@@ -1,85 +1,25 @@
 # Component Description Guide
 
-A reference for AI agents writing Figma component descriptions for any design system library. It is library-agnostic: it assumes nothing about specific axis names, roles, or component sets. Treat any concrete names below as examples, not expectations.
+What to write in a Figma component description, for any library. [SKILL.md](../SKILL.md) says which components get one and how it is applied; this guide says what goes in it.
 
----
+The guide is library-agnostic: it assumes no particular axis names, roles or component sets. Treat any concrete name below as an example, not an expectation. Where it says "the internal prefix" or "the header component name", it means the rulebook's value, never a hard-coded default.
 
-## System file
+## Contents
 
-Per-project specifics (internal prefix, authoring dialect, punctuation constraints, section heading spelling, building-block grouping, slot-only signals, virtual set separator, header component/body layer names) are **not** stored in this guide. This guide is portable — the same file applies whether the target is a web app library, a mobile library, or any other Figma file.
-
-Instead, project-specific settings live in the project's context document, keyed by the Figma `fileKey` (a local `systems/<library-name>.md` cache may hold a copy). SKILL.md workflow step 0 covers hydrating from it, or discovering what it marks `[TBD]`. Never reuse one library's settings against a different `fileKey` — a rule discovered from one library's evidence has no authority over another.
-
-Everything below this section is generic and assumes a rulebook has already been loaded into context. Where this guide says "the internal prefix" or "the header component name," it means the value the rulebook provides — never a hardcoded default.
-
----
+- [Goal](#goal)
+- [Structure](#structure)
+- [What goes in each section](#what-goes-in-each-section)
+- [Compact structure](#compact-structure-internal-prefixed-components)
+- [Writing for a virtual set](#writing-for-a-virtual-set)
+- [Content rules](#content-rules)
+- [Language and dialect](#language-and-dialect)
+- [Reference examples](#reference-examples)
 
 ## Goal
 
-Write a description for each consumer-facing public component. Descriptions are applied via `figma_set_description` using the `descriptionMarkdown` parameter, which renders rich text (headings, lists) in Figma's component panel and Dev Mode.
+Write a description for each consumer-facing public component, in the full structure below. Apply it through `figma_set_description` with the `descriptionMarkdown` parameter. That renders rich text (headings, lists) in Figma's component panel and Dev Mode.
 
-Three kinds of component are skipped, all decided in step 2 of the workflow:
-
-1. **Internal components**, conventionally prefixed with `_`.
-2. **Slot fillers**, published but only composed into a parent on the same page (see below).
-3. **Components sitting alone on their page**, where the page holds no content outside the component itself. Usually re-published system or platform chrome.
-
-Separately, two or more published components sharing a name prefix before the separator form a **virtual set** and share one description between them.
-
----
-
-## Slot-only children
-
-Some components are published yet are only meant to be composed into a parent component on the same page. A Tab item used inside a Tab bar is the canonical case: it is a real published component set, but no consumer places a Tab item directly.
-
-**A slot-only child takes the compact description, not the full structured one** — one to two sentences, no headings, stating what it is and which component composes it. This is the same form private components take, and for the same reason: the parent carries the usage guidance, so repeating axis-by-axis behaviour on the child duplicates it in a second place that will drift. **Name the child in the parent's Composition section too**, so code generation still imports it rather than reimplementing it.
-
-So two independent triggers put a component on the compact form: **it is unpublished** (carries the library's internal prefix), **or** it is a subcomponent published only because a parent uses it: every use sits inside other components on its own page, in a slot or directly. A component used anywhere off its own page keeps the full form. Either is sufficient. `scripts/verify.js` derives the second from real instances (`derivedCompact`).
-
-**The trigger is structural, never the name.** A child called `Tab item` and one called `Menu` are decided the same way — by where the component is actually used, resolved from real instances. Naming patterns like a trailing "item" are not evidence and must not be used as a shortcut `[maintainer ruling 2026-08-09]`.
-
-*This section said "do not write a standalone description" until 2026-08-09. That was wrong in the direction that loses information: it left real published components with nothing at all, so a consumer who did open one found blank metadata and no pointer to its parent. Compact says the same thing in two sentences and keeps the pointer.*
-
-Identify slot-only children using these signals, in order of reliability:
-
-1. **Project grouping**: The project may separate slot-only parts from consumer components by placing them in a dedicated section or frame; for example, a "Parts" frame beside a "Component" frame. Check the rulebook's Building-block grouping setting, then skip anything under it.
-2. **Explicit list**: If grouping is not reliable, check the rulebook for an explicit list of slot-only names, or a ruling on how the file's privacy convention extends beyond its prefix — a library whose rulebook records one is the worked example.
-3. **Structural evidence**: The component appears only as a nested instance or instance-swap inside a single parent component on the same page, and nowhere as a directly placed consumer component. Treat such a component as slot-only.
-
-**Resolving the parent — the trap that makes this test lie.** To find what composes a child, walk up from each instance to the nearest ancestor that is *either* a component root *or* an instance of one, resolving that instance to its main. Walking only to the nearest **component root** skips straight through any intervening instance and attributes the child to its grandparent. A menu option nested in a menu nested in a combobox then reads as "used by Combobox" — several different parents on several different pages — and the slot-only test fails on a component that is textbook slot-only. Found 2026-08-09: the flawed walk reported four parents across three pages for a child that has exactly one, and it was given a full structured description on that basis.
-
-   Two more things this test needs. **A virtual set counts as one parent**, so a child composed into both members of a `Foo / A` + `Foo / B` pair has one parent, not two — compare parent name stems. And **documentation example instances placed loose on a page are not consumer usage**; counting them as direct placement disqualifies almost every real slot-only child, since these pages exist to show the component in use.
-
-Signal 1 is a project-declared convention, which is why it is allowed to reference a frame. It is not an invitation to infer subjects from layout generally: workflow step 2d still applies, and where no such convention has been recorded, canvas position decides nothing.
-
-### Resolving slot-only children
-
-Before applying the slot-only heuristic, check whether the library states its own privacy convention: most commonly a naming prefix on private components. That convention takes precedence over the heuristic:
-
-- Child component **carries the internal prefix** → private. Skip it, and reference it in the parent's Composition.
-- Child component **has no prefix** and the library uses the prefix consistently elsewhere → the library has published it deliberately. Treat as consumer-facing unless the user says otherwise.
-- **No privacy convention in the file** → fall back to the slot-only heuristic and skip children that only ever compose into a parent on the same page.
-
-When the convention and the heuristic disagree, ask rather than choosing. Gather this evidence before asking, because it usually decides the answer:
-
-- Whether sibling children on the same page already carry descriptions. Existing descriptions on some children are a precedent that the project documents them; a single undocumented sibling among documented ones is more likely an oversight than a policy.
-- Whether the same conceptual child is prefixed on one page and unprefixed on another. That contrast is deliberate and tells you the unprefixed one is public.
-
-Present the evidence with the question so the user is confirming a reading rather than starting from scratch. Do not rely on the absence of an existing description alone as a signal, since consumer components can also be undocumented.
-
----
-
-## Writing for a virtual set
-
-When published components share a name prefix before the separator, consumers read them as one component with a subpart axis, so they get one shared description applied identically to each member.
-
-- Open with the group as subject, not any one member: "A top bar sits at the top of a screen", never "A top bar / Default is". The reader may have selected any member.
-- Name the subparts and what each is for, so the reader can tell which to pick. This replaces the Disambiguation that separate components would need.
-- Build the interface sections from the **union** of the members' props, and attribute anything that differs: "the options differ by subpart: Default offers Back and Close; Main offers neither".
-- Never claim an axis value that only one member has as though the whole set had it.
-- Don't items apply to the whole set, so phrase them against the subpart they constrain: "Use Main on a screen the user needs to navigate back from" rather than a bare "Use without a Back control".
-
----
+A private part and a slot-only child take the compact form instead. A virtual set shares one description among its members. SKILL.md step 2 decides which component takes which form, and which is skipped.
 
 ## Structure
 
@@ -109,100 +49,149 @@ Every description follows the same section order. Include a section only when it
 ```
 
 **Section rules:**
-- The purpose paragraph opens the description and has no heading.
-- Headings render from `##`: always use `##`, never plain text labels.
-- List items use `-` and render as bullets: never type manual `•` characters.
-- One blank line between the purpose paragraph and each heading, and between sections.
-- Omit any of Behaviour, Composition, Usage, Don't, Code gen notes when the component has nothing meaningful to say there. Right to left is written only where the project's `audit-settings` name `rtlLanguages`, and then only for a component with something to say (below). A small static component may only need a purpose paragraph plus Usage and Don't.
 
----
+- The purpose paragraph opens the description, with no heading.
+- Headings render from `##`: always use `##`, never plain text labels.
+- List items use `-` and render as bullets: never type a manual `•`.
+- Leave one blank line between the purpose paragraph and each heading, and between sections.
+- Omit any of Behaviour, Composition, Usage, Don't and Code gen notes with nothing meaningful to say. A small static component may need only a purpose paragraph, Usage and Don't.
+- Write Right to left only where the project's `audit-settings` name `rtlLanguages`, and then only for a component with something to say (below).
 
 ## What goes in each section
 
 ### Purpose (opening paragraph)
-- Component name as the subject, user benefit not implementation.
-- Name the key axes that define the component and what they select, in plain terms.
+
+- The component name is the subject; say the user benefit, not the implementation.
+- Name the key axes that define the component, and what they select, in plain terms.
 - Keep it to one to three sentences.
 
-Behaviour and Composition below are what the skill's generator produces from the interface (SKILL.md step 5); the rules are kept here so a line that reads wrong can be judged against them and fixed in the generator.
+The skill's generator writes Behaviour and Composition from the interface (SKILL.md step 5). Their rules stay here so a line that reads wrong can be judged against them, and fixed in the generator.
 
 ### Behaviour
-- What each axis or state changes, described by its verbatim name.
-- Interactive states are set by code. List only the states the component actually has, in the order they appear on the State axis, and say the code manages them. Where a component only has a resting state plus a disabled axis, note just that the disabled state is code-managed.
-- Runtime behaviour the code owns: opening and closing, animation, focus handling, sorting, scrolling.
+
+- Say what each axis or state changes, by its verbatim name.
+- Interactive states are set by code. List only the states the component has, in the State axis's order, and say the code manages them.
+- Where a component has only a resting state and a disabled axis, note just that the disabled state is code-managed.
+- Name runtime behaviour the code owns: opening and closing, animation, focus handling, sorting, scrolling.
 
 ### Composition (highest-value section)
-- List every nested sub-component by its exact name so code generation imports it rather than rebuilding it. This is the single most useful signal for downstream code-gen.
-- Note open content slots explicitly: an empty slot takes any custom content, and that content is passed in rather than hardcoded.
-- Note swappable props (instance-swap) by their exact prop name, and what they swap.
-- **Do not infer nesting from a single variant.** A sub-component that a boolean or variant axis reveals is absent from variants where that axis is off. Scan the whole set, and when a sub-component appears only under a particular axis value, mark it conditional ("revealed by the `<Boolean>` prop") rather than stating it unconditionally.
-- A component that pairs with another component not nested inside it belongs in Usage as a pairing, not here. Composition is for what the component actually contains.
-- Omit this section entirely for flat components with no sub-components, no slots, and no swaps.
+
+- List every nested sub-component by its exact name, so code generation imports it rather than rebuilding it. This is the most useful signal for code generation.
+- Note open content slots: an empty slot takes any custom content, passed in rather than hard-coded.
+- Note swappable props (instance swap) by their exact prop name, and what they swap.
+- **Never infer nesting from one variant**. A part a boolean or variant axis reveals is absent where that axis is off. Scan the whole set, and mark a part that appears only under one axis value as conditional ("revealed by the `<Boolean>` prop").
+- A component that pairs with another, without nesting it, belongs in Usage as a pairing. Composition is for what the component contains.
+- Omit this section for a flat component with no sub-components, no slots and no swaps.
 
 ### Usage
-- When and how to use it, grouping and placement rules, content guidance.
-- Variant selection order for multi-axis components: state which axis to choose first, then the next, and note that interactive states are set by code and not applied in static designs.
+
+- Say when and how to use it, with grouping, placement and content guidance.
+- For a multi-axis component, give the variant selection order: which axis to choose first, then the next. Note that interactive states are set by code, not applied in static designs.
 
 ### Don't
-- Misuse cases, each one directly countering a Usage item or closing a loophole.
+
+- List misuse cases, each countering a Usage item or closing a loophole.
 - Always name the correct alternative component for the misuse.
 
 ### Code gen notes
-- Import instructions for each nested sub-component named in Composition.
-- Slot handling: content passed through the slot as children, not hardcoded.
-- Swappable props resolved by their prop, not recreated.
-- Interactive states defined by code, not generated as static variants.
-- Values that come from tokens (colour, spacing, radius, elevation) are not hardcoded.
+
+- Import instructions for each nested sub-component named in Composition
+- Slot handling: content passed through the slot as children, not hard-coded
+- Swappable props resolved by their prop, not recreated
+- Interactive states defined by code, not generated as static variants
+- Values from tokens (colour, spacing, radius, elevation) not hard-coded
 
 ### Right to left
-Written only where the project's settings name `rtlLanguages` (figma-standard rule 50): the product mirrors in code, and this section is where a developer, Dev Mode and the MCP server find what code can't decide. Each line is a fact, measured from the component, never a general remark:
-- `- Mirrors: the order of its parts` where a horizontal auto layout holds two or more children in the flow; `- Mirrors: nothing beyond what follows` otherwise.
-- `- Padding: <left> leading, <right> trailing` where left and right padding differ, in the values drawn.
-- `- <layer>: pinned to the leading edge` (or trailing) for a layer positioned absolutely, or placed in a frame without auto layout, and constrained left (or right).
-- `- <layer>: aligned to the trailing side` for a row aligned right, or a column whose items align right.
-- `- Text: aligned to the leading side` (or trailing) for a text box wider than its text, aligned left (or right).
-- `- <text style>: uppercase in Latin only` for a style that sets a text case Arabic does not have.
-- `- <text property>: either direction` for a text property holding text people type or the product fills in (a name, a title, a search term), so the developer isolates it; text the team writes needs no line.
-- `- <layer>: corners <TL> <TR> <BR> <BL> (top leading, top trailing, bottom trailing, bottom leading)` where corners differ left and right.
-- `- Stays: <parts>` naming what keeps its direction (playback controls, a chart, a phone number field); `- Stays: nothing` when nothing does.
 
-These are the lines figma-components-audit's `direction|note` finding composes from the same measurements, so a description written either way reads the same. Omit the section for a component with nothing to reorder and nothing pinned, uneven or one-sided (an avatar, a spinner). An icon takes one line instead of the section: `Right to left: mirrors` for one that points the way the reader moves (arrows, chevrons, undo, send), `Right to left: stays` for one that keeps its direction (playback, clocks).
+Write it only where the project's settings name `rtlLanguages` (figma-standard rule 50). The product mirrors in code. This section is where a developer, Dev Mode and the MCP server find what code cannot decide. Each line is a fact measured from the component, never a general remark:
 
----
+| Line | Where |
+|---|---|
+| `- Mirrors: the order of its parts` | A horizontal auto layout holds two or more children in the flow |
+| `- Mirrors: nothing beyond what follows` | Otherwise |
+| `- Padding: <left> leading, <right> trailing` | Left and right padding differ; the values drawn |
+| `- <layer>: pinned to the leading edge` (or trailing) | A layer positioned absolutely, or in a frame without auto layout, constrained left (or right) |
+| `- <layer>: aligned to the trailing side` | A row aligned right, or a column whose items align right |
+| `- Text: aligned to the leading side` (or trailing) | A text box wider than its text, aligned left (or right) |
+| `- <text style>: uppercase in Latin only` | A style that sets a text case Arabic does not have |
+| `- <text property>: either direction` | Text people type or the product fills in (a name, a title, a search term), so the developer isolates it. Text the team writes needs no line. |
+| `- <layer>: corners <TL> <TR> <BR> <BL> (top leading, top trailing, bottom trailing, bottom leading)` | Corners differ left and right |
+| `- Stays: <parts>` | What keeps its direction (playback controls, a chart, a phone number field) |
+| `- Stays: nothing` | Nothing does |
+
+figma-components-audit's `direction|note` finding composes the same lines from the same measurements, so a description reads the same either way.
+
+Omit the section for a component with nothing to reorder, and nothing pinned, uneven or one-sided (an avatar, a spinner). An icon takes one line instead of the section:
+
+- `Right to left: mirrors` for an icon pointing the way the reader moves (arrows, chevrons, undo, send)
+- `Right to left: stays` for one that keeps its direction (playback, clocks)
 
 ## Compact structure (internal-prefixed components)
 
-Components matching the Internal prefix are private building blocks, not consumer-facing subjects — they never get the full Structure above. They still get a description, because an AI or new teammate reading the file via MCP sees an internal-prefixed component exactly as readily as a public one; an undocumented private component is a broken link the moment a public component's Composition section names it.
+A private part (one with the internal prefix) and a slot-only child are building blocks, not consumer-facing subjects. They never get the full structure above.
+
+They still get a description. An AI or a new teammate reading the file through MCP sees a private component as readily as a public one. An undocumented private component is a broken link the moment a public component's Composition names it.
 
 ```markdown
 [One to two sentences: what it is, and its role relative to its parent. No heading, no sections, no bullets.]
 ```
 
-- **Content**: what the piece is, plus either what it's split out for (a reason, not just a restatement of the name) or which parent(s) use it. State names quoted verbatim where they matter to the sentence, same as the full structure.
-- **Length discipline is the whole point.** If a private component's description grows past two sentences or starts wanting a Composition/Usage section, that's a signal the component may actually deserve to be public — flag it in the report rather than writing a long private description.
-- Never write Behaviour, Composition, Usage, Don't, or Code gen notes for a private component, even when the information is known. That structure exists to serve consumers choosing between variants; a private component has no such consumer.
-- Applied the same way as a full description (`descriptionMarkdown` via `figma_set_description` / batched writes), and re-read after writing, same as step 6/8.
-- Virtual-set grouping (2c) does not apply to private components — each is described individually against its own parent relationship, since the grouping rule exists for consumer-facing naming families, which private components aren't part of.
-- Skip entirely: private components already carrying a description (report with a preview per existing step 9 behavior, still don't overwrite unasked), and any private component that fails step 2e (sits alone on its page — some libraries do stash unused private parts this way).
+- **Content**: what the piece is, plus why it is split out (a reason, not a restatement of the name) or which parents use it. Quote state names verbatim where they matter, as in the full structure.
+- **Length discipline is the whole point**. A private description that grows past two sentences, or wants a Composition or Usage section, signals the component may deserve to be public. Flag it in the report rather than writing a long private description.
+- Never write Behaviour, Composition, Usage, Don't or Code gen notes for a private component, even when the information is known. That structure serves consumers choosing between variants, and a private component has none.
+- Apply it the same way as a full description (`descriptionMarkdown`, single or batched), and re-read it after writing (SKILL.md steps 6 and 8).
+- Virtual-set grouping (step 2c) does not apply to private components. Each is described on its own, against its own parent. The grouping rule serves consumer-facing naming families, which private components are not part of.
+- Skip a private component that already carries a description: report it with a preview, and never overwrite it unasked (SKILL.md step 9).
+- Skip any private component that fails step 2e, alone on its page and unused. Some libraries stash unused private parts this way.
 
 **Worked example:**
 
 > The individual row inside `Sidebar (Secondary)`; renders one navigation item's icon, label, and selected/hover state. Not used outside the parent sidebar section.
 
----
+## Writing for a virtual set
+
+Consumers read published components sharing a name prefix before the separator as one component with a subpart axis. So they get one shared description, applied identically to each member.
+
+- Open with the group as subject, never one member: "A top bar sits at the top of a screen", never "A top bar / Default is". The reader may have selected any member.
+- Name the subparts and what each is for, so the reader can tell which to pick. This replaces the disambiguation separate components would need.
+- Build the interface sections from the **union** of the members' props, and attribute anything that differs. An example: "the options differ by subpart: Default offers Back and Close; Main offers neither".
+- Never claim an axis value only one member has as though the whole set had it.
+- Don't items apply to the whole set, so phrase them against the subpart they constrain. Write "Use Main on a screen the user needs to navigate back from", not a bare "Use without a Back control".
 
 ## Content rules
 
-- **Verbatim names**: Prop names, axis names, and variant or state values are quoted exactly as they appear in Figma. Do not paraphrase, re-case, or translate them, even when the surrounding prose is in another language. They map directly to the Figma UI and to code.
-- **Strip property key suffixes**: Component property keys returned by `componentPropertyDefinitions` carry a `#nodeId` suffix on non-variant properties, so a boolean named `Icon` appears as `Icon#0:45`. Strip everything from `#` onwards before quoting the name. The suffix is an internal identifier and never appears in the Figma UI.
-- **Anatomy and disambiguation**: When similar components exist, state when to choose this one and when to choose a sibling instead. This is the most critical signal for AI decision-making; place it in the purpose paragraph or in Usage and Don't.
-- **Interactive states**: Never instruct designers to build Hover, Focus, Press, or Loading states manually. Always frame them as code-managed, listing only the states present.
-- **Slots and swaps over "cannot be customised"**: Do not claim a container is fixed or uncustomisable without checking. If it exposes a content slot or a swappable prop, document that instead. Only describe a component as fixed when it genuinely has no slot and no swap.
-- **Length**: Two to three bullets for simple components, three to five for complex or semantic ones. Never pad.
-- **Cross-referencing**: Name sibling components explicitly in disambiguation lines and Don't items, so the documentation forms an interconnected system.
-- **Tone**: Prescriptive and concise. No full stops at the end of list items.
+| Rule | What it asks |
+|---|---|
+| Verbatim names | Quote prop names, axis names, and variant or state values exactly as Figma shows them, misspelled ones included. Never paraphrase, re-case or translate them, even in prose in another language. They map to the Figma UI and to code. |
+| Strip property key suffixes | `componentPropertyDefinitions` gives non-variant property keys a `#nodeId` suffix: a boolean named `Icon` appears as `Icon#0:45`. Strip everything from `#` on before quoting it. The suffix is internal, and never appears in Figma's UI. |
+| Anatomy and disambiguation | Where similar components exist, say when to choose this one and when a sibling instead. This is the most critical signal for an AI's choice. Put it in the purpose paragraph, or in Usage and Don't. |
+| Interactive states | Never tell designers to build Hover, Focus, Press or Loading states by hand. Always frame them as code-managed, listing only the states present. |
+| Slots and swaps over "cannot be customised" | Never claim a container is fixed without checking. If it exposes a content slot or a swappable prop, document that instead. Call a component fixed only when it has no slot and no swap. |
+| Length | Two to three bullets for a simple component, three to five for a complex or semantic one. Never pad. |
+| Cross-referencing | Name sibling components in disambiguation lines and Don't items, so the documentation forms a connected system. |
+| Tone | Prescriptive and concise. No full stops ending list items. |
 
----
+## Language and dialect
+
+**What this skill writes takes the rulebook's `language`, always**: `language` in `audit-settings`, en-GB when absent. Text regenerated in en-GB into a library whose document records en-US is a silent reversion. The run reports success and the library goes backwards. So generated text never matches an old spelling "to be consistent": consistency with a dialect the project has left is not consistency.
+
+**The library's existing descriptions are a separate question: a finding, not a decision to take here**. A project that has just switched still has a library in the old dialect. One example records `language: en-US` while 92 of its descriptions head a section `## Behaviour`. Renaming those means editing every documented component, so it is the project's open question, not this run's.
+
+- Report the count, and name the conflict.
+- Rewriting the descriptions this run does not otherwise touch is the maintainer's call.
+- Writing the new ones in the recorded dialect is not.
+
+### Writing in another language
+
+Write in English, or in the rulebook's authoring language where the project sets one. Switch to another language only when the user explicitly asks. An earlier conversation in another language is no reason to default to it. When asked:
+
+- **Translate the prose and the section headings**. Localise the purpose paragraph, every bullet and the `##` headings. A Spanish set of headings is: Comportamiento, Composición, Uso, No hacer, Notas de generación de código. The purpose paragraph stays unheaded.
+- **Keep names verbatim in the source language**. Prop names, axis names, and variant or state values are never translated. Role, Breakpoint, Feedback, Validation, Selected and Disabled stay as Figma shows them, as do Focus, Hover, Press and Loading. They are identifiers mapping to the UI and to code, so translating them breaks the mapping.
+- **Use one canonical interactivity line across the whole catalogue**. Pick one localised sentence and reuse it verbatim, inserting only each component's states, in axis order. Consistency across the set matters more than variation per component.
+- **Keep the same section structure and omission rules**. Translation changes the language, not the shape.
+- The generated Behaviour and Composition lines are English, so in another language both are written by hand (SKILL.md step 5).
+
+A Spanish interactivity line: "Los estados interactivos (Focus, Hover, Press) y Disabled los gestiona el código; no se aplican manualmente en el diseño".
 
 ## Reference examples
 
@@ -298,22 +287,3 @@ A spinner communicates that a process is loading when the duration is unknown. T
 ## Code gen notes
 - The animation is controlled by code; do not generate static frame variants
 ```
-
----
-
-## Writing translations (aside)
-
-By default, write descriptions in English, or the authoring language set in the rulebook if the project overrides it. Everything above assumes that default. Do not switch to another language unless the user explicitly asks; a previous conversation being in another language is not a reason to default to it. This section applies only when the user asks for descriptions in another language.
-
-When writing in another language:
-
-- **Translate the prose and the section headings.** Localise the purpose paragraph, all bullet content, and the `##` headings themselves. For example, a Spanish set of headings is: Comportamiento, Composición, Uso, No hacer, Notas de generación de código, with the purpose paragraph left unheaded as usual.
-- **Keep names verbatim in the source language.** Prop names, axis names, and variant or state values are never translated: Role, Breakpoint, Feedback, Validation, Selected, Disabled, and states such as Focus, Hover, Press, Loading stay exactly as they appear in Figma. They are identifiers that map to the UI and to code, so translating them breaks the mapping.
-- **Use one canonical phrasing for the interactivity line, applied identically across the whole catalogue.** Pick a single localised sentence and reuse it verbatim everywhere, inserting only the states each component has, in axis order. Consistency across the set matters more than per-component variation. A Spanish example: "Los estados interactivos (Focus, Hover, Press) y Disabled los gestiona el código; no se aplican manualmente en el diseño".
-- **Keep the same section structure and omission rules.** Translation changes the language, not the shape of the description.
-
----
-
-## Tooling
-
-The MCP calls for enumerating, inspecting, applying, and verifying descriptions live in the skill's operational steps in `SKILL.md`, and the verification checks are in `scripts/verify.js`. This guide covers only what to write, not how to apply it.

@@ -1,5 +1,6 @@
 # Changelog — figma-component-descriptions
 
+- 1.23.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I: a lead and numbered steps; step 2, the scripts and the checklist move to `references/subjects.md`, `scripts.md` and `quality-checklist.md`; no rule dropped.
 - 1.22.2 (2026-11-16): the guide's Button example names its emphasis axis `Variant`, as figma-standard 2.24.0 rule 1 does; no rule changed.
 - 1.22.1 (2026-11-12): `sections.mjs`'s usage line names `--separator`, which it reads and its header documents.
 - 1.22.0 (2026-11-10): Composition lists only the parts a component places itself; a size line where an axis flips fixed and hug; `sections.mjs --recipes` generates the reference-screens Usage line. Case D25.

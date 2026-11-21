@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.22.2)
+# Eval cases — figma-component-descriptions (v1.23.0)
+
+**Walked: 2026-11-21 for 1.23.0** — wording and layout only: SKILL.md is the lead and the numbered steps; step 2 and discovery moved to `references/subjects.md`, the scripts' detail to `references/scripts.md`, the checklist to `references/quality-checklist.md`, dialect rules to the guide's *Language and dialect*. Every case read against the new text: each asserted rule survives (D1's quote now sits in `subjects.md`, pointer fixed). `test-engines.mjs` 55/55, `test-sections.mjs` 33, `test-verify.mjs` 19/19.
 
 **Walked: 2026-11-16 for 1.22.2** — wording in an example only; no case reads the axis name.
 
@@ -72,7 +74,7 @@ Assert: no description is written and the component is not listed as a subject. 
 
 **Walked 2026-08-09 — passes, on exactly one true fixture.** `_Error message` sits on page `❖ Error message` with **4 nodes inside the component and 0 outside it** — the page holds the component and literally nothing else. It carries no description, which is the state step 2e wants, and it is correctly not a subject. Eighteen pages hold exactly one component; only this one holds nothing besides it.
 
-Note it is a private error-message component, not platform chrome. That does not weaken the case — SKILL.md is explicit that "step 2e is about the page, not the component's quality", so the trigger is the page shape and the outcome is the same: skip, write nothing, report what was skipped and why.
+Note it is a private error-message component, not platform chrome. That does not weaken the case — step 2e (SKILL.md, in full in `references/subjects.md`) is explicit that "step 2e is about the page, not the component's quality", so the trigger is the page shape and the outcome is the same: skip, write nothing, report what was skipped and why.
 
 **A methodology failure worth keeping, because it produced a confident wrong answer.** The first pass tested `page.children.length === 1` and returned **15 components including `Button`, `Alert` and `Checkbox`** — the library's flagship components, every one of them plainly documented. The cause is that these pages wrap all their content in a single top-level section, so "one top-level child" is not "alone on the page". Acting on that list would have skipped documenting `Button` under a rule meant for re-published keyboards. The correct test is what it says on the tin: collect the component's own subtree and count the page nodes outside it. A fixture detector can be wrong in the same silent, plausible way the rule it tests guards against.
 
