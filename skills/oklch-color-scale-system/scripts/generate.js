@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // OKLCH Color Scale System — generation engine.
-// Implements oklch-color-scale-system/SKILL.md exactly. Run this instead of hand-computing
+// Implements oklch-color-scale-system's SKILL.md and references/ exactly. Run this instead of hand-computing
 // OKLCH math — it's faster and eliminates arithmetic slips from manual simulation.
 //
 // Each step also carries figmaSuffix (the single step nearest the source in OKLab space
 // gets '-anchor' if it reproduces the source hex exactly, '-source' otherwise — see
-// SKILL.md "Figma variable naming"; all other steps get '') and figmaDescription (OKLCH value +
-// source/mode/light-dark/ceiling provenance) — see SKILL.md "Figma variable naming and
+// references/figma-output.md "The source and anchor suffix"; all other steps get '') and figmaDescription (OKLCH value +
+// source/mode/light-dark/ceiling provenance) — see references/figma-output.md "Solid step
 // descriptions" for the convention these implement.
 //
 // Usage:
@@ -50,8 +50,8 @@ const DARK_L_NEUTRAL = [0.18, 0.21, 0.24, 0.27, 0.30, 0.40, 0.50, 0.60, 0.70, 0.
 const ANCHOR_IDX = 8; // step 9, 0-based
 const NEUTRAL_C_THRESHOLD = 0.01;
 
-// Pre-curve chroma ceilings for the three gamut-constrained families (see Hue family
-// rules in SKILL.md). One table, three readers: applyFamilyRules, generateScale and
+// Pre-curve chroma ceilings for the three gamut-constrained families (see
+// references/hue-families.md). One table, three readers: applyFamilyRules, generateScale and
 // usableChromaAt. It lived as duplicated literals in the first two for six versions —
 // harmless while both sat in this file's own curve path, a real hazard the moment a
 // calibration helper joined them, because a helper disagreeing with the generator about
@@ -179,7 +179,7 @@ function oklchToHex(L, C, H) {
 }
 
 // isOutOfGamut/clampToGamut use a ±0.001 tolerance — this is load-bearing, not decorative.
-// See SKILL.md "Gamut clamping" for why: a strict [0,1] check produces different, lower-chroma
+// See references/chroma-and-gamut.md "Gamut clamping" for why: a strict [0,1] check produces different, lower-chroma
 // output than every reference table in the skill.
 function isOutOfGamut(L, C, H) {
   const [r, g, b] = oklchToLinear(L, C, H);
@@ -195,7 +195,7 @@ function clampToGamut(L, C, H) {
 // FAMILY DETECTION
 // ============================================================
 
-// Per-family "avoid" source-hue ranges, mirroring the Family detection table in SKILL.md.
+// Per-family "avoid" source-hue ranges, mirroring the Family detection table in references/hue-families.md.
 //
 // These are NOT stylistic preferences. Each bound is calibrated against that family's own
 // hue nudge so the nudge can't push a step out of the family it's defined for. Green is the
@@ -317,7 +317,7 @@ const TAPER_RADIUS = 3;
 // anchor at full source chroma next to neighbours flattened at 0.10. This tapers the cap
 // up toward the anchor's own (post-ceiling) chroma within TAPER_RADIUS steps of it, so
 // the neighbours ramp toward the anchor instead of stopping dead at a flat wall. See
-// SKILL.md "Anchored mode — dark" / "the anchor's cap-exemption becomes a liability".
+// references/modes.md "Anchored mode in dark" / "An anchor in the background zone".
 // Only ever LOOSENS the cap — dist > TAPER_RADIUS, or effSrcC <= 0.10, or free/grey mode
 // all fall through to the unchanged flat 0.10.
 // `designatedPeak` is the ONE flag both cap features key on: true when the ramp has a
@@ -369,8 +369,8 @@ function applyFamilyRules(stepIdx, L, C, H, family, sourceH, opts) {
   // NOTE — this function still special-cases no rule to the anchor STEP itself,
   // deliberately. The anchored-mode anchor never reaches this code at all:
   // generateScale()'s anchor-verbatim guard returns the raw source triple before any
-  // per-step processing runs (see SKILL.md, Anchored mode — "don't enumerate exemptions
-  // per rule"). An earlier version carried an `isAnchor = stepIdx === ANCHOR_IDX` check
+  // per-step processing runs (see references/modes.md, Anchored mode — "Do not enumerate
+  // exemptions per rule"). An earlier version carried an `isAnchor = stepIdx === ANCHOR_IDX` check
   // here anyway, keyed to the FIXED curve anchor (index 8) rather than the real,
   // possibly-migrated anchored-mode anchor — dead because the background cap's
   // `stepIdx <= 4 && !isAnchor` could never see index 8, misleading because it read like
@@ -400,7 +400,7 @@ function applyFamilyRules(stepIdx, L, C, H, family, sourceH, opts) {
   // The dark-mode gate (`beyondAnchorOnly`) is keyed to the FIXED curve anchor
   // (ANCHOR_IDX, step 9) on purpose — NOT to anchored mode's migrated anchorIdx. The
   // nudge zones themselves are defined in absolute step indices (`stepIdx >= 8/9`,
-  // "steps 9-12" in SKILL.md), so the gate that trims them for dark mode must be
+  // "steps 9-12" in references/hue-families.md), so the gate that trims them for dark mode must be
   // absolute too: it exists to avoid re-shifting hue at the step the light-mode rules
   // treat as the hue's home (step 9), which is a property of the rule table, not of
   // where a particular anchored source happens to land. The real anchored-mode anchor
@@ -460,7 +460,7 @@ function applyFamilyRules(stepIdx, L, C, H, family, sourceH, opts) {
 // Hue-dependent scaling of yellow's drift: full strength for true yellows and ambers
 // (source H <= 105), fading linearly to ZERO by H 125, so lime-region sources hold
 // their hue instead of rotating toward orange. Grounded in what production systems
-// ship (see SKILL.md "Yellow" and the yellow-in-color-scale-generators research
+// ship (see references/hue-families.md "Yellow" and the yellow-in-color-scale-generators research
 // guide): Radix's hand-tuned lime holds H 119-129 across all 12 steps while the SAME
 // team drifts its amber to H 54, and Google's material-color-utilities defines dark
 // yellow-green at CAM16 hue 90-111 as universally disliked (DislikeAnalyzer) — the
@@ -479,7 +479,7 @@ function yellowHueScale(sourceH) {
 }
 
 // Degrees of rotation per unit of L moved from the source. `--tail-rate` replaces it
-// at steps 9-12 only, the tail a yellow/orange collision lives in (SKILL.md, Yellow).
+// at steps 9-12 only, the tail a yellow/orange collision lives in (references/hue-families.md, Yellow and orange collision).
 const YELLOW_DRIFT_RATE = 70;
 
 function yellowDrift(sourceL, sourceH, L, rate = YELLOW_DRIFT_RATE) {
@@ -506,7 +506,7 @@ function yellowDrift(sourceL, sourceH, L, rate = YELLOW_DRIFT_RATE) {
 // scale's own step 1). Text steps (10-12) additionally get `apcaVsWhite` /
 // `apcaVsCanvas` (informational — see apcaLc above).
 //
-// `solidForeground` generalizes the yellow foreground-on-solid rule (SKILL.md, "Text
+// `solidForeground` generalizes the yellow foreground-on-solid rule (references/lightness.md, "Text
 // usage rule") from prose into measured data: instead of "if the solid's L is above
 // ~0.65, use dark text" — a threshold a human has to remember exists, stated for one
 // family — it computes the actual WCAG ratio of both candidate foregrounds against the
@@ -537,8 +537,8 @@ function annotateContrast(steps, dark, anchorIdx, designatedPeak) {
   // APCA Lc for the same two candidates (text on the solid), reported alongside the
   // WCAG ratios because WCAG 2's formula is documented — by the people who hand-tune
   // yellow scales — to mispredict contrast for yellow/orange hues (Radix designs its
-  // solid steps against APCA and switches to dark text below |Lc| 40; see SKILL.md
-  // "Contrast"). `recommend` stays WCAG-derived: WCAG 2 is the normative standard and
+  // solid steps against APCA and switches to dark text below |Lc| 40; see
+  // references/contrast.md "solidForeground"). `recommend` stays WCAG-derived: WCAG 2 is the normative standard and
   // APCA is pre-standard with shifting constants, so APCA gets its own parallel
   // `apcaRecommend` (larger |Lc| wins) rather than silently changing the primary
   // field's meaning. When the two disagree on a yellow-family solid, trust APCA's
@@ -567,7 +567,7 @@ function generateScale(hex, mode, opts) {
   // Versioned generation options. easeHueSnaps is opt-in. luminanceText is ON by
   // default since 2.0.0 — OKLab L is not WCAG luminance, so equal L at the text
   // steps gave hue-dependent contrast; `luminanceText: false` reproduces a ramp
-  // generated before 2.0.0. See SKILL.md "Versioned generation options".
+  // generated before 2.0.0. See references/modes.md "Versioned generation options".
   const ease = !!opts.easeHueSnaps;
   const lumText = opts.luminanceText !== false;
 
@@ -611,8 +611,8 @@ function generateScale(hex, mode, opts) {
   const family = detectFamily(srcH);
   const isNeutral = srcC < NEUTRAL_C_THRESHOLD;
 
-  // Versioned option: the yellow drift rate at steps 9-12, the collision fix (SKILL.md,
-  // Yellow). Lowered for the whole tail at once, never one step, so the tail keeps its
+  // Versioned option: the yellow drift rate at steps 9-12, the collision fix (references/hue-families.md,
+  // Yellow and orange collision). Lowered for the whole tail at once, never one step, so the tail keeps its
   // shape. Only ever lowered: the collision it fixes comes from too much rotation.
   // Throws on a source it cannot touch, per the --peak precedent above. The default
   // rate, or a lime whose drift is faded to nothing (yellowHueScale 0), gives the
@@ -994,8 +994,8 @@ function finalize(i, L, C, H, figmaSuffix, provenance, provenanceLine) {
     figmaDescription: provenance ? `${oklch} · ${provenance}` : oklch,
     // For a Figma variable with separate Light/Dark modes on one description field —
     // same content as figmaDescription but without the light/dark token, meant to sit
-    // under a "Light:"/"Dark:" heading instead of repeating the mode inline. See SKILL.md
-    // "Figma variable naming and descriptions" for the two-mode composition pattern.
+    // under a "Light:"/"Dark:" heading instead of repeating the mode inline. See
+    // references/figma-output.md "Two-mode collections" for the composition pattern.
     figmaDescriptionLine: provenanceLine ? `${oklch} · ${provenanceLine}` : oklch
   };
 }
@@ -1003,7 +1003,7 @@ function finalize(i, L, C, H, figmaSuffix, provenance, provenanceLine) {
 // ============================================================
 // ALPHA SCALES
 // Precision note: both base and target MUST be quantized to their 8-bit hex value before
-// solving alpha — not the continuous OKLCH conversion. See SKILL.md "Alpha scales" for why
+// solving alpha — not the continuous OKLCH conversion. See references/alpha.md "Blend in quantised sRGB" for why
 // (the difference is small, a few ten-thousandths, but changes every downstream value).
 // ============================================================
 
@@ -1039,7 +1039,7 @@ function generateNeutralAlpha(scaleSteps, opts) {
   const base255 = hexToRgb255(baseHex)[0]; // R=G=B for a neutral base
   const baseSrgb = base255 / 255;
 
-  // Nominal OKLCH for the fixed neutral bases, exactly as published in SKILL.md's
+  // Nominal OKLCH for the fixed neutral bases, exactly as published in references/alpha.md's
   // reference tables. These are documented CONSTANTS, not conversions computed from
   // the hex — re-read the precision note above: the 8-bit hex is authoritative input
   // to the alpha solve, and round-tripping it through a continuous OKLCH conversion
@@ -1069,8 +1069,8 @@ function generateNeutralAlpha(scaleSteps, opts) {
     // this token, documentation included — whole-percent rounding moves 7 of 11
     // steps by 1/255 and reintroduces the seam this scale exists to avoid.
     const cssValue = BASE_OKLCH[usedBase].replace(/\)$/, ' / ' + alphaPct(roundedAlpha) + ')');
-    // Alpha steps never get a -source/-anchor suffix (see SKILL.md "Figma variable
-    // naming" — an alpha step isn't verbatim anything, it's a base/alpha pair engineered
+    // Alpha steps never get a -source/-anchor suffix (see references/figma-output.md "Alpha
+    // variables" — an alpha step isn't verbatim anything, it's a base/alpha pair engineered
     // to visually match a solid step when composited, so the source/anchor concept
     // doesn't apply to it the way it does to a solid step).
     const description = `${cssValue} · base ${usedBase} · alpha ${roundedAlpha} · composites to ${name}/${step.step}${step.figmaSuffix || ''} · ${modeLabel}`;
@@ -1123,7 +1123,7 @@ function generateChromaticAlpha(scaleSteps, floor, opts) {
     // is the point. A chromatic alpha base is solved per step in 8-bit sRGB, so no
     // nominal OKLCH exists for it the way it does for the two fixed neutral bases —
     // emitting one would mean converting the solved hex, and the base's hue is
-    // documented to drift up to 23.8° from the scale's own hue (SKILL.md, "The base's
+    // documented to drift up to 23.8° from the scale's own hue (references/alpha.md, "The base's
     // hue drifts"). A converted triple would therefore assert a hue this scale does
     // not own. rgb() states the exact solved channels and the exact alpha, converting
     // nothing. Use the clamped channels from baseHex, not the raw solve, which can
@@ -1266,7 +1266,7 @@ function driftTowardReference(scale, referenceHex) {
   return { ...scale, steps, solidForeground, driftedToward: { hex: referenceHex, oklch: `oklch(${refL.toFixed(4)} ${refC.toFixed(4)} ${refH.toFixed(2)})` } };
 }
 
-// Cross-family collision (SKILL.md, Yellow): the steps whose hue sits within
+// Cross-family collision (references/hue-families.md, Yellow and orange collision): the steps whose hue sits within
 // `within` degrees of another scale's at the same step, steps 9-12 by default.
 // Detection only: whether to lower the tail's rate is the reader's call.
 function hueCollisions(scale, other, opts) {
@@ -1325,7 +1325,7 @@ function buildTable(scale, alphaSteps) {
   const lines = [];
   lines.push(`${scale.family} — ${scale.source} — ${scale.sourceOklch} — mode=${scale.mode}${scale.dark ? ' (dark)' : ''}`);
   if (scale.anchorInBackgroundZone) {
-    lines.push(`⚠ anchor (step ${scale.anchorIdx + 1}) lands in the background zone (steps 1-5) — it's exempt from the C cap its neighbors get (their cap tapers toward it, but never reaches it), so it will read MORE saturated than them. See "Anchored mode — dark" in SKILL.md.`);
+    lines.push(`⚠ anchor (step ${scale.anchorIdx + 1}) lands in the background zone (steps 1-5) — it's exempt from the C cap its neighbors get (their cap tapers toward it, but never reaches it), so it will read MORE saturated than them. See "An anchor in the background zone" in references/modes.md.`);
   }
   if (scale.contrastWarning) {
     lines.push(`⚠ ${scale.contrastWarning}`);
@@ -1335,7 +1335,7 @@ function buildTable(scale, alphaSteps) {
   }
   if (scale.collisions && scale.collisions.length) {
     const fix = scale.clearingTailRate != null ? `--tail-rate ${scale.clearingTailRate} clears it` : 'no tail rate clears it';
-    lines.push(`⚠ hue within 3° of ${scale.collidesWith} at ${scale.collisions.map(c => `step ${c.step} (${c.H}° vs ${c.otherH}°)`).join(', ')}: ${fix} (SKILL.md, Yellow); never move one step.`);
+    lines.push(`⚠ hue within 3° of ${scale.collidesWith} at ${scale.collisions.map(c => `step ${c.step} (${c.H}° vs ${c.otherH}°)`).join(', ')}: ${fix} (references/hue-families.md, Yellow and orange collision); never move one step.`);
   }
   lines.push('');
   const header = alphaSteps

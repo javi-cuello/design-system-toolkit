@@ -1,5 +1,7 @@
 # Changelog — oklch-color-scale-system
 
+- 2.4.1 (2026-11-21): review fixes: contrastWarning fires in any mode; steps 3 and 7 read hue-families.md and alpha.md before generating; drift limitation says the free/grey anchor drifts too.
+- 2.4.0 (2026-11-21): meets skill-standard §A clause I: a 136-line SKILL.md, the rules in nine references/ files; dated stories dropped, rules kept; a stale drift limitation corrected.
 - 2.3.2 (2026-11-15): an alpha step's description names the solid step with its `-source`/`-anchor` suffix, the variable it really composites to; it named `Grey/9` beside a `Grey/9-source`. Two suite checks.
 - 2.3.1 (2026-11-15): the reference sources are engine fixtures, not palette picks: a light hue among them goes through the mode-and-peak table. Guidance only; output unchanged. Case A16.
 - 2.3.0 (2026-11-01): `modeDescriptions`, `--light-name`/`--dark-name`/`--dark-gen-mode` (two-mode blocks); yellow `--tail-rate`, recorded, cleared by `--collide-with`/`--table`, solved by `recover.js`, whose `oklchText` rule, `null` and warnings change output for some default ramps.

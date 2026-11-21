@@ -645,7 +645,7 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
   // The CLI previously discarded the `warning` field entirely — main() constructed a
   // new object with only mode/source/anchorIdx/etc., silently dropping it, so the exact
   // scenario the warning exists to surface loudly was invisible from the documented
-  // entry point (SKILL.md documents the CLI as the primary way to use this tool).
+  // entry point (references/recovery.md documents the CLI as the primary way to use this tool).
   {
     const { buildCliOutput } = require('../scripts/recover.js');
     const base = generateScale('#24009B', 'anchored', { dark: false });
@@ -2020,7 +2020,7 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
   const { recoverParameters, buildCliOutput } = require('../scripts/recover.js');
   const cli = argv => require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'scripts', 'generate.js'), ...argv], { encoding: 'utf8' });
   const throwsWith = (fn, re) => { try { fn(); return false; } catch (e) { return re.test(e.message); } };
-  // Light anchored, dark free: the shape SKILL.md describes, so the two lines differ.
+  // Light anchored, dark free: the shape references/figma-output.md describes, so the two lines differ.
   const light = g.generateScale('#2DAFB8', 'anchored'), dark = g.generateScale('#2DAFB8', 'free', { dark: true });
   const blocks = g.modeDescriptions({ Day: light, Night: dark });
   check('2.3 mode block: each heading is exactly "<mode name>:" on its own line, over that mode\'s line, every step',
@@ -2051,8 +2051,8 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
   check('2.3 tail rate: --collide-with reports the rate that clears the collision', collideCli.clearingTailRate === 54, String(collideCli.clearingTailRate));
 
   // Recovery. Anchored, the source is verbatim and the rate comes back exact. Free, the
-  // source's L and the rate trade off inside 8-bit rounding (SKILL.md, Parameter
-  // recovery), so the claim is the one that matters: the recovered parameters, rate
+  // source's L and the rate trade off inside 8-bit rounding (references/recovery.md,
+  // Tail-rate recovery), so the claim is the one that matters: the recovered parameters, rate
   // included, regenerate the ramp within 1/255, on the current text schedule.
   for (const [hex, mode, rate] of [['#D4A017', 'anchored', 50], ['#F5C400', 'anchored', 60]]) {
     const r = recoverParameters(g.generateScale(hex, mode, { tailRate: rate }).steps.map(st => st.hex));

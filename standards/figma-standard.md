@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.31.1** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.31.2** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -468,7 +468,7 @@ Cite a rule as `figma-standard rule N`.
 
     *Evidence:* 2026-10-15, a yellow brand extension copied from a blue one: moving the solid to the yellow's step 5 left its inverse text on step 1 at 1.4:1, and the same step 5 in dark mode put the button at 1.31:1 against the canvas. Nothing flagged either at the token mapping; rule 32 reaches them only once a component draws the pair.
 
-   *Reviewed:* `skills/oklch-color-scale-system/SKILL.md` "solidForeground" — the ramp's measured foreground for its solid, per mode; whether the brand's mapping follows it is read in the session that maps the brand.
+   *Reviewed:* `skills/oklch-color-scale-system/references/contrast.md` "solidForeground" — the ramp's measured foreground for its solid, per mode; whether the brand's mapping follows it is read in the session that maps the brand.
 
 49. **A component token is named `Component/<Component>/<Element>/<property>[-<variant>][-<state>]`, in the component's own words, and aliases a semantic token.** The component segment is the component's name (rule 13's marker stripped), or a family that shares tokens (`Input`). The element is the painted layer's role name (rule 10), `Container` for the component's frame. The lowercase leaf (rule 18) is the property, then hyphenated modifiers: the variant value as the file spells it, then the state or a gradient stop (`background-primary-hover`, `background-start`). A modifier appears only where the value differs by it: a label that does not change on hover has no state, and a default value (`Feedback=None`) adds nothing. Two variant values follow axis order (rule 1). A brand never appears in the name: its override lives in the brand's extension under the same name, bound as rule 60 says. A collection that holds only component tokens may drop the `Component/` prefix, since the collection already says it. One component worked through end to end, Figma path to stylesheet, with its cases: [tokens: component token names](../knowledge/code/tokens.md#component-token-names-worked-through). The wrong shapes:
 

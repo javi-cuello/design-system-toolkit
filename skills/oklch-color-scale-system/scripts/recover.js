@@ -428,7 +428,7 @@ function recoverWith(targetHexes, opts, luminanceText) {
   // step. A candidate that violates this isn't a valid anchored fit no matter how low
   // its reconstruction error is — most often it means the ramp had drift or another
   // manual adjustment applied on top of generation, which recovery has no model for
-  // (see "Parameter recovery" in SKILL.md). Prefer the best candidate that actually
+  // (see references/recovery.md). Prefer the best candidate that actually
   // satisfies its own mode's invariant; if the overall best-error candidate doesn't,
   // surface that loudly as a warning rather than silently returning a self-contradictory
   // "anchored" result.

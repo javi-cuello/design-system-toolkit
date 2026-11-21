@@ -1,4 +1,8 @@
-# Eval cases — oklch-color-scale-system (v2.3.2)
+# Eval cases — oklch-color-scale-system (v2.4.1)
+
+**Walked: 2026-11-21 for 2.4.1** — wording fixes after review; A5's Assert points at `references/`; A1–A16 hold as written.
+
+**Walked: 2026-11-21 for 2.4.0** — the rules moved from SKILL.md to `references/`; A4, A5, A6 and A11 re-traced to their new homes; `node tests/test-oklch.js` and `node tools/shared/test-mode-description.mjs` re-run; A1–A16 hold as written.
 
 **Walked: 2026-11-15 for 2.3.2** — an alpha description names the suffixed solid step; `node tests/test-oklch.js` 693/693 (two new checks, one pinned string updated); A1–A16 hold as written.
 
@@ -65,19 +69,19 @@ Runs: node tests/test-oklch.js — "no reference scale trips the contrast warnin
 Fixture: a ramp with a manual post-generation correction applied.
 Assert: the provenance description does not imply the ramp is reproducible from source + mode + ceiling alone. No description field records manual edits, so the edit is stated explicitly instead of inherited silently.
 
-Traced: 2026-08-17 — to SKILL.md's rule that no description field records a manual post-generation edit, so a hand-edited ramp has to say so explicitly.
+Traced: 2026-11-21 — to SKILL.md step 8 and `references/figma-output.md` (*Solid step descriptions*, "Hand edits are not recorded by any field"): a hand-edited scale says so explicitly.
 
 ## A5 · The formulas are never hand-computed in place of the script
 Fixture: a request to generate a scale.
-Assert: `generate.js` is run. `SKILL.md`'s formulas describe what that file does and are not a second specification to execute by hand.
+Assert: `generate.js` is run. The formulas in `references/` describe what that file does and are not a second specification to execute by hand.
 
-Traced: 2026-08-17 — to SKILL.md's "Before generating a scale", which sends full scale generation to the bundled `generate.js`.
+Traced: 2026-11-21 — to SKILL.md step 5, "Run `generate.js`; never hand-compute the scale", and the Files table's rule that the code is the specification.
 
 ## A6 · A light hue without a verbatim requirement gets `--peak`, never anchored (negative case)
 Fixture: a request for a ramp from a naturally-light source (yellow, amber, lime, orange, cyan region) where the exact hex carries no brand mandate.
-Assert: the ramp is generated `free --peak N`, not `--mode anchored`. Anchored answers "must this hex appear verbatim?"; peak answers "where does this hue's vividness live?" — and using anchored as a peak-placement workaround stamps `verbatim` provenance onto a ramp with no brand claim, bends the shared L grid at the anchor, and smooths a neighbour nobody asked to move. Recorded because it happened at scale: five non-brand ramps in one real palette were anchored for exactly this reason before `--peak` existed (1.5.0). The mode-and-peak decision table under "Before generating a scale" is the guardrail this case checks.
+Assert: the ramp is generated `free --peak N`, not `--mode anchored`. Anchored answers "must this hex appear verbatim?"; peak answers "where does this hue's vividness live?" — and using anchored as a peak-placement workaround stamps `verbatim` provenance onto a ramp with no brand claim, bends the shared L grid at the anchor, and smooths a neighbour nobody asked to move. Recorded because it happened at scale: five non-brand ramps in one real palette were anchored for exactly this reason before `--peak` existed (1.5.0). The mode-and-peak decision table in SKILL.md step 2 is the guardrail this case checks.
 
-Traced: 2026-08-17 — to the mode-and-peak decision table under SKILL.md's "Before generating a scale".
+Traced: 2026-11-21 — to the mode-and-peak decision table in SKILL.md step 2.
 
 ## A7 · A multi-ramp palette is calibrated by fraction, not by absolute chroma (negative case)
 Fixture: several ramps that must read as peers, across hues with materially different sRGB headroom (e.g. yellow, green, magenta).
@@ -110,7 +114,7 @@ Runs: node tests/test-oklch.js — "dialect: gray provenance says gray mode"
 
 Fixture: six hues at the same OKLCH L — `#BD00BE`, `#0E8D00`, `#1C83F9`, `#E5B800`, `#D93025`, `#00A3A3` — generated in free mode.
 
-Assert: the default equals `luminanceText: true`, whose cross-hue spread section 31 holds under 0.15 (these six measured 8.40–8.50:1 at step 10 against white, against 8.03–9.44:1 on the old schedule). With `--oklch-text` / `luminanceText: false`, `#1A6FBF` step 10 is the pre-2.0 `#005088`. `recover.js` returns `oklchText: true` for a ramp generated on the old schedule and leaves a current one unmarked. A drifted anchored ramp round-trips exactly on both schedules. `SKILL.md` never claims equal L makes contrast consistent across hues. Found by an article (Design Systems Journal, "Stop using OKLCH lightness…") whose claim reproduced here: the Overview said the opposite, and the schedule that fixed it was opt-in, so a ramp got it only if someone knew to ask.
+Assert: the default equals `luminanceText: true`, whose cross-hue spread section 31 holds under 0.15 (these six measured 8.40–8.50:1 at step 10 against white, against 8.03–9.44:1 on the old schedule). With `--oklch-text` / `luminanceText: false`, `#1A6FBF` step 10 is the pre-2.0 `#005088`. `recover.js` returns `oklchText: true` for a ramp generated on the old schedule and leaves a current one unmarked. A drifted anchored ramp round-trips exactly on both schedules. Neither `SKILL.md` nor `references/lightness.md` claims equal L makes contrast consistent across hues. Found by an article (Design Systems Journal, "Stop using OKLCH lightness…") whose claim reproduced here: the Overview said the opposite, and the schedule that fixed it was opt-in, so a ramp got it only if someone knew to ask.
 Runs: node tests/test-oklch.js — "2.0 default equals luminanceText: true", "2.0 --oklch-text reproduces the pre-2.0 ramp", "2.0 recovery leaves a current ramp unmarked"
 
 ## A12 · Steps placed by OKLCH L say when their hue moved them across a threshold
