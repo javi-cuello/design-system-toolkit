@@ -123,6 +123,51 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 
 **Sources.** Carbon, Primer and React Aria agree on a named bar with a value in text; they differ on placement (Carbon: label above, Primer: value beside).
 
+## A meter past its maximum
+
+Usage against a budget or quota (days used of days booked, storage, seats) is a meter, as *Overview* says; this section covers the value that goes over the limit.
+
+**Use when / don't use**
+- [required] No limit, no meter. HTML calls a `meter` without a known maximum wrong: "it would be wrong to use this to report a weight, or height, unless there is a known maximum value", and one with no `max` takes 1.0 and looks "maxed out"; the spec's fix is plain text, "one would either not include the meter element" ([HTML `meter`](https://html.spec.whatwg.org/multipage/form-elements.html#the-meter-element)). So nothing booked shows the count alone, never an empty bar.
+- [weak] A zero limit is not a limit: Shopify's `s-progress` turns "a `max` of `0` or less" into 1 ([Shopify Progress](https://shopify.dev/docs/api/app-home/latest/web-components/feedback-and-status-indicators/progress.md)), so a bar fed a zero budget draws as if it had one.
+
+**How**
+- [required] The element cannot hold an overrun. HTML clamps: "if the candidate actual value is greater than the maximum value, then the actual value is the maximum value" (HTML `meter`). ARIA forbids it: "The value of aria-valuenow MUST NOT fall below or exceed the computed values of aria-valuemin and aria-valuemax" ([WAI-ARIA `meter`](https://w3c.github.io/aria/#meter)). Past the limit the bar is full, and HTML asks for "a textual representation of the gauge's state" (HTML `meter`).
+- [contested] **Full bar or a bar past the end.** Clamped to full: Carbon (`cappedValue`, [Carbon ProgressBar source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/ProgressBar/ProgressBar.tsx)), Atlassian (`Math.min(value, MAX_VALUE)` for `aria-valuenow`, [Atlaskit progress-bar 5.3.7](https://cdn.jsdelivr.net/npm/@atlaskit/progress-bar@5.3.7/dist/esm/components/progress-bar.js)) and Shopify ("Values outside the scale are clamped", Shopify Progress). Past the end: Clockify's project bar "will go past 100% to reflect overage", "125% = 25% over the estimate" ([Clockify project estimates](https://clockify.me/help/troubleshooting/project-issues/understanding-project-estimates)); Harvest grows a red bar once a project is over budget ([Harvest projects overview](https://support.getharvest.com/hc/en-us/articles/360048181432); search excerpt, the page refuses a fetch, unchecked).
+- [moderate] The danger colour marks the limit reached or passed. Shopify: "Use `critical` and `warning` for progress that signals a problem, like an exhausted limit", its example an API limit at 96 of 100 with `tone="critical"` (Shopify Progress). Clockify's forecast chart: when the curve "exceeds the solid budget line", "the line color updates to indicate that your project has gone over" ([Clockify forecast chart](https://clockify.me/help/projects/forecast-chart)). WebKit draws a meter in its "even less good" region red by default ([MDN `::-webkit-meter-even-less-good-value`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/::-webkit-meter-even-less-good-value)). Atlassian's bar has no such tone: `appearance` is `default`, `success` or `inverse` (Atlaskit progress-bar 5.3.7).
+- [moderate] The figures give both numbers in the person's units: Clockify's status reads "15 (of 25h)" ([Clockify tracking project progress](https://clockify.me/help/projects/tracking-project-progress)); the HTML spec's own example reads "6 blocks used (out of 8 total)" (HTML `meter`).
+- [moderate] The overrun is said in words. Google names the state: "When you're over quota, it means you use more storage space than you have available" ([Google storage](https://support.google.com/googleone/answer/9312312?hl=en)); Clockify says how far, "25% over the estimate" (Clockify project estimates); Harvest lists "Over budget projects" (Harvest projects overview, unchecked).
+- [weak] The words sit under the bar, in the helper text: Carbon's error status "must convey the problem in the error helper text" ([Carbon progress bar](https://carbondesignsystem.com/components/progress-bar/usage/)). No source read places an overrun's words on their own.
+- [weak] Carbon's `error` status is not an overrun: it sets the value to 0, emptying the bar (Carbon ProgressBar source).
+
+**Cases**
+- "79 of 5 days" drawn as a fill 16 times the track's length → a full bar in the danger tone, with the count and how far over in words.
+- A project with nothing booked shows "0 of 0" over an empty track → no bar; the count alone.
+- An overrun shown only by a red fill → the words say it too; a full bar at the limit and past it look the same.
+- `<meter max="5" value="79">` → the browser draws 5 of 5; the 79 lives in the text beside it.
+
+**Accessibility**
+- [required] 1.4.1 Use of Color: colour "is not used as the only visual means of conveying information" ([Understanding 1.4.1](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html)); the overrun's words carry the state. 1.4.11 holds for the danger fill against the track.
+- [required] 4.1.2: `meter` lists "Accessible Name Required: True" (WAI-ARIA `meter`), as the progress bar does.
+
+**Build**
+- [required] `value` never above `max`: HTML's authoring requirement is "minimum ≤ value ≤ maximum" (HTML `meter`), and ARIA's MUST NOT holds for `role="meter"` (WAI-ARIA `meter`). The model clamps the value for the element and keeps the real count for the text (code-standard rule 29).
+- [required] `low`, `high` and `optimum` give the browser the over-state on a native `meter`: with `optimum` below `low`, the range above `high` "must be treated as an even less good region" (HTML `meter`). ARIA has no counterpart: "there are no WAI-ARIA properties corresponding to the low, optimum, and high attributes" (WAI-ARIA `meter`), so a `role="meter"` element carries the state in an attribute and the text.
+  ```html
+  <label for="days-1">Days used</label>
+  <meter id="days-1" min="0" max="5" low="4" high="4.99" optimum="0" value="5"
+         aria-describedby="days-1-text" data-state="over"></meter>
+  <span id="days-1-text">79 of 5 days, 74 over</span>
+  ```
+- [required] The overrun text is a description, tied by `aria-describedby`, never part of the name (code-standard rule 15).
+- [required] The over-state is one attribute computed in the model and styled from a danger token, never a class or a literal colour (code-standard rules 9 and 22).
+
+**Check**
+- *Script* could: flag a `meter` or `aria-valuenow` above its maximum; a `meter` with no `max`; a danger tone with no overrun text beside it.
+- *Judgement*: does the reader learn how far over, not only that it is over?
+
+**Sources.** HTML, WAI-ARIA, MDN and WCAG set the element. Carbon, Atlassian and Shopify clamp; Clockify draws past the end; Harvest's help refused a fetch. GitHub's, Google One's, Basecamp's and Bonsai's usage bars are not described in their public docs read, November 2026.
+
 ## In Figma
 
 **Layers**

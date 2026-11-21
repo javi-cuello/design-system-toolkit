@@ -16,7 +16,7 @@ How an interface shows figures so they can be read, compared and trusted: number
 - [moderate] One decimal at most for most figures, whole numbers where they serve: the EU's data visualisation guide says "As a rule, more than 1 digit after the decimal sign is not needed" and "many numbers … can be rounded to 1 digit after the decimal sign, or even to integers" ([data.europa.eu, number rounding](https://data.europa.eu/apps/data-visualisation-guide/number-rounding)); Cole gives percentages as "Integers, or one decimal place for values under 10%", two or more decimals "only if the range of values is less than 0.1%" ([Cole, "Too many digits", Arch Dis Child 2015](https://pmc.ncbi.nlm.nih.gov/articles/PMC4483789)). The Analysis Function: "The extent of rounding will depend on the intended use", and "use the same level of precision within each column" ([Analysis Function, tables](https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-tables)).
 - [weak] Thousands separators on four digits and up in running text and tables, in the locale's form.
 - [weak] Compact notation ("1.2k") only where space forces it and the exact value is one step away; never in a table people sort or compare.
-- [weak] Zero, missing and not applicable are three different values (this section owns the rule; other pages link here): "0", "Not measured" (a word, never a dash, which screen readers announce inconsistently: [tables: cell content and empty cells](tables.md#cell-content-and-empty-cells)), and blank for not applicable. A missing count beside a label (a tab, a filter option, a counter) is hidden, never shown as zero (Primer's [degraded experiences](https://primer.style/ui-patterns/degraded-experiences): "default to hiding the number").
+- [weak] Zero, missing and not applicable are three different values (this section owns the rule; other pages link here): "0", "Not measured" (a word, never a dash, which screen readers announce inconsistently: [tables: cell content and empty cells](tables.md#cell-content-and-empty-cells)), and blank for not applicable. A missing count beside a label (a tab, a filter option, a counter) is hidden, never shown as zero (Primer's [degraded experiences](https://primer.style/ui-patterns/degraded-experiences): "default to hiding the number"). In a record of days or hours: [*No entry, zero and none*](#no-entry-zero-and-none).
 - [weak] Signs: a change carries "+" or "−" and a direction word or icon; a negative value uses the true minus sign or the locale's form.
 - [strong] Tabular figures: `font-variant-numeric: tabular-nums` ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant-numeric)) on tables, tiles that update and counters, so digits do not jitter.
 
@@ -44,6 +44,51 @@ How an interface shows figures so they can be read, compared and trusted: number
 - *Judgement*: is this precision what the decision needs?
 
 **Sources.** GOV.UK and Mailchimp differ only by dialect; both agree on numerals and machine formatting. The toolkit lets the project's dialect decide and the formatter enforce it. On decimals, the EU's data visualisation guide and Cole agree on one at most for most figures, and the Analysis Function on one precision per column.
+
+## No entry, zero and none
+
+A record of days or hours holds values nobody entered beside values entered as nothing: a day not filled in, a day logged as 0 hours, a day off. This section covers telling them apart; how a table cell shows "no value" is [tables: *Cell content and empty cells*](tables.md#cell-content-and-empty-cells).
+
+**What good looks like**
+- [strong] A value never recorded looks different from one recorded as zero. GitLab: "Make sure null values are significantly different from `0` values" ([GitLab Pajamas, table](https://design.gitlab.com/components/table)). The UK statistics service: "A zero or '0' should only be used when a data point is a true zero" ([GSS, symbols and shorthand](https://gss.civilservice.gov.uk/policy-store/symbols-in-tables-definitions-and-help)). Primer hides a missing count rather than show zero ([Primer degraded experiences](https://primer.style/ui-patterns/degraded-experiences)).
+- [moderate] Not available, not applicable and none recorded are three states. GSS keeps "x = not available", "z = not applicable" and "w = none recorded in survey" apart, and does "not recommend using 'NA'" because "this shorthand is ambiguous" (GSS). GitLab labels a field that does not apply "Not applicable" and one with no data "No value" (GitLab Pajamas).
+- [moderate] A day off is an entry, not an empty day. Clockify: "Holiday time entries are automatically created on each holiday date", and an approved request creates an entry for each date in it ([Clockify, holidays and time off](https://clockify.me/help/track-time-and-expenses/track-holidays-time-off)). Harvest: "Once approved, time off appears automatically on the teammate's timesheet" ([Harvest, fall 2026](https://www.getharvest.com/blog/in-season-the-latest-from-harvest-fall-2026)).
+
+**How**
+- [moderate] A day off carries its own mark, apart from worked time. Clockify gives time-off and holiday entries a time-off icon, and "Approved time off entries will be shaded in green" (Clockify, holidays and time off). Google Calendar's out-of-office event "will have a different look on the Calendar grid, signalling to others that you're unavailable", and declines meetings in it ([Google Workspace Updates, 2018](https://workspaceupdates.googleblog.com/2018/06/better-manage-your-work-and-personal_27.html)).
+- [moderate] Time off lowers the hours expected. Toggl: "Approved time off is automatically factored into team capacity" ([Toggl time off](https://toggl.com/features/time-off-management)). Clockify: a target set to "Their work capacity" drops on approved time off; a "Custom time" target does not ([Clockify, targets and reminders](https://clockify.me/help/track-time/targets-reminders)).
+- [weak] Clockify also counts time-off entries in a person's, project's or task's total time, but leaves them out of invoices and attendance (Clockify, holidays and time off).
+- [moderate] A missing entry is chased; a day off is not. Clockify: "There are no reminders during time off", and a reminder fires when a member "doesn't meet their target" (Clockify, targets and reminders). Harvest's reminders are "smart enough to only be sent to people that need it": "If someone has already submitted or tracked their time for the week, they won't get reminders that week" ([Harvest, timesheet reminders](https://www.getharvest.com/blog/2021/04/timesheet-reminders)). Toggl emails people below their target, and its page does not say how time off counts ([Toggl, time tracking reminders](https://support.toggl.com/time-tracking-reminders)).
+- [weak] Someone who need not track is set to expect nothing, so they never look missing: Harvest excludes them from reminders by setting their capacity to 0 (Harvest, timesheet reminders).
+- [contested] **How "no value" is drawn.** Words: GitLab, "A text label is the most accessible and informative option" (GitLab Pajamas); GitLab's docs style, "avoid empty cells" and "use **None**" ([GitLab docs, tables](https://docs.gitlab.com/development/documentation/styleguide/tables/)). A dash: the EU component library, "use a dash ("-") to represent null or missing data in cells, rather than leaving them empty" ([EU component library, table](https://ec.europa.eu/component-library/eu/components/table/usage/)); GitLab allows an em dash "for dense data tables", "especially in numeric columns", with a tooltip. Blank: Primer, in [tables](tables.md#cell-content-and-empty-cells). A letter: GSS's x and z, with a key (GSS).
+- [moderate] Say why it is missing. GitLab: "prefer approaches that communicate _why_ data is missing rather than just _that_ it's missing", an em dash's tooltip reading "No activity in this time period" (GitLab Pajamas). Semrush's "n/a" cell has "a tooltip explaining that the data isn't available and why" ([Semrush, table states](https://developer.semrush.com/intergalactic/table-group/table-states/table-states)).
+- [weak] Missing values sort last: GitLab, "Null values should appear at the end of a sorted table in any sort direction" (GitLab Pajamas).
+
+**Cases**
+- A week where Wednesday was a holiday shows it blank, like Thursday nobody filled in → Wednesday marked as a day off; Thursday as no entry.
+- A day with no timesheet shown as "0h" → "No entry"; "0h" only where someone logged zero.
+- A reminder sent for a day booked off → the day off lowers the hours expected, and no reminder goes.
+- "—" for both "not entered" and "day off" in one column → two marks, each with its word.
+
+**Accessibility**
+- [required] 1.3.1 and 1.4.1: a day's state (off, no entry, zero) is in text, never only in an icon or a shade ([Understanding 1.4.1](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html)); an icon is `aria-hidden` beside its word (code-standard rule 18).
+- [moderate] A dash or a blank needs hidden words. GitLab: "A screen reader might skip an empty cell or not voice certain characters like a dash", so pair them "with visually hidden text" (GitLab Pajamas); Primer's reason is the same, in [tables](tables.md#cell-content-and-empty-cells).
+
+**Build**
+- [required] The model holds no entry, zero and a day off as three values (`null`, `0`, a time-off kind); the template branches on which, never on a falsy value (code-standard rule 12, code-standard rule 29).
+  ```html
+  <td><data value="0">0h</data></td>
+  <td data-day="off">Day off</td>
+  <td><span aria-hidden="true">—</span><span class="visually-hidden">No entry</span></td>
+  ```
+- [required] A day off is an attribute (`data-day="off"`) with its word in the markup, styled from tokens (code-standard rule 9, code-standard rule 22).
+- [required] Reminders, "missing" counts and the cells read one function in the model, so a day off is never counted as missing (code-standard rule 29).
+
+**Check**
+- *Script* could: flag "0" rendered where the model holds no entry; a day off and a missing day with the same markup; a dash or blank cell with no hidden text.
+- *Judgement*: can the reader tell a day off from a day forgotten at a glance?
+
+**Sources.** GSS and GitLab for the states; Clockify, Harvest, Toggl and Google Calendar for days off and reminders, as linked, read November 2026. On drawing "no value" GitLab, the EU library, Primer and GSS disagree. Bonsai's time-off help refused a fetch; Carbon, Atlassian, Polaris and GOV.UK publish no cell-level rule found.
 
 ## Dates and times
 
