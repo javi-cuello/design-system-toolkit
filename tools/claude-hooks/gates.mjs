@@ -681,12 +681,14 @@ function checked(st, id, rec) {
   const repo = st.checks[id]; delete st.checks[id];
   if (repo !== undefined && !st.checkedAt[repo]) st.checkedAt[repo] = rec.timestamp || new Date().toISOString();
 }
+// a repo whose check has a quick mode (the toolkit's): the one named before the work
+const quickOf = (r) => { try { return fs.readFileSync(path.join(r, 'bin', 'check'), 'utf8').includes('--quick'); } catch { return false; } };
 const planGaps = (text, st = {}, work = [], changed = Infinity) => [
   // a plan kept from a piece already closed: reviewed for this one before it starts (its Goal for this piece, its Impact on
   // the files this one touches, its Measure), or marked done and a new one written
   ...(st.closedAt && changed < Date.parse(st.closedAt) ? [`a review of the kept plan for this piece: it was written for work closed at ${st.closedAt}; update its Goal, Measure and Impact for this piece under the same Aim (or, if this work serves another aim, mark it "Status: done" and write a new plan)`] : []),
   ...PLAN.filter((h) => !new RegExp(`^#+\\s*${h}\\b`, 'im').test(text)).map((h) => `the ${h} section`),
-  ...work.filter((r) => !st.checkedAt?.[r] && fs.existsSync(path.join(r, 'bin', 'check'))).map((r) => `a bin/check run in ${r} whose closing line came back (\`cd ${r} && bin/check --quick 2>&1 | tail -2\`: under a minute, no measuring lock, enough before the work; bin/land runs the full one; pasted text alone is not a run; output redirected to a file, or cut to a preview, hides that line: pipe it through tail; run it as the command, not behind time or env)`),
+  ...work.filter((r) => !st.checkedAt?.[r] && fs.existsSync(path.join(r, 'bin', 'check'))).map((r) => `a bin/check run in ${r} whose closing line came back (${quickOf(r) ? `\`cd ${r} && bin/check --quick 2>&1 | tail -2\`: under a minute, no measuring lock, enough before the work; bin/land runs the full one; ` : ''}pasted text alone is not a run; output redirected to a file, or cut to a preview, hides that line: pipe it through tail; run it as the command, not behind time or env)`),
   ...(work.some((r) => st.checkedAt?.[r] && st.firstEdit?.[r] && st.checkedAt[r] > st.firstEdit[r]) && !/^\W*late\W*:/im.test(section(text, 'Before')) ? ['a "late:" line under Before: the check ran after the work\'s first edit, so say what that edit may have hidden'] : []),
   // the closing line is asked for only where a repo the work touches has a check to close
   ...(!work.some((r) => fs.existsSync(path.join(r, 'bin', 'check'))) || CHECK_END.test(section(text, 'Before')) ? [] : ["bin/check's closing line under Before (\"green…\", \"== N FAILED…\" or the project's own, pasted from the run before the work)"]),
