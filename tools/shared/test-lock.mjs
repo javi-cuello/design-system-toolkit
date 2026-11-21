@@ -77,4 +77,21 @@ const t3 = Date.now();
 await Promise.all(lands.map((s) => new Promise((r) => s.on('close', r))));
 assert.ok(Date.now() - t3 > 4500, 'two lands run in turn, though a measure holds only one of two slots');
 await new Promise((r) => (l1.exitCode !== null ? r() : l1.on('close', r)));
-console.log('test-lock: 20 assertions passed');
+// a long holder gives its slot to a waiter between pieces of work, and gets it back: no run keeps a slot for hours
+{ const { yieldIfWanted, wanted, holder: who } = await import('./lock.mjs');
+  assert.equal(await hold('long run'), true, 'the long run holds the one slot');
+  assert.equal(wanted(), null, 'no one waits yet');
+  const w = spawn('node', [LOCK, '--run', 'short run', '--', 'sh', '-c', 'echo ran; sleep 1'], { env });
+  let wOut = ''; w.stdout.on('data', (d) => { wOut += d; });
+  await until(() => wanted());
+  assert.match(wanted().what, /short run/, 'the waiter is seen');
+  const said = []; const t4 = Date.now();
+  assert.equal(await yieldIfWanted('long run', { say: (l) => said.push(l) }), true, 'the holder yields');
+  assert.ok(wOut.includes('ran'), 'the waiter ran in between');
+  assert.match(said.join('\n'), /giving the slot to short run/, 'and the yield is said');
+  assert.equal(who()?.what, 'long run', 'the holder has the slot again');
+  assert.ok(Date.now() - t4 < 15000, 'promptly');
+  assert.equal(await yieldIfWanted('long run'), false, 'with no one waiting it keeps the slot');
+  release(); await new Promise((r) => (w.exitCode !== null ? r() : w.on('close', r)));
+  assert.equal(fs.readdirSync(process.env.TOOLKIT_LOCK_DIR).filter((f) => f.startsWith('want-')).length, 0, 'no waiter note is left behind'); }
+console.log('test-lock: 30 assertions passed');

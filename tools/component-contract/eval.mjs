@@ -506,8 +506,22 @@ async function readSelf(where, label, only, second = false, { changed = false, j
       done();
     });
   });
+  // between components, with none running, the measuring lock goes to whoever waits for it and comes back (lock.mjs
+  // yieldIfWanted): a run never keeps a slot for hours while a land or another measure queues
+  const lock = await import('../shared/lock.mjs');
   const queue = [...todo];
-  await Promise.all(Array.from({ length: Math.max(1, Math.min(jobs, queue.length)) }, async () => { while (queue.length && !stopped) await one(queue.shift()); }));
+  let running = 0, pausing = null;
+  const pause = () => pausing || (pausing = (async () => {
+    while (running) await new Promise((r) => setTimeout(r, 500));
+    await lock.yieldIfWanted(`eval.mjs ${process.argv.slice(2).join(' ')}`, { say: (l) => console.log(l) });
+    pausing = null;
+  })());
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(jobs, queue.length)) }, async () => {
+    while (queue.length && !stopped) {
+      if (pausing || lock.wanted()) { await pause(); continue; }
+      running++; try { await one(queue.shift()); } finally { running--; }
+    }
+  }));
 }
 
 /* The self leg read twice: a reading that is not the same both times is a measure that cannot be trusted. Returns the
