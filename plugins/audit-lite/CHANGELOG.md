@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.13.2] - 2026-11-21
+### Fixed
+- The results page's filters draw their own arrow, inset from the edge and in the page's muted colour, in place of the browser's arrow, which sat cramped against the border.
+
 ## [0.13.1] - 2026-11-21
 ### Changed
 - A raw colour's advice names a variable from the linked library's semantic colours where the file can reach them, else from the variables its components use (figma-components-audit 2.51.2).
