@@ -1,5 +1,6 @@
 # Changelog — figma-component-pass
 
+- 1.11.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I; stages 0–3 are workflow steps 1–8, and the order's rationale, stage ownership, the checkpoint's branches and the descriptions judgements move to `references/stages.md`. No rule changed.
 - 1.10.2 (2026-11-11): the interface-check sentence names what the descriptions stage generates since its 1.22.0 (a template's parts, size and reference screens); the change landed unbumped on 2026-11-10.
 - 1.10.1 (2026-11-01): stage 3 takes no input from stage 2's `PT.plan()` — it never did; each stage reads the interface itself and `verify.js` catches a change between them. The claimed hand-off and the by-eye plan comparison are gone.
 - 1.10.0 (2026-10-31): Stage 0 no longer enumerates the page; the composition count and the interface cross-check are the descriptions stage's scripts (`composition.js`, `verify.js`, `sections.mjs --check`), carried on, never redone here. A5 executed there.

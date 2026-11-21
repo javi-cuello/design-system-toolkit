@@ -1,4 +1,6 @@
-# Eval cases — figma-component-pass (v1.10.2)
+# Eval cases — figma-component-pass (v1.11.0)
+
+**Walked: 2026-11-21 against v1.11.0** — rewritten to skill-standard §A clause I: detail moved to `references/stages.md`, Stage 0–3 became workflow steps 1–8. Each case re-read against the new text; every rule it asserts survives (order, checkpoint, skip-not-improvise, defect omission and the two unbound-text exceptions, per-variant dedupe, fresh-read re-run of steps 6 and 7 together, missing stage named first, one report naming declined findings, per-component library runs). Section pointers updated; no assertion changed.
 
 **Walked: 2026-11-11 against v1.10.2** — a sentence on the descriptions stage only; no case reads it, so every case holds.
 
@@ -29,7 +31,7 @@ Two components carried the walk, chosen because their audit results differ: `_Ar
 ## A1 · The order never changes, even when stages are skipped
 Fixture: the user asks only for "the properties table and the description" on a component, explicitly not the audit.
 Assert: stage 1 is skipped as asked, and the table is still generated before the description. Requesting a subset removes stages; it never reorders the survivors.
-Assert also: asking for them in the wrong order ("write the description, then do the table") does not reorder the run — the skill produces table then description regardless of the phrasing. Per *Partial and repeat runs*: "the relative order never changes."
+Assert also: asking for them in the wrong order ("write the description, then do the table") does not reorder the run — the skill produces table then description regardless of the phrasing. Per SKILL.md *Partial and repeat runs*: "the order never changes."
 
 **Half-walked 2026-08-09 — the ordering assertion is observed; the skip assertion is not.**
 
@@ -43,7 +45,7 @@ Walked live: 2026-08-09 — a live component set put through the reversed-order 
 Fixture: a "full pass, get it ready to publish" on a component whose audit finds an interface-changing fix — a mis-suffixed property, say.
 Assert: detection runs, findings are presented, and the skill **stops and waits**. No fix is applied, and the run does not proceed to stage 2 on the assumption that "full pass" authorised the change.
 Assert also: interface-changing fixes are flagged as such when presented, and a variant property rename is flagged as breaking for the API (Code Connect, name-keyed scripts, Swap library) — never as rewriting instance overrides, which it does not (tested in Figma 2026-10-01, `figma-components-audit` case A98).
-This is the case with the most to lose. Per *The checkpoint*: "Running inside this bundle is not implicit approval." An unattended pipeline that restructures someone's component is the failure the checkpoint exists to prevent, and it will look like a successful run.
+This is the case with the most to lose. Per SKILL.md step 5 and stages.md *The checkpoint*: "Running inside this bundle is not implicit approval." An unattended pipeline that restructures someone's component is the failure the checkpoint exists to prevent, and it will look like a successful run.
 
 **Walked 2026-08-09 — passes, on a live interface-changing finding.** Stage 1 on `_Arrow button` (❖ Numerical input) returned its axes as `State → Disabled`, against the project canon of `… Disabled → State` with `State` last. That is an interface change: it alters the component's declared property order, not its rendering. The run **stopped there**. No fix was applied and stage 2 was not started for that component — the table was never derived from an interface under discussion.
 
@@ -56,7 +58,7 @@ Walked live: 2026-08-09 — a live component whose audit returned an interface-c
 ## A3 · An applied interface fix forces re-detection before anything is mirrored
 Fixture: the user approves a fix that renames a variant axis from `Status` to `Feedback`, and it is applied.
 Assert: detection is re-run on the same component and each finding confirmed cleared **before** stage 2 begins. The table and description mirror the corrected interface, so no `Status` row and no `Status` reference survives anywhere in the output.
-Per *Why this order*: both artefacts are derived from the interface, and a stale mirror "still looks perfectly well-formed" — nothing downstream will catch it.
+Per stages.md *Why this order*: both artefacts are derived from the interface, and a stale mirror "still look[s] well-formed" — nothing downstream notices.
 
 
 **Walked 2026-08-09 — passes, on a real applied fix rather than a staged one.** The maintainer authorised applying the axis reorder that A2 had stopped at, so A2 and A3 were walked back to back on the same component: A2 halted before the fix, A3 governs everything after it.
@@ -87,7 +89,7 @@ Not walked.
 Fixture: a stepper component set with a `Layout` axis, whose slot children are all named `Step item` but resolve to `Step item / Horizontal` under one Layout value and `Step item / Vertical` under the other.
 Assert: both mains appear in the composition list. A dedupe keyed on instance name alone across the whole set keeps only whichever variant was scanned first, and fails this case.
 Assert also: the resulting count is cross-checked against the number of distinct mains the variant axes predict, and a shortfall is raised rather than accepted — since 1.10.0 by the descriptions stage's suite (`composition.js` keyed per variant), never recounted by this skill.
-This is a recorded production failure, not a hypothetical — the stages' walks carry the keying, and Stage 0 states it with the cross-check this skill owns, because the short list is correct as far as it goes and nothing downstream flags it.
+This is a recorded production failure, not a hypothetical — the stages' walks carry the keying, and stages.md *What each stage owns* states it with the cross-check this skill owns, because the short list is correct as far as it goes and nothing downstream flags it.
 
 **Walked 2026-08-09 — passes, and the fixture exists in this library with the exact shape the case describes.** Both keyings were run side by side across all **56** component sets: the shipped `variant.name + '::' + i.name`, and the broken `i.name` alone. Exactly **one** set diverges.
 
@@ -102,7 +104,7 @@ Walked live: 2026-08-09 — both keyings run side by side across all 56 componen
 ## A6 · A missing Properties section is skipped and reported, never improvised (negative case)
 Fixture: a documentation page with no Properties section at all.
 Assert: stage 2 is skipped and the report says so. The skill does **not** create a Properties section, invent an anatomy for it, or write the table somewhere else that looks reasonable.
-Per *Stage 2*: "the stage is skipped rather than improvised — say so in the report instead of building one."
+Per SKILL.md step 6: "If the page has no Properties section, skip the stage and say so; never build one."
 
 **Walked 2026-08-09 — passes.** `❖ Select menu` holds components (`Menu - Item`, `Menu / Default`, `Menu / Filtering`) and **no Properties section**. Stage 2 against it returned `skipped: "no properties table"` and wrote nothing. No section was created, no anatomy invented, and the table was not placed somewhere else that would have looked plausible.
 
@@ -113,7 +115,7 @@ Walked live: 2026-08-09 — a live documentation page with no Properties section
 ## A7 · A known defect is omitted from the description, not written up as a feature (negative case)
 Fixture: the audit finds a hardcoded text layer with no corresponding text property; the fix is deferred.
 Assert: the description says nothing about that text, and the report notes the description will need a line once the property exists.
-Assert also: describing it as fixed or intentional content fails this case, even though such a sentence reads perfectly well. Per *Stage 3*: "Writing around a known defect quietly bakes it in."
+Assert also: describing it as fixed or intentional content fails this case, even though such a sentence reads perfectly well. Per stages.md *Descriptions*: "Writing around a known defect quietly bakes it in."
 Assert the prior question, because this case is worthless without it: **unbound text must first be judged a defect or not, and only defects reach the rule above.** Assert the default with it — **most text layers do need a property**, and the finding stands unless one of two narrow exceptions applies: static by design (weekday headings, a mandatory asterisk) or written by code at runtime (a live `Uploading - 64%` readout). A filename, caption, heading or label is a gap.
 Assert the negative that matters most here: **a run that reaches for either exception freely fails this case.** "Probably static" is available for any text at all, so an exclusion applied loosely swallows exactly the findings the check exists to produce — the same failure as flagging everything, arrived at from the other side. In the walked library the split was two static, one runtime-driven, two genuine gaps.
 
@@ -141,7 +143,7 @@ Walked live: 2026-08-09 — a dry-run pass; one consolidated report observed, bu
 Fixture: the user asks for a full pass across an entire page of components.
 Assert: each component is taken through all three stages before the next is started — not stage 1 across the whole page, then stage 2 across the whole page.
 Assert also: one complete description is shown for confirmation before the run continues at scale.
-Per *Partial and repeat runs*: per-component ordering is what keeps the interface reading, the table and the prose in sync; a stage-wide sweep reintroduces exactly the drift the ordering exists to prevent.
+Per SKILL.md *Partial and repeat runs*: per-component ordering is what keeps the interface reading, the table and the prose in sync; a stage-wide sweep reintroduces exactly the drift the ordering exists to prevent.
 
 
 **Not walked 2026-08-09 — single-component pass only.** Two components were taken through stages, but not as a library sweep, so the per-component-versus-per-stage ordering was never under pressure. This is the case most likely to fail in practice and least likely to fail in a small test: batching stage-wide is a temptation that appears at scale, when running one stage across thirty components is obviously faster than thirty three-stage passes. It needs a genuine whole-page run to mean anything.
@@ -162,4 +164,4 @@ Fixture: a "full pass" on one component in a session where `figma-properties-tab
 Assert: before stage 1 the run says `figma-properties-table` is not installed, and how to get it (`bin/get skills/figma-component-pass`, then `./install.sh`). Stages 1 and 3 run in order; the report's Properties section says the stage was skipped and why.
 Assert also (negative): no table is built by hand here, and stage 3 is not told a plan exists. Doing a missing stage's work in the orchestrator is the second owner toolkit-standard §D 4 forbids.
 
-Traced: 2026-10-31 — to Stage 0 step 3. That `bin/get skills/figma-component-pass` takes the three stage skills is executed by `bin/check`'s "every skill, from bin/get, has what it names".
+Traced: 2026-10-31 — to Stage 0 step 3 (SKILL.md step 3 since 1.11.0). That `bin/get skills/figma-component-pass` takes the three stage skills is executed by `bin/check`'s "every skill, from bin/get, has what it names".
