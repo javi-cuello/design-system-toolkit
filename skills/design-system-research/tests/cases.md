@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.12.0)
+# Eval cases — design-system-research (v3.13.0)
+
+**Walked: 2026-11-21 for 3.13.0** — SKILL.md and its references rewritten to skill-standard §A clause I; no rule changed. Step names, the voice file's §1 to §13 and the roster's section titles are kept, so most pointers stand. The research-collection rules moved to `references/research-collection.md`, and the register greps now live once, in voice §13, which the checklist points to. Traced lines re-pointed: A4, A14, A17, A23, A27, A29, A34, A35. Every case read against the new text: each Assert still follows from it (A10's and A23's greps match voice §13 character for character; A11's checklist keeps its 16 lines, no new one).
 
 **Walked: 2026-11-18 for 3.12.0** — A36 added, observed on the token-taxonomy run; the roster gains a section and no step changes, so A1 to A35 read against it: none asserts on the roster's contents. A5 (an index or survey is never cited alone) and A3 (user research outranks six rostered systems) were read: a longer roster changes neither.
 
@@ -95,7 +97,7 @@ Assert: the answer lands in chat with citations, in one turn. No markdown file i
 
 > Amended on the 2026-08-05 walk. The case originally asserted the Research feature "is not offered" at all, which the skill contradicts by design: "start light … ending by noting what a deeper investigation could add is always acceptable." The skill's behaviour is right and the assertion was over-strict, so the case was narrowed to the deliverable path rather than the mention.
 
-Traced: 2026-08-09 — to SKILL.md's light-mode deliverable path ("start light … ending by noting what a deeper investigation could add is always acceptable").
+Traced: 2026-08-09 — to SKILL.md's light-mode deliverable path; 2026-11-21 for 3.13.0 — now worded "start light. A light answer that ends by noting what deeper research could add is always fine".
 
 ## A5 · An index is cited through, never cited (negative case)
 Fixture: The Component Gallery shows five systems calling the same component "Disclosure"; a practice survey reports a token-adoption percentage.
@@ -183,7 +185,7 @@ Assert: the run asks for a safe scratch file, builds the smallest fixture that s
 Assert also (negative): the claim is not asserted from forum consensus or a search summary alone, and no fixture is built in a file the person did not name.
 
 Observed: 2026-10-01 — `figma-and-code-differences.md` and `breaking-changes-figma-and-code.md`; seventeen tests, three of which overturned what the research had been told.
-Traced: 2026-10-08 — to SKILL.md Step 6, "Where the documentation is silent on what a tool does, test it rather than infer it."
+Traced: 2026-10-08 — to SKILL.md Step 6; 2026-11-21 for 3.13.0 — its item 5, "Where the docs are silent on what a tool does, test it rather than infer it."
 
 ## A15 · Research feeds the knowledge base in the same change
 Fixture: a deep-mode run on "how should a form mark required fields", inside the toolkit repo.
@@ -202,7 +204,7 @@ Fixture: a deep-mode run on "design principles for interfaces", with the person'
 Assert: the run reads the collection's README and the knowledge pages first, narrows the piece to one question those pages cannot answer (or adds the finding to the knowledge base instead), files it in the fitting topic folder, and argues a thesis rather than surveying.
 Negative: a broad survey restating the knowledge base saved at the collection's root, a second piece on a question an existing piece asks, or a script or results file saved beside the pieces.
 Observed: 2026-11-02 — the collection had grown to 26 pieces at its root, five of them broad principle surveys restating the knowledge base, plus an experiment's script and results; the person: "not a place to dump everything".
-Traced: 2026-11-02 for 2.9.0 — to SKILL.md "A deep-mode guide is an article, not a store."
+Traced: 2026-11-02 for 2.9.0 — to SKILL.md "A deep-mode guide is an article, not a store"; 2026-11-21 for 3.13.0 — that section of references/research-collection.md.
 
 ## A18 · The guide teaches; it does not report
 Fixture: a deep-mode guide that passes A1–A17. It opens with a paragraph on when and how it was researched; its sections begin with a bold **The short answer.** label; a paragraph explaining auto layout also reports that a forum thread was re-read in November with six replies; and a section moves through five plugins and three systems with no example tying them together.
@@ -244,7 +246,7 @@ Fixture: a deep-mode guide on mirroring icons, where the obvious phrasing is "yo
 Assert: every hit of `grep -niE "\byou(r|rs|rself|rselves)?\b"` over the body, ignoring quoted speech and URLs, sits in a worked case, the advice, the cheat sheet, the short version or a quotation; the explanation talks about the problem and the people in it ("the designer", "a library with forty components"); the advice talks to the reader ("Open the component's description and add a line `Right to left: mirrors`").
 Negative: "your library" in the explanation of a mechanism; the advice kept in a third-person stand-in; the second person traded for a narrator "I" or "we".
 Observed: 2026-11-09 — the person ruled out the second person; 2026-11-11 — the person found the guides still read as a report, the research showed every educational source checked uses "you", and the person ruled it in for worked cases and advice (the cheat sheet and short version count as advice).
-Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §9 and §13, and SKILL.md's checklist grep.
+Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §9 and §13, and SKILL.md's checklist grep; 2026-11-21 for 3.13.0 — the grep lives in §13's block, and the checklist's last line points to it.
 
 ## A24 · The guide teaches as the magazines do
 Fixture: a deep-mode guide whose first screen stacks a subtitle, a summary line, "Part 3 of 9", a "This piece sets out" paragraph and a section pointer; whose second section drops a table and an SVG with no sentence before or after; which compares tokens to plumbing in three different sections, each with a new image; whose first section introduces five new terms in one paragraph; and whose advice opens with a bold **What to do.** label.
@@ -272,7 +274,7 @@ Fixture: a deep-mode guide whose worked case comes from a project the toolkit se
 Assert: the guide names the project by a neutral description or a stand-in ("Project A", "a marketplace") used consistently through the piece; the package scope and file id become placeholders (`@project-a/…`, `<file-id>`); a toolkit file is cited by its repo path, never a home folder; what a session said is paraphrased with no verbatim quote and no private date; `bin/check`'s "no project is named in the toolkit" step is green.
 Negative: a project's name, a client's company, an email address, `/Users/<name>/` or `~/Projects/<label>`, or a quoted private prompt anywhere in the guide, its SVG text or its sources.
 Observed: 2026-11-13 — the research articles moved into the public repo named four projects, their ids and scopes, and quoted the maintainer from session memory; the person ruled: anonymise, keep public, and make sure it does not happen again.
-Traced: 2026-11-13 for 3.3.0 — to SKILL.md "A deep-mode guide is an article, not a store" and research/README.md.
+Traced: 2026-11-13 for 3.3.0 — to SKILL.md "A deep-mode guide is an article, not a store" and research/README.md; 2026-11-21 for 3.13.0 — that section of references/research-collection.md.
 
 ## A28 · A guide weighs its advice on the knowledge base's scale
 Fixture: a deep-mode guide with three sections: one whose advice rests on four independent shipping systems, one on a single working audit, and one on a vendor's 2019 study of its own tool.
@@ -287,7 +289,7 @@ Fixture: "what is the best way to build the checkbox in Figma: a bare control an
 Assert: the run reads at least two libraries' source or Code Connect files for how the checkbox is split in code (SDS's `CheckboxField` rendering a bare `Checkbox`, Primer's label-less `Checkbox`), which props become which Figma properties, which states the browser sets, and which combinations code cannot reach (Carbon drops `invalid` when `disabled`); the findings land in `knowledge/ui/components/checkbox.md` under *Alignment with code*.
 Negative: a Figma schema recommended from kits' drawings alone; alignment with code left out because the question did not name it.
 Observed: 2026-11-16 — the checkbox run found the control-and-field split and the disabled-error exclusion only by reading SDS's and Carbon's source; the maintainer then asked that alignment with code be part of the default research.
-Traced: 2026-11-16 for 3.5.0 — to SKILL.md Step 1, "A component's alignment with code is always one of the axes".
+Traced: 2026-11-16 for 3.5.0 — to SKILL.md Step 1; 2026-11-21 for 3.13.0 — its item 2, "For a component, alignment with code is always one of the axes".
 
 ## A30 · A run on a topic takes its weak items first
 Fixture: a light-mode question on a topic whose knowledge section holds `[weak]` items.
@@ -323,7 +325,7 @@ Fixture: deep mode, a guide on a subject research/ already touches (corner radiu
 Assert: before searching, the reply or plan names the neighbouring articles read; the new piece links to a neighbour's section instead of retelling it; every neighbour whose fact, number or advice the finding changes is corrected in the same change with its `updated` day set in research/index.html, and the reply lists them; the guide is 4,760 words or fewer, figures and comments not counted.
 Negative: a guide that retells a neighbour's worked example, states a fact a neighbour states the other way, or runs past 20 minutes.
 Observed: 2026-11-17 — an audit of 35 articles found 19 contradictions and 10 overlapping sections (corner radius endorsed t-shirt names that spacing tokens said to drop; elevation stated Figma's stroke default the opposite way to the Figma-and-CSS piece), and 22 of 35 articles ran past 20 minutes at 238 words a minute, figures not counted (the longest 40).
-Traced: 2026-11-17 for 3.10.0 — to SKILL.md's deep-mode paragraph and the quality checklist.
+Traced: 2026-11-17 for 3.10.0 — to SKILL.md's deep-mode paragraph and the quality checklist; 2026-11-21 for 3.13.0 — references/research-collection.md, *Start from what research/ already holds* and *Twenty minutes at most*.
 
 
 ## A35 · Neighbours are found by the identifiers the draft cites
@@ -331,7 +333,7 @@ Fixture: deep mode, a guide on token tiers and names whose draft cites surface t
 Assert: before delivery the run greps research/ for each backticked identifier the draft cites and each system's term for the subject; every article a hit lands in is read, and the guide links its section or the reply names it as untouched.
 Negative: a neighbour search by title or the run's own words only, so an article sharing the cited names goes unread.
 Observed: 2026-11-18 — the token-tiers run missed how-surfaces-stack.md, which names the same surface tokens; the maintainer pointed it out.
-Traced: 2026-11-18 for 3.11.0 — to SKILL.md's "Find neighbours by identifier" and the quality checklist.
+Traced: 2026-11-18 for 3.11.0 — to SKILL.md's "Find neighbours by identifier" and the quality checklist; 2026-11-21 for 3.13.0 — that section of references/research-collection.md.
 Walked live: 2026-11-18 on research/components-and-naming/token-tiers-and-names.md: grepping its backticked names hits how-surfaces-stack.md on `bg-surface` and `background-hover`.
 
 ## A36 · A naming question reads built token files from beyond the usual cluster

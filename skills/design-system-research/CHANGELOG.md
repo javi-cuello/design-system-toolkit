@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.13.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I; collection rules move to references/research-collection.md, the roster becomes tables, voice greps sit in one block (§13). No rule changed.
 - 3.12.0 (2026-11-18): the roster gains *Token files beyond the usual cluster*, about 25 systems' npm token packages with what each is good for. Case A36.
 - 3.11.0 (2026-11-18): deep mode finds neighbours by identifier: the draft's backticked names and each system's term for the subject are grepped across research/, every hit an article to read. Case A35.
 - 3.10.1 (2026-11-17): Step 8 carries evidence into the knowledge base by §D 21 and knowledge/README.md as read at the time, restating neither; the article's recommendation stays in the article.
