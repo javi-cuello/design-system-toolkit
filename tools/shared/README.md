@@ -12,7 +12,7 @@ Most files are libraries that other tools import. A few also run as commands beh
 node tools/shared/check-cache.mjs <repo> [--quick] [--no-fix]      # bin/check's front door
 node tools/shared/check-cache.mjs --commit <repo> <commit>         # the pre-push check of one commit
 node tools/shared/lock.mjs --run <what> -- <command…>              # run a command under the measuring lock
-node tools/shared/lock.mjs --who                                   # who holds the lock
+node tools/shared/lock.mjs --who                                   # which slots are held, and by what
 node tools/shared/worktree.mjs <work>                              # make or find a work's worktree
 node tools/shared/worktree.mjs <work> --join                       # join a worktree another session holds
 node tools/shared/model-routing.mjs                                # print the model routes
