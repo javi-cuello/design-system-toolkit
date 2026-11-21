@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.52.0 (2026-11-21): SKILL.md rewritten to skill-standard §A clause I: lead, numbered steps, reference moved to six new references/ files, dated stories dropped, "record" for "tracker"; no rule changed.
 - 2.51.3 (2026-11-21): the description drops a word, back under the 1024-character limit 2.51.2 crossed; no rule changed.
 - 2.51.2 (2026-11-21): a raw colour's advice reads the linked library's semantic colours first (`figma.teamLibrary`, imported only when a scanned layer has a raw paint), the components' bound variables as fallback; live on FW3 with FW1's library.
 - 2.51.1 (2026-11-20): the dashboard is cited in `tools/figma-audit/REFERENCE.md`, *What it exposes*, where the README rewrite moved it; no rule changed.

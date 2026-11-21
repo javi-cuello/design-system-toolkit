@@ -4,7 +4,7 @@
 // load it (toolkit-standard §D 1).
 //
 // The scoring MODEL is figma-components-audit's — scanner/scoring.json, which
-// encodes SKILL.md "Scoring — on request only". This applies it and holds no
+// encodes references/scoring.md "The model". This applies it and holds no
 // weights, penalties, thresholds or dimension names of its own. It held the
 // six dimension names until 2026-09-20: a seventh added to scoring.json would
 // have moved every total with no column to show where it came from.

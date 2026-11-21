@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The fix queue as markdown, from the audit record: figma-components-audit's
-// chat report and its .md mirror (SKILL.md, "Chat report template"), generated
+// chat report and its .md mirror (references/fix-queue.md, "Chat report template"), generated
 // rather than assembled per run (toolkit-standard §D 23). The record is the
 // source; the same record always gives the same text.
 //

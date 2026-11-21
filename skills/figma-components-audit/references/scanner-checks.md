@@ -6,7 +6,7 @@ the audit: a session runs it, and so does the dashboard, which is what makes an
 audit produce the same result whoever launched it. `scripts/probes.js` holds the
 session's other deterministic work — discovery, the checks still at `backlog` or
 `session` in `scanner/checks.json`, and the fix recipes — as `FCA.*` functions a
-session loads once per file (`SKILL.md`, "Session probes"); nothing in it feeds
+session loads once per file (`scan-and-probes.md`, "Loading the probes"); nothing in it feeds
 the dashboard. Read this to understand *why* a check exists, what failure it
 was written for, and what it must not claim — then change the check in
 `scanner/audit.js`, and update the entry here in the same commit.

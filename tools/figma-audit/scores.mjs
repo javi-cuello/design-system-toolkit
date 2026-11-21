@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The score report as markdown, from the audit record: figma-components-audit's
-// on-request 0–100 component scores (SKILL.md "Scoring — on request only"),
+// on-request 0–100 component scores (references/scoring.md, "The model"),
 // computed by the model the dashboard applies (score-model.mjs) over the
 // skill's scanner/scoring.json and checks.json, never by hand (toolkit-standard
 // §D 23). The same record always gives the same table.

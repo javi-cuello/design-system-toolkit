@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.51.2)
+# Eval cases — figma-components-audit (v2.52.0)
+
+**Walked: 2026-11-21 for 2.52.0** — prose only: SKILL.md rewritten to skill-standard §A clause I, its reference sections moved to references/ (architecture, scan-and-probes, knowledge-pages, fix-queue, record, scoring). Each section of the old SKILL.md traced to its new home, so the cases' behaviours stay stated; wording kept where a case quotes it (A3's closing block); `node tests/test-audit.mjs` 142 of 142, `test-probes.mjs` 56 of 56, `test-sweep.mjs` 10 of 10.
 
 **Walked: 2026-11-21 for 2.51.2** — `node tests/test-audit.mjs` 142 of 142; live: example library 38 findings, Tab bar fill names 5. Semantic/Colour/Control/Neutral/ghost-rest; FW3 probe names FW1's 5. Semantic/Colour/Text/Success/default.
 
