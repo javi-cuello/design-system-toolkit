@@ -412,6 +412,17 @@ function everOverrides(c, id, mains, ctx) {
   return ps;
 }
 
+/* The colour a placed component draws the glyph of an icon it places in (its part at `rel` inside the instance at
+   `host`): that part's own glyph's, else the icon's component's own at the props it is given; null for none. */
+function placedGlyph(a, host, rel, m, mains) {
+  const { M } = placedAs(a, host, m, mains), at = placedOf(a, host, M)[rel], part = at && M[at];
+  if (!part || part.kind !== 'instance') return null;
+  const g = Object.values(M).find((x) => x && x.parent === at && x.kind === 'graphic');
+  if (g) return typeof g.background === 'string' ? g.background : null;
+  const im = part.component && mains(part.component, part.key);
+  return (im && glyphColour(im, part.with)) || null;
+}
+
 /* The layers recorded inside a placed instance, each matched to the part of its component it is (derive's placedMatch). */
 const placedOf = (a, host, M) => placedMatch(M, Object.fromEntries(Object.keys(a).filter((k) => k.startsWith(`${host}/`)).map((k) => [k.slice(host.length + 1), a[k]])));
 
@@ -428,10 +439,13 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
   const B = expand(c, variantDefaults(c));
   // every layer any combination records, as chain names it (the base's, and what variants add)
   const ALL = allOf(c);
+  // (inside a placed component: its glyph's colour is that component's, or an override there: recolour, below)
+  const insideAny = (id) => { for (let p = a[id].parent; p; p = a[p] && a[p].parent) if (a[p] && a[p].kind === 'instance') return true; return false; };
+  const recolour = new Map();
   // an instance whose insides are its component's (derive drops them) draws its glyph in the colour that component
   // gives it at the instance's props: the same colour, said the same way, as an opened instance's recorded glyph
   for (const [id, e] of Object.entries(a)) {
-    if (e.kind !== 'instance' || Object.values(a).some((x) => x.parent === id && x.kind === 'graphic')) continue;
+    if (e.kind !== 'instance' || Object.values(a).some((x) => x.parent === id && x.kind === 'graphic') || insideAny(id)) continue;
     const m = e.component && mains(e.component, e.key);
     if (!m) continue;
     const glyph = glyphColour(m, e.with);
@@ -451,7 +465,9 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
       // save the colour the instance's glyph is drawn in, which the placing component sets on it: an icon draws
       // in its element's color (currentColor), so the colour is the instance's
       // (a component this library holds draws it as its own part: an override on that part, below)
-      if (a[e.parent] && a[e.parent].kind === 'instance' && e.kind === 'graphic' && typeof e.background === 'string') extra.push([e.parent, [['color', tokenNames.token(e.background)]]]);
+      if (a[e.parent] && a[e.parent].kind === 'instance' && e.kind === 'graphic' && typeof e.background === 'string') {
+        if (inside(e.parent)) recolour.set(e.parent, e.background); else extra.push([e.parent, [['color', tokenNames.token(e.background)]]]);
+      }
       // an override inside a placed component this library holds (derive keeps only a part that differs from that
       // component drawn at the instance's props): what it changes there, on that component's own part, reached through
       // the instance (chain); at any depth of placing (each placed component names its own parts down to the next it holds), a part the placed component no longer has said, not guessed
@@ -580,14 +596,24 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
     if (!m || (hostOf(ALL, host) && !hostIn(c, host, mains)) || copyOf(c, host) || Object.keys(ALL).some((k) => k !== host && copyOf(c, k) === host)) continue;
     const now = overrideOf(a, host, id.slice(host.length + 1), m, mains, ALL);
     if (now) out[id] = { decls: new Map([...now.theirs].map(([p, v]) => [p, { v, given: true }])), unread: [] };
+    // (an icon's colour too: back to the one the placed component draws it in, not unset, which would inherit)
+    const own = now && ALL[id].kind === 'instance' && placedGlyph(ALL, host, id.slice(host.length + 1), m, mains);
+    if (own) out[id].decls.set('color', { v: tokenNames.token(own), given: true });
   }
   // copies of one part and a slot's children share one rule, so one pull back cannot be said for all but the first
   for (const id of pulling) if (out[id] && pulls(a[id]) && Object.keys(a).some((k) => a[k].parent === id && (copyOf(c, k) || a[id].kind === 'slot'))) out[id].unread.push('layout.gap below 0 between copies of one part or a slot\'s children (each pulls back on its own rule; theirs is shared)');
-  // (an instance inside a placed component this library holds that differs from that component's part only in its
-  // glyph's colour has no rule of its own yet: the colour is its override there, so it takes one)
-  for (const [id, decls] of extra) {
-    if (!out[id] && a[id] && inside(id) && hostIn(c, id, mains)) out[id] = { decls: new Map(), unread: [] };
-    if (out[id]) for (const [p, v, note, knob] of decls) out[id].decls.set(p, { v, note, knob });
+  for (const [id, decls] of extra) if (out[id]) for (const [p, v, note, knob] of decls) out[id].decls.set(p, { v, note, knob });
+  // an icon inside a placed component this library holds draws its glyph in the colour that component gives it, or in
+  // the one this component recolours it to there: the recolour is written (a rule of its own where nothing else differs),
+  // the component's own colour only where a rule set another (`given`), so it never falls back to inherit
+  for (const [id, e] of Object.entries(a)) {
+    if (e.kind !== 'instance' || !inside(id) || !hostIn(c, id, mains)) continue;
+    const host = hostOf(a, id), m = mains(a[host].component, a[host].key);
+    if ((ALL[host] || {}).component !== a[host].component) continue;
+    const own = placedGlyph(a, host, id.slice(host.length + 1), m, mains), mine = recolour.get(id);
+    if (mine == null && own == null) continue;
+    out[id] ||= { decls: new Map(), unread: [] };
+    out[id].decls.set('color', mine != null && mine !== own ? { v: tokenNames.token(mine) } : { v: tokenNames.token(own), given: true });
   }
   for (const [id, notes] of Object.entries(ringNotes)) if (out[id]) out[id].unread.push(...notes);
   const entry = entryOf(c);

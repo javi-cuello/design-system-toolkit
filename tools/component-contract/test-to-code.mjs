@@ -253,6 +253,21 @@ else console.log('skip: no stored contracts on this machine');
   const sheet = toCss(field, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
   ok('a placed icon recoloured inside a placed component takes the colour on that component\'s part',
     /data-off[^{]*> \.ds-field__tip > \.ds-tip__info \{\s*color: var\(--c-disabled\);\s*\}/.test(sheet) && selfCheck(field, rulesOf(field, mains).rules, mains).length === 0);
+  // an inner icon recorded with none of its glyph (it differs in size only) draws in the colour the placed component
+  // gives it, never its own component's (Info's C/primary, where Tip recolours it C/secondary)
+  const info = { contract: 1, component: 'Info', props: {}, anatomy: { root: { kind: 'container' }, vector: { kind: 'graphic', parent: 'root', background: 'C/primary' } }, variants: [] };
+  const mains2 = (n) => (n === 'Tip' ? tip : n === 'Info' ? info : null);
+  const sized = { ...field, variants: [{ when: { off: true }, add: { 'tip/info': { kind: 'instance', parent: 'tip', component: 'Info', width: 20, height: 20 } } }] };
+  const ss = toCss(sized, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: mains2 });
+  ok('an inner icon recorded without its glyph takes no colour of its own component\'s over the placed one\'s', !/c-primary/.test(ss) && selfCheck(sized, rulesOf(sized, mains2).rules, mains2).length === 0);
+  // recoloured at the defaults: elsewhere it goes back to the placed component's own colour, never unset (inherited)
+  const atBase = { ...field, props: { on: { type: 'boolean', default: true, axis: true, figma: 'Enabled' } }, variants: [{ when: { on: true }, add: field.variants[0].add }] };
+  const bs = toCss(atBase, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an inner recolour at the defaults goes back to the placed component\'s colour elsewhere, not unset',
+    /> \.ds-tip__info \{\s*color: var\(--c-disabled\);/.test(bs) && /data-on="false"[^{]*> \.ds-tip__info \{\s*color: var\(--c-secondary\);/.test(bs) && !/unset/.test(bs) && selfCheck(atBase, rulesOf(atBase, mains).rules, mains).length === 0);
+  // recorded in the placed component's own colour: nothing to write
+  const same = { ...field, variants: [{ when: { off: true }, add: { 'tip/info': field.variants[0].add['tip/info'], 'tip/info/vector': { kind: 'graphic', parent: 'tip/info', background: 'C/secondary' } } }] };
+  ok('an inner icon in the placed component\'s own colour gets no rule', !/ds-tip__info/.test(toCss(same, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains }).split('@layer')[1]));
 }
 
 // an override inside a placed component is written on that component's own part, through the instance, and only what
