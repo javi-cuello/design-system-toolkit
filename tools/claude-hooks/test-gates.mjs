@@ -240,7 +240,7 @@ test('plan gate: the call that makes the work full is refused until a plan with 
     p.clean();
   }
   // a project's check ends in its own words
-  for (const end of ['== all green', '== FAILURES above', 'RED']) {
+  for (const end of ['== all green', '== FAILURES above', 'RED', 'toolkit gates: green', 'toolkit gates: 2 RED']) {
     const p = session([dated(withId(call('Bash', { command: 'bin/check' }), 'p1')), dated(checkResult('p1', end)), user('go'), edit('a.mjs', 200)], { checked: false });
     fs.writeFileSync(planPath(p.id), PLAN_TEXT.replace('green\n', end + '\n'));
     assert.equal(planGate(p.id, p.file, REPOS, next, TOOLKIT), null, `a project's closing line "${end}" counts`);

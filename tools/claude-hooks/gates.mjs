@@ -661,7 +661,8 @@ const section = (text, h) => {
 };
 // each repo's check ends on one of these: the toolkit's ("green…", "== N FAILED…"), and the projects' own
 // ("== all green", "== FAILURES above", "RED")
-const CHECK_END = /^[\s>*`=-]*(green\b|all green\b|[1-9]\d* FAILED\b|FAILURES above\b|RED\b)/m;
+// (a project's bin/check, tools/project-check/check.mjs, closes "toolkit gates: green" or "toolkit gates: N RED")
+const CHECK_END = /^[\s>*`=-]*(?:toolkit gates: )?(green\b|all green\b|[1-9]\d* FAILED\b|FAILURES above\b|(?:[1-9]\d* )?RED\b)/m;
 // run as a command, not named as an argument (`cat bin/check` reads it)
 const CHECK_RUN = /(^|[\n;&|(]\s*)(?:[^\s;&|()]*\/)?bin\/check(?![\w.-])/;
 /* The repo a check ran in: the folder its path names (`~/Projects/x/bin/check`), else the
