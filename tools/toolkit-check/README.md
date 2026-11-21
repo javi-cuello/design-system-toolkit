@@ -21,7 +21,7 @@ bin/closing                                            # what is open across the
 | `owned-check.mjs` + `owned.json` | Fails a repo that writes again a job the toolkit owns, instead of calling the toolkit. |
 | `leftovers.mjs` | Worktrees, branches and stashes left behind. It removes what is clean, old and merged, and parks work left untouched for a week. |
 | `twins.mjs` | Warns when two projects each wrote the same job, before the toolkit owns it. |
-| `readability.mjs` + `readability.json` | Every README reads plainly (§D 22). |
+| `readability.mjs` + `readability.json` | Every README and skill reads plainly (§D 22, skill-standard §A clause I). |
 | `readmes.mjs` | Every folder has a README in the agreed shape (§D 22). |
 | `restated.mjs` + `restated.json` | Prose that restates what another file owns agrees with it (§D 22). |
 | `main-guards.mjs` | Every script's "am I the one being run" guard works through a symlink and on import. |

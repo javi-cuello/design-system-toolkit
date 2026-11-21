@@ -1,6 +1,6 @@
 # Skill standard — definition of done for a skill and a plugin
 
-**Version 1.9.0** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
+**Version 1.10.0** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
 
 What a skill (`skills/`) and a plugin (`plugins/`) must be before they are committed. What every standard shares, including how these clauses are enforced and changed, is [`toolkit-standard.md`](toolkit-standard.md)'s; this file adds only what is particular to a skill or a plugin.
 
@@ -194,6 +194,26 @@ A skill's own files are its `references/`, `scripts/` and `tests/`. It may also 
 *Why:* a skill that reads another's files breaks when they move. A toolkit tool is shared on purpose (toolkit-standard §D 1), and a skill that names it travels with it only if the path is one `bin/get` reads. *Evidence:* an orchestrating skill read its stages' files until 2026-09-10, when it was changed to run them by name (figma-component-pass 1.5.0); until 2026-10-31 `bin/get` followed only code, and six skills whose `SKILL.md` runs `tools/` came out of it without them (maintainer decision that day: skills may call the tools `bin/get` follows).
 
 *Checked:* `standards/tests/check.sh` "reads another skill's files" and "names what the toolkit does not have" (warned per skill); `bin/check` "every skill, from bin/get, has what it names" (each skill taken alone, every path it names on disk); a reader confirms a sibling a skill names is named to run, not read.
+
+### I — A skill is read, so it is written to be read
+
+A `SKILL.md` and its `references/*.md` are read by a model on every run and by the maintainer whenever it changes. They follow toolkit-standard §D 22's plain-language numbers for sentences, paragraphs, tables, code spans and reading grade. The 800-word cap is replaced by these:
+
+| What | Rule |
+|---|---|
+| Lead | The H1, the version line, then one paragraph: what the skill does and when to use it |
+| Workflow | Numbered steps, one action each; a step's detail lives in a reference, linked |
+| Length | The `SKILL.md` body stays under 500 lines; past that, reference moves to `references/` |
+| References | One level deep from `SKILL.md`; a reference over 100 lines opens with a contents list |
+| History | No dated stories: why a rule exists stays, the incident goes to `CHANGELOG.md`, `tests/cases.md` or git log |
+| Terms | One word for one thing throughout: a record is never also a tracker |
+| One home | A rule a standard, a script or another reference owns is linked, not restated |
+
+*Why:* the skills grew by accretion, each rule carrying the story of the failure that bought it. On 2026-11-21 none of the 23 met the README limits; `figma-components-audit` ran to 9,526 words with 174 sentences over 25 words. A rule buried in its own history is a rule the model weighs as one sentence among many. The length, nesting, contents-list, history and terms rules are Anthropic's Agent Skills best practices (platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices): "Keep the SKILL.md body under 500 lines", "Keep references one level deep", a table of contents for reference files "longer than 100 lines", "Avoid time-sensitive information", "Use consistent terminology".
+
+*Evidence:* maintainer-decreed 2026-11-21, after the README rewrite (§D 22): skills held "not only to limits — to readability and everything else that applies".
+
+*Checked:* `tools/toolkit-check/readability.mjs` "lines in the SKILL.md body", "no contents list at the top", "dated stor" (run by `bin/check`; the skills written before the clause are held by the ratchet in `readability.json`, which only tightens); `tools/toolkit-check/test-readability.mjs` "a skill has no word cap but a 500-line body". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — the lead, one action per step, one term per concept and one home per rule are a read when a skill changes.
 
 ### Verifying a skill
 

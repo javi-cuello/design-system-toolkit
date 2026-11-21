@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // readability.mjs: what counts as prose, what each limit catches, and the ratchet.
 import assert from 'node:assert/strict';
-import { measure, over, prose, LIMITS } from './readability.mjs';
+import { measure, over, prose, LIMITS, SKILL_LIMITS, kindOf } from './readability.mjs';
 
 let n = 0; const ok = (name, cond) => { n++; assert.ok(cond, name); };
 const words = (k) => Array.from({ length: k }, (_, i) => 'word' + i).join(' ');
@@ -22,4 +22,13 @@ ok('a ~~~ fence and a fence indented in a list are code', measure('# T\n\n~~~\n'
 ok('a blockquote after a blank line is its own paragraph', prose('One two.\n\n> Three four.\n').length === 2);
 ok('e.g. does not end a sentence', measure('# T\n\nUse a short name, e.g. The button.\n').longSentences === 0 && prose('# T\n\nUse a name, e.g. The button.\n')[0].sentences.length === 1);
 ok('a 1) list splits into items', prose('1) one.\n2) two.\n').length === 2);
+ok('a SKILL.md and its references are skill pages; a README is not', kindOf('skills/x/SKILL.md') === 'skill' && kindOf('skills/x/references/a.md') === 'reference' && kindOf('skills/README.md') === 'readme' && kindOf('tools/x/README.md') === 'readme');
+ok('a skill has no word cap but a 500-line body', over(measure('---\nname: x\n---\n# T\n\n' + ('Short one here now. '.repeat(5) + '\n\n').repeat(41), 'skill'), 'skill').length === 0
+  && over(measure('# T\n' + 'Line.\n'.repeat(SKILL_LIMITS.lines + 1), 'skill'), 'skill').some((x) => /lines in the SKILL.md body/.test(x)));
+ok('the frontmatter is not the body', measure('---\nname: x\ndescription: ' + words(40) + '.\n---\n# T\n', 'skill').longSentences === 0);
+ok('a dated story in a skill is named; a date in code is not', measure('# T\n\nIt broke on 2026-08-13.\n\n`2026-08-13`\n', 'skill').dated === 1);
+ok('a reference over 100 lines needs a contents list', measure('# R\n' + 'Line.\n'.repeat(120), 'reference').noContents === 1
+  && measure('# R\n\n## Contents\n' + 'Line.\n'.repeat(120), 'reference').noContents === 0
+  && measure('# R\n' + 'Line.\n'.repeat(50), 'reference').noContents === 0);
+ok('a README is measured as before: no lines, dates or contents', !('dated' in measure('# T\n\nOn 2026-01-01.\n')));
 console.log(`test-readability: ${n} assertions passed`);

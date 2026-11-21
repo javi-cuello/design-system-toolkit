@@ -24,7 +24,7 @@ Warns when two projects each wrote the same job, before the toolkit owns it.
 
 ## `readability.mjs`
 
-Every README reads plainly (§D 22). Tested by `test-readability.mjs`.
+Every README and skill reads plainly (§D 22, skill-standard §A clause I). Tested by `test-readability.mjs`.
 
 ## `readmes.mjs`
 

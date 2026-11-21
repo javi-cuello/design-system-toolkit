@@ -1,1 +1,442 @@
-{}
+{
+ "skills/component-validator/SKILL.md": {
+  "words": 2667,
+  "longSentences": 52,
+  "longParagraphs": 8,
+  "codeParagraphs": 6,
+  "grade": 12.7,
+  "lines": 84,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/component-validator/references/android.md": {
+  "words": 1205,
+  "longSentences": 10,
+  "longParagraphs": 2,
+  "codeParagraphs": 2,
+  "grade": 10.2,
+  "lines": 114,
+  "dated": 2,
+  "noContents": 1
+ },
+ "skills/component-validator/references/ios.md": {
+  "words": 1499,
+  "longSentences": 21,
+  "longParagraphs": 5,
+  "codeParagraphs": 5,
+  "grade": 11.2,
+  "lines": 114,
+  "dated": 2,
+  "noContents": 1
+ },
+ "skills/component-validator/references/mui.md": {
+  "words": 1417,
+  "longSentences": 20,
+  "longParagraphs": 2,
+  "codeParagraphs": 2,
+  "grade": 9.1,
+  "lines": 190,
+  "dated": 0,
+  "noContents": 1
+ },
+ "skills/component-validator/references/web.md": {
+  "words": 3348,
+  "longSentences": 57,
+  "longParagraphs": 12,
+  "codeParagraphs": 6,
+  "grade": 11.2,
+  "lines": 164,
+  "dated": 3,
+  "noContents": 1
+ },
+ "skills/design-code-parity/SKILL.md": {
+  "words": 20661,
+  "longSentences": 365,
+  "longParagraphs": 83,
+  "codeParagraphs": 22,
+  "grade": 15.9,
+  "lines": 413,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/design-system-research/SKILL.md": {
+  "words": 5024,
+  "longSentences": 88,
+  "longParagraphs": 18,
+  "codeParagraphs": 0,
+  "grade": 13.3,
+  "lines": 151,
+  "dated": 4,
+  "noContents": 0
+ },
+ "skills/design-system-research/references/deep-mode-voice.md": {
+  "words": 3571,
+  "longSentences": 45,
+  "longParagraphs": 7,
+  "codeParagraphs": 2,
+  "grade": 10,
+  "lines": 175,
+  "dated": 13,
+  "noContents": 1
+ },
+ "skills/design-system-research/references/system-sources.md": {
+  "words": 2966,
+  "longSentences": 48,
+  "longParagraphs": 1,
+  "codeParagraphs": 2,
+  "grade": 18.4,
+  "lines": 157,
+  "dated": 1,
+  "noContents": 1
+ },
+ "skills/ds-model-routing/SKILL.md": {
+  "words": 803,
+  "longSentences": 12,
+  "longParagraphs": 1,
+  "codeParagraphs": 2,
+  "grade": 10.4,
+  "lines": 50,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/figma-component-descriptions/SKILL.md": {
+  "words": 5035,
+  "longSentences": 69,
+  "longParagraphs": 9,
+  "codeParagraphs": 8,
+  "grade": 11.2,
+  "lines": 261,
+  "dated": 2,
+  "noContents": 0
+ },
+ "skills/figma-component-descriptions/references/component-description-guide.md": {
+  "words": 3012,
+  "longSentences": 38,
+  "longParagraphs": 1,
+  "codeParagraphs": 0,
+  "grade": 11,
+  "lines": 319,
+  "dated": 2,
+  "noContents": 1
+ },
+ "skills/figma-component-pass/SKILL.md": {
+  "words": 1932,
+  "longSentences": 29,
+  "longParagraphs": 3,
+  "codeParagraphs": 1,
+  "grade": 11.4,
+  "lines": 129,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/figma-components-audit/SKILL.md": {
+  "words": 9375,
+  "longSentences": 174,
+  "longParagraphs": 28,
+  "codeParagraphs": 17,
+  "grade": 12.1,
+  "lines": 368,
+  "dated": 8,
+  "noContents": 0
+ },
+ "skills/figma-components-audit/references/conventions-universal.md": {
+  "words": 3464,
+  "longSentences": 53,
+  "longParagraphs": 6,
+  "codeParagraphs": 2,
+  "grade": 12.5,
+  "lines": 125,
+  "dated": 5,
+  "noContents": 1
+ },
+ "skills/figma-components-audit/references/judgment-protocol.md": {
+  "words": 1108,
+  "longSentences": 15,
+  "longParagraphs": 2,
+  "codeParagraphs": 0,
+  "grade": 13.3,
+  "lines": 55,
+  "dated": 3,
+  "noContents": 0
+ },
+ "skills/figma-components-audit/references/scanner-checks.md": {
+  "words": 13454,
+  "longSentences": 211,
+  "longParagraphs": 36,
+  "codeParagraphs": 33,
+  "grade": 11.8,
+  "lines": 603,
+  "dated": 27,
+  "noContents": 1
+ },
+ "skills/figma-context-capture/SKILL.md": {
+  "words": 2256,
+  "longSentences": 34,
+  "longParagraphs": 7,
+  "codeParagraphs": 1,
+  "grade": 12,
+  "lines": 124,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/figma-context-capture/references/discovery-passes.md": {
+  "words": 3269,
+  "longSentences": 47,
+  "longParagraphs": 5,
+  "codeParagraphs": 16,
+  "grade": 10.8,
+  "lines": 141,
+  "dated": 1,
+  "noContents": 1
+ },
+ "skills/figma-contrast-matrix/SKILL.md": {
+  "words": 1968,
+  "longSentences": 33,
+  "longParagraphs": 8,
+  "codeParagraphs": 8,
+  "grade": 13.1,
+  "lines": 81,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/figma-doc-generator/SKILL.md": {
+  "words": 11189,
+  "longSentences": 147,
+  "longParagraphs": 19,
+  "codeParagraphs": 24,
+  "grade": 8.6,
+  "lines": 613,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/figma-doc-generator/references/failures.md": {
+  "words": 5199,
+  "longSentences": 54,
+  "longParagraphs": 2,
+  "codeParagraphs": 10,
+  "grade": 8.4,
+  "lines": 500,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/figma-doc-generator/references/helpers.md": {
+  "words": 3961,
+  "longSentences": 46,
+  "longParagraphs": 7,
+  "codeParagraphs": 13,
+  "grade": 8.3,
+  "lines": 361,
+  "dated": 4,
+  "noContents": 0
+ },
+ "skills/figma-doc-generator/references/recipes.md": {
+  "words": 2510,
+  "longSentences": 29,
+  "longParagraphs": 2,
+  "codeParagraphs": 8,
+  "grade": 6.9,
+  "lines": 199,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/figma-file-diff/SKILL.md": {
+  "words": 1983,
+  "longSentences": 15,
+  "longParagraphs": 3,
+  "codeParagraphs": 2,
+  "grade": 7.2,
+  "lines": 158,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/figma-file-diff/references/normalisation.md": {
+  "words": 468,
+  "longSentences": 2,
+  "longParagraphs": 0,
+  "codeParagraphs": 3,
+  "grade": 8,
+  "lines": 52,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/figma-foundations-audit/SKILL.md": {
+  "words": 2652,
+  "longSentences": 41,
+  "longParagraphs": 8,
+  "codeParagraphs": 8,
+  "grade": 8.6,
+  "lines": 89,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/figma-plugin-creator/SKILL.md": {
+  "words": 1119,
+  "longSentences": 14,
+  "longParagraphs": 3,
+  "codeParagraphs": 3,
+  "grade": 16.2,
+  "lines": 29,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/figma-plugin-creator/references/conformance-checklist.md": {
+  "words": 1748,
+  "longSentences": 28,
+  "longParagraphs": 4,
+  "codeParagraphs": 4,
+  "grade": 13.1,
+  "lines": 50,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/figma-plugin-creator/references/network-fetch-patterns.md": {
+  "words": 411,
+  "longSentences": 4,
+  "longParagraphs": 0,
+  "codeParagraphs": 1,
+  "grade": 10.7,
+  "lines": 33,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/figma-project-audit/SKILL.md": {
+  "words": 845,
+  "longSentences": 14,
+  "longParagraphs": 1,
+  "codeParagraphs": 0,
+  "grade": 9.2,
+  "lines": 44,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/figma-properties-table/SKILL.md": {
+  "words": 3253,
+  "longSentences": 51,
+  "longParagraphs": 10,
+  "codeParagraphs": 7,
+  "grade": 10.8,
+  "lines": 130,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/figma-prototype/SKILL.md": {
+  "words": 1656,
+  "longSentences": 31,
+  "longParagraphs": 5,
+  "codeParagraphs": 3,
+  "grade": 12.3,
+  "lines": 30,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/figma-tokens-examples/SKILL.md": {
+  "words": 2359,
+  "longSentences": 35,
+  "longParagraphs": 4,
+  "codeParagraphs": 4,
+  "grade": 9.5,
+  "lines": 131,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/figma-variable-audit/SKILL.md": {
+  "words": 2868,
+  "longSentences": 43,
+  "longParagraphs": 7,
+  "codeParagraphs": 5,
+  "grade": 11.8,
+  "lines": 130,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/frontend-build/SKILL.md": {
+  "words": 2205,
+  "longSentences": 29,
+  "longParagraphs": 2,
+  "codeParagraphs": 5,
+  "grade": 10.9,
+  "lines": 109,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/humanizer/SKILL.md": {
+  "words": 4306,
+  "longSentences": 35,
+  "longParagraphs": 12,
+  "codeParagraphs": 0,
+  "grade": 10.2,
+  "lines": 422,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/kirby-cms/SKILL.md": {
+  "words": 2016,
+  "longSentences": 26,
+  "longParagraphs": 2,
+  "codeParagraphs": 8,
+  "grade": 8.7,
+  "lines": 276,
+  "dated": 0,
+  "noContents": 0
+ },
+ "skills/kirby-cms/references/blueprints.md": {
+  "words": 545,
+  "longSentences": 5,
+  "longParagraphs": 0,
+  "codeParagraphs": 6,
+  "grade": 7.2,
+  "lines": 156,
+  "dated": 0,
+  "noContents": 1
+ },
+ "skills/kirby-cms/references/gotchas.md": {
+  "words": 2384,
+  "longSentences": 28,
+  "longParagraphs": 5,
+  "codeParagraphs": 7,
+  "grade": 9,
+  "lines": 165,
+  "dated": 1,
+  "noContents": 1
+ },
+ "skills/kirby-cms/references/plugins-hooks-routes.md": {
+  "words": 999,
+  "longSentences": 6,
+  "longParagraphs": 0,
+  "codeParagraphs": 4,
+  "grade": 6.8,
+  "lines": 208,
+  "dated": 0,
+  "noContents": 1
+ },
+ "skills/kirby-cms/references/templating.md": {
+  "words": 677,
+  "longSentences": 4,
+  "longParagraphs": 0,
+  "codeParagraphs": 2,
+  "grade": 7.8,
+  "lines": 172,
+  "dated": 0,
+  "noContents": 1
+ },
+ "skills/oklch-color-scale-system/SKILL.md": {
+  "words": 18778,
+  "longSentences": 295,
+  "longParagraphs": 56,
+  "codeParagraphs": 20,
+  "grade": 8,
+  "lines": 967,
+  "dated": 1,
+  "noContents": 0
+ },
+ "skills/type-scale/SKILL.md": {
+  "words": 1407,
+  "longSentences": 16,
+  "longParagraphs": 2,
+  "codeParagraphs": 4,
+  "grade": 6.9,
+  "lines": 66,
+  "dated": 5,
+  "noContents": 0
+ }
+}
