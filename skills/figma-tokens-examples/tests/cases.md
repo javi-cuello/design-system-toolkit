@@ -1,4 +1,6 @@
-# Eval cases — figma-tokens-examples (v1.5.0)
+# Eval cases — figma-tokens-examples (v1.6.0)
+
+**Walked: 2026-11-21 against v1.6.0** — prose restructured to skill-standard §A clause I; old §1–§6 now SKILL.md steps 1–10, references/anatomy.md and references/building.md. Each case read against the new text: every asserted rule is still stated (T1 *Finding the swatch layer*, T2 Content table, T3 step 5, T4 `Empy` convention, T5 step 4 and *The audit*, T6 step 10, T7 and T8 the script). Section pointers in the assertions updated; walk notes below keep their old § numbers. `node tests/test-tokens-mapping.mjs` passes.
 
 **Walked: 2026-10-31 against v1.5.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -14,7 +16,7 @@
 
 **Two findings and one open question came out of it**, all recorded in the case that produced them and queued in Project A's context. The open question is a direct contradiction between this skill's stated rule and the reference file it documents, and it is left open deliberately rather than resolved by guessing which side is stale.
 
-Every case below pins a mistake the skill already documents. That is deliberate: §5 is a list of failures someone hit and wrote down, and a documented failure with no case is exactly what invites the regression back.
+Every case below pins a mistake the skill already documents. That is deliberate: the common-mistakes table (references/building.md) is a list of failures someone hit and wrote down, and a documented failure with no case is exactly what invites the regression back.
 
 ## T1 · The swatch is bound, never the pill
 Fixture: a row whose `Content` pill carries a neutral overlay fill and whose `Sample` swatch is the layer that should receive the variable.
@@ -38,7 +40,7 @@ Walked live: 2026-08-09 — Project A's `04. Documentation` mapping page, all 58
 
 ## T2 · A variant switch resets the layers that must stay neutral
 Fixture: a cell switched from `Content=Shape` to `Content=Text`, where the previous variant left an override on a same-named layer.
-Assert: the layers §2's table lists as "must stay neutral" are explicitly reset after the switch, not assumed clean. Variant-switch bleed carries an old override onto the identically-named layer in the new variant, which renders as a plausible colour rather than as an error.
+Assert: the layers the Content table (references/anatomy.md) lists as "must stay neutral" are explicitly reset after the switch, not assumed clean. Variant-switch bleed carries an old override onto the identically-named layer in the new variant, which renders as a plausible colour rather than as an error.
 
 **Walked 2026-08-09 — passes.** §2's table names one layer that must stay neutral after a switch: for the `Text` variant, the `Content > Sample` FRAME fill, which can inherit a prior `Shape` swatch's colour. All **21** `Text`-variant cells were checked: every one carries `#000000 a=0.03`, none is bound to a variable, and none holds any other colour.
 
@@ -78,7 +80,7 @@ Walked live: 2026-08-09 — the page's 114 instances carrying the `Empy` propert
 
 ## T5 · Symmetry is never assumed across branches
 Fixture: a Role with no Type split, sitting beside Roles that have one.
-Assert: the branch is built from what that Role's variables actually show, not from the shape of its neighbours. Assert also that verification is programmatic rather than visual — §4 exists because a table can look right and carry wrong bindings, and the pill/swatch confusion in T1 is precisely the failure a visual check passes.
+Assert: the branch is built from what that Role's variables actually show, not from the shape of its neighbours. Assert also that verification is programmatic rather than visual — the audit (references/building.md, *The audit*) exists because a table can look right and carry wrong bindings, and the pill/swatch confusion in T1 is precisely the failure a visual check passes.
 
 **Walked 2026-08-09 — passes on both halves.**
 
@@ -107,14 +109,14 @@ Walked live: 2026-08-09 — Project A's context §4 authored-vs-generated table 
 
 ## T7 · The bind and the audit are the script, and the audit sees what the prose described
 Fixture: mock `Level token` instances for each `Content` variant, one switched from `Shape` to `Text` with the old swatch colour left on `Sample`, one whose `Text` swatch layer is named `A`, one bound pill, one label naming a different token than its binding, and a frame named `Soft` holding a `Level 3-4` labelled `Inverse`.
-Assert (`token` mode, `applyCell`): the colour lands on §2's layer for each variant — `Sample` fill, `Sample > Aa` fill, `Sample` stroke — keeping the paint's opacity; the pill is reset to the neutral paint; after a `Shape` → `Text` switch the bled `Sample` colour is reset (T2); a `Stroke` `Sample` ends with no fills; the label is the variable name in dot notation unless one is given; a missing swatch layer is returned as an issue naming the path, never skipped (T1's lesson).
+Assert (`token` mode, `applyCell`): the colour lands on the Content table's layer for each variant — `Sample` fill, `Sample > Aa` fill, `Sample` stroke — keeping the paint's opacity; the pill is reset to the neutral paint; after a `Shape` → `Text` switch the bled `Sample` colour is reset (T2); a `Stroke` `Sample` ends with no fills; the label is the variable name in dot notation unless one is given; a missing swatch layer is returned as an issue naming the path, never skipped (T1's lesson).
 Assert (`audit` mode, `auditTable`): a correctly built table returns no issues and counts every cell and frame it checked; the planted table returns exactly four — the bound pill, the missing `Aa`, the label/binding mismatch, the stale frame name — and does not count an `Empy=True` level as a frame to check; a `Stroke` cell whose `Sample` keeps fills is reported.
 Assert (`token` mode, `writeCells`, 1.3.1): a cell whose variant switch throws and one whose paint bind throws each become a `write failed` issue, a missing node is reported, and the healthy cell is still written (`done` 1).
-Assert: §2 and §4 carry no inline copy of the bind or the audit (clause G).
+Assert: SKILL.md and its references carry no inline copy of the bind or the audit (clause G).
 Runs: node tests/test-tokens-mapping.mjs — against mock nodes; live Figma behaviour not observed.
 
 ## T8 · A section's rows come from the chosen sample by script, each branch from its own names
 Fixture: a five-name Background sample — an Accent Type with `soft-rest` and `soft-hover`, its `inverse-rest`, a Neutral with no Type split, a Feedback emphasis with no State; then a three-segment name, a duplicate, a sample mixing Background and Text, a `Shadow` category; and, in `rows` mode against a mock file, one name that is local, one bound on the page and one that is neither.
-Assert: each row's Role, Type, Emphasis and State are read from its own name, capitalised, with `null` (an `Empy` cell, T4) where its shape lacks the column; the tree is §3's chain in the sample's order, and `Inverse` keeps its one State rather than its sibling's two (T5); each cell carries the category's `Content` variant from §2 and its dot-notation label. Assert (negative): the wrong shape, the duplicate, the mixed sample and the category with no variant are each an issue, not a guessed row; the name that resolves to nothing is `[check-token]` (T3), while a name bound on the page resolves as well as a local one. Recorded under toolkit-standard §D 23: the rows were assembled by the agent from the sample each run.
+Assert: each row's Role, Type, Emphasis and State are read from its own name, capitalised, with `null` (an `Empy` cell, T4) where its shape lacks the column; the tree is the chain in references/building.md in the sample's order, and `Inverse` keeps its one State rather than its sibling's two (T5); each cell carries the category's `Content` variant from references/anatomy.md and its dot-notation label. Assert (negative): the wrong shape, the duplicate, the mixed sample and the category with no variant are each an issue, not a guessed row; the name that resolves to nothing is `[check-token]` (T3), while a name bound on the page resolves as well as a local one. Recorded under toolkit-standard §D 23: the rows were assembled by the agent from the sample each run.
 
 Runs: node tests/test-tokens-mapping.mjs — "rowsFor reads each name's shape on its own, and blanks what it lacks", "rows mode in Figma marks a name that resolves to nothing as [check-token] (T3)"

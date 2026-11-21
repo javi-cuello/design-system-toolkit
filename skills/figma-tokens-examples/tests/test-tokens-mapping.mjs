@@ -27,7 +27,7 @@ const deps = {
   bindPaint: (p, v) => Object.assign({}, p, { boundVariables: { color: { type: "VARIABLE_ALIAS", id: v.id } } }),
   getVariableById: async (id) => VARS[id] || null,
 };
-// The subtree each Content variant carries, by §2's table. `bleed` copies the
+// The subtree each Content variant carries, by references/anatomy.md's Content table. `bleed` copies the
 // Sample fill from the previous variant onto the new one, as Figma does for a
 // same-named layer.
 function variantTree(variant, bleed, textName = "Aa") {
@@ -162,7 +162,7 @@ await check("a cell that throws is an issue, and the batch goes on", async () =>
 const SAMPLE = [
   "Colour/Background/Accent/Primary/soft-rest",
   "Colour/Background/Accent/Primary/soft-hover",
-  "Colour/Background/Accent/Primary/inverse-rest",   // Inverse has rest only (§1 step 4)
+  "Colour/Background/Accent/Primary/inverse-rest",   // Inverse has rest only (SKILL.md step 4)
   "Colour/Background/Neutral/soft-rest",             // Neutral has no Type split
   "Colour/Background/Feedback/Danger/strong",        // no State
 ];
@@ -176,7 +176,7 @@ await check("rowsFor reads each name's shape on its own, and blanks what it lack
     ["Neutral", null, "Soft", "Rest"], ["Feedback", "Danger", "Strong", null]]);
   assert.deepEqual(r.cells[0], { variable: SAMPLE[0], content: "Frame", label: "background.accent.primary.soft.rest" });
 });
-await check("rowsFor's tree is §3's chain, in the sample's order, with an Empy node where a column does not apply", async () => {
+await check("rowsFor's tree is references/building.md's chain, in the sample's order, with an Empy node where a column does not apply", async () => {
   const { tree } = rowsFor(SAMPLE);
   assert.deepEqual(tree.map((n) => n.label), ["Accent", "Neutral", "Feedback"]);
   const soft = tree[0].children[0].children[0];
@@ -186,7 +186,7 @@ await check("rowsFor's tree is §3's chain, in the sample's order, with an Empy 
   const danger = tree[2].children[0].children[0].children[0];
   assert.deepEqual([danger.empty, danger.cell.label], [true, "background.feedback.danger.strong"]);
 });
-await check("rowsFor names what it cannot place: a wrong shape, a duplicate, a mixed sample, a category §2 has no variant for", async () => {
+await check("rowsFor names what it cannot place: a wrong shape, a duplicate, a mixed sample, a category the Content table has no variant for", async () => {
   const r = rowsFor(["Colour/Background/x", SAMPLE[0], SAMPLE[0], "Colour/Text/Accent/Primary/medium"]);
   const problems = r.issues.map((i) => i.problem);
   assert.ok(problems.some((p) => /3 segments/.test(p)), "shape");

@@ -1,5 +1,5 @@
 // Tokens-mapping engine — fills and audits the `Level token` cells of a
-// "Tokens mapping" table (SKILL.md §2–§4). Run as a figma_execute body; the
+// "Tokens mapping" table (references/anatomy.md, references/building.md). Run as a figma_execute body; the
 // caller prepends one of:
 //
 //   const MODE = "token"; const CELLS = [{ id, content, variable, label? }, …];
@@ -15,7 +15,7 @@
 //
 //   const MODE = "rows"; const SAMPLE = ["Colour/Background/Accent/Primary/soft-rest", …];
 //       The rows a section shows, from the sample of variable names chosen for
-//       it (§1 step 4): each row's Role, Type, Emphasis and State labels, which
+//       it (SKILL.md step 4): each row's Role, Type, Emphasis and State labels, which
 //       of them is an `Empy` cell, and the token cell — `Content` variant and
 //       label — ready to pass as `token` mode's CELLS once the ids exist. Each
 //       name is resolved as `token` mode resolves it; one that resolves to
@@ -23,9 +23,9 @@
 //       { category, content, rows, tree, cells, issues }.
 //
 // What stays the agent's: which variables the sample holds, cloning and
-// pruning the Role/Type/Emphasis/State chain (§3) to the rows `rows` mode
+// pruning the Role/Type/Emphasis/State chain (references/building.md) to the rows `rows` mode
 // returns, and what a finding means — the skill's T1 records a file whose pills are bound to a
-// neutral token on purpose, against §2's rule, as a question still open.
+// neutral token on purpose, against the pill rule in references/anatomy.md, as a question still open.
 //
 // With no `figma` in scope the body returns its functions, so the logic runs
 // in node against mock nodes: node tests/test-tokens-mapping.mjs
@@ -33,7 +33,7 @@
 // The pill's own background — always a flat neutral overlay, never bound.
 const NEUTRAL_PAINT = { type: "SOLID", visible: true, opacity: 0.03, blendMode: "NORMAL", color: { r: 0, g: 0, b: 0 }, boundVariables: {} };
 
-// Where the colour lives per `Content` variant (§2's table, as data). `path`
+// Where the colour lives per `Content` variant (references/anatomy.md's Content table, as data). `path`
 // is the swatch below the pill; `neutral` are layers reset to NEUTRAL_PAINT;
 // `noFills` are layers whose fills must be empty.
 function swatchPlan(variant) {
@@ -55,12 +55,12 @@ function labelFor(variableName) {
   return String(variableName).split("/").slice(1).join(".").replace(/-/g, ".").toLowerCase();
 }
 
-// §2's table, by category: the `Content` variant each section's token cells take.
+// references/anatomy.md's Content table, by category: the `Content` variant each section's token cells take.
 const CONTENT_BY_CATEGORY = { Background: "Frame", Icon: "Shape", Text: "Text", Stroke: "Stroke" };
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// §1 step 4's three shapes, read off each name in the chosen sample:
+// SKILL.md step 4's three shapes, read off each name in the chosen sample:
 //   Colour/{Category}/{Role}/{Type}/{emphasis}-{state}   all four columns
 //   Colour/{Category}/{Role}/{Type}/{emphasis}           State is an Empy cell
 //   Colour/{Category}/{Role}/{emphasis}[-{state}]        Type is an Empy cell
@@ -74,7 +74,7 @@ function rowsFor(names) {
     if (seen.has(name)) { issues.push({ variable: name, problem: "listed twice in the sample" }); continue; }
     seen.add(name);
     if (seg.length !== 4 && seg.length !== 5) {
-      issues.push({ variable: name, problem: `${seg.length} segments — not one of §1's Role/Type/Emphasis(-State) shapes` });
+      issues.push({ variable: name, problem: `${seg.length} segments — not one of SKILL.md step 4's Role/Type/Emphasis(-State) shapes` });
       continue;
     }
     const [, category, role] = seg;
@@ -88,8 +88,8 @@ function rowsFor(names) {
   if (categories.size > 1) issues.push({ problem: `the sample spans ${[...categories].join(", ")} — a section shows one category` });
   const category = categories.size === 1 ? [...categories][0] : null;
   const content = category ? CONTENT_BY_CATEGORY[category] || null : null;
-  if (category && !content) issues.push({ problem: `§2's table has no Content variant for "${category}" — decide which, and add it there` });
-  // The chain §3 builds: Role → Type (or Empy) → Emphasis → State (or Empy) → token.
+  if (category && !content) issues.push({ problem: `references/anatomy.md's Content table has no Content variant for "${category}" — decide which, and add it there` });
+  // The chain references/building.md builds: Role → Type (or Empy) → Emphasis → State (or Empy) → token.
   const tree = [];
   const node = (list, label) => {
     let n = list.find((x) => x.label === label);
@@ -150,7 +150,7 @@ async function auditTable(table, deps) {
     if (!plan) { say(`unknown Content variant "${variant}"`); return; }
     const pill = child(node, "Content");
     if (!pill) { say("no layer named \"Content\""); return; }
-    if (boundId(pill.fills)) say("pill bound to a variable (§2: always the flat neutral overlay)");
+    if (boundId(pill.fills)) say("pill bound to a variable (references/anatomy.md: always the flat neutral overlay)");
     for (const p of plan.neutral) { const n = walkPath(pill, p); if (n && boundId(n.fills)) say(`${p.join(" > ")} bound — must stay neutral`); }
     for (const p of plan.noFills) { const n = walkPath(pill, p); if (n && (n.fills || []).length) say(`${p.join(" > ")} has fills — must have none`); }
     const target = walkPath(pill, plan.path);
@@ -164,7 +164,7 @@ async function auditTable(table, deps) {
     if (label !== null && label !== labelFor(v.name)) say(`label reads "${label}" but the swatch is bound to ${v.name}`);
   };
   await walk(table);
-  // §3 step 5: a cloned frame keeps its source's name. A frame whose direct
+  // references/building.md, Building a branch step 6: a cloned frame keeps its source's name. A frame whose direct
   // Level 1/2/3-4 child is labelled differently is stale. Counted, so a table
   // whose structure this does not recognise reads as 0 checked, not as clean.
   measures.levelFrames = 0;
