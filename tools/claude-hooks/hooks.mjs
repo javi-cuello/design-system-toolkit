@@ -125,7 +125,7 @@ if (mode === 'edit') {
     try {
       const { isPush } = await import('./gates.mjs');
       const { holder, describe } = await import('../shared/lock.mjs');
-      const h = isPush(payload.tool_input?.command) && holder();
+      const h = isPush(payload.tool_input?.command) && holder({ first: true });
       if (h) note = `This push's bin/check waits for the measuring lock, now held by ${describe(h)}.`;
     } catch { /* said nothing: the check itself says whom it waits for */ }
   }

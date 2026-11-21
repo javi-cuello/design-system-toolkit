@@ -65,7 +65,7 @@ export async function run(repo, args) {
   // a caller that already holds the lock (bin/land) keeps it: this run neither takes nor lets go of it
   const outer = !!process.env.TOOLKIT_LOCK_HELD;
   const let_go = () => { if (!outer) release(); };
-  if (!outer && (mode(args) === 'quick' || !(await hold(`bin/check${args.length ? ' ' + args.join(' ') : ''}`)))) process.env.TOOLKIT_LOCK_HELD = String(process.pid);
+  if (!outer && (mode(args) === 'quick' || !(await hold(`bin/check${args.length ? ' ' + args.join(' ') : ''}`, { first: true })))) process.env.TOOLKIT_LOCK_HELD = String(process.pid);
   const before = can ? treeKey(repo) : null;
   hit = before && lookup(before, args);
   if (hit) { let_go(); return replay(hit); }

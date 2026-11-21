@@ -29,6 +29,8 @@ export const lockDir = () => process.env.TOOLKIT_LOCK_DIR || common();
    overloading the machine, and none has reason to move the lock aside (agents given their own TOOLKIT_LOCK_DIR ran
    five measures at once and doubled the load, 2026-11-21). One slot per four cores (a measure runs about four jobs);
    TOOLKIT_LOCK_SLOTS sets it (the tests: 1). Slot 0 keeps the old file names. */
+/* bin/check and bin/land take slot 0 alone (`first`): land rebases and pushes in one shared worktree, and a queued
+   check takes the answer of the same tree's run before it, so both need their kind one at a time; measures take any slot. */
 export const slots = () => Math.max(1, +process.env.TOOLKIT_LOCK_SLOTS || Math.floor(os.cpus().length / 4));
 const lockFile = (i = 0) => path.join(lockDir(), `toolkit-measure${i ? `.${i}` : ''}.flock`);
 const infoFile = (i = 0) => path.join(lockDir(), `toolkit-measure${i ? `.${i}` : ''}.holder.json`);
@@ -38,7 +40,7 @@ const TRY = 'import fcntl,sys\ntry: f=open(sys.argv[1],"a")\nexcept Exception: s
 // hold: "busy" when it must wait, "held" once it holds, then keep it until stdin closes (the holder gone)
 // the note (argv[2] into argv[3]) is written under the lock, before "held", so a waiter never reads the last holder's
 // argv: the note, then lock file and note file per slot; the first slot free is taken, else every slot is tried again each second
-const HOLD = 'import fcntl,sys,time\nn=sys.argv[1]; p=sys.argv[2:]; fs=[]\nfor i in range(0,len(p),2):\n  try: fs.append((open(p[i],"a"),p[i+1]))\n  except Exception:\n    print("nolock",flush=True); sys.exit(0)\nsaid=False\nwhile True:\n  for f,w in fs:\n    try: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\n    except OSError: continue\n    try: open(w,"w").write(n)\n    except Exception: pass\n    print("held",flush=True); sys.stdin.read(); sys.exit(0)\n  if not said: print("busy",flush=True); said=True\n  time.sleep(1)\n';
+const HOLD = 'import fcntl,sys,time\nn=sys.argv[1]; p=sys.argv[2:]; fs=[]\nfor i in range(0,len(p),2):\n  try: fs.append((open(p[i],"a"),p[i+1]))\n  except Exception: pass\nif not fs:\n  print("nolock",flush=True); sys.exit(0)\nsaid=False\nwhile True:\n  for f,w in fs:\n    try: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\n    except OSError: continue\n    try: open(w,"w").write(n)\n    except Exception: pass\n    print("held",flush=True); sys.stdin.read(); sys.exit(0)\n  if not said: print("busy",flush=True); said=True\n  time.sleep(1)\n';
 
 /* The live session's name, from Claude Code's registry (~/.claude/sessions/<pid>.json), else its id. */
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
@@ -55,9 +57,9 @@ export function sessionName(id, dir = path.join(os.homedir(), '.claude', 'sessio
 
 /* Who a new run would wait for: the earliest holder { pid, what, session, at } when every slot is held, or null when one
    is free (asked of the locks, not of the notes). */
-export function holder() {
+export function holder({ first = false } = {}) {
   const held = [];
-  for (let i = 0; i < slots(); i++) {
+  for (let i = 0; i < (first ? 1 : slots()); i++) {
     if (spawnSync('python3', ['-c', TRY, lockFile(i)], { stdio: 'ignore' }).status !== 1) return null;
     try { held.push(JSON.parse(fs.readFileSync(infoFile(i), 'utf8'))); } catch { held.push({ pid: 0, what: 'a run', at: Date.now() }); }
   }
@@ -68,14 +70,14 @@ export const describe = (h) => `${h.what} (pid ${h.pid}${h.session ? `, ${sessio
 let child = null;
 /* Wait for the lock (saying who holds it, then each minute), lower this process's priority, and hold it until release()
    or this process ends. Resolves false when it could not be taken at all: the run goes ahead unlocked, said. */
-export function hold(what, { say = (l) => console.error(l) } = {}) {
+export function hold(what, { say = (l) => console.error(l), first = false } = {}) {
   if (process.env.TOOLKIT_LOCK_HELD) return Promise.resolve(true);
   try { fs.mkdirSync(lockDir(), { recursive: true }); } catch { /* the open says it */ }
   return new Promise((resolve) => {
     let timer = null, buf = '', done = false;
     const finish = (ok, why) => { if (done) return; done = true; clearInterval(timer); if (!ok) { say(`measuring lock: ${why}; running without it`); child = null; } resolve(ok); };
     const note = JSON.stringify({ pid: process.pid, what, session: process.env.CLAUDE_CODE_SESSION_ID || '', at: Date.now() });
-    child = spawn('python3', ['-c', HOLD, note, ...Array.from({ length: slots() }, (_, i) => [lockFile(i), infoFile(i)]).flat()], { stdio: ['pipe', 'pipe', 'ignore'] });
+    child = spawn('python3', ['-c', HOLD, note, ...Array.from({ length: first ? 1 : slots() }, (_, i) => [lockFile(i), infoFile(i)]).flat()], { stdio: ['pipe', 'pipe', 'ignore'] });
     child.on('error', (e) => finish(false, `python3 could not run (${e.code || e.message})`));
     child.on('close', () => finish(false, 'the lock holder stopped before taking it')); // after its output is read
     child.stdout.on('data', (d) => {
@@ -83,7 +85,7 @@ export function hold(what, { say = (l) => console.error(l) } = {}) {
       for (let i; (i = buf.indexOf('\n')) >= 0;) {
         const l = buf.slice(0, i); buf = buf.slice(i + 1);
         if (l === 'busy') {
-          const tell = () => { const h = holder(); if (h) say(`measuring lock: waiting for ${describe(h)}`); };
+          const tell = () => { const h = holder({ first }); if (h) say(`measuring lock: waiting for ${describe(h)}`); };
           tell(); timer = setInterval(tell, 60000);
         } else if (l === 'nolock') finish(false, `cannot open ${lockFile()}`);
         else if (l === 'held') {
@@ -104,7 +106,7 @@ export function release() {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
   const argv = process.argv.slice(2);
-  if (argv[0] === '--who') { const h = holder(); console.log(h ? `held by ${describe(h)}` : 'free'); process.exit(0); }
+  if (argv[0] === '--who') { const h = holder(); const c = holder({ first: true }); console.log(h ? `every slot held; next free after ${describe(h)}` : c ? `a slot free; checks and lands wait for ${describe(c)}` : 'free'); process.exit(0); }
   const dash = argv.indexOf('--');
   if (argv[0] !== '--run' || dash < 2 || dash === argv.length - 1) { console.error('usage: lock.mjs --run <what> -- <command…> | --who'); process.exit(2); }
   // waits without bound: a waiter that gave up would turn a busy machine into a red check

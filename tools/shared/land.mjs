@@ -194,7 +194,7 @@ export async function land(from, target) {
   writeJSON(qfile(main, branch), { branch, sha, at: Date.now() });
   say(`${branch} queued at ${sha.slice(0, 8)}`);
   // a run inside a holder (a test, a nested call) holds nothing new
-  await hold(`bin/land ${branch}`);
+  await hold(`bin/land ${branch}`, { first: true });
   try { return (await landBatch(main, { branch, sha })) === 'landed' ? 0 : 1; } finally { release(); }
 }
 

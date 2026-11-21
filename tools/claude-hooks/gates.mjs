@@ -850,7 +850,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
     + `  ## Budget — agent time, review rounds\n`
     + `  ## Review — who reviews which area\n`
     + `Then tell the user the plan in a few lines and carry on: it is the work's contract, not a request for approval.${compound(call)}`
-    + (work.some((r) => !st.checkedAt?.[r] && fs.existsSync(path.join(r, 'bin', 'check'))) && (h = holder()) ? `\nbin/check waits for the measuring lock, now held by ${describe(h)}.` : '');
+    + (work.some((r) => !st.checkedAt?.[r] && fs.existsSync(path.join(r, 'bin', 'check'))) && (h = holder({ first: true })) ? `\nbin/check waits for the measuring lock, now held by ${describe(h)}.` : '');
 }
 
 /* A closed piece of work: its window empties; its plan is kept for the next piece, which reviews it first, and put
