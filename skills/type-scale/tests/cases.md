@@ -1,6 +1,6 @@
-# Eval cases — type-scale (v1.1.0)
+# Eval cases — type-scale (v1.2.0)
 
-**Walked: 2026-11-15 — pass (13/13).** `node tests/test-generate.mjs` 24/24. Review findings closed: `none` for a number is refused (it had made every heading a display), `--phone no` asks nothing more. Failing direction checked: a grid tie rounding up gives 12/20 and fails A3; a default label weight of 400 fails A8. A1 is also traced to SKILL.md's *Ask before generating*.
+**Walked: 2026-11-21 — pass (13/13).** `node tests/test-generate.mjs` 24/24. Rewritten to clause I: the choices are in references/choices.md, the script's rules in references/script-rules.md (A4, A9–A12 read against it). Review findings closed: `none` for a number is refused (it had made every heading a display), `--phone no` asks nothing more. Failing direction checked: a grid tie rounding up gives 12/20 and fails A3; a default label weight of 400 fails A8. A1 is also traced to SKILL.md's *Ask before generating*.
 
 Evidence marked "the 2026-11-15 run" is the maintainer's build of a project's type scale in Figma that day (Project A). The maintainer's feedback from it became recommended answers here, never silent defaults.
 
