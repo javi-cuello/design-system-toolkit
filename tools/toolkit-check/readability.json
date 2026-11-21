@@ -1,84 +1,4 @@
 {
- "skills/component-validator/SKILL.md": {
-  "words": 2667,
-  "longSentences": 52,
-  "longParagraphs": 8,
-  "codeParagraphs": 6,
-  "grade": 12.7,
-  "lines": 84,
-  "dated": 1,
-  "noContents": 0
- },
- "skills/component-validator/references/android.md": {
-  "words": 1205,
-  "longSentences": 10,
-  "longParagraphs": 2,
-  "codeParagraphs": 2,
-  "grade": 10.2,
-  "lines": 114,
-  "dated": 2,
-  "noContents": 1
- },
- "skills/component-validator/references/ios.md": {
-  "words": 1499,
-  "longSentences": 21,
-  "longParagraphs": 5,
-  "codeParagraphs": 5,
-  "grade": 11.2,
-  "lines": 114,
-  "dated": 2,
-  "noContents": 1
- },
- "skills/component-validator/references/mui.md": {
-  "words": 1417,
-  "longSentences": 20,
-  "longParagraphs": 2,
-  "codeParagraphs": 2,
-  "grade": 9.1,
-  "lines": 190,
-  "dated": 0,
-  "noContents": 1
- },
- "skills/component-validator/references/web.md": {
-  "words": 3348,
-  "longSentences": 57,
-  "longParagraphs": 12,
-  "codeParagraphs": 6,
-  "grade": 11.2,
-  "lines": 164,
-  "dated": 3,
-  "noContents": 1
- },
- "skills/design-system-research/SKILL.md": {
-  "words": 5024,
-  "longSentences": 88,
-  "longParagraphs": 18,
-  "codeParagraphs": 0,
-  "grade": 13.3,
-  "lines": 151,
-  "dated": 4,
-  "noContents": 0
- },
- "skills/design-system-research/references/deep-mode-voice.md": {
-  "words": 3571,
-  "longSentences": 45,
-  "longParagraphs": 7,
-  "codeParagraphs": 2,
-  "grade": 10,
-  "lines": 175,
-  "dated": 13,
-  "noContents": 1
- },
- "skills/design-system-research/references/system-sources.md": {
-  "words": 2966,
-  "longSentences": 48,
-  "longParagraphs": 1,
-  "codeParagraphs": 2,
-  "grade": 18.4,
-  "lines": 157,
-  "dated": 1,
-  "noContents": 1
- },
  "skills/figma-component-descriptions/SKILL.md": {
   "words": 5035,
   "longSentences": 69,
@@ -98,46 +18,6 @@
   "lines": 319,
   "dated": 2,
   "noContents": 1
- },
- "skills/figma-components-audit/references/conventions-universal.md": {
-  "words": 3464,
-  "longSentences": 53,
-  "longParagraphs": 6,
-  "codeParagraphs": 2,
-  "grade": 12.5,
-  "lines": 125,
-  "dated": 5,
-  "noContents": 1
- },
- "skills/figma-components-audit/references/judgment-protocol.md": {
-  "words": 1108,
-  "longSentences": 15,
-  "longParagraphs": 2,
-  "codeParagraphs": 0,
-  "grade": 13.3,
-  "lines": 55,
-  "dated": 3,
-  "noContents": 0
- },
- "skills/figma-components-audit/references/scanner-checks.md": {
-  "words": 13454,
-  "longSentences": 211,
-  "longParagraphs": 36,
-  "codeParagraphs": 33,
-  "grade": 11.8,
-  "lines": 603,
-  "dated": 26,
-  "noContents": 1
- },
- "skills/figma-contrast-matrix/SKILL.md": {
-  "words": 1968,
-  "longSentences": 33,
-  "longParagraphs": 8,
-  "codeParagraphs": 8,
-  "grade": 13.1,
-  "lines": 81,
-  "dated": 0,
-  "noContents": 0
  },
  "skills/figma-doc-generator/SKILL.md": {
   "words": 11189,
@@ -209,26 +89,6 @@
   "dated": 1,
   "noContents": 0
  },
- "skills/figma-project-audit/SKILL.md": {
-  "words": 845,
-  "longSentences": 14,
-  "longParagraphs": 1,
-  "codeParagraphs": 0,
-  "grade": 9.2,
-  "lines": 44,
-  "dated": 0,
-  "noContents": 0
- },
- "skills/figma-properties-table/SKILL.md": {
-  "words": 3253,
-  "longSentences": 51,
-  "longParagraphs": 10,
-  "codeParagraphs": 7,
-  "grade": 10.8,
-  "lines": 130,
-  "dated": 1,
-  "noContents": 0
- },
  "skills/figma-prototype/SKILL.md": {
   "words": 1656,
   "longSentences": 31,
@@ -237,66 +97,6 @@
   "grade": 12.3,
   "lines": 30,
   "dated": 1,
-  "noContents": 0
- },
- "skills/figma-variable-audit/SKILL.md": {
-  "words": 2868,
-  "longSentences": 43,
-  "longParagraphs": 7,
-  "codeParagraphs": 5,
-  "grade": 11.8,
-  "lines": 130,
-  "dated": 0,
-  "noContents": 0
- },
- "skills/frontend-build/SKILL.md": {
-  "words": 2205,
-  "longSentences": 29,
-  "longParagraphs": 2,
-  "codeParagraphs": 5,
-  "grade": 10.9,
-  "lines": 109,
-  "dated": 0,
-  "noContents": 0
- },
- "skills/frontend-build/references/audit/audit-pass.md": {
-  "words": 680,
-  "longSentences": 4,
-  "longParagraphs": 0,
-  "codeParagraphs": 0,
-  "grade": 8,
-  "lines": 63,
-  "dated": 0,
-  "noContents": 0
- },
- "skills/humanizer/SKILL.md": {
-  "words": 4306,
-  "longSentences": 35,
-  "longParagraphs": 12,
-  "codeParagraphs": 0,
-  "grade": 10.2,
-  "lines": 422,
-  "dated": 0,
-  "noContents": 0
- },
- "skills/oklch-color-scale-system/SKILL.md": {
-  "words": 18778,
-  "longSentences": 295,
-  "longParagraphs": 56,
-  "codeParagraphs": 20,
-  "grade": 8,
-  "lines": 967,
-  "dated": 1,
-  "noContents": 0
- },
- "skills/type-scale/SKILL.md": {
-  "words": 1407,
-  "longSentences": 16,
-  "longParagraphs": 2,
-  "codeParagraphs": 4,
-  "grade": 6.9,
-  "lines": 66,
-  "dated": 0,
   "noContents": 0
  }
 }
