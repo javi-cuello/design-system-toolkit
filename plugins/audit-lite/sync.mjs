@@ -96,7 +96,7 @@ const readers = [
 const judgeRules = read('tools/figma-audit/judge-rules.mjs').replace(/^export /gm, '');
 // The audit's one list of stages and its reader (tools/figma-audit/stages.mjs): Audit lite runs the stages that name it,
 // in the list's order, by the rules the dashboard and bin/audit read (figma-project-audit stages.json).
-const REGISTRY_FILE = 'skills/figma-project-audit/stages.json';
+const REGISTRY_FILE = 'skills/figma-project-audit/scripts/stages.json';
 const registry = JSON.parse(read(REGISTRY_FILE));
 const stagesSrc = read('tools/figma-audit/stages.mjs');
 const { gatherCode } = await import(path.join(ROOT, 'tools/figma-audit/stages.mjs'));

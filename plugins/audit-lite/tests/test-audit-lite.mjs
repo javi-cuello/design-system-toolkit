@@ -185,7 +185,7 @@ const plugin = ({ fileKey, store = {} }) => {
 // it applies to the file, and the tokens and icons stages through the snapshot plugin's own facts mode.
 {
   const { REGISTRY, HANDLERS, ON_SELECTION, LIBRARY, offered, bucketFor: liteBucket, stagesFor } = /** @type {any} */ (mod.exports);
-  const registry = JSON.parse(fs.readFileSync(path.join(ROOT, 'skills/figma-project-audit/stages.json'), 'utf8'));
+  const registry = JSON.parse(fs.readFileSync(path.join(ROOT, 'skills/figma-project-audit/scripts/stages.json'), 'utf8'));
   ok('the bundled list is the registry, unchanged', JSON.stringify(REGISTRY) === JSON.stringify(registry));
   ok('Audit lite runs file, components, variables and styles, and icons, in the list\'s order', JSON.stringify(stagesFor(REGISTRY, 'lite').map((s) => s.id)) === '["foundations","components","tokens","icons"]');
   ok('every stage it runs has a handler, and only the components stage runs on a selection', stagesFor(REGISTRY, 'lite').every((s) => typeof HANDLERS[s.id] === 'function') && ON_SELECTION.join() === 'components');

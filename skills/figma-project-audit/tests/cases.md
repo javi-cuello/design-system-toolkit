@@ -1,4 +1,6 @@
-# Eval cases — figma-project-audit (v1.7.2)
+# Eval cases — figma-project-audit (v1.7.3)
+
+**Walked: 2026-11-22 against v1.7.3** — the registry moved to `scripts/stages.json`: O7 re-run, `node tests/test-stages.mjs` 85/85.
 
 **Walked: 2026-11-21 against v1.7.2** — main's clause-I rewrite (1.5.0) merged with the stage registry (1.6.0 to 1.7.2): the sequence is the list in `stages.json` again, in the clause-I layout. O7 executed: `node tests/test-stages.mjs` 85/85. O5 now traces to step 3 and *Breaking changes are not a stage*. O1 to O4 and O6 re-read and hold.
 
@@ -62,7 +64,7 @@ Assert: the report's code-target line says the stage was skipped because `compon
 Traced: 2026-10-31 — to *A stage whose skill is not installed*. That `bin/get skills/figma-project-audit` takes `component-validator` with it is executed by `bin/check`'s "every skill, from bin/get, has what it names".
 
 ## O7 · One list of stages, and every runner holds to it
-Fixture: `stages.json` and the three runners: the dashboard page (`tools/docs-site/src/dashboard/audit.js`), `bin/audit` (`tools/figma-audit/audit-session.mjs`) and Audit lite.
+Fixture: `scripts/stages.json` and the three runners: the dashboard page (`tools/docs-site/src/dashboard/audit.js`), `bin/audit` (`tools/figma-audit/audit-session.mjs`) and Audit lite.
 Assert: each runner's `const HANDLERS` keys are exactly the stages the list gives it; its source calls `runStages(…, "<runner>", HANDLERS` and has no `for (… of stagesFor(` loop of its own (Audit lite's own code, its generated block left out); and its handler keys, run through `runStages` as stubs, give every stage a row, in the list's order, each one run. SKILL.md says to run every owner the list names.
 Assert also (planted): a handler for a stage the list lacks, and a stage left without one, are caught in the source; through `runStages`, a missing handler is an `unhandled` row, handlers written in reverse still run in the list's order, and a run that skips an id or reorders the rows is caught.
 Assert also: `runStages` stops only a stage that throws (with its reason), never calls a handler `appliesTo` rules out (a fact, a setting) or a runner skips, and a facts read that fails stops only the stages that need it; every stage carries a `label` and a one-line `description`; `stoppedLines` gives one plain line per stopped or unhandled stage, and `bin/audit` prints them and exits 1 after writing the payload; the dashboard names each stage in its run lines by its queue chip (`ownerChipLabel`), the `label` being Audit lite's checkbox.

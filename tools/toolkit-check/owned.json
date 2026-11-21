@@ -438,7 +438,7 @@
     },
     {
       "job": "the audit's stages and how a runner runs them",
-      "module": "skills/figma-project-audit/stages.json, read through tools/figma-audit/stages.mjs",
+      "module": "skills/figma-project-audit/scripts/stages.json, read through tools/figma-audit/stages.mjs",
       "names": [
         "stagesFor",
         "gatherCode",

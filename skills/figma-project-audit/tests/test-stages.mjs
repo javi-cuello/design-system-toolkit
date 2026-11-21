@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The audit's one list of stages (../stages.json) and the runners that read it:
+// The audit's one list of stages (../scripts/stages.json) and the runners that read it:
 // every runner handles exactly the stages the list gives it, every stage names
 // a skill, scripts that exist and a bucket rule, and the reader every runner
 // shares (tools/figma-audit/stages.mjs) builds the same Figma call each time.
@@ -12,7 +12,7 @@ import { appliesTo, bucketFor, gatherCode, runStages, stagesFor, stoppedLines } 
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..", "..", "..");
-const registry = JSON.parse(readFileSync(join(HERE, "..", "stages.json"), "utf8"));
+const registry = JSON.parse(readFileSync(join(HERE, "..", "scripts", "stages.json"), "utf8"));
 let n = 0;
 const ok = (name, cond, why = "") => { n++; assert.ok(cond, `${name}${why ? `\n${why}` : ""}`); console.log("ok", name); };
 

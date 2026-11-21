@@ -7,7 +7,7 @@
  *   bin/audit --file <payload> [--write]   show what filing it would add, update and close; --write files it
  *
  * Step one runs the stages the audit's one list gives a session
- * (skills/figma-project-audit/stages.json), through the loop every runner
+ * (skills/figma-project-audit/scripts/stages.json), through the loop every runner
  * shares (stages.mjs runStages: its order, its applicability rule, a stage
  * that fails stopping only itself), through the project's own service
  * (POST /exec), and writes one payload per stage that ran, every candidate a
@@ -158,7 +158,7 @@ async function libraryStage(stage) {
   if (!out || !out.ran.length) return 'empty';
   file(stage, { target: stage.target, scope: out.scope, ran: out.ran, findings: out.findings.map((f) => Object.assign({}, f, { bucket: bucketFor(stage, f.rule, { own: f.bucket }) })) });
 }
-const ran = await runStages(JSON.parse(read('skills/figma-project-audit/stages.json')), 'session', HANDLERS, { facts: factsFor, settings: lib });
+const ran = await runStages(JSON.parse(read('skills/figma-project-audit/scripts/stages.json')), 'session', HANDLERS, { facts: factsFor, settings: lib });
 const out = path.join(os.tmpdir(), `audit-${project}-${fileKey}.json`);
 fs.writeFileSync(out, JSON.stringify({ project, fileKey, at: new Date().toISOString(), measures: (scan && scan.measures) || null, stages }, null, 2));
 const WHY = { 'n/a': 'does not apply to this file', empty: 'nothing here to check' };

@@ -29,7 +29,7 @@ reads `scanner/audit.js`, `scanner/sweep.js` and `scanner/judge.txt` straight
 out of `figma-components-audit`, the file-level scanner out of
 `figma-foundations-audit`, and the live reader and engine out of
 `component-validator`, and runs those. So pressing **Audit** here runs the
-project audit's stages, the ones `figma-project-audit/stages.json` gives the
+project audit's stages, the ones `figma-project-audit/scripts/stages.json` gives the
 dashboard, through the loop every runner shares (`stages.mjs` `runStages`: its
 order, `appliesTo`, a failing stage stopping only itself), the same way a
 session would, and each stage's rows carry its skill's name and its line the
@@ -271,7 +271,7 @@ Several skills write to one project's record, so they write rows the same way. T
 | `POST /exec` | `{code}` straight to the Figma plugin |
 | `POST /claude` | proxied to the Anthropic API |
 | `GET /status` | is the plugin attached, and to which file |
-| `GET /scripts` | the **skills'** scripts: the components scanner, sweep, judgement and fix instructions and measures from `figma-components-audit/scanner/`, the file-level scanner from `figma-foundations-audit`, the live reader from `component-validator`, the link check from `figma-variable-audit`, the pairing instruction from `design-code-parity`, the snapshot plugin's code for headless use, and `stages`, the audit's one list of stages (`figma-project-audit/stages.json`), which the page runs in order |
+| `GET /scripts` | the **skills'** scripts: the components scanner, sweep, judgement and fix instructions and measures from `figma-components-audit/scanner/`, the file-level scanner from `figma-foundations-audit`, the live reader from `component-validator`, the link check from `figma-variable-audit`, the pairing instruction from `design-code-parity`, the snapshot plugin's code for headless use, and `stages`, the audit's one list of stages (`figma-project-audit/scripts/stages.json`), which the page runs in order |
 | `GET /context` | the project's settings (house defaults merged beneath) and its §6 rulings, read from the context document |
 | `POST /ruling` | `{text, where, dryRun?}` appended as a row to the context document's §6 rulings table; refuses a ruling already there; `dryRun` answers without writing |
 | `POST /table-rows` | `{fileKey, pages}`: the Properties table rows of every component on those pages, read from the open file by the snapshot plugin's own walk, recorded as the store records it (`store.cjs` `recordOf`) and read by `contract-rows.mjs` `rowsOf`; figma-properties-table draws them (`contract-rows.mjs --live`) |

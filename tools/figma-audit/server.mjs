@@ -253,7 +253,7 @@ const VALIDATE = join(HERE, "..", "component-validator", "validate.mjs");
 if (!existsSync(VALIDATE)) { console.error(`validator      no engine at ${VALIDATE}: the toolkit checkout is incomplete`); process.exit(1); }
 const LINKS = arg("--links", join(HERE, "..", "..", "skills", "figma-variable-audit", "scripts", "links.js"));
 // The audit's one list of stages (figma-project-audit), served to the page so it runs them in that order.
-const STAGES = join(HERE, "..", "..", "skills", "figma-project-audit", "stages.json");
+const STAGES = join(HERE, "..", "..", "skills", "figma-project-audit", "scripts", "stages.json");
 // The tokens and icons checks (figma-foundations-audit), run on the live file's facts (/library-checks) and on the
 // stored snapshot when its tokens settle (below): one module, imported at call time so an edit reaches the next run.
 const LIBRARY = join(HERE, "..", "..", "skills", "figma-foundations-audit", "scripts", "library.mjs");

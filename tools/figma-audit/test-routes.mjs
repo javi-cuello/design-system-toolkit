@@ -101,7 +101,7 @@ try {
   ok("/exec with a body that is not JSON is a 500 that says so, and the service stays up", notJson.code === 500 && /JSON/.test(notJson.json.error) && (await ask("GET", "/health")).code === 200);
   ok("/claude with no key says so rather than calling out", (await post("/claude", { prompt: "x" })).json.error === "no_api_key");
 
-  // the audit's stages and the live tokens and icons checks (skills/figma-project-audit/stages.json)
+  // the audit's stages and the live tokens and icons checks (skills/figma-project-audit/scripts/stages.json)
   const sc = (await ask("GET", "/scripts")).json;
   ok("/scripts serves the audit's one list of stages", sc && sc.stages && sc.stages.stages.some((s) => s.id === "tokens" && s.runners.includes("dashboard")));
   // every stage the dashboard runs fetches its gather script by the key the registry names (gather.served)

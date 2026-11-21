@@ -1,5 +1,5 @@
 /*
- * Reading the audit's one list of stages (skills/figma-project-audit/stages.json)
+ * Reading the audit's one list of stages (skills/figma-project-audit/scripts/stages.json)
  * the same way in every runner: which stages a runner runs and in what order,
  * the text that runs a stage's script in Figma, the bucket a finding of it
  * goes in, whether it applies to a file, and the one loop that runs them

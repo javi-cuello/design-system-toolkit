@@ -667,7 +667,7 @@ async function otherStages(scan, rules, runId) {
   };
 
   /*
-   * THE STAGES, IN THE REGISTRY'S ORDER. skills/figma-project-audit/stages.json
+   * THE STAGES, IN THE REGISTRY'S ORDER. skills/figma-project-audit/scripts/stages.json
    * is the audit's one list of stages; bin/audit and Audit lite read it too,
    * and skills/figma-project-audit/tests/test-stages.mjs holds this map to the
    * stages it gives the dashboard. The components stage ran before this
