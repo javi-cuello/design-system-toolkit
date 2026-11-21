@@ -428,6 +428,34 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   { const wrap = derive({ name: 'Wrap', props: {}, variants: [{ name: 'Wrap', type: 'COMPONENT', layout: 'HORIZONTAL', children: [
       { name: 'I', type: 'INSTANCE', instanceOf: 'Icon/house', w: 20, h: 20, sizing: 'FIXED/FIXED', children: [{ name: 'V', type: 'VECTOR', x: 2, y: 1, w: 16.67, h: 17.5, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/icon'] }] }] }] }, [], { mains: () => null }).anatomy;
     ok('through derive, an outside icon\'s scaled glyph keeps its scale until ownGlyph folds it: no box of its own left', !!wrap['i/v'] && (wrap['i/v'].width === undefined && wrap['i/v'].constraints === undefined)); }
+  { // a scale both ways inside an instance (Material's card state layer, Atlassian's spinner): its component's where its part
+    // there is constrained alike, left out; one its component constrains otherwise, or with no component to hold it to, kept
+    const layer = (c) => ({ name: 'Layer', type: 'FRAME', x: 0, y: 0, w: 360, h: 80, sizing: 'FIXED/FIXED', layout: 'VERTICAL', constraints: c, fills: ['C/layer'] });
+    const dot = { name: 'Dot', type: 'ELLIPSE', x: 4, y: 4, w: 8, h: 8, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/dot'] };
+    const main = (c) => derive({ name: 'Card state', props: {}, variants: [{ name: 'Card state', type: 'COMPONENT', w: 360, h: 80, children: [layer(c), dot] }] });
+    const card = (mains) => derive({ name: 'Card', props: {}, variants: [{ name: 'Card', type: 'COMPONENT', layout: 'HORIZONTAL', children: [
+      { name: 'State', type: 'INSTANCE', instanceOf: 'Card state', w: 360, h: 80, sizing: 'FIXED/FIXED', children: [layer('SCALE/SCALE'), { ...dot, fills: ['C/other'] }] }] }] }, ['Card state'], mains ? { mains } : {}).anatomy;
+    const alike = card((n) => (n === 'Card state' ? main('SCALE/SCALE') : null)), other = card((n) => (n === 'Card state' ? main('MIN/MIN') : null)), none = card(null);
+    ok('inside an instance, a scale both ways equal to its component\'s part is the component\'s, left out (figma-fact: no-nested-position-override); one the component constrains otherwise, or with no component held, is kept',
+      !!alike['state/dot'] && alike['state/dot'].constraints === undefined && (!alike['state/layer'] || alike['state/layer'].constraints === undefined)
+      && !!other['state/layer'] && !!other['state/layer'].constraints && !!none['state/layer'] && !!none['state/layer'].constraints); }
+  { // two deep (Material's slider: a track stop's dot, recoloured by the track, inside the track placed in the slider): the
+    // track's own contract has the dot's scale left out at the stop's turn, so the slider's walk of it, constrained alike,
+    // is the track's, not an override
+    const dot = (fill) => ({ name: 'Dot', type: 'ELLIPSE', x: 0, y: 0, w: 4, h: 4, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: [fill] });
+    const specs = { Stop: { name: 'Stop', props: {}, variants: [{ name: 'Stop', type: 'COMPONENT', w: 4, h: 4, children: [dot('C/a')] }] },
+      Track: { name: 'Track', props: {}, variants: [{ name: 'Track', type: 'COMPONENT', layout: 'HORIZONTAL', children: [{ name: 'Stop', type: 'INSTANCE', instanceOf: 'Stop', w: 4, h: 4, sizing: 'FIXED/FIXED', children: [dot('C/b')] }] }] } };
+    // (each component's contract as stored, itself derived against the others, as a reading's placed components are)
+    const known = ['Stop', 'Track'], mains = mainsFrom(specs, known, () => ({ mains: mainsFrom(specs, known) }));
+    const slider = derive({ name: 'Slider', props: {}, variants: [{ name: 'Slider', type: 'COMPONENT', layout: 'HORIZONTAL', children: [{ name: 'Track', type: 'INSTANCE', instanceOf: 'Track', children: [
+      { name: 'Stop', type: 'INSTANCE', instanceOf: 'Stop', w: 4, h: 4, sizing: 'FIXED/FIXED', children: [dot('C/b')] }] }] }] }, known, { mains }).anatomy;
+    ok('a layer two instances deep, constrained as its own component constrains it, is the outer component\'s and left out',
+      mains('Track').anatomy['stop/dot'] && mains('Track').anatomy['stop/dot'].constraints === undefined && !slider['track/stop/dot']); }
+  { // a part swapped to another component (its key not the main's) is not the main's part: its constraints, even equal, are kept
+    const holder = { contract: 1, component: 'Holder', props: {}, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon', key: 'k1', position: 'absolute', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } } }, variants: [] };
+    const x = { root: { kind: 'container' }, h: { kind: 'instance', parent: 'root', component: 'Holder' }, 'h/i': { kind: 'instance', parent: 'h', component: 'Icon', key: 'k2', constraints: { horizontal: 'scale', vertical: 'scale' } } };
+    ownInsides(x, (n) => (n === 'Holder' ? holder : null), { partial: true });
+    ok('a part swapped to another component keeps its constraints, though equal to the part it replaced', !!x['h/i'] && !!x['h/i'].constraints); }
   const by = byComponentName([{ component: 'Button' }, { component: 'button' }, { component: 'Chip' }]);
   ok('a component is found by its name in any case; a name two components share finds none', by('CHIP').component === 'Chip' && by('Button') === null);
   // a swap names its target by its own name or by its main's folder: the instance placed there says which

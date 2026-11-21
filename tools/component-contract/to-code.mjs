@@ -545,7 +545,21 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
     if (sample) e = { ...e, width: 'fill' };
     const anchors = Object.values(a).some((x) => x.parent === id && (x.position === 'absolute' || x.absolute) && !ringOf(c, when, Object.keys(a).find((k) => a[k] === x), x, a, t));
     // the parent's own size, where it is a number: what a part that scales with it is a share of
-    const box = parent ? { width: typeof parent.width === 'number' ? parent.width : null, height: typeof parent.height === 'number' ? parent.height : null } : null;
+    // (or one stretched between its own parent's edges, placed out of the flow: that parent's size less both offsets,
+    // as a skeleton's shimmer scales inside a fill stretched over its box)
+    const sizeOf = (pid, k, depth = 0) => {
+      const p = a[pid];
+      if (!p || depth > 32) return null;
+      if (typeof p[k] === 'number') return p[k];
+      const [axis, near, far] = k === 'width' ? ['horizontal', 'x', 'end'] : ['vertical', 'y', 'bottom'];
+      const at = p.absolute || {};
+      if (p.parent && (p.constraints || {})[axis] === 'stretch' && typeof at[near] === 'number' && typeof at[far] === 'number') {
+        const whole = sizeOf(p.parent, k, depth + 1);
+        return typeof whole === 'number' ? +(whole - at[near] - at[far]).toFixed(2) : null;
+      }
+      return null;
+    };
+    const box = parent ? { width: sizeOf(e.parent, 'width'), height: sizeOf(e.parent, 'height') } : null;
     // in a box whose gap is below 0 in any combination, every child says its pull back in every one: the gap after
     // the first in the flow, 0 for the first and for a placed part, 0 where the gap is not below 0 (a variant's own
     // value, never an unset that would leave the base's)

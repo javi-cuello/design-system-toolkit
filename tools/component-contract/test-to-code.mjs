@@ -469,4 +469,24 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     /data-quiet[^{]*> \.ds-rail__knob \{[^}]*background: unset/.test(qs) && selfCheck(quiet, rulesOf(quiet, m2).rules, m2).length === 0);
   ok('a nested instance\'s own override is written through its holder', /\.ds-slider > \.ds-slider__rail > \.ds-rail__knob \{[^}]*background: var\(--c-strong\)/.test(toCss(slider, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: m2 })));
 }
+// a part scaled with a parent that is stretched between its own parent's edges takes its share of that parent's size, the
+// grandparent's less both offsets (Carbon's skeleton shimmer, scaled inside a fill stretched over the box)
+{
+  const sk = { contract: 1, component: 'Skel', props: {}, anatomy: { root: { kind: 'container', width: 160, height: 16, overflow: 'hidden' },
+    fill: { kind: 'container', parent: 'root', background: 'C/soft', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' } },
+    'fill/shine': { kind: 'graphic', parent: 'fill', background: 'C/strong', width: 160, height: 16, position: 'absolute', absolute: { x: -160, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } } }, variants: [] };
+  const css = toCss(sk, 'skel', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  const rule = (css.match(/\.ds-skel__shine \{[^}]*\}/) || [''])[0];
+  ok('a part scaled in a stretched parent is a share of that parent\'s size: the grandparent\'s less both offsets',
+    /inset-inline-start: -100%/.test(rule) && /inline-size: 100%/.test(rule) && /inset-block-start: 0%/.test(rule) && /block-size: 100%/.test(rule) && !/is no number/.test(css));
+}
+// and a part centred in such a parent keeps its centre's distance from that parent's, as with a parent of a number's size
+{
+  const ct = { contract: 1, component: 'Ctr', props: {}, anatomy: { root: { kind: 'container', width: 160, height: 16 },
+    fill: { kind: 'container', parent: 'root', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' } },
+    'fill/dot': { kind: 'graphic', parent: 'fill', background: 'C/strong', width: 8, height: 8, position: 'absolute', absolute: { x: 12, y: 4 }, constraints: { horizontal: 'center', vertical: 'center' } } }, variants: [] };
+  const rule = (toCss(ct, 'ctr', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }).match(/\.ds-ctr__dot \{[^}]*\}/) || [''])[0];
+  ok('a part centred in a stretched parent keeps its centre\'s distance from that parent\'s (its size the grandparent\'s less both offsets)',
+    /inset-inline-start: calc\(50% - 4rem\)/.test(rule) && /inset-block-start: 50%;/.test(rule));
+}
 console.log(`${n} passed`);

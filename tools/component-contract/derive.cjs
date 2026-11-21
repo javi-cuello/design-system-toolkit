@@ -629,16 +629,28 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
       const kids = Object.keys(M).filter((q) => M[q] && M[q].parent === mk), g = kids.length === 1 && M[kids[0]];
       if (g && g.kind === 'graphic' && g.background === e.background) { const { background: _, ...rest } = e; anatomy[k] = rest; }
     }
+    // a layer's constraints with no position of its own, equal to its component's part at the instance's props, are
+    // that component's (an instance cannot override them, figma-fact: no-nested-position-override; a glyph's scale both
+    // ways was kept only for ownGlyph, which runs on an instance with no component here): left out, after the
+    // comparison below, which reads them as walked; one that differs is kept
+    const sameCons = (a, b) => !!a && !!b && a.horizontal === b.horizontal && a.vertical === b.vertical;
+    // (only where this instance is the nearest one above: a layer of an instance nested in it is left to that instance's
+    // own turn, so an icon's glyph keeps its scale until ownGlyph folds it)
+    const host = (k) => { for (let up = (anatomy[k] || {}).parent; up; up = (anatomy[up] || {}).parent) if ((anatomy[up] || {}).kind === 'instance') return up; return null; };
+    const inherit = () => { for (const k of inner) { if (host(k) !== id) continue; const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk]; if (e && e.constraints && !e.absolute && x && keyMatches(e.key, x.key) && sameCons(e.constraints, x.constraints)) { const { constraints: _, ...rest } = e; anatomy[k] = rest; } } };
     // (`whole`: instances the design keeps whole, so a reading keeps what it reads there too)
     // (`found`: where given, collects the instances kept whole for a layer they hide, so a drawing hides there what
     // the contract does not list, and nowhere else)
-    if (whole.has(id)) continue;
-    if (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk))) { if (found) found.add(id); continue; }
+    if (whole.has(id)) { inherit(); continue; }
+    if (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk))) { if (found) found.add(id); inherit(); continue; }
     const own = (k) => {
       const mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       // (a key is no look, but two that differ are two components: a swap to another library's Icon of one name)
       if (!x || !keyMatches(anatomy[k].key, x.key)) return false;
-      const y = asGlyphOf(anatomy[k], x, reading);
+      // (a layer of an instance nested in this one has its position-less constraints left out at that instance's own
+      // turn, as this component's own contract already has them: compared so, where the component's part has none)
+      const y0 = asGlyphOf(anatomy[k], x, reading);
+      const y = host(k) !== id && y0.constraints && !y0.absolute && !x.constraints ? (({ constraints: _, ...r }) => r)(y0) : y0;
       if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(arcForm(bare(y))) === look(arcForm(bare(x))); }
       if (look(arcForm(y)) === look(arcForm(x))) return true;
       // a part pinned to its parent's far edge (bottom, end) stands where the parent's size puts it: its near offset
@@ -654,6 +666,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
+    inherit();
   }
 }
 
