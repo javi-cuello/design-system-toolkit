@@ -1,4 +1,6 @@
-# Eval cases — figma-project-audit (v1.4.1)
+# Eval cases — figma-project-audit (v1.5.0)
+
+**Walked: 2026-11-21 against v1.5.0** — SKILL.md rewritten to skill-standard §A clause I; every case re-read. O1 to O4 and O6 hold unchanged (O6's *A stage whose skill is not installed* is kept). O5 now traces to step 7 and *Breaking changes are not a stage*, where old step 8 moved; the report still opens with the open breaking changes.
 
 **Walked: 2026-11-20 against v1.4.1** — the record contract is cited in tools/figma-audit/REFERENCE.md (the README rewrite); no case reads the path, so none re-traced.
 
@@ -43,7 +45,7 @@ Fixture: a library whose audit record holds two open rows owned by `figma-snapsh
 Assert: the report's first line says two breaking changes are undecided and names them; no stage files, re-raises or closes a `figma-snapshot-router` row.
 Assert also (negative): the audit does not read the change log as a stage; a stage reads the live file (toolkit-standard §D 5).
 
-Traced: 2026-10-01 — to step 8. The service half is executed in `test-breaking.mjs`.
+Traced: 2026-10-01 — to step 8, now step 7 and *Breaking changes are not a stage* (v1.5.0). The service half is executed in `test-breaking.mjs`.
 
 ## O6 · A stage skill that is not installed is named, and the rest run
 Fixture: a full run in a session where `component-validator` is not among the installed skills, on a library whose settings name a code target.
