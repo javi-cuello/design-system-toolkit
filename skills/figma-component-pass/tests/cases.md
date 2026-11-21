@@ -1,5 +1,7 @@
 # Eval cases — figma-component-pass (v1.11.0)
 
+**Since 1.11.0, old stages map to SKILL.md steps:** Stage 0 → steps 1–3, Stage 1 → step 4, the checkpoint → step 5, Stage 2 → step 6, Stage 3 → step 7.
+
 **Walked: 2026-11-21 against v1.11.0** — rewritten to skill-standard §A clause I: detail moved to `references/stages.md`, Stage 0–3 became workflow steps 1–8. Each case re-read against the new text; every rule it asserts survives (order, checkpoint, skip-not-improvise, defect omission and the two unbound-text exceptions, per-variant dedupe, fresh-read re-run of steps 6 and 7 together, missing stage named first, one report naming declined findings, per-component library runs). Section pointers updated; no assertion changed.
 
 **Walked: 2026-11-11 against v1.10.2** — a sentence on the descriptions stage only; no case reads it, so every case holds.

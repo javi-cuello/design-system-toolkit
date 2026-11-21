@@ -1,6 +1,6 @@
 # The stages
 
-Why the order holds, what each stage owns and hands on, and the judgements at the checkpoint and the descriptions stage. [SKILL.md](../SKILL.md) steps 2, 5 and 7 point here.
+Why the order holds, what each stage owns and hands on, and the judgements at the checkpoint and the descriptions stage. [SKILL.md](../SKILL.md) steps 2, 4, 5, 6 and 7 point here.
 
 ## Contents
 

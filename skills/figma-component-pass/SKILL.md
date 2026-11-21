@@ -21,21 +21,21 @@ Per-library files under `systems/` are an **optional local cache** for persisten
 
 ## Workflow
 
-This skill is an orchestrator: it sequences skills and owns nothing they own (toolkit-standard §D 4). Each stage reads the component itself, and this skill carries each result on to the report. Why the order holds, and what each stage owns, is in [stages.md](references/stages.md).
+This skill is an orchestrator: it sequences skills and owns nothing they own (toolkit-standard §D 4). Each stage reads the component itself. This skill carries the audit's open findings into the descriptions stage, and every stage's result into the report. Why the order holds, and what each stage owns, is in [stages.md](references/stages.md).
 
 **1. Confirm the file.** Run `figma_list_open_files`. If more than one file is connected, ask which is the target rather than assuming.
 
 **2. Resolve the scope.** Take one component, a page or the whole library, as the user said it. If it is ambiguous, ask. Do not list the page's components here ([stages.md](references/stages.md) *Scope*).
 
-**3. Check the stages are installed.** Name any stage whose skill is missing from the session before anything runs. Say how to get it: `bin/get skills/figma-component-pass`, then `./install.sh` in the toolkit checkout. Run the stages that are there, in order. Never do a missing stage's work here.
+**3. Check the stages are installed.** Name any stage whose skill is missing from the session before anything runs. Say how to get it: `bin/get skills/figma-component-pass`, then `./install.sh` in the toolkit checkout. Named this way, `bin/get` fetches the skills this one runs. Run the stages that are there, in order, and never do a missing stage's work here.
 
-**4. Run the audit.** Run `figma-components-audit` on the target components, by name. Run its detection, classify every finding as error, warning or hygiene, and **stop**.
+**4. Run the audit.** Run `figma-components-audit` on the target components, by name. Run its detection, classify every finding as error, warning or hygiene, and **stop** ([stages.md](references/stages.md) *The audit*).
 
 **5. Hold the checkpoint.** Present the findings and wait. **Running inside this bundle is not implicit approval** to fix anything. Flag the fixes that change the interface, and the breaking ones by kind. Then branch on the answer ([stages.md](references/stages.md) *The checkpoint*).
 
-**6. Run the properties table.** Run `figma-properties-table` on the same page. It loads its own script and checks its own tables. Report what it returns. If the page has no Properties section, skip the stage and say so; never build one.
+**6. Run the properties table.** Run `figma-properties-table` on the same page. It loads its own script and checks its own tables. Report what it returns. If the page has no Properties section, skip the stage and say so; never build one ([stages.md](references/stages.md) *The properties table*).
 
-**7. Run the descriptions.** Run `figma-component-descriptions` for the same components. Its own verification re-reads the interface; when that finds a change, **re-run steps 6 and 7 together**. Never describe a defect as a feature ([stages.md](references/stages.md) *Descriptions*).
+**7. Run the descriptions.** Run `figma-component-descriptions` for the same components. Its own verification re-reads the interface; when that finds a change, **re-run steps 6 and 7 together**. Carry in the audit's open findings, so a deferred defect is left out of the description. Never describe a defect as a feature ([stages.md](references/stages.md) *Descriptions*).
 
 **8. Report once.** Write one consolidated report in the shape below, not one per stage.
 
