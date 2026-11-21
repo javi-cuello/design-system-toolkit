@@ -1,4 +1,6 @@
-# Eval cases — humanizer (v2.10.0)
+# Eval cases — humanizer (v2.11.0)
+
+**Walked: 2026-11-21 against v2.11.0 — pass (6/6), plus `python3 tests/test-scan-tells.py`.** Layout only (skill-standard §A clause I): the patterns moved to `references/patterns.md`, the false-positive and human-signs lists to `references/detection.md`. H1 and H6 trace to the *Invocation modes* table and step 6 of *Process and output*; H2 to §5's closing line in `references/patterns.md` and step 3; H3 to *Voice calibration*; H4 to the "Secondhand text" row in `references/detection.md`; H5's standing fixture is now `references/patterns.md`, where the scanner finds the same 18 quoted hits and zero in prose (SKILL.md and detection.md: clean).
 
 **Walked: 2026-10-31 against v2.10.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -37,7 +39,7 @@ Traced: 2026-08-10 — to the "Secondhand text" entry under "What NOT to flag (f
 Fixture: a document containing an em dash inside a fenced code block, an em dash inside a quotation attributed to a named person, and an em dash in the author's own prose.
 Assert: `scripts/scan-tells.py` reports all three and separates them. The two inside the fence and the quotation are listed as quoted and do not set the exit code; the one in the author's own prose does. The rewrite changes only the third. Treating a quoted hit as a required edit is a failure of this case, and so is assuming the split is always right: the region rule is a good default, not a verdict, and a document that quotes itself badly can still need the quoted text changed.
 
-> This skill's own `SKILL.md` is the standing fixture. The scanner finds 18 tells in it, all inside **Before** examples or inline code that exist to show the reader what the tell looks like, and reports zero in prose. A version of this skill that "fixed" them would delete its own teaching material. Version 2.9.1 did exactly that to two of them before the scanner learned to tell the difference.
+> This skill's own `references/patterns.md` (the pattern catalogue, in `SKILL.md` until v2.11.0) is the standing fixture. The scanner finds 18 tells in it, all inside **Before** examples or inline code that exist to show the reader what the tell looks like, and reports zero in prose. A version of this skill that "fixed" them would delete its own teaching material. Version 2.9.1 did exactly that to two of them before the scanner learned to tell the difference.
 
 Walked live: 2026-08-10 — `scripts/scan-tells.py` run over this skill's own `SKILL.md`: 18 quoted hits, zero in prose.
 
