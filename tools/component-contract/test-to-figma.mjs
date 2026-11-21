@@ -131,6 +131,10 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const placed = (key) => ({ ...two, anatomy: { ...two.anatomy, i: { kind: 'instance', parent: 'root', component: 'Button', ...(key && { key }) } } });
     const at = (a, b) => roundTrip(placed(a), placed(b)).rows.filter((r) => r.at === 'i.key').length;
     ok('a key one side lacks is no row; two keys that differ are one', at('web', null) === 0 && at('web', 'mobile') === 1 && at('web', 'web') === 0);
+    // where the components already differ (Icons/stars against Icons/stars_filled), their keys differing is that same difference
+    const icon = (component, key) => ({ ...two, anatomy: { ...two.anatomy, i: { kind: 'instance', parent: 'root', component, key } } });
+    const r = roundTrip(icon('Icons/stars', 'k1'), icon('Icons/stars_filled', 'k2')).rows;
+    ok('where the components differ, the key is no second row', r.filter((x) => x.at === 'i.component').length === 1 && r.filter((x) => x.at === 'i.key').length === 0);
   }
   { // a placed instance's boolean axis in the design's spelling (true) and a reading's (True) is one value; a text is its own words
     const placed = (w) => ({ ...two, anatomy: { ...two.anatomy, i: { kind: 'instance', parent: 'root', component: 'Box', with: w } } });

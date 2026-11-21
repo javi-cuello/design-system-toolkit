@@ -321,7 +321,18 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     const bool = (v) => (typeof v === 'boolean' ? v : typeof v === 'string' && /^(true|false)$/i.test(v) ? v.toLowerCase() === 'true' : undefined);
     if (/\.with\.[^.]+$/.test(at) && bool(a) !== undefined && bool(a) === bool(b)) return;
     if (/(^|\.)component$/.test(at) && typeof a === 'string' && typeof b === 'string' && !b.includes('/') && a.split('/').pop() === b) return;
-    if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) { for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) diff(a[k], b[k], at ? `${at}.${k}` : k); }
+    if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) {
+      // (an instance's component before its key: where the components already differ, a key that differs with them is the
+      // same difference, counted once)
+      const ks = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort((x, y) => (y === 'component') - (x === 'component'));
+      let other = false;
+      for (const k of ks) {
+        if (k === 'key' && other) continue;
+        const before = rows.size, seen = [...rows.values()].reduce((n, r) => n + r.in, 0);
+        diff(a[k], b[k], at ? `${at}.${k}` : k);
+        if (k === 'component') other = rows.size > before || [...rows.values()].reduce((n, r) => n + r.in, 0) > seen;
+      }
+    }
     else add(at, a, b);
   };
   const low = (x) => String(x).toLowerCase();
