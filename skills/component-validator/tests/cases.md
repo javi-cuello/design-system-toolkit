@@ -1,4 +1,6 @@
-# Eval cases — component-validator (v2.32.4)
+# Eval cases — component-validator (v2.33.0)
+
+**Walked: 2026-11-21 for 2.33.0** — SKILL.md and references rewritten to skill-standard §A clause I; detail moved to the new references/engine.md and references/record.md. T1–T3 re-traced to their new homes; rule ids, Detect lines and sources unchanged, so the E, MU, ST, CV, CLI and WF cases stand. `node tools/component-validator/test-validate.mjs` and `node skills/component-validator/tests/test-walk-figma.mjs` pass.
 
 **Walked: 2026-11-19 for 2.32.4** — one citation in references/web.md WT1 repointed (rule 4 to rule 58); ST1 and the WT1 cases re-read, unchanged; no script reads the line.
 
@@ -6,7 +8,7 @@
 
 **Walked: 2026-10-31 for 2.32.1** — no case changed; `node bin/get --list skills/component-validator` names nothing missing.
 
-**Walked: 2026-10-31 for 2.32.0** — every `Runs:` line re-aimed: `node tools/validator/test-validate.mjs` (now `tools/component-validator/test-validate.mjs`) 157/157, `node tests/test-walk-figma.mjs` 3/3 (WF1); the dashboard service refuses to start without the engine, and `tools/figma-audit/test-paths.mjs` fails on the service's old default.
+**Walked: 2026-10-31 for 2.32.0** — every `Runs:` line re-aimed at the engine's then folder, tools/validator (now `tools/component-validator/test-validate.mjs`) 157/157, `node tests/test-walk-figma.mjs` 3/3 (WF1); the dashboard service refuses to start without the engine, and `tools/figma-audit/test-paths.mjs` fails on the service's old default.
 
 **Walked: 2026-10-31 against v2.31.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -116,15 +118,15 @@ Assert, against a real stored tree rather than the fixture: some node carries `l
 Not walked against a re-snapshot yet — the plugin change ships ahead of the next run of it.
 
 ## T1 · The target is asked, not assumed
-Assert: the skill instructs that the target is read from the context document or asked, one per run, and that a multi-platform library is validated once per target. Traced to §Step 0.
+Assert: the skill instructs that the target is read from the context document or asked, one per run, and that a multi-platform library is validated once per target. Traced to SKILL.md *Workflow* step 2 and the paragraph under it, and references/engine.md *Which target*.
 Not walked.
 
 ## T2 · The choice goes to the designer before code
-Assert: each row ends in Figma / code / accept and nothing under that component starts in code on that target until chosen. Traced to §Running it, step 3.
+Assert: each row ends in Figma / code / accept and nothing under that component starts in code on that target until chosen. Traced to SKILL.md *Workflow* step 7.
 Not walked.
 
 ## T3 · What the engine cannot see is stated
-Assert: the report names screen-level classes, live-only fields and the reverse direction as outside the engine. Traced to §What the engine cannot see.
+Assert: the report names screen-level classes, live-only fields and the reverse direction as outside the engine. Traced to SKILL.md *Workflow* step 10 and references/engine.md *What the engine cannot see*.
 Not walked.
 
 ## E9 · Translations name what the web builds differently
