@@ -128,13 +128,14 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.equal(r.code, 1, r.out);
   assert.match(r.out, /refused: a commit names a project/, 'the remote\'s reason is said');
   assert.doesNotMatch(r.out, /main moved/, r.out);
-  // (case (i)'s newer h is still queued: h lands alone, j is refused alone — no fourth check, no retry)
+  // (case (i)'s newer h is still queued, and this hook refuses every push: h and j are each refused alone)
   assert.equal(runs() - before, 3, `a check for the batch, then one each: ${r.out}`);
   assert.match(r.out, /worktree-j: not landed/, r.out);
   assert.equal(queued(main).some((q) => q.branch === 'worktree-j'), false, 'off the queue'); }
-// (k) in a batch, the refusal falls on the branch that carries it; the other lands
-{ const K = wt('k'), L = wt('l');
-  edit(K, 'd.txt', 'd-NAMED\n'); edit(L, 'a.txt', 'a-ok\n');
+// (k) in a batch of three, the refusal falls on the branch that carries it, queued last; the others land
+{ const K = wt('k'), L = wt('l'), M = wt('m');
+  edit(K, 'd.txt', 'd-NAMED\n'); edit(L, 'a.txt', 'a-ok\n'); edit(M, 'e.txt', 'e-ok\n');
+  fs.writeFileSync(path.join(main, '.git', 'land-queue', 'worktree-m'), JSON.stringify({ branch: 'worktree-m', sha: git(M, 'rev-parse', 'HEAD'), at: Date.now() - 500 }));
   const hook = path.join(remote, 'hooks', 'pre-receive');
   fs.writeFileSync(hook, '#!/bin/sh\nwhile read o n r; do git log --format=%s "$o..$n" 2>/dev/null | grep -q NAMED && { echo "refused: NAMED" >&2; exit 1; }; done; exit 0\n', { mode: 0o755 });
   fs.writeFileSync(path.join(main, '.git', 'land-queue', 'worktree-l'), JSON.stringify({ branch: 'worktree-l', sha: git(L, 'rev-parse', 'HEAD'), at: Date.now() - 1000 }));
@@ -142,7 +143,9 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   fs.rmSync(hook);
   assert.equal(r.code, 1, r.out);
   assert.equal(remoteHas('a.txt'), 'a-ok', `the other branch landed: ${r.out}`);
-  assert.match(r.out, /worktree-k: not landed/, r.out); }
+  assert.equal(remoteHas('e.txt'), 'e-ok', `the second other branch landed: ${r.out}`);
+  assert.match(r.out, /worktree-k: not landed/, r.out);
+  assert.equal(queued(main).length, 0, 'the refused branch, last in the queue, is refused, not left queued'); }
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');

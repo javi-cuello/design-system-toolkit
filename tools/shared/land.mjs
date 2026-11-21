@@ -115,12 +115,16 @@ async function landBatch(main, me) {
   const dir = integration(main);
   sweep(main);
   let alone = null; // a batch red together though each is green alone: one branch at a time
-  for (let attempt = 0; attempt < 4; attempt++) {
+  // a push refused for a batch: one branch at a time for the rest of this run, an attempt each, so the refusal falls on
+  // its carrier wherever it stands in the queue
+  let single = false, limit = 4;
+  for (let attempt = 0; attempt < limit; attempt++) {
     tryGit(main, 'fetch', '-q', 'origin');
     const done = settled(main, me);
     if (done) return done;
     let batch = queued(main);
     if (alone) batch = batch.filter((b) => b.branch === alone).concat(batch.some((b) => b.branch === alone) ? [] : batch.slice(0, 1)).slice(0, 1);
+    else if (single) batch = batch.slice(0, 1);
     const base = tryGit(dir, 'rev-parse', 'origin/main').out;
     const { applied, conflicted } = replay(dir, 'origin/main', batch);
     for (const c of conflicted) { say(c.gone ? `${c.branch}: commit ${c.sha.slice(0, 8)} no longer exists: dropped` : `${c.branch} does not apply on main (${c.files.join(', ') || 'conflict'}): rebase it on origin/main, then land again`); unqueue(main, c, 'conflict'); }
@@ -148,9 +152,8 @@ async function landBatch(main, me) {
       if (!tryGit(dir, 'fetch', '-q', 'origin').ok || tryGit(dir, 'rev-parse', 'origin/main').out !== base) { say(`main moved during the check, or could not be asked (${push.out.split('\n').pop()}): again`); continue; }
       say(`the push was refused, main where it was:\n${push.out.split('\n').map((l) => `  ${l}`).join('\n')}`);
       // a batch: each alone, so the refusal falls on the branch that carries it and the rest still land
-      if (applied.length > 1) { alone = applied[0].branch; say('landing one at a time'); continue; }
+      if (applied.length > 1) { single = true; limit = attempt + 1 + applied.length; say('landing one at a time'); continue; }
       say(`${applied[0].branch}: not landed (the push was refused, above): fix it, then land again`); unqueue(main, applied[0], 'refused');
-      alone = null;
       continue;
     }
     for (const a of applied) {
