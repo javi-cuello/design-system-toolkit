@@ -64,6 +64,34 @@ ok('a part a variant adds before the rest is drawn there, not after them', /"dat
 const pill = { component: 'Pill', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon'] }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon'] } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/plus', swappedBy: 'icon20' } }, variants: [{ when: { size: 'xs' }, set: { 'icon.swappedBy': 'icon16' } }], folder: 'pill' };
 const holder = { component: 'Row', props: {}, anatomy: { root: { kind: 'container' }, pill: { kind: 'instance', parent: 'root', component: 'Pill', with: { 'Icon (20)': 'plus', 'Icon (16)': 'x', Size: 'xs' } } }, variants: [], folder: 'row' };
 ok('a placed component with a swap per size is given the one its size draws (xs: Icon (16))', /renderPill\(\{ icon: "x"/.test(toElement(holder, 'row', { naming: ELEMENT, library: { Pill: pill, Row: holder } })));
+// a swap of one of the library's components (Atlassian's button group, its <Button> 1): what the caller passes, else
+// the design's own instance at its values, so the code draws what Figma draws at the swap's default; a snippet keeps its slot
+{ const btn = { component: 'Btn', props: { label: { type: 'string', figma: 'Label', sets: ['label'], default: 'Go' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: '{label}' } }, variants: [], folder: 'btn' };
+  const group = { component: 'Group', props: { button1: { type: 'instance', figma: '<Button> 1', swaps: ['button'] } }, anatomy: { root: { kind: 'container' }, button: { kind: 'instance', parent: 'root', component: 'Btn', with: { Label: 'One' } } }, variants: [], folder: 'group' };
+  const lib = { Btn: btn, Group: group }, w = toElement(group, 'group', { naming: ELEMENT, library: lib }), r = toReact(group, 'group', { naming: CLASS, library: lib });
+  const sw = propsOf(group, lib).find((x) => x.name === 'button1');
+  ok('a swap of a library component draws the caller\'s content where given, the design\'s instance where not',
+    /\(button1 != null\) && h\("span", \{ "data-part": "button"/.test(w) && /\(button1 == null\) && renderBtn\(\{ label: "One" \}, \{ "data-part": "button"/.test(w) && /\{button1 == null && \(\s*<Btn className="ds-group__button" label="One"/.test(r)
+    && sw.type === 'node' && JSON.stringify(sw.placed.parts) === '["button"]' && sw.placed.component === 'Btn', w);
+  // a swap layer only a variant adds (its third button at count 3): the same, under that variant's condition
+  const three = { ...group, props: { ...group.props, count: { type: 'enum', values: ['2', '3'], figmaValues: ['2', '3'], default: '2', figma: 'count' }, button3: { type: 'instance', figma: '<Button> 3', swaps: ['button_3'] } },
+    variants: [{ when: { count: '3' }, add: { button_3: { kind: 'instance', parent: 'root', component: 'Btn', with: { Label: 'Three' }, order: 1 } } }] };
+  const w3 = toElement(three, 'group', { naming: ELEMENT, library: { ...lib, Group: three } });
+  ok('a swap of a layer only a variant adds draws the design\'s instance there, where that variant holds and nothing is passed',
+    /\(\(count === "3"\) && button3 == null\) && renderBtn\(\{ label: "Three" \}/.test(w3) && JSON.stringify(propsOf(three, { ...lib, Group: three }).find((x) => x.name === 'button3').placed.parts) === '["button_3"]', w3);
+}
+// a swap that drives two layers draws the design's instance in each where nothing is passed; a variant that swaps that
+// instance for another of the library's draws the other where it holds, the base's elsewhere (as the instance branch does)
+{ const st = (name) => ({ component: name, props: { on: { type: 'boolean', default: false, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [], folder: name.toLowerCase() });
+  const two = { component: 'Two', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['a', 'b'] } }, anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', order: 0, component: 'Pic' }, b: { kind: 'instance', parent: 'root', order: 1, component: 'Pic' } }, variants: [], folder: 'two' };
+  const w2 = toElement(two, 'two', { naming: ELEMENT, library: { Pic: st('Pic'), Two: two } });
+  ok('a swap that drives two layers draws the design\'s instance in each where nothing is passed', (w2.match(/\(icon == null\) && renderPic\(/g) || []).length === 2, w2);
+  const sty = { component: 'Sty', props: { style: { type: 'enum', values: ['outlined', 'elevated'], figmaValues: ['Outlined', 'Elevated'], default: 'outlined', figma: 'Style' }, bgSwap: { type: 'instance', figma: 'Bg', swaps: ['bg'] } },
+    anatomy: { root: { kind: 'container' }, bg: { kind: 'instance', parent: 'root', component: 'Outlined' } }, variants: [{ when: { style: 'elevated' }, set: { 'bg.component': 'Elevated' } }], folder: 'sty' };
+  const w3 = toElement(sty, 'sty', { naming: ELEMENT, library: { Outlined: st('Outlined'), Elevated: st('Elevated'), Sty: sty } });
+  ok('a swap whose instance a variant changes draws the variant\'s component where it holds, the base\'s elsewhere, where nothing is passed',
+    /bgSwap == null\) && \(styleOption === "elevated"\)\) && renderElevated\(/.test(w3) && /bgSwap == null\) && !\(styleOption === "elevated"\)\) && renderOutlined\(/.test(w3), w3);
+}
 // a variant that places another of the library's components (Material 3's card: its Elevated state at Style Elevated, for
 // the base's Outlined): each where its variant holds, the base's where none does, in all three languages
 { const st = (name) => ({ component: name, props: {}, anatomy: { root: { kind: 'container' } }, variants: [], folder: name.toLowerCase(), figma: { key: `k-${name}` } });

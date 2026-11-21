@@ -374,11 +374,32 @@ export function joinedNames(props, design, map = {}) {
   return props;
 }
 
+/* A slot control in the toolkit's own story (the self leg): to-markup's swap of a library component (`placed`) says so,
+   with the component it draws where the caller passes nothing. Only this story sets `placed`: a docgen default (a real
+   Storybook's `icon = <ChevronDown />`) is no such mark. Tested by test-from-code.mjs. */
+export const selfSlotControl = (x) => ({ control: 'slot', ...(x.placed && { placed: x.placed.component }) });
+/* A code prop that takes content: a slot, found where a stand-in for it lands; one the self story marks `placed` is read
+   at the component it draws by default, with no stand-in (asDesignSwaps then takes the design's swap). Tested by
+   test-from-code.mjs. */
+/* The reading's own mark taken off every prop of each props map given: no contract written carries `placed`. Tested by
+   test-from-code.mjs. */
+export function dropPlaced(...maps) { for (const m of maps) for (const p of Object.values(m || {})) delete p.placed; }
+export const slotProp = (k, a, must = {}) => ({ type: 'slot', code: k, ...must, ...(a.placed && { placed: true }) });
 /* An icon the code takes by name (a string) where the design swaps an instance: the design's swap, one per size where
    the code merged them (to-markup's one `icon` for Icon (16) and Icon (20)); never a key the design holds as another
-   kind. Returns the props, changed in place. Tested by test-from-code.mjs. */
-export function asDesignSwaps(props, design) {
+   kind. So is content the code takes where it draws one of the library's components by default (a slot `placed`),
+   where the reading (`read`: its anatomy and variants) draws each layer the design's swap swaps as an instance.
+   Returns the props, changed in place. Tested by test-from-code.mjs. */
+export function asDesignSwaps(props, design, read = {}) {
   for (const [k, p] of Object.entries(props)) {
+    // content the code takes, read at the component it draws by default (`placed`), where the design swaps that layer's
+    // instance: the design's swap, only where the reading draws each layer it swaps as an instance (at some combination)
+    if (p.type === 'slot' && p.placed) {
+      const q = design[k], drawn = (id) => [read.anatomy || {}, ...(read.variants || []).map((v) => v.add || {})].some((a) => (a[id] || {}).kind === 'instance');
+      if (q && q.type === 'instance' && (q.swaps || []).length && q.swaps.every(drawn)) props[k] = { type: 'instance', figma: q.figma, swaps: q.swaps, code: p.code };
+      else delete p.placed;
+      continue;
+    }
     if (p.type !== 'string' || (design[k] && design[k].type !== 'instance')) continue;
     const swaps = Object.entries(design).filter(([dk, q]) => q.type === 'instance' && (dk === k || dk.replace(/\d+$/, '') === k));
     if (!swaps.length) continue;
@@ -1184,7 +1205,7 @@ async function selfSource(project, name, { second = false } = {}) {
     x.type === 'enum' && (x.values || []).length ? { options: x.values, control: 'select', default: x.default }
     : x.type === 'boolean' ? { control: 'boolean', type: 'boolean', default: x.default === true }
     : x.type === 'number' ? { control: 'number', type: 'number', default: x.default }
-    : x.type === 'node' ? { control: 'slot' }
+    : x.type === 'node' ? selfSlotControl(x)
     : { control: 'text', type: 'string', default: x.default ?? '' }])) } };
   const tokens = project.snapshot;
   const src = {
@@ -1382,7 +1403,7 @@ async function main() {
       else if ((a.control === 'text' || a.type === 'string') && typeof start === 'string') props[camel(k)] = { type: 'string', code: k, sample: start || (typeof a.default === 'string' ? a.default : start), ...must };
       else if (a.control === 'number' || a.type === 'number') props[camel(k)] = { type: 'number', code: k, ...((a.default ?? start) != null && { default: a.default ?? start }), ...must };
       // content a caller passes (a ReactNode, a snippet, a template): a slot, found where a stand-in for it lands
-      else if (isSlot(a)) props[camel(k)] = { type: 'slot', code: k, ...must };
+      else if (isSlot(a)) props[camel(k)] = slotProp(k, a, must);
     }
     if (story.declared) notes.push('the props are the ones the mapping declares (`controls`): the host does not say them, so they are taken as stated, not read');
     // the pointer states the mapping says how to force: a State prop of the contract's own kind (role
@@ -1402,16 +1423,16 @@ async function main() {
     const setStates = asArg ? asArg.values.filter((v) => v !== asArg.default && v !== 'rest' && !(v in L.pseudoOf)) : [];
     if (asArg && Object.keys(L.pseudoOf).length) { L.stateArg = asArg.code; delete props[stateKey]; }
     if (Object.keys(L.pseudoOf).length) props.state = { type: 'enum', values: ['rest', ...Object.keys(L.pseudoOf), ...setStates], default: 'rest', role: 'interaction', pointer: Object.keys(L.pseudoOf), code: '__state' };
-    let defaults = Object.fromEntries(Object.entries(props).filter(([, p]) => p.type !== 'string').map(([, p]) => [p.code, p.type === 'slot' ? slotMark(p.code) : p.default]));
+    let defaults = Object.fromEntries(Object.entries(props).filter(([, p]) => p.type !== 'string').map(([, p]) => [p.code, p.type === 'slot' && !p.placed ? slotMark(p.code) : p.default]));
     // each slot's stand-in, by the prop it stands in for: the element it lands in is the slot
-    const marks = Object.entries(props).filter(([, p]) => p.type === 'slot').map(([k, p]) => [slotMark(p.code), k]);
+    const marks = Object.entries(props).filter(([, p]) => p.type === 'slot' && !p.placed).map(([k, p]) => [slotMark(p.code), k]);
     // for another component drawn inside this one: each of its booleans that shows a layer, by that layer's selector in its own mapping
     const shownSel = Object.fromEntries(Object.keys(others).map((slug) => {
       const fc = official.get(slug), parts = L.partsOf ? L.partsOf(slug) : null;
       if (!fc || !parts) return [slug, {}];
       return [slug, Object.fromEntries(Object.values(fc.props).filter((q) => q.type === 'boolean' && q.shows && parts[q.shows[0]]).map((q) => [q.figma, parts[q.shows[0]]]))];
     }));
-    for (const [k, p] of Object.entries(props)) if (p.type === 'slot') slotArgs[p.code] = slotMark(p.code);
+    for (const [k, p] of Object.entries(props)) if (p.type === 'slot' && !p.placed) slotArgs[p.code] = slotMark(p.code);
 
     // one render, read as anatomy. The walk starts at the component's own root: the mapping's `root`, or
     // the framework's root class for it, which holds every part (the first paired element may be one part
@@ -2644,7 +2665,12 @@ async function main() {
     // code's own names, and none is the code's alone for having another name. A prop the mapping joins, or one
     // sharing its code prop with one the design has (a swap's half beside its boolean), is the design's too
     if (L.governed && figmaContract) {
-      asDesignSwaps(shaped.contract.props, figmaContract.props);
+      asDesignSwaps(shaped.contract.props, figmaContract.props, shaped.contract);
+    }
+    // (a slot read at its placed default that no design swap took is a slot: the mark is the reading's, never the contract's)
+    // (from the reading as written too: asFigma copies each prop, so both carry it)
+    dropPlaced(shaped.contract.props, fromCode.props);
+    if (L.governed && figmaContract) {
       const sq = (x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '');
       const theirs = new Set(Object.entries(figmaContract.props).flatMap(([k, p]) => [k, sq(p.figma || k)]));
       const joined = new Set(Object.values((side.map || {}).props || {}).map((x) => (typeof x === 'string' ? x : x && (x.arg || x.code))).filter(Boolean));

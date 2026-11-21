@@ -193,6 +193,12 @@ function swapOf(c, p, library, lang) {
   // drawing alone (no props, no words, nothing placed: an empty state's ghost), where a component is the caller's to place
   const drawing = (m) => m && !Object.keys(m.props || {}).length && Object.values(m.anatomy || {}).every((x) => x && ['container', 'graphic'].includes(x.kind));
   if (e && e.kind === 'instance' && (!placedOf(library, e) || drawing(placedOf(library, e)))) return { type: 'icon', default: e.component || '' };
+  // a component of the library's, swapped: content the caller passes, the design's own instance where it passes none
+  // (`placed`: each part it swaps drawn so, and the first's component, which a reading of the code takes as its default)
+  if (e && e.kind === 'instance' && placedOf(library, e)) {
+    const parts = (p.swaps || []).filter((x) => { const y = at(c, x); return y && y.kind === 'instance' && placedOf(library, y); });
+    return { type: 'node', placed: { parts, component: e.component } };
+  }
   return { type: 'node' };
 }
 // a slot prop's part: the slot whose content names it, else the slot part of its name, which a boolean that shows it
@@ -449,7 +455,26 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     } else if (slot) {
       // marked as a slot, so a reading of a component that fills it finds it (from-code)
       out = { tag, attrs: [...hook(id), ...((slot.slots || [slot.slot]).includes(id) ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };
+      // a swapped component of the library's: what the caller passes, else the design's own instance, as Figma draws
+      // the swap at its default (a snippet takes no markup from its caller: there the slot stays)
+      // (each layer the swap drives, and as a variant swaps that instance for another of the library's: instanceOut)
+      if (!lang.php && e.kind === 'instance' && slot.p.type === 'instance' && ((slot.placed || {}).parts || []).includes(id) && placedOf(library, e)) {
+        const given = `${ref(slot.name)} != null`, gone = `${ref(slot.name)} == null`, and = (t) => (when ? `(${when}) && ${t}` : t);
+        return [{ when: and(given), node: out }, ...instanceOut(and(gone))];
+      }
     } else if (e.kind === 'instance') {
+      return instanceOut(when);
+    } else if (e.kind === 'graphic') {
+      out = { tag: 'span', attrs: [...hook(id), ['aria-hidden', { lit: 'true' }]], children: [] };
+    } else if (e.kind === 'text') {
+      out = { tag, attrs: hook(id), children: [textOf(id, e, part.words)] };
+    } else {
+      out = { tag, attrs: hook(id), children: (kids.get(id) || []).flatMap((k) => node(k, known, fill)).filter(Boolean) };
+    }
+    return when ? { when, node: out } : out;
+    // a placed instance under the condition `w`: each component a variant swaps in where it holds, the base's elsewhere
+    // (a list either way)
+    function instanceOut(w) {
       // a variant that places another of the library's components here (a card's Elevated state for its Outlined one,
       // an app bar's Text Large at Large): each drawn where its variant holds and no later one swaps it again, the
       // base's where none does, as expand layers them (a combination last)
@@ -464,17 +489,11 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
         // (a later layer at another value of the same prop never holds with this one: not said)
         const one = (t) => /^([\w$.]+) === ("[^"]*"|'[^']*')$/.exec(t), apart = (a, b) => { const x = one(a), y = one(b); return !!x && !!y && x[1] === y[1] && x[2] !== y[2]; };
         const alts = [{ t: all(layers.map((x) => not(x.t))), e }, ...layers.map((x, i) => ({ t: all([x.t, ...layers.slice(i + 1).filter((y) => !apart(x.t, y.t)).map((y) => not(y.t))]), e: x.e }))].filter((x) => x.t !== 'false');
-        return alts.map((x) => { const t = all([...(when ? [when] : []), x.t]); const item = placedItem(x.e); return t === 'true' ? item : { when: t, node: item }; });
+        return alts.map((x) => { const t = all([...(w ? [w] : []), x.t]); const item = placedItem(x.e); return t === 'true' ? item : { when: t, node: item }; });
       }
-      out = placedItem(e);
-    } else if (e.kind === 'graphic') {
-      out = { tag: 'span', attrs: [...hook(id), ['aria-hidden', { lit: 'true' }]], children: [] };
-    } else if (e.kind === 'text') {
-      out = { tag, attrs: hook(id), children: [textOf(id, e, part.words)] };
-    } else {
-      out = { tag, attrs: hook(id), children: (kids.get(id) || []).flatMap((k) => node(k, known, fill)).filter(Boolean) };
+      const item = placedItem(e);
+      return [w ? { when: w, node: item } : item];
     }
-    return when ? { when, node: out } : out;
     // a placed instance of the library's: the component, the props it is given and what this one puts in its slots
     function placedItem(e) {
       const placed = placedOf(library, e), theirs = propsOf(placed, library, lang, settings);

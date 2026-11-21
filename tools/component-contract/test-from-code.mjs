@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -396,6 +396,26 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   const got = asDesignSwaps({ icon: { type: 'string', code: 'icon' }, label: { type: 'string', code: 'label' } }, design);
   ok('a string icon the writer merged reads back as each size\'s swap', got.icon16?.type === 'instance' && got.icon20?.code === 'icon' && !got.icon);
   ok('a string the design holds as text stays text, though an instance shares its name', got.label?.type === 'string' && !got.label2);
+  // content the code draws a library component in by default (to-markup's swap of Button 1): the design's swap, where
+  // the reading draws the layer it swaps as an instance; a slot where it does not, or the design has no swap of that key
+  const group = { button1: { type: 'instance', figma: '<Button> 1', swaps: ['button'] }, button3: { type: 'instance', figma: '<Button> 3', swaps: ['button_3'] }, extra: { type: 'instance', figma: 'Extra', swaps: ['extra'] } };
+  const read = { anatomy: { root: { kind: 'container' }, button: { kind: 'instance', parent: 'root', component: 'Btn' }, extra: { kind: 'slot', parent: 'root' } }, variants: [{ when: { count: '3' }, add: { button_3: { kind: 'instance', parent: 'root', component: 'Btn' } } }] };
+  const sw = asDesignSwaps({ button1: { type: 'slot', code: 'button1', placed: true }, button3: { type: 'slot', code: 'button3', placed: true }, extra: { type: 'slot', code: 'extra', placed: true }, other: { type: 'slot', code: 'other', placed: true }, free: { type: 'slot', code: 'free' } }, group, read);
+  ok('a slot the code fills with a library component by default reads back as the design\'s swap of that instance, one a variant adds too',
+    JSON.stringify(sw.button1) === JSON.stringify({ type: 'instance', figma: '<Button> 1', swaps: ['button'], code: 'button1' }) && sw.button3.type === 'instance');
+  // only the toolkit's own story marks a slot read at its default: a real Storybook's docgen default keeps the stand-in
+  ok('the self story marks a swap of a library component as placed, and only that mark reads a slot at its default',
+    JSON.stringify(selfSlotControl({ type: 'node', placed: { parts: ['button'], component: 'Btn' } })) === '{"control":"slot","placed":"Btn"}' && JSON.stringify(selfSlotControl({ type: 'node' })) === '{"control":"slot"}'
+    && slotProp('button1', selfSlotControl({ type: 'node', placed: { parts: ['button'], component: 'Btn' } })).placed === true
+    && !('placed' in slotProp('icon', { control: 'slot', default: '<ChevronDown />' })) && !('placed' in slotProp('children', { control: 'slot', default: 'Submit' })));
+  { // the mark leaves both the shaped contract and the reading the report writes (asFigma copies each prop)
+    const raw = { component: 'G', props: { b: { type: 'slot', code: 'b', placed: true } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+    const shaped = asFigma(raw, {});
+    dropPlaced(shaped.contract.props, raw.props);
+    ok('no contract a reading writes keeps the placed mark: neither the shaped one nor the reading itself', !JSON.stringify(shaped.contract.props).includes('placed') && !JSON.stringify(raw.props).includes('placed'));
+  }
+  ok('a default the reading does not draw as an instance, or a key the design does not swap, stays a slot; a plain slot is untouched',
+    JSON.stringify(sw.extra) === '{"type":"slot","code":"extra"}' && JSON.stringify(sw.other) === '{"type":"slot","code":"other"}' && JSON.stringify(sw.free) === '{"type":"slot","code":"free"}');
 }
 {
   const btn = { props: { size: { type: 'enum', values: ['sm', 'md'], default: 'md' }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon16'] }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon20'] } },
