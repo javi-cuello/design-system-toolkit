@@ -57,10 +57,14 @@ export function sessionName(id, dir = path.join(os.homedir(), '.claude', 'sessio
 
 /* Who a new run would wait for: the earliest holder { pid, what, session, at } when every slot is held, or null when one
    is free (asked of the locks, not of the notes). */
+// a measure tries slot 0 last, so it leaves checks and lands their slot while another is free
+const order = (first) => (first ? [0] : [...Array.from({ length: slots() - 1 }, (_, i) => i + 1), 0]);
 export function holder({ first = false } = {}) {
   const held = [];
   for (let i = 0; i < (first ? 1 : slots()); i++) {
-    if (spawnSync('python3', ['-c', TRY, lockFile(i)], { stdio: 'ignore' }).status !== 1) return null;
+    const s = spawnSync('python3', ['-c', TRY, lockFile(i)], { stdio: 'ignore' }).status;
+    if (s === 2) continue; // a slot that cannot be opened is skipped, as hold() skips it
+    if (s !== 1) return null;
     try { held.push(JSON.parse(fs.readFileSync(infoFile(i), 'utf8'))); } catch { held.push({ pid: 0, what: 'a run', at: Date.now() }); }
   }
   return held.sort((a, b) => a.at - b.at)[0] || null;
@@ -77,7 +81,7 @@ export function hold(what, { say = (l) => console.error(l), first = false } = {}
     let timer = null, buf = '', done = false;
     const finish = (ok, why) => { if (done) return; done = true; clearInterval(timer); if (!ok) { say(`measuring lock: ${why}; running without it`); child = null; } resolve(ok); };
     const note = JSON.stringify({ pid: process.pid, what, session: process.env.CLAUDE_CODE_SESSION_ID || '', at: Date.now() });
-    child = spawn('python3', ['-c', HOLD, note, ...Array.from({ length: first ? 1 : slots() }, (_, i) => [lockFile(i), infoFile(i)]).flat()], { stdio: ['pipe', 'pipe', 'ignore'] });
+    child = spawn('python3', ['-c', HOLD, note, ...order(first).map((i) => [lockFile(i), infoFile(i)]).flat()], { stdio: ['pipe', 'pipe', 'ignore'] });
     child.on('error', (e) => finish(false, `python3 could not run (${e.code || e.message})`));
     child.on('close', () => finish(false, 'the lock holder stopped before taking it')); // after its output is read
     child.stdout.on('data', (d) => {
@@ -106,7 +110,11 @@ export function release() {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
   const argv = process.argv.slice(2);
-  if (argv[0] === '--who') { const h = holder(); const c = holder({ first: true }); console.log(h ? `every slot held; next free after ${describe(h)}` : c ? `a slot free; checks and lands wait for ${describe(c)}` : 'free'); process.exit(0); }
+  if (argv[0] === '--who') {
+    const held = Array.from({ length: slots() }, (_, i) => i).filter((i) => spawnSync('python3', ['-c', TRY, lockFile(i)], { stdio: 'ignore' }).status === 1);
+    const note = (i) => { try { return describe(JSON.parse(fs.readFileSync(infoFile(i), 'utf8'))); } catch { return 'a run'; } };
+    console.log(held.length ? `${held.length} of ${slots()} slots held: ${held.map((i) => `slot ${i} by ${note(i)}`).join('; ')}` : 'free'); process.exit(0);
+  }
   const dash = argv.indexOf('--');
   if (argv[0] !== '--run' || dash < 2 || dash === argv.length - 1) { console.error('usage: lock.mjs --run <what> -- <command…> | --who'); process.exit(2); }
   // waits without bound: a waiter that gave up would turn a busy machine into a red check
