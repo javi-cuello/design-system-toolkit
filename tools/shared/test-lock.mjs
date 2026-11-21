@@ -96,4 +96,17 @@ await new Promise((r) => (l1.exitCode !== null ? r() : l1.on('close', r)));
   fs.writeFileSync(path.join(process.env.TOOLKIT_LOCK_DIR, 'want-999999.json'), JSON.stringify({ pid: 999999, what: 'gone', first: false, at: 0 }));
   assert.equal((await import('./lock.mjs')).waiters().length, 0, 'a dead waiter is no one');
   assert.equal(fs.readdirSync(process.env.TOOLKIT_LOCK_DIR).filter((f) => f.startsWith('want-')).length, 0, 'no waiter note is left behind'); }
-console.log('test-lock: 31 assertions passed');
+// a measure never takes slot 0 while a check or land waits for it (a live want note with first)
+{ const env3 = { ...env, TOOLKIT_LOCK_SLOTS: '2' };
+  const m1 = spawn('node', [LOCK, '--run', 'measure one', '--', 'sleep', '4'], { env: env3 });
+  await until(() => spawnSync('node', [LOCK, '--who'], { env: env3, encoding: 'utf8' }).stdout.startsWith('1 of 2 slots held'));
+  const landPid = spawn('sleep', ['30']); // stands for a land waiting on slot 0
+  const note = path.join(process.env.TOOLKIT_LOCK_DIR, `want-${landPid.pid}.json`);
+  fs.writeFileSync(note, JSON.stringify({ first: true, pid: landPid.pid, what: 'bin/land x', at: Date.now() }));
+  const t5 = Date.now();
+  const m2 = spawnSync('node', [LOCK, '--run', 'measure two', '--', 'echo', 'two'], { env: env3, encoding: 'utf8', timeout: 20000 });
+  assert.equal(m2.stdout.trim(), 'two', 'the second measure runs in the end');
+  assert.ok(Date.now() - t5 > 2500, 'but only once measure one let slot 1 go, not in slot 0 the land waits for');
+  landPid.kill(); fs.rmSync(note, { force: true });
+  await new Promise((r) => (m1.exitCode !== null ? r() : m1.on('close', r))); }
+console.log('test-lock: 33 assertions passed');

@@ -41,7 +41,8 @@ const TRY = 'import fcntl,sys\ntry: f=open(sys.argv[1],"a")\nexcept Exception: s
 // hold: "busy" when it must wait, "held" once it holds, then keep it until stdin closes (the holder gone)
 // the note (argv[2] into argv[3]) is written under the lock, before "held", so a waiter never reads the last holder's
 // argv: the note, then lock file and note file per slot; the first slot free is taken, else every slot is tried again each second
-const HOLD = 'import fcntl,sys,time\nn=sys.argv[1]; p=sys.argv[2:]; fs=[]\nfor i in range(0,len(p),2):\n  try: fs.append((open(p[i],"a"),p[i+1]))\n  except Exception: pass\nif not fs:\n  print("nolock",flush=True); sys.exit(0)\nsaid=False\nwhile True:\n  for f,w in fs:\n    try: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\n    except OSError: continue\n    try: open(w,"w").write(n)\n    except Exception: pass\n    print("held "+p[p.index(w)-1],flush=True); sys.stdin.read(); sys.exit(0)\n  if not said: print("busy",flush=True); said=True\n  time.sleep(1)\n';
+// a measure (D set) never takes slot 0 (info file Z) while a check or land (a live want note with first) waits for it
+const HOLD = 'import fcntl,sys,time,glob,json,os\nn=sys.argv[1]; D=sys.argv[2]; Z=sys.argv[3]; p=sys.argv[4:]; fs=[]\nfor i in range(0,len(p),2):\n  try: fs.append((open(p[i],"a"),p[i+1]))\n  except Exception: pass\nif not fs:\n  print("nolock",flush=True); sys.exit(0)\ndef landing():\n  for g in glob.glob(os.path.join(D,"want-*.json")):\n    try:\n      w=json.load(open(g))\n      if not w.get("first"): continue\n      os.kill(int(w["pid"]),0); return True\n    except PermissionError: return True\n    except Exception: pass\n  return False\nsaid=False\nwhile True:\n  for f,w in fs:\n    if D and w==Z and landing(): continue\n    try: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\n    except OSError: continue\n    try: open(w,"w").write(n)\n    except Exception: pass\n    print("held "+p[p.index(w)-1],flush=True); sys.stdin.read(); sys.exit(0)\n  if not said: print("busy",flush=True); said=True\n  time.sleep(1)\n';
 
 /* The live session's name, from Claude Code's registry (~/.claude/sessions/<pid>.json), else its id. */
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
@@ -111,7 +112,7 @@ export function hold(what, { say = (l) => console.error(l), first = false } = {}
     let timer = null, buf = '', done = false;
     const finish = (ok, why) => { if (done) return; done = true; clearInterval(timer); unwant(); if (!ok) { say(`measuring lock: ${why}; running without it`); child = null; } resolve(ok); };
     const note = JSON.stringify({ pid: process.pid, what, session: process.env.CLAUDE_CODE_SESSION_ID || '', at: Date.now() });
-    child = spawn('python3', ['-c', HOLD, note, ...order(first).map((i) => [lockFile(i), infoFile(i)]).flat()], { stdio: ['pipe', 'pipe', 'ignore'] });
+    child = spawn('python3', ['-c', HOLD, note, first ? '' : lockDir(), infoFile(0), ...order(first).map((i) => [lockFile(i), infoFile(i)]).flat()], { stdio: ['pipe', 'pipe', 'ignore'] });
     child.on('error', (e) => finish(false, `python3 could not run (${e.code || e.message})`));
     child.on('close', () => finish(false, 'the lock holder stopped before taking it')); // after its output is read
     child.stdout.on('data', (d) => {
