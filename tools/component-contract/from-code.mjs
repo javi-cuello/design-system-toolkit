@@ -356,6 +356,7 @@ export function axisValueOf(vals, attrs, innerDisabled = false) {
 /* A prop the mapping joins to exactly one design prop of its own kind (a boolean to a boolean, a text to a text) takes
    that prop's Figma name, as the design spells it; one already named, an enum (named by its values above), a swap
    (named by the layers it shows) or a name another prop holds is left. Changes props in place. Tested by test-from-code.mjs. */
+const JOINED = new WeakSet(); // props joinedNames named, for asFigma's last word on a name two props share
 export function joinedNames(props, design, map = {}) {
   const joins = (x, c) => (typeof x === 'string' ? x === c : !!x && (x.code === c || x.arg === c));
   // names taken: one a prop already carries, the names a swap is drawn under (its boolean and its swap), and the
@@ -368,7 +369,7 @@ export function joinedNames(props, design, map = {}) {
     const name = hits[0][1].figma || hits[0][0];
     // (its own convention name is no other prop's: it may take a design name spelled so)
     if (held.has(name) && name !== sentence(k)) continue;
-    p.figma = name; held.add(name);
+    p.figma = name; held.add(name); JOINED.add(p);
   }
   return props;
 }
@@ -633,7 +634,7 @@ export function delta(base, other, def = base) {
    `renamed` lists every change, so a reader can see what the code said. */
 export function asFigma(contract, { axisOrder = [] } = {}) {
   const renamed = [];
-  const props = {}, valueMap = {};
+  const props = {}, valueMap = {}, joined = [];
   const tokensOf = (anatomy) => Object.values(anatomy).flatMap((e) => [e.background, e.color].filter((t) => typeof t === 'string' && t.includes('/')));
   for (const [k, p] of Object.entries(contract.props)) {
     // one that took the design's name (and so its values) keeps them: the token words are the code's guess at them
@@ -689,7 +690,11 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
     }
     // a prop that took the design's own name keeps it; the rest are named by the house's convention
     props[k] = { ...p, figma: p.figma || sentence(k) };
+    if (JOINED.has(p)) joined.push(k);
   }
+  // a design name joinedNames gave that another prop is drawn under after all goes back to the convention, as before the
+  // join: two props under one Figma name lose one when drawn (to-figma keys them by it)
+  for (const k of joined) if (Object.entries(props).some(([o, q]) => o !== k && q.figma === props[k].figma)) props[k] = { ...props[k], figma: sentence(k) };
   // figma-standard rule 1's order: props and booleans, then the axes the house orders (audit-settings
   // axisOrder, by the contract's own spelling of them), then the rest of the enums
   const AXES = axisOrder.map(camel);

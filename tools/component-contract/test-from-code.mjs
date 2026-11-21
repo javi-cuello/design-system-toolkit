@@ -130,6 +130,11 @@ ok('an emphasis is not a category: values whose own word is the token\'s leaf ke
   const clash = joinedNames({ children: { type: 'string', code: 'children' }, label: { type: 'string', code: 'label' }, hasIcon: { type: 'boolean', default: false, code: 'hasIcon' }, icon: { type: 'swap', code: 'icon', shows: ['icon'], showName: 'Show icon' } },
     { label: { type: 'string', figma: 'Label' }, show: { type: 'boolean', figma: 'Show icon' } }, { label: 'children', show: 'hasIcon' });
   ok('a design name another prop is drawn under is not taken: an unpaired prop\'s convention, a swap\'s boolean', !clash.children.figma && !clash.hasIcon.figma);
+  // and whatever the held names miss, asFigma never draws two props under one name: a joined name another prop is drawn
+  // under after all (a swap's own layer name, Icon) goes back to the convention
+  const late = joinedNames({ glyph: { type: 'string', code: 'glyph' }, icon: { type: 'swap', code: 'icon', shows: ['icon'], default: 'x' } }, { g: { type: 'string', figma: 'Icon' } }, { g: 'glyph' });
+  const lp = asFigma({ ...code, props: late, variants: [] }).contract.props, names = Object.values(lp).map((q) => q.figma);
+  ok('asFigma never draws two props under one Figma name', new Set(names).size === names.length && lp.glyph.figma === 'Glyph');
 }
 
 ok('a percentage radius is of the box, not pixels: 50% on a 120px avatar is a full round of 60, 10% a corner of 12',
