@@ -190,6 +190,18 @@ ok('a part inside a box drawn under the same condition is not asked it again', /
 ok('a part a "not not" would draw is drawn by the value itself', /\{showNote && \(/.test(stepper) && !/!!/.test(stepper));
 ok('a slot a boolean shows is found under its own name, never a placed component\'s slot of the same name', /<div className="ds-stepper__show-more-actions-slot" data-slot="actionsSlot">\{actionsSlot\}<\/div>/.test(stepper));
 ok('a part a pointer state takes away stays, a gap saying so', /chevron-down/.test(stepper) && /frontend-build: Chevron is taken away at a pointer state/.test(stepper));
+{ const border = { kind: 'graphic', parent: 'root', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 } };
+  const tile = { component: 'Tile', props: { kind: { type: 'enum', values: ['plain', 'framed'], default: 'plain' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] } },
+    anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Tile' } }, variants: [{ when: { kind: 'framed' }, add: { border } }, { when: { state: 'hover' }, add: { border } }] };
+  const el = toElement(tile, 'tile', { naming: ELEMENT, library: {} });
+  ok('a part a pointer state also puts in is held wherever that state draws it, a gap saying the sheet shows it', /\n\s*h\("span", \{ "data-part": "border"/.test(el) && !/kind === "framed"\) && h\("span", \{ "data-part": "border"/.test(el) && /Border is also drawn at a pointer state/.test(el) && Array.isArray(partsOf(tile).get('border').pointerShown));
+  // (a base part the rest take out at a size and a pointer state puts back: held at that size too, as the gap says)
+  const icon = { ...tile, anatomy: { ...tile.anatomy, icon: { kind: 'container', parent: 'root' } }, variants: [{ when: { kind: 'framed' }, remove: ['icon'] }, { when: { state: 'hover' }, add: { icon: { kind: 'container', parent: 'root' } } }] };
+  const ie = toElement(icon, 'tile', { naming: ELEMENT, library: {} });
+  ok('a base part a pointer state puts back over a removal is held past that removal', /\n\s*h\("div", \{ "data-part": "icon"/.test(ie) && !/framed"\)\) && h\("div", \{ "data-part": "icon"/.test(ie) && /Icon is also drawn at a pointer state/.test(ie));
+  // (a base part nothing removes, which a pointer state adds again: the sheet hides nothing, so no gap)
+  const kept = toElement({ ...icon, variants: [icon.variants[1]] }, 'tile', { naming: ELEMENT, library: {} });
+  ok('a base part no variant removes is no pointer-shown gap', !/Icon is also drawn at a pointer state/.test(kept)); }
 ok('every placed component the markup draws is imported, and only those', /import \{ IconButton \}/.test(stepper) && /import \{ Field \}/.test(stepper) && (stepper.match(/^import \{/gm) || []).length === 2);
 ok('a component with no props of its own has no empty type for them', /export type NoteProps = ComponentPropsWithRef<"span">;/.test(toReact({ component: 'Note', props: {}, anatomy: { root: { kind: 'container' } } }, 'note', { naming: CLASS, library: {} })) && !/type Own = \{\s*\};/.test(toReact({ component: 'Note', props: {}, anatomy: { root: { kind: 'container' } } }, 'note', { naming: CLASS, library: {} })));
 ok('a project\'s story types are its Storybook framework\'s, read from its package.json', storybookOf({ devDependencies: { '@storybook/nextjs-vite': '9' } }) === '@storybook/nextjs-vite' && storybookOf({}) === '@storybook/react' && /from '@storybook\/react-vite'/.test(toStories(library.Button, 'button', 'react', { library, storybook: '@storybook/react-vite' })));

@@ -113,6 +113,11 @@ ok('a placed control the contract names drives the state, and no other', ccss.in
 // where Figma draws no disabled hover, a disabled box under the pointer is drawn at rest: rest admits it
 const restDis = toCss({ ...chip, props: { ...chip.props, state: { ...chip.props.state, values: ['rest', 'hover', 'press'], pointer: ['hover', 'press'] } }, variants: [...chip.variants, { when: { state: 'press' }, set: { 'root.background': 'C/p' } }, { when: { state: 'rest', disabled: true }, set: { 'root.background': 'C/r' } }] }, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
 ok('rest is also a disabled box hovered, where disabled hover is not drawn', condition(chip, namer('chip'), 'state', 'rest').includes(':not(:hover:not(:is([data-disabled]') && !restDis.includes('undefined'));
+// rest, where the product sets states of its own (disabled, read-only, active), is none of them: a rule naming rest never
+// reaches a disabled box (carbon slider: a rest rule's display: none hid its handle at disabled and active)
+{ const sl = { contract: 1, component: 'Slide', props: { state: { type: 'enum', values: ['rest', 'hover', 'disabled'], default: 'rest', role: 'interaction', pointer: ['hover'] } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const r = condition(sl, namer('slide'), 'state', 'rest');
+  ok('rest, beside states the product sets, excludes them by its attribute', r.includes(':not(:hover)') && /:is\(\[data-state="rest"\], :not\(\[data-state\]\)\)/.test(r) && !/data-state/.test(condition(chip, namer('chip'), 'state', 'rest'))); }
 // numbered copies of a placed component in one box are rows of one kind: the first's class and rule, no numbered parts
 const rows = toCss({ ...chip, anatomy: { ...chip.anatomy, nav: { kind: 'container', parent: 'root', order: 1, layout: { direction: 'column' } }, 'nav/item': { kind: 'instance', parent: 'nav', order: 0, component: 'Row', width: 'fill' }, 'nav/item_2': { kind: 'instance', parent: 'nav', order: 1, component: 'Row', width: 'fill' } } }, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
 const odd = toCss({ ...chip, anatomy: { ...chip.anatomy, nav: { kind: 'container', parent: 'root', order: 1, layout: { direction: 'column' } }, 'nav/day': { kind: 'instance', parent: 'nav', order: 0, component: 'Day', opacity: 'O/dim' }, 'nav/day_2': { kind: 'instance', parent: 'nav', order: 1, component: 'Day', width: 'fill' } } }, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
@@ -385,6 +390,33 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('and stays hidden where a rule of the same weight gives the part a display of its own (a layout at a size)', selfCheck(lg, rulesOf(lg).rules).length === 0);
   ok('a part a pointer state takes away is hidden by the sheet at that state, its insides with it, once',
     /:focus-visible[^{]*> \.pick__down \{[^}]*display: none/.test(css) && !/pick__dot \{[^}]*display: none/.test(css) && (css.match(/display: none/g) || []).length === 1); }
+// a part the rest of the grid draws that a pointer state also puts in (a tile's border, framed or hovered): the markup
+// holds it, so the sheet hides it where the contract draws none and shows it at the pointer state (carbon tile, 2026-11-21)
+{ const border = { kind: 'graphic', shape: 'rectangle', parent: 'root', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'C/s', width: 1 } };
+  const c = { contract: 1, component: 'Tile', props: { kind: { type: 'enum', values: ['plain', 'framed'], default: 'plain' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, label: { kind: 'text', parent: 'root', content: 'Tile' } },
+    variants: [{ when: { kind: 'framed' }, add: { border } }, { when: { state: 'hover' }, add: { border } }] };
+  const css = toCss(c, 'tile', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('a part a pointer state also puts in is hidden by the sheet where the contract draws none, shown at that state',
+    /\.ds-tile:where\(:is\(\[data-kind="plain"\], :not\(\[data-kind\]\)\)\):where\([^{]*:not\(:hover\)[^{]*\) > \.ds-tile__border \{\s*display: none;\s*\}/.test(css)
+    // (hidden by a rule naming its whole combination alone, so no rule shows it again: nothing to undo a display with)
+    && (css.match(/display: /g) || []).length === 2 && selfCheck(c, rulesOf(c).rules).length === 0);
+  // (a placed component is hidden the same way, and never shown again by a display of this sheet's: its own sheet's holds,
+  // whatever its props make it; carbon dropdown's read-only tag, whose content read as filling under display: unset)
+  const tag = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } } }, variants: [] };
+  const held = { ...c, variants: [{ when: { kind: 'framed' }, add: { tag: { kind: 'instance', parent: 'root', component: 'Tag' } } }, { when: { state: 'hover' }, add: { tag: { kind: 'instance', parent: 'root', component: 'Tag' } } }] };
+  const hm = (n) => (n === 'Tag' ? tag : null), hc = toCss(held, 'tile', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: hm });
+  ok('a placed component a pointer state also puts in is hidden where the contract draws none and its own display left alone', /__tag \{\s*display: none;\s*\}/.test(hc) && !/__tag \{[^}]*display: (?!none)/.test(hc) && selfCheck(held, rulesOf(held, hm).rules, hm).length === 0);
+  // (a pseudo part, `::`, is no element the markup holds: never hidden this way)
+  const ps = { ...c, variants: [{ when: { kind: 'framed' }, add: { 'label::after': { kind: 'graphic', parent: 'label' } } }, { when: { state: 'hover' }, add: { 'label::after': { kind: 'graphic', parent: 'label' } } }] };
+  ok('a pseudo part a pointer state also puts in is not hidden by display', !/::after \{\s*display: none/.test(toCss(ps, 'tile', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }))); }
+  // (one a pointer state draws as a ring, focus's outline on the box it rings, stays that outline: no element held for it
+  // there, none hidden; carbon dropdown, whose focus border came back as a second ring)
+  const ringAdd = { contract: 1, component: 'Pick', props: { open: { type: 'boolean', default: false }, state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'] } },
+    anatomy: { root: { kind: 'container', radius: 8 } },
+    variants: ['open', 'state'].map((k) => { const fb = { kind: 'graphic', shape: 'rectangle', parent: 'root', position: 'absolute', absolute: { x: -2, y: -2, end: -2, bottom: -2 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'C/f', width: 2, align: 'inside' }, radius: 8 }; return { when: { [k]: k === 'open' ? true : 'focus' }, add: { focusBorder: fb } }; }) };
+  const rc = toCss(ringAdd, 'pick', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('a part a pointer state draws as a ring stays the ring there, never held and hidden', !/\.ds-pick > \.ds-pick__focus-border \{\s*display: none/.test(rc) && /:focus-visible[^{]*\) \{\s*outline: /.test(rc));
 {
   const c = { component: 'Sheet', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column' } },
     body: { kind: 'slot', parent: 'root', layout: { direction: 'column' }, width: 'fill', height: 'hug', minHeight: 172, whileEmpty: ['minHeight'] } }, variants: [] };

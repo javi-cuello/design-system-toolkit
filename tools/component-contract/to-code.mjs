@@ -203,7 +203,10 @@ export function condition(c, n, key, value, t = HOUSE) {
     const notDrawn = (v) => dis && (c.invalid || []).some((w) => w[dis] === true && [].concat(w[key]).includes(v) && Object.keys(w).length === 2);
     const live = (v) => PS[v] + (notDrawn(v) ? `:not(${disabled})` : '');
     if (PS[value]) return live(value);
-    if (value === p.default) return Object.keys(PS).map((v) => `:not(${live(v)})`).join('');
+    // (and where the product sets values of its own too, a disabled or read-only state, the default is not those:
+    // its attribute at the default, or none; a rule for the rest state would otherwise reach a disabled box)
+    const set = (p.values || []).filter((v) => v !== p.default && !PS[v]);
+    if (value === p.default) return Object.keys(PS).map((v) => `:not(${live(v)})`).join('') + (set.length ? `:is([${n.attr(key)}="${value}"], :not([${n.attr(key)}]))` : '');
   }
   if (entry && key === entry.flag) return (value === entry.on) ? `:has(> ${control}:not(:placeholder-shown))` : `:has(> ${control}:placeholder-shown)`;
   if (key === dis) return value ? disabled : `:not(${disabled})`;
@@ -670,6 +673,31 @@ function pointerGone(c, full, dflt, mains, t = HOUSE) {
   return Object.keys(rest).filter((id) => restA[id] && !nowA[id] && !id.includes('::') && (!restA[id].parent || restA[id].parent === 'root' || nowA[restA[id].parent]));
 }
 
+// the parts a pointer state puts in that the rest of the grid draws too (to-markup's partsOf `pointerShown`): the markup
+// holds each wherever a pointer state of that combination draws it, so the sheet hides it at this combination where the
+// contract draws none (outermost only, its insides with it). A part only pointer states draw is a gap, not this
+const shownMemo = new WeakMap();
+function shownParts(c, t = HOUSE) {
+  const k = shownMemo.get(c); if (k && k.t === t) return k.ids;
+  const ids = shownPartsOf(c, t); shownMemo.set(c, { t, ids }); return ids;
+}
+function shownPartsOf(c, t) {
+  const pointer = ([k, v]) => ((c.props || {})[k] || {}).role === 'interaction' && (c.props[k].pointer || []).includes(v);
+  const rest = new Set(Object.keys(c.anatomy || {})), byPointer = new Set();
+  // (a pointer state's add drawn as a ring is the ringed element's outline there, which the markup holds no element for)
+  for (const v of c.variants || []) for (const [id, e] of Object.entries(v.add || {})) {
+    if (!Object.entries(v.when || {}).some(pointer)) rest.add(id);
+    else if (!ringOf(c, v.when || {}, id, e, { ...c.anatomy, ...v.add }, t)) byPointer.add(id);
+  }
+  return [...byPointer].filter((id) => rest.has(id) && !id.includes('::'));
+}
+function pointerShown(c, full, t = HOUSE) {
+  const ids = shownParts(c, t);
+  if (!ids.length) return [];
+  const nowA = expand(c, full), all = { ...Object.assign({}, ...(c.variants || []).map((v) => v.add || {})), ...c.anatomy };
+  return ids.filter((id) => { const p = all[id].parent; return !nowA[id] && (!p || p === 'root' || nowA[p]); });
+}
+
 export function rulesOf(c, mains, t = HOUSE) {
   const dflt = variantDefaults(c);
   const layers = [{ when: {} }, ...(c.variants || []).filter((v) => !v.combination), ...(c.variants || []).filter((v) => v.combination)]
@@ -692,6 +720,9 @@ export function rulesOf(c, mains, t = HOUSE) {
     // a part a pointer state takes away (a field's chevron at focus, where another stands): the markup holds it at every
     // state, so the sheet hides it there (to-markup names it pointerGone); the outermost part gone, its insides with it
     for (const id of pointerGone(c, full, dflt, mains, t)) if ((cascade(rules, full, id).get('display') || {}).v !== 'none') (parts[id] ||= new Map()).set('display', { v: 'none' });
+    // (one a pointer state puts in, held by the markup beyond where the contract draws it, is hidden by selfCheck's rules
+    // alone, each naming its whole combination: a hide on a layer would reach combinations that draw it, and showing it
+    // again there would take a display this sheet cannot know, a placed component's own)
     if (Object.keys(parts).length || !rules.length) rules.push({ when, weight: Object.keys(when).length, parts });
   }
   // CSS decides by specificity where the contract applies its layers in order, so a combination the two read
@@ -727,7 +758,7 @@ export function selfCheck(c, rules, mains, t = HOUSE) {
       for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset') out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
     }
     // and a part a pointer state takes away stays hidden there, whatever a rule of the same weight gives it
-    for (const id of pointerGone(c, full, dflt, mains, t)) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v }); }
+    for (const id of [...pointerGone(c, full, dflt, mains, t), ...pointerShown(c, full, t)]) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v }); }
   }
   return out;
 }

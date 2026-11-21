@@ -239,7 +239,8 @@ export function partsOf(c, t = HOUSE) {
     const byPointer = Object.entries(when).some(([k, x]) => pointer(k, x));
     for (const [id, e] of Object.entries(v.add || {})) {
       if (!parts.has(id)) parts.set(id, { id, e, base: false, adds: [], removes: [], pointerOnly: true, rings: [], words: [] });
-      if (byPointer) { parts.get(id).rings.push(!!ringOf(c, when, id, e, { ...c.anatomy, ...v.add }, t)); continue; }
+      // (a pointer state's add drawn as a ring is the ringed element's outline there, never an element the markup holds)
+      if (byPointer) { const ring = !!ringOf(c, when, id, e, { ...c.anatomy, ...v.add }, t); parts.get(id).rings.push(ring); if (!ring) parts.get(id).pointerAdds = [...(parts.get(id).pointerAdds || []), when]; continue; }
       parts.get(id).pointerOnly = false;
       parts.get(id).adds.push(when);
       const at = parts.get(id);
@@ -272,6 +273,12 @@ export function partsOf(c, t = HOUSE) {
     delete part.texts;
     // a ring where to-code makes it the ringed element's outline at every focus that draws it (to-code's ringOf, the one rule)
     part.ring = !part.base && part.pointerOnly && part.rings.length > 0 && part.rings.every(Boolean);
+    // a part the rest of the grid draws that a pointer state also puts in where the rest take it out (a tile's border at
+    // hover, a search's clear icon at focus): the markup holds it wherever that state's combination draws it, the
+    // pointer value aside, and the sheet hides it where the contract draws none (to-code's pointerShown)
+    if (!part.pointerOnly && part.pointerAdds) {
+      part.pointerShown = part.pointerAdds.map((w) => Object.fromEntries(Object.entries(w).filter(([k, x]) => !pointer(k, x))));
+    }
     for (let up = part.e.parent; up && up !== 'root'; up = ((parts.get(up) || {}).e || {}).parent) {
       const k = ((parts.get(up) || {}).e || {}).kind;
       if (k === 'instance') part.inside = up;
@@ -343,6 +350,10 @@ function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, 
   const backs = !part.base ? [] : part.adds.flatMap((w) => { const [t] = terms([w]); if (!t) return []; const rs = terms(narrower(w)); return [rs.length ? `${wrap(t)} && ${not(any(rs))}` : t]; });
   const back = any(backs);
   if (back !== 'false' && cond !== 'true') cond = cond === 'false' || back === 'true' ? back : `${wrap(cond)} || ${wrap(back)}`;
+  // a pointer state that puts the part in (partsOf `pointerShown`, base or added) holds it wherever that state's
+  // combination is, past any removal the rest make: the sheet hides it where the contract draws none
+  const shown = any(terms(part.pointerShown || []));
+  if (shown !== 'false' && cond !== 'true') cond = cond === 'false' || shown === 'true' ? shown : `${wrap(cond)} || ${wrap(shown)}`;
   // (a removal it is put back over rules nothing out for its children: they keep their own)
   return { when: cond === 'true' ? null : cond, unknown, known: { yes: new Set([...known.yes, add]), no: new Set([...known.no, ...(back === 'false' ? no : [])]) } };
 }
@@ -430,6 +441,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     if (part.pointerOnly) { gaps.push(`${partName(id)} is drawn only at a pointer state: the stylesheet's, or frontend-build's to add`); return { comment: `frontend-build: ${partName(id)}, drawn only at a pointer state` }; }
     const { when, unknown, known } = conditionOf(c, part, props, holds, lang);
     if (part.pointerGone) gaps.push(`${partName(id)} is taken away at a pointer state: the stylesheet's, or frontend-build's to take away`);
+    if (part.pointerShown && (!part.base || part.removes.length)) gaps.push(`${partName(id)} is also drawn at a pointer state: held here, the stylesheet's to show there and hide elsewhere`);
     if (unknown) gaps.push(`${partName(id)} is drawn by whether the field holds a value: the input's own :placeholder-shown, or frontend-build's to say`);
     if (when === 'false') return null;
     const icon = props.find((x) => x.type === 'icon' && (x.p.swaps || []).includes(id));
