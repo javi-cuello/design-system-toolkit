@@ -62,7 +62,7 @@ Read [discovery-passes.md](references/discovery-passes.md) before the first `fig
 
 5. **Confirm the summary before assembling.** Present a short chat summary per file, each value with its tag. It gives the prefix, separator, scales, state order, dialect, sparse stance, proposed registry role and audience. **Wait for the user's confirmation or corrections.** A correction here is a `[confirmed]` value with "maintainer-stated" as its evidence.
 
-   - Ask **pass M's questions** in the same message, as a separate block headed as things the file cannot answer. There are four, and a fifth (screens) where the project registers a screens file.
+   - Ask **pass M's questions** in the same message, as a separate block headed as things the file cannot answer. There are four, and a fifth (screens) where the project registers a screens file. Keep them apart: they are the only items where silence yields a document that looks finished and is not.
    - Pass M's items have no house default. Where a discovered value has one (axis order from pass D, slot names from pass C), *offer* it, never apply it quietly. For example: "canon default is Size-first — apply here?"
    - If the user says "just give me the draft", assemble without the pause. Then say prominently which values are `[inferred]`, and that the document needs review before it is committed.
 

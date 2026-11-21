@@ -119,7 +119,7 @@ Traced: 2026-08-08 — to the template's §2, which carries the Audience column 
 Fixture: token list `Colour/Background/Feedback/Danger/soft`, no taxonomy page, maintainer present.
 Assert: the ask offers the published synonym sets (Carbon's element/role/order/state, Primer's prefix/namespace/property/variant/scale) rather than one invented label, and captures per slot whether it is required, optional or at-most-one. Extends C1, which asserts only that the labels are tagged `[TBD]` and not invented — a `[TBD]` slot list with no cardinality still lets a later skill accept a token name the project would reject.
 
-Traced: 2026-08-08 — to pass M, which exists, runs no code, and is routed from SKILL.md's steps 3 and 5.
+Traced: 2026-08-08 — to pass M, which exists, runs no code, and is routed from SKILL.md's step 1 and step 2.
 
 ## C10 · A house rule is cited, never copied into the document
 Fixture: a capture run for a project that follows every house default, where the maintainer says nothing about finding classification, `[check-token]`, the tracked metric or refills.
@@ -219,7 +219,7 @@ Runs: node tests/test-passes.mjs — "pass C scales: a step named late among man
 Fixture: a project whose §5 snapshot routing names a screens file with three stored screens, one named `<Screens> List - Empty`.
 Assert: pass M asks which screen types exist, the template each starts from, their required states and where the shell config lives; the empty screen is put as a hypothesis ("is empty a required state of every list?"); §3's Screens table holds only those answers, `[TBD]` where unanswered, and names no region, example screen or component other than the type's template.
 Negative: a table of each screen's regions and components copied from the stored screens; a required state recorded from a screen name without asking; the item asked of a project with no screens file.
-Traced: 2026-11-11 for 2.13.0 — to references/discovery-passes.md pass M, SKILL.md step 5 and the template's §3.
+Traced: 2026-11-11 for 2.13.0 — to references/discovery-passes.md pass M, SKILL.md step 2 and the template's §3.
 
 ## C19 · An icon library is routed as icons — 2026-11-15
 

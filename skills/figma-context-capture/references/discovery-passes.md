@@ -131,7 +131,7 @@ Each pass C collection is looked up only in the snapshot collection of its own n
 Each collection that did not match is listed in `notInSnapshot`, with why and the snapshot's source files. `shared: true` marks one whose reason is shared ownership.
 
 - **Resolve every `notInSnapshot` entry**, with the right store or a fresh snapshot. Otherwise record its scale as `[TBD]` in the Tokens prose.
-- Never record what matched as the whole scale.
+- While any collection is unmatched, never record what matched as the whole scale.
 - When nothing matched at all, `audit` is null, `auditWhy` says why, and the command exits 1.
 
 ### What the script returns per family
@@ -322,7 +322,7 @@ The non-variable half of the source. Send `scripts/pass-s3-styles.js` in the sou
 - a cap of 400 names, with `truncated` saying when it bit;
 - the `paint` and `grid` style counts.
 
-Record the text-style **group names verbatim**, since they drive the doc-generator's per-group unit rule. The role and size grammar with its suffixes, and the effect-style taxonomy, are your reading of the names.
+Record the text-style **group names verbatim**, since they drive the doc-generator's per-group unit rule. Record the role and size grammar with its suffixes, and the effect-style taxonomy, too. Those are your reading of the names.
 
 ### S4 — Documentation state
 
