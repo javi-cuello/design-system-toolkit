@@ -127,7 +127,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       if (b) base[f] = !over(m, kind).length ? undefined : b ? Object.fromEntries(Object.keys(m).map((k) => [k, Math.min(m[k], b[k] ?? m[k])])) : m; }
     const all = readmes(ROOT), keep = Object.fromEntries(Object.entries(base).filter(([f, v]) => v && all.includes(f)).sort());
     fs.writeFileSync(BASE, JSON.stringify(keep, null, 1) + '\n');
-    console.log(`readability.json: ${Object.keys(keep).length} README(s) still over the limits`);
+    console.log(`readability.json: ${Object.keys(keep).length} page(s) still over the limits`);
   } else {
     const { worse, better } = compare(ROOT, base);
     for (const w of worse) console.log(w);
