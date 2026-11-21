@@ -428,7 +428,9 @@ export const keepsName = (name, id) => partName(id) !== name;
 export function designKeyOf(design, fe, name) {
   if (fe && fe.component === name) return fe.key || null;
   const all = [design.anatomy || {}, ...(design.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a));
-  const keys = [...new Set(all.filter((x) => x.kind === 'instance' && x.component === name && x.key).map((x) => x.key))];
+  // (a variant's swap, `<id>.component` with its `<id>.key` beside it, places one too)
+  const swaps = (design.variants || []).flatMap((v) => Object.entries(v.set || {}).filter(([k, x]) => k.endsWith('.component') && x === name).map(([k]) => (v.set || {})[`${k.slice(0, -'.component'.length)}.key`]));
+  const keys = [...new Set([...all.filter((x) => x.kind === 'instance' && x.component === name && x.key).map((x) => x.key), ...swaps.filter(Boolean)])];
   return keys.length === 1 ? keys[0] : null;
 }
 
@@ -2346,8 +2348,8 @@ async function main() {
         const under = (k) => k === id || k.startsWith(`${id}/`);
         const designSets = Object.entries(figmaContract.anatomy).some(([k, x]) => under(k) && x.background != null) || (figmaContract.variants || []).some((v) => Object.keys(v.set || {}).some((k) => under(k.split('.')[0]) && /\.background$/.test(k)) || Object.entries(v.add || {}).some(([k, x]) => under(k) && x.background != null));
         if (!ownIcon.has(id) && !designSets) { delete e.background; for (const v of fromCode.variants) if (v.set) delete v.set[`${id}.background`]; }
-        // a variant that changes the glyph (an alert's error icon) changes the component in the same set
-        if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = whole(v.set[`${id}.asset`]); delete v.set[`${id}.asset`]; }
+        // a variant that changes the glyph (an alert's error icon) changes the component in the same set, with its key
+        if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = whole(v.set[`${id}.asset`]); delete v.set[`${id}.asset`]; const k = designKeyOf(figmaContract, null, v.set[`${id}.component`]); if (k) v.set[`${id}.key`] = k; else delete v.set[`${id}.key`]; }
       };
       for (const [id, e] of Object.entries(fromCode.anatomy)) asIcon(id, e);
       for (const v of fromCode.variants) for (const [id, e] of Object.entries(v.add || {})) asIcon(id, e);

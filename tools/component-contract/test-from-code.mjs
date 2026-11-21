@@ -436,5 +436,8 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('a read icon takes the design\'s key for its layer, or the one key the design places that glyph under; and with it is never the same-named component',
     k === 'icon' && mains('Checkbox', k) === null && mains('Checkbox', null) === set
     && designKeyOf(set, set.anatomy.glyph, 'Checkbox checked') === 'tick' && designKeyOf(set, null, 'Close') === null);
+  // a glyph the design places only by a variant's swap takes that swap's key
+  const swapped = { ...set, variants: [{ when: { error: true }, set: { 'glyph.component': 'Warning', 'glyph.key': 'warn' } }] };
+  ok('a glyph a variant swaps to takes the key the design swaps it under', designKeyOf(swapped, null, 'Warning') === 'warn');
 }
 console.log(`${n}/${n} passed`);
