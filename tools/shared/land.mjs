@@ -26,6 +26,7 @@ import { mainOf, link } from './worktree.mjs';
 const git = (dir, ...a) => execFileSync('git', ['-C', dir, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const tryGit = (dir, ...a) => { try { return { ok: true, out: git(dir, ...a) }; } catch (e) { return { ok: false, out: String(e.stderr || e.message).trim() }; } };
 const say = (l) => console.log(`land: ${l}`);
+const PAUSE = +process.env.TOOLKIT_LAND_PAUSE || 2500; // ms between steps, so a waiter gets the lock
 
 const queueDir = (main) => path.join(git(main, 'rev-parse', '--path-format=absolute', '--git-common-dir'), 'land-queue');
 const qfile = (main, branch) => path.join(queueDir(main), encodeURIComponent(branch));
@@ -213,6 +214,8 @@ export async function land(from, target) {
     let out;
     try { out = await step(main, { branch, sha }, state); } finally { release(); }
     if (out) return out === 'landed' ? 0 : 1;
+    // a waiter asks the lock once a second (lock.mjs HOLD): without a pause this holder takes it back first, every time
+    await new Promise((r) => setTimeout(r, PAUSE));
   }
 }
 
