@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.4.7)
+# Eval cases — figma-file-diff (v1.5.0)
+
+**Walked: 2026-11-21 against v1.5.0** — prose rewritten to skill-standard §A clause I; Step 7's table shape and row rules moved to `references/output-tables.md`. Each case read against the new text: A1 (Step 1, identity asserted), A2 (Step 3 "stop, and don't spend calls listing them"; Step 4 skip on identical hash), A3 (Step 4's node-count check and 529-against-1,850 example), A4 (failure modes 4 and 6), A5 (*Why this doesn't sync*), A6 (Step 6, Step 7, failure mode 9), A7 (Step 7 runs `report.mjs`, meaning cells only) and A9 (*Validating the serialiser*, its heading shortened) all hold. `test-report.mjs`, `test-serialise.mjs` and `test-coverage-body.mjs` pass.
 
 **Walked: 2026-11-12 against v1.4.7** — two sentences of prose (clientStorage crosses files; a screenshot shows only the active file); no case reads them and no procedure changed, so every case holds; `node skills/figma-file-diff/tests/test-report.mjs` and `test-serialise.mjs` re-run under `bin/check`.
 
@@ -68,7 +70,7 @@ Traced: 2026-08-12 — to the grepped absence of mutation calls in the four read
 ## A6 · No report without a stability re-run
 Fixture: a live file whose properties moved mid-session between the first Tier 2 run and the report.
 Assert: the Tier 2 hashes are re-run on both files before reporting, and if the totals moved against the first run the skill says so plainly and re-runs — it does not quietly report the later number. The final report leads with a summary table and details each difference as property, value on each side, and what it means; a bare hash is never presented as a finding.
-Trace: Step 6 (including the observed mid-session property change that invalidated a finding), Step 7's two-table shape, and failure mode 9.
+Trace: Step 6 (including the observed mid-session property change that invalidated a finding), Step 7's two-table shape (now references/output-tables.md), and failure mode 9.
 
 Traced: 2026-10-31 — to Step 6, whose comparison is now `report.mjs --stable` (executed in A8), Step 7's two-table shape, and failure mode 9.
 

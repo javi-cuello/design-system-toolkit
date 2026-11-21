@@ -1,5 +1,6 @@
 # Changelog — figma-file-diff
 
+- 1.5.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I: workflow as numbered steps, compared areas and scripts as tables, Step 7's table shape and row rules moved to `references/output-tables.md`, the dated clientStorage note undated. No rule changed.
 - 1.4.7 (2026-11-12): two bridge facts in prose: `figma.clientStorage` crosses files where nodes cannot, and a screenshot captures only the active file.
 - 1.4.6 (2026-11-11): `coverage-body.mjs` builds the URL inside the guard's try too (landed unbumped on 2026-11-06).
 - 1.4.5 (2026-11-06): the script's "am I the one being run" guard resolves argv[1] inside a try, so importing it from a process whose argv[1] is no file does not throw.
