@@ -27,7 +27,7 @@ Two example recommendations:
 
 ### Naming effort
 
-- Name the effort level, never "default". The default is medium on Opus 5.5 and Haiku 5.5, but high on Sonnet 5.5 and Fable 5.2 (Anthropic's model docs, as cached in November 2026).
+- Name the effort level, never "default". The default is medium on Opus 5.5 and Haiku 5.5. It is high on Sonnet 5.5 and Fable 5.2 (Anthropic's model docs, as cached in November 2026).
 - If the effort level is not visible, mention effort only when it clearly matters.
 - Effort clearly matters at the top: the highest level for plugin design and deep research. Low is fine for pure math tasks.
 
