@@ -65,11 +65,11 @@ Where there is no document, derive what you need from the design file, and recor
 Each step's output is the next step's input. The detail of every step is in [build-steps.md](references/build-steps.md).
 
 1. **Orient before writing anything.** Answer the five questions in build-steps.md, *Orient before writing anything*. They ask about the stylesheet already there, the CSS build, the HTML renderer, the design's contents and the platform features allowed. **No design file** (a page, a site, an artifact built from a brief): the knowledge base is the design (design-standard rule 14). Walk the pages the screen uses before writing anything, and follow each item as its weight says (toolkit-standard §D 21). Name every value a reference site supplied where those pages left it open.
-2. **Inventory.** List the components the design implies, with each one's element, variants, states and the content it must survive. Ask now for the states the design lacks.
-3. **Tokens.** Generate them, never write them, with the one token build (code-standard rules 51–55).
-4. **Base.** Write the reset, element defaults, typography and reduced-motion block once, with the layer order declared first (code-standard rule 4).
-5. **Layout.** Size intrinsically first, and add a breakpoint only where the layout changes (code-standard rules 3, 46, 54).
-6. **Components.** Generate the stylesheet of a component Figma has drawn, and write the markup to the hooks its header names. Decide where a Figma↔code mismatch lives, and write it there in the same commit (toolkit-standard §D 8).
+2. **Inventory.** List the components the design implies, with each one's element, variants, states and the content it must survive. Ask now for the states the design lacks (build-steps.md, *Inventory*).
+3. **Tokens.** Generate them, never write them, with the one token build, `tools/tokens/build-tokens.mjs` (code-standard rules 51–55; build-steps.md, *Tokens*).
+4. **Base.** Write the reset, element defaults, typography and reduced-motion block once, with the layer order declared first (code-standard rule 4; build-steps.md, *Base*).
+5. **Layout.** Size intrinsically first, and add a breakpoint only where the layout changes (code-standard rules 3, 46, 54; build-steps.md, *Layout*).
+6. **Components.** A component Figma has drawn has its stylesheet generated, never written; write the markup to the hooks its header names. Its own sheet never holds a value the generated sheet sets. One with no stored contract yet is written by hand until it is drawn. Decide where a Figma↔code mismatch lives, and write it there in the same commit (toolkit-standard §D 8; build-steps.md, *Components*).
 7. **Audit what you built**, as *Audit* below says, and **look before you ship**: no interface change ships before its screenshots are looked at.
 8. **Report back what the build decided** that the design did not, as it happens (build-steps.md, *Reporting back from a build*).
 

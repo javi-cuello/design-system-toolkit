@@ -187,6 +187,7 @@ Traced: 2026-10-11 for 2.2.0.
 ## T4 · The skill prescribes no runtime *(negative)*
 Assert: no reference names a JS framework, templating language or CMS as required, and `SKILL.md` explicitly defers the HTML-rendering layer to whatever else covers it. The skill must stay silent here — a front-end skill that assumes a runtime is unusable on the next project, and the toolkit's self-containment rule forbids leaning on another skill's files. Falsifiable by grep.
 Walked live: 2026-10-11 for 2.0.0 — `grep -rniE 'react|vue|svelte|angular|next\.js|kirby|wordpress' references/` finds nothing; `SKILL.md` names Kirby only as the one runtime the optional scaffold writes.
+Walked live: 2026-11-21 for 3.4.0 — the runtime deferral is `references/build-steps.md` *Orient before writing anything*, question 3 ("This skill says nothing about the runtime"); the grep of `references/` prints nothing, and React, web components and Kirby appear only in SKILL.md's generated-markup note and the optional scaffold.
 
 ## T5 · Deviations are reported, not applied silently
 Assert: where the skill overrides the design — a contrast failure, a touch target under 24px, a label allowed to wrap — it requires the deviation and its reason to be said back to the user. A build that silently corrects a design teaches nobody anything and gets reverted at review. Traced to SKILL.md *Build* step 8, `references/build-steps.md` *Reporting back from a build*, and `knowledge/code/figma-handoff.md` §Reporting deviations.
@@ -274,6 +275,7 @@ Fixture: "how should this form mark required fields?"
 Assert: the answer consults `knowledge/ui/patterns/forms.md` (toolkit repo) and cites it, and the skill holds no copy of that guidance: its references hold only its own procedure (`build-steps.md`, and `audit/` for the checks and the judgement pass); how to write the code is `knowledge/code/`. (Amended 3.4.0: before it, `audit/` was the only reference.)
 Traced: 2026-10-11 for 2.1.0 — to `SKILL.md`'s knowledge paragraph and *Where the rest is*; `ls references` shows `audit` only (2.2.0).
 Traced: 2026-11-16 for 3.2.0 — the knowledge paragraph names `knowledge/ui/components/` beside the patterns, and a component question ("what states does our button need?") is answered from `knowledge/ui/components/button.md`; `ls references` still shows `audit` only.
+Traced: 2026-11-21 for 3.4.0 — SKILL.md *References* lists `references/build-steps.md` and `audit/` (`audit-checks.md`, `audit-pass.md`), each the skill's own steps; none copies knowledge guidance, which each links by page.
 
 ## A7 · An audit of a real build runs end to end: checks, then the judgement pass on screenshots
 Fixture: a live docs site, two page types (an overview page and the audit queue), at 1280 and 390 wide.
