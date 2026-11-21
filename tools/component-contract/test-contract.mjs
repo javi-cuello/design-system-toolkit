@@ -492,6 +492,20 @@ ok('combinations too many to list are said to be unlisted, never left to read as
 }
 
 {
+  // a layer read inside a placed instance at its component's look but for the place and constraints the component gives it
+  // (Atlassian's Checkbox icon: its box at 1, 1, scaled, read from code with neither) is the component's: an instance
+  // cannot override them (figma-fact: no-nested-position-override), so they are no override in a reading; a fill is
+  const main = { component: 'Icon', props: {}, anatomy: { root: { kind: 'container' }, box: { kind: 'container', parent: 'root', width: 16, height: 16 },
+    'box/check': { kind: 'container', parent: 'box', width: 14, height: 14, absolute: { x: 1, y: 1 }, constraints: { horizontal: 'scale', vertical: 'scale' }, background: 'C/a' } }, variants: [] };
+  const read = (bg) => ({ root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon' }, 'i/box': { kind: 'container', parent: 'i', width: 16, height: 16 }, 'i/box/check': { kind: 'container', parent: 'i/box', width: 14, height: 14, background: bg } });
+  const m = (x) => (x === 'Icon' ? main : null);
+  const same = read('C/a'), other = read('C/b'), design = read('C/a');
+  ownInsides(same, m, { partial: true, reading: true }); ownInsides(other, m, { partial: true, reading: true }); ownInsides(design, m, { partial: true });
+  ok('in a reading, a layer inside an instance that differs from its component\'s only in place and constraints is the component\'s; one of another fill is kept, and a design keeps its rule',
+    !same['i/box'] && !same['i/box/check'] && other['i/box/check'].background === 'C/b' && !!other['i/box'] && !!design['i/box/check']);
+}
+
+{
   // an icon coloured on its instance (code's way) at the colour its component gives the glyph inside (Figma's way) is the
   // component's; a colour the component does not give is the instance's own. In an instance the design keeps whole it
   // stays: the design keeps the glyph's colour there too (Carbon's select chevron: Icon/icon-primary, read back as none)

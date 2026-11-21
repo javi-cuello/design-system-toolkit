@@ -663,7 +663,11 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
       // an icon's size said by its width, as code says it (a Size that is its width and height): to-figma's iconSize
       // equivalence, for a reading (from-code)
       const sized = (y) => { const { Size, ...w } = y.with || {}; const same = Size != null && String(Size) === String(y.width) && y.width === y.height; const { with: _, ...r } = y; return same ? (Object.keys(w).length ? { ...r, with: w } : r) : y; };
-      return reading && look(arcForm(sized(y))) === look(arcForm(sized(x)));
+      // and its place and constraints, which no instance can override (figma-fact: no-nested-position-override): code
+      // reads none where the component places a layer in a frame (Atlassian's Checkbox icon's box at 1, 1, scaled), so a
+      // reading's are never the instance's own (a design's are compared as walked, above)
+      const placeless = (y) => { const { absolute: _a, constraints: _c, ...r } = y; return r; };
+      return reading && look(arcForm(placeless(sized(y)))) === look(arcForm(placeless(sized(x))));
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
