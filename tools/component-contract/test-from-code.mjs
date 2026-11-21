@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -10,6 +10,20 @@ import { judge } from '../parity/external.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
+
+// a placed icon's colour the code only inherits (currentColor, no rule of the sheet's) is dropped unless the design sets
+// one for it: Atlassian's EpicObject places Epic, an icon the library holds no contract for, whose glyph inside is purple
+// in its own drawing; that is Epic's own, not this design's, so the inherited black is no override to compare
+{ const epic = { anatomy: { root: { kind: 'container' }, sVG: { kind: 'container', parent: 'root' }, 'sVG/icon': { kind: 'instance', parent: 'sVG', component: 'Epic', key: 'k1' },
+    'sVG/icon/icon': { kind: 'container', parent: 'sVG/icon' }, 'sVG/icon/icon/glyph': { kind: 'graphic', parent: 'sVG/icon/icon', background: 'color/icon/accent/purple' } }, variants: [] };
+  const held = byComponentName([{ component: 'Epic', figma: { key: 'k1' }, anatomy: { root: { kind: 'container' } } }]);
+  ok('a colour inside an icon the library holds no contract for is its own: the design sets none for the placed icon',
+    designSetsColour(epic, 'sVG/icon', byComponentName([])) === false);
+  ok('inside an icon the library holds, a colour the snapshot kept is the design\'s override; on the instance, or set by a variant, always the design\'s',
+    designSetsColour(epic, 'sVG/icon', held) === true
+    && designSetsColour({ ...epic, anatomy: { ...epic.anatomy, 'sVG/icon': { ...epic.anatomy['sVG/icon'], background: 'color/icon/x' } } }, 'sVG/icon', byComponentName([])) === true
+    && designSetsColour({ anatomy: { i: { kind: 'instance', component: 'Epic' } }, variants: [{ when: {}, set: { 'i.background': 'c' } }] }, 'i', byComponentName([])) === true
+    && designSetsColour({ anatomy: { i: { kind: 'instance', component: 'Epic' } }, variants: [] }, 'i', held) === false); }
 
 const table = [['Color/Background/Neutral/secondary', '#eeeeee'], ['Color/Background/Neutral/secondary-translucent', 'rgb(22 22 22 / 0.073)'],
   ['Color/Icon/Feedback/Danger/primary', '#5e0007'], ['Color/Icon/Supportive/Red/primary', '#5e0007'], ['Color/Text/Feedback/Danger/primary', '#5e0007'],

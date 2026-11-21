@@ -434,6 +434,25 @@ export function designKeyOf(design, fe, name) {
   return keys.length === 1 ? keys[0] : null;
 }
 
+/* Whether the design sets the colour of the placed icon at `id`: on the instance itself, or on a layer inside it, in its
+   anatomy, a variant's set or a variant's added layers. A layer inside a component the library holds no contract for
+   (`mainOf` finds none: an icon set's, Atlassian's Epic) is that component's own drawing, never an override the design
+   makes here: eval.mjs leaves those insides to code (inForeign), so its colour sets nothing. Where the library holds the
+   component, the snapshot keeps only what differs from it inside, so a colour there is the design's. */
+export function designSetsColour(design, id, mainOf = () => null) {
+  const all = Object.assign({}, ...[...(design.variants || [])].reverse().map((v) => v.add || {}), design.anatomy || {});
+  const foreign = (el) => (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key);
+  // (k is id or under it; it counts unless an instance from id down to its parent is a foreign one)
+  const counts = (k) => {
+    if (k !== id && !k.startsWith(`${id}/`)) return false;
+    const segs = k.split('/'), from = id.split('/').length;
+    for (let i = from; i < segs.length; i++) if (foreign(segs.slice(0, i).join('/'))) return false;
+    return true;
+  };
+  return Object.entries(design.anatomy || {}).some(([k, x]) => counts(k) && x.background != null)
+    || (design.variants || []).some((v) => Object.keys(v.set || {}).some((k) => /\.background$/.test(k) && counts(k.split('.')[0])) || Object.entries(v.add || {}).some(([k, x]) => counts(k) && x.background != null));
+}
+
 /* The key a variant's swap of a read glyph says: the design's (designKeyOf), else null where the base instance has one
    (expand keeps a field no variant sets, so the swapped glyph would carry the base icon's key), else none (undefined). */
 export const swapKeyOf = (design, baseKey, name) => designKeyOf(design, null, name) || (baseKey ? null : undefined);
@@ -2349,9 +2368,8 @@ async function main() {
         if (e.iconSize) { e.with = { ...(e.with || {}), Size: e.iconSize }; delete e.iconSize; }
         // a colour it only takes from around it is no override of the placed icon: the design leaves it the icon's own
         // (where the design sets the icon's colour, on it or inside it, the code's is read as drawn and compared)
-        const under = (k) => k === id || k.startsWith(`${id}/`);
-        const designSets = Object.entries(figmaContract.anatomy).some(([k, x]) => under(k) && x.background != null) || (figmaContract.variants || []).some((v) => Object.keys(v.set || {}).some((k) => under(k.split('.')[0]) && /\.background$/.test(k)) || Object.entries(v.add || {}).some(([k, x]) => under(k) && x.background != null));
-        if (!ownIcon.has(id) && !designSets) { delete e.background; for (const v of fromCode.variants) if (v.set) delete v.set[`${id}.background`]; }
+        // (a colour inside a component the library holds no contract for is that component's own: designSetsColour)
+        if (!ownIcon.has(id) && !designSetsColour(figmaContract, id, mainOf)) { delete e.background; for (const v of fromCode.variants) if (v.set) delete v.set[`${id}.background`]; }
         // a variant that changes the glyph (an alert's error icon) changes the component in the same set, with its key
         if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = whole(v.set[`${id}.asset`]); delete v.set[`${id}.asset`]; const k = swapKeyOf(figmaContract, e.key, v.set[`${id}.component`]); if (k === undefined) delete v.set[`${id}.key`]; else v.set[`${id}.key`] = k; }
       };
