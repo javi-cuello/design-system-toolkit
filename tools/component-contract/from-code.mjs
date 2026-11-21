@@ -2262,8 +2262,12 @@ async function main() {
     // do beyond them is a layer of its own, as three's is (a loading button's icon colour at a size, a hierarchy and
     // a feedback), so the reading rebuilds it; and so every combination of more the design draws (combinationsToRead)
     // (counted and said with the self-check: layers kept from one read each, not a check passed)
+    // (a prop the design has no counterpart for is never varied by the comparison, which draws its default alone: a
+    // combination that moves one is not compared, and not read)
     const drawsIt = figmaContract && ((list) => {
-      const c = { ...variantDefaults(figmaContract), ...comboOf({ ...defaults, ...Object.fromEntries(list.map(([k, v]) => [props[k].code, v])) }) };
+      const moved = comboOf(Object.fromEntries(list.map(([k, v]) => [props[k].code, v])));
+      if (Object.keys(moved).length < list.length) return false;
+      const c = { ...variantDefaults(figmaContract), ...comboOf(defaults), ...moved };
       return !(figmaContract.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v)));
     });
     const beyond = combinationsToRead(keys, (k) => valuesOf(props[k]), drawsIt);
