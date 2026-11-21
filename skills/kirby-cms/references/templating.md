@@ -1,6 +1,18 @@
 # Templating — templates, controllers, models, snippets, collections, files
 
-Companion to `SKILL.md`. Everything here is Kirby 5.
+Companion to [SKILL.md](../SKILL.md). Everything here is Kirby 5.
+
+## Contents
+
+- [Templates](#templates)
+- [Controllers](#controllers)
+- [Page models](#page-models)
+- [Snippets](#snippets)
+- [Field methods](#field-methods)
+- [Pages and collections](#pages-and-collections)
+- [Files](#files)
+- [Escaping and KirbyText](#escaping-and-kirbytext)
+- [Caching](#caching)
 
 ## Templates
 
@@ -75,6 +87,13 @@ Inside a model use `$this`, not `$page`. Models are for behaviour that belongs t
 
 Models can also be registered from a plugin under the `pageModels` key.
 
+Content logic lives here so a fixture can call it ([SKILL.md](../SKILL.md#content-logic-belongs-to-the-page-model)). A pure function of its input is public and static. One that needs the page stays an instance method, and the fixture constructs a page:
+
+```php
+$page = new EventPage(['slug' => 'x', 'template' => 'event', 'content' => ['website' => $url]]);
+$check('a ticket link goes to the booking form', $page->bookingUrl(), 'https://tickets.example.com/e/1/book');
+```
+
 ## Snippets
 
 `site/snippets/`, called by path without the extension. Subfolders are addressed with slashes.
@@ -109,6 +128,17 @@ Inside the snippet:
 
 `$slot` is the default (unnamed) slot; `$slots->name()` reaches a named one.
 
+## Field methods
+
+Every field access returns a `Field` object. These convert or test it:
+
+```php
+->value()  ->isEmpty()  ->isNotEmpty()  ->or('Fallback')
+->toDate()  ->toBool()  ->toInt()
+->toPage()  ->toFile()  ->toPages()  ->toStructure()  ->toBlocks()
+->kirbytext()  ->html()  ->escape()
+```
+
 ## Pages and collections
 
 ```php
@@ -131,7 +161,12 @@ $site->index()
      ->limit(5);
 ```
 
-Other regulars: `->find('slug')`, `->findBy('field', 'value')`, `->first()`, `->last()`, `->not($page)`, `->flip()`, `->group()`, `->pluck()`, `->paginate(10)` with `->pagination()`.
+Other regulars:
+
+```php
+->find('slug')  ->findBy('field', 'value')  ->first()  ->last()  ->not($page)
+->flip()  ->group()  ->pluck()  ->paginate(10)  ->pagination()
+```
 
 `page('projects/alpha')` and `page('page://…')` both resolve to a page from anywhere. The argument is the **page id** — the content path without num prefixes — not the URL.
 
@@ -157,16 +192,29 @@ Thumbnails are generated on demand into `/media` and cached there:
 
 `/media` is regenerable — gitignore it, and delete it when thumbs look stale.
 
-`crop()` and `resize()` return the **original file unchanged** for an SVG — no thumbnail and no error. Read the size off the returned object rather than repeating the numbers you asked for; see `gotchas.md`.
+`crop()` and `resize()` return the **original file unchanged** for an SVG, with no thumbnail and no error. Read the size off the returned object rather than repeating the numbers you asked for.
 
 ## Escaping and KirbyText
 
-`->kirbytext()` renders Markdown plus KirbyTags (`(image: cover.jpg)`, `(link: page://… text: …)`) as block-level HTML. `->kirbytextinline()` does the same without wrapping paragraphs — the right one for a heading or a table cell. `->html()` escapes. `->escape($context)` escapes for a named context. See `SKILL.md` for the safety rules.
+| Method | Does |
+|---|---|
+| `->kirbytext()` | renders Markdown and KirbyTags, such as `(image: cover.jpg)`, as block-level HTML |
+| `->kirbytextinline()` | the same without wrapping paragraphs: for a heading or a table cell |
+| `->html()` | escapes for HTML |
+| `->escape($context)` | escapes for a named context |
+
+The safety rules are in [SKILL.md](../SKILL.md#security-escaping-is-not-automatic).
 
 ## Caching
 
-`'cache' => ['pages' => ['active' => true]]` in config enables the page cache. It is a full-output cache, but it declines more on its own than it is usually given credit for. `Page::isCacheable()` (read on 5.5.3) returns false for any method but GET/HEAD, for **any request carrying query data or URL params**, and for the `changes` version; and `Page::render()` records whether the render touched auth or cookies, so `Responder::isPrivate()` refuses to serve that entry to anyone else.
+`'cache' => ['pages' => ['active' => true]]` in config turns on the page cache. It caches full output, but it declines more on its own than people expect. As read in the 5.5.3 source:
 
-So a query string and a logged-in visitor are already handled. `'ignore'` — a list of page ids, or a closure taking the page — is for output that varies for a reason Kirby cannot see from the request: the time of day, a random pick, a live call to an external API.
+- `Page::isCacheable()` returns false for any method but GET and HEAD.
+- It returns false for **any request carrying query data or URL params**, and for the `changes` version.
+- `Page::render()` records whether the render touched auth or cookies. If it did, `Responder::isPrivate()` refuses to serve that entry to anyone else.
 
-Content edited outside the Panel does not invalidate the cache. The Panel flushes on save; a text editor does not, so a project that is edited by hand wants the cache off in `config.localhost.php` and on in the base config. Clear `site/cache/` when in doubt.
+So a query string and a logged-in visitor are already handled.
+
+The `'ignore'` option takes page ids or a closure taking the page. It suits output that varies for a reason the request cannot show. Examples are the time of day, a random pick, or a live call to an external API.
+
+Content edited outside the Panel does not clear the cache. The Panel flushes on save, but a text editor does not. So a project edited by hand wants the cache off in `config.localhost.php` and on in the base config. Clear `site/cache/` when in doubt.

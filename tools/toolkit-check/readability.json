@@ -319,56 +319,6 @@
   "dated": 0,
   "noContents": 0
  },
- "skills/kirby-cms/SKILL.md": {
-  "words": 2016,
-  "longSentences": 26,
-  "longParagraphs": 2,
-  "codeParagraphs": 8,
-  "grade": 8.7,
-  "lines": 276,
-  "dated": 0,
-  "noContents": 0
- },
- "skills/kirby-cms/references/blueprints.md": {
-  "words": 545,
-  "longSentences": 5,
-  "longParagraphs": 0,
-  "codeParagraphs": 6,
-  "grade": 7.2,
-  "lines": 156,
-  "dated": 0,
-  "noContents": 1
- },
- "skills/kirby-cms/references/gotchas.md": {
-  "words": 2384,
-  "longSentences": 28,
-  "longParagraphs": 5,
-  "codeParagraphs": 7,
-  "grade": 9,
-  "lines": 165,
-  "dated": 1,
-  "noContents": 1
- },
- "skills/kirby-cms/references/plugins-hooks-routes.md": {
-  "words": 999,
-  "longSentences": 6,
-  "longParagraphs": 0,
-  "codeParagraphs": 4,
-  "grade": 6.8,
-  "lines": 208,
-  "dated": 0,
-  "noContents": 1
- },
- "skills/kirby-cms/references/templating.md": {
-  "words": 677,
-  "longSentences": 4,
-  "longParagraphs": 0,
-  "codeParagraphs": 2,
-  "grade": 7.8,
-  "lines": 172,
-  "dated": 0,
-  "noContents": 1
- },
  "skills/oklch-color-scale-system/SKILL.md": {
   "words": 18778,
   "longSentences": 295,

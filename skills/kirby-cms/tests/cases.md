@@ -1,4 +1,6 @@
-# Eval cases — kirby-cms (v1.9.1)
+# Eval cases — kirby-cms (v1.10.0)
+
+**Walked: 2026-11-21 for 1.10.0** — SKILL.md and references rewritten to skill-standard §A clause I; every case read against the new text. The folder layout, content format and UUIDs moved to `references/content-store.md`; signed tokens and the opcache restore moved to `gotchas.md`; the page-model fixture moved to `templating.md`; the plugin example moved to `plugins-hooks-routes.md`. Each case's asserted behaviour is still stated: K6 in SKILL.md's *No context document, no engine*, K14 in gotchas.md's *A restored file serves the old version*, K18 in its *Every model gets the same signed token*. K14's pointer updated; all hold.
 
 **Walked: 2026-10-31 for 1.9.1** — every case read against the reworded example and records: none asserts on the names changed, so all hold; K10's fixture names `event.yml`.
 
@@ -107,7 +109,7 @@ Not walked.
 
 ## K14 · A restored file serves stale until its mtime moves
 Fixture: a template edited to inject a fault, then restored by moving a timestamped backup over it; the served page still shows the fault.
-Assert: the skill names opcache's timestamp revalidation as the cause and one `touch` as the fix, and frames the symptom (an edit or revert that "doesn't take" while the file on disk is clean). Traced to §A restored file can serve stale; observed 2026-08-25.
+Assert: the skill names opcache's timestamp revalidation as the cause and one `touch` as the fix, and frames the symptom (an edit or revert that "doesn't take" while the file on disk is clean). Traced to `references/gotchas.md`, "A restored file serves the old version"; observed 2026-08-25.
 Walked live: 2026-08-25 — the reference project: a template restored by `mv` kept the injected fault through two clean runs until a `touch`.
 
 ## K15 · A crop that silently did not happen

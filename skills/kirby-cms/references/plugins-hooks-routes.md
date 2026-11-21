@@ -1,6 +1,19 @@
 # Extending Kirby — plugins, hooks, routes, config, users, API, virtual content
 
-Companion to `SKILL.md`. Everything here is Kirby 5.
+Companion to [SKILL.md](../SKILL.md). Everything here is Kirby 5.
+
+## Contents
+
+- [Plugin anatomy](#plugin-anatomy)
+- [Extension keys](#extension-keys)
+- [Hooks](#hooks)
+- [Routes](#routes)
+- [Maintenance routes (cron-called workers)](#maintenance-routes-cron-called-workers)
+- [Config](#config)
+- [Users, roles and permissions](#users-roles-and-permissions)
+- [Multi-language](#multi-language)
+- [The API](#the-api)
+- [Virtual content](#virtual-content)
 
 ## Plugin anatomy
 
@@ -17,6 +30,33 @@ Kirby::plugin('my-name/my-plugin', [
   // extension keys
 ]);
 ```
+
+A fuller one registers files and methods, and a hook:
+
+```php
+<?php
+
+Kirby::plugin('my-name/my-plugin', [
+  'snippets' => [
+    'header' => __DIR__ . '/snippets/header.php'
+  ],
+  'templates' => [
+    'blog' => __DIR__ . '/templates/blog.php'
+  ],
+  'pageMethods' => [
+    'readingTime' => function () {
+      return ceil(str_word_count($this->text()->toString()) / 200);
+    }
+  ],
+  'hooks' => [
+    'page.delete:before' => function () {
+      throw new Exception('Nope');
+    }
+  ]
+]);
+```
+
+A method every page should have goes under `pageMethods` (plural) in a plugin, with `$this` as the page. It is not a page model or a helper function in a template.
 
 Named arguments read better once the array grows:
 
@@ -50,7 +90,8 @@ Around sixty exist. The ones that carry most work:
 | `snippets`, `templates`, `blueprints`, `collections` | files by name → absolute path |
 | `routes` | frontend routes (same shape as config routes) |
 | `hooks` | event listeners |
-| `pageMethods`, `pagesMethods`, `fileMethods`, `filesMethods`, `siteMethods`, `userMethods` | methods on those objects; `$this` is the object |
+| `pageMethods`, `pagesMethods`, `siteMethods` | methods on those objects; `$this` is the object |
+| `fileMethods`, `filesMethods`, `userMethods` | methods on those objects; `$this` is the object |
 | `fieldMethods` | methods on every field object; receives `$field` |
 | `pageModels` | template name → class name |
 | `fields`, `sections`, `blocks` | custom Panel field / section / block types |
@@ -58,14 +99,15 @@ Around sixty exist. The ones that carry most work:
 | `validators` | new blueprint validation rules |
 | `translations` | UI strings per language |
 | `options` | the plugin's own default options |
-| `api`, `areas`, `dialogs`, `drawers`, `dropdowns`, `permissions`, `commands` | Panel and API surface |
+| `api`, `areas`, `permissions`, `commands` | Panel and API surface |
+| `dialogs`, `drawers`, `dropdowns` | Panel surface |
 | `cacheTypes`, `components`, `authChallenges` | core replacement points |
 
 `components` overrides core behaviour — the URL builder, the markdown parser, the thumb driver, `snippet` resolution. Powerful and global; if two plugins override the same component, the last loaded wins silently.
 
 ## Hooks
 
-`entity.action:before` or `:after`.
+Hooks are named `entity.action:before` or `entity.action:after`, such as `page.create:after` or `file.delete:before`.
 
 ```php
 'hooks' => [
@@ -81,7 +123,7 @@ Around sixty exist. The ones that carry most work:
 ]
 ```
 
-Arguments differ per hook — check the hook reference rather than guessing; a wrong signature fails at call time, not at registration. `:before` hooks can modify the incoming data by returning it, and can abort by throwing. Inside a hook, `$this` is the `Kirby` instance.
+Arguments differ per hook, so check the hook reference rather than guessing. A wrong signature fails at call time, not at registration. `:before` hooks can modify the incoming data by returning it, and can abort by throwing. Inside a hook, `$this` is the `Kirby` instance.
 
 Hooks also register in `config.php` under a `hooks` key, which is the right place for site-specific reactions that will never be reused.
 
@@ -142,10 +184,13 @@ A recurring shape for content that maintains itself — link checkers, API syncs
 
 - The token is a plugin option (`option('vendor.plugin.token')`), overridden per environment — never a literal in the route.
 - `impersonate('kirby')` is required before `update()`/`createChild()`/`changeStatus()` from a public route; without it writes fail on permissions.
-- Process in bounded batches (N items per call, oldest-stamped first) and **stamp every item visited — including failures** — or permanently-failing items recycle to the front of the queue and starve the rest.
+- Process in bounded batches: N items per call, oldest-stamped first.
+- **Stamp every item visited, including failures.** Otherwise items that always fail recycle to the front of the queue and starve the rest.
 - Batch + cron beats one long run: each call stays inside timeouts, and the cron provides the loop.
-- Take a **bounded size override** (`&limit=`, clamped) as well as the small default. The default keeps the cron cheap; the override is how a backlog gets cleared deliberately, and without it a queue that falls behind can only catch up at the cron's pace.
-- **`Remote::get` is one request at a time, and a route that checks many links spends its life waiting.** Kirby has no batch fetch; `curl_multi` is the answer, and the difference is not marginal — a hundred URLs went from minutes to 42 seconds in one project, because the batch now costs its slowest member rather than the sum of them all. Structure such a route in phases: fetch everything concurrently, decide, then fetch whatever the decisions turned out to need (also concurrently). Note `curl_close()` is deprecated from PHP 8.5 and has done nothing since 8.0 — `curl_multi_remove_handle()` alone is correct.
+- Take a **bounded size override** (`&limit=`, clamped) as well as the small default. The default keeps the cron cheap. The override clears a backlog on purpose; without it, a queue that falls behind catches up only at the cron's pace.
+- **`Remote::get` makes one request at a time, so a route that checks many links spends its life waiting.** Kirby has no batch fetch; use `curl_multi`. In one project a hundred URLs went from minutes to 42 seconds. The batch then costs its slowest member, not the sum of all.
+- Build such a route in phases: fetch everything at once, decide, then fetch what the decisions need, also at once.
+- `curl_close()` is deprecated from PHP 8.5 and has done nothing since 8.0. Calling `curl_multi_remove_handle()` alone is correct.
 
 ```php
 // one round trip for the whole batch, not one per item
@@ -167,7 +212,12 @@ config.cli.php                    CLI runs
 env.php                           deployment-specific indirection
 ```
 
-Options that shape a project most: `debug`, `url`, `languages`, `cache`, `panel`, `routes`, `hooks`, `date.handler`, `markdown`, `thumbs`, `smartypants`, `api`, `email`, plus any plugin's namespaced options.
+The options that shape a project most, plus any plugin's namespaced options:
+
+```
+debug  url  languages  cache  panel  routes  hooks
+date.handler  markdown  thumbs  smartypants  api  email
+```
 
 `'debug' => true` in the base config is the classic production leak. Put it in `config.localhost.php` only.
 
@@ -193,7 +243,13 @@ Permissions cascade: a blueprint's own `options:` can further restrict what a ro
 
 ## Multi-language
 
-Enable with `'languages' => true`; language definitions live in `site/languages/<code>.php` and hold the code, name, locale, direction, URL prefix and custom translation strings. Content files gain the language suffix (`article.en.txt`). In templates, `$kirby->languages()`, `$kirby->language()`, `$page->url('de')`, and `t('key')` for interface strings.
+Enable with `'languages' => true`. Each language is defined in `site/languages/<code>.php`: its code, name, locale, direction, URL prefix and custom translation strings. Content files gain the language suffix (`article.en.txt`).
+
+In templates:
+
+```php
+$kirby->languages()   $kirby->language()   $page->url('de')   t('key')   // t() for interface strings
+```
 
 A field marked `translate: false` in the blueprint stays shared across all languages.
 
@@ -203,6 +259,8 @@ Kirby ships a REST API at `/api`, authenticated by session or HTTP Basic (which 
 
 ## Virtual content
 
-Pages need not exist on disk. Override `children()` in a page model, or register `pages` from a plugin, to build page objects from an API, a database, a CSV or an RSS feed — they then behave like any other page for templates, collections and routing. This is Kirby's answer to "but I have 50,000 records": keep those in a database and expose them as virtual pages, rather than creating 50,000 folders.
+Pages need not exist on disk. Override `children()` in a page model, or register `pages` from a plugin. Either builds page objects from an API, a database, a CSV or an RSS feed. They then behave like any other page for templates, collections and routing.
+
+This is Kirby's answer to "but I have 50,000 records". Keep those in a database and expose them as virtual pages, rather than creating 50,000 folders.
 
 `site/config/` also permits a real database connection (`Db::connect()`), used the same way inside models.

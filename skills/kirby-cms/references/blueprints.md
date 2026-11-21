@@ -1,6 +1,16 @@
 # Blueprints — Panel configuration, fields, sections, query language, blocks
 
-Companion to `SKILL.md`. Everything here is Kirby 5.
+Companion to [SKILL.md](../SKILL.md). Everything here is Kirby 5.
+
+## Contents
+
+- [What a blueprint controls](#what-a-blueprint-controls)
+- [Anatomy](#anatomy)
+- [Section types](#section-types)
+- [Field types](#field-types)
+- [Reuse: extends and presets](#reuse-extends-and-presets)
+- [Query language](#query-language)
+- [Translations](#translations)
 
 ## What a blueprint controls
 
@@ -59,7 +69,7 @@ tabs:
 
 Levels, outermost first: **tabs → columns → sections → fields**. Every level is optional; the minimum useful blueprint is `title:` plus `fields:`.
 
-Column widths are `1/2`, `1/3`, `2/3`, `1/4`, `2/4`, `3/4`.
+Column widths are fractions: 1/2, 1/3, 2/3, 1/4, 2/4 and 3/4.
 
 **The mixing rule:** as soon as a tab or column contains both sections and fields, the fields must be wrapped in a section of `type: fields`. Fields sitting loose beside a `pages:` section is the most common blueprint parse surprise.
 
@@ -93,18 +103,32 @@ sections:
 
 ## Field types
 
-`blocks`, `checkboxes`, `color`, `date`, `email`, `entries`, `files`, `gap`, `headline`, `hidden`, `info`, `layout`, `line`, `link`, `list`, `multiselect`, `number`, `object`, `pages`, `radio`, `range`, `select`, `slug`, `stats`, `structure`, `tags`, `tel`, `text`, `textarea`, `time`, `toggle`, `toggles`, `url`, `users`, `writer`. Plugins can register custom types under the `fields` extension key.
+The core field types:
 
-Structural ones to know:
+```
+blocks  checkboxes  color  date  email  entries  files  gap  headline  hidden
+info  layout  line  link  list  multiselect  number  object  pages  radio
+range  select  slug  stats  structure  tags  tel  text  textarea  time
+toggle  toggles  url  users  writer
+```
 
-- **`structure`** — a repeatable set of subfields, stored as YAML in one field value; read with `->toStructure()`.
-- **`object`** — a single grouped set of subfields, same storage idea; `->toObject()`.
-- **`blocks`** — the page builder; stored as JSON, read with `->toBlocks()`. Core block types are text, heading, image, video, gallery, quote, code, list, markdown, line; each can be overridden by a snippet at `site/snippets/blocks/<type>.php`, and new ones defined with a blueprint at `site/blueprints/blocks/<name>.yml` plus a matching snippet.
-- **`layout`** — blocks arranged into columns; `->toLayouts()`.
-- **`pages` / `files` / `users`** — pickers, which store **UUIDs**, read with `->toPages()`, `->toFile()`, `->toUsers()`.
-- **`writer`** — inline rich text producing HTML, unlike `textarea` which produces Markdown/KirbyText.
+Plugins can register custom types under the `fields` extension key.
 
-Field names must be alphanumeric plus underscore — no dashes — and should avoid colliding with `$page` methods (`image`, `num`, `children`, `files`, `audio`, `videos`). Do not use `title` as a custom field in a page blueprint; it is already the page title.
+The structural ones to know:
+
+| Type | What it is | Stored as | Read with |
+|---|---|---|---|
+| `structure` | a repeatable set of subfields | YAML in one field value | `->toStructure()` |
+| `object` | one grouped set of subfields | YAML in one field value | `->toObject()` |
+| `blocks` | the page builder | JSON | `->toBlocks()` |
+| `layout` | blocks arranged into columns | JSON | `->toLayouts()` |
+| `pages`, `files`, `users` | pickers | **UUIDs** | `->toPages()`, `->toFile()`, `->toUsers()` |
+| `writer` | inline rich text | HTML | the field itself |
+| `textarea` | long text | Markdown or KirbyText | `->kirbytext()` |
+
+The core block types are text, heading, image, video, gallery, quote, code, list, markdown and line. A snippet at `site/snippets/blocks/<type>.php` overrides one. A new block takes a blueprint at `site/blueprints/blocks/<name>.yml` and a matching snippet.
+
+Field names are letters, digits and underscores only, with no dashes. They should not collide with a page method, such as image, num, children, files, audio or videos. Do not use `title` as a custom field in a page blueprint: it is already the page title.
 
 ## Reuse: extends and presets
 
@@ -121,7 +145,7 @@ fields:
     label: Meta description      # local keys override the extended ones
 ```
 
-Whole blueprints extend too — `extends: pages/article` — and sections and tabs can be extended the same way. Shared parts live under `site/blueprints/fields/`, `site/blueprints/sections/`, `site/blueprints/tabs/`. This is how a project keeps twelve page types from drifting apart, and it is worth looking for before adding a field by hand in several files.
+Whole blueprints extend too, as in `extends: pages/article`, and so do sections and tabs. Shared parts live in the `fields/`, `sections/` and `tabs/` folders under `site/blueprints/`. This keeps twelve page types from drifting apart. Look for it before adding a field by hand in several files.
 
 ## Query language
 
@@ -137,9 +161,25 @@ info: "{{ page.date.toDate('d.m.Y') }} — {{ page.location }}"
 query: site.index.filterBy("template", "in", ["note", "album"])
 ```
 
-Root keywords: `site`, `page`, `file`, `user`, `kirby`, `item` (inside a structure or options loop), `block`, and `this` (v5.1+). `{{ … }}` interpolation is used in display strings — a section's `text`, `info`, `image.query`.
+| Root keyword | Refers to |
+|---|---|
+| `site`, `page`, `file`, `user`, `kirby` | that object |
+| `item` | the entry inside a structure or options loop |
+| `block` | the current block |
+| `this` | the current model (v5.1+) |
 
-Kirby 5.1's query runner adds optional chaining (`page.cover.toFile?.url`), ternaries, comparison and logical operators (`==`, `!=`, `>`, `<`, `&&`, `||`) and arithmetic. On an older v5 patch these silently fail rather than erroring usefully — check the version before using them.
+`{{ … }}` interpolation is used in display strings, such as a section's `text`, `info` and `image.query`.
+
+Kirby 5.1's query runner adds:
+
+```
+page.cover.toFile?.url          optional chaining
+a ? b : c                       ternaries
+==  !=  >  <  &&  ||            comparison and logical operators
++  -  *  /                      arithmetic
+```
+
+On an older v5 patch these fail silently rather than with a useful error. Check the installed version before using them.
 
 ## Translations
 
@@ -153,4 +193,4 @@ headline:
   type: text
 ```
 
-Field **values** are translated per language automatically on multi-language sites; a field marked `translate: false` stays shared across languages, which is what you want for things like a numeric price or a page-wide toggle.
+On multi-language sites, field **values** are translated per language automatically. A field marked `translate: false` stays shared across languages. That suits a numeric price or a page-wide toggle.
