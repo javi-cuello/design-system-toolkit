@@ -167,7 +167,13 @@ function routing(contextDoc) {
   }
   if (!parsed || !parsed.files) return { error: `the snapshot-routing block in ${contextDoc} names no files` };
   // No repo is a design-only project: the toolkit stores its snapshot itself.
-  return { repo: parsed.repo ? expand(parsed.repo) : null, files: parsed.files, doc: contextDoc };
+  const repo = parsed.repo ? expand(parsed.repo) : null;
+  /* A moved root (a copy of the projects to measure against) whose context document
+     still names a repo outside it would read, and write, the original's store. */
+  const moved = expand(process.env.TOOLKIT_PROJECTS_ROOT);
+  if (repo && moved && path.relative(path.resolve(moved), path.resolve(repo)).startsWith('..'))
+    return { error: `${contextDoc} names repo ${repo}, outside TOOLKIT_PROJECTS_ROOT ${moved}: a copied root still points at the original; repoint its snapshot-routing "repo"` };
+  return { repo, files: parsed.files, doc: contextDoc };
 }
 
 /*

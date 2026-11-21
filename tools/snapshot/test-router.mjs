@@ -1814,3 +1814,21 @@ test('an icon is stored with its attributes sorted, so the app and the cloud wri
   assert.equal(store.attrsOrdered(app), store.attrsOrdered(cloud));
   assert.equal(store.attrsOrdered(app), '<svg fill="none" height="16" width="16">\n<path d="M0 0" fill-rule="evenodd" fill="#123456"/>\n</svg>');
 });
+
+test('a moved projects root whose context document still names a repo outside it is refused, never read through to the original', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'root-guard-'));
+  const doc = path.join(dir, 'p', 'figma-design-system', 'design-system-context.md');
+  fs.mkdirSync(path.dirname(doc), { recursive: true });
+  const write = (repo) => fs.writeFileSync(doc, '```json snapshot-routing\n' + JSON.stringify({ repo, files: { library: { key: 'k', id: 'i' } } }) + '\n```\n');
+  const was = process.env.TOOLKIT_PROJECTS_ROOT;
+  process.env.TOOLKIT_PROJECTS_ROOT = dir;
+  try {
+    write('/elsewhere/original/p');
+    assert.match(contract.routing(doc).error || '', /outside TOOLKIT_PROJECTS_ROOT/);
+    write(path.join(dir, 'p'));
+    assert.equal(contract.routing(doc).repo, path.join(dir, 'p'), 'a repo inside the moved root is read');
+  } finally {
+    if (was === undefined) delete process.env.TOOLKIT_PROJECTS_ROOT; else process.env.TOOLKIT_PROJECTS_ROOT = was;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
