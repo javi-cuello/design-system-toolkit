@@ -1101,10 +1101,8 @@ export function variantKeys(dir, names, tails = []) {
    only the overrides, and a layer not listed is the component's own, showing. Told apart by trimming again: the insides
    lose a layer only where they were kept whole. */
 export function keptWhole(anatomy, mains) {
-  const { ownInsides } = req('./derive.cjs');
-  const copy = JSON.parse(JSON.stringify(anatomy));
-  ownInsides(copy, mains, { partial: true });
-  return Object.keys(anatomy).filter((id) => anatomy[id] && anatomy[id].kind === 'instance' && Object.keys(anatomy).some((k) => k.startsWith(id + '/') && !copy[k]));
+  // derive's wholeIn, the one cut: a drawing draws the design, so the design's own equivalences (no reading's)
+  return [...req('./derive.cjs').wholeIn(anatomy, mains)];
 }
 
 /* The plan as the plugin gets it: each distinct element once, a variant's anatomy its indices. */

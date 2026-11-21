@@ -971,17 +971,21 @@ function bridge(stored) {
    kept whole in a slider's error state with its glyph's place unstated, read as nothing to drop under a cut that held
    place against its component. `mains` is byComponentName over the library. */
 function wholeHosts(contract, mains) {
+  if (!contract || !mains) return new Set();
+  return wholeIn(Object.assign({}, ...[...(contract.variants || [])].reverse().map((v) => v.add || {}), contract.anatomy || {}), mains, { reading: true });
+}
+/* The same question of one anatomy (one variant's flat): the instances whose insides a partial cut would shrink, with the
+   reading's equivalences where it is a reading's (`reading`), else derive's own, as a drawing of the design is. */
+function wholeIn(all, mains, { reading = false } = {}) {
   const out = new Set();
-  if (!contract || !mains) return out;
-  const all = Object.assign({}, ...[...(contract.variants || [])].reverse().map((v) => v.add || {}), contract.anatomy || {});
-  for (const [id, x] of Object.entries(all)) {
+  for (const [id, x] of Object.entries(all || {})) {
     if (!x || x.kind !== 'instance' || !mains(x.component, x.key)) continue;
     const sub = Object.fromEntries(Object.entries(all).filter(([k]) => k === id || k.startsWith(`${id}/`)).map(([k, v]) => [k, JSON.parse(JSON.stringify(v))]));
     const n = Object.keys(sub).length;
-    ownInsides(sub, mains, { partial: true, reading: true });
+    ownInsides(sub, mains, { partial: true, reading });
     if (Object.keys(sub).length < n) out.add(id);
   }
   return out;
 }
 
-module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, glyphColour, ownStyling, OWN, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs, wholeHosts };
+module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, glyphColour, ownStyling, OWN, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs, wholeHosts, wholeIn };
