@@ -247,6 +247,22 @@ else console.log('skip: no stored contracts on this machine');
   ok('without the library, no colour is guessed', !/color:/.test(toCss(btn, 'button', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
 }
 
+// an instance of a component the store does not hold (an icon of another library: Carbon's checkbox draws its Checkbox
+// icon with a focus stroke): no sheet of its own draws its box, so its stroke and corners are written here, placed
+// directly or inside a placed component the store holds; with no store given, nothing is taken to be missing
+{
+  const note = { contract: 1, component: 'Note', props: {}, anatomy: { root: { kind: 'container' }, warn: { kind: 'instance', parent: 'root', component: 'Warn', key: 'aa11', width: 16, height: 16 } }, variants: [] };
+  const box = { contract: 1, component: 'Box', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', figma: 'State', role: 'interaction', pointer: ['focus'] } },
+    anatomy: { root: { kind: 'container' }, check: { kind: 'instance', parent: 'root', component: 'Check', key: 'bb22', width: 20, height: 20 }, note: { kind: 'instance', parent: 'root', component: 'Note', key: 'cc33' } },
+    variants: [{ when: { state: 'focus' }, set: { 'check.border': { color: 'Focus/focus', align: 'center', width: 2 }, 'check.radius': 4 }, add: { 'note/warn': { kind: 'instance', parent: 'note', component: 'Warn', key: 'aa11', width: 16, height: 16, border: { color: 'C/clear', width: 1 } } } }] };
+  const mains = (n) => (n === 'Note' ? note : null);
+  const sheet = toCss(box, 'box', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an instance the store does not hold draws its own stroke and corners, placed directly or inside a held one',
+    /focus-visible[^{]*> \.ds-box__check \{[^}]*border-radius: 4px;[^}]*outline: 2px solid var\(--focus-focus\);/.test(sheet) && /focus-visible[^{]*> \.ds-box__note > \.ds-note__warn \{[^}]*box-shadow: inset 0 0 0 1px var\(--c-clear\);/.test(sheet)
+    && selfCheck(box, rulesOf(box, mains).rules, mains).length === 0 && !/key on/.test(sheet));
+  ok('with no store given, a placed instance is given only its place', !/outline|box-shadow|border-radius/.test(toCss(box, 'box', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
+}
+
 // an icon placed inside a placed component, which a variant recolours there (Carbon's disabled Toggletip icon): the
 // instance differs from the component's part only in its glyph's colour, and that colour is written on the part
 {

@@ -379,7 +379,9 @@ function overrideOf(a, host, rel, m, mains, B = a) {
    sheet draws, never read as an override). */
 function placedDecls(x, ctx, mains, at = x) {
   const m = at.component && mains(at.component, at.key), R = m && atProps(m, at.with).root;
-  const placed = declarations(x, ctx, tokenNames).decls.filter(([p]) => PLACED.test(p));
+  const all = declarations(x, ctx, tokenNames).decls, placed = all.filter(([p]) => PLACED.test(p));
+  // (one the store does not hold, an icon of another library, has no sheet to draw its box: all it states is its own)
+  if (!m && at.component && mains && mains !== NO_MAINS) return all;
   if (!R) return placed;
   const whole = { ...R, ...Object.fromEntries(OWN.filter((f) => x[f] != null).map((f) => [f, x[f]])) };
   return [...placed, ...declarations(whole, { ...ctx, holds: holds(R.kind) }, tokenNames).decls.filter(([p]) => !PLACED.test(p))];
@@ -435,7 +437,10 @@ const hostIn = (c, id, mains) => { const a = allOf(c); const h = hostOf(a, id), 
   return !!placedOf(a, h, placedAs(a, h, m, mains).M)[id.slice(h.length + 1)]; };
 
 /* Each part's declarations at one combination, as a map property → value (with its note). */
-export function drawn(c, when, mains = () => null, t = HOUSE) {
+// no store given: what a placed component draws is not known, so none is taken to be missing from it
+const NO_MAINS = () => null;
+export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
+  mains ||= NO_MAINS;
   const a = expand(c, when);
   const out = {}, extra = [], ringNotes = {};
   // the component at its defaults: what the base rule writes, which every other combination inherits
@@ -577,11 +582,15 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
     const { decls, unread } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box, pull }, tokenNames);
     // a placed component is placed here and looks as its own sheet says (code-standard rule 5): where it sits and
     // how big, never its fill, stroke, corners or type, which a prop changes in code
-    const kept = e.kind === 'instance' || slotted ? decls.filter(([p]) => PLACED.test(p)) : decls;
+    // (but an instance of a component the store does not hold, an icon of another library: no sheet of its own draws
+    // its box, and derive kept every field it states, so its fill, stroke and corners are written here, as a box's)
+    // (known only where the store was given: with none, every placed component is taken to be held)
+    const unheld = e.kind === 'instance' && mains !== NO_MAINS && !(e.component && mains(e.component, e.key));
+    const kept = (e.kind === 'instance' && !unheld) || slotted ? decls.filter(([p]) => PLACED.test(p)) : decls;
     // save an override set on the instance itself (derive keeps only what differs from its component's root at its
     // props: Carbon's toggle fills its toggle item per state): written on the instance, and where the defaults' override
     // no longer holds, the component's own value, as an override inside one is
-    if (e.kind === 'instance' && !slotted) {
+    if (e.kind === 'instance' && !unheld && !slotted) {
       const ictx = { root: false, holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors: false, box: null, pull: null };
       const over = ownOverride(e, ictx, mains), said = new Set(over.changed.map(([p]) => p));
       // (the component's own value said only where a rule before this one sets it otherwise, `given`: elsewhere nothing,
@@ -591,7 +600,7 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
     if (sample) kept.push(['inline-size', '100%']);
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
     if (parent && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
-    out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: e.kind === 'instance' || slotted ? [] : unread };
+    out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: (e.kind === 'instance' && !unheld) || slotted ? [] : unheld ? unread.filter((f) => !/^(key|component|with|swappedBy)\b/.test(f)) : unread };
     if (slotted) { /* the sample's: above */ } else if (empty.length) {
       const only = declarations(Object.fromEntries(empty.map((f) => [f, a[id][f]])), { root: false, holds: false, row: true, anchors: false, box: null, pull: null }, tokenNames);
       out[`${slotted ? `${e.parent}/*` : id}::empty`] = { decls: new Map(only.decls.map(([p, v, note]) => [p, { v, note }])), unread: [] };
