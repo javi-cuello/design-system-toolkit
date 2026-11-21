@@ -1567,6 +1567,9 @@ async function main() {
                 return true;
               }).map((t) => [...t.childNodes].filter((c) => c.nodeType === 3).map((c) => c.textContent).join('').trim()),
               glyphs: [...n.querySelectorAll('svg, [data-icon]:empty')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) });
+            // its own styling over its component's root (a toggle's fill on its toggle item), folded back where it is that root's
+            // (ownStyling); drawn over its parent where it paints, as a box is
+            { const ie = out[out.length - 1]; boxStyling(ie); if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
             // the layers the mapping names inside it, where the mapping names it too, at any depth of placing (opensPlaced; an
             // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
             // (each at its place among the component's own drawn children, which this reading does not all read)
@@ -1576,6 +1579,16 @@ async function main() {
           if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; if (tag !== 'svg') e.mark = true; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; if (n.getAttribute('data-icon-size')) e.iconSize = n.getAttribute('data-icon-size'); }
           else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
+            boxStyling(e);
+            // a box no flex lays out, or one with nothing to hug, has a size of its own (a switch's thumb, an avatar's image)
+            if (kind === 'container' && (!n.children.length || !/flex/.test(s.display))) { e.width = px(s.width); e.height = px(s.height); }
+            // placed by code at a point inside its parent (a thumb over its track): where, so a drawing can place it so
+            if (parent != null && s.position === 'absolute') Object.assign(e, placed(n));
+          }
+          // a box's own styling as the contract says it: its layout, fill, corners, stroke, clipping and shadow, read off
+          // its computed style (a container's, a text's, a slot's; and a placed instance's own, what it sets over its
+          // component's root, which derive's ownStyling folds back where it is that root's)
+          function boxStyling(e) {
             if (/flex/.test(s.display)) {
               const A = { 'flex-start': 'start', 'flow-start': 'start', start: 'start', normal: 'start', center: 'center', 'flex-end': 'end', 'flow-end': 'end', end: 'end', 'space-between': 'space-between', stretch: 'stretch' };
               e.layout = { direction: /column/.test(s.flexDirection) ? 'column' : 'row', gap: s.gap === 'normal' ? 0 : px(s.gap), align: A[s.justifyContent] || s.justifyContent, crossAlign: A[s.alignItems] || s.alignItems };
@@ -1624,10 +1637,6 @@ async function main() {
             if (drops.length) e.shadow = drops.join(',');
             // the side rings taken as a border, with the shadow they came from: a style that draws them itself takes them back (below)
             if (ss) { e.shadowAll = layers.join(','); e.ringsUsed = ss.used.map((i) => layers[i]); }
-            // a box no flex lays out, or one with nothing to hug, has a size of its own (a switch's thumb, an avatar's image)
-            if (kind === 'container' && (!n.children.length || !/flex/.test(s.display))) { e.width = px(s.width); e.height = px(s.height); }
-            // placed by code at a point inside its parent (a thumb over its track): where, so a drawing can place it so
-            if (parent != null && s.position === 'absolute') Object.assign(e, placed(n));
           }
           // what it is drawn over: the nearest ancestor that paints, for a translucent colour's token
           let a = kind === 'container' && e.background ? n.parentElement : n, under = null;

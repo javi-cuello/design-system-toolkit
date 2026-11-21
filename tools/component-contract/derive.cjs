@@ -515,7 +515,9 @@ function ownStyling(anatomy, mains) {
     const m = e && e.kind === 'instance' && e.component && mains(e.component, e.key);
     if (!m) continue;
     const root = atProps(m, e.with).root;
-    if (root) for (const f of OWN) if (e[f] !== undefined && sorted(e[f]) === sorted(root[f])) delete e[f];
+    // (a layout with no padding and one of four zeros are one layout: a reading from code says no padding it finds none of)
+    const one = (f, v) => (f === 'layout' && v && typeof v === 'object' && !v.padding ? { ...v, padding: { top: 0, end: 0, bottom: 0, start: 0 } } : v);
+    if (root) for (const f of OWN) if (e[f] !== undefined && sorted(one(f, e[f])) === sorted(one(f, root[f]))) delete e[f];
   }
   return anatomy;
 }

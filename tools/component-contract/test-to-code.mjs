@@ -408,6 +408,12 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     /\.ds-switch > \.ds-switch__knob \{[^}]*justify-content: flex-end;[^}]*background: var\(--c-success\)/.test(sheet) && !/\.ds-switch > \.ds-switch__knob \{[^}]*(gap|flex-direction)/.test(sheet)
     && /data-on="false"[^{]*> \.ds-switch__knob \{[^}]*background: var\(--c-off\)/.test(sheet) && selfCheck(sw, rulesOf(sw, mains).rules, mains).length === 0);
   ok('where a variant drops the instance\'s override, the component\'s own value there (none: unset)', /read-only[^{]*> \.ds-switch__knob \{[^}]*background: unset/.test(sheet));
+  // one a variant adds (a small toggle's), where a further combination drops its override: the component's own value, never unset
+  const small = { ...sw, props: { ...sw.props, small: { type: 'boolean', default: false, axis: true, figma: 'Small' } }, anatomy: { root: sw.anatomy.root },
+    variants: [{ when: { small: true }, add: { knob: sw.anatomy.knob } }, { when: { small: true, on: false }, set: { 'knob.background': 'C/off', 'knob.layout': null } }] };
+  const ss = toCss(small, 'switch', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an instance a variant adds, its override dropped further on, goes back to its component\'s own value, never unset',
+    /data-on="false"[^{]*> \.ds-switch__knob \{[^}]*justify-content: flex-start/.test(ss) && !/justify-content: unset/.test(ss) && selfCheck(small, rulesOf(small, mains).rules, mains).length === 0);
   ok('without the library, an instance is placed only', !/background/.test(toCss(sw, 'switch', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }).split('@layer')[1]));
   const rail = { contract: 1, component: 'Rail', props: {}, anatomy: { root: { kind: 'container' }, knob: { kind: 'instance', parent: 'root', component: 'Knob', with: { State: 'Enabled' } } }, variants: [] };
   const slider = { contract: 1, component: 'Slider', props: {}, anatomy: { root: { kind: 'container' }, rail: { kind: 'instance', parent: 'root', component: 'Rail', with: {} }, 'rail/knob': { kind: 'instance', parent: 'rail', component: 'Knob', with: { State: 'Enabled' }, background: 'C/strong' } }, variants: [] };

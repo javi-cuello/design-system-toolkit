@@ -393,6 +393,25 @@ function ownOverride(x, ctx, mains) {
   return { theirs, changed: [...[...mine].filter(([p, v]) => theirs.get(p) !== v), ...[...theirs.keys()].filter((p) => !mine.has(p)).map((p) => [p, 'unset'])] };
 }
 
+/* The properties an instance's own styling overrides at any combination that places it (the defaults', and each
+   variant's that adds it or sets a field of it, at the defaults' other values): each combination says every one, its
+   override or its component's own value, so no rule of another combination's reaches it, nor an `unset` the cascade
+   would write where one drops it (which would undo the component's own value). */
+const EVER = new WeakMap();
+function everOverrides(c, id, mains, ctx) {
+  // (per library too: the same contract read against another set of mains overrides otherwise)
+  const byLib = EVER.get(c) || new WeakMap(); EVER.set(c, byLib);
+  const memo = byLib.get(mains) || new Map(); byLib.set(mains, memo);
+  if (memo.has(id)) return memo.get(id);
+  const ps = new Set(), d = variantDefaults(c);
+  for (const when of [d, ...(c.variants || []).filter((v) => (v.add || {})[id] || Object.keys(v.set || {}).some((k) => k.startsWith(`${id}.`))).map((v) => ({ ...d, ...v.when }))]) {
+    const x = expand(c, when)[id];
+    if (x && x.kind === 'instance') for (const [p] of ownOverride(x, ctx, mains).changed) ps.add(p);
+  }
+  memo.set(id, ps);
+  return ps;
+}
+
 /* The layers recorded inside a placed instance, each matched to the part of its component it is (derive's placedMatch). */
 const placedOf = (a, host, M) => placedMatch(M, Object.fromEntries(Object.keys(a).filter((k) => k.startsWith(`${host}/`)).map((k) => [k.slice(host.length + 1), a[k]])));
 
@@ -528,8 +547,7 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
     if (e.kind === 'instance' && !slotted) {
       const ictx = { root: false, holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors: false, box: null, pull: null };
       const over = ownOverride(e, ictx, mains), said = new Set(over.changed.map(([p]) => p));
-      const at = B[id] && B[id].component === e.component ? ownOverride(B[id], ictx, mains) : { changed: [] };
-      kept.push(...over.changed, ...at.changed.filter(([p]) => !said.has(p)).map(([p]) => [p, over.theirs.get(p) ?? 'unset']));
+      kept.push(...over.changed, ...[...everOverrides(c, id, mains, ictx)].filter((p) => !said.has(p)).map((p) => [p, over.theirs.get(p) ?? 'unset']));
     }
     if (sample) kept.push(['inline-size', '100%']);
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
