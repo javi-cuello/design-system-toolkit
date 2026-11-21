@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 3.4.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I; build detail to `references/build-steps.md`, audit detail to `references/audit/audit-checks.md`. No rule changed; A6 amended.
 - 3.3.1 (2026-11-20): two case citations name `tools/component-contract/REFERENCE.md`, where the README rewrite moved the to-markup trial; no rule changed.
 - 3.3.0 (2026-11-16): the audit pass does not walk `weak` knowledge items, the research queue (toolkit-standard 2.41.0 §D 21); the scaffold's README says an axis a library named `Role` becomes `variant`. T13 re-traced.
 - 3.2.0 (2026-11-16): the knowledge list, the inventory step and the audit pass name `knowledge/ui/components/`, a page per component in design, Figma and code (toolkit-standard 2.38.0 §D 21). A6 re-traced.

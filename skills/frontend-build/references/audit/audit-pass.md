@@ -2,6 +2,15 @@
 
 The judgement half of an audit, after the mechanical checks have run (SKILL.md, *Audit*). It applies `standards/design-standard.md` and `standards/code-standard.md` and restates neither: each line below is a question, and the rule it asks about is named by handle. Read the rule before raising a finding against it. Work on what a person sees: the frames, or screenshots of the page at phone and desktop width in both themes.
 
+## Contents
+
+- [1. The principles](#1-the-principles)
+- [2. design-standard, area by area](#2-design-standard-area-by-area)
+- [3. code-standard's *needs a read* rules](#3-code-standards-needs-a-read-rules)
+- [Symptoms](#symptoms)
+- [Before calling it done](#before-calling-it-done)
+- [The simplicity questions](#the-simplicity-questions)
+
 ## 1. The principles
 
 Walk design-standard's *Principles* as questions of the whole screen. A "no" is a finding only when a rule names it; otherwise it is a recommendation, with the knowledge page that supports it.
@@ -15,18 +24,36 @@ The rules a script cannot settle, by handle; read each before raising a finding 
 - **Visual:** design-standard rules 7, 8 and 9.
 - **Content:** design-standard rules 10 and 11.
 - **Accessibility:** on a design, figma-standard rules 26, 31 and 32 (checked by `figma-components-audit`); on a build, code-standard rules 2, 14–19 and 64.
-- **The depth:** the fundamentals in `knowledge/ui/design/`, the components in `knowledge/ui/components/` and the patterns in `knowledge/ui/patterns/` (toolkit repo) that the screen uses, each section's *Check* line and its cases. A practice there is the default the screen is held to: a deviation is a finding cited by page and section, unless the project records a ruling; only a rule is cited as a breach.
+- **The depth:** the knowledge pages the screen uses, in `knowledge/ui/design/`, `knowledge/ui/components/` and `knowledge/ui/patterns/` (toolkit repo). Read each section's *Check* line and its cases. A practice there is the default the screen is held to. A deviation is a finding cited by page and section, unless the project records a ruling. Only a rule is cited as a breach.
 - **The profile** the page belongs to (design-standard's *Application profiles* names each and its page in `knowledge/ui/profiles/`), and what it says such a page must specify.
 
 ## 3. code-standard's *needs a read* rules
 
-On a build, after `tools/project-check/check.mjs`: code-standard rules 1 (markup stands alone), 2 (DOM order is reading order), 3 (one container per band) and 7 (prose scale), and every other rule whose evidence line says **needs a read**. `bin/closing` lists the ones a change touches.
+On a build, after `tools/project-check/check.mjs`, read these rules:
+
+| Rule | What it asks |
+|---|---|
+| code-standard rule 1 | Markup stands alone |
+| code-standard rule 2 | DOM order is reading order |
+| code-standard rule 3 | One container per band |
+| code-standard rule 7 | Prose scale |
+
+Read too every other rule whose evidence line says **needs a read**. `bin/closing` lists the ones a change touches.
 
 - **The depth:** the pages in `knowledge/code/` (toolkit repo) for what the build touches, each section's *Check* line and its cases. As with the design pages, a practice no rule states is a recommendation with its source, never a breach.
 
 ## Symptoms
 
-A symptom in a build is traced in the knowledge page that owns the property, each with its cause and fix: overflow, viewport units, container queries and reflow in [responsive](../../../../knowledge/code/responsive.md); layers, nesting, custom properties and Sass modules in [css-architecture](../../../../knowledge/code/css-architecture.md); themes, literals and generated files in [tokens](../../../../knowledge/code/tokens.md); images and fonts in [performance](../../../../knowledge/code/performance.md); focus and reduced motion in [accessibility](../../../../knowledge/code/accessibility.md); `alt` in [html-semantics](../../../../knowledge/code/html-semantics.md).
+Trace a symptom in a build to the knowledge page that owns the property. Each page gives the cause and the fix.
+
+| Symptom | Knowledge page |
+|---|---|
+| Overflow, viewport units, container queries, reflow | [responsive](../../../../knowledge/code/responsive.md) |
+| Layers, nesting, custom properties, Sass modules | [css-architecture](../../../../knowledge/code/css-architecture.md) |
+| Themes, literals, generated files | [tokens](../../../../knowledge/code/tokens.md) |
+| Images, fonts | [performance](../../../../knowledge/code/performance.md) |
+| Focus, reduced motion | [accessibility](../../../../knowledge/code/accessibility.md) |
+| `alt` | [html-semantics](../../../../knowledge/code/html-semantics.md) |
 
 ## Before calling it done
 

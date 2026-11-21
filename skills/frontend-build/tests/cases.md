@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v3.3.1)
+# Eval cases — frontend-build (v3.4.0)
+
+**Walked: 2026-11-21 for 3.4.0** — SKILL.md rewritten to skill-standard §A clause I: build detail moved to `references/build-steps.md`, the audit's checks, look, knowledge walk and report form to `references/audit/audit-checks.md`. Every section pointer below repointed (T1, T5, T13, T17, A2–A4, A8, A9) and each case re-read against the new text: the asserted behaviour holds. A6 amended: the references hold the skill's own procedure, never knowledge guidance. A5's and T4's greps print nothing.
 
 **Walked: 2026-11-20 for 3.3.1** — two citations moved to tools/component-contract/REFERENCE.md (the README rewrite); no case reads them, so none re-traced.
 
@@ -171,7 +173,7 @@ Negative: 1.4.1 said nothing at this step; the four comments it would have caugh
 Traced: 2026-10-08 — to SKILL.md's Components step, which says to decide in that change where a Figma-to-code mismatch lives.
 
 ## T1 · Semantic tier only in components
-Assert: the skill instructs that components consume semantic tokens only, and that a primitive appearing in a component stylesheet is a defect. Traced to `knowledge/code/tokens.md` §Three tiers ("Components consume semantic tokens only"), which `SKILL.md` step 2 points to.
+Assert: the skill instructs that components consume semantic tokens only, and that a primitive appearing in a component stylesheet is a defect. Traced to `knowledge/code/tokens.md` §Three tiers ("Components consume semantic tokens only"), which `references/build-steps.md` *Tokens* points to (SKILL.md *Build* step 3).
 Traced: 2026-10-11 for 2.0.0.
 
 ## T2 · Breakpoints are Sass variables; the values they change are custom properties
@@ -187,7 +189,7 @@ Assert: no reference names a JS framework, templating language or CMS as require
 Walked live: 2026-10-11 for 2.0.0 — `grep -rniE 'react|vue|svelte|angular|next\.js|kirby|wordpress' references/` finds nothing; `SKILL.md` names Kirby only as the one runtime the optional scaffold writes.
 
 ## T5 · Deviations are reported, not applied silently
-Assert: where the skill overrides the design — a contrast failure, a touch target under 24px, a label allowed to wrap — it requires the deviation and its reason to be said back to the user. A build that silently corrects a design teaches nobody anything and gets reverted at review. Traced to `SKILL.md` §Reporting back from a build and `knowledge/code/figma-handoff.md` §Reporting deviations.
+Assert: where the skill overrides the design — a contrast failure, a touch target under 24px, a label allowed to wrap — it requires the deviation and its reason to be said back to the user. A build that silently corrects a design teaches nobody anything and gets reverted at review. Traced to SKILL.md *Build* step 8, `references/build-steps.md` *Reporting back from a build*, and `knowledge/code/figma-handoff.md` §Reporting deviations.
 Traced: 2026-10-11 for 2.2.0.
 
 ## T6 · The library shape is scaffolded, not re-derived — *executed*
@@ -231,7 +233,7 @@ Walked live: 2026-10-30 — as the 2.7.0 line above records.
 Fixture: "build a site to browse these articles; look at Smashing Magazine and the Figma blog for layouts", no Figma file.
 Assert: before writing, the session walks the knowledge pages the screen uses (visual's type and layout, the documentation profile, navigation and content) and takes their values as far as each item's weight carries (amended 3.3.0: a `weak` item is not used, a `contested` one is decided and the report says which way); a reference site supplies only what they leave open, and the report back names each such value.
 Negative: a page whose type, measure and palette come from the reference sites with no knowledge pass.
-Traced: 2026-11-02 for 2.10.0 — to SKILL.md *Orient before writing anything* step 4 and design-standard rule 14. Re-traced 2026-11-11 for 2.21.0 — to toolkit-standard §D 21's weights. Re-traced 2026-11-16 for 3.3.0 — to §D 21's `weak` row (not acted on) and design-standard rule 14.
+Traced: 2026-11-02 for 2.10.0 — to SKILL.md *Build* step 1 (*Orient before writing anything*, **No design file**) and design-standard rule 14. Re-traced 2026-11-11 for 2.21.0 — to toolkit-standard §D 21's weights. Re-traced 2026-11-16 for 3.3.0 — to §D 21's `weak` row (not acted on) and design-standard rule 14.
 
 ## T7 · Native interactive wraps the control, never replaces it — *traced*
 Fixture: "add a disabled state to our `ds-button`."
@@ -251,17 +253,17 @@ Walked live: 2026-10-11 — `tools/ui-check/test-check.mjs` 16/16 (the fixture a
 ## A2 · An audit of a design reads the snapshot and runs the Figma audit skills by name — *traced*
 Fixture: "audit this Figma screen."
 Assert: the answer runs `figma-components-audit` and `figma-foundations-audit` by name for what they measure (an audit reads the live file, toolkit-standard §D 5's exception), says no skill checks a whole screen's contrast, and walks design-standard on screenshots of the frames. It reads none of those skills' files (skill-standard §A clause H).
-Traced: 2026-10-11 for 2.0.0 to `SKILL.md` §Audit, the *A design* row.
+Traced: 2026-10-11 for 2.0.0 to `references/audit/audit-checks.md` *What each input takes*, the *A design* row.
 
 ## A3 · Comparing a build with its design is handed to parity *(negative)* — *traced*
 Fixture: "audit the design and the build of this page."
 Assert: the answer runs both audits and names `design-code-parity` for the comparison; it never diffs the design against the page itself.
-Traced: 2026-10-11 for 2.0.0 to `SKILL.md` (the opening "does not do" paragraph and the *Both* row).
+Traced: 2026-10-11 for 2.0.0 to SKILL.md (the "does not do" table and *Audit* step 1) and audit-checks.md's *Both* row.
 
 ## A4 · A finding leads with what it does to people, then the rule, then the fix — *traced*
 Fixture: a filter menu that hides its empty options.
 Assert: the finding reads like "Two areas disappear when they are empty, so the menu changes shape under the reader: keep them, disabled (design-standard rule 5)", not "design-standard rule 5 violated"; a candidate is raised as a suggestion with its source; what was not checked is named.
-Traced: 2026-10-11 for 2.0.0 to `SKILL.md` §Reporting findings, which cites design-standard rule 10.
+Traced: 2026-10-11 for 2.0.0 to SKILL.md *Audit* step 6 and `references/audit/audit-checks.md` *Reporting findings*, which cite design-standard rule 10.
 
 ## A5 · The skill restates neither standard *(regression)* — *executed*
 Assert: no file in the skill types a focus offset or width, puts `light-dark()` in a component, declares its own layer order, styles its examples by class or modifier class, or names breakpoints the token build does not write — the places 1.4.7 disagreed with code-standard rules 4, 6, 9, 53 and 54.
@@ -269,7 +271,7 @@ Walked live: 2026-10-11 for 2.1.0 — `grep -rnE "outline-offset: [0-9]|outline:
 
 ## A6 · Guidance past the rules is consulted in knowledge/, never copied into the skill — *traced*
 Fixture: "how should this form mark required fields?"
-Assert: the answer consults `knowledge/ui/patterns/forms.md` (toolkit repo) and cites it, and the skill holds no copy of that guidance: its only reference is `audit/` (the judgement pass); how to write the code is `knowledge/code/`.
+Assert: the answer consults `knowledge/ui/patterns/forms.md` (toolkit repo) and cites it, and the skill holds no copy of that guidance: its references hold only its own procedure (`build-steps.md`, and `audit/` for the checks and the judgement pass); how to write the code is `knowledge/code/`. (Amended 3.4.0: before it, `audit/` was the only reference.)
 Traced: 2026-10-11 for 2.1.0 — to `SKILL.md`'s knowledge paragraph and *Where the rest is*; `ls references` shows `audit` only (2.2.0).
 Traced: 2026-11-16 for 3.2.0 — the knowledge paragraph names `knowledge/ui/components/` beside the patterns, and a component question ("what states does our button need?") is answered from `knowledge/ui/components/button.md`; `ls references` still shows `audit` only.
 
@@ -283,16 +285,16 @@ Fixture: an agent reports a batch of visual fixes done, every gate green, and th
 Assert: the session takes `tools/ui-check/check.mjs --shots` of every changed page type (desktop light, dark, phone), opens every file, and fixes or reports what it sees before committing; the agent's own "I looked" and the permission to push do not count as the look.
 Negative: pushing on green gates and permission alone.
 Runs: node tools/ui-check/test-check.mjs — "--shots saves desktop, dark and phone for each page checked"
-Traced: 2026-10-11 for 2.3.0 — to SKILL.md *Look before you ship* and step 6 of the order of work.
+Traced: 2026-10-11 for 2.3.0 — to SKILL.md *Audit* step 3 (*Look before you ship*, detail in audit-checks.md *Looking at the screenshots*) and *Build* step 7.
 
 ## A9 · An audit holds the site to the whole of the applicable knowledge
 Fixture: a docs site whose findings list is all fixed, and whose dates are still plain text with no `<time>` element on any page.
 Assert: the audit walks every applicable knowledge page section by section against every page type and reports the dates as a finding cited to `knowledge/ui/patterns/data.md` *Dates and times*, not as a recommendation; a gap the project accepts is a ruling in its context document.
 Negative: calling the audit complete when the findings list is empty.
-Traced: 2026-10-12 for 2.4.0 — to SKILL.md *Hold it to the whole of the knowledge* and *Reporting findings*.
+Traced: 2026-10-12 for 2.4.0 — to SKILL.md *Audit* steps 4 (*Hold it to the whole of the knowledge*) and 6, detail in audit-checks.md.
 
 ## T17 · A build settles its platform features against the support target, and cites an uncovered one — *traced*
 Fixture: a build from a brief that wants a tooltip anchored to its trigger, in a project whose CLAUDE.md sets no Baseline target; no knowledge page covers anchor positioning.
 Assert: before writing, the run reads `knowledge/code/browser-support.md`, takes Baseline widely available as the target, reads the anchor-positioning guide through `npx modern-web-guidance@latest search`/`retrieve` as that page says, follows its fallback for the target, and cites the guide's id in its report.
 Negative: anchor positioning used with no fallback while it is not widely available; guidance for the feature written from memory with no source; the Modern Web Guidance skill installed into the project or `~/.claude/skills`.
-Traced: 2026-11-11 for 2.17.0 — to SKILL.md *Orient before writing anything*, question 5, and `knowledge/code/browser-support.md` *Baseline as the support policy*. Not yet met real input.
+Traced: 2026-11-11 for 2.17.0 — to `references/build-steps.md` *Orient before writing anything*, question 5, and `knowledge/code/browser-support.md` *Baseline as the support policy*. Not yet met real input.
