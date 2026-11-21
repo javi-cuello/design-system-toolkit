@@ -549,4 +549,13 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const pinnedEnd = centredEdges({ x: 2, y: 0, end: 4 }, { horizontal: 'center', vertical: 'min' }, { x: 2, y: 0, end: 6, bottom: 3 });
   ok('a centred part keeps its far edges as measured; a far edge the CSS says stays; a part pinned to an edge gains none', at.end === 7.7 && at.bottom === 10.25 && pinnedEnd.end === 4 && pinnedEnd.bottom === undefined);
 }
+// the reading reads every combination of five props or more the design draws, as the round trip compares them all: Material's
+// square extra-small icon button needs five props off default, and was only predicted from the layers, wrongly
+{ const { combinationsToRead } = await import('./from-code.mjs');
+  const keys = ['a', 'b', 'c', 'd', 'e', 'f'], vals = () => [true];
+  const all = combinationsToRead(keys, vals, () => true), none = combinationsToRead(keys, vals, () => false), code = combinationsToRead(keys, vals);
+  const sizes = (l) => l.map((x) => x.length).sort().join();
+  ok('after the pairs and triples: every four-prop combination, and every larger one the design draws; a reading only in code stops at four',
+    sizes(all) === [...Array(15).fill(4), ...Array(6).fill(5), 6].join() && sizes(none) === Array(15).fill(4).join() && sizes(code) === sizes(none)
+    && combinationsToRead(keys, vals, (l) => !l.some(([k]) => k === 'f')).filter((x) => x.length > 4).map((x) => x.map(([k]) => k).join('')).join() === 'abcde'); }
 console.log(`${n}/${n} passed`);

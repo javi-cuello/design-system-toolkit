@@ -198,6 +198,23 @@ export function designCombo(design, props, joinedProps, args, pseudoOf = {}, set
   return combo;
 }
 
+/* The combinations read after the pairs and the triples, each a list of [prop, value]: every one of four props off their
+   defaults, and every one of more that the design draws (`draws(list)`; none given, a reading only in code, stops at
+   four, which has no grid to say which it draws). The round trip compares every combination the design draws, so one of
+   five props or more left unread was only predicted from the layers, and read back wrong where they do more together
+   (Material's square extra-small icon button, five props off default; its vertical slider, five to seven).
+   Tested by test-from-code.mjs. */
+export function combinationsToRead(keys, valuesOf, draws = null, from = 4) {
+  const out = [];
+  const go = (i, acc) => {
+    if (acc.length >= from && (acc.length === from || draws(acc))) out.push(acc);
+    if (acc.length >= from && !draws) return;
+    for (let j = i; j < keys.length; j++) for (const v of valuesOf(keys[j])) go(j + 1, [...acc, [keys[j], v]]);
+  };
+  go(0, []);
+  return out;
+}
+
 /* A library's settings by component folder (the house's where it keeps none): the one source the self leg writes its
    sheet, markup and mapping under and the reading reads them back under, as to-code and to-markup take them. */
 export const librarySettings = (componentsDir) => req('../snapshot/projects.cjs').librarySettingsFor(componentsDir);
@@ -2243,10 +2260,15 @@ async function main() {
     const stillUnread = unread.filter(([when, got]) => Object.keys(delta(expand(fromCode, { ...allDefaults, ...when }), got, base)).length).map(([w]) => JSON.stringify(w));
     // and every four-prop combination, which the layers, pairs and three-prop combinations must predict: what four
     // do beyond them is a layer of its own, as three's is (a loading button's icon colour at a size, a hierarchy and
-    // a feedback), so the reading rebuilds it
+    // a feedback), so the reading rebuilds it; and so every combination of more the design draws (combinationsToRead)
     // (counted and said with the self-check: layers kept from one read each, not a check passed)
+    const drawsIt = figmaContract && ((list) => {
+      const c = { ...variantDefaults(figmaContract), ...comboOf({ ...defaults, ...Object.fromEntries(list.map(([k, v]) => [props[k].code, v])) }) };
+      return !(figmaContract.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v)));
+    });
+    const beyond = combinationsToRead(keys, (k) => valuesOf(props[k]), drawsIt);
     let fourLayers = 0;
-    for (const four of combos(4)) {
+    for (const four of beyond) {
       const when = Object.fromEntries(four.map(([k, v]) => [k, argOf(props[k], v)]));
       const got = await read({ ...defaults, ...Object.fromEntries(four.map(([k, v]) => [props[k].code, v])) });
       const d = delta(expand(fromCode, { ...allDefaults, ...when }), got, base);
@@ -2691,8 +2713,8 @@ async function main() {
     }
     const propsCompare = figmaContract ? compareProps(figmaContract, side.map, side.code, side.framework, side.fw || {}) : [];
     // a check that read nothing the layers were not built from cannot fail: said, not passed
-    const heldOut = combos(4).length;
-    const report = { at: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000), ...(figmaContract && { of: (await import('./official.mjs')).hashOf(figmaContract) }), chrome: (await import('../shared/cdp.mjs')).chromeMajor(), selfCheck: bad.length ? { notRebuilt: bad } : heldOut ? `every render rebuilt, ${heldOut} four-prop combination(s) among them: ${heldOut - fourLayers} predicted by the layers, ${fourLayers} kept as layers of their own, each from one read` : 'every render rebuilt, but fewer than four props vary: nothing was left unread to check the layers against',
+    const heldOut = beyond.length;
+    const report = { at: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000), ...(figmaContract && { of: (await import('./official.mjs')).hashOf(figmaContract) }), chrome: (await import('../shared/cdp.mjs')).chromeMajor(), selfCheck: bad.length ? { notRebuilt: bad } : heldOut ? `every render rebuilt, ${heldOut} combination(s) of four props or more among them: ${heldOut - fourLayers} predicted by the layers, ${fourLayers} kept as layers of their own, each from one read` : 'every render rebuilt, but fewer than four props vary: nothing was left unread to check the layers against',
       ...(notes.length && { notes }), ties, compare, propsCompare, structure, renamed: shaped.renamed, contract: fromCode, asFigma: shaped.contract };
     const out = path.join(L.out, 'from-code', `${name}.json`);
     fs.mkdirSync(path.dirname(out), { recursive: true });
