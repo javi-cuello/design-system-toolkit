@@ -42,10 +42,12 @@ export const WIDE_LINES = 10;
 // Bookkeeping that a change of any size carries; counting it made every
 // skill edit "full" (version, changelog, cases).
 // A worktree under a repo (.claude/worktrees/<name>) is a repo of its own: its tree, branch, size, check and
-// review are its own (one worktree per piece of work, tools/shared/worktree.mjs). agent-<id> ones are background
-// subagents' (Claude Code's isolation), counted when their branch is merged.
+// review are its own (one worktree per piece of work, tools/shared/worktree.mjs). What a background subagent writes in
+// a worktree is the subagent's, counted when its branch lands: Claude Code's isolation (agent-<id>) or one it made with
+// bin/worktree (a session's agents each in diag-<cause>, 2026-11-21: counted as the session's, the review gate and the
+// uncommitted-edits block fired on agents mid-work, six reviews of unfinished diffs and five forced WIP commits).
 const IN_WORKTREE = /^\.claude\/worktrees\/([^/]+)(?:\/|$)/;
-const subagentTree = (w) => !!w?.worktree && w.worktree.startsWith('agent-');
+const subagentTree = (w) => !!w?.worktree;
 const BOOKKEEPING = /(^|\/)(CHANGELOG\.md|README\.md)$|(^|\/)tests\/cases\.md$|^standards\/changelog\//;
 // The plan's sections, each a heading; Aim is the main goal the work serves, as agreed with the person, kept unchanged
 // from piece to piece; Before must hold bin/check's closing line, Measure the goal measured
@@ -524,7 +526,7 @@ function record(st, line, repos, sub) {
       if (r.is_error && st.counted[r.tool_use_id]) uncount(st, r.tool_use_id);
       const sh = st.shell[r.tool_use_id];
       // a subagent's call that ended before the session's last review is that review's
-      if (sh && !st.denied.includes(r.tool_use_id) && !(sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt)) scriptWrites(st, { ...sh, pre: st.pre[r.tool_use_id], end: Date.parse(rec.timestamp) || Date.now() }, repos);
+      if (sh && !st.denied.includes(r.tool_use_id) && !(sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt) && !(sub && subagentTree(where(sh.dir, repos)))) scriptWrites(st, { ...sh, pre: st.pre[r.tool_use_id], end: Date.parse(rec.timestamp) || Date.now() }, repos);
       if (sh) { delete st.shell[r.tool_use_id]; delete st.pre[r.tool_use_id]; }
       // a foreground review is done when its result comes back; a background one only says it was launched
       const out = typeof r.content === 'string' ? r.content : (r.content || []).map((x) => x.text || '').join('\n');

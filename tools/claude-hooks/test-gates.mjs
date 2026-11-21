@@ -543,6 +543,19 @@ test("a background agent's edits in its own worktree are not the session's; the 
   own.clean();
 });
 
+test("a background agent's work in a worktree it made itself (bin/worktree, no agent- name) is its own too", () => {
+  const s = session([user('build it'), call('Agent', { description: 'Fix a cause', prompt: 'x', subagent_type: 'general-purpose' })]);
+  const dir = path.join(s.file.replace(/\.jsonl$/, ''), 'subagents');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'agent-1.jsonl'), JSON.stringify(edit('.claude/worktrees/diag-x/a.mjs', 150)) + '\n');
+  assert.equal(size(advance(s.id, s.file, REPOS).total).lines, 0);
+  fs.rmSync(path.dirname(dir), { recursive: true, force: true });
+  s.clean();
+  const own = session([user('build it'), edit('.claude/worktrees/diag-x/a.mjs', 150)]);
+  assert.equal(size(advance(own.id, own.file, REPOS).total).lines, 150, 'the session\'s own edits there still count');
+  own.clean();
+});
+
 test("the plan gate lets a subagent write its own worktree, and holds the session there", () => {
   const big = (id) => ({ id, name: 'Write', input: { file_path: path.join(TOOLKIT, '.claude/worktrees/agent-x/big.mjs'), content: Array(900).fill('b').join('\n') } });
   const s = session([user('build it')]);
