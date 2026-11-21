@@ -27,7 +27,7 @@ fs.writeFileSync(path.join(repo, '.gitignore'), '.claude/\n');
 const git = (...a) => execFileSync('git', ['-C', repo, ...a], { stdio: 'ignore' });
 git('init', '-q'); git('-c', 'user.email=t@t', '-c', 'user.name=t', 'add', '.'); git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'one');
 
-const base = { ...process.env, TOOLKIT_LOCK_DIR: path.join(tmp, 'lock') };
+const base = { ...process.env, TOOLKIT_LOCK_DIR: path.join(tmp, 'lock'), TOOLKIT_LOCK_SLOTS: '1' };
 delete base.TOOLKIT_LOCK_HELD; delete base.TOOLKIT_CHECK_FRESH;
 const runs = () => (fs.existsSync(count) ? fs.readFileSync(count, 'utf8').split('\n').filter(Boolean).length : 0);
 const check = (args = [], env = {}) => spawnSync('node', [CACHE, repo, ...args], { env: { ...base, ...env }, encoding: 'utf8' });

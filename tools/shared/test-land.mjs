@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-land-')));
 process.env.TOOLKIT_LOCK_DIR = path.join(tmp, 'lock');
+process.env.TOOLKIT_LOCK_SLOTS = '1'; // one run at a time, what these cases measure
 delete process.env.TOOLKIT_LOCK_HELD; delete process.env.TOOLKIT_CHECK_FRESH;
 process.env.GIT_AUTHOR_NAME = process.env.GIT_COMMITTER_NAME = 't';
 process.env.GIT_AUTHOR_EMAIL = process.env.GIT_COMMITTER_EMAIL = 't@t';

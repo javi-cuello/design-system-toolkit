@@ -35,5 +35,5 @@ These are owned here.
 - **Close the gap you found in the same change.** "Not yet" in a summary is the gap announcing itself (toolkit-standard §D 10).
 - **Machinery earns its place like a rule:** a check ships for something it would have caught. Net-additive three times running, remove something.
 - **Say project, never client**, in skills, standards and commits.
-- **An agent briefed to change code runs its suites, never the full `bin/check`.** Full runs share one measuring lock and `bin/land` runs one anyway; agents' own queued 25 minutes behind each other (2026-11-21).
+- **An agent briefed to change code runs its suites, never the full `bin/check`, and never moves the measuring lock (`TOOLKIT_LOCK_DIR` is for tests).** `bin/land` runs the full check; the lock's slots bound how many measures share the machine. Agents' own checks queued 25 minutes, and private locks doubled the load (2026-11-21).
 - **A stalled fan-out review keeps its findings** in `~/.claude/projects/<project>/subagents/agent-<id>.jsonl`; salvage them rather than run it again.

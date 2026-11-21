@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 process.env.TOOLKIT_LOCK_DIR = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-lock-')));
 delete process.env.TOOLKIT_LOCK_HELD;
+process.env.TOOLKIT_LOCK_SLOTS = '1';
 const { holder } = await import('./lock.mjs');
 const LOCK = path.join(HERE, 'lock.mjs');
 const env = { ...process.env };
@@ -51,4 +52,16 @@ assert.equal(spawnSync('node', [LOCK, '--run', 'x', '--', 'sh', '-c', 'exit 3'],
 const ro = spawnSync('node', [LOCK, '--run', 'x', '--', 'echo', 'unlocked'], { env: { ...env, TOOLKIT_LOCK_DIR: '/dev/null/nope' }, encoding: 'utf8', timeout: 10000 });
 assert.equal(ro.stdout.trim(), 'unlocked', 'it runs');
 assert.match(ro.stderr, /running without it/, 'and says it ran unlocked');
-console.log('test-lock: 14 assertions passed');
+// two slots: two runs go side by side, a third waits for one of them
+const env2 = { ...env, TOOLKIT_LOCK_SLOTS: '2' };
+const t2 = Date.now();
+const s1 = spawn('node', [LOCK, '--run', 'slot one', '--', 'sleep', '3'], { env: env2 });
+const s2 = spawn('node', [LOCK, '--run', 'slot two', '--', 'sleep', '3'], { env: env2 });
+await until(() => spawnSync('node', [LOCK, '--who'], { env: env2, encoding: 'utf8' }).stdout.startsWith('held'));
+const t1 = Date.now();
+const s3 = spawnSync('node', [LOCK, '--run', 'third', '--', 'echo', 'third'], { env: env2, encoding: 'utf8', timeout: 20000 });
+assert.ok(Date.now() - t1 > 1000, 'a third run waits while both slots are held');
+assert.match(s3.stderr, /waiting for slot (one|two)/, 'and names a holder');
+await Promise.all([s1, s2].map((s) => new Promise((r) => (s.exitCode !== null ? r() : s.on('close', r)))));
+assert.ok(Date.now() - t2 < 5500, 'the two ran side by side, not in turn');
+console.log('test-lock: 18 assertions passed');
