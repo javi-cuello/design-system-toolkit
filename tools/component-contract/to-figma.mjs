@@ -276,7 +276,11 @@ export function ownInPlaced(library, drawn, mains, whole = new Set()) {
       const flow = ((um ? atProps(um, up.with).root : up) || {}).layout;
       const f = { ...x, parent: !x.parent || x.parent === 'root' ? h : `${h}/${x.parent}` };
       if (!(flow && flow.direction)) delete f.absolute;
-      if (!f.absolute && !(f.constraints && f.constraints.horizontal === 'scale' && f.constraints.vertical === 'scale')) delete f.constraints;
+      // (a glyph's scale both ways kept only below another instance inside this one, left to that one's turn: a part whose
+      // nearest instance is this one has its constraints, the component's own, left out as derive's inherit leaves them;
+      // Carbon's dropdown chevron's Chevron--down, filled with a scale the library keeps none of)
+      const nested = (() => { for (let p = x.parent; p && p !== 'root'; p = (M[p] || {}).parent) if ((M[p] || {}).kind === 'instance') return true; return false; })();
+      if (!f.absolute && !(nested && f.constraints && f.constraints.horizontal === 'scale' && f.constraints.vertical === 'scale')) delete f.constraints;
       out[id] = f;
       break;
     }

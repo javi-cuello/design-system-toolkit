@@ -266,6 +266,16 @@ delete globalThis.figma;
 }
 
 {
+  // a part of a placed component the library keeps and the reading leaves to the component (Carbon's dropdown chevron's
+  // Chevron--down, Material's leading element's icon) is filled from it as the library keeps it: its constraints, equal to
+  // the component's and so left out of the library's (derive's inherit), are left out of the fill too
+  const chev = { component: 'Chev', props: {}, anatomy: { root: { kind: 'container', width: 16, height: 16 }, down: { kind: 'instance', parent: 'root', component: 'Down', width: 16, height: 16, constraints: { horizontal: 'scale', vertical: 'scale' }, absolute: { x: 0, y: 0 } } }, variants: [] };
+  const mains = (n) => (n === 'Chev' ? chev : null);
+  const holder = (kept) => ({ component: 'Select', props: {}, anatomy: { root: { kind: 'container' }, c: { kind: 'instance', parent: 'root', component: 'Chev', width: 16, height: 16 }, ...(kept && { 'c/down': { kind: 'instance', parent: 'c', component: 'Down', width: 16, height: 16 } }) }, variants: [] });
+  ok('a part filled from the placed component it is the direct part of keeps no constraints, as the library keeps none for it', roundTrip(holder(true), holder(false), { mains }).rows.length === 0);
+}
+
+{
   // an instance's prop at its own component's default is that prop unstated: the library states it, a reading does not
   const button = { component: 'Button', props: { size: { type: 'enum', values: ['sm', 'lg'], figmaValues: ['Sm', 'Lg'], default: 'sm', figma: 'Size' }, disabled: { type: 'boolean', default: false, figma: 'Disabled' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
   const holder = (w) => ({ component: 'Card', props: {}, anatomy: { root: { kind: 'container' }, action: { kind: 'instance', parent: 'root', component: 'Button', ...(w && { with: w }) } }, variants: [] });
