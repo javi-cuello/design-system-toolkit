@@ -32,8 +32,8 @@ const ROOT = path.resolve(HERE, '../..');
 const BASE = path.join(HERE, 'readability.json');
 const COUNTS = ['words', 'longSentences', 'longParagraphs', 'codeParagraphs', 'lines', 'dated', 'noContents'];
 /* What a page is: a README, a skill's SKILL.md, or one of its references. */
-export const kindOf = (f) => /^skills\/[^/]+\/SKILL\.md$/.test(f) ? 'skill' : /^skills\/[^/]+\/references\/[^/]+\.md$/.test(f) ? 'reference' : 'readme';
-const body = (md) => md.replace(/^---\n[\s\S]*?\n---\n/, '');
+export const kindOf = (f) => /^skills\/[^/]+\/SKILL\.md$/.test(f) ? 'skill' : /^skills\/[^/]+\/references\/.+\.md$/.test(f) ? 'reference' : 'readme';
+const body = (md) => md.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '');
 
 /* The prose of a markdown page: paragraphs, each { sentences: [word counts], words, code, text }. */
 export function prose(md) {
@@ -68,7 +68,9 @@ export function measure(md, kind = 'readme') {
       // a contents list: a heading named Contents, or a list of in-page links, within the first 30 lines
       const head = md.split('\n').slice(0, 30).join('\n');
       const contents = /^#+\s*(table of )?contents\b/im.test(head) || (head.match(/^\s*[-*]\s*\[[^\]]+\]\(#/gm) || []).length >= 3;
-      return { lines, dated: ps.reduce((a, p) => a + (p.text.match(/\b20\d\d-\d\d-\d\d\b/g) || []).length, 0),
+      // a date in a table cell is a source's date (where a default came from), not a story; a story is told in prose
+      const told = prose(md.split('\n').filter((l) => !/^\s*\|/.test(l)).join('\n'));
+      return { lines, dated: told.reduce((a, p) => a + (p.text.match(/\b20\d\d-\d\d-\d\d\b/g) || []).length, 0),
         noContents: kind === 'reference' && lines > SKILL_LIMITS.contentsOver && !contents ? 1 : 0 };
     })()),
   };
@@ -100,8 +102,8 @@ export function compare(root, base) {
     const grew = [...COUNTS.filter((k) => k === 'words' ? kind === 'readme' && m.words > Math.max(b.words, LIMITS.words)
       : k === 'lines' ? kind === 'skill' && m.lines > Math.max(b.lines, SKILL_LIMITS.lines) : k in m && m[k] > (b[k] || 0)),
       ...(m.grade > Math.max(b.grade, LIMITS.grade) ? ['grade'] : [])];
-    if (grew.length) worse.push(`${f}: ${grew.map((k) => `${k} ${b[k]} → ${m[k]}`).join(', ')} (it may not get worse: split the sentence, make the list a table, move the reference to the code or a standard and link it)`);
-    else if (COUNTS.some((k) => k in m && m[k] < b[k])) better.push(f);
+    if (grew.length) worse.push(`${f}: ${grew.map((k) => `${k} ${b[k] ?? 0} → ${m[k]}`).join(', ')} (it may not get worse: split the sentence, make the list a table, move the reference to the code or a standard and link it)`);
+    else if (COUNTS.some((k) => k in m && m[k] < b[k] && !(k === 'words' && kind !== 'readme') && !(k === 'lines' && kind !== 'skill'))) better.push(f);
   }
   const all = readmes(root);
   for (const f of Object.keys(base)) if (!all.includes(f)) worse.push(`${f}: recorded but gone (moved or deleted): node tools/toolkit-check/readability.mjs --tighten drops it; a moved README is held to the limits outright`);
@@ -115,17 +117,14 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const rows = readmes(ROOT).map((f) => ({ f, k: kindOf(f), m: measureFile(ROOT, f) })).sort((a, b) => over(b.m, b.k).length - over(a.m, a.k).length || b.m.longSentences - a.m.longSentences);
     for (const { f, k, m } of rows) console.log(`${over(m, k).length ? 'over ' : 'ok   '} ${f}: ${k === 'readme' ? m.words + ' words' : m.lines + ' lines, ' + m.dated + ' dated'}, ${m.longSentences} long sentences, ${m.longParagraphs} long paragraphs, ${m.codeParagraphs} code-heavy, grade ${m.grade}`);
     console.log(`${rows.filter((r) => !over(r.m, r.k).length).length} of ${rows.length} within the limits`);
-  } else if (arg === '--record' && ['skill', 'reference'].every((k) => Object.keys(base).some((f) => kindOf(f) === k))) {
-    console.log('readability.json already holds every kind of page written before its rule; --record runs once per kind, and a new or moved page meets the limits');
+  } else if (arg === '--record') {
+    console.log('readability.json already holds the pages written before their rules (READMEs 2026-11-20, skills 2026-11-21); a new or moved page meets the limits');
     process.exitCode = 2;
-  } else if (arg === '--tighten' || arg === '--record') {
-    // --record: once per kind of page, every page of a kind not yet recorded, as it stands when its rule arrives
-    // (READMEs were recorded on 2026-11-20, when their rule arrived; they are never recorded again)
-    const recorded = new Set(['readme', ...Object.keys(base).map(kindOf)]);
+  } else if (arg === '--tighten') {
     for (const f of readmes(ROOT)) { const kind = kindOf(f), m = measureFile(ROOT, f), b = base[f];
       // --tighten: only a recorded page, only downward: it keeps the lower of old and new on every field, so it never
       // loosens a baseline
-      if (arg === '--record' ? !recorded.has(kind) && over(m, kind).length : b) base[f] = !over(m, kind).length ? undefined : b ? Object.fromEntries(Object.keys(m).map((k) => [k, Math.min(m[k], b[k] ?? m[k])])) : m; }
+      if (b) base[f] = !over(m, kind).length ? undefined : b ? Object.fromEntries(Object.keys(m).map((k) => [k, Math.min(m[k], b[k] ?? m[k])])) : m; }
     const all = readmes(ROOT), keep = Object.fromEntries(Object.entries(base).filter(([f, v]) => v && all.includes(f)).sort());
     fs.writeFileSync(BASE, JSON.stringify(keep, null, 1) + '\n');
     console.log(`readability.json: ${Object.keys(keep).length} README(s) still over the limits`);

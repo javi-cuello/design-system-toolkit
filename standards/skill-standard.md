@@ -203,7 +203,7 @@ A `SKILL.md` and its `references/*.md` are read by a model on every run and by t
 |---|---|
 | Lead | The H1, the version line, then one paragraph: what the skill does and when to use it |
 | Workflow | Numbered steps, one action each; a step's detail lives in a reference, linked |
-| Length | The `SKILL.md` body stays under 500 lines; past that, reference moves to `references/` |
+| Length | The `SKILL.md` body runs to 500 lines at most; past that, reference moves to `references/` |
 | References | One level deep from `SKILL.md`; a reference over 100 lines opens with a contents list |
 | History | No dated stories: why a rule exists stays, the incident goes to `CHANGELOG.md`, `tests/cases.md` or git log |
 | Terms | One word for one thing throughout: a record is never also a tracker |
@@ -213,7 +213,7 @@ A `SKILL.md` and its `references/*.md` are read by a model on every run and by t
 
 *Evidence:* maintainer-decreed 2026-11-21, after the README rewrite (§D 22): skills held "not only to limits — to readability and everything else that applies".
 
-*Checked:* `tools/toolkit-check/readability.mjs` "lines in the SKILL.md body", "no contents list at the top", "dated stor" (run by `bin/check`; the skills written before the clause are held by the ratchet in `readability.json`, which only tightens); `tools/toolkit-check/test-readability.mjs` "a skill has no word cap but a 500-line body". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — the lead, one action per step, one term per concept and one home per rule are a read when a skill changes.
+*Checked:* `tools/toolkit-check/readability.mjs` "lines in the SKILL.md body", "no contents list at the top", "dated stor" (run by `bin/check`; the skills written before the clause are held by the ratchet in `readability.json`, which only tightens); `tools/toolkit-check/test-readability.mjs` "a skill has no word cap but a 500-line body". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — the lead, one action per step, references one level deep, three or more like things as a table, one term per concept and one home per rule are a read when a skill changes.
 
 ### Verifying a skill
 

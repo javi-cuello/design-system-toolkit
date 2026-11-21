@@ -166,7 +166,7 @@
   "codeParagraphs": 33,
   "grade": 11.8,
   "lines": 603,
-  "dated": 27,
+  "dated": 26,
   "noContents": 1
  },
  "skills/figma-context-capture/SKILL.md": {
@@ -359,6 +359,16 @@
   "dated": 0,
   "noContents": 0
  },
+ "skills/frontend-build/references/audit/audit-pass.md": {
+  "words": 680,
+  "longSentences": 4,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 8,
+  "lines": 63,
+  "dated": 0,
+  "noContents": 0
+ },
  "skills/humanizer/SKILL.md": {
   "words": 4306,
   "longSentences": 35,
@@ -436,7 +446,7 @@
   "codeParagraphs": 4,
   "grade": 6.9,
   "lines": 66,
-  "dated": 5,
+  "dated": 0,
   "noContents": 0
  }
 }
