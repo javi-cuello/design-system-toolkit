@@ -100,7 +100,9 @@ Everything deterministic a session does beyond the scan is one file of `FCA.*` f
 
 ## Reporting: the fix queue
 
-The report is exception-based and grouped by the action each finding needs. It has four buckets: **1 · Approve & I fix**, **2 · Quick manual fixes**, **3 · Decide** and **4 · Breaking — schedule**. Severity orders rows within a bucket, and user-visible defects lead theirs. Silence on pass: no matrix, no totals and no praise. The chat report comes first, and the `.md` mirror is an optional, fuller copy.
+The report is exception-based and grouped by the action each finding needs. It has four buckets: **1 · Approve & I fix**, **2 · Quick manual fixes**, **3 · Decide** and **4 · Breaking — schedule**. Severity orders rows within a bucket, and user-visible defects lead theirs. Silence on pass: no matrix, no totals and no praise.
+
+The chat report comes first, and the `.md` mirror is an optional, fuller copy. In a terminal the mirror is mandatory, since the deep links live there.
 
 **The tracked metric**. Every audit report ends with exactly three lines, regardless of findings: `Coverage:`, `Scope:` and `Date:`. Coverage is semantic-token coverage per library, the one metric tracked over time. It also lands in the context document's audit line for the library. No composite score is given unless the maintainer asks.
 
@@ -123,7 +125,3 @@ A score from 0 to 100 per component is produced only when the maintainer asks. I
 | [scoring.md](references/scoring.md) | The on-request score: its model, rules and report |
 | [scanner-checks.md](references/scanner-checks.md) | Why each scanner check and probe exists |
 | [conventions-universal.md](references/conventions-universal.md) | The portable rules, each tagged scanner or agent |
-| [scanner-checks.md](references/scanner-checks.md) | Why each scanner check and probe exists |
-| [fix-queue.md](references/fix-queue.md) | The report's rules and the chat template |
-| [record.md](references/record.md) | Delivery, the record, filing rows, re-audit, sweep, the dashboard |
-| [scoring.md](references/scoring.md) | The on-request score |

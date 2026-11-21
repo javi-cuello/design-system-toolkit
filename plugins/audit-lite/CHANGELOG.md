@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.13.3] - 2026-11-21
+### Changed
+- The carried bucket list cites its new home in figma-components-audit 2.52.0; no behaviour changed.
+
 ## [0.13.2] - 2026-11-21
 ### Fixed
 - The results page's filters draw their own arrow, inset from the edge and in the page's muted colour, in place of the browser's arrow, which sat cramped against the border.

@@ -23,7 +23,7 @@
  *     `FCA.detachedScan`, `FCA.sweepSchema`, `FCA.composedFrame`, `FCA.references`, `FCA.fix.*`) need `figma` and are
  *     syntax-checked only.
  *
- * Load once per Figma file, then bootstrap (SKILL.md, "Session probes"):
+ * Load once per Figma file, then bootstrap (references/scan-and-probes.md, "Loading the probes"):
  *   1. `node skills/figma-components-audit/scripts/probes.js` prints the hash.
  *   2. Paste `globalThis.__FCA_EXPECT = "<hash>";`, this file, then
  *      `return globalThis.__FCA_LOADED;` in one figma_execute call. The source

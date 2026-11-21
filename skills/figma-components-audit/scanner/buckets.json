@@ -1,5 +1,5 @@
 {
-  "_note": "Which bucket a candidate lands in, keyed by the scanner rule that raised it. This is the skill's reporting contract (SKILL.md, 'Group by the action required'), not a rendering choice, so it lives here and the dashboard reads it rather than holding an opinion.",
+  "_note": "Which bucket a candidate lands in, keyed by the scanner rule that raised it. This is the skill's reporting contract (references/fix-queue.md, the four buckets), not a rendering choice, so it lives here and the dashboard reads it rather than holding an opinion.",
   "b1": ["tokens", "naming", "metadata", "structure"],
   "b2": ["schema"],
   "b3": ["states", "properties", "accessibility", "direction"],

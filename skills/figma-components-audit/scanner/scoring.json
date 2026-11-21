@@ -1,5 +1,5 @@
 {
-  "_note": "The on-request 0-100 component score, exactly as SKILL.md 'Scoring — on request only' specifies it. The SKILL owns this model; the dashboard applies it and must not hold its own. Weights anchor to FigmaLint's measured category weights with two deviations argued in Grounding: descriptions 3->10, accessibility split out at 10.",
+  "_note": "The on-request 0-100 component score, exactly as references/scoring.md specifies it. The SKILL owns this model; the dashboard applies it and must not hold its own. Weights anchor to FigmaLint's measured category weights with two deviations argued in references/architecture.md, Grounding: descriptions 3->10, accessibility split out at 10.",
   "dimensions": {
     "Tokens": {
       "weight": 25,
