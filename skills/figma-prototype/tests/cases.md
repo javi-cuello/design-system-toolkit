@@ -1,4 +1,6 @@
-# Eval cases — figma-prototype (v1.1.0)
+# Eval cases — figma-prototype (v1.2.0)
+
+**Walked: 2026-11-21 for 1.2.0** — SKILL.md rewritten to skill-standard §A clause I; each step's detail moved to `references/compose.md` and `references/feedback.md`, section names and step numbers unchanged. P1–P5's assertions hold, each traced to the same step, now in its reference.
 
 **Walked: 2026-11-11 for 1.1.0** — drafting the product file, recording and retiring a decision and guidance pages now run `figma-context-capture` by name; P2–P5's assertions hold, with those writes traced to its *The project's other documents*.
 
