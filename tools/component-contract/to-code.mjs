@@ -583,7 +583,12 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
   }
   // copies of one part and a slot's children share one rule, so one pull back cannot be said for all but the first
   for (const id of pulling) if (out[id] && pulls(a[id]) && Object.keys(a).some((k) => a[k].parent === id && (copyOf(c, k) || a[id].kind === 'slot'))) out[id].unread.push('layout.gap below 0 between copies of one part or a slot\'s children (each pulls back on its own rule; theirs is shared)');
-  for (const [id, decls] of extra) if (out[id]) for (const [p, v, note, knob] of decls) out[id].decls.set(p, { v, note, knob });
+  // (an instance inside a placed component this library holds that differs from that component's part only in its
+  // glyph's colour has no rule of its own yet: the colour is its override there, so it takes one)
+  for (const [id, decls] of extra) {
+    if (!out[id] && a[id] && inside(id) && hostIn(c, id, mains)) out[id] = { decls: new Map(), unread: [] };
+    if (out[id]) for (const [p, v, note, knob] of decls) out[id].decls.set(p, { v, note, knob });
+  }
   for (const [id, notes] of Object.entries(ringNotes)) if (out[id]) out[id].unread.push(...notes);
   const entry = entryOf(c);
   if (entry && out[entry.box]) {

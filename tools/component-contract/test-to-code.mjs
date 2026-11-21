@@ -242,6 +242,19 @@ else console.log('skip: no stored contracts on this machine');
   ok('without the library, no colour is guessed', !/color:/.test(toCss(btn, 'button', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
 }
 
+// an icon placed inside a placed component, which a variant recolours there (Carbon's disabled Toggletip icon): the
+// instance differs from the component's part only in its glyph's colour, and that colour is written on the part
+{
+  const tip = { contract: 1, component: 'Tip', props: {}, anatomy: { root: { kind: 'container' }, info: { kind: 'instance', parent: 'root', component: 'Info', width: 16, height: 16 }, 'info/vector': { kind: 'graphic', parent: 'info', background: 'C/secondary' } }, variants: [] };
+  const field = { contract: 1, component: 'Field', props: { off: { type: 'boolean', default: false, axis: true, figma: 'Disabled' } },
+    anatomy: { root: { kind: 'container' }, tip: { kind: 'instance', parent: 'root', component: 'Tip' } },
+    variants: [{ when: { off: true }, add: { 'tip/info': { kind: 'instance', parent: 'tip', component: 'Info', width: 16, height: 16 }, 'tip/info/vector': { kind: 'graphic', parent: 'tip/info', background: 'C/disabled' } } }] };
+  const mains = (n) => (n === 'Tip' ? tip : null);
+  const sheet = toCss(field, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('a placed icon recoloured inside a placed component takes the colour on that component\'s part',
+    /data-off[^{]*> \.ds-field__tip > \.ds-tip__info \{\s*color: var\(--c-disabled\);\s*\}/.test(sheet) && selfCheck(field, rulesOf(field, mains).rules, mains).length === 0);
+}
+
 // an override inside a placed component is written on that component's own part, through the instance, and only what
 // differs from the component at the instance's props; a layer it has under no such name is said, not guessed
 {
