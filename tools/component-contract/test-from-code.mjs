@@ -475,5 +475,15 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const other = { kind: 'instance', component: 'Slot', background: 'color/blue' };
   dropOwnGlyph('slotChildren', other, [], mains);
   ok('a colour the component does not draw stays an override', other.background === 'color/blue');
+  // a variant back at the component's own colour, over a base that overrides it, says so (null), else it keeps the base's;
+  // and a variant that swaps the component is held to the one it swaps to (review)
+  const back = { kind: 'instance', component: 'Slot', background: 'color/blue' }, bv = [{ when: { hover: true }, set: { 'slotChildren.background': 'color/magenta' } }];
+  dropOwnGlyph('slotChildren', back, bv, mains);
+  const warn = { component: 'Warn', props: {}, variants: [], anatomy: { root: { kind: 'container' }, g: { kind: 'graphic', parent: 'root', background: 'color/red' } } };
+  const sw = { kind: 'instance', component: 'Slot' }, sv = [{ when: { error: true }, set: { 'slotChildren.component': 'Warn', 'slotChildren.background': 'color/magenta' } }, { when: { error: true, x: true }, set: { 'slotChildren.component': 'Warn', 'slotChildren.background': 'color/red' } }];
+  dropOwnGlyph('slotChildren', sw, sv, byComponentName([slot, warn]));
+  ok('a variant back at the component\'s own colour says null over an overriding base; a swap is held to the component it swaps to',
+    back.background === 'color/blue' && bv[0].set['slotChildren.background'] === null
+    && sv[0].set['slotChildren.background'] === 'color/magenta' && !('slotChildren.background' in sv[1].set));
 }
 console.log(`${n}/${n} passed`);

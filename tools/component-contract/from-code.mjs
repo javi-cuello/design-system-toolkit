@@ -427,13 +427,20 @@ export const keepsName = (name, id) => partName(id) !== name;
    nav's slots: its magenta placeholder fill, drawn by Slot itself, read back as the instance's background. At each
    variant's props too. `e` the reading's instance at `id`, `variants` the reading's; `mains` resolves a component. */
 export function dropOwnGlyph(id, e, variants, mains) {
-  const m = e && e.kind === 'instance' && e.component && mains(e.component, e.key);
-  if (!m) return;
+  if (!e || e.kind !== 'instance' || !e.component) return;
   const { glyphColour } = req('./derive.cjs');
-  if (e.background != null && e.background === glyphColour(m, e.with)) delete e.background;
+  // what the component placed draws its glyph in, under the props it is given (`with`, replaced whole by a variant as
+  // applyTo does, null for none)
+  const own = (component, key, w) => { const m = mains(component, key); return m ? glyphColour(m, w || undefined) : undefined; };
+  if (e.background != null && e.background === own(e.component, e.key, e.with)) delete e.background;
   for (const v of variants || []) {
-    const s = v.set || {}, w = s[`${id}.with`];
-    if (s[`${id}.background`] != null && s[`${id}.background`] === glyphColour(m, { ...(e.with || {}), ...(w && typeof w === 'object' ? w : {}) })) delete s[`${id}.background`];
+    const s = v.set || {}, b = s[`${id}.background`];
+    if (b == null) continue;
+    // against the component this variant places there (a swap), with the props it gives it
+    const at = (f) => (`${id}.${f}` in s ? s[`${id}.${f}`] : e[f]);
+    if (b !== own(at('component'), at('key'), at('with'))) continue;
+    // back to the component's own: none where the base says none, else said as null, so it does not keep the base's
+    if (e.background == null) delete s[`${id}.background`]; else s[`${id}.background`] = null;
   }
 }
 
@@ -2395,10 +2402,11 @@ async function main() {
         // (where the design sets the icon's colour, on it or inside it, the code's is read as drawn and compared)
         // (a colour inside a component the library holds no contract for is that component's own: designSetsColour)
         if (!ownIcon.has(id) && !designSetsColour(figmaContract, id, mainOf)) { delete e.background; for (const v of fromCode.variants) if (v.set) delete v.set[`${id}.background`]; }
-        // and a colour the placed component draws its glyph in itself (a slot placeholder's fill) is its own, no override
-        dropOwnGlyph(id, e, fromCode.variants, mainsOfAll);
         // a variant that changes the glyph (an alert's error icon) changes the component in the same set, with its key
         if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = whole(v.set[`${id}.asset`]); delete v.set[`${id}.asset`]; const k = swapKeyOf(figmaContract, e.key, v.set[`${id}.component`]); if (k === undefined) delete v.set[`${id}.key`]; else v.set[`${id}.key`] = k; }
+        // a colour the component placed draws its glyph in itself is no override (after the swaps above, so each variant is
+        // held to the component it places)
+        dropOwnGlyph(id, e, fromCode.variants, mainsOfAll);
       };
       for (const [id, e] of Object.entries(fromCode.anatomy)) asIcon(id, e);
       for (const v of fromCode.variants) for (const [id, e] of Object.entries(v.add || {})) asIcon(id, e);
