@@ -245,6 +245,26 @@ export async function readCombinations(lists, layered, readOne) {
   return { read, skipped };
 }
 
+/* The placed instances a design keeps whole (one hides a layer no prop shows, so derive kept layers equal to its
+   component's): the ones the reading's own cut (ownInsides, partial, `reading`) drops something from, so the reading
+   keeps them whole too. The same cut as the reading's: Carbon's Status notification, kept whole in a slider's error
+   state with its glyph's place and constraints unstated (derive keeps none inside an instance), read as nothing to drop
+   under a cut that held those against its component's, and its insides were then cut from the reading. `mains` is
+   byComponentName over the library, `ownInsides` derive's. */
+export function keptWhole(design, mains, ownInsides) {
+  const out = new Set();
+  if (!design) return out;
+  const all = Object.assign({}, ...[...(design.variants || [])].reverse().map((v) => v.add || {}), design.anatomy);
+  for (const [id, x] of Object.entries(all)) {
+    if (x.kind !== 'instance' || !mains(x.component, x.key)) continue;
+    const sub = Object.fromEntries(Object.entries(all).filter(([k]) => k === id || k.startsWith(`${id}/`)).map(([k, v]) => [k, JSON.parse(JSON.stringify(v))]));
+    const n = Object.keys(sub).length;
+    ownInsides(sub, mains, { partial: true, reading: true });
+    if (Object.keys(sub).length < n) out.add(id);
+  }
+  return out;
+}
+
 /* A library's settings by component folder (the house's where it keeps none): the one source the self leg writes its
    sheet, markup and mapping under and the reading reads them back under, as to-code and to-markup take them. */
 export const librarySettings = (componentsDir) => req('../snapshot/projects.cjs').librarySettingsFor(componentsDir);
@@ -1517,18 +1537,8 @@ async function main() {
     const { ownStyling, ownInsides, normalForm, byComponentName, placedAs, placedMatch } = req('./derive.cjs');
     const mainOf = byComponentName([...official.values()]);
     // the instances the design keeps whole (one hides a layer no prop shows): there it keeps layers equal to its component's,
-    // which a partial cut would drop; known as the ones that cut drops something from
-    const wholeIn = new Set();
-    if (figmaContract) {
-      const all = Object.assign({}, ...[...(figmaContract.variants || [])].reverse().map((v) => v.add || {}), figmaContract.anatomy);
-      for (const [id, x] of Object.entries(all)) {
-        if (x.kind !== 'instance' || !mainOf(x.component, x.key)) continue;
-        const sub = Object.fromEntries(Object.entries(all).filter(([k]) => k === id || k.startsWith(`${id}/`)).map(([k, v]) => [k, JSON.parse(JSON.stringify(v))]));
-        const n = Object.keys(sub).length;
-        ownInsides(sub, mainOf, { partial: true });
-        if (Object.keys(sub).length < n) wholeIn.add(id);
-      }
-    }
+    // which a partial cut would drop (keptWhole)
+    const wholeIn = keptWhole(figmaContract, mainOf, ownInsides);
     // the room at the combination read: a variant that sets the root's width (a small breakpoint's 404) gives its own.
     // Joined by name, as the code's props are the design's on the toolkit's own render; a project's own names that
     // differ fall back to the base room, as before
