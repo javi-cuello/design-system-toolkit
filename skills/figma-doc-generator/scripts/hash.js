@@ -36,4 +36,4 @@ if (bad) process.exit(1);
 
 console.log('\nPaste all three once per file, docgen.js first — the others call into');
 console.log('DOCGEN at runtime. Each returns its hash; all three must match above.');
-console.log('Later calls need only the bootstrap in SKILL.md.');
+console.log('Later calls need only the bootstrap in references/helpers.md.');

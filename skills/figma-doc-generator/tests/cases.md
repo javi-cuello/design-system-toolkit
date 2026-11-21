@@ -1,4 +1,6 @@
-# Eval cases — figma-doc-generator (v1.25.1)
+# Eval cases — figma-doc-generator (v1.26.0)
+
+**Walked: 2026-11-21 for 1.26.0** — wording and layout only: SKILL.md and references rewritten to skill-standard §A clause I, detail moved to four new references. The five suites run green (docgen 168, recipes 144, load protocol 37, describe-coverage 12, describe-write 7). Each Walked-live and Not-walked case traced to its rule's new home: A1–A5 and A8 to discovery.md, colour-and-units.md and SKILL.md *Project context first*; A7, A10, A11 and D21–D25, D33 to failures.md, generation.md and SKILL.md. A8's 'never reuse the text-style decision' is now stated outright in colour-and-units.md.
 
 **Walked: 2026-11-19 for 1.25.1** — D49's test re-run, 12/12, with a short name (`Elevation`) beside the deep ones; the new check fails on 1.25.0 (11/12).
 

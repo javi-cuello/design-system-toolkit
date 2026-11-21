@@ -13,7 +13,7 @@
  * Prepend BOTH files to a generating figma_execute call, docgen.js FIRST —
  * keyFor and normaliseFrameWidths call into DOCGEN at runtime. After the FIRST
  * paste each file caches its own source (see the tail of this file), so later
- * calls need only the three-line bootstrap in SKILL.md rather than the 51KB.
+ * calls need only the three-line bootstrap in references/helpers.md rather than the 51KB.
  * This header used to claim there is no `eval` in the sandbox. There is — that
  * was tested on 2026-08-08 and is what the self-caching below depends on, so
  * the claim was already false when 1.11.0 shipped the caching four versions
