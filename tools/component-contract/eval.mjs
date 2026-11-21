@@ -25,6 +25,7 @@
  *   node tools/component-contract/eval.mjs --project <label> --make-panel 30, then --panel with any of the above
  *   node tools/component-contract/eval.mjs --project <label> --second [components…]
  *   node tools/component-contract/eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]
+ *   node tools/component-contract/eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top 25]   the panels' rows by mechanism, across libraries: what to fix first
  *
  * Each leg says how many components came back the same of all, how many were measured, and its rows folded to causes (a
  * part missing or extra is one cause at its root, `causes`); a reading taken of another contract than today's, or kept
@@ -97,6 +98,24 @@ export function causes(rows, combinations) {
     out[key] = (out[key] || 0) + 1;
   }
   return out;
+}
+
+/* Rows grouped by mechanism, the ranking a fix is chosen from: the field a row differs in (its last part's field, or
+   `element` for a whole part) and the shape of each side (none, a word, a token path, a number, an element's kind), so one
+   cause across libraries is one group. { 'field | design → code': { components, rows, examples } }, by components, then
+   rows. `by` is { component: rows }. */
+const shapeOf = (v) => (v == null ? 'none' : Array.isArray(v) ? 'array' : typeof v === 'object' ? (v.kind ? `el:${v.kind}` : 'obj') : typeof v === 'number' ? 'num' : typeof v === 'string' ? (v.includes('/') ? 'token' : 'word') : typeof v);
+export function mechanisms(by) {
+  const out = new Map();
+  for (const [c, rows] of Object.entries(by)) for (const r of rows) {
+    const last = r.at.split('/').pop();
+    const key = `${last.includes('.') ? last.slice(last.indexOf('.') + 1).replace(/\.\d+$/, '') : 'element'} | ${shapeOf(r.library)} → ${shapeOf(r.drawn)}`;
+    const g = out.get(key) || { components: new Set(), rows: 0, examples: [] };
+    g.components.add(c); g.rows++;
+    if (g.examples.length < 2) g.examples.push(`${c}: ${r.at} ${JSON.stringify(r.library)?.slice(0, 60)} | ${JSON.stringify(r.drawn)?.slice(0, 60)}`);
+    out.set(key, g);
+  }
+  return [...out].map(([key, g]) => ({ key, components: g.components.size, rows: g.rows, examples: g.examples })).sort((a, b) => b.components - a.components || b.rows - a.rows);
 }
 
 /* What the toolkit's own markup leaves to the code that uses it, by design: a part drawn only at a pointer state (a menu
@@ -550,6 +569,22 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   const flag = (k) => { const i = argv.indexOf(k); if (i >= 0) argv.splice(i, 1); return i >= 0; };
   const all = opt('--projects');
+  if (all && flag('--mechanisms')) {
+    // read only: each project's panel, its stored readings measured as the report measures them, grouped across all
+    const legs = (opt('--legs') || 'self').split(','), by = {};
+    for (const p of all.split(',')) {
+      const w = req('../snapshot/projects.cjs').layout(null, p);
+      if (w.error) { console.error(w.error); process.exit(2); }
+      const panel = readPanel(w.projectDir);
+      if (!panel) { console.error(`no panel at ${panelFile(w.projectDir)}: make one with --make-panel 30`); process.exit(2); }
+      const m = measure(w, panel);
+      for (const l of legs) for (const [c, x] of Object.entries(m.legs[l] || {})) if (x.rows) by[`${p}:${c}${legs.length > 1 ? ` (${l})` : ''}`] = x.rows;
+    }
+    const all2 = Object.values(by);
+    console.log(`${all2.length} measured, ${all2.filter((r) => !r.length).length} the same, ${all2.reduce((a, r) => a + r.length, 0)} rows`);
+    for (const g of mechanisms(by).slice(0, +(opt('--top') || 25))) console.log(`${String(g.components).padStart(4)} ${String(g.rows).padStart(5)}  ${g.key}\n            ${g.examples.join('\n            ')}`);
+    process.exit(0);
+  }
   if (all) {
     // no lock here: each measuring leg is its own eval.mjs, which takes it, so it is let go between steps
     const o = projectsOptions({ projects: all, legs: opt('--legs'), jobs: opt('--jobs'), log: opt('--log'), rest: argv }, { cwd: process.cwd(), labelError: (p) => req('../snapshot/projects.cjs').layout(null, p).error });

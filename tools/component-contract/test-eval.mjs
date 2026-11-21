@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, todayOf } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, todayOf, mechanisms } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
 import { selfDrawn, siteFiles, drawnAll } from './site.mjs';
@@ -274,6 +274,15 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
     ok('drawnAll: a kept drawing is the one drawn; a placed component\'s change draws it and its holder again, not the rest',
       isDeepStrictEqual(first.card, again.card) && JSON.stringify(again) === JSON.stringify(first) && first.tile.sheet === fresh.tile.sheet && kept === 3 && files() === 5);
     fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
+{ // rows grouped by mechanism across components: one cause in two libraries is one group, ranked by components
+  const g = mechanisms({
+    'a:x': [{ at: 'icon.absolute.x', library: -2, drawn: 10 }, { at: 'label', library: { kind: 'text' }, drawn: null }],
+    'b:y': [{ at: 'box/icon.absolute.x', library: 4, drawn: 5 }],
+    'b:z': [] });
+  assert.deepStrictEqual(g.map((x) => [x.key, x.components, x.rows]), [['absolute.x | num → num', 2, 2], ['element | el:text → none', 1, 1]]);
+  assert.match(g[0].examples[0], /^a:x: icon\.absolute\.x -2 \| 10$/); n++;
 }
 
 console.log(`${n} passed`);
