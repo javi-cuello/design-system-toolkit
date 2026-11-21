@@ -169,10 +169,13 @@ function routing(contextDoc) {
   // No repo is a design-only project: the toolkit stores its snapshot itself.
   const repo = parsed.repo ? expand(parsed.repo) : null;
   /* A moved root (a copy of the projects to measure against) whose context document
-     still names a repo outside it would read, and write, the original's store. */
+     still names a project home in the original would read, and write, the original's
+     store. A code repo kept outside the root is fine; another root's home is not. */
   const moved = expand(process.env.TOOLKIT_PROJECTS_ROOT);
-  if (repo && moved && path.relative(path.resolve(moved), path.resolve(repo)).startsWith('..'))
-    return { error: `${contextDoc} names repo ${repo}, outside TOOLKIT_PROJECTS_ROOT ${moved}: a copied root still points at the original; repoint its snapshot-routing "repo"` };
+  const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
+  const out = repo && moved && path.relative(real(moved), real(repo)).split(path.sep)[0] === '..';
+  if (out && fs.existsSync(path.join(repo, HOME, 'design-system-context.md')))
+    return { error: `${contextDoc} names repo ${repo}, another projects root's home outside TOOLKIT_PROJECTS_ROOT ${moved}: a copied root still points at the original; repoint its snapshot-routing "repo"` };
   return { repo, files: parsed.files, doc: contextDoc };
 }
 

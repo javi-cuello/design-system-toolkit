@@ -1823,8 +1823,14 @@ test('a moved projects root whose context document still names a repo outside it
   const was = process.env.TOOLKIT_PROJECTS_ROOT;
   process.env.TOOLKIT_PROJECTS_ROOT = dir;
   try {
-    write('/elsewhere/original/p');
+    const orig = path.join(dir, '..', path.basename(dir) + '-original', 'p');
+    fs.mkdirSync(path.join(orig, 'figma-design-system'), { recursive: true });
+    fs.writeFileSync(path.join(orig, 'figma-design-system', 'design-system-context.md'), '');
+    write(orig);
     assert.match(contract.routing(doc).error || '', /outside TOOLKIT_PROJECTS_ROOT/);
+    write(path.join(dir, '..', 'plain-code-repo'));
+    assert.equal(contract.routing(doc).error, undefined, 'a code repo kept outside the root is read');
+    fs.rmSync(path.dirname(orig), { recursive: true, force: true });
     write(path.join(dir, 'p'));
     assert.equal(contract.routing(doc).repo, path.join(dir, 'p'), 'a repo inside the moved root is read');
   } finally {
