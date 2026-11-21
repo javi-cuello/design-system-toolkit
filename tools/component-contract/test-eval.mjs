@@ -9,7 +9,8 @@ import path from 'node:path';
 import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, todayOf } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
-import { selfDrawn, siteFiles } from './site.mjs';
+import { selfDrawn, siteFiles, drawnAll } from './site.mjs';
+import { isDeepStrictEqual } from 'node:util';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -38,6 +39,9 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a sheet whose every rule names its element is scoped; one rule past it is not', scopedTo('@layer c { ds-tag { color: red } :where(ds-tag[size="s"]) > [data-part="x"], ds-tag:hover { gap: 0 } }', 'ds-tag') && !scopedTo('ds-tag { a: 0 } button { b: 0 }', 'ds-tag') && !scopedTo('ds-tag-item { a: 0 }', 'ds-tag') && scopedTo('ds-tag:where(:disabled, :has(> :disabled)) > b { a: 0 }', 'ds-tag') && !scopedTo('ds-tag { animation: spin 1s } @keyframes spin { from { a: 0 } }', 'ds-tag'));
   const part = closureHashes(lib, { a: '1', b: '1', c: '1' }, 's', ['a']);
   ok('closureOf: a component and what it places, transitively; hashes asked for some are theirs, from their closure\'s own only', JSON.stringify([...closureOf(lib, ['a', 'gone'])].sort()) === '["a","b","c"]' && JSON.stringify(part) === JSON.stringify({ a: before.a }));
+  // a variant that swaps an instance to another component names it in its set (`icon.component`): placed too
+  { const swaps = { A: { folder: 'a', anatomy: { root: {}, icon: { kind: 'instance', component: 'Icon' } }, variants: [{ when: { loading: true }, set: { 'icon.component': 'S' } }] }, S: { folder: 's', anatomy: { root: {} } }, Icon: { folder: 'icon', anatomy: { root: {} } } };
+    ok('closureOf: a component a variant swaps in is placed by it', JSON.stringify([...closureOf(swaps, ['a'])].sort()) === '["a","icon","s"]'); }
   { const slow = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-')), 'chrome'); fs.writeFileSync(slow, '#!/bin/sh\nsleep 3; echo Chrome 99.0\n'); fs.chmodSync(slow, 0o755);
     const t0 = Date.now(), v = chromeVersion(slow, 300);
     ok('a Chrome that does not answer its version in time is none, never a hang', v === '' && Date.now() - t0 < 2500);
@@ -254,6 +258,19 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
   const [a, b] = [both(own), both(undefined)];
   ok('the site writes exactly what the inputs hash is taken of, under any settings, and a change of settings moves both',
     a.same && b.same && a.x.sheet !== b.x.sheet && a.x.markup !== b.x.markup);
+  // the drawing kept between runs: what it gives back is what it draws; a change to a placed component draws its holder
+  // again, a change elsewhere does not
+  { const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'drawn-')), files = () => fs.readdirSync(dir).length;
+    const card = { contract: 1, component: 'Card', folder: 'card', props: {}, anatomy: { root: { kind: 'container' }, tile: { kind: 'instance', component: 'Tile', parent: 'root' } } };
+    const lone = { contract: 1, component: 'Lone', folder: 'lone', props: {}, anatomy: { root: { kind: 'container', background: 'Bg/x' } } };
+    const lib = (t) => ({ Tile: t, Card: card, Lone: lone }), settingsOf = () => own;
+    const fresh = Object.fromEntries(Object.values(lib(tile)).map((c) => [c.folder, selfDrawn(c, { library: lib(tile), mains: () => null, settings: own })]));
+    const first = drawnAll(lib(tile), { settingsOf, dir }), kept = files(), again = drawnAll(lib(tile), { settingsOf, dir });
+    const tile2 = { ...tile, anatomy: { root: { kind: 'container', background: 'Bg/y' } } };
+    drawnAll(lib(tile2), { settingsOf, dir });
+    ok('drawnAll: a kept drawing is the one drawn; a placed component\'s change draws it and its holder again, not the rest',
+      isDeepStrictEqual(first.card, again.card) && JSON.stringify(again) === JSON.stringify(first) && first.tile.sheet === fresh.tile.sheet && kept === 3 && files() === 5);
+    fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
 console.log(`${n} passed`);

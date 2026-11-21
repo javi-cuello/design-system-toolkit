@@ -52,6 +52,9 @@ import { contracts, hashOf } from './official.mjs';
 import { roundTrip } from './to-figma.mjs';
 import { partsOf, unexposed, pointerWords } from './to-markup.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
+import { importClosure } from '../shared/import-closure.mjs';
+import { closureOf } from './site.mjs';
+export { importClosure, closureOf };
 
 const req = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -357,23 +360,6 @@ function draw(where, label, into, only, retry = true) {
   if (retry && unanswered.length) draw(where, label, into, unanswered, false);
 }
 
-/* The files a module runs through: its relative imports, static and literal dynamic, and its literal require()s,
-   followed transitively. A path built at run time is not followed: the reader's only ones load a project's own files
-   (parity/project.mjs its parity settings, external.mjs a repo's components), which selfInputs hashes as the project's. */
-export function importClosure(entries, skip = new Set()) {
-  const seen = new Set();
-  const visit = (f) => {
-    if (seen.has(f) || skip.has(f) || !fs.existsSync(f)) return;
-    seen.add(f);
-    const src = fs.readFileSync(f, 'utf8');
-    for (const m of src.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*|\b(?:require|req)\s*\(\s*|\bcreateRequire\([^)]*\)\s*\(\s*)(['"`])(\.{1,2}\/[^'"`$]+)\1/g)) {
-      const to = path.resolve(path.dirname(f), m[2]);
-      visit(['', '.js', '.cjs', '.mjs', '.json'].map((x) => to + x).find((x) => fs.existsSync(x) && fs.statSync(x).isFile()) || to);
-    }
-  };
-  for (const e of entries) visit(e);
-  return [...seen].sort();
-}
 
 /* The reader's own code: every file a self reading runs through (from-code.mjs and what it imports), but to-markup's and
    to-code's, whose output selfInputs hashes instead (each component's markup, sheet, mapping and props, and what every
@@ -395,7 +381,7 @@ export async function selfInputs(label, where, only = []) {
   const project = await loadParity(label, { self: true });
   const { propsOf, DOM } = await import('./to-markup.mjs');
   const { BASE, pseudoClasses, entryOf } = await import('./to-code.mjs');
-  const { selfDrawn } = await import('./site.mjs');
+  const { drawnAll } = await import('./site.mjs');
   const store = req('../snapshot/store.cjs');
   const library = Object.fromEntries(contracts(where).map(({ folder, contract }) => [contract.component, { ...contract, folder }]));
   const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
@@ -404,8 +390,9 @@ export async function selfInputs(label, where, only = []) {
   const own = {}, unscoped = [], mains = req('./derive.cjs').byComponentName(Object.values(library)), settingsOf = req('../snapshot/projects.cjs').librarySettingsFor(project.paths.components);
   // only what the components asked for place, transitively (every sheet is still made: one unscoped reaches them all)
   const need = only.length ? closureOf(library, only) : new Set(Object.keys(byFolder));
+  const drawn = drawnAll(library, { settingsOf });
   for (const c of Object.values(library)) {
-    const { sheet, markup, mapping } = selfDrawn(c, { library, mains, settings: settingsOf(c.folder) });
+    const { sheet, markup, mapping } = drawn[c.folder];
     // every sheet is on the one page: one whose rules reach past its own element reaches every reading
     if (!scopedTo(sheet, `ds-${c.folder}`)) unscoped.push(sheet);
     if (!need.has(c.folder)) continue;
@@ -459,16 +446,6 @@ export function closureHashes(library, own, shared, only = []) {
   const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
   const hash = (xs) => createHash('sha1').update(xs.join('\0')).digest('hex');
   return Object.fromEntries(Object.keys(byFolder).filter((f) => !only.length || only.includes(f)).map((f) => [f, hash([shared, ...[...closureOf(library, [f])].sort().map((g) => `${g}:${own[g]}`)])]));
-}
-
-/* The folders of `folders` and every component they place, transitively (`library` by component name, each with its folder). */
-export function closureOf(library, folders) {
-  const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
-  const placed = (c) => { const out = new Set(); JSON.stringify(c, (k, v) => { if (k === 'component' && typeof v === 'string' && library[v]) out.add(library[v].folder); return v; }); return out; };
-  const seen = new Set();
-  const visit = (f) => { if (seen.has(f) || !byFolder[f]) return; seen.add(f); for (const g of placed(byFolder[f])) visit(g); };
-  for (const f of folders) visit(f);
-  return seen;
 }
 
 /* contract → to-markup and to-code → Chrome → from-code's walk → contract, per component (from-code --self), `jobs` at a
