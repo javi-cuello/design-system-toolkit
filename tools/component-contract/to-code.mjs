@@ -597,7 +597,7 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
     const now = overrideOf(a, host, id.slice(host.length + 1), m, mains, ALL);
     if (now) out[id] = { decls: new Map([...now.theirs].map(([p, v]) => [p, { v, given: true }])), unread: [] };
     // (an icon's colour too: back to the one the placed component draws it in, not unset, which would inherit)
-    const own = now && ALL[id].kind === 'instance' && placedGlyph(ALL, host, id.slice(host.length + 1), m, mains);
+    const own = now && ALL[id].kind === 'instance' && placedGlyph({ ...ALL, [host]: a[host] || ALL[host] }, host, id.slice(host.length + 1), m, mains);
     if (own) out[id].decls.set('color', { v: tokenNames.token(own), given: true });
   }
   // copies of one part and a slot's children share one rule, so one pull back cannot be said for all but the first

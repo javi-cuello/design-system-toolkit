@@ -265,6 +265,13 @@ else console.log('skip: no stored contracts on this machine');
   const bs = toCss(atBase, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
   ok('an inner recolour at the defaults goes back to the placed component\'s colour elsewhere, not unset',
     /> \.ds-tip__info \{\s*color: var\(--c-disabled\);/.test(bs) && /data-on="false"[^{]*> \.ds-tip__info \{\s*color: var\(--c-secondary\);/.test(bs) && !/unset/.test(bs) && selfCheck(atBase, rulesOf(atBase, mains).rules, mains).length === 0);
+  // and back to the colour the placed component gives at this combination's own props (Tip's Danger tone), not its defaults' (review)
+  const toned = { ...tip, props: { tone: { type: 'enum', values: ['Neutral', 'Danger'], default: 'Neutral', axis: true, figma: 'Tone' } }, variants: [{ when: { tone: 'Danger' }, set: { 'info/vector.background': 'C/danger' } }] };
+  const mainsT = (n) => (n === 'Tip' ? toned : null);
+  const loud = { ...atBase, props: { ...atBase.props, loud: { type: 'boolean', default: false, axis: true, figma: 'Loud' } }, variants: [...atBase.variants, { when: { loud: true }, set: { 'tip.with': { Tone: 'Danger' } } }] };
+  const ls = toCss(loud, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: mainsT });
+  ok('a recolour that stops holding goes back to the placed component\'s colour at the combination\'s own props',
+    /data-on="false"\]\):where\(\[data-loud\]:not\(\[data-loud="false"\]\)\) > \.ds-field__tip > \.ds-tip__info \{\s*color: var\(--c-danger\);/.test(ls));
   // recorded in the placed component's own colour: nothing to write
   const same = { ...field, variants: [{ when: { off: true }, add: { 'tip/info': field.variants[0].add['tip/info'], 'tip/info/vector': { kind: 'graphic', parent: 'tip/info', background: 'C/secondary' } } }] };
   ok('an inner icon in the placed component\'s own colour gets no rule', !/ds-tip__info/.test(toCss(same, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains }).split('@layer')[1]));
