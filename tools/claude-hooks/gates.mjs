@@ -808,7 +808,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   if (away) { if (call.id) { st.denied.push(call.id); delete st.pre[call.id]; } save(session, st); return away; }
   // the repos the work is in: those its files are in, and the one this call writes
   // the repos whose check the plan needs: the session's own work, never an agent's tree it left to the agent
-  const work = [...new Set([...Object.keys(sessionsOwn(st, st.total, repos).files), ...writes(call, cwd).filter((f) => !agentsTree(st, f, repos))].map((f) => where(f, repos)?.repo).filter(Boolean))];
+  const work = [...new Set([...Object.keys(sessionsOwn(st, st.total, repos).files), ...writes(call, cwd).filter((f) => !sub || !agentsTree(st, f, repos))].map((f) => where(f, repos)?.repo).filter(Boolean))];
   const gaps = fs.existsSync(plan) ? planGaps(fs.readFileSync(plan, 'utf8'), st, work, fs.statSync(plan).mtimeMs) : null;
   const planned = gaps !== null && !gaps.length;
   inherit(st, session, repos, cwd);

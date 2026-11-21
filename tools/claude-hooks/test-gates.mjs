@@ -584,6 +584,7 @@ test("a background agent's work in a worktree it made itself (bin/worktree, no a
     const got2 = String(planGate(s2.id, s2.file, REPOS, { id: 'p9', name: 'Edit', input: { file_path: path.join(TOOLKIT, 'tools/y.mjs'), old_string: 'a', new_string: 'b\n'.repeat(10) } }, TOOLKIT));
     assert.match(got2, /full-size/, 'the session\'s own work is gated');
     assert.doesNotMatch(got2, /diag-z/, 'and no check is asked in the agent\'s tree');
+    assert.equal(planGate(s2.id, s2.file, REPOS, { id: 'p10', name: 'Write', input: { file_path: path.join(os.tmpdir(), 'scratch-gate-x.txt'), content: 'x\n'.repeat(300) } }, TOOLKIT, true), null, 'an agent\'s scratch write is nobody\'s work');
     fs.rmSync(path.dirname(sd2), { recursive: true, force: true }); s2.clean(); }
   // a fork's edit in a tree the session writes in itself leaves it the session's
   const f = session([user('build it'), edit('.claude/worktrees/diag-y/a.mjs', 10), call('Agent', { description: 'Fork', prompt: 'x', subagent_type: 'fork' })]);
