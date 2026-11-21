@@ -437,16 +437,22 @@ export function designKeyOf(design, fe, name) {
 /* Whether the design sets the colour of the placed icon at `id`: on the instance itself, or on a layer inside it, in its
    anatomy, a variant's set or a variant's added layers. A layer inside a component the library holds no contract for
    (`mainOf` finds none: an icon set's, Atlassian's Epic) is that component's own drawing, never an override the design
-   makes here: eval.mjs leaves those insides to code (inForeign), so its colour sets nothing. Where the library holds the
+   makes here: eval.mjs leaves those insides to code (inForeign), so its colour sets nothing, but for its lone glyph straight
+   under it, whose colour roundTrip compares as the instance's (to-figma glyph). Where the library holds the
    component, the snapshot keeps only what differs from it inside, so a colour there is the design's. */
 export function designSetsColour(design, id, mainOf = () => null) {
   const all = Object.assign({}, ...[...(design.variants || [])].reverse().map((v) => v.add || {}), design.anatomy || {});
   const foreign = (el) => (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key);
+  const loneGlyph = (at, k) => { const inside = Object.keys(all).filter((x) => x.startsWith(`${at}/`)); return inside.length === 1 && inside[0] === k && (all[k] || {}).kind === 'graphic'; };
   // (k is id or under it; it counts unless an instance from id down to its parent is a foreign one)
   const counts = (k) => {
     if (k !== id && !k.startsWith(`${id}/`)) return false;
     const segs = k.split('/'), from = id.split('/').length;
-    for (let i = from; i < segs.length; i++) if (foreign(segs.slice(0, i).join('/'))) return false;
+    for (let i = from; i < segs.length; i++) {
+      const at = segs.slice(0, i).join('/');
+      // (but a foreign icon's lone glyph straight under it: roundTrip compares its colour as the instance's, to-figma glyph)
+      if (foreign(at) && !(i === segs.length - 1 && loneGlyph(at, k))) return false;
+    }
     return true;
   };
   return Object.entries(design.anatomy || {}).some(([k, x]) => counts(k) && x.background != null)
