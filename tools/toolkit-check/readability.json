@@ -239,36 +239,6 @@
   "dated": 1,
   "noContents": 0
  },
- "skills/figma-plugin-creator/SKILL.md": {
-  "words": 1119,
-  "longSentences": 14,
-  "longParagraphs": 3,
-  "codeParagraphs": 3,
-  "grade": 16.2,
-  "lines": 29,
-  "dated": 0,
-  "noContents": 0
- },
- "skills/figma-plugin-creator/references/conformance-checklist.md": {
-  "words": 1748,
-  "longSentences": 28,
-  "longParagraphs": 4,
-  "codeParagraphs": 4,
-  "grade": 13.1,
-  "lines": 50,
-  "dated": 1,
-  "noContents": 0
- },
- "skills/figma-plugin-creator/references/network-fetch-patterns.md": {
-  "words": 411,
-  "longSentences": 4,
-  "longParagraphs": 0,
-  "codeParagraphs": 1,
-  "grade": 10.7,
-  "lines": 33,
-  "dated": 0,
-  "noContents": 0
- },
  "skills/figma-project-audit/SKILL.md": {
   "words": 845,
   "longSentences": 14,

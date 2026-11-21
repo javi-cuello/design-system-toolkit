@@ -1,5 +1,6 @@
 # Changelog — figma-plugin-creator
 
+- 1.19.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I: steps and tables, Part B linked not restated, checklist contents list and tables. No rule removed.
 - 1.18.1 (2026-11-11): `conformance.mjs` §5c walks tags as the HTML parser does, so nested rows, unclosed switches and a switch wrapping a control are read right; a nested `:has()` is no restyle. Case P7.
 - 1.18.0 (2026-11-11): skill-standard 1.9.0 §B 4: `.text-btn` retired (a bare `<button>` is always hand-built); `conformance.mjs` §5c warns on a footer fig-button without `size="large"` and on text inside a switch or checkbox in a field row. Template's action is large. Case P7.
 - 1.17.0 (2026-11-11): the PropsKit look from FigUI3 (skill-standard 1.7.0 §B 4): template and assets carry it; `conformance.mjs` checks FigUI3 drift (§5), restyles and native controls (§5c). Case P7.
