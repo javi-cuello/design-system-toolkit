@@ -52,6 +52,10 @@ const subagentTree = (w) => !!w?.worktree && w.worktree.startsWith('agent-');
 // session's, those gates fired on agents mid-work and on shelved branches: six reviews of unfinished diffs, five forced
 // WIP commits in one night; counting it only at landing let a branch land unreviewed, so it is counted as written).
 // (never a tree the session writes in itself: a fork or helper in the session's own worktree leaves it the session's)
+// a review's prompt names a tree by its whole path (never diag-x for diag-x-2): followed by a separator, a quote or its end
+const named = (said, repo) => new RegExp(`${repo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w.-])`).test(said);
+// a worktree a subagent works in that the session does not: where its pre-review work is still judged by its tree
+const agentsDir = (st, f, repos) => { const w = where(f, repos); return !!w?.worktree && !(st.ownTrees || []).includes(w.repo); };
 const agentsTree = (st, f, repos) => { const w = where(f, repos); return !!w?.worktree && (st.agentTrees || []).includes(w.repo) && !(st.ownTrees || []).includes(w.repo); };
 const sessionsOwn = (st, a, repos) => { const files = Object.fromEntries(Object.entries(a.files).filter(([f]) => !agentsTree(st, f, repos))); return { files, wide: a.wide.filter((f) => files[f] !== undefined) }; };
 const BOOKKEEPING = /(^|\/)(CHANGELOG\.md|README\.md)$|(^|\/)tests\/cases\.md$|^standards\/changelog\//;
@@ -308,7 +312,7 @@ function scriptWrites(st, win, repos) {
     if (t < (before ? before.at : win.start - 1000) || t > win.end) continue;
     // kept across closes, bookkeeping included: the Stop hook's own-uncommitted check reads it (scriptWritten)
     // (a subagent's script in a worktree it writes is the agent's: never the session's to commit, gated at its landing)
-    const agents = win.sub && where(file, repos)?.worktree;
+    const agents = win.sub && agentsDir(st, file, repos);
     if (agents && !(st.agentTrees ||= []).includes(repo)) st.agentTrees.push(repo);
     if (!agents) (st.wrote ||= {})[file] = Math.max(st.wrote[file] || 0, t);
     if (path.basename(rel) === 'README.md' && !st.docs.includes(file)) st.docs.push(file);
@@ -537,7 +541,7 @@ function record(st, line, repos, sub) {
       if (r.is_error && st.counted[r.tool_use_id]) uncount(st, r.tool_use_id);
       const sh = st.shell[r.tool_use_id];
       // a subagent's call that ended before the session's last review is that review's
-      if (sh && !st.denied.includes(r.tool_use_id) && !(sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt)) scriptWrites(st, { ...sh, pre: st.pre[r.tool_use_id], end: Date.parse(rec.timestamp) || Date.now() }, repos);
+      if (sh && !st.denied.includes(r.tool_use_id) && !(sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt && !agentsDir(st, sh.dir, repos))) scriptWrites(st, { ...sh, pre: st.pre[r.tool_use_id], end: Date.parse(rec.timestamp) || Date.now() }, repos);
       if (sh) { delete st.shell[r.tool_use_id]; delete st.pre[r.tool_use_id]; }
       // a foreground review is done when its result comes back; a background one only says it was launched
       const out = typeof r.content === 'string' ? r.content : (r.content || []).map((x) => x.text || '').join('\n');
@@ -556,7 +560,7 @@ function record(st, line, repos, sub) {
       if (size(sessionsOwn(st, st.since, repos)).full) st.owed = true;
       // an agent's tree the review never named keeps its lines: they are still owed a review before its branch lands
       const said = JSON.stringify(c.input || {});
-      const kept = Object.keys(st.since.files).filter((f) => agentsTree(st, f, repos) && !said.includes(where(f, repos).repo));
+      const kept = Object.keys(st.since.files).filter((f) => agentsTree(st, f, repos) && !named(said, where(f, repos).repo));
       const keep = { files: Object.fromEntries(kept.map((f) => [f, st.since.files[f]])), wide: st.since.wide.filter((f) => kept.includes(f)) };
       st.cleared.push(...Object.keys(st.since.files).filter((f) => !kept.includes(f)), ...Object.keys(st.inherited?.files || {})); st.inherited = empty();
       st.since = keep; st.reviewedAt = rec.timestamp || '';
@@ -571,7 +575,7 @@ function record(st, line, repos, sub) {
     if (c.name === 'Bash' && c.id) st.shell[c.id] = { start: Date.parse(rec.timestamp) || Date.now(), dir: shellDir(bareShell(c.input?.command), rec.cwd || process.cwd()), this: !sub || !rec.timestamp || rec.timestamp > st.turnStart, sub };
     if (c.id && st.counted[c.id]) continue; // counted when the plan gate saw it pending
     // a subagent's edit the session's review already covered (one in a worktree is judged by its tree: the review may not have named it)
-    if (sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt && !writes(c, rec.cwd || process.cwd()).some((f) => where(f, repos)?.worktree)) continue;
+    if (sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt && !writes(c, rec.cwd || process.cwd()).some((f) => agentsDir(st, f, repos))) continue;
     const got = add(st, c, rec.cwd || process.cwd(), repos, sub);
     // a subagent's file is read after the session's, so an edit it made before the person spoke is not this turn's
     for (const [f] of got) { const r = where(f, repos)?.repo; const at = rec.timestamp || new Date().toISOString(); if (r && !(st.firstEdit[r] <= at)) st.firstEdit[r] = at; }

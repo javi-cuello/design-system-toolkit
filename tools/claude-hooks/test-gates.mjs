@@ -560,7 +560,7 @@ test("a background agent's work in a worktree it made itself (bin/worktree, no a
   own.clean();
   // a review of other work does not clear an agent's tree it never named; one that names it does (review of the fix)
   const reviewOf = (text) => call('Agent', { description: 'Review it', prompt: text, subagent_type: 'Explore' });
-  for (const [prompt, lands] of [['the diff in /elsewhere', false], [`the diff in ${W}`, true]]) {
+  for (const [prompt, lands] of [['the diff in /elsewhere', false], [`the diff in ${W}-2`, false], [`the diff in ${W}`, true]]) {
     const r = session([user('build it'), call('Agent', { description: 'Fix a cause', prompt: 'x', subagent_type: 'general-purpose' })]);
     const sd = path.join(r.file.replace(/\.jsonl$/, ''), 'subagents');
     fs.mkdirSync(sd, { recursive: true });
