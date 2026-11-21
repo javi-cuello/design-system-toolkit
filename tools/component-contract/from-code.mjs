@@ -440,10 +440,12 @@ export function designKeyOf(design, fe, name) {
    makes here: eval.mjs leaves those insides to code (inForeign), so its colour sets nothing, but for its lone glyph straight
    under it, whose colour roundTrip compares as the instance's (to-figma glyph). Where the library holds the
    component, the snapshot keeps only what differs from it inside, so a colour there is the design's. */
+// (a glyph's own words, as to-figma's glyph() moves its colour up only when it says nothing else)
+const PLACE = new Set(['kind', 'parent', 'name', 'order', 'background']);
 export function designSetsColour(design, id, mainOf = () => null) {
   const all = Object.assign({}, ...[...(design.variants || [])].reverse().map((v) => v.add || {}), design.anatomy || {});
   const foreign = (el) => (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key);
-  const loneGlyph = (at, k) => { const inside = Object.keys(all).filter((x) => x.startsWith(`${at}/`)); return inside.length === 1 && inside[0] === k && (all[k] || {}).kind === 'graphic'; };
+  const loneGlyph = (at, k) => { const inside = Object.keys(all).filter((x) => x.startsWith(`${at}/`)); return inside.length === 1 && inside[0] === k && (all[k] || {}).kind === 'graphic' && Object.keys(all[k]).every((f) => PLACE.has(f)); };
   // (k is id or under it; it counts unless an instance from id down to its parent is a foreign one)
   const counts = (k) => {
     if (k !== id && !k.startsWith(`${id}/`)) return false;

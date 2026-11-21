@@ -29,7 +29,8 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   const lone = { anatomy: { icon: { kind: 'instance', component: 'Icons/x' }, 'icon/icon': { kind: 'graphic', parent: 'icon', background: 'C/medium' } }, variants: [{ when: { error: true }, set: { 'icon/icon.background': 'C/red' } }] };
   ok('a foreign icon\'s lone glyph straight under it keeps its colour, and a variant\'s set of it, as the design\'s',
     designSetsColour(lone, 'icon', byComponentName([])) === true
-    && designSetsColour({ anatomy: { ...lone.anatomy, 'icon/icon': { kind: 'graphic', parent: 'icon' } }, variants: lone.variants }, 'icon', byComponentName([])) === true); }
+    && designSetsColour({ anatomy: { ...lone.anatomy, 'icon/icon': { kind: 'graphic', parent: 'icon' } }, variants: lone.variants }, 'icon', byComponentName([])) === true
+    && designSetsColour({ anatomy: { ...lone.anatomy, 'icon/icon': { ...lone.anatomy['icon/icon'], width: 12 } }, variants: [] }, 'icon', byComponentName([])) === false); }
 
 const table = [['Color/Background/Neutral/secondary', '#eeeeee'], ['Color/Background/Neutral/secondary-translucent', 'rgb(22 22 22 / 0.073)'],
   ['Color/Icon/Feedback/Danger/primary', '#5e0007'], ['Color/Icon/Supportive/Red/primary', '#5e0007'], ['Color/Text/Feedback/Danger/primary', '#5e0007'],
