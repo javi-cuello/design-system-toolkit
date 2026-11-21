@@ -1,55 +1,100 @@
 # Judgment protocol — the agent layer
 
-Everything the scanner cannot decide. Scanner output is hypotheses; nothing reaches the user without passing this layer.
+Everything the scanner cannot decide. Scanner output is hypotheses: nothing reaches the user without passing this layer. [SKILL.md](../SKILL.md) steps 2, 5 and 7 point here.
 
 ## 1. Discovery (only for what the rulebook does not already record)
 
-Fills a library's rulebook in the project's context document the first time this skill audits it (copied into `systems/<library-name>.md` where a local cache is in use). Never derive scales or role vocabularies from *imported* variables (`getLocalVariablesAsync` returns only what the file happens to use — gaps guaranteed); enumerate the source libraries themselves:
+Discovery fills a library's rulebook in the project's context document the first time this skill audits it. Where a local cache is in use, the rulebook is copied into `systems/<library-name>.md`.
+
+**Never derive scales or role vocabularies from imported variables.** `getLocalVariablesAsync` returns only what the file happens to use, so gaps are guaranteed. Enumerate the source libraries themselves:
 
 ```js
 await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()          // -> name, key, libraryName
 await figma.teamLibrary.getVariablesInLibraryCollectionAsync(collectionKey)    // -> complete variable list
 ```
 
-Record: collection **keys** (names collide across libraries — the key is the identity), full numeric scales, colour role vocabulary, token spelling, state vocabulary per archetype (sample interactive sets), the sparse-grid pattern (how `Disabled=True` pairs with states), axis grammar, naming suffixes, local collections (legitimate unless default-named), stated accessibility minima (else note WCAG fallback). Summarize to the user and get confirmation **before** the first audit — a wrong discovery bakes errors into every finding.
+Record these:
+
+- collection **keys**: names collide across libraries, so the key is the identity;
+- full numeric scales, the colour role vocabulary and the token spelling;
+- the state vocabulary per archetype, from a sample of interactive sets;
+- the sparse-grid pattern: how `Disabled=True` pairs with states;
+- the axis grammar and the naming suffixes;
+- local collections, which are legitimate unless default-named;
+- stated accessibility minima, or a note that the WCAG fallback applies.
+
+Summarise all of it to the user and get confirmation **before** the first audit. A wrong discovery bakes errors into every finding.
 
 ## 2. Verification (every candidate, no exceptions)
 
-1. **Fresh re-read.** `getNodeByIdAsync` the specific node and reproduce the defect in raw data. Not reproducible → drop silently. Never report with a hedge.
-2. **Universality test.** A candidate firing on every instance of something means the check misread the API or found a house pattern. Investigate the check first. (This is how sparse grids, space-between gaps, and per-side stroke weights became exemptions rather than findings.)
+1. **Fresh re-read.** Call `getNodeByIdAsync` on the specific node and reproduce the defect in raw data. Not reproducible: drop it silently. Never report with a hedge.
+2. **Universality test.** A candidate firing on every instance of something means the check misread the API or found a house pattern. Investigate the check first. Sparse grids, space-between gaps and per-side stroke weights became exemptions this way.
 3. **Sibling test.** A near-identical sibling with the correct binding names the intended token and confirms the defect. All siblings agreeing indicts the check.
-4. **Exception match.** Suppress candidates matching an accepted exception in the active library's rulebook.
-5. **Assumption audit.** Any check depending on *where* Figma stores a value (shorthand vs per-side, authored vs resolved/cached) gets validated against one known-good component before its findings count.
+4. **Exception match.** Suppress candidates that match an accepted exception in the active library's rulebook.
+5. **Assumption audit.** A check may depend on *where* Figma stores a value: shorthand or per-side, authored or resolved and cached. Validate it against one known-good component before its findings count.
 
 ## 3. Mechanism recognition
 
-Raw values serving a mechanism are questions, not defects: negative gaps creating overlaps (tooltip beaks), large off-scale paddings driving fills (progress, sliders), transparent hit-area frames enlarging touch targets, 1px hairline grids. Signals: the value is load-bearing for geometry rather than rhythm; siblings use the same "wrong" value; no token could express it (negative, computed). Route to **Decide**, never to auto-fix.
+Raw values serving a mechanism are questions, not defects. Examples are negative gaps creating overlaps (tooltip beaks) and large off-scale paddings driving fills (progress bars, sliders). Transparent hit-area frames enlarging touch targets and 1px hairline grids are others.
+
+The signals: the value carries geometry rather than rhythm, siblings use the same "wrong" value, or no token could express it (negative, computed). Route these to **Decide**, never to auto-fix.
 
 ## 4. Judgment-only checks
 
-Run after scanning, on the components in scope:
+Run these after scanning, on the components in scope.
 
-- **State renders** — diff non-rest subtrees against rest. Identical = product bug, leads the report. **The signature includes the variant root's visual properties — `opacity`, fills, strokes, effects — excluding only its name** (which is `Axis=Value` by construction, §3.10e). Dimming the root is the most common Disabled treatment (measured 2026-08-08: a root-blind diff flagged 6 of 9 correct Disabled variants); a state fill painted on the root or a `Content` frame is the most common Hover/Press treatment (measured 2026-08-13: a diff with root opacity but not root fills still reported 14 false non-rendering states; the full-root signature left exactly the 2 real ones, confirmed by a correctly-rendering sibling in the same set). Detail: `scanner-checks.md` §3.5a.
-- **Coverage intent** — missing-state candidates vs the archetype baseline: library-wide absence is conformance; single-component absence is a Decide item with the keyboard/touch implications spelled out.
-- **Descriptions** — beyond non-empty (scanner): does it match **the heading set the project's context document records** (conventions-universal §6)? This skill asserts no structure of its own — the shape is per-project and the quality spec belongs to `figma-component-descriptions`. The one content check that is universal is **Composition**: a composite component whose description omits the line naming its sub-components is incomplete whatever the project calls its headings, because that line is what stops the component being reimplemented rather than imported. Is it stale against the current axes/props? Draft replacements; never write without approval.
-- **Contrast** — resolved WCAG ratios on text/surface pairs, **across every mode the collection defines, not just the displayed one** (scanner-checks 3.7c). Report failing token *pairs* with the ratio and the mode; a pairing that passes in light and fails in dark is the finding, and naming only the pairing sends the maintainer to a component that looks correct on screen. The fix belongs to tokens; always Decide.
-- **Content resilience / composition fit** — fixed-size prop-bound text without truncation, boolean-hidden parts that leave holes, spacing ownership inconsistencies. Questions per element.
-- **Detached-instance confirmation** — for each scanner candidate (conventions-universal §8), confirm no `mainComponent` reference and check for drift (stale tokens, outdated naming) before treating it as a real duplicate; a frame that merely wraps a legitimate instance is not a finding.
-- **Annotation gaps** — for each state-bearing variant, judge whether it carries spec detail (cursor/opacity rules, timing, conditional visibility, ARIA role) that belongs in a Dev Mode annotation rather than prose. Never invent the actual values (a timing number, a cursor keyword) — draft the annotation only from what's confirmable in the file or from the maintainer directly.
+| Check | What the agent does |
+|---|---|
+| State renders | Diff non-rest subtrees against rest. Identical is a product bug and leads the report. Detail below the table. |
+| Coverage intent | Compare missing-state candidates with the archetype baseline. Library-wide absence is conformance. Absence on a single component is a Decide item that spells out the keyboard and touch implications. |
+| Descriptions | Beyond non-empty (the scanner's), check the description against the heading set the project's context document records ([conventions-universal.md](conventions-universal.md) §6). Check it is not stale against the current axes and properties. Draft replacements, and never write without approval. |
+| Contrast | Resolve WCAG ratios on text and surface pairs in **every mode the collection defines**, not just the displayed one ([scanner-checks.md](scanner-checks.md) §3.7c). Report failing token *pairs* with the ratio and the mode. The fix belongs to tokens, so it is always Decide. |
+| Content resilience and composition fit | Fixed-size text bound to a property without truncation, boolean-hidden parts that leave holes, and unclear spacing ownership. Ask a question per element. |
+| Detached-instance confirmation | For each scanner candidate ([conventions-universal.md](conventions-universal.md) §8), confirm there is no `mainComponent` reference. Check for drift (stale tokens, outdated naming) before treating it as a real duplicate. A frame that merely wraps a legitimate instance is not a finding. |
+| Annotation gaps | For each state-bearing variant, judge whether it carries spec detail that belongs in a Dev Mode annotation rather than prose. Such detail is cursor and opacity rules, timing, conditional visibility or an ARIA role. |
+
+**The state-render signature includes the variant root's visual properties**: `opacity`, fills, strokes and effects. Only the root's name is excluded, since it is `Axis=Value` by construction ([scanner-checks.md](scanner-checks.md) §3.10e). Dimming the root is the commonest Disabled treatment: a root-blind diff flagged 6 of 9 correct Disabled variants.
+
+A state fill on the root or a `Content` frame is the commonest Hover and Press treatment. A diff with root opacity but not root fills still reported 14 false states, and the full signature left the 2 real ones. Detail: [scanner-checks.md](scanner-checks.md) §3.5a.
+
+**Descriptions: this skill asserts no structure of its own.** The shape is per project, and the quality spec belongs to `figma-component-descriptions`. The one universal content check is **Composition**. A composite component whose description omits the line naming its sub-components is incomplete, whatever the project calls its headings. That line is what stops the component being reimplemented rather than imported.
+
+**Contrast: name the mode.** A pairing that passes in light and fails in dark is the finding. Naming only the pairing sends the maintainer to a component that looks correct on screen.
+
+**Annotations: never invent the values.** Draft an annotation only from what the file confirms or the maintainer states. Never invent a timing number or a cursor keyword.
 
 ## 5. Classification into the fix queue
 
-- **Approve & I fix**: programmatic, unambiguous, matches a discovered token or naming rule exactly, non-breaking. (Rebind on-scale raw values, layer renames applied identically to every variant of the set, approved descriptions — public descriptions follow the full structure, private ones the compact one-to-two-sentence form; both per the `figma-component-descriptions` skill's format if it's available, otherwise draft inline using the same principle: state what it is and its role, nothing more, for private components.)
-- **Quick manual fixes**: correct-by-inspection but API-impossible (axis order, variant option order — Figma UI drag only). Give exact steps + deep link.
-- **Decide**: mechanisms, coverage intent, system-rule questions (a repeated "violation" that may mean the rule should change), anything where two legitimate outcomes exist. Present options + a recommendation; a decision yields a fix or a system-file entry.
-- **Breaking — schedule**: two kinds, and the blast radius names which. **Loses consumers' work** (tested in Figma, 2026-10-01): deleting or retyping a component property (instances fall back to the default, so typed text is gone), pointing a nested instance at another component or variant (overrides on it are dropped), deleting a slot property (slot content is deleted), and a layer rename that leaves one layer named differently across variants (overrides are dropped when a consumer switches variant). **Changes the API, keeps the file**: renaming a variant property or option keeps every instance and override, but breaks Code Connect enum mappings silently (the CLI does not check mapping keys), scripts that set properties by name, and Swap library, which matches by name. Structural rework belongs to whichever kind it does. Never batch either with safe fixes.
+| Bucket | What goes in it |
+|---|---|
+| Approve & I fix | Programmatic, unambiguous, non-breaking, and matching a discovered token or naming rule exactly. Examples: rebinding on-scale raw values, a layer rename applied identically to every variant of the set, and approved descriptions. |
+| Quick manual fixes | Correct by inspection but impossible through the API: axis order and variant option order, which only a drag in the Figma UI changes. Give exact steps and a deep link. |
+| Decide | Mechanisms, coverage intent, and system-rule questions (a repeated "violation" may mean the rule should change). Anything with two legitimate outcomes. Present options and a recommendation; a decision yields a fix or a rulebook entry. |
+| Breaking — schedule | Two kinds, below. The blast radius names which. Never batch either kind with safe fixes. |
 
-Product-visible defects (non-rendering states, missing focus indication) lead the queue regardless of category.
+**Descriptions in Approve & I fix.** A public description follows the full structure and a private one the compact one-to-two-sentence form. Both follow the `figma-component-descriptions` skill's format where it is available. Otherwise draft inline by the same principle: for a private component, state what it is and its role, nothing more.
+
+**Breaking, kind 1: loses consumers' work** (tested in Figma):
+
+- deleting or retyping a component property: instances fall back to the default, so typed text is gone;
+- pointing a nested instance at another component or variant: overrides on it are dropped;
+- deleting a slot property: slot content is deleted;
+- a layer rename that leaves one layer named differently across variants: overrides are dropped when a consumer switches variant.
+
+**Breaking, kind 2: changes the API, keeps the file.** Renaming a variant property or option keeps every instance and override. It still breaks Code Connect enum mappings silently, since the CLI does not check mapping keys. It also breaks scripts that set properties by name, and Swap library, which matches by name. Structural rework belongs to whichever kind it does.
+
+Product-visible defects (non-rendering states, missing focus indication) lead the queue whatever their bucket.
 
 ## 6. After the user rules
 
-Same session: accepted → add to the active library's rulebook, under Accepted exceptions, with the reason; rejected → add the fix to the queue and apply per its bucket; system-rule changed (e.g. new scale step) → update the rulebook entry, note the date, and mention that previously suppressed candidates may resurface on the next run.
+Act in the same session:
+
+- **Accepted**: add it to the active library's rulebook, under Accepted exceptions, with the reason.
+- **Rejected**: add the fix to the queue and apply it per its bucket.
+- **System rule changed** (a new scale step, say): update the rulebook entry and note the date. Mention that previously suppressed candidates may resurface on the next run.
 
 ## 7. Applying fixes
 
-Batch approved safe fixes per component, then **re-run the relevant scanner check on the touched components** to confirm clearance — a fix that doesn't clear its finding is a new finding. Variant property renames: warn (breaking) → approval → rename → verify. Never silently restructure layer trees or change visual values.
+Batch approved safe fixes per component. Then **re-run the relevant scanner check on the touched components** to confirm clearance: a fix that does not clear its finding is a new finding.
+
+Variant property renames go: warn (breaking), approval, rename, verify. Never silently restructure layer trees or change visual values.

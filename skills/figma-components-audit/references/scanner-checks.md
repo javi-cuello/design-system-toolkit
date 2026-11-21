@@ -1,215 +1,358 @@
 # Scanner checks — the deterministic layer
 
-**This file documents `scanner/audit.js` and `scripts/probes.js`. It is not a
-second implementation of either, and nothing here runs.** `scanner/audit.js` is
-the audit: a session runs it, and so does the dashboard, which is what makes an
-audit produce the same result whoever launched it. `scripts/probes.js` holds the
-session's other deterministic work — discovery, the checks still at `backlog` or
-`session` in `scanner/checks.json`, and the fix recipes — as `FCA.*` functions a
-session loads once per file (`scan-and-probes.md`, "Loading the probes"); nothing in it feeds
-the dashboard. Read this to understand *why* a check exists, what failure it
-was written for, and what it must not claim — then change the check in
-`scanner/audit.js`, and update the entry here in the same commit.
+**This file documents `scanner/audit.js` and `scripts/probes.js`. It is not a second implementation of either, and nothing here runs**. Read it for *why* a check exists, what failure it was written for, and what it must not claim. Then change the check in `scanner/audit.js`, and update its entry here in the same commit.
 
-**Checks documented here but not yet in `scanner/audit.js` are listed in the
-porting backlog at the end of this file.** A probe in `scripts/probes.js` runs only
-when a session calls it; it is not in the scanner until it is ported.
+## Contents
 
+- [The two engines](#the-two-engines)
+- [Traps: read before writing or trusting a check](#traps-read-before-writing-or-trusting-a-check)
+- [Adding a check — the four things, none optional](#adding-a-check--the-four-things-none-optional)
+- [0. Locate](#0-locate-a-component-set-by-page-name) and [0.5 Discovery](#05-discovery--establish-this-files-own-vocabulary-before-checking-anything)
+- [1. Variant schema](#1-variant-schema-check) and [2. Property naming](#2-property-naming-check)
+- [3. Token binding](#3-token-binding-check-the-core-check), [3.4 GRID gaps](#34-grid-mode-nodes-use-different-gap-properties-than-horizontalvertical-auto-layout)
+- [3.5 States, slots, collection source, coverage](#35-structural-checks--states-slots-overlay-anatomy)
+- [3.6 Metadata](#36-metadata-check--descriptions-on-the-set-and-its-properties) and [3.7 Accessibility](#37-accessibility-structural-checks)
+- [3.8 Text properties](#38-text-property-coverage-and-the-overflow-question), [3.8b](#38b-page-organisation--category-and-page-ordering), [3.8c Naming case](#38c-naming-case--splits-and-conformance-to-the-recorded-convention)
+- [3.9 Detached frames](#39-detached-frame-candidates-real-instances-not-copies)
+- [3.10 Hidden, disabled, grouped, unused, orphaned, fixed and visibility-only](#310-hidden--orphan-layers)
+- [3.11 Annotations](#311-variant-annotations), [3.12 Right to left](#312-right-to-left-opt-in-figma-standard-rule-50), [3.13 Composed frame](#313-a-composed-frame-library-instances-and-bound-values-only)
+- [4. Fixes](#4-fixes), [5. Sweep](#5-whole-library-sweep-schema-only), [6. Output contract](#6-output-contract)
+- [Coverage and the porting backlog](#coverage-and-the-porting-backlog--see-scannerchecksjson)
 
-Each section names its engine — a rule in `scanner/audit.js` or an `FCA.*` function in `scripts/probes.js` — answering a binary question in `references/conventions-universal.md`, parameterized by the active library's rulebook (scales, collection keys, spelling, state vocabulary, baselines), never hardcoded, since a different library means different values. If the rulebook has not been resolved for this file yet, run discovery (judgment-protocol §1) first.
+## The two engines
 
-**Scanner output is candidates, not findings.** Every result routes through `references/judgment-protocol.md` §2 (verification) before it can reach the user; anything matching an accepted exception in the rulebook is suppressed there. Scripts are time-boxed and depth-limited: batch by page group (~100–150 variants per call), `timeout` 20000–30000.
+| Engine | What it is | Who runs it |
+|---|---|---|
+| `scanner/audit.js` | The audit | A session, and the dashboard too. So an audit gives the same result whoever launched it. |
+| `scripts/probes.js` | The session's other deterministic work, as `FCA.*` functions | A session only, loaded once per file ([scan-and-probes.md](scan-and-probes.md), *Loading the probes*). Nothing in it feeds the dashboard. |
 
-**Before writing or trusting any check, read this list of traps.** Every one of these caused a false positive — or a silent miss — severe enough to make an audit untrustworthy:
-- **Gap means three properties, not one.** `itemSpacing` is only the primary-axis gap. Wrapping auto-layouts also carry `counterAxisSpacing` (the cross-axis row gap), and GRID auto-layout (`layoutMode: "GRID"`) has its own gap properties. A walker that checks only `itemSpacing` silently passes every unbound wrap/grid gap — this shipped a false "fully clean" deep pass on calendar-style grid components. Check `itemSpacing` on flow auto-layout, `counterAxisSpacing` when `layoutWrap === "WRAP"`, and on GRID **only** `gridRowGap` and `gridColumnGap` — there `itemSpacing`/`counterAxisSpacing` are inert leftovers (§3.4; this bullet said the opposite until 2.12.0, contradicting §3.4 and the scanner). In reports, label GRID findings "grid row-gap" / "grid column-gap" and tell the maintainer they live in the **Grid layout** panel section, not the flow auto-layout gap field.
+`scripts/probes.js` holds discovery, the checks still at `backlog` or `session` in `scanner/checks.json`, and the fix recipes. A probe runs only when a session calls it. It is not in the scanner until it is ported; the backlog lives in `scanner/checks.json` ([the last section](#coverage-and-the-porting-backlog--see-scannerchecksjson)).
 
+Each section below names its engine: a rule in `scanner/audit.js` or an `FCA.*` function. Each answers a yes-or-no question in [conventions-universal.md](conventions-universal.md). Each is parameterised by the active library's rulebook (scales, collection keys, spelling, state vocabulary, baselines), never hard-coded. If the rulebook is not resolved for this file yet, run discovery first ([judgment-protocol.md](judgment-protocol.md) §1).
+
+**Scanner output is candidates, not findings**. Every result goes through [judgment-protocol.md](judgment-protocol.md) §2 (verification) before it reaches the user. Anything matching an accepted exception in the rulebook is suppressed there. Scripts are time-boxed and depth-limited: batch by page group (about 100–150 variants per call), with `timeout` 20000–30000.
+
+General API notes:
+
+- Use the async API variants (`getLocalVariableCollectionsAsync`, `getVariableByIdAsync`). The sync variants throw under dynamic-page document access.
+- Call `await page.loadAsync()` before `findAllWithCriteria`.
+- A bound value reports its variable id in `node.boundVariables[key]`. For a non-zero, non-default visual property, absence of that key is the signal for "raw value".
+
+## Traps: read before writing or trusting a check
+
+Every trap below caused a false positive, or a silent miss, severe enough to make an audit untrustworthy.
+
+**Gap means three properties, not one**. `itemSpacing` is only the primary-axis gap. Wrapping auto-layouts also carry `counterAxisSpacing`, the cross-axis row gap. GRID auto-layout (`layoutMode: "GRID"`) has its own gap properties. A walker reading only `itemSpacing` passes every unbound wrap or grid gap; this shipped a false "fully clean" pass on calendar-style grids.
+
+| Layout | Gap properties to check |
+|---|---|
+| Flow auto-layout | `itemSpacing` |
+| Flow, `layoutWrap === "WRAP"` | `itemSpacing` and `counterAxisSpacing` |
+| GRID | **Only** `gridRowGap` and `gridColumnGap`. The flow properties are inert leftovers (§3.4). |
+
+In reports, label GRID findings "grid row-gap" and "grid column-gap". Tell the maintainer they live in the **Grid layout** panel section, not the flow auto-layout gap field.
 
 | Trap | Reality |
 |---|---|
-| Reading `strokeWeight` | Shorthand, carries no binding. Read the four per-side `stroke*Weight` properties |
-| `paint.opacity < 1` on a bound paint | Figma caches the token's resolved alpha onto the paint. Not an override. Compare against `resolveForConsumer` if you must check |
-| Scale from `collection.variableIds` | Only imported variables. Use `figma.teamLibrary.getVariablesInLibraryCollectionAsync` |
-| Role from node type (`VECTOR → Icon`) | Wrong constantly. Only `TEXT ↔ Text-role` is safe |
-| An instance's layer name as what it is | Layers are renamed freely ("Forward" holding a chevron-down). Read the main component's name, and its variant's when it sits in a set; fall back to the layer name only when those say nothing. The first right-to-left run flagged 8 vertical chevrons as directional (§3.12) |
-| Collection identity by name | Names are not unique across libraries. Compare `key` |
-| `instance.mainComponent` | Throws under dynamic-page access. Use `getMainComponentAsync()` |
-| A finding on *every* component | Almost certainly a broken check or a house pattern — investigate before reporting |
-| Indexing `fills` / `strokes` / `effects` | `figma.mixed` on a text node with per-character styling. Indexing it **throws mid-walk and loses every finding already collected** — silent under-reporting, no error surfaced. `Array.isArray` first, always |
-| A property no layer references ⇒ unused | Variant axes live in `componentPropertyDefinitions` and are resolved at the set level, so **no layer ever references one**. Filter `type !== "VARIANT"` or you flag every axis of every set. `SLOT` properties fail the identical way for a different reason — filled by presence in the tree, not by a `componentPropertyReferences` entry — so the filter needs both exclusions, not one; detail in §3.10c |
-| Treating `BOOLEAN_OPERATION` as a `GROUP` | It reports as its own type and is legitimate inside icons. Never widen a GROUP check to "any non-frame container" |
-| `layoutSizingVertical` alone | Meaningless without an auto-layout parent. Read `textAutoResize` too, or you flag every text node in a non-auto-layout frame |
-| `layoutSizingVertical: "FIXED"` as a second way to catch fixed text | Can read `FIXED` even under a genuine auto-layout parent when `textAutoResize` is `HEIGHT`/`WIDTH_AND_HEIGHT` — contradicting the resize mode outright, not merely meaningless. `textAutoResize` alone decides "fixed"; `layoutSizingVertical` is reported, never used to decide. 33 false hits on one real layer; detail in §3.10f |
-| `paint.color` on a bound paint | The value cached for whichever mode the file is **currently displaying**. Resolve `valuesByMode` per mode, and follow `VariableAlias` chains to their target — treating an alias object as a colour yields `NaN`, which passes every threshold and reports clean |
-| `itemSpacing` as "the gap" | Three properties, not one — see the gap note above this table, which also covers how to label GRID findings in a report |
-| `!main` as the orphan test | Never fires. Deleting a main leaves `getMainComponentAsync()` returning it, `removed === false`, still findable by id — only its `parent` goes null. Test `!main` or `!main.parent`, either one; detail in §3.10d |
-| `main.parent === null` on a REMOTE instance | Not proof of orphaning. A perfectly healthy remote component reads identically to a broken one whenever its source file isn't connected in the current session — nothing about the node tells you which. Gate on `main.key`: absent, trust `!main.parent`; present, verify live with `figma.importComponentByKeyAsync(main.key)` before flagging. A timeout on that call is not proof either — retry once, isolated, before reporting. Detail in §3.10d |
-| "Non-canonical page" = doesn't start with one library's marker | A library uses other prefixes for work in progress (a status marker, say), and treating an unfamiliar one as non-canonical produces a wall of false positives from that page's own substructure. Read the real set from `componentPages`; exempt the pages `exemptPages` names. Detail in §3.9 |
-| WCAG target-size minimum = 44 | 44×44 is SC 2.5.5 (**AAA**, also the common mobile-touch figure), not the AA baseline this skill actually claims. SC 2.5.8 (**AA**) is 24×24. Checking 44 against a real desktop-pointer library flagged nearly every interactive component as a single undifferentiated wall — the universal-finding signature. Detail in §3.7b |
-| Diffing state variants with the variant root excluded | The root's *name* is `Axis=Value` and must be excluded (§3.10e's lesson) — but its **visual properties are where states render**: Disabled dims the root's `opacity`, Hover/Press paint a state fill on the root itself or on a `Content` frame. Excluding the whole root reported 44 non-rendering states on one library; 42 of them were the root's own opacity or fill, 2 were real. Exclude the root's name; keep its fills, strokes, effects and opacity in the signature. Detail in §3.5a |
-| Resolving a colour variable and dropping its alpha | A resolved variable value is **rgba**, and low-alpha tints are how soft surfaces are built — a "soft" background token can be its palette's near-black at ~5% alpha, rendering light grey. A resolver that reads only `{r,g,b}` reports that token as opaque near-black: measured 2026-08-13, a fill-vs-track pair returned ratio 1.0 (black vs black) for a bar that visually shows ~15:1. Composite over the backdrop using `a` before computing luminance, or flag the pair as verify-by-eye when `a < 1`. Detail in §3.7c |
-| A nested instance's own `opacity: 0.5` read as a double-dim | It is usually the disabled treatment itself. **An instance does not inherit its main component's root opacity** — a library that renders `Disabled` as a 0.5 on the variant root gives an *instance* of that variant an explicit 0.5, and clearing it makes the control look enabled. Only an override *inside* an already-dimmed parent multiplies. Test before touching it: compare the instance's opacity against `(await inst.getMainComponentAsync()).opacity`, and screenshot the set. |
-| An exposed nested instance in `componentPropertyDefinitions` | It is never there. "Expose nested instance" sets `isExposedInstance` on the CHILD; the parent set's definitions do not change, so a check reading them reports a correctly exposed component as exposing nothing — a false finding on a component that was just fixed. Verify the consumer's view: `const p = set.createInstance(); p.exposedInstances; p.remove();` |
-| "Does anything consume this token?" via variable-to-variable alias chains only | Misses **Style paint-stop bindings** (`style.paints[].boundVariables.color`) entirely — a real, legitimate consumption path distinct from one variable aliasing another. A token bound only there reports zero consumers under an alias-only search and reads as orphaned when it isn't. No check in this skill performs this walk today (the token-binding check in §3 runs the opposite direction — layer-binds-to-token, not token-has-consumers), so nothing here regresses; recorded because an ad-hoc version of exactly this search produced a real false "orphaned variable" finding on a live file, withdrawn only because the maintainer knew better. If this ever becomes a formal check, walk both paths before concluding a token is unused. |
+| Reading `strokeWeight` | A shorthand that carries no binding. Read the four per-side `stroke*Weight` properties. |
+| `paint.opacity < 1` on a bound paint | Figma caches the token's resolved alpha onto the paint. It is not an override. Compare against `resolveForConsumer` if you must check. |
+| A scale from `collection.variableIds` | Only imported variables. Use `figma.teamLibrary.getVariablesInLibraryCollectionAsync`. |
+| A role from the node type (`VECTOR` means Icon) | Wrong constantly. Only text node to text role is safe. |
+| An instance's layer name as what it is | Layers are renamed freely ("Forward" holding a chevron-down). Read the main component's name, and its variant's in a set. Fall back to the layer name only when those say nothing. The first right-to-left run flagged 8 vertical chevrons as directional (§3.12). |
+| Collection identity by name | Names are not unique across libraries. Compare `key`. |
+| `instance.mainComponent` | Throws under dynamic-page access. Use `getMainComponentAsync()`. |
+| A finding on *every* component | Almost certainly a broken check or a house pattern. Investigate before reporting. |
+| Indexing `fills`, `strokes` or `effects` | On a text node with per-character styling it is `figma.mixed`. Indexing it **throws mid-walk and loses every finding already collected**: silent under-reporting, no error surfaced. Check `Array.isArray` first, always. |
+| A property no layer references means unused | Variant axes are resolved at the set level, so **no layer ever references one**. Slot properties fail the same way, being filled by presence in the tree. Filter out both `VARIANT` and `SLOT` (§3.10c). |
+| Treating `BOOLEAN_OPERATION` as a `GROUP` | It reports as its own type and is legitimate inside icons. Never widen a GROUP check to "any non-frame container". |
+| `layoutSizingVertical` alone | Meaningless without an auto-layout parent. Read `textAutoResize` too, or every text node in a plain frame is flagged. |
+| `layoutSizingVertical: "FIXED"` as a second test for fixed text | It can read `FIXED` under a real auto-layout parent while the resize mode hugs. The resize mode alone decides "fixed"; the other is reported, never used to decide. 33 false hits on one layer (§3.10f). |
+| `paint.color` on a bound paint | The value cached for the mode the file is **currently displaying**. Resolve `valuesByMode` per mode, and follow `VariableAlias` chains. An alias read as a colour yields `NaN`, which passes every threshold and reports clean. |
+| `itemSpacing` as "the gap" | Three properties, not one: see the gap note above this table, which also says how to label GRID findings. |
+| `!main` as the orphan test | Never fires. A deleted main is still returned, with `removed === false`, and still findable by id; only its `parent` goes null. Test `!main` or `!main.parent` (§3.10d). |
+| `main.parent === null` on a remote instance | Not proof of orphaning: a healthy remote main reads the same when its source file is not connected. Gate on `main.key`. Absent, trust `!main.parent`; present, verify live with `figma.importComponentByKeyAsync(main.key)`. A timeout is not proof either: retry once, isolated (§3.10d). |
+| "Non-canonical page" means it lacks one library's marker | A library may use other prefixes for work in progress, such as a status marker. Treating an unfamiliar one as non-canonical floods the report from that page's own substructure. Read the real set from `componentPages`, and exempt the pages `exemptPages` names (§3.9). |
+| A WCAG target-size minimum of 44 | 44×44 is SC 2.5.5 (**AAA**, also the common mobile-touch figure). The AA baseline this skill claims is SC 2.5.8, 24×24. Checking 44 on a desktop-pointer library flagged nearly every interactive component, the universal-finding signature (§3.7b). |
+| Diffing state variants with the variant root excluded | Exclude the root's *name*, which is `Axis=Value`. Keep its fills, strokes, effects and opacity: that is where states render. Excluding the whole root reported 44 non-rendering states on one library, and only 2 were real (§3.5a). |
+| Resolving a colour variable and dropping its alpha | A resolved value is **rgba**, and low-alpha tints build soft surfaces. A reader of `{r,g,b}` only saw a near-black at 5% alpha as opaque, and returned 1.0 for a pair showing about 15:1. Composite over the backdrop using `a`, or flag the pair verify-by-eye when `a < 1` (§3.7c). |
+| A nested instance's own `opacity: 0.5` read as a double dim | It is usually the disabled treatment itself. **An instance does not inherit its main component's root opacity**, so it carries an explicit 0.5, and clearing it makes the control look enabled. Only an override inside an already-dimmed parent multiplies. Compare against `(await inst.getMainComponentAsync()).opacity`, and screenshot the set. |
+| An exposed nested instance in `componentPropertyDefinitions` | It is never there. "Expose nested instance" sets `isExposedInstance` on the child, and the parent set's definitions do not change. Verify the consumer's view: `const p = set.createInstance(); p.exposedInstances; p.remove();` |
+| "Does anything consume this token?" through alias chains only | Misses **style paint-stop bindings** (`style.paints[].boundVariables.color`), a real consumption path. No check here does this walk today, but an ad-hoc one produced a false "orphaned variable" finding. A formal check walks both paths before calling a token unused. |
 
 ## Adding a check — the four things, none optional
 
-Every trap in the table above was a check that shipped and then reported something false or missed something real. The pattern is consistent enough to be a procedure:
+Every trap above was a check that shipped and then reported something false or missed something real. The pattern is consistent enough to be a procedure:
 
-1. **Control-pass it before trusting a single hit** (toolkit-standard §D 18). Run the new check against output already known to be correct. Identical hits there mean you have found an artefact of the component or the template, not a defect — and "fixing" those damages correct output. This is the step that catches a check which is right about the mechanism and blind to the intent.
-2. **State what the check does NOT flag**, with the reason, beside the script. Every check added in 1.3.0–1.4.0 needed one to two exclusions, and each exclusion was the difference between a useful check and one firing library-wide. If you cannot name a legitimate case that resembles a hit, you have not understood the check yet.
-3. **Put the trap in the table above, not only in your section.** That table is what the file tells a future author to read first, so a trap recorded only where it was found is a trap nobody will meet in time. Five traps were inline-only until 1.6.0 for exactly this reason.
-4. **Write the case, and make its sharpest assertion a negative one.** What must *not* be reported is the half that rots silently: a check that stops firing on a real defect reports success, and a report that looks normal is indistinguishable from a correct one. §11's rule is the general form — a finding on every instance means the check is wrong.
+1. **Control-pass it before trusting a single hit** (toolkit-standard §D 18). Run the new check against output already known to be correct. Identical hits there mean an artefact of the component or the template, not a defect, and "fixing" them damages correct output. This step catches a check that is right about the mechanism and blind to the intent.
+2. **State what the check does NOT flag**, with the reason, beside the script. Most checks needed one or two exclusions, and each one separated a useful check from one firing library-wide. If you cannot name a legitimate case that resembles a hit, you have not understood the check yet.
+3. **Put the trap in the table above, not only in your section**. That table is what this file tells a future author to read first. A trap recorded only where it was found is one nobody meets in time.
+4. **Write the case, and make its sharpest assertion a negative one**. What must *not* be reported is the half that rots silently. A check that stops firing on a real defect reports success, and that looks just like a correct report. Conventions §11 is the general form: a finding on every instance means the check is wrong.
 
 A check missing any of the four is a candidate, not a check. Say so in the report rather than presenting its hits as findings.
 
-General notes:
-- Use the async API variants (`getLocalVariableCollectionsAsync`, `getVariableByIdAsync`); the sync variants throw under dynamic-page document access.
-- `await page.loadAsync()` before `findAllWithCriteria`.
-- A bound value reports its variable id in `node.boundVariables[key]`. Absence of that key for a non-zero/non-default visual property is the signal for "raw value".
-
----
-
 ## 0. Locate a component set by page name
 
-**Engine:** `FCA.locate(target, componentPages)` in `scripts/probes.js` — the page whose name contains `target` inside the project's `componentPages` filter (the same regex `scanner/audit.js` reads; absent, every page), and its component sets with id and variant count. A marker written into the call is one library's convention, and on a library that uses another it finds nothing and the audit reports clean (the trap table above says exactly this).
+**Engine:** `FCA.locate(target, componentPages)` in `scripts/probes.js`. It returns the page whose name contains `target`, within the project's `componentPages` filter, and that page's component sets with id and variant count. The filter is the same regex `scanner/audit.js` reads; absent, every page counts.
 
----
+Never write a page marker into the call. A marker is one library's convention: on a library that uses another, it finds nothing, and the audit reports clean.
 
 ## 0.5 Discovery — establish this file's own vocabulary before checking anything
 
-Run once per file (skip if already run this session against the same file). Do **not** carry any prior file's scales or colour spelling into a later call — take them from this probe's output.
+Run it once per file; skip it if it already ran this session against the same file. Never carry a prior file's scales or colour spelling into a later call: take them from this probe's output.
 
-> **CRITICAL:** query `figma.teamLibrary` for the COMPLETE library. `collection.variableIds` and `getLocalVariablesAsync()` return only variables *this file has already imported* — a scale built from those will be missing steps and a role list will be missing roles, producing false "off-scale" and "wrong role" findings on correct components.
+> **CRITICAL:** query `figma.teamLibrary` for the COMPLETE library. `collection.variableIds` and `getLocalVariablesAsync()` return only variables this file has already imported. A scale built from those misses steps, and a role list misses roles. That produces false "off-scale" and "wrong role" findings on correct components.
 
-**Engine:** `FCA.discover()` in `scripts/probes.js` — every library collection with its key, the numeric groups of each (`FCA.numericScales`: spacing, radius, stroke, opacity, size, font), the colour role segments (`FCA.colourRoles`: the first two segments of every colour or state variable), `allowedKeys` by collection key (local collections included, except a default-named one; a `remote` collection is never counted local), and each local collection with its variables and whether its name is Figma's default (`Collection N` — the finding; mode names are not, being invisible at one mode).
+**Engine:** `FCA.discover()` in `scripts/probes.js`. It returns:
+
+| Output | What it holds |
+|---|---|
+| Collections | Every library collection, with its key |
+| `scales` | The numeric groups of each collection (`FCA.numericScales`): spacing, radius, stroke, opacity, size, font |
+| `colourRoles` | The first two segments of every colour or state variable (`FCA.colourRoles`) |
+| `allowedKeys` | By collection key: the library collections and the local ones, labelled `local :: <name>` |
+| Local collections | Each with its variables, and whether its name is Figma's default |
+
+A default-named local collection (`Collection N`) is left out of `allowedKeys`: it is a finding, not a source. A `remote` collection is never counted local. Mode names are not checked, being invisible at one mode.
 
 Feed the results into the project's audit settings (the `TOKENS` the scanner reads) and the `opts` of every later probe:
 
-- the spacing and radius scales — from `scales`, complete.
-- the allowed collection keys — from `allowedKeys`, which holds the library collections and this file's local collections (labelled `local :: <name>`); a stray default-named collection is left out, being a finding rather than a source. **Check bindings by collection KEY, never by name** — a file can subscribe to two different collections sharing a name (e.g. two called `Semantic` from different libraries), and only the key distinguishes them.
-- the colour roles — from `colourRoles`, complete. A role you didn't discover is a gap in discovery, not a defect in a component.
+- **The spacing and radius scales**: from `scales`, complete.
+- **The allowed collection keys**: from `allowedKeys`. **Check bindings by collection KEY, never by name**. A file can subscribe to two collections sharing a name, such as two called `Semantic` from different libraries. Only the key tells them apart.
+- **The colour roles**: from `colourRoles`, complete. A role you did not discover is a gap in discovery, not a defect in a component.
 
-Then sample two or three interactive component sets for the `State` axis vocabulary and order (libraries vary — mobile libraries typically have no `Hover`).
+Then sample two or three interactive component sets for the `State` axis vocabulary and order. Libraries vary: mobile libraries typically have no `Hover`.
 
-Summarize all of it to the user in one short note before auditing, so a wrong discovery is caught before it is baked into every finding. If two components disagree on spelling, that inconsistency is itself the finding — don't silently pick one.
-
----
+Summarise all of it to the user in one short note before auditing. A wrong discovery is then caught before it is baked into every finding. If two components disagree on spelling, that inconsistency is itself the finding: never silently pick one.
 
 ## 1. Variant schema check
 
-Axis order (the state axis last, the disabled axis before it, a project's `firstAxis` first) and a True/False axis's default-first order are the scanner's: `scanner/audit.js` `schema|axis-order|` and `schema|bool-default|`, which the dashboard runs too (figma-standard rule 1). A single-option axis is the scanner's too since 2026-11-20 (`properties|single-option|`, breaking). The session probe reports what the scanner does not: `State` options off the recorded vocabulary.
+The scanner owns these, and the dashboard runs them too (figma-standard rule 1):
 
-**Engine:** `FCA.schema(set, opts)` in `scripts/probes.js` (the pure half is `FCA.schemaFindings(defs, opts)`, tested). The state axis and its vocabulary are the project's, passed in: `opts.stateAxis`, `opts.states` (the recorded order) — and each missing one **skips** its check. The block this replaced hard-coded one library's `State`, `Disabled`, `Breakpoint` and `Rest · Focus · Hover · Press · Loading`, which a touch-first library with no `Hover` would have failed wholesale. It reports: the state axis not last; the disabled axis not immediately before it; the first axis not first; any axis with a single option; a `False`/`True` axis whose default is not its first option (default first, not a fixed `False` first); state options outside the vocabulary, and out of order among the known ones (ranking an unknown option `-1`, as the prose did, made a correct order read as out of order).
+| Rule id | Raises |
+|---|---|
+| `schema\|axis-order\|` | The state axis not last, the disabled axis not just before it, or a project's `firstAxis` not first |
+| `schema\|bool-default\|` | A True/False axis whose default is not its first option |
+| `properties\|single-option\|` | An axis with a single option; breaking |
 
-**The single-option-axis check is walked, both directions** (added 2026-08-13 on maintainer request; control-passed the same day — silent across all 54 sets of a live library the maintainer considers correct, and fires on a purpose-built probe set carrying a one-option axis beside a two-option control axis; case A23). What it does **not** flag: non-variant properties, which carry no `variantOptions` at all; any axis with two or more options. One shape it flags deliberately rather than excludes: a set with exactly one variant, whose one axis necessarily has one option — there the question the agent frames is the set's shape (should this be a plain component?), not the axis alone. A hit always routes to **Decide**: removing or merging an axis rewrites every variant name and every instance override, a breaking change, and a deliberately staged axis (options planned, or an API kept in step with a sibling library) is legitimate intent to record as a ruling in the rulebook.
+The session probe reports what the scanner does not: `State` options off the recorded vocabulary.
 
----
+**Engine:** `FCA.schema(set, opts)` in `scripts/probes.js`. Its pure half, `FCA.schemaFindings(defs, opts)`, is tested.
+
+The state axis and vocabulary are the project's, passed in as `opts.stateAxis` and `opts.states` (the recorded order). Each one missing **skips** its check. Never hard-code one library's axes or states: a touch-first library with no `Hover` would fail wholesale.
+
+It reports:
+
+- the state axis not last, or the disabled axis not immediately before it;
+- the first axis not first, or any axis with a single option;
+- a `False`/`True` axis whose default is not its first option (default first, not a fixed `False` first);
+- state options outside the vocabulary, or out of order among the known ones. Never rank an unknown option `-1`: that makes a correct order read as out of order.
+
+**The single-option-axis check is walked, both directions**. It is silent across all 54 sets of a live library the maintainer considers correct. It fires on a probe set carrying a one-option axis beside a two-option control axis (case A23).
+
+- **Not flagged**: non-variant properties, which carry no `variantOptions`, and any axis with two or more options.
+- **Flagged on purpose**: a set with exactly one variant, whose one axis necessarily has one option. There the agent asks about the set's shape (should it be a plain component?), not the axis alone.
+- **Always Decide**. Removing or merging an axis rewrites every variant name and instance override: a breaking change. A deliberately staged axis (options planned, or an API kept in step with a sibling library) is intent to record as a ruling.
 
 ## 2. Property naming check
 
-Flags a text property ending in ` text` unless a code prop has it, an instance swap ending in ` swap`, and a property that is not sentence case (an all-capitals word is an acronym and passes), per figma-standard rule 21.
+Per figma-standard rule 21, it flags:
 
-**Engine:** `FCA.propertyNaming(set, opts)` in `scripts/probes.js` (`FCA.propertyNamingFindings(defs, opts)`, tested). Flags an instance swap still carrying Figma's default name (`Instance…`, `Component…` — several swaps need unique names, so a qualifier like `Icon (Danger)` is fine). A property name's case, prefix and suffix are the scanner's (`naming|prop-case|`, `naming|prop-text|`, `naming|prop-boolean|`, `naming|prop-swap|`).
+- a text property ending in ` text`, unless a code prop has it;
+- an instance swap ending in ` swap`;
+- a property that is not sentence case. An all-capitals word is an acronym and passes.
 
----
+**Engine:** `FCA.propertyNaming(set, opts)` in `scripts/probes.js`, whose pure half `FCA.propertyNamingFindings` is tested.
+
+It flags an instance swap still carrying Figma's default name (`Instance…`, `Component…`). Several swaps need unique names, so a qualifier like `Icon (Danger)` is fine.
+
+A property name's case, prefix and suffix are the scanner's: `naming|prop-case|`, `naming|prop-text|`, `naming|prop-boolean|` and `naming|prop-swap|`.
 
 ## 3. Token-binding check (the core check)
 
-Walks every variant in the set (not just one) and flags any raw padding/gap/radius, any unbound fill/stroke, any colour token whose role doesn't match the layer, any off-scale spacing, and any text node missing a text style. Checking only the default/rest variant misses real defects that only appear on Hover, Press, or Disabled — widen to all variants by default; scoping down to one variant is the optimization, not the default.
+It walks every variant in the set, not just one. It flags any raw padding, gap or radius, and any unbound fill or stroke. It flags a colour token whose role does not match the layer, off-scale spacing, and a text node missing a text style.
 
-**Before running it, the project's `TOKENS` must hold what section 0.5's discovery found** — a missing rule skips its check rather than falling back to another library's value.
+Checking only the rest variant misses defects that appear only on Hover, Press or Disabled. All variants is the default; scoping down to one variant is the optimisation.
 
-**Engine: `scanner/audit.js`** — the token rules inside `checkFacts`, which every session and the dashboard run. Its scales and collection come from the project's `TOKENS`, never from constants in a snippet. Per non-instance, non-slot node: each non-zero padding unbound; the gap (below); each non-zero corner radius unbound — padding and gap noted *on the spacing scale* or *off the spacing scale; nearest step N* against `TOKENS.spacing`, radius against `TOKENS.radius`, and an off-scale padding of 80 or more filed as `review` asking whether it drives a fill (a progress bar or slider), since a mechanism is a question, not a defect; a visible solid fill unbound — its advice naming the colour variable that holds exactly that colour, else the closest one within an OKLab distance of 0.03 (a hand-drawn copy of it), else saying none is close, from the `semantic` collection(s) when they hold any, read from the file's local colour variables in each collection's default mode (`file.colours`; none passed, no suggestion), and the same for a stroke's colour — or bound outside the `semantic` collection(s), or — on a `TEXT` node — bound outside the `textRole` segment, or — on any other node — bound **inside** it (a text role on a shape; only these two role assertions are made, because inferring icon or background roles from node type is wrong too often); a visible stroke's colour unbound, and its weight unbound — on the four per-side properties where the node has them, on the `strokeWeight` shorthand where it has none (vectors, lines, ellipses); a `TEXT` node with no text style or an unbound font family, size or weight (a weight bound as `fontStyle` or as a number on `fontWeight` counts); with `TOKENS.allowedKeys`, any binding from a collection outside those keys (§3.5c); a Figma default layer name. It walks every variant and never descends into an instance. Each setting that is absent skips its note or check.
+**Before running it, the project's `TOKENS` must hold what discovery (§0.5) found**. A missing setting skips its check rather than falling back to another library's value.
 
-> The check flags a value **only when it is unbound**. A bound value on this file's scale (whatever section 0.5 discovered it to be) passes — the rule is binding, not arithmetic. > > **Every unbound non-zero gap is flagged** — an untokenised value is dead weight regardless of whether it shows today, and it is a latent defect (it activates the moment a second child is added). The *tier* depends on context: a gap that is currently effective (not space-between, 2+ visible children) is an **error**; a gap that is inert because the frame has a single child is still flagged, as **hygiene** (lower priority, no visual impact yet). The **only** exclusion is `SPACE_BETWEEN` ("Auto"): Figma ignores the stored number there and keeps an unclearable fallback, so flagging it is noise. Padding and radius always affect layout, so they are flagged whenever unbound. > > For an unbound padding the check says whether the value is on the project's spacing scale (safe auto-fix) or off it (needs a design decision). `SLOT` nodes are skipped: they are meant to be empty and filled by overrides. The walker handles both a `COMPONENT_SET` (all variants) and a plain `COMPONENT`. > > **On performance:** walking every variant instead of just one costs more time per call. If a set has many variants and the bridge times out, fall back to checking the default/rest variant first as a quick pass, but treat that as a reduced-coverage shortcut, not the standard — note explicitly in the report which variants were actually checked, and widen to the rest in follow-up calls rather than silently reporting a partial audit as complete.
+**Engine: `scanner/audit.js`**, the token rules inside `checkFacts`, which every session and the dashboard run. Its scales and collections come from the project's `TOKENS`, never from constants in a snippet. It checks every non-instance, non-slot node, in every variant, and never descends into an instance. Each absent setting skips its note or check.
 
----
+| Property | Raised when | Note or advice |
+|---|---|---|
+| Padding | Non-zero and unbound | *On the spacing scale*, or *off the spacing scale; nearest step N*, against `TOKENS.spacing`. Off-scale and 80 or more is filed as `review`, asking whether it drives a fill. |
+| Gap | Unbound (detail below) | On or off the spacing scale, as for padding |
+| Corner radius | Non-zero and unbound | On or off scale against `TOKENS.radius` |
+| Visible solid fill | Unbound | Names the colour variable holding exactly that colour (detail below) |
+| Fill colour | Bound outside the `semantic` collection(s) | The project's intended collection |
+| Fill colour on a `TEXT` node | Bound outside the `textRole` segment | Text takes a text role |
+| Fill colour on any other node | Bound **inside** the `textRole` segment | A text role on a shape |
+| Visible stroke | Colour unbound, or weight unbound | Weight is read per side where the node has the four properties, else from the shorthand (vectors, lines, ellipses) |
+| `TEXT` node | No text style, or an unbound font family, size or weight | A weight bound as `fontStyle`, or as a number on `fontWeight`, counts |
+| Any binding | From a collection outside `TOKENS.allowedKeys` | §3.5c |
+| Layer name | A Figma default name | — |
+
+**Only two role assertions are made**: text roles on text, and none on shapes. Inferring icon or background roles from the node type is wrong too often.
+
+**An off-scale padding of 80 or more is a question**. A mechanism (a progress bar or slider fill) is a question, not a defect.
+
+**A raw colour's advice**. It names the colour variable holding exactly that colour. Else it names the closest one within an OKLab distance of 0.03, a hand-drawn copy. Else it says none is close.
+
+It reads the `semantic` collection(s) when they hold any colours, else all of them. It reads the file's local colour variables, each collection's default mode (`file.colours`); none passed, no suggestion. A stroke's colour gets the same advice.
+
+> The check flags a value **only when it is unbound**. A bound value on this file's scale passes: the rule is binding, not arithmetic.
+
+**Every unbound non-zero gap is flagged**. An untokenised value is dead weight even when it does not show. It is a latent defect that activates the moment a second child is added. The tier depends on context:
+
+| Gap | Tier |
+|---|---|
+| Effective: not space-between, two or more visible children | **error** |
+| Inert: the frame has a single child | **hygiene** (lower priority, no visual impact yet) |
+| `SPACE_BETWEEN` ("Auto") | Not flagged |
+
+`SPACE_BETWEEN` is the **only** exclusion. Figma ignores the stored number there and keeps a fallback that cannot be cleared, so flagging it is noise. Padding and radius always affect layout, so they are flagged whenever unbound.
+
+For an unbound padding, the check says whether it is on the project's spacing scale or off it. On the scale is a safe auto-fix; off it is a design decision. Slot nodes are skipped: they are meant to be empty and filled by overrides. The walker handles both a `COMPONENT_SET` (all variants) and a plain `COMPONENT`.
+
+**On performance**. Walking every variant costs more time per call. If a set has many variants and the bridge times out, check the rest variant first as a quick pass. Treat that as reduced coverage, not the standard.
+
+Name in the report which variants were checked, and widen to the rest in later calls. Never report a partial audit as complete.
 
 ## 3.4 GRID-mode nodes use different gap properties than HORIZONTAL/VERTICAL auto-layout
 
-**This caused a confirmed false-positive incident**: `itemSpacing`/`counterAxisSpacing` are legacy properties that persist with stale, unbound, non-functional values once a node's `layoutMode` is switched to `"GRID"` (Figma's newer Grid-Beta auto-layout, distinct from `"HORIZONTAL"`/`"VERTICAL"` and from the unrelated "Layout Grid" guide feature). Reading them on a GRID node produces numbers that look raw and unbound — but they are inert leftovers with no UI control and no way to bind them, because GRID mode doesn't use them at all. The real, live, bindable gap properties on a GRID node are **`gridRowGap`** and **`gridColumnGap`**, bound via `boundVariables.gridRowGap` / `boundVariables.gridColumnGap`.
+**This caused a confirmed false-positive incident**. The flow gap properties (`itemSpacing`, `counterAxisSpacing`) persist with stale, unbound values once a node's `layoutMode` becomes `"GRID"`. GRID is Figma's newer grid auto-layout, distinct from HORIZONTAL and VERTICAL and from the unrelated "Layout Grid" guides. Read on a GRID node, those values look raw and unbound. They are inert leftovers with no UI control and no way to bind them.
 
-Every gap check must branch on `layoutMode` and never read `itemSpacing`/`counterAxisSpacing` when it is `"GRID"`. Both halves of that branch are in the engines: `scanner/audit.js` reads `gridRowGap` and `gridColumnGap` on a GRID node and `itemSpacing` (except `SPACE_BETWEEN`) on any other; a wrapping frame's cross-axis gap, `counterAxisSpacing`, is **not** in the scanner, and `FCA.wrapRowGaps(set)` in `scripts/probes.js` is the session probe for it — never on GRID, where it is the inert leftover this section is about.
+The live, bindable gap properties on a GRID node are **`gridRowGap`** and **`gridColumnGap`**. They bind through `boundVariables.gridRowGap` and `boundVariables.gridColumnGap`.
 
-**Verification rule this incident reinforces**: before reporting *any* gap finding, dump the node's full raw `boundVariables` object (unfiltered, not just the one key you expect) and check for a `gridRowGap`/`gridColumnGap` entry — their presence means the property you were about to flag is the wrong one, not that the value is unbound.
+Every gap check must branch on `layoutMode` and must never read the flow properties on `"GRID"`. Both halves of that branch are in the engines:
 
-Findings must report the **full layer path from the set root** (walk `parent` up to the page) and the node id — a finding the maintainer cannot locate is functionally a false positive.
+| Engine | Reads |
+|---|---|
+| `scanner/audit.js` | `gridRowGap` and `gridColumnGap` on GRID; `itemSpacing` (except `SPACE_BETWEEN`) on any other node |
+| `FCA.wrapRowGaps(set)` in `scripts/probes.js` | A wrapping frame's cross-axis gap, `counterAxisSpacing`, which the scanner does not read. Never on GRID. |
 
----
+**Before reporting any gap finding, dump the node's full raw `boundVariables` object**, unfiltered, not just the key you expect. A `gridRowGap` or `gridColumnGap` entry means you were about to flag the wrong property, not that the value is unbound.
 
----
+Findings must report the **full layer path from the set root** (walk `parent` up to the page) and the node id. A finding the maintainer cannot locate is in effect a false positive.
 
 ## 3.5 Structural checks — states, slots, overlay anatomy
 
-These implement rules in `conventions-universal.md §4` that previously had **no detection script**, which meant a "deep" audit silently reported clean on categories it never examined. Run them alongside the token walk.
+These implement the rules in [conventions-universal.md](conventions-universal.md) §4. Without a script for them, a "deep" audit reported clean on categories it never examined. Run them alongside the token walk.
 
-> Note: `instance.mainComponent` **throws** under dynamic-page document access. Use `await instance.getMainComponentAsync()`.
+> `instance.mainComponent` **throws** under dynamic-page document access. Use `await instance.getMainComponentAsync()`.
 
 ### 3.5a Every non-Rest state actually renders (highest-priority check)
 
-A `Press`/`Hover` variant identical to `Rest` is a product bug and outranks any token or naming finding.
+A `Press` or `Hover` variant identical to `Rest` is a product bug. It outranks any token or naming finding.
 
-**Engine: `scanner/audit.js`**, the `states` rule. For each variant whose state is not the resting one (`TOKENS.stateAxis`, resting value `SCALES[stateAxis][0]`), it finds the resting sibling equal on every other axis and compares a signature of every layer: fills, strokes, visible effects, opacity and visibility, the root included but for its name. Identical is a candidate. The block this replaced looked first for a "state layer" overlay instance — one library's mechanism — and left the diff to the reader; the scanner runs the diff, which catches every mechanism at once.
+**Engine: `scanner/audit.js`**, the `states` rule. The state axis is `TOKENS.stateAxis`, and the resting value is `SCALES[stateAxis][0]`. For each variant not at rest, it finds the resting sibling equal on every other axis.
 
-**The confirming diff must include the variant root's visual properties — fills, strokes, effects and `opacity` — excluding only its name.** Measured 2026-08-13 on a live library, in three iterations on one run: a diff excluding the root entirely (over-applying §3.10e's exclude-the-root rule, which is about the *name*) reported 44 non-rendering states across 13 sets. Including root opacity cleared 28 (Disabled dims the root — the 1.7.7 lesson, which named opacity but not the rest); including root fills cleared 14 more (Hover/Press paint a 3%-alpha state token on the root or a `Content` frame — the second-commonest state mechanism in that library after opacity). The 2 survivors were genuine product bugs, confirmed by the sibling test: the same set's other binary-axis side rendered its states correctly. A diff that reaches the right verdict only after three corrections would have reported 42 false product bugs on the first pass — verify against a known-good sibling before believing any non-rendering hit. Also include, for nested `INSTANCE` children: the resolved main component id (via `getMainComponentAsync`) and `componentProperties`, since a state passed down to a swapped child is invisible to a name-and-visibility signature.
+It compares a signature of every layer: fills, strokes, visible effects, opacity and visibility. The root is included, except its name. Identical is a candidate.
+
+The scanner runs the diff, which catches every state mechanism at once. Never look first for one library's "state layer" overlay instance and leave the diff to the reader.
+
+**The confirming diff includes the variant root's fills, strokes, effects and `opacity`, excluding only its name**. One live run needed three tries:
+
+| Diff | False non-rendering states |
+|---|---|
+| Root excluded entirely (§3.10e's rule over-applied: it is about the *name*) | 44, across 13 sets |
+| Root opacity included (Disabled dims the root) | 16: 28 cleared |
+| Root fills included too (Hover and Press paint a 3%-alpha state token on the root or a `Content` frame) | 2: 14 more cleared |
+
+The 2 survivors were real product bugs. The sibling test confirmed them: the same set's other binary-axis side rendered its states correctly. Verify against a known-good sibling before believing any non-rendering hit.
+
+For nested `INSTANCE` children, the signature also includes the resolved main component id (through `getMainComponentAsync`) and `componentProperties`. A state passed down to a swapped child is invisible to a name-and-visibility signature.
 
 ### 3.5b Slots and overlay anatomy
 
-**Engine:** `FCA.anatomy(set, opts)` in `scripts/probes.js`. Per variant, its direct children: no native `SLOT` is a candidate; with `opts.slotName`, a slot named otherwise; with `opts.parts` (for example `["Header", "Footer"]`), each part missing. The names are the library's, read from a sibling that gets it right — never this file's.
+**Engine:** `FCA.anatomy(set, opts)` in `scripts/probes.js`. Per variant, it reads the direct children:
 
-> Compare against a sibling that gets it right before reporting — if one overlay in the file uses `Header / Content slot / Footer` and another doesn't, that contrast *is* the finding. If none of them do, the library may simply have a different anatomy, and the convention doesn't apply.
+- no native `SLOT` is a candidate;
+- with `opts.slotName`, a slot named otherwise is a candidate;
+- with `opts.parts` (for example `["Header", "Footer"]`), each missing part is a candidate.
+
+The names are the library's, read from a sibling that gets it right, never assumed for this file.
+
+> Compare against a sibling that gets it right before reporting. If one overlay uses `Header / Content slot / Footer` and another does not, that contrast *is* the finding. If none do, the library may have a different anatomy, and the convention does not apply.
 
 ### 3.5c Collection source (binding leaks to the wrong library)
 
-**Engine: `scanner/audit.js`**, the `tokens|off-library` rule. With `TOKENS.allowedKeys` — the collection keys discovery found (§0.5), as a list or as `FCA.discover()`'s `allowedKeys` object — every binding on every non-instance node is resolved to its collection, and one whose **key** is outside the set is a warning naming the field and the token. By key, because names are not unique across libraries; the `semantic` check beside it still matches fills by name, and the two answer different questions (which collection a project intends, and which library a binding came from). Without `allowedKeys` the check does not run. Not yet walked live: whether a library collection's key from `teamLibrary` equals the imported collection's `key` that the scanner reads is assumed, not measured — the first live run with `allowedKeys` set must control-pass on a known-good library before a hit is believed.
+**Engine: `scanner/audit.js`**, the `tokens|off-library` rule. It runs only with `TOKENS.allowedKeys`: the collection keys discovery found (§0.5), as a list or as `FCA.discover()`'s `allowedKeys` object. Every binding on every non-instance node is resolved to its collection. One whose **key** is outside the set is a warning naming the field and the token.
+
+It matches by key, because names are not unique across libraries. The `semantic` check beside it still matches fills by name. The two answer different questions: which collection a project intends, and which library a binding came from.
+
+**Not yet walked live**. It is assumed, not measured, that a collection's key from `teamLibrary` equals the imported collection's `key` the scanner reads. The first live run with `allowedKeys` set must control-pass on a known-good library before a hit is believed.
 
 ### 3.5d State coverage — expected states that don't exist
 
-The inverse of 3.5a: 3.5a catches states that exist but don't render; this catches states the archetype needs that are missing entirely. `BASELINE` comes from discovery (the state sets this library's own components of the same archetype actually use) — never from a fixed table.
+The inverse of 3.5a. That one catches states that exist but do not render; this one catches states the archetype needs that are missing. The baseline comes from discovery: the states this library's own components of the same archetype use. Never take it from a fixed table.
 
-**Engine:** `FCA.stateCoverage(set, expected, opts)` in `scripts/probes.js` — the states in `expected` (this archetype's baseline from discovery) that the set's `opts.stateAxis` lacks, and whether it has `opts.disabledAxis`. The archetype is decided per component during scoping.
+**Engine:** `FCA.stateCoverage(set, expected, opts)` in `scripts/probes.js`. It returns the states in `expected` (the archetype's baseline) that the set's `opts.stateAxis` lacks, and whether the set has `opts.disabledAxis`. The archetype is decided per component during scoping.
 
-> A missing state is only a finding when the baseline actually contains it — if no component in the file has `Hover`, its absence is conformance (touch-first library), not a gap. Whether the audited component is a loading-capable control (and so should carry the library's loading state) is a judgment call — surface it, don't assume.
-
----
+> A missing state is a finding only when the baseline contains it. If no component in the file has `Hover`, its absence is conformance (a touch-first library), not a gap. Whether a component is loading-capable, and so needs the library's loading state, is a judgement call: surface it, never assume it.
 
 ## 3.6 Metadata check — descriptions on the set and its properties
 
-**Scanner:** `audit.js` raises `metadata|description` for an empty description, an `error` on a public set and `hygiene` on a private one (the `internalPrefix`), and `metadata|placeholder` for a placeholder — matching `descriptionPlaceholder`, repeating the set's name, or shorter than `minDescription` — as an `error`. Each setting absent skips its part.
+**Scanner**. `audit.js` raises these; each absent setting skips its part:
 
-**Probe:** `FCA.metadata(set)` in `scripts/probes.js` raises nothing; it lists every property with whether it carries a description, and the set's documentation links: which properties *need* one is judgement (text props and plain nouns rarely do; booleans and swaps with abstract names — Compact, Asset, Emphasis — usually do), so the probe lists and the agent decides.
+| Rule id | Raised when | Tier |
+|---|---|---|
+| `metadata\|description` | Empty description on a public set | `error` |
+| `metadata\|description` | Empty description on a private set (the `internalPrefix`) | `hygiene` |
+| `metadata\|placeholder` | Matches `descriptionPlaceholder`, repeats the set's name, or is shorter than `minDescription` | `error` |
 
-> Stale descriptions (referencing removed variants or old names) can't be detected mechanically — during verification, skim the description against the current axis/property list and flag mismatches as `warning`. > > If `description` comes back `undefined` on **every** property, the running API version doesn't expose property descriptions — that's a limitation of the check, not a finding. Mark the criterion `Not checked`, per the universal-finding rule in the traps table.
+**Probe**. `FCA.metadata(set)` in `scripts/probes.js` raises nothing. It lists every property with whether it carries a description, and the set's documentation links. Which properties *need* one is judgement, so the probe lists and the agent decides. Text props and plain nouns rarely need one. Booleans and swaps with abstract names (Compact, Asset, Emphasis) usually do.
 
----
+> Stale descriptions (citing removed variants or old names) cannot be detected mechanically. During verification, skim the description against the current axis and property list, and flag mismatches as `warning`.
+>
+> If `description` comes back `undefined` on **every** property, the running API version does not expose property descriptions. That is a limit of the check, not a finding: mark the criterion `Not checked`, per the universal-finding rule.
 
 ## 3.7 Accessibility structural checks
 
-These parameterize from discovery: `minTarget` / `minText` are the library's own discovered minima when it states them (findings tier `error`), or the WCAG reference values 24 / 12 when it doesn't (findings tier `review`). Contrast is always `review`.
+These take their values from discovery:
 
-**`minTarget`'s WCAG reference is 24, not 44 — a real near-miss, not a hypothetical one.** WCAG 2.2 SC 2.5.8 (Target Size Minimum, **AA**) sets 24×24 CSS px. 44×44 is SC 2.5.5 (Target Size Enhanced, **AAA** — also the common mobile-touch-target figure), a stricter, different criterion this skill has never claimed to enforce. Against a real desktop-pointer web library, checking 44 flagged nearly every interactive component in the file — buttons, icon buttons, checkboxes, switches — as a single, undifferentiated wall of findings, which is exactly the universal-finding signature §11 says to investigate rather than report. Checking 24 (matching the project's own WCAG 2.2 AA accessibility floor) found none of those, because they all genuinely clear it. Caught before reporting, not after — the snippet's placeholder carried the wrong figure until this fix, and the house settings' `minTarget` is 24.
+| Value | Library states one | Library states none |
+|---|---|---|
+| `minTarget` | The library's own; findings `error` | WCAG reference 24; findings `review` |
+| `minText` | The library's own; findings `error` | Reference 12; findings `review` |
+| Contrast | Always `review` | Always `review` |
+
+**`minTarget`'s WCAG reference is 24, not 44: a real near-miss**. WCAG 2.2 SC 2.5.8 (Target Size Minimum, **AA**) sets 24×24 CSS px. 44×44 is SC 2.5.5 (Target Size Enhanced, **AAA**), also the common mobile-touch figure. It is a stricter, different criterion this skill has never claimed to enforce.
+
+On a desktop-pointer web library, checking 44 flagged nearly every interactive component: buttons, icon buttons, checkboxes, switches. That wall of findings is the universal-finding signature, to investigate rather than report. Checking 24, the project's WCAG 2.2 AA floor, found none, because they all clear it. The house settings' `minTarget` is 24.
 
 ### 3.7a Focus renders (ring diff, not overlay diff)
 
-**Engine:** `FCA.focusRings(set, { stateAxis, focus, rest })` in `scripts/probes.js` — the project's words for all three, or it skips. Each Focus variant is matched to the Rest sibling equal on every other axis, and their stroke signatures — paints and the four per-side weights, to depth 4 — must differ. §3.5a's scanner rule leaves Focus to this one: a ring is a stroke, not a fill.
+**Engine:** `FCA.focusRings(set, { stateAxis, focus, rest })` in `scripts/probes.js`. All three are the project's words, or it skips.
 
-> Some libraries draw focus as a dedicated `Stroke`/ring *layer* visible only on the Focus variant — the signature diff catches that too (the layer's strokes appear in one signature and not the other). If the diff fires on every Focus variant in the *library*, suspect the check (house pattern), per the universal-finding rule.
+Each Focus variant is matched to the Rest sibling equal on every other axis. Their stroke signatures must differ. A signature is the paints and the four per-side weights, to depth 4. The scanner rule in §3.5a leaves Focus to this one, since a ring is a stroke, not a fill.
+
+> Some libraries draw focus as a dedicated `Stroke` or ring *layer* visible only on the Focus variant. The signature diff catches that too: the layer's strokes appear in one signature and not the other. If the diff fires on every Focus variant in the *library*, suspect the check (a house pattern).
 
 ### 3.7b Target size and text size
 
-**Scanner, target size:** `audit.js` raises `accessibility|target` as a `review` for the variants under `minTarget` on either side, naming the smallest (figma-standard rule 26). Without `minTarget` in the settings it does not run.
+| Rule id | Raised when | Tier | Without the setting |
+|---|---|---|---|
+| `accessibility\|target` | A variant is under `minTarget` on either side; names the smallest (figma-standard rule 26) | `review` | No `minTarget`: does not run |
+| `accessibility\|small-text` | A text layer is under `minText` (house default 12); once per layer, naming the sizes and variants | `warning`, seen by users | No `minText`: does not run |
 
-**Scanner, text size:** `audit.js` raises `accessibility|small-text` as a `warning`, seen by users, once per text layer under `minText` (the house defaults give 12), naming the sizes and the variants; a text of mixed sizes is read by its smallest run, and disabled variants are exempt. Without `minText` it does not run. Until 2.51.0 this was the probe `FCA.textSizes`, which listed and left the finding to the reader.
+A text of mixed sizes is read by its smallest run, and disabled variants are exempt from `small-text`. It replaced the probe `FCA.textSizes`, which only listed sizes.
 
-> A visually small control can still meet the target via a larger invisible hit area — before reporting, check for a transparent hit-area frame around the shape (a common pattern), and skip components that are not interactive (a divider is allowed to be 1px tall). Disabled-state text is exempt from text-size and contrast minima.
+> A visually small control can still meet the target through a larger invisible hit area. Before reporting, check for a transparent hit-area frame around the shape, a common pattern. Skip components that are not interactive: a divider may be 1px tall. Disabled-state text is exempt from text-size and contrast minima.
 
 ### 3.7c Text-on-surface contrast (resolved values, every mode)
 
-**Scanner, the mode on screen:** `audit.js` raises `accessibility|contrast` as an error for each text layer over an opaque surface inside the same component (a layer at opacity 0 and its children are skipped, unless the opacity is bound to a variable that is not 0 in every mode, which another mode may show; that test runs live only, so a headless run judges every bound 0), in the mode each variant resolves to, the text's alpha blended over the surface, 4.5:1 or 3:1 for large text (24px, or 18.66px at weight 700), disabled variants exempt. It also feeds the Contrast measure and the score's Accessibility dimension. It is the one contrast engine: its luminance is `tools/shared/colour.js`'s, held to it character for character by `tools/shared/test-colour.mjs`. What one reading cannot see stays the agent's, as a `review`: every other mode, and a translucent surface (which the scanner does not judge).
+**Scanner, the mode on screen**. `audit.js` raises `accessibility|contrast` as an `error`. It judges each text layer over an opaque surface inside the same component, in the mode each variant resolves to.
 
-> Report the pairing and the ratio — resolve the two bound variables to token names so the report says *which tokens* fail together. The fix usually belongs to the token, not the component; never "fix" contrast by unbinding or rebinding a semantic color. Semi-transparent overlay fills and blended alpha make the naive nearest-solid-ancestor model approximate — treat borderline ratios (within ~0.3 of the threshold) as "verify by eye", and skip disabled-state variants entirely.
+- **Thresholds**: 4.5:1, or 3:1 for large text (24px, or 18.66px at weight 700).
+- **Alpha**: the text's alpha is blended over the surface.
+- **Exempt**: disabled variants.
+- **Opacity 0**: a layer at opacity 0 and its children are skipped. The exception is an opacity bound to a variable that is not 0 in every mode, which another mode may show. That test runs live only, so a headless run judges every bound 0.
 
-**Check the other modes, not only the one resolved.** A paint's `color` is the value cached for the mode a variant resolves to, so the scanner checks that mode and is silent about the rest. The mode nobody has open is exactly the one that ships broken. For each other mode, resolve the pair's two bound variables in it with `FCA.resolveInMode` and take the ratio with `contrastRatio` from `tools/shared/colour.js` (node).
+It also feeds the Contrast measure and the score's Accessibility dimension. It is the one contrast engine. Its luminance is `tools/shared/colour.js`'s, held to it character for character by `tools/shared/test-colour.mjs`. What one reading cannot see stays the agent's, as a `review`: every other mode, and a translucent surface, which the scanner does not judge.
+
+> Report the pairing and the ratio. Resolve the two bound variables to token names, so the report says *which tokens* fail together. The fix usually belongs to the token: never "fix" contrast by unbinding or rebinding a semantic colour. Semi-transparent fills make the nearest-solid-ancestor model approximate. Treat ratios within about 0.3 of the threshold as "verify by eye", and skip disabled-state variants entirely.
+
+**Check the other modes, not only the one resolved**. A paint's `color` is cached for the mode a variant resolves to, so the scanner is silent about the rest. The mode nobody has open is the one that ships broken. For each other mode, resolve the pair's two bound variables with `FCA.resolveInMode`. Take the ratio with `contrastRatio` from `tools/shared/colour.js` (node).
 
 ```js
 // Enumerate the modes to iterate, then re-resolve each failing pair per mode.
@@ -217,260 +360,374 @@ const cols = await figma.variables.getLocalVariableCollectionsAsync();
 return cols.map(c => ({ collection: c.name, key: c.key, modes: c.modes.map(m => m.name) }));
 ```
 
-For each mode, resolve the two bound variables explicitly rather than re-reading the cached paint. **Engine:** `FCA.resolveInMode(varId, modeName)` in `scripts/probes.js` — one bound variable in one mode, following each alias **by mode name**, falling back to the first mode only where the target has no mode of that name; it returns the value with its alpha, or `undefined` for a missing variable or a chain that does not end within six hops. Its lookups are injectable, which is how the test proves the dark value is not the light one.
+**Engine:** `FCA.resolveInMode(varId, modeName)` in `scripts/probes.js`: one bound variable in one mode, never the cached paint. It follows each alias **by mode name**, falling back to the first mode only where the target has no mode of that name. It returns the value with its alpha. It returns `undefined` for a missing variable, or a chain that does not end within six hops. Its lookups are injectable, which is how the test proves the dark value is not the light one.
 
-**Follow the alias by mode NAME, not to the target's first mode — measured, and getting this wrong is invisible.** A `VariableAlias` must be followed before it yields a colour: treating the alias object as one produces `NaN`, which passes every threshold and reports clean. But following it into `modes[0]` is worse, because it returns a real colour that is simply the wrong one. On a live library every sampled semantic token resolved its **Dark** value to the **Light** colour that way — `Colour/Text/Neutral/inverse` came back near-white in dark mode instead of near-black — so every dark-mode ratio was computed from light-mode colours and Light and Dark reported identical ratios. That reads as a theme-invariant token rather than as a broken resolver.
+**Follow the alias by mode NAME, not to the target's first mode**. An alias object read as a colour gives `NaN`, which passes every threshold. Following it into `modes[0]` is worse: it returns a real colour that is the wrong one. On one live library, every sampled semantic token resolved its Dark value to the Light colour that way. Light and Dark then reported identical ratios, which reads as a theme-invariant token, not a broken resolver.
 
-**The resolved value is rgba — never drop `a`.** Measured 2026-08-13: a soft-surface token resolving to its palette's near-black at low alpha was compared against an opaque near-black fill, returning ratio 1.0 for a pairing that renders at roughly 15:1. A translucent token must be alpha-composited over its actual backdrop before luminance is computed; where the backdrop is unknown, report the pair as verify-by-eye rather than computing a confident wrong number. This is the concrete, variable-resolution form of the semi-transparent caveat below.
+**The resolved value is rgba: never drop `a`**. A soft-surface token at low alpha, compared as opaque near-black, returned 1.0 for a pair rendering at about 15:1. Composite a translucent token over its real backdrop before computing luminance. Where the backdrop is unknown, report the pair as verify-by-eye rather than a confident wrong number.
 
-Figma provides no mapping between one collection's modes and another's, so name matching is the available heuristic. Where a target collection has no mode of that name — a single-mode primitive collection, say — the first mode is correct, which is why the fallback stays. Report a failure as *token pair + mode*: the same pairing passing in one mode and failing in another is the finding, and a report naming only the pairing sends the maintainer to a component that looks correct on screen.
-
----
+Figma maps no collection's modes to another's, so name matching is the available heuristic. Where a target has no mode of that name (a single-mode primitive collection, say), the first mode is correct: that is why the fallback stays. Report a failure as *token pair + mode*. A pairing passing in one mode and failing in another is the finding. Naming only the pairing sends the maintainer to a component that looks correct on screen.
 
 ## 3.8 Text property coverage, and the overflow question
 
-**One walk, both questions** — which text layers have no property (the gap), and which have one but cannot grow (the overflow risk). They were two sections until 2026-08-14, and splitting them is what hid a defect for as long as it did: the older §3.8 ended in `.filter(t => t.boundToProp)`, returning **only** layers that already had a property, so the population the conventions §7 rule is actually about was discarded before anything could look at it. A rule with no detector is not a check, and a check that discards the rule's subject is worse than none — it occupies the space where coverage appears to be.
+**One walk, both questions**: which text layers have no property (the gap), and which have one but cannot grow (the overflow risk). Never filter the walk to layers that already have a property. An older walk did, and so discarded the very population conventions §7 is about. A check that discards the rule's subject is worse than none: it fills the space where coverage appears to be.
 
-**Engine:** `FCA.textCoverage(set)` in `scripts/probes.js` — one walk returning `missing` (a text layer with no `characters` property) and `overflow` (one with a property, `textAutoResize: NONE` and no `ENDING` truncation), each with variant, layer, id, character count and a 40-character sample. It stops at instances (that component's concern), excludes text inside a `SLOT` (ruling 2026-08-13: slot content needs no property), and handles a plain `COMPONENT` as itself. The prose carried this walk twice — the second block was the first one's `missing` half, under a comment saying the first still had the plain-component bug it did not have; they are one function now.
+**Engine:** `FCA.textCoverage(set)` in `scripts/probes.js`. One walk returns two lists, each row with variant, layer, id, character count and a 40-character sample:
 
-`overflow` surfaces *setup*, not behaviour. Turn each row into a question in the report ("what should `Label text` do at 40 characters?") rather than a verdict — truncate, wrap or grow is a design decision. `missing` is the gap check, and everything below governs it.
+| List | A text layer that |
+|---|---|
+| `missing` | Has no `characters` property |
+| `overflow` | Has a property, `textAutoResize: NONE` and no `ENDING` truncation |
 
-**Status of the `missing` half: walked, both directions, 2026-08-14 — promoted from candidate to check.** (`overflow` is inherited unchanged from the pre-merge §3.8 and carries no walk of its own.) Silent on five components that expose their text correctly, including `Button` across all 54 variants and the 7-variant `Text input`. Silent on `Avatar` *after* its `Initials text` property was added, having fired on it before — the same component answering both ways across one fix is the strongest fixture available, because it holds everything except the defect constant. The library sweep hit **7 of 71 sets (10%)**, which is the lumpy distribution a working check produces rather than the universal-finding signature §11 warns about.
+It stops at instances (that component's concern) and excludes text inside a `SLOT` (a maintainer ruling: slot content needs no property). It handles a plain `COMPONENT` as itself.
 
-**The sweep's own results are the best argument for the agent layer.** Four of the seven hits are cleared on sight by the static-by-design exception, and two of them are the exact examples this file already names: `Calendar`'s 28 weekday `Label` layers (`Mo`, `Tu`, …) and `_Label / Default`'s `Asterisk` (`*`), alongside two `Optional` markers. A scanner-only version of this check would have reported all four as defects and taught the maintainer to skim the rest. The remaining three — an upload status `Caption`, a chat disclaimer `Caption`, and an empty-state `Title` and `Message` pair — are genuine judgement calls that route to **Decide**, not to a batch fix.
+The `overflow` list surfaces *setup*, not behaviour. Turn each row into a question in the report, not a verdict. Ask, for example, "what should `Label text` do at 40 characters?" Truncate, wrap or grow is a design decision. The `missing` list is the gap check, and the rest of this section governs it.
 
-**Still unexercised:** the `SLOT` exclusion. No component in that library holds text directly inside a slot in its main, so the branch ran but never had to suppress anything. It stays proven by the 2026-08-13 ruling that produced it, not by this walk.
+**The `missing` half is walked, both directions, and is a check, not a candidate**. (`overflow` carries no walk of its own.) It is silent on five components that expose their text correctly. They include `Button` across all 54 variants and the 7-variant text input. It went silent on `Avatar` after its `Initials text` property was added, having fired before. The same component answering both ways across one fix is the strongest fixture available.
 
-**Variance is evidence, not the trigger.** The obvious implementation compares a layer's `characters` across variants and flags only what differs — and that check cannot fire on a one-variant component or on text held identical across a set, which is where missing properties actually collect. Measured 2026-08-14: a single-variant message card holding a lorem paragraph with no property passed a full clean audit, and was caught only when a human went to write its description. Rank by `chars` and by whether the string reads like content, but do not gate on variance.
+The library sweep hit **7 of 71 sets (10%)**: the lumpy distribution a working check produces, not the universal-finding signature.
+
+**The sweep's results argue for the agent layer**. Four of the seven hits are static by design, cleared on sight. They are 28 calendar weekday labels (Mo, Tu, …), a label's asterisk (*) and two Optional markers. A scanner-only check would report all four and teach the maintainer to skim.
+
+The other three are judgement calls for **Decide**, not a batch fix. They are an upload status caption, a chat disclaimer caption, and an empty state's title and message.
+
+**Still unexercised: the `SLOT` exclusion**. No component in that library holds text directly inside a slot, so the branch never had to suppress anything. It rests on the maintainer ruling that produced it.
+
+**Variance is evidence, not the trigger**. The obvious build compares a layer's `characters` across variants and flags what differs. That cannot fire on a one-variant component, or on text held identical across a set, which is where missing properties collect. A one-variant message card with a lorem paragraph and no property once passed a clean audit. Rank by `chars` and by whether the string reads like content, but never gate on variance.
 
 What this deliberately does **not** flag, each cleared by the agent rather than assumed by the scanner:
 
-- **Text inside a `SLOT`** — replaced wholesale by the consumer (ruling 2026-08-13, conventions §7).
-- **Text owned by a nested `INSTANCE`** — the nested component's concern; the walk stops at instances.
-- **Static by design** — a value naming a fixed thing rather than carrying supplied content: weekday headings in a calendar, a mandatory-field asterisk, a currency symbol. A property here invites changing a value that has no business changing.
-- **Written by code at runtime** — a live readout such as `Uploading - 64%`, which no one types in Figma. **Rarer than it looks**; confirm rather than assume from the wording.
+| Not flagged | Why |
+|---|---|
+| Text inside a `SLOT` | Replaced wholesale by the consumer (a maintainer ruling, conventions §7) |
+| Text owned by a nested `INSTANCE` | The nested component's concern; the walk stops at instances |
+| Static by design | A value naming a fixed thing, not supplied content: calendar weekday headings, a mandatory-field asterisk, a currency symbol. A property invites changing what should not change. |
+| Written by code at runtime | A live readout such as `Uploading - 64%`, which no one types in Figma. **Rarer than it looks**: confirm rather than assume from the wording. |
 
-The separating question is **whether a consumer would ever legitimately set this string**, not whether it happens to vary today. A filename, a caption, a heading, a message, a person's initials: findings. `Mo Tu We Th Fr Sa Su`: not. Both exceptions are a minority, and an exclusion reached for freely swallows the findings the check exists to produce.
-
----
+The separating question is **whether a consumer would ever legitimately set this string**, not whether it varies today. A filename, a caption, a heading, a message, a person's initials: findings. `Mo Tu We Th Fr Sa Su`: not. Both exceptions are a minority. An exclusion reached for freely swallows the findings the check exists to produce.
 
 ## 3.8b Page organisation — category and page ordering
 
-**Moved to `figma-foundations-audit` on 2026-09-10** (its foundations scanner, figma-standard rule 11). This skill no longer checks page order and holds no walk for it; the heading stays so older cases that cite §3.8b still resolve. The lessons that section carried travelled with the check: compare with `localeCompare` and `sensitivity: "base"`, never `<`; furniture (cover, dividers) is excluded, not sorted; a category the project pins last is a setting (`pinnedLast`), not a violation; a page move is a safe, visible fix.
+**Moved to `figma-foundations-audit`** (its foundations scanner, figma-standard rule 11). This skill no longer checks page order and holds no walk for it; the heading stays so older cases citing §3.8b still resolve.
+
+The lessons travelled with the check:
+
+- compare with `localeCompare` and `sensitivity: "base"`, never `<`;
+- furniture (cover, dividers) is excluded, not sorted;
+- a category the project pins last is a setting (`pinnedLast`), not a violation;
+- a page move is a safe, visible fix.
 
 ## 3.8c Naming case — splits, and conformance to the recorded convention
 
-**The collision half moved to `figma-foundations-audit` on 2026-09-10**: whether two names in one name space differ only in case (figma-standard rule 19) is that skill's check, filed under its name. What stays here is the second question — conformance to the recorded case convention (figma-standard rule 18), which needs the project's carve-outs judged and is a session check. The script below classifies every name space for the convention half only, and reports no collision.
+Two questions that look like one:
 
-Two questions that look like one. **Whether a name space contains two names differing only in case** is preference-free and decidable here: it is **figma-standard rule 19**, it holds whatever convention a project picked, and for an exported name it is always a defect, because every export path lowercases and the two collapse into one token. **Which case the project uses** is a convention, and this skill does not know it and must not state it. Read it from the active project's context document (§3, language and naming); where the document is silent, cite **figma-standard rule 18** by handle and apply it as the default. Never restate that rule's text here or in a report — a copy freezes at the date it was written and, because a project document outranks house defaults, silently overrides the rule it copied.
+| Question | Owner |
+|---|---|
+| Does a name space hold two names differing only in case? (figma-standard rule 19) | `figma-foundations-audit`, filed under its name. This skill reports no collision. |
+| Do names conform to the recorded case convention? (figma-standard rule 18) | This skill, as a session check, since the project's carve-outs need judging |
 
-So the engine **classifies and never judges**. It returns the case shape of every segment and the minority members of each name space; the agent compares that against the hydrated convention and decides. Clause G's boundary in its usual place: the engine says what follows from the data, the agent says what the project wants.
+**figma-standard rule 19 is preference-free**. It holds whatever convention a project picked. For an exported name it is always a defect: every export path lowercases, and the two collapse into one token.
 
-**Engine:** `FCA.nameSpaces()` in `scripts/probes.js` gathers the name spaces — one per local variable collection, the text styles, the effect styles, and the components — and hands them to `FCA.classifyNameSpaces(spaces)` (tested), which returns per space the **minorities** (figma-standard rule 18's evidence: case shapes outnumbered at the same depth, with the majority's count and up to eight examples). `FCA.caseShape` classifies a segment as `lower`, `initial-cap`, `upper`, `camel-inner` or `mixed`, and a segment not starting with a letter as nothing. Moving it found one defect: the prose tested `camel-inner` before `upper`, and every acronym (`AI`, `WCAG`) matches the camel pattern, so `upper` — which its own comment named for exactly those — could never be returned.
+**Which case the project uses is a convention, and this skill must not state it**. Read it from the active project's context document (§3, language and naming). Where the document is silent, cite **figma-standard rule 18** by handle and apply it as the default. Never restate that rule's text here or in a report. A copy freezes when written and, since a project document outranks house defaults, silently overrides the rule it copied.
 
-**Walked 2026-08-20 against a live 19-page library, and the control pass is the reason this check is usable.** Run against the corrected library it should have been silent, and it fired four times — which is a finding about the check, per toolkit-standard §D 18, not about the file. Two were bugs and both are fixed in the engine:
+So the engine **classifies and never judges**. It returns the case shape of every segment and the minority members of each name space. The agent compares that with the convention and decides (clause G's boundary: the engine says what the data shows, the agent what the project wants).
 
-- **Segments with a leading digit were classified as `mixed`.** `Palette/Blue/9-source` has letters, so it escaped the non-alpha guard and became evidence of a case convention it cannot have. `Utils/white` and its two siblings were then reported as the minority against eight `N-source` leaves, all four correct. A segment that does not start with a letter is now excluded rather than classified.
-- **All non-leaf segments were pooled.** In `Heading/md-medium/size` the group is capitalised and the size is not, both correctly, and pooling them reported 54 lowercase against 54 capitalised in one collection — the convention flagged as its own violation. Bucketing by depth fixed it. Worth naming because the first draft claimed to have fixed exactly this by splitting leaf from the rest, and had only moved it one level in.
+**Engine:** `FCA.nameSpaces()` in `scripts/probes.js` gathers the name spaces: one per local variable collection, the text styles, the effect styles and the components. It hands them to `FCA.classifyNameSpaces(spaces)` (tested). Per space, that returns the **minorities**, figma-standard rule 18's evidence. A minority is a case shape outnumbered at the same depth, with the majority's count and up to eight examples.
 
-After both fixes: silent across all five variable collections and both style types. The two surviving hits on components were correct, and were the two shapes this check then told apart — **one real split** (a `switch` graphic beside the `Switch` component set, two components differing only in case; since 2.35.0 that half is figma-foundations-audit's alone) and **one legitimate minority** (20 lowercase icon and graphic names against 22 capitalised components, which is the imported-asset carve-out).
+`FCA.caseShape` classifies a segment as lower, initial-cap, `upper`, `camel-inner` or mixed.
 
-- **A minority is a candidate, never a finding.** Asset names imported from an icon set sit in the minority permanently and legitimately, and `Elevation/Raised` is a capitalised leaf that figma-standard rule 18 carries as an explicit allowlist. Check the context document's carve-outs before reporting one.
-- **A split in an *exported* name space — variables, styles — is a defect every time**, needing no convention to interpret: the two names become one token downstream. figma-standard rule 19's evidence is a project that carried such a split across several library versions with nothing measuring it.
-- **A split among *component* names is advisory**, not a figma-standard rule 19 violation: components are not exported as tokens, so nothing collapses. It is still worth reporting, because a picker search returns both and a code-gen mapping cannot tell them apart.
-- **Report the majority count beside the minority.** A maintainer deciding whether five is a defect or a carve-out needs to see that the majority is 268; a finding naming only the five invites the wrong call.
+Test `upper` before `camel-inner`. Every acronym (AI, WCAG) matches the camel pattern, so the other order never returns `upper`.
+
+**The control pass is what makes this check usable**. On a corrected live 19-page library it should have been silent, and it fired four times. That is a finding about the check (toolkit-standard §D 18), not the file. Two were bugs, both fixed in the engine:
+
+- **A segment that does not start with a letter is excluded, not classified**. `Palette/Blue/9-source` has letters, so it was classified `mixed`. It became evidence of a convention it cannot have. Correct names were then reported as the minority.
+- **Segments are bucketed by depth, never pooled**. In `Heading/md-medium/size` the group is capitalised and the size is not, both correctly. Pooling reported 54 lowercase against 54 capitalised: the convention flagged as its own violation. Splitting only leaf from the rest moved the bug one level in.
+
+After both fixes it was silent across all five variable collections and both style types. The two surviving hits on components were correct, and were the two shapes the check tells apart. One was a real split: a `switch` graphic beside the `Switch` set (now the foundations audit's half). The other was a legitimate minority: 20 lowercase icon names against 22 capitalised components, the imported-asset carve-out.
+
+- **A minority is a candidate, never a finding**. Names imported from an icon set sit in the minority permanently and legitimately. `Elevation/Raised` is a capitalised leaf that figma-standard rule 18 allowlists. Check the context document's carve-outs before reporting one.
+- **A split in an *exported* name space (variables, styles) is a defect every time**. It needs no convention to interpret: the two names become one token downstream.
+- **A split among *component* names is advisory**, not a figma-standard rule 19 violation. Components are not exported as tokens, so nothing collapses. Still report it: a picker search returns both, and a code-gen mapping cannot tell them apart.
+- **Report the majority count beside the minority**. A maintainer deciding whether five is a defect or a carve-out needs to see the majority is 268.
 
 ## 3.9 Detached-frame candidates (real instances, not copies)
 
-Scan non-canonical pages for frames whose names collide with real component names. **Confirmed false-positive trap**: "non-canonical" is not just "doesn't start with the usual marker" — a library may use other prefixes for in-progress or grouped work (one file marks WIP component pages with a status marker). Treating an unfamiliar prefix as automatically non-canonical produces a wall of false positives from that page's own internal substructure. Read the full set of component-bearing page prefixes from `componentPages` (or, where it is `[TBD]`, ask, or note every prefix seen among pages that contain `COMPONENT_SET`/`COMPONENT` nodes) rather than hardcoding one. Exclude the pages `exemptPages` names outright — a cover is decorative, not a product surface, and any name collision there is exempt.
+Scan non-canonical pages for frames whose names collide with real component names.
 
-**Engine:** `FCA.detachedScan(exemptPages)` in `scripts/probes.js`. Pass one loads every page and collects the names of top-level components (parent a page, section or frame) and the prefixes of pages that hold them; pass two loads each candidate page (`FCA.isCandidatePage`: not among the `exemptPages` the settings name — none by default — and not sharing a component page's prefix) and returns each frame or group named like a component (`FCA.detachedSuspects`). The prose block read a page's children **before** `loadAsync`, which under dynamic-page access sees an unloaded page as empty; the engine loads first.
+**Confirmed false-positive trap: "non-canonical" is not "lacks the usual marker"**. A library may use other prefixes for in-progress or grouped work, such as a status marker on WIP pages. Treating an unfamiliar prefix as non-canonical floods the report from that page's own substructure.
 
-Candidates only — judgment-protocol §4 confirms each: check the ancestry chain (`node.parent` walked up) for a `COMPONENT_SET`/`COMPONENT` ancestor before treating a name collision as a real detached duplicate. A frame that's internal substructure of a *different* legitimate component (reusing a common name like "Divider" for its own sub-part) is not a finding.
+- Read the full set of component-bearing page prefixes from `componentPages`.
+- Where it is `[TBD]`, ask, or note every prefix among pages holding `COMPONENT_SET` or `COMPONENT` nodes.
+- Never hard-code one prefix.
+- Exclude the pages `exemptPages` names outright. A cover is decorative, not a product surface, so a name collision there is exempt.
+
+**Engine:** `FCA.detachedScan(exemptPages)` in `scripts/probes.js`, in two passes:
+
+1. Load every page. Collect the names of top-level components (parent a page, section or frame), and the prefixes of the pages holding them.
+2. Load each candidate page and return each frame or group named like a component (`FCA.detachedSuspects`). A candidate page (`FCA.isCandidatePage`) is not in `exemptPages` (none by default) and shares no component page's prefix.
+
+Always load a page before reading its children. Under dynamic-page access, an unloaded page reads as empty.
+
+Candidates only: judgment-protocol §4 confirms each. Before treating a name collision as a detached duplicate, walk `node.parent` up for a `COMPONENT_SET` or `COMPONENT` ancestor. A frame that is substructure of a *different* legitimate component is not a finding. An example is one reusing a common name like "Divider" for its own part.
 
 ## 3.10 Hidden / orphan layers
 
-**Engine: `scanner/audit.js`**, the `structure|hidden` rule — a layer with `visible: false` and no `visible` property reference, every variant, never inside an instance.
+**Engine: `scanner/audit.js`**, the `structure|hidden` rule. It raises a layer with `visible: false` and no `visible` property reference, in every variant, never inside an instance.
 
 ## 3.10a Disabled paints, strokes and effects (hygiene)
 
-A paint toggled off in the panel stays in the array with its own `visible: false`. Distinct from 3.10, which finds hidden *nodes*; this finds dead *style entries* on visible nodes.
+A paint toggled off in the panel stays in the array with its own `visible: false`. Distinct from 3.10, which finds hidden *nodes*: this finds dead *style entries* on visible nodes.
 
-**Engine:** `FCA.disabledPaints(set)` in `scripts/probes.js` — each `fills`, `strokes` or `effects` entry with `visible: false`, by variant, layer, property and index, never inside an instance.
+**Engine:** `FCA.disabledPaints(set)` in `scripts/probes.js`. It returns each fills, strokes or effects entry with `visible: false`, by variant, layer, property and index. It never looks inside an instance.
 
-`Array.isArray` is not optional, and this is measured rather than reasoned: on a probe with per-character fills, the same walk without the guard **threw and returned `[]`**, losing the disabled fill it would otherwise have reported. The throw itself surfaces as a failed `figma_execute` — the danger is that this walk is batched per page group, so one failed batch returns nothing while the rest succeed, and an audit that does not check every call presents the union of the survivors as complete.
+**`Array.isArray` is not optional: measured**. On a probe with per-character fills, the walk without the guard **threw and returned `[]`**, losing the disabled fill. The throw shows as a failed `figma_execute`. The danger is batching: one failed batch returns nothing while the rest succeed. An audit that does not check every call presents the survivors as complete.
 
 ## 3.10b No GROUP nodes inside components
 
-**Engine: `scanner/audit.js`**, the `structure|group` rule — every `GROUP` node in every variant, never inside an instance.
+**Engine: `scanner/audit.js`**, the `structure|group` rule. It raises every `GROUP` node in every variant, never inside an instance.
 
-`BOOLEAN_OPERATION` nodes report as their own type, not `GROUP`, and are legitimate inside icons — do not widen this to "any non-frame container". **Walked 2026-08-08, three directions:** silent across 55 real components (the type census contained no `GROUP` at all), fires on a probe containing one, and correctly ignores a probe whose only container is a `BOOLEAN_OPERATION`.
+`BOOLEAN_OPERATION` nodes report as their own type, not `GROUP`, and are legitimate inside icons. Never widen this to "any non-frame container".
+
+**Walked, three directions**. It is silent across 55 real components, whose type census holds no `GROUP`. It fires on a probe holding one. It ignores a probe whose only container is a `BOOLEAN_OPERATION`.
 
 ## 3.10c Unused component properties
 
-A property no layer references. Walked against a real 54-variant set on 2026-08-08 and returned `[]`, correctly.
+A property no layer references. Walked against a real 54-variant set, it correctly returned `[]`.
 
-**Engine: `scanner/audit.js`**, the `properties|unused` rule — every reference in every variant collected, and each definition that is neither `VARIANT` nor `SLOT` and that no layer references reported as an `error` naming its consequence.
+**Engine: `scanner/audit.js`**, the `properties|unused` rule. It collects every reference in every variant. Each definition that is neither `VARIANT` nor `SLOT`, and that no layer references, is an `error` naming its consequence.
 
-**The trap this walk exists to avoid, now confirmed against a real file.** Variant axes appear in `componentPropertyDefinitions` and are never referenced by any layer, because Figma resolves them at the set level. On the control run the same walk *without* the `type !== "VARIANT"` filter returned `["Size", "Role", "Disabled", "State"]` — every axis of a component the maintainer considers correct, and by extension every axis of every set in the library. Conventions §11 calls a finding on everything evidence the check is wrong; this is the check that would have produced it. Filter before comparing.
+**Trap 1: variant axes**. They appear in `componentPropertyDefinitions`, and no layer ever references them, because Figma resolves them at the set level. On the control run, the walk without the `type !== "VARIANT"` filter returned `["Size", "Role", "Disabled", "State"]`. Those are every axis of a correct component, and so of every set in the library. Filter before comparing.
 
-**A second, structurally identical trap, found on a real file 2026-08-10: `SLOT` properties fail the same way, for the same reason.** A `SLOT` node is filled by whatever a consumer places inside it — nothing in the surrounding tree carries a `componentPropertyReferences` entry pointing back at the slot property, because there is no *layer* to reference it, only the slot's own presence. A two-variant set with a genuinely conditional `Menu slot` (a `SLOT` node correctly present only on the variant where it should show, absent on the other) flagged `unused` under the pre-fix filter — confirmed by direct inspection: the `SLOT` node existed exactly where expected, conditionally, correctly built. `type !== "VARIANT"` alone was never enough; the filter needed both exclusions from the start, and shipped with only one for several versions before this file's own audit caught it on a real set.
+**Trap 2: `SLOT` properties fail the same way**. A `SLOT` node is filled by whatever a consumer places inside it. No layer carries a `componentPropertyReferences` entry pointing back at the slot property: only the slot's own presence. A two-variant set with a correctly conditional `Menu slot`, present only where it should show, was flagged `unused`. The filter needs both exclusions.
 
-**`unused` is an `error`, and the consequence is the whole component.** Figma **ignores the component at publication** when it declares a property applied to no layer — maintainer-confirmed 2026-08-08 and reproduced live. Not a dropped property: consumers never receive the component at all, while the publish reports success. Figma flags it with a warning icon in the properties panel, visible only to someone already inside the file. Report it with that consequence stated — "this component will not publish" is the sentence that gets it fixed; "unused property" is the one that gets it deferred.
+**`unused` is an `error`, and the consequence is the whole component**. Figma **ignores the component at publication** when it declares a property applied to no layer (maintainer-confirmed, reproduced live). Consumers never receive the component, while the publish reports success. Figma's warning icon in the properties panel is visible only to someone inside the file. Report it with the consequence: "this component will not publish" gets it fixed; "unused property" gets it deferred.
 
-**A second check lived here until 1.6.2 and should never have been written.** It compared each variant's exposed properties against the union across the set, reporting any variant "missing" one — a rule nobody had asked for, invented from a misreading of the requirement above. The real requirement was always the one this check now implements: a property applied to *no layer at all*. On the known-good Button the invented check flagged **54 of 54 variants**, and every flag was correct design: 30 expose a 20px icon swap, 15 expose the 16px one because they are the small size, and 9 expose nothing because `State=Loading` shows a spinner. Properties are **conditional on an axis value** — the sparse-grid principle applied to properties rather than variants.
+**Never reintroduce a per-variant "missing property" check**. One compared each variant's exposed properties against the set's union. On the known-good Button it flagged **54 of 54 variants**, every one correct design. 30 expose a 20px icon swap, 15 the 16px one (the small size), and 9 nothing (`State=Loading` shows a spinner). Properties are **conditional on an axis value**: the sparse-grid principle applied to properties.
 
-It is not salvageable as a script. Telling *conditional-by-design* from *lost-in-a-rename* requires knowing which axes govern content — `Size` and `State` do on Button, `Role` does not — and that is judgement. Do not reintroduce it.
+It cannot be salvaged as a script. Telling conditional-by-design from lost-in-a-rename needs to know which axes govern content: `Size` and `State` do on Button, `Role` does not. That is judgement.
 
 ## 3.10cc A layer wired in some variants and not in others
 
-**The mirror image of 3.10c, and the one it cannot see.** 3.10c asks whether a
-declared property is used; it collects every reference in the set into one set
-of keys, so a property is "used" the moment a *single* layer anywhere points at
-it. A component set can therefore declare `Label text`, have one variant wire
-its label to it, and leave the other hundred labels hard-coded — and this file
-reports the set clean, because the property is used, every text node has a
-style, every font field is bound and nothing is a raw value. Nothing is wrong
-with any one layer. What is wrong is that its twins disagree.
+**The mirror image of 3.10c, and the one it cannot see**. 3.10c collects every reference in the set into one set of keys. A property is "used" the moment a *single* layer points at it.
 
-Read the other direction. Within one set, for each layer, for each of the three
-reference kinds (`characters`, `mainComponent`, `visible`): count the variants
-where it carries a reference and the variants where it does not. Report only
-when **both** are non-empty. That guard is what makes the check quiet enough to
-run:
+So a set can declare `Label text`, wire one variant's label, and leave a hundred labels hard-coded. 3.10c reports that set clean. Nothing is wrong with any one layer; what is wrong is that its twins disagree.
 
-- a layer no variant wires — a spinner, a static caption, a divider — is
-  `off`-only and never fires, so the file's deliberate static content is not
-  swept up;
-- a layer every variant wires is `on`-only and never fires;
-- a layer that exists in only some variants is counted only where it exists, so
-  an error message present under `Validation=Error` alone is not a finding.
+Read the other direction. Within one set, take each layer and each reference kind (`characters`, `mainComponent`, `visible`). Count the variants where it carries a reference and where it does not. Report only when **both** counts are non-empty. That guard keeps the check quiet:
 
-**Key by PATH, never by name.** This is the whole check, and keying by name
-failed on the first live sweep: one variant of a text field holds four layers
-called `Label` — the label part's instance, the text inside it, the field's
-static placeholder and the error message's text — and a name key collapsed all
-four into one 9-on/9-off finding, on three different components, every one of
-them wrong. The path below the variant root is what a twin shares across
-variants; the root's own name is left out, because it *is* the variant name.
+- a layer no variant wires (a spinner, a static caption, a divider) is off-only and never fires, so deliberate static content is not swept up;
+- a layer every variant wires is on-only and never fires;
+- a layer in only some variants is counted only where it exists, so an error message present only under `Validation=Error` is not a finding.
 
-**Give same-named siblings an ordinal.** A dialog footer holds two layers both
-called `Button`: the primary, always visible, and the secondary, wired to a
-boolean. They share a path, so the path alone reads them as one layer wired in
-half its variants — the second false positive of that same sweep. `Button` and
-`Button[2]` tell present twins apart rather than dropping the path and losing
-the coverage.
+**Key by PATH, never by name**. One text field variant holds four layers called `Label`: the label part's instance, its text, the static placeholder and the error text. A name key collapsed all four into one 9-on/9-off finding, on three components, all wrong. The path below the variant root is what a twin shares across variants. The root's own name is left out, because it *is* the variant name.
 
-With both refinements the sweep over an 88-set library went from four findings,
-all false, to one, which was real and which a maintainer had to find by eye.
+**Give same-named siblings an ordinal**. A dialog footer holds two layers called `Button`. The primary is always visible; the secondary is wired to a boolean. They share a path, so the path alone reads them as one layer wired in half its variants. The names `Button` and `Button[2]` tell present twins apart without losing the coverage.
 
-**A path is where a layer sits, not what it is.** The ordinal assumed child
-order is stable across a set's variants, and it is — but the *set* of children
-is not, and when one is missing the same path names a different layer. Five
-rows on one 120-set library, all false, in two shapes. A Button's `Loading`
-variants hold one `Icon container` in `Content` — the spinner, correctly wired
-to nothing — where every other variant holds the left icon, a label and the
-right icon; the path named the spinner in 18 variants and the left icon in 90,
-and the row read "wired to nothing in 18". An input whose leading icon exists
-only when it has a value made `Field > Icon container` the chevron in the empty
-variants and the leading icon in the filled ones. The tell was in the data: the
-unwired variants fell exactly on one axis value, which is a design's signature.
-So a layer is keyed by its path *and* what it is — its type, and for an
-instance the names of what it holds — and, for the `visible` kind only, whether
-it is its parent's only child: a boolean cannot hide the only child of a
-container without emptying it, so an icon that stands alone in `Icon only`
-variants and beside a label elsewhere is two slots. That last is a class, not
-an exemption: a wrapper's only child wired in six variants and forgotten in
-four still fires, as `tests/test-audit.mjs` shows. The genuine finding that
-motivated the check — a label whose text reference was lost at two sizes — is
-the same layer in every variant and still fires with the same counts.
+With both refinements, a sweep of an 88-set library went from four findings, all false, to one, which was real. A maintainer had found it by eye.
 
-*Why it exists:* a `Button` drawn at three sizes was merged into one set, and
-the three `Label text` properties collapsed into one. The `md` and `sm` labels
-lost their `characters` reference in the merge — 36 of 108 still bound, 72 wired
-to nothing — and every check in this file passed over it. The maintainer found
-it by eye and said so. A defect class that survives a scan is only a defect
-class until someone writes the check; after that it is a line of output.
+**A path is where a layer sits, not what it is**. Child order is stable across a set's variants, but the *set* of children is not. When one is missing, the same path names a different layer. One 120-set library gave five false rows, in two shapes:
+
+- A Button's `Loading` variants hold one `Icon container` in `Content`, the spinner, wired to nothing. The other variants hold the left icon, a label and the right icon. The path named the spinner in 18 variants and the left icon in 90.
+- An input whose leading icon exists only with a value made `Field > Icon container` the chevron when empty and the leading icon when filled.
+
+The tell was in the data: the unwired variants fell exactly on one axis value, a design's signature.
+
+So a layer is keyed by its path *and* what it is. That is its type, and for an instance the names of what it holds. For the `visible` kind only, the key adds whether it is its parent's only child. A boolean cannot hide a container's only child without emptying it. So an icon alone in `Icon only` variants and beside a label elsewhere is two slots.
+
+That last is a class, not an exemption: a wrapper's only child wired in six variants and forgotten in four still fires (`tests/test-audit.mjs`). The motivating finding still fires with the same counts: a label whose text reference was lost at two sizes, the same layer in every variant.
+
+*Why it exists:* a `Button` drawn at three sizes was merged into one set, and three `Label text` properties collapsed into one. The `md` and `sm` labels lost their `characters` reference: 36 of 108 still bound, 72 wired to nothing. Every other check passed over it, and the maintainer found it by eye.
 
 ## 3.10d Instances whose main component is gone
 
-**Engine:** `FCA.orphans(set)` in `scripts/probes.js` (tested with stand-in nodes). Per instance, via `getMainComponentAsync()`: no main is an orphan; a main with a parent is healthy; a parentless main with no key is a local main detached from the document; a parentless main **with** a key is verified with `figma.importComponentByKeyAsync`, once per key with one retry, and only a failure on both tries is reported. It never descends into an instance.
+**Engine:** `FCA.orphans(set)` in `scripts/probes.js`, tested with stand-in nodes. It never descends into an instance. Per instance, through `getMainComponentAsync()`:
 
-**Walked 2026-08-08, both directions, and the original rule was wrong.** `!main` alone never fires: removing a main component leaves `getMainComponentAsync()` still returning it, with `removed === false` and still findable by id. What changes is that it loses its parent. So the test became `!main || !main.parent`.
+| Main | Verdict |
+|---|---|
+| None | Orphan |
+| Has a parent | Healthy |
+| No parent, no key | A local main detached from the document: orphan |
+| No parent, has a key | Verify with `figma.importComponentByKeyAsync`, once per key with one retry. Report only a failure on both tries. |
 
-**That fix was itself wrong, found on a real audit 2026-08-10 and confirmed by hand against the maintainer's correction.** `!main.parent` is not proof of orphaning — it is also exactly what a **perfectly healthy remote component** looks like when its own source file is not connected in the current bridge session: the plugin has no local visibility into that file's page tree, so the parent chain reads as null regardless of whether the component is fine. Four instances of a remote icon library — the icon and its default swap value, used across several sets — were all flagged this way. Every one resolved cleanly via `figma.importComponentByKeyAsync(main.key)` on the first correctly-isolated retry, proving they were never broken. The maintainer caught it by direct knowledge of the source file, not by any report signal.
+**`!main` alone never fires: walked, both directions**. Removing a main leaves `getMainComponentAsync()` still returning it, with `removed === false`, still findable by id. What changes is that it loses its parent. So the local test is `!main || !main.parent`.
 
-This also means the 1.7.4 validation — "37 of 40 real instances were remote and none was flagged, because a remote main keeps its parent" — was true only because that session's remote source file happened to be connected too, giving the plugin local visibility it normally would not have. The measurement was real; the generalisation drawn from it was not, and nothing before this walk had a fixture where the source file was disconnected. **The corrected rule gates on `main.key`:** absent a key, `!main.parent` alone is trustworthy (the original, narrower case this check was built for). Present a key, a null parent means only "not verified yet" — resolve it live before deciding. A resolution failure is itself not instant proof either: three back-to-back `importComponentByKeyAsync` calls timed out in the same session that then had every one of them succeed on an isolated retry, most likely a rate-limit or bridge-saturation artefact rather than a broken component. Retry once, isolated, before reporting a remote key as failed.
+**`!main.parent` is not proof of orphaning for a remote main**. It is also how a healthy remote component looks when its source file is not connected in the current bridge session. The plugin cannot see that file's page tree, so the parent reads null. Four instances of a remote icon library were flagged this way. Every one resolved through `figma.importComponentByKeyAsync(main.key)` on an isolated retry.
+
+An earlier validation found no false hits only because that session happened to have the remote source file connected. **So the rule gates on `main.key`:**
+
+- **No key**: `!main.parent` alone is trustworthy, the narrow case this check was built for.
+- **A key**: a null parent means only "not verified yet". Resolve it live before deciding.
+- **A failed resolution is not instant proof**. Three back-to-back import calls once timed out and then all succeeded on isolated retries, most likely a rate limit or a saturated bridge. Retry once, isolated, before reporting a remote key as failed.
 
 ## 3.10f Text nodes with a fixed height
 
 Text that cannot grow clips instead of reflowing. The scanner finds fixed-height text; the agent clears the four legitimate exceptions in conventions §7.
 
-**Engine:** `FCA.fixedText(set)` in `scripts/probes.js` — a text node with `textAutoResize: NONE`, not `FILL` vertically, and not truncating (`ENDING` or a `maxLines`), reported with its resize mode, vertical sizing, whether its parent is auto-layout, height and character count. Never inside an instance.
+**Engine:** `FCA.fixedText(set)` in `scripts/probes.js`. It raises a text node with `textAutoResize: NONE`, not filling vertically, and not truncating (`ENDING` or a max line count). Each hit reports the resize mode, vertical sizing, whether the parent is auto-layout, height and character count. Never inside an instance.
 
-Four things this deliberately does **not** flag, each of which would otherwise fire across a whole library:
+Four things it deliberately does **not** flag, each of which would otherwise fire across a whole library:
 
-- `textAutoResize: "TRUNCATE"`, `textTruncation: "ENDING"` or a `maxLines` value — clipping is the intended behaviour, and reporting it proposes breaking a designed truncation.
-- `layoutSizingVertical: "FILL"` — the text is stretching by instruction, not stuck.
-- `layoutSizingVertical` on a node with no auto-layout parent, where the property is meaningless — it reports `FIXED` regardless. **This exclusion was documented and not implemented until 1.7.2**, and a probe caught it: a text node with `textAutoResize: "HEIGHT"` inside a plain frame was flagged, because the check ORed the two properties instead of gating the second on the parent. Reading both is not enough; the read of `layoutSizingVertical` has to be conditional. A genuinely fixed-height node in a plain frame still flags — verified separately, so the fix does not silence the real case.
-- **`layoutSizingVertical: "FIXED"` under a genuine auto-layout parent, when `textAutoResize` is `HEIGHT` or `WIDTH_AND_HEIGHT`.** Found on a real file 2026-08-10, not reasoned about: 33 instances of one layer (`Value`, inside `Menu button`) were flagged, every one a false positive. The node's own `textAutoResize` read `WIDTH_AND_HEIGHT` — it hugs both dimensions and cannot clip, full stop — while `layoutSizingVertical` still reported `FIXED` even though the parent genuinely was auto-layout. The 1.7.2 fix gated `layoutSizingVertical` on the parent existing; this shows the gate isn't sufficient, because the property can lie even when its precondition holds. **The fix is not a third gate — it's removing `layoutSizingVertical` from the positive determination of "fixed" entirely.** It is reported alongside each finding for context, never used to decide one. 33 hits on one layer is also the universal-finding signature (§11): every variant of one component flagging identically is a check bug, not 33 defects.
+| Not flagged | Why |
+|---|---|
+| `textAutoResize: "TRUNCATE"`, `textTruncation: "ENDING"` or a `maxLines` value | Clipping is intended; reporting it proposes breaking a designed truncation |
+| `layoutSizingVertical: "FILL"` | The text stretches by instruction; it is not stuck |
+| `layoutSizingVertical` with no auto-layout parent | Meaningless there: it reads `FIXED` regardless |
+| `layoutSizingVertical: "FIXED"` under a real auto-layout parent, with `textAutoResize` `HEIGHT` or `WIDTH_AND_HEIGHT` | The node hugs and cannot clip; the sizing property lies |
 
-**Report the character count with each hit.** A fixed-height node holding 4 characters is a numeric badge; one holding 60 is a description waiting to clip, and the agent needs that to rank them. Do not report the height alone — it says nothing about how close to overflowing the node already is.
+**The read of `layoutSizingVertical` must be conditional, not ORed**. A text node with `textAutoResize: "HEIGHT"` in a plain frame was flagged because the check ORed the two properties. A genuinely fixed-height node in a plain frame still flags; that was verified separately.
+
+**Never use `layoutSizingVertical` to decide "fixed"**. 33 instances of one layer (`Value`, in `Menu button`) were flagged, all false. Each read `textAutoResize: WIDTH_AND_HEIGHT`, while the sizing property said `FIXED` under a real auto-layout parent.
+
+Gating on the parent was not enough, because the property lies even when its precondition holds. It is reported with each finding for context only. 33 hits on one layer is also the universal-finding signature: a check bug, not 33 defects.
+
+**Report the character count with each hit**. A fixed-height node holding 4 characters is a numeric badge; one holding 60 is a description waiting to clip. The agent needs that to rank them. The height alone says nothing about how close to overflowing the node is.
 
 ## 3.10e Variant axes that only toggle visibility
 
-Candidate-only. Compares each pair of variants differing on exactly one axis; if the sole structural difference is one subtree's `visible`, the axis is doing a boolean's job.
+Candidate only. It compares each pair of variants differing on exactly one axis. If the sole structural difference is one subtree's `visible`, the axis is doing a boolean's job.
 
-**Engine:** `FCA.visibilityAxes(set)` in `scripts/probes.js` (tested). For every pair of variants differing on exactly one axis it compares a signature of path, name, type and visibility for every layer below the variant root, to depth 6, never inside an instance. An axis is a suspect only when **every** such pair on it differs in visibility alone. The paragraph below said so and the prose's code reported an axis on any one matching pair; the engine does what the paragraph says.
+**Engine:** `FCA.visibilityAxes(set)` in `scripts/probes.js` (tested). For each such pair, it compares a signature of path, name, type and visibility for every layer below the variant root. It goes to depth 6, never inside an instance.
 
-The signature deliberately excludes fills, sizes and text content — two variants differing in colour will not match, which is correct. Report an axis only when **every** compared pair on it shows visibility-only differences; one matching pair proves nothing.
+**An axis is a suspect only when every compared pair on it differs in visibility alone**. One matching pair proves nothing. The signature deliberately excludes fills, sizes and text content, so two variants differing in colour do not match, which is correct.
 
-**This check could not fire at all until 1.7.3, and a clean result from it meant nothing.** The signature included the variant root, whose name is literally `Axis=Value` — so every pair differed on the root's name, every pair was disqualified, and the check returned an empty list for any component set ever passed to it. Run against a real 54-variant Button it reported nothing across 207 pairs, which read exactly like a pass. It was found by probing the positive direction: a purpose-built two-variant set differing *only* in one rectangle's visibility also reported nothing, which nothing about a real-library run would have revealed. A check that cannot report is worse than a missing one, because it occupies the space where coverage appears to be.
+**Exclude the variant root from the signature**. Its name is literally `Axis=Value`, so including it disqualified every pair, and the check returned nothing for any set. On a real 54-variant Button it reported nothing across 207 pairs, which read exactly like a pass. Probing the positive direction found it: a two-variant set differing *only* in one rectangle's visibility also reported nothing. A check that cannot report is worse than a missing one.
 
 ## 3.11 Variant annotations
 
-Not a `figma_execute` script — annotations are read via the dedicated MCP tools (`figma_get_annotations`, `figma_get_annotation_categories`), not the plugin API's node walk. Check presence per state-bearing variant; judgment-protocol §4 decides whether absence is a real gap (spec detail with nowhere else to live) or correctly empty (purely visual variant).
+Not a `figma_execute` script. Annotations are read through the dedicated MCP tools (`figma_get_annotations`, `figma_get_annotation_categories`), not the plugin API's node walk. Check presence per state-bearing variant. Judgment-protocol §4 decides whether absence is a real gap (spec detail with nowhere else to live) or correctly empty (a purely visual variant).
 
 ## 3.12 Right to left (opt-in, figma-standard rule 50)
 
-Engine: `scanner/audit.js` rule family `direction`, run only when the settings name `rtlLanguages`. Every library has a left padding and an end-aligned row, so without the switch each check would be noise. With it, they answer the binary questions in figma-standard rule 50, every variant walked:
+**Engine:** `scanner/audit.js`, rule family `direction`. It runs only when the settings name `rtlLanguages`. Every library has a left padding and an end-aligned row, so without the switch each check would be noise. With it, the rules answer the questions in figma-standard rule 50, every variant walked.
 
+**Names are read as words**. Before the word tests, a camelCase or PascalCase name is split at its capitals with a hyphen. So `ArrowLeft` becomes `Arrow-Left`, and `Fast-Forward` still matches the media words. So a library naming icons that way reads like one using `arrow-left`.
 
-Names are read as words: a camelCase or PascalCase name (`ArrowLeft`, `chevronDown`) is split at its capitals with a hyphen (`Arrow-Left`, `Fast-Forward`, so the media words still match) before the directional, media and up/down words are tested, so a library that names icons that way is read like one using `arrow-left`. Where a set has a `Direction` axis holding `RTL`, its RTL variants are the mirror and are checked against their LTR twins (`rtl-order`, `rtl-align`); the side-labelled notes (pinned, padding, end-align, corners, text-align) read the LTR variants only, so a correctly mirrored 8/12 padding is not noted beside the LTR 12/8.
-- `direction|no-autolayout|` — a frame without auto layout holding two visible layers side by side (x ranges apart, y ranges overlapping): a row with no order to reverse. A frame drawn only in shapes (a logo, an illustration) is a drawing, not a row, and is exempt. It replaces the structure family's review of the same frame, so one cause is one row.
-- `direction|pinned|` — a layer with `layoutPositioning: "ABSOLUTE"`, or off-centre in an overlay frame without auto layout, one where another visible layer covers the frame (a badge on an avatar's image), whose horizontal constraint is `MIN` or `MAX`, and which is neither centred nor covering both edges. Drawn shapes inside a frame that is itself a drawing (a checkmark in a checkbox box) are exempt. **Trap:** absolute layers default to `MIN`, so a focus ring drawn 2px outside its control reads as pinned left by constraint alone; position decides, not the constraint. Counting stretched layers put a 120-variant icon-only set in the wrong column of the measured library.
-- `direction|flat-icon|` — a `VECTOR` or `BOOLEAN_OPERATION` named chevron, arrow or caret, inside a component that is not itself an icon.
-- `direction|side-name|` — left or right as a word or inside camelCase or PascalCase (`iconLeft`, `LeftIcon`) in a layer name, with the advice renaming it by role in the same case. Icons are skipped (their glyph really points that way), here and for property names and options. Text layers (named after their copy, "3 days left") and instances still named after their component (`arrow-left`), or whose component cannot be resolved, are exempt. Hidden layers are skipped throughout the family; the structure family already raises them.
-- `direction|side-prop|`, `direction|side-option|` — the same in a property name, or in a variant axis's options (one row per axis, every rename named). A rename there is breaking, and the advice says so.
-- `direction|fixed-icon|` — an instance of an icon (its main component is an icon by structure, so a Next button in a pager is not one) whose name or main component holds a directional word, media controls excepted, and that no instance-swap property controls. Trap: a name that points only up or down (chevron-down in a select) stays in Arabic, so it is skipped here, in flat-icon and in icon-decision; an instance takes its direction from its main component and variant when they name one, so a layer called Forward holding chevron-down is skipped; the first live run raised eight of them among thirteen.
-- `direction|no-variant` — only with `rtlInFigma: true`: a set with anything that must mirror and no `Direction` variant axis holding `RTL`. Not only a row: uneven padding, content aligned to the right, text aligned to a side in a box wider than it, one-sided corners, a pinned layer, a row without auto layout and a directional icon, placed as an instance no swap property controls or drawn in, each need it too (an icon a swap property controls is the instance's to change, and gives no reason), since an instance can swap none of them. The finding names every reason. A row of two only with a hidden part still counts: named as shown by a boolean when the part's visibility is bound to one, else as hidden. A row-only count misses uneven padding, side-aligned text and one-sided corners.
-- `direction|by-hand` — only with `rtlInFigma: true`: a set that would need the variant but whose name matches `rtlByHand` (media controls, phone numbers, clocks, code fields), a review: such a row may keep its order. A set whose name matches `rtlStays` (charts) raises neither. A pattern that is not a string or does not compile is named in the result's `settings`.
-- `rtlVerdicts` (measure, only with `rtlInFigma: true`) — one line per set: `variant`, `has variant`, `covered` (it has nothing of its own to mirror and holds, at any depth, a component that gets the variant, hidden instances included; `by` names them; inside a hidden frame too; only sets in the same run count, so a scoped run can leave a holder `none`), `by hand`, `stays` or `none`, with its variant count and the reasons. This is what an overview of the work is counted from: a hand-written walk for the same counts drifted from the scanner on its first day.
-- `direction|rtl-order|`, `direction|rtl-align|` — only with `rtlInFigma: true` and a Direction axis: each `RTL` variant is checked against its `LTR` twin (same other properties). Layers are matched by their path of names, every level down: each horizontal row's in-flow parts must be the twin's reversed (hidden parts count, since a boolean shows them), and each text box wider than its text must be aligned to the twin's other side. Where a row's parts differ by name, not just order (`Leading` against `Trailing`), it is `direction|rtl-parts`, with the reversed LTR names to use. An instance's own parts are skipped: they come from its component, checked in its own set. An RTL variant with no twin is `direction|rtl-twin`, a review. The advice names the exact order, or the layer and the side. **Limit:** two siblings sharing a name are compared as one.
-- `direction|padding|` — any auto layout in the set, horizontal or vertical, whose left and right padding differ; one row per set, every distinct pair on its line (Size S at 8/4 and L at 12/8 are two).
-- `direction|end-align|` — a horizontal row aligned `MAX` on its main axis, or a vertical frame `MAX` on its cross axis. **Trap:** this is an enum, invisible to a scan for numbers. In the measured library, a chat bubble's side was exactly this, and a scan that read padding and radius called it clean.
-- `direction|corners|` — per-corner radii whose left pair differs from the right pair, outside icons; one row per distinct set of radii, so sizes that round differently each get their line.
-- `direction|icon-decision` — an icon (a lone component of shapes, 64px or less, decided by structure because another plugin's data is unreadable here) whose name holds a directional word (not its description: prose like "takes you back" is no direction) and whose description has no `Right to left: mirrors` or `Right to left: stays`.
-- `direction|note` — a component with any of the above, or a row that reverses, whose description has no `Right to left` heading.
+**A `Direction` axis**. Where a set has a `Direction` axis holding `RTL`, its RTL variants are the mirror. They are checked against their LTR twins (`rtl-order`, `rtl-align`). The side-labelled notes (pinned, padding, end-align, corners, text-align) read the LTR variants only. So a correctly mirrored 8/12 padding is not noted beside the LTR 12/8.
 
-Measures `rtlSets` and `rtlVariants`: the sets, and their variants, with a horizontal auto layout holding two or more children in the flow, or a frame without auto layout laying two visible layers side by side (the `no-autolayout` row). Hidden children count, since a boolean shows them; absolute ones don't. **Trap:** counted from first variants only, the measured library read 41 sets and 238 variants against the true 58 and 461, and put the primary Button among the safe.
+**Hidden layers are skipped throughout the family**; the structure family already raises them.
 
-- `direction|font-fixed|`, per text style — a text style whose font family is not bound to a variable (on the style or the layer), so a frame in the right-to-left mode cannot switch the typeface. Warning: the letters fall back to a device font. Raised once per style for the whole file, under the first set that uses it, and pointed at the source library when the style is remote; icon fonts and code type (`mono`, `code`, `symbols`, `icons` in the family or style name) keep their face and are exempt. A text layer with no style is the tokens family's `textStyle` error already.
-- `direction|tracking|`, per text style — positive letter spacing not bound to a variable: it pulls joined Arabic letters apart, so the right-to-left mode needs 0.
-- `direction|text-case|`, per text style — a text case other than original (uppercase, small caps), which Arabic does not have; the line says it is Latin only.
-- `direction|text-align|` — a text box wider than its text (not hugging) aligned left or right. Figma's alignment is physical and no mode changes it, so code must write it as start or end. **Trap:** every text layer is aligned left by default, so a hugging label, where alignment shows nothing, is exempt.
+Rules on any set (with `rtlLanguages`):
 
-**What it does not check:** rotation (a rotated chevron that code mirrors still points the right way, and a flip may read as rotation 180, so the check was dropped in review), a row drawn as a Group, language-specific exceptions, line height (whether Arabic reads tight is a judgement on real text), and whether a note is right rather than present.
+| Rule id | Raised when | Exempt, or trap |
+|---|---|---|
+| `direction\|no-autolayout\|` | A frame without auto layout holds two visible layers side by side (x ranges apart, y ranges overlapping): a row with no order to reverse | A frame drawn only in shapes (a logo, an illustration) is a drawing. It replaces the structure family's review of the same frame, so one cause is one row. |
+| `direction\|pinned\|` | A layer that is absolute, or off-centre in an overlay frame, with horizontal constraint `MIN` or `MAX`, neither centred nor covering both edges | Detail below the table |
+| `direction\|flat-icon\|` | A `VECTOR` or `BOOLEAN_OPERATION` named chevron, arrow or caret, inside a component that is not itself an icon | Up-or-down-only names are skipped |
+| `direction\|side-name\|` | Left or right as a word, or inside camelCase or PascalCase (`iconLeft`, `LeftIcon`), in a layer name. The advice renames it by role, in the same case. | Detail below the table |
+| `direction\|side-prop\|`, `direction\|side-option\|` | The same in a property name, or in a variant axis's options: one row per axis, every rename named | A rename there is breaking, and the advice says so. Icons are skipped. |
+| `direction\|fixed-icon\|` | An icon instance whose name or main holds a directional word, that no instance-swap property controls | Detail below the table |
+| `direction\|padding\|` | Any auto layout, horizontal or vertical, with different left and right padding | One row per set, every distinct pair on its line (Size S at 8/4 and L at 12/8 are two) |
+| `direction\|end-align\|` | A horizontal row aligned `MAX` on its main axis, or a vertical frame `MAX` on its cross axis | **Trap:** an enum, invisible to a scan for numbers. A chat bubble's side was exactly this, and a padding-and-radius scan called it clean. |
+| `direction\|corners\|` | Per-corner radii whose left pair differs from the right pair, outside icons | One row per distinct set of radii |
+| `direction\|icon-decision` | An icon whose name holds a directional word, and whose description has neither `Right to left: mirrors` nor `Right to left: stays` | Detail below the table |
+| `direction\|note` | A component with any of the above, or a row that reverses, whose description has no `Right to left` heading | — |
+| `direction\|text-align\|` | A text box wider than its text (not hugging) aligned left or right | **Trap:** every text layer is aligned left by default, so a hugging label is exempt. Figma's alignment is physical and no mode changes it, so code must write it as start or end |
+
+**`pinned`, in full**. It covers a layer with `layoutPositioning: "ABSOLUTE"`, or one off-centre in an overlay frame without auto layout. An overlay frame is one where another visible layer covers it (a badge on an avatar's image). Drawn shapes inside a frame that is itself a drawing (a checkmark in a checkbox) are exempt.
+
+**`pinned` trap: position decides, not the constraint**. Absolute layers default to `MIN`, so a focus ring drawn 2px outside its control reads as pinned left by constraint alone. Counting stretched layers put a 120-variant icon-only set in the wrong column of the measured library.
+
+**`side-name` exemptions**. Icons are skipped, since their glyph really points that way; the same holds for property names and options. Text layers are exempt, being named after their copy ("3 days left"). So are instances still named after their component (`arrow-left`), or whose component cannot be resolved.
+
+**`fixed-icon`, in full**. An icon is decided by its main component's structure, so a Next button in a pager is not one. Media controls are excepted. A name pointing only up or down (chevron-down in a select) stays the same in Arabic. It is skipped here, in `flat-icon` and in `icon-decision`.
+
+**`fixed-icon` trap**. An instance takes its direction from its main component and variant when they name one. So a layer called Forward holding chevron-down is skipped. The first live run raised eight such among thirteen.
+
+**`icon-decision`, in full**. An icon here is a lone component of shapes, 64px or less. It is decided by structure, because another plugin's data is unreadable here. Only the name counts, not the description: prose like "takes you back" is no direction.
+
+Rules per text style (with `rtlLanguages`):
+
+| Rule id | Raised when | Note |
+|---|---|---|
+| `direction\|font-fixed\|` | The style's font family is not bound to a variable, on the style or the layer, so a right-to-left mode cannot switch the typeface | Warning: the letters fall back to a device font. Detail below. |
+| `direction\|tracking\|` | Positive letter spacing not bound to a variable | It pulls joined Arabic letters apart, so the right-to-left mode needs 0 |
+| `direction\|text-case\|` | A text case other than original (uppercase, small caps) | Arabic has none; the line says it is Latin only |
+
+`font-fixed` is raised once per style for the whole file, under the first set using it. It points at the source library when the style is remote. Icon fonts and code type keep their face and are exempt: mono, code, symbols or icons in the family or style name. A text layer with no style is already the tokens family's `textStyle` error.
+
+Rules only with `rtlInFigma: true`:
+
+| Rule id | Raised when |
+|---|---|
+| `direction\|no-variant` | A set with anything that must mirror and no `Direction` axis holding `RTL` |
+| `direction\|by-hand` | A set needing the variant whose name matches `rtlByHand`: a `review`, since such a row may keep its order |
+| `direction\|rtl-order\|`, `direction\|rtl-align\|` | With a Direction axis: an `RTL` variant whose rows or text boxes do not mirror its `LTR` twin |
+| `direction\|rtl-parts` | A row whose parts differ from the twin's by name, not just order (`Leading` against `Trailing`); gives the reversed LTR names to use |
+| `direction\|rtl-twin` | An `RTL` variant with no twin: a `review` |
+
+**`no-variant`, in full**. Not only a row needs the variant, because an instance can swap none of these. Each of the following needs it:
+
+- uneven padding;
+- content aligned to the right;
+- text aligned to a side in a box wider than it;
+- one-sided corners;
+- a pinned layer;
+- a row without auto layout;
+- a directional icon placed as an instance no swap property controls, or drawn in.
+
+An icon a swap property controls is the instance's to change, and gives no reason. The finding names every reason. A row of two only with a hidden part still counts. It is named as shown by a boolean when the part's visibility is bound to one, else as hidden. A row-only count misses uneven padding, side-aligned text and one-sided corners.
+
+**`by-hand` and `rtlStays`**. `rtlByHand` names media controls, phone numbers, clocks and code fields. A set whose name matches `rtlStays` (charts) raises neither rule. A pattern that is not a string or does not compile is named in the result's `settings`.
+
+**`rtl-order` and `rtl-align`, in full**. Each `RTL` variant is checked against its `LTR` twin, the one with the same other properties. Layers are matched by their path of names, every level down. Each horizontal row's in-flow parts must be the twin's reversed; hidden parts count, since a boolean shows them. Each text box wider than its text must be aligned to the twin's other side.
+
+An instance's own parts are skipped: they come from its component, checked in its own set. The advice names the exact order, or the layer and the side. **Limit:** two siblings sharing a name are compared as one.
+
+**Measures.**
+
+| Measure | What it counts |
+|---|---|
+| `rtlSets`, `rtlVariants` | The sets, and their variants, with a horizontal auto layout holding two or more children in the flow, or a `no-autolayout` row |
+| `rtlVerdicts` (only with `rtlInFigma: true`) | One line per set, with its variant count and the reasons. The verdicts are variant, has variant, `covered`, by hand, stays and `none`. |
+
+For `rtlSets`, hidden children count, since a boolean shows them; absolute ones do not. **Trap:** counted from first variants only, the measured library read 41 sets and 238 variants against the true 58 and 461. It put the primary Button among the safe.
+
+For `rtlVerdicts`, `covered` means a set with nothing of its own to mirror. It holds, at any depth, a component that gets the variant, hidden instances and hidden frames included; `by` names them. Only sets in the same run count, so a scoped run can leave a holder `none`. An overview of the work is counted from this. A hand-written walk for the same counts drifted from the scanner on its first day.
+
+**What it does not check:**
+
+- rotation: a rotated chevron that code mirrors still points the right way, and a flip may read as rotation 180;
+- a row drawn as a Group;
+- language-specific exceptions;
+- line height: whether Arabic reads tight is a judgement on real text;
+- whether a note is right, rather than present.
 
 ## 3.13 A composed frame: library instances and bound values only
 
-**Engine:** `FCA.composedFrame(frame, componentNames?)` in `scripts/probes.js`, its pure half `FCA.composedFindings` tested with stand-in nodes. Not a library check: it reads one screen composed from the library (an agent's prototype, a designer's page), so it is not in `scanner/checks.json`, whose dimensions score components.
+**Engine:** `FCA.composedFrame(frame, componentNames?)` in `scripts/probes.js`; its pure half, `FCA.composedFindings`, is tested with stand-in nodes. It is not a library check. It reads one screen composed from the library (an agent's prototype, a designer's page). So it is not in `scanner/checks.json`, whose dimensions score components.
 
-With `{ receipt: true }` (an agent's frame) it also reads the frame's receipt, shared plugin data `fca` / `receipt`, so any plugin or bridge reads what another wrote: none, or unparseable, is `no-receipt`; one with no `reference` is `no-reference`, the composer having started from the bare template. `FCA.references(template)` is its companion before composing: every visible instance of the template's variants (a variant passed is read as its set) that sits in no component and in no instance's own drawing (one in an instance's slot counts, a slot's default content included), one row per instance, with its screen, the frame just under the page or a section, and its page; a screen already carrying a receipt is `composed`, a past prototype, and sorts last.
+**The receipt**. With `{ receipt: true }` (an agent's frame), it also reads the frame's receipt. That is shared plugin data (namespace fca, key receipt), so any plugin or bridge reads what another wrote. No receipt, or one that does not parse, is `no-receipt`. One with no `reference` is `no-reference`: the composer started from the bare template.
 
-What was composed is the root, unless it is an instance, and whatever was put in a slot of an instance placed in it, at any depth. The rest is the library's: an instance's own drawing, and a slot's default content, told apart by id — a slot child whose id, taken relative to the placed instance, names a node of that instance's main component came with it (seen live: content put in a slot does not). In what was composed: a node that is not a frame, component, section or instance is `raw` (a group too, and its children are still read); a frame's non-zero gap (unless spaced between), wrap gap (unless spaced between), grid gaps, padding (with auto layout) and corner radius, and each visible solid fill and stroke without a style, are `unbound`; a placed instance whose main does not resolve, or is a local main gone from the document, is `orphan`; a frame other than the root named like a component placed in the frame, or one in `componentNames`, or any frame Figma marks as detached (`detachedInfo`), is `detached`, its `by` saying which (`figma` or `name`) and `root` set when the root itself is the detached copy, typically a screen detached from a template. A raw text says whether it carries a text style (`styled`; a mixed one does), and the result's `checked` counts what was judged, bound or not (non-zero values, visible solid paints, texts), so a caller turns findings into a share, and `keys` counts the placed instances by their main component's key, so a caller can tell which library they come from: the Adoption score widget (`plugins/adoption-score`) does. Hidden layers are skipped; gradients, images and fully transparent paints are not judged.
+**`FCA.references(template)` is its companion before composing**. It lists every visible instance of the template's variants, one row per instance; a variant passed is read as its set. It skips instances inside a component or inside an instance's own drawing. One in an instance's slot counts, a slot's default content included.
 
-**Why:** the 2026-11-04 composition trial built a page from library instances, and its own background was a raw white that only a probe of this shape caught. **Walked live 2026-11-05** on that page, rebuilt from its template: 9 placed instances, no finding; a copy with a rectangle and an unbound, white-filled frame put in its content slot gave exactly one `raw` and two `unbound`; a fresh instance of the template, its slots at their defaults, gave none. Both scratch nodes were removed. **Limits:** an orphan here is what resolves locally; a remote key that fails to import is §3.10d's (`FCA.orphans`), which retries it. A detached copy of a component the frame does not otherwise place is caught by Figma's `detachedInfo` (the root's included), or, for a copy Figma no longer marks, only when its name is passed in `componentNames`. A detached frame's own layers are still read as composed, so its raw drawing also counts as raw.
+Each row names its screen (the frame just under the page or a section) and its page. A screen with a receipt is `composed`, a past prototype, and sorts last.
+
+**What was composed** is the root (unless it is an instance) plus whatever was put in a slot of a placed instance, at any depth. The rest is the library's: an instance's own drawing, and a slot's default content. They are told apart by id. A slot child whose id, relative to the placed instance, names a node of that instance's main came with it. Content put in a slot does not (seen live).
+
+In what was composed, it raises:
+
+| Finding | Raised for |
+|---|---|
+| `raw` | A node that is not a frame, component, section or instance. A group too, and its children are still read. |
+| `unbound` | A frame's non-zero gap or wrap gap (unless spaced between), grid gaps, padding (with auto layout) or corner radius. Also each visible solid fill and stroke without a style. |
+| `orphan` | A placed instance whose main does not resolve, or is a local main gone from the document |
+| `detached` | A non-root frame named like a component placed in the frame, or one in `componentNames`. Also any frame Figma marks detached (`detachedInfo`). |
+
+A `detached` finding's `by` says which test caught it (`figma` or `name`). Its `root` is set when the root itself is the detached copy, typically a screen detached from a template.
+
+**What it returns besides findings.**
+
+- A raw text says whether it carries a text style (`styled`; a mixed one does).
+- `checked` counts what was judged, bound or not: non-zero values, visible solid paints, texts. A caller turns findings into a share.
+- `keys` counts the placed instances by their main component's key, so a caller can tell which library they come from. The Adoption score widget (`plugins/adoption-score`) does.
+- Hidden layers are skipped. Gradients, images and fully transparent paints are not judged.
+
+**Why:** a composition trial built a page from library instances. Its own background was a raw white that only a probe of this shape caught. **Walked live** on that page, rebuilt from its template: 9 placed instances, no finding. A copy with a rectangle and an unbound white frame in its content slot gave exactly one `raw` and two `unbound`. A fresh template instance, slots at their defaults, gave none.
+
+**Limits.**
+
+- An orphan here is what resolves locally. A remote key that fails to import is §3.10d's (`FCA.orphans`), which retries it.
+- A detached copy of a component the frame does not otherwise place is caught by `detachedInfo` (the root's included). A copy Figma no longer marks is caught only when its name is in `componentNames`.
+- A detached frame's own layers are still read as composed, so its raw drawing counts as raw.
 
 ## 4. Fixes
 
@@ -478,39 +735,48 @@ Apply only after the user approves. Re-run the matching detection afterwards to 
 
 ### 4a. Bind a raw spacing/radius to a primitive token
 
-**Engine:** `FCA.fix.bindVariable(nodeId, field, source)` in `scripts/probes.js` — `source` is a variable id, or `{ sibling: nodeId }` to copy the binding a correctly bound sibling carries on the same field. It binds, re-reads the node fresh and returns the variable names now bound there.
+**Engine:** `FCA.fix.bindVariable(nodeId, field, source)` in `scripts/probes.js`. `source` is a variable id, or `{ sibling: nodeId }` to copy the binding a correctly bound sibling carries on the same field. It binds, re-reads the node fresh, and returns the variable names now bound there.
 
-> Remote tokens often aren't in `getLocalVariablesAsync`. The reliable path is to **copy the binding id from a sibling layer that is already bound correctly** (read `sibling.boundVariables.itemSpacing.id`, then `figma.variables.getVariableByIdAsync(id)` → `setBoundVariable`). Prefer matching an existing correct example over guessing a token.
+> Remote tokens often are not in `getLocalVariablesAsync`. The reliable path is to **copy the binding id from a correctly bound sibling layer**. Read `sibling.boundVariables.itemSpacing.id`, then `figma.variables.getVariableByIdAsync(id)`, then `setBoundVariable`. Prefer an existing correct example over guessing a token.
 
 ### 4a-2. Rebind a fill/stroke color variable
 
-`setBoundVariable` on the node directly **fails** for `fills`/`strokes` (Figma's API requires paint-level binding: `Error: in setBoundVariable: fills and strokes variable bindings must be set on paints directly`). Paints need their own API.
+`setBoundVariable` on the node directly **fails** for fills and strokes. Figma requires paint-level binding: `Error: in setBoundVariable: fills and strokes variable bindings must be set on paints directly`.
 
-**Engine:** `FCA.fix.bindPaint(nodeId, "fills" | "strokes", source, index)` in `scripts/probes.js` — the same `source` forms; it binds the paint at `index` (default 0) with `setBoundVariableForPaint`, reassigns the array, and returns the names now bound. Only that paint changes: the prose assigned `[newPaint]`, which dropped every other paint on the node.
+**Engine:** `FCA.fix.bindPaint(nodeId, "fills" | "strokes", source, index)` in `scripts/probes.js`, with the same source forms. It binds the paint at the index (default 0) with `setBoundVariableForPaint`. It reassigns the array and returns the names now bound. **Only that paint changes**. Never assign `[newPaint]`, which drops every other paint on the node.
 
-**Verify after writing** — both fixes read the node back fresh (`getNodeByIdAsync` again, not the same in-memory reference) and return the bound variable's name; confirm it is the token you intended rather than trusting the write call's success.
+**Verify after writing**. Both fixes read the node back fresh (`getNodeByIdAsync` again, not the in-memory reference) and return the bound variable's name. Confirm it is the token you intended rather than trusting the write call's success.
 
 ### 4b. Reorder variant options (e.g. boolean axes to `False, True`, or `State` to canonical order)
 
-Option order is derived from the order of child components, and is **not exposed as a writable field**: calling `set.editComponentProperty("State", { variantOptions: [...] })` throws `Unrecognized key(s) in object: 'variantOptions'`. There is no reliable plugin-API path to rewrite option order directly. **This is always a manual fix**: tell the user to drag the options into place in Figma's Variants panel. Don't attempt to reinsert child components to force an order — it's fiddly, easy to scramble instance overrides, and there's no clean programmatic path around the API limitation above.
+Option order comes from the order of child components, and is **not a writable field**. `set.editComponentProperty("State", { variantOptions: [...] })` throws `Unrecognized key(s) in object: 'variantOptions'`. No reliable plugin-API path rewrites option order.
+
+**This is always a manual fix**: tell the user to drag the options into place in Figma's Variants panel. Never reinsert child components to force an order. It is fiddly, easily scrambles instance overrides, and has no clean path around the API limit.
 
 ### 4b-2. Add a component property, and bind a layer to it
 
-Adding a property is **additive and non-breaking** — existing instances keep working and simply gain a control — which makes it the one interface change that can sit in *Approve & I fix* rather than *Breaking*. Two steps: declare it on the set, then point the layer at the returned key.
+Adding a property is **additive and non-breaking**: existing instances keep working and gain a control. That makes it the one interface change that can sit in *Approve & I fix* rather than *Breaking*. Two steps: declare it on the set, then point the layer at the returned key.
 
-**Engine:** `FCA.fix.addProperty(setId, name, type, layerIds, defaultValue)` in `scripts/probes.js` — declares the property, takes the **key** it returns (`name#id`; the name alone will not bind), and sets the matching reference (`characters`, `visible` or `mainComponent`) on every listed layer, merged into what each already carries. For `INSTANCE_SWAP` with no default it uses the first listed instance's main **node id**. It re-reads each layer and returns how many are bound and which are not.
+**Engine:** `FCA.fix.addProperty(setId, name, type, layerIds, defaultValue)` in `scripts/probes.js`.
 
-**Spread the existing references, never replace them.** A layer can carry `visible`, `characters` and `mainComponent` at once; assigning a fresh object silently drops whichever ones you left out, and nothing errors.
+1. It declares the property and takes the **key** it returns (`name#id`); the name alone will not bind.
+2. It sets the matching reference (`characters`, `visible` or `mainComponent`) on every listed layer, merged into what each already carries.
+3. For `INSTANCE_SWAP` with no default, it uses the first listed instance's main **node id**.
+4. It re-reads each layer and returns how many are bound and which are not.
 
-**A layer inside a nested instance cannot be bound.** Setting a property reference on a sublayer of an instance throws `Cannot set component property references on instance sublayer`: put the content in a slot (figma-standard rule 38): exposing the nested component's properties on the parent does not keep a per-item value when the item switches variant. Tested 2026-10-08.
+**Spread the existing references, never replace them**. A layer can carry `visible`, `characters` and `mainComponent` at once. Assigning a fresh object silently drops the ones left out, and nothing errors.
 
-**A component cloned into another set loses its property references.** Cloning a component into a different component set drops every `componentPropertyReferences`; re-wire from the source by layer path, and verify with a diff that includes the references, since one without them reads the clone as identical. Tested 2026-10-08.
+**A layer inside a nested instance cannot be bound** (tested). Setting a reference on an instance's sublayer throws `Cannot set component property references on instance sublayer`. Put the content in a slot instead (figma-standard rule 38). Exposing the nested component's properties on the parent does not keep a per-item value when the item switches variant.
 
-**The `INSTANCE_SWAP` default is a node id.** Passing `main.key` — the obvious guess, and the value every other API in this file wants — throws `Property value is incompatible with component property type`, which names the type and not the field, so it reads as though the property type were wrong. Found 2026-08-14 by reading what a working sibling actually stored (`"0:6907"`, plainly a node id) rather than by reasoning about the error. Bind the layer for **every** variant the property applies to, not just the one you read the default from, then re-read the set and confirm each variant's `componentPropertyReferences` — a partially-bound property is not a publication blocker the way an unused one is (§3.10c), so nothing will tell you.
+**A component cloned into another set loses its property references** (tested). Cloning into a different set drops every `componentPropertyReferences`. Re-wire from the source by layer path. Verify with a diff that includes the references, since one without them reads the clone as identical.
+
+**The `INSTANCE_SWAP` default is a node id**. Passing `main.key`, the value every other API here wants, throws `Property value is incompatible with component property type`. The error names the type, not the field, so it reads as though the property type were wrong. A working sibling stored a node id (`"0:6907"`).
+
+**Bind the layer for every variant the property applies to**, not just the one you read the default from. Then re-read the set and confirm each variant's `componentPropertyReferences`. A partially bound property is not a publication blocker the way an unused one is (§3.10c), so nothing will tell you.
 
 ### 4c. Rename a layer
 
-Rename the layer in every variant of the set, never in one: overrides survive a rename on update, but a layer named differently across variants loses them when a consumer switches.
+Rename the layer in every variant of the set, never in one. Overrides survive a rename on update, but a layer named differently across variants loses them when a consumer switches.
 
 ```js
 const set = await figma.getNodeByIdAsync("SET_ID");
@@ -530,58 +796,46 @@ set.editComponentProperty("Value", { name: "Value text" });
 return "renamed";
 ```
 
-> Renaming a variant **property** or **option** keeps every instance on its variant with its overrides — tested 2026-10-01 — but it is a breaking **API** change: Code Connect enum mappings keyed on the old value stop matching without failing the publish, and scripts and Swap library match by name. Always surface it as such and get explicit approval. Renaming a layer (4c) is safe only when every variant's layer gets the same new name: a name that differs across variants drops consumers' overrides when they switch variant.
+> Renaming a variant **property** or **option** keeps every instance on its variant with its overrides (tested). It is still a breaking **API** change. Code Connect enum mappings keyed on the old value stop matching without failing the publish, and scripts and Swap library match by name. Always surface it as breaking and get explicit approval.
+>
+> Renaming a layer (4c) is safe only when every variant's layer gets the same new name. A name that differs across variants drops consumers' overrides when they switch variant.
 
 ### 4e. A missing or placeholder description
 
-**This audit flags it; it does not write it.** `figma-component-descriptions`
-owns writing a description — the full structured form for a public component,
-the compact one for a private one — along with the dialect it infers from the
-library and the slot-only resolution protocol that decides what a part's
-description should even say. A recipe here would be a second, shorter answer
-to the same question, drifting from the one that knows those things, and
-`figma-component-pass` exists precisely to run the two in order.
+**This audit flags it; it does not write it**. `figma-component-descriptions` owns writing a description. That is the full structured form for a public component, and the compact one for a private one. It also owns the dialect it infers from the library. And it owns the slot-only protocol that decides what a part's description says.
 
-So the row this audit files is the finding, and the fix is a hand-off: report
-the component, say what is missing, and name the skill that writes it. The
-check itself (what counts as missing, what counts as a placeholder) stays in
-`checks.json` where the rest of this audit's rows live.
+A recipe here would be a second, shorter answer that drifts from the one that knows those things. The skill `figma-component-pass` exists to run the two in order.
 
----
+So the row this audit files is the finding, and the fix is a hand-off. Report the component, say what is missing, and name the skill that writes it. The check itself (what counts as missing or placeholder) stays in `checks.json` with the rest of this audit's rows.
 
 ## 5. Whole-library sweep (schema only)
 
-For a fast file-wide pass, run the probe's schema checks (single-option axes, state vocabulary) and its default-swap-name check across all sets without the deep token walk (the token walk is too heavy to run on every set in a file at once — a library of even a few dozen sets can time out the bridge in one call). Iterate pages in batches, collecting axis/property findings, then deep-token-check only the components that the user wants fixed.
+For a fast file-wide pass, run the probe's schema checks and its default-swap-name check across all sets, without the deep token walk. The schema checks are single-option axes and the state vocabulary. The token walk is too heavy for every set at once: even a few dozen sets can time out the bridge in one call. Iterate pages in batches, collecting axis and property findings. Then deep-check tokens only on the components the user wants fixed.
 
-**Engine:** `FCA.sweepSchema(componentPages, opts)` in `scripts/probes.js` — every component set on the project's component pages through `FCA.schemaFindings` and `FCA.propertyNamingFindings`, the same two functions §1 and §2 call, so the sweep cannot drift from them. Axis order, default-first and a property name's case are the scanner's, not the sweep's: run the scanner for those. The prose version read `TOK.componentPages`, which exists only inside `scanner/audit.js`; pasted on its own it threw a `ReferenceError` before reading a page. §0 had the same reference.
+**Engine:** `FCA.sweepSchema(componentPages, opts)` in `scripts/probes.js`. It runs every component set on the project's component pages through `FCA.schemaFindings` and `FCA.propertyNamingFindings`. Those are the two functions §1 and §2 call, so the sweep cannot drift from them.
 
----
+Axis order, default-first and a property name's case are the scanner's, not the sweep's: run the scanner for those. Never reference `TOK.componentPages` outside `scanner/audit.js`, where alone it exists. Pasted on its own, it throws a `ReferenceError` before reading a page.
 
 ## 6. Output contract
 
-No aggregation, no matrix, no score. The scanner emits per-batch: a coverage line (pages, sets, variants, nodes walked — so the agent can state honestly what was scanned) and the raw candidate list tagged by rule, node id, and value. Everything else — verification, suppression via accepted exceptions, bucketing into the fix queue — happens in the judgment layer. If a batch returns zero candidates, verify the walk actually visited nodes (return node/binding counts) before treating silence as clean.
+No aggregation, no matrix, no score. The scanner emits, per batch:
 
----
+- a coverage line: pages, sets, variants and nodes walked, so the agent can state honestly what was scanned;
+- the raw candidate list, tagged by rule, node id and value.
+
+Everything else happens in the judgment layer: verification, suppression by accepted exceptions, bucketing into the fix queue. If a batch returns zero candidates, verify the walk visited nodes (return node and binding counts) before treating silence as clean.
 
 ## Coverage and the porting backlog — see `scanner/checks.json`
 
-**Do not restate the backlog here.** `scanner/checks.json` is the catalogue: every
-check, its dimension, its tier, who raises it, and a `status` that is the single
-statement of whether it runs —
+**Do not restate the backlog here**. `scanner/checks.json` is the catalogue: every check, its dimension, its tier, who raises it, and a `status`. The `status` is the single statement of whether a check runs:
 
-- `scanner` — implemented in `scanner/audit.js`. Runs identically from a session
-  and from the dashboard.
-- `session` — agent-layer. Only a full session run originates it, because the
-  dashboard's judgement pass *filters* scanner candidates and never raises its
-  own.
-- `backlog` — documented, implemented nowhere. Does not run unless a run writes
-  it by hand.
+| `status` | Meaning |
+|---|---|
+| `scanner` | Implemented in `scanner/audit.js`. Runs identically from a session and from the dashboard. |
+| `session` | Agent layer. Only a full session run originates it, because the dashboard's judgement pass *filters* scanner candidates and never raises its own. |
+| `backlog` | Documented, implemented nowhere. It does not run unless a run writes it by hand. |
 
-The split is derived, not restated — a hardcoded one said `14 / 8 / 20 / 3` of
-45 for as long as it stood, and a `scanner` check had been added under it
-without anyone touching the one sentence in this repo that states coverage.
-This is the file whose job is to not overstate coverage, so it prints the
-figure instead of remembering it:
+The split is derived, never restated. A hard-coded split once stood unchanged while a `scanner` check was added under it. This file's job is to not overstate coverage, so it prints the figure instead of remembering it:
 
 ```sh
 python3 -c "import json,collections;d=json.load(open('skills/figma-components-audit/scanner/checks.json'));\
@@ -590,14 +844,8 @@ w=lambda o:[o['status']] if isinstance(o,dict) and isinstance(o.get('status'),st
 c=collections.Counter(w(d));print(dict(c),'total',sum(c.values()))"
 ```
 
-The two file-level checks belong to `figma-foundations-audit` and are not in
-here. The dashboard's About tab renders this file, marking anything that is
-not `scanner`, so the page cannot claim coverage the scanner does not have.
+The two file-level checks belong to `figma-foundations-audit` and are not in here. The dashboard's About tab renders `checks.json`, marking anything that is not `scanner`, so the page cannot claim coverage the scanner lacks.
 
-A backlog entry closes by porting the check into `scanner/audit.js`, flipping its
-`status`, and confirming it against **two** libraries — one library cannot tell a
-real check from that library's own constant (case A57). Contrast (§3.7c) ranks
-first: it is the only missing check that is user-visible by definition.
+A backlog entry closes in three steps: port the check into `scanner/audit.js`, flip its `status`, and confirm it against **two** libraries. One library cannot tell a real check from that library's own constant (case A57). Contrast (§3.7c) ranks first: it is the only missing check that is user-visible by definition.
 
-This file stays the place that explains *why* each check exists and what it must
-not claim. It is prose about an executable, and holds no second copy of it.
+This file stays the place that explains *why* each check exists and what it must not claim. It is prose about an executable, and holds no second copy of it.

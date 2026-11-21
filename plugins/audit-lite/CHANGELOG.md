@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.13.4] - 2026-11-21
+### Changed
+- The carried universal conventions follow figma-components-audit 2.53.0's rewrite to skill-standard §A clause I; no rule changed.
+
 ## [0.13.3] - 2026-11-21
 ### Changed
 - The carried bucket list cites its new home in figma-components-audit 2.52.0; no behaviour changed.
