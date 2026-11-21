@@ -71,7 +71,7 @@ assert.match(r.out, /does not apply on main \(a\.txt\)/, 'the conflicting file i
 assert.equal(git(remote, 'rev-parse', 'main'), before, 'the remote did not move');
 assert.equal(queued(main).length, 0, 'and the branch left the queue');
 
-// (d) a red branch in a batch holds no one: each alone, the green one lands
+// (d) a red branch in a batch holds no one: the batch is halved, the green one lands
 const E = wt('e'), F = wt('f');
 edit(E, 'e.txt', 'e1\n'); edit(F, 'd.txt', 'BAD\n');
 fs.writeFileSync(path.join(main, '.git', 'land-queue', 'worktree-f'), JSON.stringify({ branch: 'worktree-f', sha: git(F, 'rev-parse', 'HEAD'), at: Date.now() }));
@@ -160,7 +160,9 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.match(r.out, /trying it in halves of 3 and 3/, r.out);
   assert.match(r.out, /worktree-n6 is red on main/, r.out);
   const used = runs() - before;
-  assert.ok(used <= 5, `halving costs at most 5 checks here, each alone cost 7: ${used}\n${r.out}`);
+  // red 6, green 3 (lands), the other 3 the red tree again (no check), red 2, green 1, red 1 (always checked), green 1
+  assert.equal(used, 6, `halving costs 6 checks here, each alone cost 7, and it grows as log2(n), not n: ${used}\n${r.out}`);
+  assert.match(r.out, /the same tree as the red batch before it: red, not checked again/, r.out);
   const holds = fs.readFileSync(count, 'utf8').split('\n').filter(Boolean).slice(-used).map((l) => l.split(' ')[1]);
   assert.equal(new Set(holds).size, used, `each check under its own hold of the lock: ${holds.join(',')}`);
   assert.equal(queued(main).length, 0, 'the queue is empty');

@@ -5,8 +5,8 @@
  * branch together: their new commits replayed onto origin/main in an integration worktree, one full check of the
  * result, and a push from there. N sessions landing at once cost one check, not N (the bors model: test main with the
  * change applied, then move main; github.com/bors-ng/bors-ng). A branch whose commits do not apply is dropped and told;
- * a red batch is split in half until the red branch is alone (step()). The lock is held for one check at a time, never
- * a whole batch's retries, and a branch red at the same commit is not queued again.
+ * a red batch is split in half until the red branch is alone (step()). The lock is held for one check at a time, with a
+ * pause between, never a whole batch's retries, and a branch red at the same commit is not queued again.
  *
  *   bin/land [<branch or worktree folder>]     default: the branch checked out where it is run
  *
@@ -114,7 +114,7 @@ function sweep(main) {
 }
 
 /* A red batch is split in half, recursively, and the halves wait in .split, the first half next: whichever bin/land holds
-   the lock next goes on from there, so 1 red branch in 12 costs about 2·log2(12) checks, not 12 (2026-11-21: a red batch
+   the lock next goes on from there, so 1 red branch in n costs about log2(n) checks, not n (2026-11-21: a red batch
    re-checked one branch at a time held the lock five hours). A half landed before the other moves main, so a branch
    red only beside another is found red on main by the same split. The second half keeps the red batch's tree: once
    the first half has landed green, the second half on top of it is that tree again, so it is red without a check
@@ -143,7 +143,9 @@ async function step(main, me, state) {
   if (conflicted.length) { setGroups(main, g); return null; } // the rest of its group is tried next, without it
   if (!applied.length) return settled(main, me) || 'landed';
   const tree = git(dir, 'rev-parse', 'HEAD^{tree}');
-  const known = g.length && g[0].red === tree;
+  // a single branch is always checked: an inferred red that rests on a flake must never be blamed on one branch, and
+  // then refused at that commit
+  const known = applied.length > 1 && g.length && g[0].red === tree;
   if (known) say(`${applied.map((a) => a.branch).join(', ')}: the same tree as the red batch before it: red, not checked again`);
   const code = known ? 1 : applied.some((a) => a.commits) ? await check(dir, ['--no-fix']) : 0;
   if (code !== 0) {
@@ -208,14 +210,17 @@ export async function land(from, target) {
   writeJSON(qfile(main, branch), { branch, sha, at: Date.now() });
   say(`${branch} queued at ${sha.slice(0, 8)}`);
   // a run inside a holder (a test, a nested call) holds nothing new
+  // inside a holder (a test, a nested call) the lock is the holder's: never let go of it here
+  const outer = !!process.env.TOOLKIT_LOCK_HELD;
   const state = { moved: 0 };
   for (;;) {
     await hold(`bin/land ${branch}`, { first: true });
     let out;
-    try { out = await step(main, { branch, sha }, state); } finally { release(); }
+    try { out = await step(main, { branch, sha }, state); } finally { if (!outer) release(); }
+    out ||= settled(main, { branch, sha }); // its own landing is read without another turn of the lock
     if (out) return out === 'landed' ? 0 : 1;
     // a waiter asks the lock once a second (lock.mjs HOLD): without a pause this holder takes it back first, every time
-    await new Promise((r) => setTimeout(r, PAUSE));
+    if (!outer) await new Promise((r) => setTimeout(r, PAUSE));
   }
 }
 
