@@ -1,10 +1,10 @@
-// Reads the 12 step hexes of an existing colour ramp — Workflow step 2's
+// Reads the 12 step hexes of an existing colour ramp — Workflow step 4's
 // "Pull existing swatches" — and returns them in the form
 // build-matrix-script.py takes for --color-a / --color-b. Run via
 // figma_execute with this file's contents as `code`, after filling FRAME_ID
 // (or FRAME_NAME, matched on the current page). Read-only.
 //
-// The shape it relies on (SKILL.md step 2): a top-level frame holding one ramp
+// The shape it relies on (SKILL.md step 4; references/running.md §2): a top-level frame holding one ramp
 // instance; the ramp has 12 step columns, each a `Swatches` frame with two rows
 // of fills. The ramp is found as an actual child whose main component is
 // RAMP_NAME, never by offsetting the frame's ID: a frame and the instance inside
@@ -14,7 +14,7 @@
 // build-matrix-script.py would fill a grid from in the wrong place.
 //
 // Both rows come back. Which one the matrix compares (which mode) is the
-// user's answer, asked before this runs (step 2: always confirm which mode).
+// user's answer, asked before this runs (step 4: always confirm which mode).
 
 const FRAME_ID = "";               // the ramp's top-level frame, or leave empty and set FRAME_NAME
 const FRAME_NAME = "";             // matched exactly among the current page's top-level frames

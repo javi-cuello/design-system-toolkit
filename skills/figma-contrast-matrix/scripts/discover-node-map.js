@@ -33,7 +33,7 @@
 
 // Both are prepended by the session, never edited in: `const TOKENS = …;` (the library's settings, whose ratiosGrid
 // names the component; node tools/snapshot/projects.cjs settings <project>) and `const TARGET_INSTANCE_ID = "…";`
-// (an instance find-grid-instances.js returned, Workflow step 1).
+// (an instance find-grid-instances.js returned, Workflow step 2).
 if (typeof TOKENS === "undefined" || !TOKENS || !TOKENS.ratiosGrid) throw new Error("prepend the library's settings, `const TOKENS = …;` with ratiosGrid: node tools/snapshot/projects.cjs settings <project>");
 if (typeof TARGET_INSTANCE_ID === "undefined" || !TARGET_INSTANCE_ID) throw new Error('prepend `const TARGET_INSTANCE_ID = "…";`, an instance find-grid-instances.js returned');
 const GRID_NAME = TOKENS.ratiosGrid;
@@ -45,7 +45,7 @@ function expect(cond, msg) {
   if (!cond) throw new Error(`${GRID_NAME} structure unexpected: ${msg}`);
 }
 
-expect(TARGET_INSTANCE_ID, "TARGET_INSTANCE_ID is empty — fill it with an instance ID from step 1's search, found ON THE PAGE you are targeting, not guessed or reused from a different file");
+expect(TARGET_INSTANCE_ID, "TARGET_INSTANCE_ID is empty — fill it with an instance ID from step 2's search, found ON THE PAGE you are targeting, not guessed or reused from a different file");
 
 const instance = await figma.getNodeByIdAsync(TARGET_INSTANCE_ID);
 expect(instance, `no node found for TARGET_INSTANCE_ID "${TARGET_INSTANCE_ID}"`);

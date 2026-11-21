@@ -1,5 +1,5 @@
 // Lists every instance of the contrast-matrix grid component on the current
-// page — Workflow step 1 of SKILL.md. Run via figma_execute on the page holding
+// page — Workflow step 2 of SKILL.md. Run via figma_execute on the page holding
 // the matrices; pass the file's contents as `code` (it is short enough that the
 // call itself is the delivery, like discover-node-map.js).
 //
