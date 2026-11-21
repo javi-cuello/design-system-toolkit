@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /*
- * Writes the generated block of plugins/audit-lite/code.js: the components audit's scanner, its judgement prompt, its
- * buckets and universal conventions, the house settings flattened as every other launcher flattens them, and this
+ * Writes the generated block of plugins/audit-lite/code.js: the audit's list of stages and its reader, the components
+ * audit's scanner with its judgement prompt, buckets and universal conventions, the foundations audit's file and
+ * library checks, the snapshot plugin's facts mode, the house settings flattened as every other launcher flattens them, and this
  * plugin's own instructions and report template. A plugin's main file cannot load other files, so they are copied in;
  * the copy is generated, never pasted (toolkit-standard §D 23), and --check fails on one that differs.
  *
@@ -93,14 +94,57 @@ const readers = [
 ].join('\n');
 // The judge's conventions and rulings lines, as the dashboard derives them.
 const judgeRules = read('tools/figma-audit/judge-rules.mjs').replace(/^export /gm, '');
+// The audit's one list of stages and its reader (tools/figma-audit/stages.mjs): Audit lite runs the stages that name it,
+// in the list's order, by the rules the dashboard and bin/audit read (figma-project-audit stages.json).
+const REGISTRY_FILE = 'skills/figma-project-audit/stages.json';
+const registry = JSON.parse(read(REGISTRY_FILE));
+const stagesSrc = read('tools/figma-audit/stages.mjs');
+const { gatherCode } = await import(path.join(ROOT, 'tools/figma-audit/stages.mjs'));
+const strip = (src) => src.replace(/^export /gm, '');
+// The tokens and icons checks (figma-foundations-audit scripts/library.mjs), over the store's own owns derivation
+// (tools/snapshot/owns.cjs), each in a scope of its own: a plugin's main file imports nothing. iconSetNames is left out:
+// it fetches, and Audit lite runs no icon-name check (the project's icon set is a setting only the full audit reads).
+const LIBRARY_FILE = 'skills/figma-foundations-audit/scripts/library.mjs';
+const OWNS_FILE = 'tools/snapshot/owns.cjs';
+const librarySrc = read(LIBRARY_FILE);
+const IMPORT = /^import ownsModule from "[^"]*owns\.cjs";\n/m;
+if (!IMPORT.test(librarySrc)) throw new Error('sync: ' + LIBRARY_FILE + ' no longer imports owns.cjs as ownsModule');
+const cut = librarySrc.indexOf('export async function iconSetNames');
+if (cut < 0 || /^export /m.test(librarySrc.slice(cut + 1))) throw new Error('sync: iconSetNames is not the last export of ' + LIBRARY_FILE);
+const libraryBody = strip(librarySrc.slice(0, librarySrc.lastIndexOf('/**', cut)).replace(IMPORT, ''));
+const library = `const LIBRARY = (() => {
+const ownsModule = (() => { const module = { exports: /** @type {any} */ ({}) };
+${read(OWNS_FILE)}
+return module.exports; })();
+${libraryBody}
+return { liveChecks, liveApplies };
+})();`;
+// The snapshot plugin's facts mode, its own reader run as the registry says (gatherCode: its `__html__` shadowed, so it
+// never opens a window inside this one). The tokens and icons stages share one read, so their gathers must agree.
+const live = registry.stages.filter((s) => s.id === 'tokens' || s.id === 'icons');
+if (live.length !== 2 || JSON.stringify(live[0].gather) !== JSON.stringify(live[1].gather)) throw new Error('sync: the tokens and icons stages no longer share one gather in ' + REGISTRY_FILE);
+const snapshotSrc = read(live[0].gather.script);
+const ICON_PAGE = /^const isIconPage = .*;$/m;
+if (!ICON_PAGE.exec(snapshotSrc)) throw new Error('sync: ' + live[0].gather.script + ' has no one-line isIconPage');
+const snapshot = `/** What the snapshot plugin calls an icon page, its own rule: the icons stage applies where there is one. */
+${ICON_PAGE.exec(snapshotSrc)[0]}
+/** The snapshot plugin's facts mode (design-system-snapshot code.js), unchanged, run headless. @returns {Promise<any>} */
+function snapshotFacts() {
+${gatherCode(live[0], snapshotSrc)}
+}`;
+
 // The full audit's discovery and probes (figma-components-audit scripts/probes.js), its factory by source.
 const probes = `const FCA_FACTORY = ${globalThis.__FCA_PROBES_FACTORY.toString()};`;
 
-const block = `/* audit-lite generated start — written by plugins/audit-lite/sync.mjs from ${SCANNER}, ${FOUNDATIONS}/foundations.js, skills/figma-components-audit/scripts/probes.js, ${REFERENCES}/conventions-universal.md, tools/snapshot/projects.cjs, tools/figma-audit/judge-rules.mjs, skills/figma-context-capture/assets/context-template.md, standards/audit-settings.json, standards/naming-preferences.json, instructions.md, report.html, and the audit dashboard's words and tokens (tools/docs-site/src/dashboard, stock-ui); never edit by hand */
+const block = `/* audit-lite generated start — written by plugins/audit-lite/sync.mjs from ${SCANNER}, ${FOUNDATIONS}/foundations.js, ${REGISTRY_FILE}, tools/figma-audit/stages.mjs, ${LIBRARY_FILE}, ${OWNS_FILE}, ${live[0].gather.script}, skills/figma-components-audit/scripts/probes.js, ${REFERENCES}/conventions-universal.md, tools/snapshot/projects.cjs, tools/figma-audit/judge-rules.mjs, skills/figma-context-capture/assets/context-template.md, standards/audit-settings.json, standards/naming-preferences.json, instructions.md, report.html, and the audit dashboard's words and tokens (tools/docs-site/src/dashboard, stock-ui); never edit by hand */
 const LITE = ${JSON.stringify(LITE)};
 ${readers}
 ${judgeRules}
 ${probes}
+const REGISTRY = ${JSON.stringify(registry)};
+${strip(stagesSrc)}
+${library}
+${snapshot}
 /** The components audit's scanner, unchanged: TARGETS [] scans every set. @returns {Promise<any>} */
 async function scan(/** @type {string[]} */ TARGETS, /** @type {any} */ SCALES, /** @type {any} */ TOKENS) {
 ${scanner}

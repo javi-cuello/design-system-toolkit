@@ -8,7 +8,7 @@ import { DASH, ctx } from './context.js';
 //   bridge  -> POST /exec               (straight to the Figma plugin)
 //   ask     -> POST /claude             (the API, key held by the server)
 // — and the rest of the surface hangs off the same object: `status`,
-// `context`, `ruling`, `rows`, `validate`, `scripts` and `live`. The three
+// `context`, `ruling`, `rows`, `validate`, `libraryChecks`, `scripts` and `live`. The three
 // above were the whole app once and the sentence outlived that.
 /*
  * Read-only, when nothing is serving the record. A published copy of this
@@ -115,6 +115,15 @@ export const api = {
     if (specs) payload.specs = specs;
     const r = await fetch("/validate", { method: "POST", headers: { "content-type": "application/json" },
                                         body: JSON.stringify(payload) });
+    return r.json();
+  },
+  // The tokens and icons checks (figma-foundations-audit library.mjs) on the
+  // live file's facts, read by the snapshot plugin's facts mode: node code the
+  // page cannot run, as the validator's engine is.
+  async libraryChecks(facts) {
+    if (readOnly()) return refuse();
+    const r = await fetch("/library-checks", { method: "POST", headers: { "content-type": "application/json" },
+                                              body: JSON.stringify({ facts, fileKey: ctx.libKey }) });
     return r.json();
   },
   // The library's components against its code's, by name, compared in the

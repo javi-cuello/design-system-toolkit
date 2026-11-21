@@ -1,5 +1,9 @@
 # Changelog — figma-foundations-audit
 
+- 1.31.0 (2026-11-21): the snapshot watch runs the tokens checks for every library whose stored source owns a collection, text style or effect, not only the `tokens` role (`watchTargets`), so a components library's own unused tokens are checked. Case F29.
+- 1.30.0 (2026-11-21): live and stored agree on who uses a token: `liveChecks` `selfUsed`, from the file's roles (`selfUsedOf`); an icon's glyph colour counts as a use on both paths. Case F28, each path from its own input.
+- 1.29.1 (2026-11-21): Audit lite carries the tokens and icons checks too, and runs the file stage first, in the audit's list order; the SKILL says so.
+- 1.29.0 (2026-11-21): the tokens and icons checks run on the live file, as the audit's `tokens` and `icons` stages, through `liveView` and `liveChecks`. Case F28. Renumbered from 1.28.0 when merged after main's clause-I rewrite; its text now lives in references/libraries.md and gather.md.
 - 1.28.0 (2026-11-21): SKILL.md meets skill-standard §A clause I; detail moves to references/ (checks, gather, filing, libraries). *Not yet checked* names only rule 15's unchecked half: the header and one Properties table per component.
 - 1.27.2 (2026-11-19): the note that Propstar displaces the Desktop Bridge, so the template check runs apart from Matrix generation, moves here from figma-standard rule 15.
 - 1.27.1 (2026-11-16): the unused-token check counts every style's bindings, used by a component or not, as figma-standard rule 42 says. Case F27.

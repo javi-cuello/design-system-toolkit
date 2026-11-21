@@ -1,4 +1,4 @@
-// Design system snapshot — v0.80.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.81.2 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -52,6 +52,10 @@ let unpaired = '';
  * the project keeps out. `const FULL =
  * true` returns the whole library payload instead, previews and icons
  * included: what the UI would post, for a caller that posts it itself.
+ * `const FACTS = true` returns what the audit's tokens and icons stages read
+ * (collectFacts): the tokens, the icons without SVGs, what the components
+ * bind. Inside another plugin, which has a `__html__` of its own, the caller
+ * shadows it first (`const __html__ = undefined;`), as Audit lite does.
  */
 const HEADLESS = typeof __html__ === 'undefined';
 
@@ -487,7 +491,24 @@ const drawnIn = (s) => {
   return null;
 };
 
+/* Every variable the components on `pages` bind, by id: on the component, its layers, and their fills, strokes and effects. */
+const boundOn = (/** @type {readonly PageNode[]} */ pages) => {
+  const ids = new Set();
+  const take = (/** @type {any} */ b) => { if (Array.isArray(b)) b.forEach(take); else if (b && b.type === 'VARIABLE_ALIAS') ids.add(b.id); else if (b && typeof b === 'object') Object.values(b).forEach(take); };
+  for (const p of pages) for (const c of p.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }))
+    for (const n of [c, ...c.findAll()]) for (const x of [n, ...[/** @type {any} */ (n).fills, /** @type {any} */ (n).strokes, /** @type {any} */ (n).effects].flatMap((l) => (Array.isArray(l) ? l : []))]) take(/** @type {any} */ (x).boundVariables);
+  return ids;
+};
+/* The pages whose components a snapshot stores: never this plugin's scratch page or one a person marks Scratch, which
+   the stored specs leave out too, so the live and stored audits count the same bindings. */
+const storedPages = () => figma.root.children.filter((p) => p.name !== SCRATCH && !isScratchPage(p));
+/* What the file's components bind, read once a run (collectTokens starts it afresh): the tokens read uses it to find
+   another library's collections. */
+let boundIds = null;
+function boundVariableIds() { return boundIds || (boundIds = boundOn(storedPages())); }
+
 async function collectTokens() {
+  boundIds = null;   // a run reads the file as it is now: the window stays open between runs
   const collections = await figma.variables.getLocalVariableCollectionsAsync();
   // Every collection under its own name, with its own modes: the payload
   // assumes no collection is called anything in particular (toolkit-standard
@@ -560,10 +581,7 @@ async function collectTokens() {
   const byName = {};
   // and the collections of another library whose variables the components bind (a component file whose colours, spaces
   // and radii live in a foundations file has none local), marked remote: a name a local one holds is that one
-  const ids = new Set(), others = new Map(), here = new Set(collections.map((c) => c.name));
-  const take = (b) => { if (Array.isArray(b)) b.forEach(take); else if (b && b.type === 'VARIABLE_ALIAS') ids.add(b.id); else if (b && typeof b === 'object') Object.values(b).forEach(take); };
-  for (const c of figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }))
-    for (const n of [c, ...c.findAll()]) for (const x of [n, ...[n.fills, n.strokes, n.effects].flatMap((l) => (Array.isArray(l) ? l : []))]) take(x.boundVariables);
+  const ids = boundVariableIds(), others = new Map(), here = new Set(collections.map((c) => c.name));
   for (const i of ids) {
     const v = await variable(i).catch(() => null);
     const c = v && v.remote && await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(() => null);
@@ -613,7 +631,8 @@ async function collectTokens() {
     if (s.remote && !font.family) continue;
     let lh, source;
     if (s.lineHeight.unit === 'AUTO') {
-      const h = await measureStyle(s, font);
+      // the facts mode writes nothing: measuring draws a text on a scratch page, and no audit check reads a line height
+      const h = typeof FACTS !== 'undefined' && FACTS ? null : await measureStyle(s, font);
       if (h !== null) { lh = +(h / s.fontSize).toFixed(4); source = 'measured'; }
       else { lh = +(Math.round(s.fontSize * (METRIC[font.family] || 1.2)) / s.fontSize).toFixed(4); source = 'metric'; }
     } else { lh = perFontSize(s.lineHeight, s.fontSize); source = 'style'; }
@@ -725,7 +744,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.80.0';
+const VERSION = '0.81.2';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1129,6 +1148,23 @@ const glyphFill = async (node) => {
   };
   return visit(node);
 };
+/* One entry per icon variant: its set's name, the size it is drawn at, its unbound paints and the
+   variable its glyph is painted with, and with `svg` its export. The facts mode reads it without
+   the export, which is the slow part and which no check reads. */
+const iconFacts = async (/** @type {(ComponentSetNode | ComponentNode)[]} */ iconSets, /** @type {boolean} */ svg) => {
+  const icons = [];
+  for (const [i, s] of iconSets.entries()) {
+    say('reading icons', i, iconSets.length);
+    for (const k of s.type === 'COMPONENT_SET' ? s.children : [s]) {
+      const m = /Size=(\d+)/.exec(k.name);
+      const out = { name: s.name, size: m ? +m[1] : Math.round(k.width) };
+      if (svg) out.svg = await k.exportAsync({ format: 'SVG_STRING' });
+      const fill = await glyphFill(k);
+      icons.push(Object.assign(out, { unbound: unboundPaints(k) }, fill ? { fill } : {}));
+    }
+  }
+  return icons;
+};
 /** @param {PageNode | SectionNode | FrameNode} scope */
 const componentSets = (scope) => /** @type {(ComponentSetNode | ComponentNode)[]} */ (scope.findAll((n) =>
   n.type === 'COMPONENT_SET' || (n.type === 'COMPONENT' && n.parent !== null && n.parent.type !== 'COMPONENT_SET')));
@@ -1189,18 +1225,7 @@ async function collectLibrary(withIcons) {
   const iconSets = iconPage ? componentSets(iconPage) : [];
   const graphicPage = figma.root.children.find(isGraphicPage);
   const graphicSets = graphicPage ? componentSets(graphicPage) : [];
-  const icons = [];
-  if (withIcons) {
-    for (const [i, s] of iconSets.entries()) {
-      say('reading icons', i, iconSets.length);
-      for (const k of s.type === 'COMPONENT_SET' ? s.children : [s]) {
-        const m = /Size=(\d+)/.exec(k.name);
-        const svg = await k.exportAsync({ format: 'SVG_STRING' });
-        const fill = await glyphFill(k);
-        icons.push({ name: s.name, size: m ? +m[1] : Math.round(k.width), svg, unbound: unboundPaints(k), ...(fill ? { fill } : {}) });
-      }
-    }
-  }
+  const icons = withIcons ? await iconFacts(iconSets, true) : [];
   /*
    * The graphics, at twice the size they are drawn.
    *
@@ -1735,6 +1760,9 @@ const message = (e) => String((e && typeof e === 'object' && /** @type {{message
 /** The router refused the code: the window asks for it again. */
 class Unpaired extends Error {}
 
+// ---- the window and the headless entry: everything below runs from the UI or a bridge, never from use_figma's run,
+// which calls collectLibrary itself and is cut here to stay under its size cap (tools/snapshot/mcp.mjs, CUT).
+
 if (!HEADLESS) {
   const ready = () => Promise.all([kind(), reachable()]).then(([mode, up]) =>
     figma.ui.postMessage({ type: 'ready', mode, up, unpaired: up ? unpaired : '', server: SERVER, file: figma.root.name, version: VERSION }));
@@ -1793,6 +1821,28 @@ if (!HEADLESS) {
   };
 }
 
+/*
+ * The facts the audit's tokens and icons stages read (figma-foundations-audit
+ * scripts/library.mjs, liveView), from the live file: the tokens payload, the
+ * icon facts without their SVGs, the variables the file's own components bind
+ * by name, and how many components it has off the icon and scratch pages. The
+ * same reader as a snapshot, so the live audit and the store cannot describe a
+ * token in two shapes (toolkit-standard §D 5).
+ */
+async function collectFacts() {
+  await loadPages();
+  const tokens = await collectTokens();
+  const iconPage = figma.root.children.find(isIconPage);
+  const iconSets = iconPage ? componentSets(iconPage) : [];
+  const icons = await iconFacts(iconSets, false);
+  // what the components bind, off the icon page as the stored specs are: a glyph's colour counts through the icon facts (owns.iconColours)
+  const pages = storedPages().filter((p) => p !== iconPage);
+  const used = new Set();
+  for (const id of boundOn(pages)) { const v = await variable(id).catch(() => null); if (v) used.add(v.name); }
+  const components = pages.reduce((n, p) => n + componentSets(p).length, 0);
+  return { tokens, icons, iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, used: [...used].sort(), components };
+}
+
 // No `return` at the top level: Figma evaluates this file as a SCRIPT, and a
 // top-level return is a SyntaxError there — the plugin was dead from the
 // commit that added the headless branch until the console said "Illegal
@@ -1800,6 +1850,8 @@ if (!HEADLESS) {
 // value, so the service appends `return __headless();` when it serves this
 // file for headless use (figma-audit/server.mjs).
 async function __headless() {
+  // put back on the way out: the caller's next read (Audit lite's components scan, the bridge's next script) sees what it saw before
+  const skip = figma.skipInvisibleInstanceChildren;
   figma.skipInvisibleInstanceChildren = true;
   walkWhole = false;
   await loadPages();
@@ -1809,7 +1861,8 @@ async function __headless() {
   const exclude = typeof EXCLUDE !== 'undefined' && Array.isArray(EXCLUDE) && EXCLUDE.length ? new Set(EXCLUDE) : null;
   try {
     if (typeof FULL !== 'undefined' && FULL) return Object.assign(await collectLibrary(true), { fileKey: figma.fileKey || null, fileName: figma.root.name });
+    if (typeof FACTS !== 'undefined' && FACTS) return Object.assign(await collectFacts(), { fileKey: figma.fileKey || null, fileName: figma.root.name, at: new Date().toISOString() });
     const components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], scope, pages, section, exclude });
     return { components, ...(unreadable.length && { unreadable }), fileKey: figma.fileKey || null, fileName: figma.root.name, at: new Date().toISOString() };
-  } finally { if (scratchPage) { scratchPage.remove(); scratchPage = null; } }
+  } finally { figma.skipInvisibleInstanceChildren = skip; if (scratchPage) { scratchPage.remove(); scratchPage = null; } }
 }

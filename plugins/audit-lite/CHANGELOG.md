@@ -1,6 +1,32 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.2] - 2026-11-21
+### Fixed
+- **The checks fieldset keeps FigUI3's own look.** The plugin no longer overrides FigUI3's padding and border on the fieldset or its legend's inset; it sets only the space around the group and the question's weight.
+### Changed
+- The bundled audit code carries `stoppedLines` and `watchTargets` (figma-project-audit 1.7.2, figma-foundations-audit 1.31.0); nothing in the plugin calls them.
+
+## [0.14.1] - 2026-11-21
+### Fixed
+- **One loop for the stages.** The plugin runs them through the audit's own loop (`stages.mjs` `runStages`), as the dashboard and `bin/audit` do.
+- **A saved unticked check never runs.** The plugin reads what is switched off from its own storage at Run, and the window's clicks only change it, one write after another, so a click is never undone by a stale read.
+- **Run waits for the checks.** It is disabled until the list of checks has arrived. A list that has not changed is not rebuilt, so focus and a box just clicked stay put.
+- **A file that cannot be read says so.** On opening, a failed read of the file's facts says "This file could not be read" with the error, holds Run and offers **Try again**, rather than "The audit stopped".
+- **The report says why a check did not run.** A components check that threw is said as stopped, never as a file with no components. On a selection, a whole-file check says a run on a selection checks only the selected components, even when its box is unticked.
+- **Unused tokens are checked against this file.** The plugin reads one file as self-contained, so its own components, icons and styles decide what is unused, and the report says that only this file counts. An icon's glyph colour counts as a use (figma-foundations-audit 1.30.0).
+### Changed
+- The checks sit in a fieldset whose legend asks "What should the audit check?" (knowledge/ui/components/checkbox.md).
+
+## [0.14.0] - 2026-11-21
+### Added
+- **The audit's own list of stages.** The plugin runs the stages figma-project-audit's `stages.json` gives it, in its order, through the same scripts the dashboard and `bin/audit` run: the file, the components, and now the variables and styles and the icons (figma-foundations-audit's tokens and icons checks, on facts read by the snapshot plugin's own facts mode, carried in and run headless).
+- **A checkbox per check, shown only where it applies.** Components where the file has components, Variables & styles where it owns a collection, text style or effect style, Icons where it has an icon page, File always; on a selection, Components alone. Each carries its one-line description, taken from the list. The choices are kept on this machine; Run waits while every check is off.
+- The report says which checks ran and why each other did not, and what the variables and icons checks covered.
+### Changed
+- Each candidate carries its bucket, by its stage's rule as the dashboard files it. A page-order finding now lands in bucket 1, as on the dashboard, where Claude put it in bucket 3.
+- A check that stops costs its own findings, never the report: a failed components scan is said in the report rather than ending the run.
+
 ## [0.13.4] - 2026-11-21
 ### Changed
 - The carried universal conventions follow figma-components-audit 2.53.0's rewrite to skill-standard §A clause I; no rule changed.

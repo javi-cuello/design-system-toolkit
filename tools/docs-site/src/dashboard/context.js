@@ -9,7 +9,7 @@ export const DASH = document.querySelector("[data-dash]");
 export const ctx = {
   libKey: null, libName: null, FILE: "", lastMetrics: null, lastRuns: [],
   storedPrints: null, printsLoaded: false, lastMoved: [],
-  lastRules: null, BUCKET_OF_RULE: {}, BUCKET_DEFAULT: "b3",
+  lastRules: null,
   ownerFilter: "all", askSample: null,
   /*
    * A run is in flight. Every write site in `audit.js` reads `ctx.libKey`

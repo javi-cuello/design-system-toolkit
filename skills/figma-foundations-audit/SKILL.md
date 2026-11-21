@@ -5,7 +5,7 @@ description: Audit a Figma library file as a whole rather than component by comp
 
 # Figma Foundations Audit
 
-**Version 1.28.0** — history in CHANGELOG.md.
+**Version 1.31.0** — history in CHANGELOG.md.
 
 This skill audits a Figma library file as a whole, not one component at a time. It checks the order of pages, names that collide on export, grouped-name separators, and whether a part carries its parent's name. A walk over component sets never reaches these rules, so one script reads the page list and every component's name and parents instead. Use it to check page order, naming across the library or the file's structure, and as the foundations stage of `figma-project-audit`.
 
@@ -60,4 +60,4 @@ The checks run in node against fixture facts with no Figma: `node tests/test-fou
 | [checks.md](references/checks.md) | Each check's question and keys, mode pins, the part rule, scope, what is not yet checked |
 | [gather.md](references/gather.md) | Step 3: the snapshot, live and Audit lite paths, and the snapshot's limits |
 | [filing.md](references/filing.md) | Steps 4 to 6: judging, the payload, keys, buckets and closing rows |
-| [libraries.md](references/libraries.md) | The tokens library and the icon library, checked from the snapshot |
+| [libraries.md](references/libraries.md) | The tokens library and the icon library: the live stages and the snapshot watch |

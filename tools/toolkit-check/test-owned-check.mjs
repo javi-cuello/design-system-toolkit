@@ -31,5 +31,20 @@ try {
   const outside = repoWith(tmpdir(), { 'x/draw.mjs': "import { parseColour } from '../../parity/values.mjs';\nconst parseColour = 1;\n" });
   made.push(outside);
   ok('a relative path that does not reach the toolkit is no use of it', /EXIT 1/.test(run(outside)));
+  // a sync-generated block (a plugin's main file imports nothing, so the owner is copied in and --check holds the copy
+  // to it) is a use; a definition beside the block is still a copy
+  const gen = repoWith(tmpdir(), { 'plugin/code.js': '/* audit-lite generated start — written by sync.mjs */\nfunction parseColour(s) { return null; }\n/* audit-lite generated end */\n' });
+  made.push(gen);
+  ok('a definition inside a sync-generated block is the owner copied in, not a copy', !/EXIT/.test(run(gen)));
+  const beside = repoWith(tmpdir(), { 'plugin/code.js': '/* audit-lite generated start */\nconst x = 1;\n/* audit-lite generated end */\nfunction parseColour(s) { return null; }\n' });
+  made.push(beside);
+  ok('…and one outside the block still fails', /defines `parseColour`/.test(run(beside)) && /EXIT 1/.test(run(beside)));
+  // only a block a known generator writes (conformance.mjs GENERATORS, each run with --check by check.sh) is a use
+  const typed = repoWith(tmpdir(), { 'plugin/code.js': '/* mine generated start */\nfunction parseColour(s) { return null; }\n/* mine generated end */\n' });
+  made.push(typed);
+  ok('(refused) a hand-typed marker no generator writes hides nothing: the definition in it is a copy', /defines `parseColour`/.test(run(typed)) && /EXIT 1/.test(run(typed)));
+  const mixed = repoWith(tmpdir(), { 'plugin/code.js': '/* audit-lite generated start */\nfunction parseColour(s) { return null; }\n/* adoption-score generated end */\n' });
+  made.push(mixed);
+  ok('(refused) a start and an end that name two generators are no block: the definition is a copy', /defines `parseColour`/.test(run(mixed)) && /EXIT 1/.test(run(mixed)));
 } finally { for (const d of made) rmSync(d, { recursive: true, force: true }); }
 console.log(`\n${n} passed`);

@@ -260,21 +260,9 @@ function contrastCells(r, headings) {
 // Row DEFINITIONS live in the database beside their state, not in this file.
 // While they were markup, an audit run from the page could never add a row —
 // which is exactly what a maintainer expects an audit to do.
-// Which bucket a rule lands in is the SKILL's reporting contract, fetched
-// from /scripts with everything else it decides. Empty until the first
-// fetch; `fileRows` is the only reader and it awaits that fetch first.
-
-export function loadBuckets(buckets) {
-  if (!buckets) return;
-  const map = {};
-  // b1–b3, which is what `buckets.json` defines and what `rows.mjs` clamps
-  // every incoming bucket into. `b4` was iterated here and in `check.mjs` and
-  // has never existed in either.
-  for (const b of ["b1", "b2", "b3"])
-    for (const rule of buckets[b] || []) map[rule] = b;
-  ctx.BUCKET_OF_RULE = map;
-  ctx.BUCKET_DEFAULT = buckets._default || "b3";
-}
+// Which bucket a rule lands in is the SKILL's reporting contract (buckets.json), read where a row is filed, through
+// the audit's one bucket rule (tools/figma-audit/stages.mjs bucketFor, called by audit.js fileRows); nothing here
+// keeps a second map of it.
 export function rowsIn(bucket) {
   return Object.keys(state)
     .filter((id) => (state[id] || {}).bucket === bucket)

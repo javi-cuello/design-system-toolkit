@@ -23,6 +23,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join, relative, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { walkRepo } from '../shared/walk.mjs';
+import { blankGenerated } from '../../skills/figma-plugin-creator/scripts/conformance.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TOOLKIT = resolve(HERE, '..', '..');
@@ -71,13 +72,18 @@ for (const entry of owned) {
     // flagging themselves and 2 real third copies nobody had seen.
     const rel = relative(repo, file);
     if ((entry.owners || []).some((o) => rel.startsWith(o))) continue;
+    // A sync-generated block (`/* <name> generated start … <name> generated end */`) is the owner's code copied in,
+    // where a file can import nothing (a Figma plugin's main file), and its sync's --check fails on a copy that differs
+    // from the owner (toolkit-standard §D 23): a use, not a second implementation. Only a block conformance.mjs's
+    // GENERATORS names is blanked, so a hand-typed marker hides nothing and a definition outside a block still counts.
+    const own = blankGenerated(text);
     for (const name of entry.names || []) {
       if (imported.has(name)) continue;
       const defines = new RegExp(`(?:^|\\n)[^\\n]*(?:export\\s+)?(?:async\\s+)?(?:function\\s+${name}\\b|(?:const|let|var)\\s+${name}\\s*=)[^\\n]*`, 'g');
-      for (const m of text.matchAll(defines)) {
+      for (const m of own.matchAll(defines)) {
         // A wrapper over the toolkit's own is a use: a project may name its
         // tolerance or its paths around a shared part, and often should.
-        const body = text.slice(m.index, text.indexOf('\n\n', m.index) + 1 || m.index + 400);
+        const body = own.slice(m.index, own.indexOf('\n\n', m.index) + 1 || m.index + 400);
         if ([...imported].some((i) => new RegExp(`\\b${i}\\b`).test(body))) continue;
         findings.push([entry.job, `${relative(repo, file)} defines \`${name}\` — call ${entry.module}`]);
       }

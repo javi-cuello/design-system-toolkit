@@ -1,4 +1,12 @@
-# Eval cases — figma-foundations-audit (v1.28.0)
+# Eval cases — figma-foundations-audit (v1.31.0)
+
+**Walked: 2026-11-21 for 1.31.0** — merge of main's clause-I rewrite (1.28.0) with the one-audit work, renumbered 1.29.0–1.31.0: the live stages, the watch and `selfUsed` moved into references/libraries.md, Audit lite's stages into gather.md; F28 and F29 read against them, every assertion's rule survives. `node tests/test-foundations.mjs` 104 of 104.
+
+**Walked: 2026-11-21 for 1.30.0** — F28 rewritten and executed: `node tests/test-foundations.mjs` 102 of 102. With the glyph-colour reach removed from `tokenChecks`, "a token only an icon's glyph is painted with is used, on both paths" fails (101 of 102); the planted 0.81 rule (a tokens file's own documentation components taken for its users) raises Text/soft, which the other file binds.
+
+**Walked: 2026-11-21 for 1.29.1** — prose only (Audit lite's path); `node tests/test-foundations.mjs` 99 of 99; F28's live path is the one Audit lite now bundles, and `plugins/audit-lite/tests/test-audit-lite.mjs` holds its copy to `liveChecks` finding for finding.
+
+**Walked: 2026-11-21 for 1.29.0** — F28 added and executed: `node tests/test-foundations.mjs` 99 of 99; with `liveView` skipping the store's sort, three of F28's assertions fail. F20 and F27 unchanged: the stored path's findings are the same.
 
 **Walked: 2026-11-21 for 1.28.0** — prose moved to references/ (checks, gather, filing, libraries) under skill-standard §A clause I; every case read against the new text: each assertion's rule survives (F3 and F23 in checks.md, F6 in filing.md, F25 in gather.md, F24 in the script alone as before, F20, F21, F26 and F27 in libraries.md); no case cites a moved section. `node tests/test-foundations.mjs` 88 of 88.
 
@@ -200,3 +208,17 @@ Runs: node tests/test-foundations.mjs — "tokens: letter spacing in percent may
 - **Traced:** a project's font-size primitives, reached through a text-styles collection by heading and display styles no component drew, were raised as unused; figma-standard rule 42 counts any style. Run 2026-11-16, `tokenChecks` on that project's stored tokens with no component use at all: no `Font/Size` token raised (17 others in its Global collection still are, radii and spacing nothing binds).
 Runs: node tests/test-foundations.mjs — "tokens: a token no component, style or used token reaches is unused; an alias target and a style's binding are used, the style used by a component or not (Caption, case F27)"
 
+## F28 · The live file and its snapshot give the same tokens and icons findings — *executed* 2026-11-21
+Fixture: one snapshot plugin payload (collections in Figma's own order, a remote collection and style, icons with an unbound paint, a token `Icon/x` bound only as the plus icon's glyph colour). The stored path is built from its own input: `store.mergeTokens` and the components' specs through `namesUsed`. The live path from its own: the facts as the plugin returns them (`used` off the icon page), through `liveChecks` with `selfUsed` from the project record (`selfUsedOf`: the tokens and components roles, and no other components library). A second file pair: a tokens file T with documentation components of its own, and a components file C whose specs bind `Text/soft` and `Text/base`.
+Assert: for a file that is its own tokens' user, live and stored return the same tokens findings, ran and scope, the unused check among them, and the same icon findings; `Icon/x` is raised as unused on neither path.
+Assert also: for T, the stored path (C's specs) runs the unused check and finds `Text/soft` used; the live run on T runs no unused check and otherwise returns exactly the stored rows.
+Assert also (planted): taking T's own documentation components for its users, as 0.81's `facts.components` rule did, raises `Text/soft` as unused.
+Assert also (negative): another library's collections and styles never make a file a tokens library; a stage whose file has nothing to read is null; without `selfUsed` no unused check runs.
+Runs: node tests/test-foundations.mjs — "live and stored, one file its tokens' own user: the tokens checks find the same rows, each from its own input", "a token only an icon's glyph is painted with is used, on both paths", "two files, live on the tokens file: no unused check, and every other row the store's", "(planted) a tokens file's own documentation components taken for its users raise Text/soft, which C binds", "live and stored: the icon checks find the same rows from one payload", "selfUsedOf: a file is its tokens' only user with both the tokens and the components role and no other components library", "liveChecks: a stage that does not apply is null, never an empty run that would close rows"
+
+## F29 · The snapshot watch checks a components library's own tokens — *executed* 2026-11-21
+Fixture: `tests/test-foundations.mjs`, the tokens block: the stored tokens of a tokens file T and a components-only file W whose source owns one local collection (`Card/pad`, `Card/gap`); a third components file X owning nothing. Records: T tokens and icons, W and X components.
+Assert: `watchTargets` gives T tokens and icons, W tokens, X nothing; `selfUsedOf` is false for W, and the watch's `tokenChecks` on W runs the unused check and raises `Card/pad`, not `Card/gap`, which a component binds.
+Negative: with the selection by role alone (as before 1.31.0), the assertion fails (103 of 104): W's tokens were checked for use nowhere, live or stored.
+Traced: a review of 1.30.0 found two projects' components files, which own collections, never had their unused tokens checked.
+Runs: node tests/test-foundations.mjs — "watchTargets: the tokens checks for a components-only library whose stored source owns a collection; a tokens library as before; nothing for one that owns nothing", "…and the run the watch then makes on it checks its unused tokens: Card/pad, which no component binds"

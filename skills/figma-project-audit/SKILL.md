@@ -5,7 +5,7 @@ description: Run a project's whole Figma audit by sequencing the stand-alone aud
 
 # Figma Project Audit
 
-**Version 1.5.0** — history in CHANGELOG.md.
+**Version 1.7.2** — history in CHANGELOG.md.
 
 This skill runs a project's whole Figma audit by sequencing the stand-alone audit skills into one audit record. Each of those skills owns one subject: the components, the file as a whole, the code target, the token links. This skill runs them in the one order that keeps their results consistent, so the dashboard shows the whole library. Use it to audit everything, check the whole library, update the dashboard, or run some audits together.
 
@@ -27,9 +27,9 @@ This skill reads from the document only what decides the sequence. Every stage r
 
 | What | Where in the document | Decides |
 |---|---|---|
-| Library, record, source library | The file registry | Which file, which record, whether stage 5 runs |
-| `codeTarget` | The library's `audit-settings` entry | Whether stage 4 runs, and for which target |
-| `code` | The library's `audit-settings` entry | Whether stage 6 runs |
+| Library, record, source library | The file registry | Which file, which record, whether the links stage runs |
+| `codeTarget` | The library's `audit-settings` entry | Whether the code-target stage runs, and for which target |
+| `code` | The library's `audit-settings` entry | Whether the code stage runs |
 
 ## Who owns what
 
@@ -37,26 +37,36 @@ Ownership is the record contract in `tools/figma-audit/REFERENCE.md`. Settings a
 
 ## The sequence
 
+**The stages and their order are `skills/figma-project-audit/stages.json`**, the audit's one list of them.
+
+- Each entry names the stage's skill, its queue, its scripts and its bucket rule.
+- It also says when the stage applies to a file, and which runners run it.
+- The dashboard's *Audit*, `bin/audit` and the Audit lite plugin each read it, so the three run one audit.
+- All three run it through one loop, `tools/figma-audit/stages.mjs` `runStages`. It keeps the list's order and stops only a stage that fails.
+- The suite `tests/test-stages.mjs` fails when a runner and the list disagree.
+
 1. **Confirm the library and the record** from the document's registry.
    - Then, once for every stage, pin the file (`figma_navigate({ lock: true })`) and probe the bridge (`figma_get_status({ probe: true })`).
-2. **Foundations first:** run `figma-foundations-audit`.
-   - A file-level fix, such as page order, never changes a component. So nothing later is invalidated by it.
-   - The order matters only when fixes land between stages. The dashboard's *Audit* applies none, so it runs components first and the file second. That is not a deviation.
-3. **Components next:** run `figma-components-audit` over every component in scope.
-   - Where the dashboard is running, its *Audit all* is stages 2 to 6 in one press.
-4. **Code target:** where the library's settings name a `codeTarget`, run `component-validator` for that target over the same components.
-   - Its findings are decisions, never fixes.
-5. **Links:** where the project routes a library with the role `tokens` (snapshot-standard rule 17), run `figma-variable-audit` against it.
-   - The dashboard's *Audit* runs this stage too, when the source is open in Figma.
-6. **Code:** where the library's settings name its `code`, run `design-code-parity`'s existence comparison and pairing question.
-   - It asks which components the code has, and which it may have under another name.
-   - The dashboard's *Audit* runs this stage last.
-7. **Report** the open breaking changes first, then one line per stage.
+2. **Run each stage in the list's order** by naming its owner skill, where it applies to this library.
+   - A stage applies by a fact of the file, such as an icon page, or by a setting that must be set.
+   - A stage that does not apply is named in the report, with why.
+   - Where the dashboard is running, its *Audit all* runs the whole list in one press.
+3. **Report** the open breaking changes first, then one line per stage.
    - First line: how many breaking changes are open, by name (*Breaking changes are not a stage*).
    - Each stage line: what ran, what it found, what it closed.
    - Name every stage skipped, with its reason. The rows are in the record; the dashboard shows them.
 
-**Any subset runs in the same relative order.** "Just the file and the components" is stages 2 and 3. A stage that fails stops only itself: say which, and run the rest.
+**Order matters only when fixes land between stages.** A runner that applies none, as the dashboard's *Audit*, may run components first. That is not a deviation.
+
+**The owners are the skills this one runs.** That is how `bin/get` takes them with it, and the suite holds this list to the registry:
+
+- run `figma-foundations-audit`
+- run `figma-components-audit`
+- run `component-validator`
+- run `figma-variable-audit`
+- run `design-code-parity`
+
+**Any subset runs in the same relative order.** "Just the file and the components" is the `foundations` and `components` stages. A stage that fails stops only itself: say which, and run the rest. The validator's findings are decisions, never fixes.
 
 **A stage whose skill is not installed** (absent from the session's skills) is skipped and named in the report, with the way to get it. Give the commands `bin/get skills/figma-project-audit`, then `./install.sh`, in the toolkit checkout. Named this way, `bin/get` takes the skills this one runs. Never stand in for the missing skill by doing its checks here.
 
@@ -67,12 +77,12 @@ Ownership is the record contract in `tools/figma-audit/REFERENCE.md`. Settings a
 - Each snapshot the store records is graded for the library's code and for the designers' files that use it.
 - The dashboard service files every change that is major for either as a row under *Breaking changes* (snapshot-standard rule 21).
 - An audit reads the live file, so it never files or closes these rows.
-- The report names how many are open, before the stage lines (step 7).
+- The report names how many are open, before the stage lines (step 3).
 - Why first: an undecided breaking change in a library about to be published is the one thing worth saying before the rest.
 
 ## What this skill never does
 
 - Hold a setting or a ruling. If a stage needs one the document lacks, that stage reports it; this skill supplies no default.
-- Read another skill's files, or re-implement a check.
+- Read another skill's files, or re-implement a check. The list names each stage's scripts for the runners, which run them; this skill never opens them.
 - Close, rewrite or renumber a row another skill raised.
 - Write a composite score. Each stage reports its own measures.

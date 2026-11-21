@@ -69,6 +69,14 @@ fig-footer>.footer-hint{flex:1;min-width:0;align-self:center;color:var(--figma-c
 .value-row{display:flex;align-items:center;gap:0;min-width:0;min-height:24px}
 .value-row:has(> fig-button:not([hidden])){margin-right:calc(-1 * var(--spacer-2,8px))}
 .value{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* the checks the next run covers: a fieldset whose legend asks the question, one FigUI3 checkbox per stage that applies
+   to the file, its one-line description under its label, stacked (knowledge/ui/components/checkbox.md, *Anatomy* and
+   *How*). FigUI3 styles the fieldset and legend (padding, border, gap, the legend's inset) and its rules stand; set here
+   is only what it leaves unset: the space above the group, below the question, the question's weight, and the
+   browser's min-content width taken off so a long description wraps. */
+.checks{margin-top:var(--space-3);min-width:0}
+.checks-title{margin:0 0 var(--space-1);font-weight:var(--fw-semibold)}
+.check-description{margin:0 0 var(--space-1);padding-left:calc(16px + var(--spacer-2,8px));color:var(--figma-color-text-secondary)}
 </style>
 <script type="module">
 /* figui3-js generated start — FigUI3 11.11.5 dist/fig.js (MIT, plugins/_shared/figui3/LICENSE) */
@@ -280,7 +288,11 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
 <div class="panel" id="panel-audit" role="tabpanel" aria-label="Audit">
   <div class="panel-body">
     <p class="title" id="file">Reading the file…</p>
-    <p class="what" id="what">Audits every component in this file and saves a report. Upload it to Claude and type <b>show me results</b>.</p>
+    <p class="what" id="what">Audits this file with the checks below and saves a report. Upload it to Claude and type <b>show me results</b>.</p>
+    <fieldset class="checks" id="checks" hidden>
+      <legend class="checks-title">What should the audit check?</legend>
+      <div id="checks-list"></div>
+    </fieldset>
     <div class="status" id="status" role="status" hidden>
       <div class="status-head">
         <fig-spinner id="bar" hidden></fig-spinner>
@@ -294,7 +306,8 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
   <fig-footer>
     <span class="footer-hint" id="version"></span>
     <fig-button id="save" variant="secondary" size="large" hidden>Download</fig-button>
-    <fig-button id="run" size="large">Run audit</fig-button>
+    <fig-button id="retry" variant="secondary" size="large" hidden>Try again</fig-button>
+    <fig-button id="run" size="large" disabled>Run audit</fig-button>
   </fig-footer>
 </div>
 
@@ -317,7 +330,7 @@ var last = null, busy = false, scoped = 0;
 function scope(n) {
   scoped = n;
   $('what').firstChild.textContent = n ? 'Audits the ' + (n === 1 ? 'selected component' : n + ' selected components') + ' and saves a report (select nothing for the whole file). Upload it to Claude and type '
-    : 'Audits every component in this file and saves a report. Upload it to Claude and type ';
+    : 'Audits this file with the checks below and saves a report. Upload it to Claude and type ';
 }
 // while an audit runs the settings links ignore a click rather than show disabled: FigUI3 draws a disabled link as a grey filled button
 var HINT = 'Kept on this computer; nothing is saved in the Figma file.';
@@ -340,14 +353,51 @@ function say(tone, title, detail) {
 }
 // a settings change says what happened in the settings footer
 function hint(text) { $('settings-hint').textContent = text || HINT; }
+// the checks: one per stage the plugin offers for this file, their names and descriptions from the audit's list of
+// stages (the plugin sends them); a box only chooses what the next run covers, so it is a checkbox, never a switch.
+// The plugin keeps what is switched off and reads it itself at Run; a click here tells it, one box at a time.
+var stages = null, loaded = false;
+function offNow() { return (stages || []).filter(function (s) { var b = $('stage-' + s.id); return b && !b.checked; }).map(function (s) { return s.id; }); }
+// Run waits for the list of checks, while a run is busy, and when every check offered is off
+function canRun() { var none = stages && stages.length && offNow().length === stages.length; $('run').toggleAttribute('disabled', !!(busy || !loaded || none)); }
+function showStages(list, saved) {
+  list = list || [];
+  loaded = true; $('retry').hidden = true;
+  // the same checks as shown: nothing is rebuilt, so focus stays where it is and a box just clicked keeps its state
+  var same = stages && stages.map(function (s) { return s.id; }).join() === list.map(function (s) { return s.id; }).join();
+  if (same) { canRun(); return; }
+  // a box already on screen keeps what the person set; a new one takes what the plugin has stored
+  var mine = {}; (stages || []).forEach(function (s) { var b = $('stage-' + s.id); if (b) mine[s.id] = b.checked; });
+  stages = list;
+  var box = $('checks-list'); box.textContent = '';
+  stages.forEach(function (s) {
+    var row = document.createElement('div');
+    var cb = document.createElement('fig-checkbox');
+    cb.id = 'stage-' + s.id; cb.setAttribute('label', s.label);
+    if (s.id in mine ? mine[s.id] : (saved || []).indexOf(s.id) < 0) cb.setAttribute('checked', '');
+    var d = document.createElement('p');
+    d.className = 'check-description'; d.id = 'stage-' + s.id + '-description'; d.textContent = s.description;
+    row.appendChild(cb); row.appendChild(d); box.appendChild(row);
+    // the description is read with the box: tied to FigUI3's own input once the element is defined
+    customElements.whenDefined('fig-checkbox').then(function () { if (cb.input) cb.input.setAttribute('aria-describedby', d.id); });
+    cb.addEventListener('change', function () {
+      parent.postMessage({ pluginMessage: { type: 'stages-set', id: s.id, on: !!cb.checked } }, '*');
+      canRun();
+    });
+  });
+  $('checks').hidden = !stages.length;
+  canRun();
+}
 $('run').addEventListener('click', function () {
   if (busy) return;
   busy = true; $('run').setAttribute('disabled', '');
-  say(undefined, 'Auditing the components…', scoped ? '' : 'A large library takes about a minute.');
+  say(undefined, 'Running the checks…', scoped ? '' : 'A large library takes about a minute.');
   parent.postMessage({ pluginMessage: { type: 'run', id: Date.now(), draft: !!$('draft').checked } }, '*');
 });
 parent.postMessage({ pluginMessage: { type: 'hello' } }, '*');
 $('save').addEventListener('click', function () { if (last) download(last); });
+// after the file could not be read: read it again
+$('retry').addEventListener('click', function () { $('retry').hidden = true; say(undefined, 'Reading the file…', ''); parent.postMessage({ pluginMessage: { type: 'stages-get' } }, '*'); });
 // the project's context document: its settings and rulings, remembered for this file on this computer
 function context(name) {
   $('ctx-name').textContent = name || 'No document';
@@ -367,12 +417,15 @@ onmessage = function (e) {
   if (!msg) return;
   if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; context(msg.context); scope(msg.selected || 0); return; }
   if (msg.type === 'selection') { scope(msg.selected); return; }
+  if (msg.type === 'stages') { if ($('status').getAttribute('data-load') === 'failed') { $('status').hidden = true; $('status').removeAttribute('data-load'); } showStages(msg.stages, msg.off); return; }
+  // the file's facts could not be read on opening: said as that, Run held until Try again reads them
+  if (msg.type === 'load-failed') { loaded = false; canRun(); $('retry').hidden = false; say('error', 'This file could not be read', msg.why + '. Press Try again; if it fails again, reload the plugin.'); $('status').setAttribute('data-load', 'failed'); return; }
   if (msg.type === 'context') { context(msg.name); hint(''); return; }
   if (msg.type === 'context-failed') { hint('That document was not used: ' + msg.why + '.'); return; }
-  busy = false; $('run').removeAttribute('disabled');
+  busy = false; canRun();
   if (msg.type === 'done') {
     last = msg; download(msg); $('save').hidden = false;
-    say('done', 'Saved ' + msg.name, msg.sets + (msg.scoped ? ' selected' : '') + ' components, ' + msg.found + ' possible issues for Claude to review' + (msg.from === 'context' ? ', judged by the context document' : '') + '. Upload the file and type "show me results".');
+    say('done', 'Saved ' + msg.name, (msg.sets != null ? msg.sets + (msg.scoped ? ' selected' : '') + ' components, ' : '') + msg.found + ' possible issues for Claude to review' + (msg.from === 'context' ? ', judged by the context document' : '') + '. Upload the file and type "show me results".');
   } else if (msg.type === 'failed') {
     say('error', 'The audit stopped', msg.why + '. Press Run audit to try again.');
   }

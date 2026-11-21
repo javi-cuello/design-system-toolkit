@@ -92,7 +92,8 @@ const byName = (list) => new Map((list || []).map((x) => [x.name, x]));
  * written before ownership was recorded (or by a repo's own receiver, which
  * wrote one file whole) is replaced whole by its one file.
  */
-const OWNED = ['textStyles', 'paintStyles', 'effects'];
+// what a file owns, and its tokens in stored order: one derivation, shared with the live audit (owns.cjs)
+const { OWNED, sortCollection, canonical, ownsOf } = require('./owns.cjs');
 /*
  * What a token snapshot holds: every collection under its Figma name, and the
  * styles. The plugin also sends four convenience keys (global, semantic,
@@ -101,17 +102,6 @@ const OWNED = ['textStyles', 'paintStyles', 'effects'];
  * mode in the collections (valueOf). The shape is the one the more careful of
  * two receivers already wrote.
  */
-// A collection's values and aliases are maps, and Figma returns them in
-// whatever order it read them: one snapshot moved 3,000 lines in a file whose
-// job is to be diffable, with nothing changed. Sorted by name, so a diff shows
-// what moved. The order of the collections and of the styles is the file's own
-// and is kept — the docs pages follow it.
-const sortMap = (o) => Object.fromEntries(Object.keys(o || {}).sort().map((k) => [k, o[k]]));
-const sortCollection = (c) => ({ ...c, values: Object.fromEntries(Object.entries(c.values || {}).map(([m, v]) => [m, sortMap(v)])), ...(c.alias ? { alias: sortMap(c.alias) } : {}) });
-const canonical = (t) => ({
-  collections: Object.fromEntries(Object.entries(t.collections || {}).map(([n, c]) => [n, sortCollection(c)])),
-  textStyles: t.textStyles || [], paintStyles: t.paintStyles || [], effects: t.effects || [],
-});
 const metaOf = (m) => ({
   file: m.file || null,
   // Both names the file answers to. A run that sends no key (a plugin before
@@ -145,19 +135,8 @@ function mergeTokens(before, incoming, { iconSets = [], iconPage = null, iconGro
   // not assume what an icon page is called (toolkit-standard §D 7), so the
   // file says. Absent (plugin < 0.35.0, or a file with no icon page) the key
   // is simply not there, and a reader reports icons as unaddressed.
-  // What the icon library's checks read (figma-foundations-audit): the sizes
-  // each set was drawn at, and, from plugin 0.53.0, the variants holding a
-  // paint no variable or style binds. Only an export carries them; a run with
-  // export off keeps the last export's, as it keeps the files on disk.
-  const exported = icons.length ? { iconSizes: icons.reduce((m, i) => ((m[i.name] = [...(m[i.name] || []), i.size].sort((a, b) => a - b)), m), {}),
-    ...(icons.every((i) => typeof i.unbound === 'number') && { unboundIcons: icons.filter((i) => i.unbound > 0).map((i) => `${i.name}@${i.size}`) }),
-    // the variable each icon's glyph is painted with (plugin 0.63.0): what an instance is drawn in until given a colour
-    ...(icons.some((i) => i.fill) && { iconColours: Object.fromEntries(icons.filter((i) => i.fill).map((i) => [i.name, i.fill])) }) } : null;
-  const owns = { collections: Object.entries(incoming.collections || {}).filter(([, c]) => !c.remote).map(([n]) => n), icons: iconSets, ...(iconPage ? { iconPage } : {}), ...Object.fromEntries(OWNED.map((k) => [k, (incoming[k] || []).filter((x) => !x.remote).map((x) => x.name)])),
-    // the other libraries' text styles it sends, which it does not own: kept while any source still sends one
-    ...((incoming.textStyles || []).some((x) => x.remote) && { remoteTextStyles: incoming.textStyles.filter((x) => x.remote).map((x) => x.name) }),
-    // and the other libraries' collections its components bind (plugin 0.80.0), the same way
-    ...(Object.values(incoming.collections || {}).some((c) => c.remote) && { remoteCollections: Object.keys(incoming.collections).filter((n) => incoming.collections[n].remote) }) };
+  // What the icon library's checks read, and the names this file owns (owns.cjs, which the live audit calls too).
+  const { owns, exported } = ownsOf(incoming, { iconSets, iconPage, icons });
   const source = { [id]: { file: incoming._meta.file, at: incoming._meta.snapshot, ...(incoming._meta.pages && { pages: incoming._meta.pages }), ...(incoming._meta.plugin && { plugin: incoming._meta.plugin }), owns } };
   const stored = before && before._meta && before._meta.sources;
   // The same file under another of its identities is this entry, not another.

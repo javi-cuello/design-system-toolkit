@@ -52,6 +52,8 @@ export async function contextRules(given) {
   const conventions = judgeConventions(t, lib.optionOrder, lib.descriptionStructure);
   if (lib.framework && lib.frameworkProfile && lib.frameworkProfile.name) FRAMEWORK_NAME[lib.framework] = lib.frameworkProfile.name;
   ctx.lastRules = { tokens: t, optionOrder: lib.optionOrder || {}, descriptionStructure: lib.descriptionStructure || "", codeTarget: lib.codeTarget || "", sourceLibrary: lib.sourceLibrary || "",
+                // the folder the library's code is in, where one is named: the parity stage's `applies` (stages.json)
+                code: (lib.code && lib.code.repo) || "",
                 // What the app is BUILT with, and which MUI component each
                 // Figma component is. Project data both, so they come from
                 // the document and nothing here knows a framework's names.

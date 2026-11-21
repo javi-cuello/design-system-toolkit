@@ -20,7 +20,7 @@ The service picks it up within a minute; nothing else changes. Then open `http:/
 
 ## Use from a session
 
-Open Figma after the service is running (the plugin looks for servers when it starts), run the Desktop Bridge plugin in the library file, then press **Audit** on the project's Audits page. From a Claude session without an API key, `bin/audit <project>` runs the components and foundations stages through this service and the session judges them; the validator and token-link stages run from the page, or from their skills.
+Open Figma after the service is running (the plugin looks for servers when it starts), run the Desktop Bridge plugin in the library file, then press **Audit** on the project's Audits page. From a Claude session without an API key, `bin/audit <project>` runs the stages the list of stages gives a session (components, foundations, tokens and icons) through this service and the session judges them; the validator, token-link and parity stages run from the page, or from their skills.
 
 ## What the service runs
 
@@ -29,10 +29,14 @@ reads `scanner/audit.js`, `scanner/sweep.js` and `scanner/judge.txt` straight
 out of `figma-components-audit`, the file-level scanner out of
 `figma-foundations-audit`, and the live reader and engine out of
 `component-validator`, and runs those. So pressing **Audit** here runs the
-project audit's stages — the components, the file as a whole, the library's code
-target where its settings name one, and its token links where they name a
-source library — the same way a session would, and each stage's rows carry its
-skill's name. The page holds no checks
+project audit's stages, the ones `figma-project-audit/stages.json` gives the
+dashboard, through the loop every runner shares (`stages.mjs` `runStages`: its
+order, `appliesTo`, a failing stage stopping only itself), the same way a
+session would, and each stage's rows carry its skill's name and its line the
+list's `label`. The tokens and icons stages read the live file through
+the snapshot plugin's facts mode and are checked by `/library-checks`. A
+service started before the list existed sends none, and the page says to
+restart it rather than run fewer stages. The page holds no checks
 and no judgement prompt of its own. `--scanner`, `--foundations`,
 `--validator` (component-validator's `scripts/`, for its live reader) and `--links` point elsewhere if a skill is installed outside
 this repo; a missing one makes the page say that stage did not run. The validator's engine is `tools/component-validator/validate.mjs`, beside this service, and the service will not start without it. `--pairing`
@@ -45,7 +49,8 @@ beside the library.
 The service also files rows by itself, with nothing open and no button
 pressed, each from a check that lives elsewhere: the tokens and icon
 libraries' own checks whenever the snapshot's tokens settle
-(`figma-foundations-audit`, `scripts/library.mjs`); a library's consistency
+(`figma-foundations-audit`, `scripts/library.mjs`, the same checks the audit's
+tokens and icons stages run live); a library's consistency
 with itself whenever the snapshot index settles
 (`tools/component-contract/analyze.mjs`, under the target `consistency`); the
 breaking changes the store graded (`breaking.mjs`); and the code audit, re-run
@@ -266,10 +271,11 @@ Several skills write to one project's record, so they write rows the same way. T
 | `POST /exec` | `{code}` straight to the Figma plugin |
 | `POST /claude` | proxied to the Anthropic API |
 | `GET /status` | is the plugin attached, and to which file |
-| `GET /scripts` | the **skills'** scripts: the components scanner, sweep, judgement and fix instructions and measures from `figma-components-audit/scanner/`, the file-level scanner from `figma-foundations-audit`, the live reader from `component-validator`, the link check from `figma-variable-audit`, the pairing instruction from `design-code-parity`, and the snapshot plugin's code for headless use |
+| `GET /scripts` | the **skills'** scripts: the components scanner, sweep, judgement and fix instructions and measures from `figma-components-audit/scanner/`, the file-level scanner from `figma-foundations-audit`, the live reader from `component-validator`, the link check from `figma-variable-audit`, the pairing instruction from `design-code-parity`, the snapshot plugin's code for headless use, and `stages`, the audit's one list of stages (`figma-project-audit/stages.json`), which the page runs in order |
 | `GET /context` | the project's settings (house defaults merged beneath) and its §6 rulings, read from the context document |
 | `POST /ruling` | `{text, where, dryRun?}` appended as a row to the context document's §6 rulings table; refuses a ruling already there; `dryRun` answers without writing |
 | `POST /table-rows` | `{fileKey, pages}`: the Properties table rows of every component on those pages, read from the open file by the snapshot plugin's own walk, recorded as the store records it (`store.cjs` `recordOf`) and read by `contract-rows.mjs` `rowsOf`; figma-properties-table draws them (`contract-rows.mjs --live`) |
+| `POST /library-checks` | `{facts, fileKey}`: the tokens and icons stages on the live file, and `applies` (which of the two apply). `facts` is the snapshot plugin's facts mode; the checks are `figma-foundations-audit`'s `library.mjs` `liveChecks`, node code the page cannot run itself. The unused-tokens check runs on the file's own bindings only where the project record gives it both the `tokens` and the `components` role |
 | `POST /validate` | `{target, specs?, components?, framework?, frameworkMap?, fileKey?}` run through the validator's engine (`tools/component-validator/validate.mjs`; the service refuses to start without it), which is node code the page cannot run itself |
 | `POST /parity` | `{lib, figma[]}`: the library's component names against the components in the code its settings name, through `tools/shared/code-inventory.mjs`; answers what is in both, only in Figma and only in code, and writes nothing |
 | `POST /rows` | `{owner, fileKey?, target?, full, scope, exhaustive?, ran?, origin?, findings[], dismissed[]?, why?, language?, dryRun?}` filed into the record by the one writer (`rows.mjs`): keys, matches, reopens and closes by owner; `scope` is required with `full`, `ran` with `full` from an owner whose scanner reports it, `why` is said on each row a full run closes; any other field is refused; `dryRun` reports and writes nothing |
@@ -288,8 +294,9 @@ connected, the project's service may still hold them: `GET /status` lists them, 
 `POST /exec` with `{ code, fileKey, timeout }` and the header
 `origin: http://localhost:<port>` runs the code in the file named; the value comes
 back at `result.result`. Each project has its own port, its project block's `port`.
-`bin/audit` (`audit-session.mjs`) is that path for an audit with no API key, its components and foundations stages: the
-scanners through `/exec`, the session's judgement, then `/rows`, dry-run first. Its filing half (`--file`) is held by
+`bin/audit` (`audit-session.mjs`) is that path for an audit with no API key, the stages the list gives a session, through
+`runStages`: the scanners and the facts read (300 s, as the page's) through `/exec`, the tokens and icons checks in node, a
+stage that fails stopping only itself, the session's judgement, then `/rows`, dry-run first. Its filing half (`--file`) is held by
 `test-session.mjs` on a real service over a scratch project; the scanning half needs a file open in Figma and is not run.
 
 ## Shared vs per-project — the thing to get right

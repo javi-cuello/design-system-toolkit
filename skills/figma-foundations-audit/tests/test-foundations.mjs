@@ -588,6 +588,89 @@ expect("and checkFacts reads the adapter's facts unchanged",
     iconChecks({ tokens: { _meta: { sources: { I: { owns: { iconSizes: { plus: [16] } } } } } }, source: "I" }).ran, ["icons-sizes"]);
 }
 
+// Live and stored are one view (case F28): the snapshot plugin's facts mode, through liveView, gives the
+// findings the store's tokens.json of the same payload gives, because both derive it with owns.cjs. Each path
+// is built from its own real input: the stored one from tokens.json and the components libraries' specs
+// (namesUsed, as the snapshot watch builds it), the live one from the facts as the plugin returns them, with
+// who uses the tokens decided by the file's roles (selfUsedOf). Never one hand-fed Set given to both.
+{
+  const { tokenChecks, iconChecks, liveView, liveChecks, liveApplies, namesUsed, selfUsedOf, watchTargets } = await import("../scripts/library.mjs");
+  const { createRequire } = await import("node:module");
+  const store = createRequire(import.meta.url)("../../../tools/snapshot/store.cjs");
+  const col = (values, extra = {}) => ({ modes: ["Light", "Dark"], values: { Light: values, Dark: values }, alias: { Light: extra.alias || {}, Dark: extra.alias || {} }, descriptions: extra.descriptions || {}, ...(extra.hidden && { hidden: extra.hidden }), ...(extra.remote && { remote: true }) });
+  const unusedNames = (r) => r.findings.filter((f) => f.rule === "tokens-unused").map((f) => f.fix[0]).join(" ");
+  // values in Figma's own (unsorted) order: the store sorts them, and the live view must too, or a row's list reads differently
+  const payload = {
+    _meta: { file: "Lib", fileKey: "K", snapshot: "2026-11-21", plugin: "0.81.2", pages: ["❖ Icons"] },
+    collections: {
+      Primitives: col({ "Size/8": 8, "Grey/2": "#ccc", "Grey/1": "#eee", "Size/4": 4 }, { hidden: ["Grey/1"], descriptions: { "Size/4": "Small gaps" } }),
+      Semantic: col({ "Text/soft": 0, "Text/base": 0, "Text/Base": 0, "Icon/x": 0, "Icon/Big/y": 0 }, { alias: { "Text/base": "Grey/1" } }),
+      Remote: col({ "Elsewhere/1": 0 }, { remote: true }),
+    },
+    textStyles: [{ name: "Body", bound: { fontFamily: { name: "f" }, fontSize: { name: "Size/4" } }, authored: { letterSpacing: { unit: "PIXELS", value: 0 } } },
+      { name: "Theirs", remote: true, bound: {}, authored: {} }],
+    paintStyles: [],
+    effects: [{ name: "Raised", layers: [{ bound: { color: { name: "c" } } }] }],
+  };
+  // Icon/x is bound by nothing but the plus icon's glyph: the facts' `used` leaves the icon page out, as the stored specs do
+  const icons = [{ name: "plus", size: 24, unbound: 0, fill: "Icon/x" }, { name: "plus", size: 16, unbound: 0 }, { name: "spark", size: 16, unbound: 2 }, { name: "minus", size: 16, unbound: 0 }, { name: "minus", size: 24, unbound: 0 }];
+  const facts = { tokens: payload, icons, iconSets: ["plus", "spark", "minus"], iconPage: "❖ Icons", used: ["Size/8", "Text/soft"], components: 3 };
+  const stored = store.mergeTokens(null, payload, { iconSets: facts.iconSets, iconPage: facts.iconPage, icons, ref: "K" });
+  const live = liveView(facts, "K");
+  // the stored path's own input: the specs of the file's components, as the snapshot watch reads them
+  const specsK = [{ name: "Button", fills: ["Text/soft"], layout: { gap: "Size/8" } }];
+  const t1 = tokenChecks({ tokens: stored, source: "K", used: namesUsed(specsK) });
+  const t2 = liveChecks(facts, "K", { selfUsed: selfUsedOf([{ key: "K", roles: ["tokens", "components", "icons"] }], "K") }).tokens;
+  expect("live and stored, one file its tokens' own user: the tokens checks find the same rows, each from its own input", t2, t1);
+  expect("…and they found something to compare, the unused check among it", t1.findings.length > 3 && t1.ran.includes("tokens-unused") && /Grey\/2/.test(unusedNames(t1)), true);
+  expect("a token only an icon's glyph is painted with is used, on both paths", [/Icon\/x/.test(unusedNames(t1)), /Icon\/x/.test(unusedNames(t2))], [false, false]);
+  const i1 = iconChecks({ tokens: stored, source: "K", names: ["plus", "minus"] }), i2 = iconChecks({ tokens: live, source: "K", names: ["plus", "minus"] });
+  expect("live and stored: the icon checks find the same rows from one payload", i2, i1);
+  expect("…and they found something to compare", i1.findings.map((f) => f.rule), ["icons-sizes", "icons-fill", "icons-name"]);
+  expect("live and stored: the owned names are one derivation", live._meta.sources.K.owns, (({ seq, ...o }) => o)(stored._meta.sources.K.owns));
+
+  // Two files: T holds the tokens (and a few documentation components of its own), C the components that bind them.
+  // The store reads C's specs and finds Text/soft and Text/base used; a live run on T cannot see C, so it runs no unused check.
+  const payloadT = { ...payload, _meta: { ...payload._meta, fileKey: "T" } };
+  const factsT = { ...facts, tokens: payloadT, used: ["Size/8"], components: 2 };
+  const payloadC = { _meta: { file: "Web", fileKey: "C", snapshot: "2026-11-21", plugin: "0.81.2", pages: [] }, collections: { Semantic: { ...payload.collections.Semantic, remote: true } }, textStyles: [], paintStyles: [], effects: [] };
+  const storedTC = store.mergeTokens(store.mergeTokens(null, payloadT, { iconSets: facts.iconSets, iconPage: facts.iconPage, icons, ref: "T" }), payloadC, { ref: "C" });
+  const specsC = [{ name: "Field", fills: ["Text/soft"], text: { color: "Text/base" } }];
+  const s2 = tokenChecks({ tokens: storedTC, source: "T", used: namesUsed(specsC) });
+  const l2 = liveChecks(factsT, "T", { selfUsed: selfUsedOf([{ key: "T", roles: ["tokens", "icons"] }, { key: "C", roles: ["components"] }], "T") }).tokens;
+  expect("two files, stored: the components library's specs make Text/soft and Text/base used", s2.ran.includes("tokens-unused") && !/Text\/soft/.test(unusedNames(s2)), true);
+  expect("two files, live on the tokens file: no unused check, and every other row the store's",
+    [l2.ran.includes("tokens-unused"), l2.findings], [false, s2.findings.filter((f) => f.rule !== "tokens-unused")]);
+  // (planted) deciding by the file's own components, as 0.81 did, raises what the other file uses
+  expect("(planted) a tokens file's own documentation components taken for its users raise Text/soft, which C binds",
+    /Text\/soft/.test(unusedNames(liveChecks(factsT, "T", { selfUsed: true }).tokens)), true);
+
+  // Each live stage applies where the file has what it reads, and nowhere else.
+  expect("liveApplies: tokens where the file owns a collection or style, icons where it has an icon page", liveApplies(facts), { tokens: true, icons: true });
+  const bare = { tokens: { collections: { Remote: payload.collections.Remote }, textStyles: [payload.textStyles[1]], effects: [] }, icons: [], iconSets: [], iconPage: null, used: [], components: 4 };
+  expect("liveApplies: another library's collections and styles do not make a tokens library, and no icon page is no icons stage", liveApplies(bare), { tokens: false, icons: false });
+  expect("liveChecks: a stage that does not apply is null, never an empty run that would close rows", liveChecks(bare, "K"), { tokens: null, icons: null });
+  const rec = (key, ...roles) => ({ key, roles });
+  expect("selfUsedOf: a file is its tokens' only user with both the tokens and the components role and no other components library",
+    [selfUsedOf([rec("K", "tokens", "components")], "K"), selfUsedOf([rec("K", "tokens")], "K"), selfUsedOf([rec("K", "components")], "K"), selfUsedOf(null, "K"),
+     selfUsedOf([rec("K", "tokens", "components"), rec("W", "components")], "K"), selfUsedOf([rec("K", "tokens", "components"), rec("I", "icons")], "K")],
+    [true, false, false, false, false, true]);
+  expect("liveChecks: without selfUsed, who uses the tokens is not known, so no unused check runs and nothing it would close is touched",
+    [liveChecks(facts, "K").tokens.ran.includes("tokens-unused"), liveChecks(facts, "K").tokens.findings.some((f) => f.rule === "tokens-unused")], [false, false]);
+
+  // A components library with one local collection of its own, beside a tokens library (two projects'
+  // components files): selfUsedOf is false for it, so its live run checks no unused token; the snapshot watch must.
+  const payloadW = { _meta: { file: "Web", fileKey: "W", snapshot: "2026-11-21", plugin: "0.81.2", pages: [] },
+    collections: { Local: col({ "Card/pad": 8, "Card/gap": 4 }) }, textStyles: [], paintStyles: [], effects: [] };
+  const storedTW = store.mergeTokens(store.mergeTokens(null, payloadT, { iconSets: facts.iconSets, iconPage: facts.iconPage, icons, ref: "T" }), payloadW, { ref: "W" });
+  const recsTW = [rec("T", "tokens", "icons"), rec("W", "components"), rec("X", "components")];
+  expect("watchTargets: the tokens checks for a components-only library whose stored source owns a collection; a tokens library as before; nothing for one that owns nothing",
+    recsTW.map((r) => watchTargets(r, storedTW)), [["tokens", "icons"], ["tokens"], []]);
+  const wRun = tokenChecks({ tokens: storedTW, source: "W", used: namesUsed([{ name: "Card", layout: { gap: "Card/gap" } }]) });
+  expect("…and the run the watch then makes on it checks its unused tokens: Card/pad, which no component binds",
+    [selfUsedOf(recsTW, "W"), wRun.ran.includes("tokens-unused"), /Card\/pad/.test(unusedNames(wRun)), /Card\/gap/.test(unusedNames(wRun))], [false, true, true, false]);
+}
+
 // The house pageMarker is Unicode: "❖ États" sorts as États, not as "tats" (an ASCII class ate the É).
 expect("the house page marker keeps an accented first letter",
   texts(checkFacts({ pages: pages("❖ INPUTS", "❖ États", "❖ Mono"), components: [] }, Object.assign({}, T, { pageMarker: "^[^\\p{L}\\p{N}_]+" }))).filter((x) => x.startsWith("page-order")), []);

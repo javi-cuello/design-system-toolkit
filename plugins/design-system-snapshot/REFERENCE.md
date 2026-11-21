@@ -1,12 +1,24 @@
 # Design system snapshot reference
 
-The detail behind the plugin's [README](README.md): what it reads, using it without the toolkit, how it talks to the router, the first run, its known limits, what it expects of a library and the data it stores.
+The detail behind the plugin's [README](README.md): what it reads, how an audit runs it headless, using it without the toolkit, how it talks to the router, the first run, its known limits, what it expects of a library and the data it stores.
 
 ## What it reads
 
 One click after a library publish or a named version: reads everything a codebase takes from a design file and posts it to the consuming repo's local server. From a **library**: variables with their aliases, text, colour and effect styles (a colour style's gradient stops by variable name, its angle from the handles and its transform — a node's own gradient fill records the transform too), every component's variants as measured node trees — plus, for each boolean property, every variant with that property flipped, named `<variant>, <Prop>=<value>` (a node filled with a colour style carries `fillStyle`, a bound number the variable's name under `bindings`, an instance-swap prop the swapped component's name), and the icon SVGs per size, and the file's page list in order (category headers and dividers included, so a reader can group components the way the file does). From a **screens** file: every frame or section **directly under a page** that is **marked Ready for dev or Completed**, as the same tree plus a PNG of it scaled to 1200px on its longest side — an unmarked one is a draft and sends its name alone, so the receiver can report what it skipped. Nothing deeper is read: a screen moved inside a section stops being a screen, and the section, once marked, becomes one. The plugin decides which of the two it is in by whether the file has variable collections, or component sets and no frame marked Ready for dev.
 
 It replaces running the same collector through a bridge plugin, which capped a call at 30 seconds, advanced the work only while a call was live, and wedged on icon exports in long sessions.
+
+## Run headless by an audit
+
+The same file runs with no UI as a function body, through the Desktop Bridge or inside another plugin, and returns instead of posting. The audit reads the live library this way, by this plugin's reader rather than a second one (toolkit-standard §D 5). The constants a caller prepends, and the header comment over `HEADLESS` in `code.js` details each:
+
+| Constant | Returns | Read by |
+|---|---|---|
+| none, or `PAGES`, `SECTION`, `EXCLUDE`, `SCOPE` | the component specs a snapshot records | the validator stage, figma-properties-table |
+| `FULL = true` | the whole library payload | a caller that posts it itself |
+| `FACTS = true` | tokens, icon facts without SVGs, what components off the icon and scratch pages bind | the audit's tokens and icons stages |
+
+Inside a plugin with a UI of its own, the caller first declares `const __html__ = undefined;`, so this file stays headless.
 
 ## Use it without the toolkit
 Import it as the README says (from a copy of this folder, if you have only the plugin). Open a library or a screens file and run **Design system snapshot**. With no receiver listening on `localhost:9317`, the button reads **Download snapshot** and saves one JSON file: `{ kind, tokens, components, icons, … }` for a library, `{ kind, _meta, screens }` for a screens file. `payload.cjs` in the toolkit's `tools/snapshot` is its schema.

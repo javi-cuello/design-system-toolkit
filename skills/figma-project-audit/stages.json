@@ -1,0 +1,101 @@
+{
+  "$comment": "The audit's stages, in the one order figma-project-audit runs them: the only list of them. The dashboard (tools/docs-site/src/dashboard/audit.js), bin/audit (tools/figma-audit/audit-session.mjs) and Audit lite (plugins/audit-lite) each run the stages that name them in `runners`, in this order, with the scripts named here; skills/figma-project-audit/tests/test-stages.mjs fails when a runner handles a stage this list does not give it, or this list gives a runner a stage it has no handler for. Order matters only when fixes land between stages; a runner that applies none may run components first.",
+  "$fields": {
+    "id": "the stage's handle; each runner keys its handler by it",
+    "label": "the stage's name as Audit lite's checkbox, and in its report's list of checks run; the dashboard's run lines name a stage by the queue chip its rows land under (dashboard/labels.js), never by this",
+    "description": "one plain line under that name saying what the stage looks at, written for a designer; the only copy of it",
+    "owner": "the skill whose rows the stage files, and the only one that closes them",
+    "target": "the queue it files under, beside its owner; null for the owner's main queue, \"setting:<key>\" for one a setting names",
+    "gather": "what runs in Figma: `script` from the repo root; `shadow` globals declared undefined first, so a plugin's own `__html__` leaves the snapshot plugin headless; `set` the constants prepended (a list: values the runner supplies from settings; an object: these values); `call` the function whose value the body returns; `served` its key in the dashboard service's GET /scripts",
+    "checks": "what runs on the gathered facts outside Figma, where that is a separate step: `script` and its exported `call`, or the service `route` that runs it",
+    "buckets": "the fix-queue bucket of each finding: `from` a rules file (rule → b1/b2/b3, `_default`), `rules` with a `default`, or `finding` for checks that set their own",
+    "applies": "when the stage runs on a file: `always`; `fact` a fact of the open file (componentSets: it has components, in sets or single; tokens and icons: library.mjs liveApplies), as stages.mjs appliesTo reads it; `setting` a key of the library's audit settings that must be set. runStages asks appliesTo for every runner; the one stage outside it is the dashboard's components stage, which is the page's Audit itself and runs before the loop",
+    "runners": "which of dashboard, session and lite run it"
+  },
+  "stages": [
+    {
+      "id": "foundations",
+      "label": "File",
+      "description": "Page order and names across the whole file.",
+      "owner": "figma-foundations-audit",
+      "target": null,
+      "gather": { "script": "skills/figma-foundations-audit/scripts/foundations.js", "set": ["TOKENS"], "served": "foundations" },
+      "checks": null,
+      "buckets": { "rules": { "page-order": "b1" }, "default": "b3" },
+      "applies": { "always": true },
+      "runners": ["dashboard", "session", "lite"]
+    },
+    {
+      "id": "components",
+      "label": "Components",
+      "description": "How each component is built: tokens, layers, variants, states.",
+      "owner": "figma-components-audit",
+      "target": null,
+      "gather": { "script": "skills/figma-components-audit/scanner/audit.js", "set": ["TARGETS", "SCALES", "TOKENS"], "served": "audit" },
+      "checks": null,
+      "buckets": { "from": "skills/figma-components-audit/scanner/buckets.json" },
+      "applies": { "fact": "componentSets" },
+      "runners": ["dashboard", "session", "lite"]
+    },
+    {
+      "id": "tokens",
+      "label": "Variables & styles",
+      "description": "Descriptions, unused tokens, and styles bound to variables.",
+      "owner": "figma-foundations-audit",
+      "target": "tokens",
+      "gather": { "script": "plugins/design-system-snapshot/code.js", "shadow": ["__html__"], "set": { "FACTS": true }, "call": "__headless", "served": "snapshot" },
+      "checks": { "script": "skills/figma-foundations-audit/scripts/library.mjs", "call": "liveChecks", "result": "tokens", "route": "/library-checks" },
+      "buckets": { "finding": true },
+      "applies": { "fact": "tokens" },
+      "runners": ["dashboard", "session", "lite"]
+    },
+    {
+      "id": "icons",
+      "label": "Icons",
+      "description": "Sizes, bound colours and names of the icon sets.",
+      "owner": "figma-foundations-audit",
+      "target": "icons",
+      "gather": { "script": "plugins/design-system-snapshot/code.js", "shadow": ["__html__"], "set": { "FACTS": true }, "call": "__headless", "served": "snapshot" },
+      "checks": { "script": "skills/figma-foundations-audit/scripts/library.mjs", "call": "liveChecks", "result": "icons", "route": "/library-checks" },
+      "buckets": { "finding": true },
+      "applies": { "fact": "icons" },
+      "runners": ["dashboard", "session", "lite"]
+    },
+    {
+      "id": "validator",
+      "label": "Code target",
+      "description": "What the project's code platform cannot build as drawn.",
+      "owner": "component-validator",
+      "target": "setting:codeTarget",
+      "gather": { "script": "plugins/design-system-snapshot/code.js", "set": ["PAGES", "SECTION", "EXCLUDE"], "call": "__headless", "served": "snapshot" },
+      "checks": { "script": "tools/component-validator/validate.mjs", "call": "validate", "route": "/validate" },
+      "buckets": { "rules": {}, "default": "b3" },
+      "applies": { "setting": "codeTarget" },
+      "runners": ["dashboard"]
+    },
+    {
+      "id": "links",
+      "label": "Token links",
+      "description": "Variables whose link to the source library is broken.",
+      "owner": "figma-variable-audit",
+      "target": null,
+      "gather": { "script": "skills/figma-variable-audit/scripts/links.js", "set": ["MODE", "KEYS", "SCOPE", "SELF", "TOKENS"], "served": "links" },
+      "checks": null,
+      "buckets": { "rules": {}, "default": "b3" },
+      "applies": { "setting": "sourceLibrary" },
+      "runners": ["dashboard"]
+    },
+    {
+      "id": "parity",
+      "label": "Design and code",
+      "description": "Where the built components differ from the Figma file.",
+      "owner": "design-code-parity",
+      "target": null,
+      "gather": null,
+      "checks": { "script": "skills/design-code-parity/scripts/pairing.txt", "route": "/parity" },
+      "buckets": { "rules": {}, "default": "b3" },
+      "applies": { "setting": "code" },
+      "runners": ["dashboard"]
+    }
+  ]
+}

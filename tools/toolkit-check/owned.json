@@ -1,5 +1,5 @@
 {
-  "_note": "Jobs the toolkit owns, and how a repo proves it is not doing them itself. A project calls these; it does not write its own. `names` are distinctive enough that a repo defining one means it has re-implemented the job \u2014 a generic name (resolve, diff, paths) is deliberately not listed, because a check that cries wolf is a check nobody reads. `owners` are the paths allowed to define those names: the implementation itself is not a duplicate of itself, and without this the check could never be pointed at the toolkit, which is where the owners live. `files` must not exist at all. Read by tools/toolkit-check/owned-check.mjs, which every repo's own check runs and the toolkit's `bin/check` runs over itself; the rule is code-standard 59 and toolkit-standard \u00a7D 1. `projectOwn` and `scaffoldOwn` are read by tools/toolkit-check/twins.mjs, keyed as it prints a name (family included): `projectOwn` rules a file name two project repos both carry genuinely project-own, each with why; `scaffoldOwn` names a sanctioned copy of a scaffold file (toolkit-standard \u00a7D 2), its `source` in the toolkit and its `copies` as repo-relative paths, which twins.mjs compares with the source.",
+  "_note": "Jobs the toolkit owns, and how a repo proves it is not doing them itself. A project calls these; it does not write its own. `names` are distinctive enough that a repo defining one means it has re-implemented the job \u2014 a generic name (resolve, diff, paths) is deliberately not listed, because a check that cries wolf is a check nobody reads. `owners` are the paths allowed to define those names: the implementation itself is not a duplicate of itself, and without this the check could never be pointed at the toolkit, which is where the owners live. `files` must not exist at all. A sync-generated block (`/* <name> generated start \u2026 end */`) is the owner copied in where nothing can be imported, held to it by its sync's --check (toolkit-standard \u00a7D 23), so a name defined inside one is a use. Read by tools/toolkit-check/owned-check.mjs, which every repo's own check runs and the toolkit's `bin/check` runs over itself; the rule is code-standard 59 and toolkit-standard \u00a7D 1. `projectOwn` and `scaffoldOwn` are read by tools/toolkit-check/twins.mjs, keyed as it prints a name (family included): `projectOwn` rules a file name two project repos both carry genuinely project-own, each with why; `scaffoldOwn` names a sanctioned copy of a scaffold file (toolkit-standard \u00a7D 2), its `source` in the toolkit and its `copies` as repo-relative paths, which twins.mjs compares with the source.",
   "owned": [
     {
       "job": "writing a snapshot",
@@ -21,7 +21,8 @@
         "propFacts",
         "layerFacts",
         "componentFacts",
-        "pairComponents"
+        "pairComponents",
+        "ownsOf"
       ],
       "evidence": "two repos each wrote one, in two token shapes and three screen layouts, each with fixes the other lacked (snapshot-standard 2.0.0)",
       "owners": [
@@ -433,6 +434,20 @@
       "evidence": "the contract editor, the Figma drawer and the stylesheet generator all draw a variant from one contract; a second expansion would draw one variant two ways",
       "owners": [
         "tools/component-contract/"
+      ]
+    },
+    {
+      "job": "the audit's stages and how a runner runs them",
+      "module": "skills/figma-project-audit/stages.json, read through tools/figma-audit/stages.mjs",
+      "names": [
+        "stagesFor",
+        "gatherCode",
+        "bucketFor"
+      ],
+      "evidence": "the stage list was written four times (the dashboard page, bin/audit, Audit lite and figma-project-audit's prose), and bin/audit kept its own copy of the page's bucket rule (2026-11-21)",
+      "owners": [
+        "tools/figma-audit/",
+        "plugins/audit-lite/"
       ]
     }
   ],

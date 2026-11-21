@@ -32,7 +32,7 @@ The service picks it up within a minute. Open `http://127.0.0.1:9232/audits/`.
 
 Then open Figma, run the Desktop Bridge plugin in the library, and press **Audit**. Start the service before Figma, because the plugin looks for servers when it starts. The port rules are under [Adding a project](REFERENCE.md#adding-a-project-the-port).
 
-From a Claude session with no API key, `bin/audit <project>` runs two stages through this service. The session judges them.
+From a Claude session with no API key, `bin/audit <project>` runs the session's stages through this service. These are the file, the components, the variables and styles, and the icons. A stage that fails stops only itself. The session judges them.
 
 ## What it reads and writes
 
@@ -62,6 +62,8 @@ node tools/figma-audit/check-services.mjs
 | `judge-rules.mjs` | what the judge is told |
 | `breaking.mjs` | files breaking changes |
 | `audit-session.mjs` | the `bin/audit` path |
+| `stages.mjs` | reads the audit's list of stages, and holds the one loop every runner runs it with |
+| `lucide.mjs` | the icon importer's Lucide release |
 | `probe.mjs` | checks the bridge can draw |
 | `check-services.mjs` | checks running services |
 | `services.mjs` | finds running services |

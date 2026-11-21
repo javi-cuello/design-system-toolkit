@@ -1,4 +1,10 @@
-# Eval cases — figma-plugin-creator (v1.19.0)
+# Eval cases — figma-plugin-creator (v1.20.1)
+
+**Walked: 2026-11-21 for 1.20.1** — main's clause-I rewrite (1.19.0) merged with the generated-block rules (now 1.20.0 and 1.20.1): the checklist's §2 and §3 say a block is left out only where `GENERATORS` names its generator. P2 and P3 read against the merged text and executed: `node tests/test-conformance.mjs` 29 passed.
+
+**Walked: 2026-11-21 for 1.20.1 (was 1.19.1) — P2 and P3 executed** (`node tests/test-conformance.mjs`, 29 passed): a marker no generator writes (`handmade`) and a block whose start and end name two generators hide nothing, each sync call still found at its line; every `GENERATORS` script is run with `--check` by `standards/tests/check.sh`.
+
+**Walked: 2026-11-21 for 1.20.0 (was 1.19.0) — P3 executed** (`node tests/test-conformance.mjs`, 27 passed): a fetch inside a `generated start … generated end` block in code.js raises no network finding, and the same fetch after the block is still blocked under `["none"]` at its line; every plugin in `plugins/` passes, audit-lite (carrying the snapshot plugin's facts mode) included.
 
 **Walked: 2026-11-21 for 1.19.0** — a readability rewrite (skill-standard §A clause I); no rule moved out of the skill and the checklist's section numbers are kept, so every case's § pointer still resolves. P1–P7 read against the new text and hold; `node tests/test-conformance.mjs` 26 passed, `test-fetch-queue.mjs` all passed, `test-scaffold.mjs` 9 passed.
 
@@ -63,7 +69,7 @@ Assert: conformance report classifies it, documentAccess NOT added; the fix (→
 
 Walked live: 2026-08-09 — a planted "Selection Tools" fixture whose `code.js` carries three sync node calls and whose manifest has no `documentAccess`.
 
-**Generated blocks** (1.16.0): code between `/* <name> generated start` and `<name> generated end */` is written by a sync script from code that runs under dynamic-page elsewhere, and is not grepped here. Assert: a sync call inside such a block is not raised; the same call outside it is, at its line.
+**Generated blocks** (1.16.0, narrowed 1.20.1): code between `/* <name> generated start` and `<name> generated end */` is written by a sync script from code that runs under dynamic-page elsewhere, and is not grepped here, but only where both markers carry the same name and `conformance.mjs` `GENERATORS` lists it (a generator `standards/tests/check.sh` runs with `--check`). Assert: a sync call inside such a block is not raised; the same call outside it is, at its line. Assert also (negative): inside a hand-typed marker, or between a start and an end of two generators, it is raised.
 
 ## P3 · networkAccess matches reality
 Fixture: plugin fetching https://api.example.com but manifest says ["none"].

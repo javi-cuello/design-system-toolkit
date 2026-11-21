@@ -55,6 +55,7 @@ A file no project claims is refused. When a write fails, the router keeps the pa
 | `pairing.cjs` | the machine's pairing code |
 | `payload.cjs` | the schema for both payloads |
 | `store.cjs` | the stored layout and its one reader |
+| `owns.cjs` | what a file owns, live or stored |
 | `deliver.cjs` | writes a payload through the store |
 | `spec.cjs` | compacts and resolves component specs |
 | `unpack.mjs` | unpacks a saved snapshot file |

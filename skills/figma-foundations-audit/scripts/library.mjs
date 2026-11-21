@@ -1,5 +1,7 @@
-// @runs: the audit dashboard service, when the snapshot's tokens settle (tools/figma-audit/server.mjs).
-// The tokens library and the icon library, checked from the stored snapshot.
+// @runs: tools/figma-audit/server.mjs (its /library-checks route and its snapshot watch) and tools/figma-audit/audit-session.mjs
+// (bin/audit): the audit's tokens and icons stages on the live file (figma-project-audit's list of stages,
+// which Audit lite runs too), and the stored snapshot whenever its tokens settle.
+// The tokens library and the icon library, checked from the stored snapshot or the live file.
 //
 // A components library is scanned live, set by set. The file that holds the
 // tokens and the file that holds the icons have no component sets worth
@@ -10,7 +12,14 @@
 //
 // Pure: the dashboard service reads the store and files what these return
 // (tools/figma-audit/server.mjs), as a full run, so a finding no longer
-// raised closes. `node tests/test-foundations.mjs` runs them on fixtures.
+// raised closes. A live run hands the snapshot plugin's facts mode to
+// `liveView`, which builds the same view the store would (owns.cjs, one
+// derivation), so the checks never know which they read.
+// `node tests/test-foundations.mjs` runs them on fixtures, and proves the two
+// views of one payload give the same findings.
+
+import ownsModule from "../../../tools/snapshot/owns.cjs";
+const { canonical, ownsOf } = ownsModule;
 
 export const RAN_TOKENS = ["tokens-description", "tokens-unused", "tokens-style-binding", "tokens-naming", "tokens-structure"];
 
@@ -49,6 +58,10 @@ const namesOf = (col) => Object.keys(Object.values(col.values || {})[0] || {});
  * nothing from that file.
  */
 export function tokenChecks({ tokens, source, used = new Set() }) {
+  // `used: null` is "not known": a live read of a file other files use (liveChecks without selfUsed) cannot
+  // say what binds its tokens, so the unused check does not run and closes nothing (the snapshot watch reads
+  // every components library's specs and runs it there).
+  const usedKnown = used !== null;
   const owns = owned(tokens, source);
   if (!owns) return { findings: [], ran: [], scope: [] };
   const findings = [];
@@ -71,14 +84,18 @@ export function tokenChecks({ tokens, source, used = new Set() }) {
   const reach = new Set();
   for (const s of tokens.textStyles || []) for (const b of Object.values(s.bound || {})) reach.add(b.name);
   for (const s of tokens.effects || []) for (const l of s.layers || []) for (const b of Object.values(l.bound || {})) reach.add(b.name);
-  for (const c of cols) for (const n of namesOf(tokens.collections[c])) if (used.has(n)) reach.add(n);
+  if (usedKnown) for (const c of cols) for (const n of namesOf(tokens.collections[c])) if (used.has(n)) reach.add(n);
+  // An icon's glyph colour is a use (any source's owns.iconColours): an instance is drawn in it until given another.
+  // The live `used` leaves the icon page out (the snapshot plugin's facts mode), as the stored specs do, so both
+  // paths count a glyph's token here, once.
+  for (const src of Object.values((tokens._meta || {}).sources || {})) for (const v of Object.values((src.owns || {}).iconColours || {})) reach.add(v);
   for (let grew = true; grew;) {
     grew = false;
     for (const c of cols) for (const m of Object.values(tokens.collections[c].alias || {})) {
       for (const [n, target] of Object.entries(m)) if (reach.has(n) && !reach.has(target)) { reach.add(target); grew = true; }
     }
   }
-  for (const c of cols) {
+  if (usedKnown) for (const c of cols) {
     const unused = namesOf(tokens.collections[c]).filter((n) => !reach.has(n));
     if (unused.length) findings.push(finding(c, "tokens-unused", "all", "warn", 3,
       `${unused.length} ${unused.length === 1 ? "token is" : "tokens are"} used by no component, style or other token, so the library offers choices nothing makes`,
@@ -137,7 +154,7 @@ export function tokenChecks({ tokens, source, used = new Set() }) {
       `${odd.length} ${odd.length === 1 ? "group differs" : "groups differ"} in shape from ${odd.length === 1 ? "its" : "their"} siblings, so a name that works in one group is missing in the next`,
       list(odd, 6), ["Give parallel groups the same leaves, and keep tokens and groups at separate levels.", "On purpose: record it as a ruling, and it stops being raised."]));
   }
-  return { findings, ran: RAN_TOKENS, scope: [...cols, "Text styles", "Effect styles"] };
+  return { findings, ran: usedKnown ? RAN_TOKENS : RAN_TOKENS.filter((r) => r !== "tokens-unused"), scope: [...cols, "Text styles", "Effect styles"] };
 }
 
 /**
@@ -178,6 +195,79 @@ export function iconChecks({ tokens, source, names = null, slug = (s) => s }) {
       list(stray), ["Rename to the icon set's name, so code finds it by the same name.", "Drawn here, not taken from the set: record it as a ruling, and it stops being raised."]));
   }
   return { findings, ran, scope: ["Icons"] };
+}
+
+/**
+ * The view `tokenChecks` and `iconChecks` read, built from the snapshot plugin's
+ * facts mode (`const FACTS = true`: `{ tokens, icons, iconSets, iconPage, used,
+ * components }`) for the file `fileKey`, by the store's own derivation
+ * (tools/snapshot/owns.cjs): what one file's snapshot would store about itself.
+ */
+export function liveView(facts, fileKey) {
+  const t = (facts && facts.tokens) || {};
+  const { owns, exported } = ownsOf(t, { iconSets: facts.iconSets || [], iconPage: facts.iconPage || null, icons: facts.icons || [] });
+  return { _meta: { sources: { [fileKey]: { owns: Object.assign(owns, exported || {}) } } }, ...canonical(t) };
+}
+
+/**
+ * When each live stage applies to the file the facts describe: `tokens`
+ * where it owns a variable collection, a text style or an effect style;
+ * `icons` where it has an icon page. figma-project-audit's list of stages
+ * names these as the stages' `applies`.
+ */
+export function liveApplies(facts) {
+  const t = (facts && facts.tokens) || {};
+  const own = (xs) => (xs || []).some((x) => !x.remote);
+  return {
+    tokens: Object.values(t.collections || {}).some((c) => !c.remote) || own(t.textStyles) || own(t.effects),
+    icons: !!(facts && facts.iconPage),
+  };
+}
+
+/**
+ * Whether the file `key` is its own tokens' only user, by the project record (`records`: each library's `key` and
+ * `roles`): it holds the tokens and the components that bind them, and no other library holds components that could
+ * bind them too. liveChecks' `selfUsed` for the dashboard and bin/audit.
+ */
+export function selfUsedOf(records, key) {
+  const own = (records || []).find((r) => r.key === key);
+  const roles = (own && own.roles) || [];
+  return roles.includes("tokens") && roles.includes("components")
+    && !(records || []).some((r) => r.key !== key && (r.roles || []).includes("components"));
+}
+
+/**
+ * Which checks the snapshot watch runs on the library `record` (`key`, `roles`) from the stored `tokens`:
+ * `tokens` where it has the tokens role or its stored source owns a collection, text style or effect (a
+ * components library with local tokens of its own, whose unused tokens no live run checks, selfUsedOf being
+ * false for it); `icons` where it has the icons role.
+ */
+export function watchTargets(record, tokens) {
+  const owns = owned(tokens, record.key) || {};
+  const roles = record.roles || [];
+  const ownsTokens = ["collections", "textStyles", "effects"].some((k) => (owns[k] || []).length);
+  return [...(roles.includes("tokens") || ownsTokens ? ["tokens"] : []), ...(roles.includes("icons") ? ["icons"] : [])];
+}
+
+/**
+ * The tokens and icons stages on the live file: `{ tokens, icons }`, each
+ * `{ findings, ran, scope }` or null where the stage does not apply.
+ * `selfUsed` says the file is its own tokens' only user: the project record
+ * gives it both the tokens and the components role (the dashboard and
+ * bin/audit), or the runner audits one file as self-contained (Audit lite,
+ * whose report says so). Then what its own components bind (`facts.used`)
+ * decides what is unused; otherwise who uses the tokens is not known here,
+ * the unused check does not run and closes nothing, and the snapshot watch,
+ * which reads every components library, runs it. `names` and `slug` are
+ * `iconChecks`'.
+ */
+export function liveChecks(facts, fileKey, { names = null, slug = (s) => s, selfUsed = false } = {}) {
+  const tokens = liveView(facts, fileKey);
+  const applies = liveApplies(facts);
+  return {
+    tokens: applies.tokens ? tokenChecks({ tokens, source: fileKey, used: selfUsed ? new Set(facts.used || []) : null }) : null,
+    icons: applies.icons ? iconChecks({ tokens, source: fileKey, names, slug }) : null,
+  };
 }
 
 /**

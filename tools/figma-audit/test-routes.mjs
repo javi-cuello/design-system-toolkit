@@ -101,6 +101,22 @@ try {
   ok("/exec with a body that is not JSON is a 500 that says so, and the service stays up", notJson.code === 500 && /JSON/.test(notJson.json.error) && (await ask("GET", "/health")).code === 200);
   ok("/claude with no key says so rather than calling out", (await post("/claude", { prompt: "x" })).json.error === "no_api_key");
 
+  // the audit's stages and the live tokens and icons checks (skills/figma-project-audit/stages.json)
+  const sc = (await ask("GET", "/scripts")).json;
+  ok("/scripts serves the audit's one list of stages", sc && sc.stages && sc.stages.stages.some((s) => s.id === "tokens" && s.runners.includes("dashboard")));
+  // every stage the dashboard runs fetches its gather script by the key the registry names (gather.served)
+  const unserved = sc.stages.stages.filter((s) => s.gather && s.runners.includes("dashboard") && typeof sc[s.gather.served] !== "string").map((s) => `${s.id} → ${s.gather.served}`);
+  ok("/scripts serves every stage's gather script under the key stages.json names", unserved.length === 0, unserved.join(", "));
+  // own components, but no record says the file is their only user (the scratch project has no context document)
+  const facts = { fileKey: "K1", tokens: { collections: { Base: { modes: ["Value"], values: { Value: { "Space/4": 4 } }, alias: { Value: {} }, descriptions: {} } }, textStyles: [], effects: [] },
+    icons: [{ name: "plus", size: 16, unbound: 1 }], iconSets: ["plus"], iconPage: "Icons", used: [], components: 3 };
+  const lc = await post("/library-checks", { facts, fileKey: "K1" });
+  ok("/library-checks runs the tokens and icons checks on live facts", lc.json.ok && lc.json.tokens.findings.some((f) => f.rule === "tokens-description") && lc.json.icons.findings.some((f) => f.rule === "icons-fill"));
+  ok("…and where the record does not give the file both the tokens and the components role, runs no unused check, whatever components it has", !lc.json.tokens.ran.includes("tokens-unused"));
+  ok("…and says which of the two stages apply, for the page's appliesTo", JSON.stringify(lc.json.applies) === JSON.stringify({ tokens: true, icons: true }));
+  ok("/library-checks refuses facts read from another file", (await post("/library-checks", { facts, fileKey: "K2" })).json.ok === false);
+  ok("/library-checks without facts is a 400", (await post("/library-checks", { fileKey: "K1" })).code === 400);
+
   // the record's guards
   const empty = (await ask("GET", "/data")).json;
   ok("/data before any audit is an empty record, not an error", empty && JSON.stringify(empty.rows) === "{}" && JSON.stringify(empty.runs) === "{}");

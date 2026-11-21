@@ -22,7 +22,22 @@ const JS_BLOCK = /\/\* figui3-js generated start[\s\S]*?\/\* figui3-js generated
 // §2: each sync API dynamic-page makes throw. `.instances` and `.consumers` are left to the read: a plugin's own
 // arrays and maps carry those names as often as Figma's nodes do, so a hit is not a finding without one.
 export const BANNED = /getNodeById\(|getStyleById\(|getFileThumbnailNode\(|getLocalTextStyles\(|getLocalPaintStyles\(|getLocalEffectStyles\(|getLocalGridStyles\(|getVariableById\(|getVariableCollectionById\(|getLocalVariables\(|getLocalVariableCollections\(|\.mainComponent\b|figma\.currentPage\s*=[^=]|\.masterComponent\b/;
-export const GENERATED = /\/\* [\w-]+ generated start[\s\S]*?\/\* [\w-]+ generated end \*\//g;
+// The generated blocks a sync script writes into a plugin's files, by the name in their markers, and the script that
+// writes each; standards/tests/check.sh runs every one of them with --check, so the copy is held to its source
+// (toolkit-standard §D 23; tests/test-conformance.mjs fails when one is not). The one list: tools/toolkit-check/owned-check.mjs
+// reads it too. Only these blocks are read as their source's code, never a hand-typed marker.
+export const GENERATORS = {
+  figui3: "plugins/_shared/sync.mjs",
+  "figui3-js": "plugins/_shared/sync.mjs",
+  "audit-lite": "plugins/audit-lite/sync.mjs",
+  "adoption-score": "plugins/adoption-score/sync.mjs",
+};
+export const GENERATED = /\/\* ([\w-]+) generated start[\s\S]*?\/\* ([\w-]+) generated end \*\//g;
+/** The text with every known generated block blanked (its lines kept, so line numbers hold): a block whose start and end
+ *  names match and whose name GENERATORS lists. Any other marker, typed by hand or mismatched, hides nothing. */
+export function blankGenerated(text) {
+  return text == null ? text : text.replace(GENERATED, (m, start, end) => (start === end && Object.hasOwn(GENERATORS, start) ? m.replace(/[^\n]/g, "") : m));
+}
 // `figma.root.findAll` is sync-safe once every page is loaded, which is the checklist's own fix for it.
 export const ROOT_WALK = /figma\.root\.findAll\b/;
 // §1: a gated API and the permission it needs; without it every call throws at runtime.
@@ -106,7 +121,7 @@ export function checkPlugin(dir, opts = {}) {
   // §2 banned sync APIs: dynamic-page makes each throw. A generated block (`/* <name> generated start … generated end */`,
   // written by a sync script from code that already runs under dynamic-page elsewhere, as audit-lite's copy of the
   // components scanner runs through the bridge) is that code's, and is read where it is written, not here.
-  const own = (codeJs || "").replace(GENERATED, (m) => m.replace(/[^\n]/g, ""));
+  const own = blankGenerated(codeJs || "");
   const banned = hits(own, BANNED);
   if (codeJs != null && !/loadAllPagesAsync\(/.test(own)) banned.push(...hits(own, ROOT_WALK));
   banned.sort((a, b) => a - b);
@@ -114,9 +129,11 @@ export function checkPlugin(dir, opts = {}) {
 
   // §3 network truth
   const allowed = (m.networkAccess && m.networkAccess.allowedDomains) || null;
-  // the generated FigUI3 block is a library's code, not the plugin's own requests (its fetches load media a plugin hands it)
-  const uiOwn = ui == null ? null : ui.replace(GENERATED, (m) => m.replace(/[^\n]/g, ""));
-  const fetches = [...hits(codeJs, NETWORK).map((n) => "code.js:" + n), ...hits(uiOwn, NETWORK).map((n) => "ui.html:" + n)];
+  // the generated FigUI3 block is a library's code, not the plugin's own requests (its fetches load media a plugin hands it);
+  // a generated block in code.js is its source's, as in §2: audit-lite carries the snapshot plugin's facts mode, whose
+  // posts to the router sit behind its window and never run headless (read where the block is written, not here)
+  const uiOwn = blankGenerated(ui);
+  const fetches = [...hits(codeJs == null ? null : own, NETWORK).map((n) => "code.js:" + n), ...hits(uiOwn, NETWORK).map((n) => "ui.html:" + n)];
   if (!allowed) add("warn", "3", "manifest has no networkAccess.allowedDomains", "needs-decision");
   else if (!fetches.length && !(allowed.length === 1 && allowed[0] === "none")) add("warn", "3", `nothing fetches, yet allowedDomains is ${JSON.stringify(allowed)}: it should be ["none"]`, "needs-decision");
   // a plugin that talks only to a local server in development declares it in devAllowedDomains, beside ["none"]

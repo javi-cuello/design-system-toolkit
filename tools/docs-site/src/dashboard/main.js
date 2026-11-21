@@ -1,7 +1,7 @@
 // Start-up: read the record, wire every renderer to it, then poll.
 import { announce, onRecord, pullRecord, step } from './record.js';
 import { DASH, ctx } from './context.js';
-import { build, componentFromHash, loadBuckets, paintVerify, queueStatus, state } from './queue.js';
+import { build, componentFromHash, paintVerify, queueStatus, state } from './queue.js';
 import { loadMeasures, paintFiles, renderLibrary, renderQueuePane, renderRuns } from './measures.js';
 import { renderChanged, renderChecks } from './scores.js';
 import { loadContext } from './owners.js';
@@ -127,7 +127,7 @@ import { paintAuditMenu } from './audit.js';
   });
   announce();
 
-  // The check catalogue, the buckets and the measures' definitions: baked
+  // The check catalogue and the measures' definitions: baked
   // into the page at build, so the queue paints from them at once. The
   // service's live copy is asked for only when the About view, which reads
   // it, is opened — once — rather than on every load. A page built without
@@ -135,7 +135,6 @@ import { paintAuditMenu } from './audit.js';
   const paintScripts = (sc) => {
     if (!sc) return;
     renderChecks(sc.checks);
-    loadBuckets(sc.buckets);
     loadMeasures(sc.measures);
     announce();                       // repaint the tiles now that they exist
   };

@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../..');
+const ui = fs.readFileSync(path.join(HERE, '..', 'ui.html'), 'utf8');
 const mod = { exports: {} };
 new Function('module', fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8'))(mod);
 const { report, settingsFor, LITE, scan, foundations, selectedSets } = /** @type {any} */ (mod.exports);
@@ -178,6 +179,129 @@ const plugin = ({ fileKey, store = {} }) => {
   ok('a selected set the settings keep out is named as not scanned', /Not scanned, as the settings keep their page or section out of the audit: Chip/.test(report(Object.assign({}, r, { scope: ['Button', 'Chip'], unscanned: ['Chip'] }), { fileName: 'X', fileKey: 'K', date: 'd' })));
   ok('a selection holding no component says so, not "nothing was selected"', /- Scope: the whole file \(the selection held no component\)/.test(report(Object.assign({}, r, { selectionHeldNone: true }), { fileName: 'X', fileKey: 'K', date: 'd' })));
   ok('a whole-file run says so', /- Scope: the whole file \(nothing was selected\)/.test(report(r, { fileName: 'X', fileKey: 'K', date: 'd' })));
+}
+
+// The audit's list of stages, run as the list says: the stages that name Audit lite, in its order, each offered only where
+// it applies to the file, and the tokens and icons stages through the snapshot plugin's own facts mode.
+{
+  const { REGISTRY, HANDLERS, ON_SELECTION, LIBRARY, offered, bucketFor: liteBucket, stagesFor } = /** @type {any} */ (mod.exports);
+  const registry = JSON.parse(fs.readFileSync(path.join(ROOT, 'skills/figma-project-audit/stages.json'), 'utf8'));
+  ok('the bundled list is the registry, unchanged', JSON.stringify(REGISTRY) === JSON.stringify(registry));
+  ok('Audit lite runs file, components, variables and styles, and icons, in the list\'s order', JSON.stringify(stagesFor(REGISTRY, 'lite').map((s) => s.id)) === '["foundations","components","tokens","icons"]');
+  ok('every stage it runs has a handler, and only the components stage runs on a selection', stagesFor(REGISTRY, 'lite').every((s) => typeof HANDLERS[s.id] === 'function') && ON_SELECTION.join() === 'components');
+  const all = { componentSets: true, tokens: true, icons: true };
+  ok('a file with everything offers every check, each with the list\'s label and description', JSON.stringify(offered(all, false)) === JSON.stringify(stagesFor(registry, 'lite').map((s) => ({ id: s.id, label: s.label, description: s.description }))));
+  ok('a check that does not apply is not offered: no variables, no icon page', JSON.stringify(offered({ componentSets: true, tokens: false, icons: false }, false).map((s) => s.id)) === '["foundations","components"]');
+  ok('a file with no components offers no components check', !offered({ componentSets: false, tokens: true, icons: false }, false).some((s) => s.id === 'components'));
+  ok('a selection offers only the components check', JSON.stringify(offered(all, true).map((s) => s.id)) === '["components"]');
+  ok('the window holds no stage words of its own: they come from the list', !registry.stages.some((s) => fs.readFileSync(path.join(HERE, '..', 'ui.html'), 'utf8').includes(s.description)));
+
+  // the bundled checks are library.mjs's own: one payload, the same findings
+  const lib = await import(path.join(ROOT, 'skills/figma-foundations-audit/scripts/library.mjs'));
+  const col = (values, extra = {}) => ({ modes: ['Light'], values: { Light: values }, alias: { Light: {} }, descriptions: extra.descriptions || {} });
+  const facts = { tokens: { _meta: {}, collections: { Primitives: col({ 'Size/4': 4, 'Size/8': 8, 'Grey/1': '#eee' }, { descriptions: { 'Size/4': 'Small gaps' } }) },
+    textStyles: [{ name: 'Body', bound: { fontSize: { name: 'Size/4' } }, authored: { letterSpacing: { unit: 'PIXELS', value: 0 } } }], paintStyles: [], effects: [] },
+    icons: [{ name: 'plus', size: 16, unbound: 1 }, { name: 'plus', size: 24, unbound: 0 }, { name: 'minus', size: 16, unbound: 0 }], iconSets: ['plus', 'minus'], iconPage: 'Icons', used: ['Size/8'], components: 2 };
+  ok('the bundled tokens and icons checks are library.mjs\'s, finding for finding', JSON.stringify(LIBRARY.liveChecks(facts, 'K', { names: null })) === JSON.stringify(lib.liveChecks(facts, 'K', { names: null })));
+  ok('…and so is when they apply', JSON.stringify(LIBRARY.liveApplies(facts)) === JSON.stringify(lib.liveApplies(facts)));
+  const live = LIBRARY.liveChecks(facts, 'K', { names: null });
+  ok('…and the fixture raises tokens and icons findings to file', live.tokens.findings.length >= 2 && live.icons.findings.length >= 1, JSON.stringify(live).slice(0, 300));
+
+  // the report: library findings beside the others, bucketed by their own rule, and the checks run and not run
+  const r2 = { audited: [{ set: 'Page list', id: '', stage: 'foundations', candidates: [{ sev: 'warning', rule: 'page-order', key: 'po', text: 't', advice: 'a' }] },
+    { set: 'Primitives', id: '', stage: 'tokens', candidates: [{ sev: 'warning', rule: 'tokens-unused', key: 'tu', text: '1 token is used by nothing: Grey/1.', advice: 'Remove it.', bucket: 3 }, { sev: 'warning', rule: 'tokens-description', key: 'td', text: 'x', advice: 'y', bucket: 1 }] }],
+    ran: [], stages: [{ id: 'foundations', label: 'File', status: 'ran' }, { id: 'components', label: 'Components', status: 'off' }, { id: 'tokens', label: 'Variables & styles', status: 'ran' }, { id: 'icons', label: 'Icons', status: 'n/a' }],
+    library: { tokens: { ran: ['tokens-description', 'tokens-style-binding', 'tokens-naming', 'tokens-structure'] } }, foundations: { ran: ['page-order'], notRun: [] } };
+  const md2 = report(r2, { fileName: 'X', fileKey: 'K', date: 'd' });
+  const c2 = JSON.parse(md2.split('## Candidates')[1].replace(/^\s*```json\n/, '').replace(/\n```\s*$/, ''));
+  ok('a tokens finding reaches the candidates with its own bucket, filed as the file\'s', c2[1].area === 'file' && c2[1].candidates.map((c) => c.bucket).join() === '3,1', JSON.stringify(c2[1]));
+  ok('a file-level finding takes the list\'s bucket rule: page order first, as the dashboard files it', c2[0].candidates[0].bucket === 1 && liteBucket(REGISTRY.stages[0], 'page-order') === 'b1');
+  ok('a scanner candidate takes its buckets.json bucket', JSON.parse(md.split('## Candidates')[1].replace(/^\s*```json\n/, '').replace(/\n```\s*$/, '')).every((g) => g.area === 'components' && g.candidates.every((c) => [1, 2, 3].includes(c.bucket))));
+  ok('the run says which checks ran', md2.includes('- Checks run: File, Variables & styles'));
+  ok('…and why each other did not', md2.includes('- Checks not run: Components (switched off in the plugin); Icons (the file has no icon page)'));
+  ok('…and what the variables check covered, the unused check named as not run', md2.includes('- Variables and styles checks run: tokens-description, tokens-style-binding, tokens-naming, tokens-structure; unused tokens not checked'));
+  ok('…and that no component was scanned, and why', md2.includes('- Scanned: no components; the components check did not run (switched off in the plugin)') && !md2.includes('- Rule families checked:'));
+  const withUnused = report(Object.assign({}, r2, { library: { tokens: { ran: ['tokens-description', 'tokens-unused'] } } }), { fileName: 'X', fileKey: 'K', date: 'd' });
+  ok('an unused-tokens check that ran says plainly that only this file\'s components count as users', withUnused.includes('tokens-unused; only this file\'s own components count as users of its tokens, so a token that only another file\'s components use is listed as unused'));
+  ok('the bundled checks run the unused check on the file\'s own bindings, as the report says (selfUsed)', LIBRARY.liveChecks(facts, 'K', { names: null, selfUsed: true }).tokens.ran.includes('tokens-unused'));
+  const stopped = report(Object.assign({}, r2, { stages: [{ id: 'components', label: 'Components', status: 'stopped', why: 'the scanner threw' }] }), { fileName: 'X', fileKey: 'K', date: 'd' });
+  ok('a components check that applied and threw is said as stopped, never as a file with no components', stopped.includes('- Scanned: the components check stopped (the scanner threw)') && !stopped.includes('Scanned: no components'));
+  const none = report(Object.assign({}, r2, { stages: [{ id: 'components', label: 'Components', status: 'n/a' }] }), { fileName: 'X', fileKey: 'K', date: 'd' });
+  ok('…and a file with none says that', none.includes('- Scanned: no components; the file has none'));
+  ok('the stages Audit lite does not run are named from the list', md2.includes('- Not part of this plugin, only the full audit runs them: Code target (') && md2.includes('Design and code ('));
+}
+
+// A whole run, against a fake figma that has a variable collection and no components: the stages the window chose run,
+// the snapshot plugin's facts mode among them, and it never opens a window or posts to this one.
+{
+  const shown = [], posted = [];
+  const vars = { 'V:1': { id: 'V:1', name: 'Size/4', valuesByMode: { m1: 4 }, description: '', key: 'k1', scopes: [], variableCollectionId: 'C:1', remote: false },
+    'V:2': { id: 'V:2', name: 'Size/8', valuesByMode: { m1: 8 }, description: '', key: 'k2', scopes: [], variableCollectionId: 'C:1', remote: false } };
+  const coll = { id: 'C:1', name: 'Primitives', modes: [{ modeId: 'm1', name: 'Default' }], variableIds: ['V:1', 'V:2'], remote: false, isExtension: false };
+  const pg = { type: 'PAGE', name: 'Cover', children: [], findAll: () => [], findAllWithCriteria: () => [], findOne: () => null };
+  const store = {};
+  const figma = {
+    fileKey: 'K', root: { name: 'Lib', type: 'DOCUMENT', children: [pg], getPluginData: () => '', setPluginData: () => { throw new Error('wrote'); }, findAllWithCriteria: () => [], findAll: () => [] },
+    currentPage: { selection: [], name: 'Cover' }, skipInvisibleInstanceChildren: false,
+    loadAllPagesAsync: async () => {}, on: () => {}, notify: (m) => posted.push({ type: 'notify', m }), closePlugin: () => {},
+    showUI: (...a) => shown.push(a), ui: { postMessage: (m) => posted.push(m) },
+    clientStorage: { getAsync: async (k) => store[k], setAsync: async (k, v) => { store[k] = v; }, deleteAsync: async (k) => { delete store[k]; } },
+    variables: { getLocalVariableCollectionsAsync: async () => [coll], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async (id) => (id === 'C:1' ? coll : null) },
+    getLocalTextStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async () => null,
+    createText: () => { throw new Error('drew'); }, createPage: () => { throw new Error('made a page'); }, createFrame: () => { throw new Error('made a frame'); },
+  };
+  new Function('module', 'figma', '__html__', fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8'))({ exports: {} }, figma, '<ui/>');
+  await figma.ui.onmessage({ type: 'hello' });
+  const offer = posted.find((m) => m.type === 'stages');
+  ok('opening offers the checks that apply: the file and its variables, no components, no icons', offer && JSON.stringify(offer.stages.map((s) => s.id)) === '["foundations","tokens"]', JSON.stringify(posted));
+  ok('Run waits for the list of checks: the window opens with it disabled, and enables it only once the list has arrived', /<fig-button id="run"[^>]*\bdisabled\b/.test(ui) && /!loaded/.test(ui));
+  // two clicks in quick succession, against a store that answers slowly: neither write may be lost to a stale read
+  const slow = { getAsync: figma.clientStorage.getAsync, setAsync: figma.clientStorage.setAsync };
+  figma.clientStorage.getAsync = async (k) => { await new Promise((res) => setTimeout(res, 5)); return slow.getAsync(k); };
+  figma.clientStorage.setAsync = async (k, v) => { await new Promise((res) => setTimeout(res, 5)); return slow.setAsync(k, v); };
+  await Promise.all([figma.ui.onmessage({ type: 'stages-set', id: 'tokens', on: false }), figma.ui.onmessage({ type: 'stages-set', id: 'foundations', on: false }), figma.ui.onmessage({ type: 'stages-set', id: 'tokens', on: true })]);
+  ok('clicks are written one after another: two boxes unticked and one ticked again leave exactly the one off', JSON.stringify(store['stages-off']) === '["foundations"]', JSON.stringify(store['stages-off']));
+  posted.length = 0;
+  // the window sends no list of its own: what runs is what the plugin has stored
+  await figma.ui.onmessage({ type: 'run', id: 1 });
+  const done = posted.find((m) => m.type === 'done');
+  ok('the run finishes with a report', !!done, JSON.stringify(posted).slice(0, 600));
+  ok('Audit lite opened its own window once, and the snapshot plugin\'s code, run inside it, opened none', shown.length === 1 && shown[0][0] === '<ui/>', JSON.stringify(shown));
+  ok('…and posted nothing to Audit lite\'s window (no progress of its own)', posted.every((m) => ['done', 'notify'].includes(m.type)), JSON.stringify(posted.map((m) => m.type)));
+  ok('the variables check ran on the live file and found the undescribed tokens', done && /- Checks run: Variables & styles/.test(done.text) && /"rule": "tokens-description"/.test(done.text), done && done.text.split('## Run')[1].slice(0, 900));
+  ok('…the switched-off and inapplicable checks are said', done && done.text.includes('File (switched off in the plugin)') && done.text.includes('Components (the file has no components)') && done.text.includes('Icons (the file has no icon page)'));
+  // the file read as self-contained: with no components of its own, nothing binds its two variables, and the report says why
+  ok('…no components scanned, so the window counts none; the two findings are the undescribed and the unused tokens', done && done.sets === null && done.found === 2 && /"rule": "tokens-unused"/.test(done.text) && done.text.includes('only this file\'s own components count as users'), JSON.stringify(done && { sets: done.sets, found: done.found }));
+  ok('…and the facts mode leaves skipInvisibleInstanceChildren as it found it', figma.skipInvisibleInstanceChildren === false);
+
+  // a run on a selection: a whole-file check reports the selection, never "switched off", though its box is unticked
+  const button = { type: 'COMPONENT', name: 'Button', parent: pg, children: [], findAll: () => [] };
+  figma.currentPage.selection = [button];
+  posted.length = 0;
+  await figma.ui.onmessage({ type: 'run', id: 2 });
+  const sel = posted.find((m) => m.type === 'done');
+  ok('on a selection, a whole-file check says a run on a selection checks only the selected components', sel && sel.text.includes('File (a run on a selection checks only the selected components)') && !sel.text.includes('File (switched off'), sel && sel.text.split('## Run')[1].slice(0, 900));
+  figma.currentPage.selection = [];
+
+  // the file cannot be read on opening: said as that, with a way to try again, never as an audit that stopped
+  posted.length = 0;
+  const cols = figma.variables.getLocalVariableCollectionsAsync;
+  figma.variables.getLocalVariableCollectionsAsync = async () => { throw new Error('the document is closing'); };
+  await figma.ui.onmessage({ type: 'stages-get' });
+  const lf = posted.find((m) => m.type === 'load-failed');
+  ok('a file whose facts cannot be read on opening says so, with the error, and nothing else', lf && lf.why === 'the document is closing' && !posted.some((m) => m.type === 'failed' || m.type === 'stages'), JSON.stringify(posted));
+  ok('…the window then holds Run and offers Try again, which asks again', /msg\.type === 'load-failed'\) \{ loaded = false; canRun\(\); \$\('retry'\)\.hidden = false; say\('error', 'This file could not be read'/.test(ui) && /type: 'stages-get'/.test(ui));
+  figma.variables.getLocalVariableCollectionsAsync = cols;
+  posted.length = 0;
+  await figma.ui.onmessage({ type: 'stages-get' });
+  ok('…and a retry that reads the file offers its checks', posted.some((m) => m.type === 'stages'));
+}
+
+// The checks are one question in a fieldset whose legend asks it (knowledge/ui/components/checkbox.md, *How*), and a
+// list that has not changed is not rebuilt, so focus and a box just clicked stay as they are.
+{
+  ok('the checks sit in a fieldset whose legend asks the question', /<fieldset class="checks" id="checks" hidden>\s*<legend class="checks-title">What should the audit check\?<\/legend>/.test(ui));
+  ok('the window rebuilds the checkboxes only when the list of checks changes', /if \(same\) \{ canRun\(\); return; \}/.test(ui));
 }
 
 ok('the plugin has no way to write to the file', !/setPluginData|setSharedPluginData/.test(fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8').split('/* audit-lite generated end */')[1]));

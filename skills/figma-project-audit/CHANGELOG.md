@@ -1,5 +1,9 @@
 # Changelog — figma-project-audit
 
+- 1.7.2 (2026-11-21): `stages.json`'s `label` note says it is Audit lite's checkbox name; the dashboard's run lines name a stage by its queue chip. `bin/audit` exits 1 and names each stage that stopped (`stages.mjs` `stoppedLines`). Case O7.
+- 1.7.1 (2026-11-21): the three runners share one loop, `stages.mjs` `runStages`, and decide applicability through `appliesTo` alone; the SKILL says so. Case O7 says only what `tests/test-stages.mjs` checks, which now runs the loop with planted failures.
+- 1.7.0 (2026-11-21): each stage in `stages.json` carries its `label` and a one-line `description`, the only copy of the words a person reads about it; Audit lite runs the tokens and icons stages too, and `stages.mjs` `appliesTo` reads a stage's `applies`. Case O7.
+- 1.6.0 (2026-11-21): the stages and their order live in `stages.json`, which the dashboard, `bin/audit` and Audit lite each read, rather than in this file's prose; the tokens and icons stages join the list. `tests/test-stages.mjs` holds every runner to it.
 - 1.5.0 (2026-11-21): SKILL.md meets skill-standard §A clause I: one lead paragraph; what the document decides is a table; old step 8 (breaking changes) becomes the section *Breaking changes are not a stage*, and step 7's report opens with them. No rule changed. Case O5's pointer updated.
 - 1.4.1 (2026-11-20): the record contract is cited in `tools/figma-audit/REFERENCE.md`, where the README rewrite moved it; no rule changed.
 - 1.4.0 (2026-10-31): a stage whose skill is not installed is skipped and named, with how to get it; the rest run.

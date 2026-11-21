@@ -70,8 +70,13 @@ __holder.setSharedPluginData('${NS}', 'n', String(__n));
 return { holder: __holder.id, chunks: __n, bytes: __text.length, components: __payload.components.length, seconds: Math.round((Date.now() - __t0) / 1000) };
 `;
 
+/* Where the plugin's window and headless entry begin: dead code here (HEADLESS is true and the epilogue calls
+   collectLibrary), cut so the run stays under the cap. The plugin's own comment marks it. */
+export const CUT = '// ---- the window and the headless entry:';
 export function script() {
-  const body = stripped(fs.readFileSync(PLUGIN, 'utf8')).replace(/^const HEADLESS = .*$/m, 'const HEADLESS = true;');
+  const source = fs.readFileSync(PLUGIN, 'utf8');
+  if (!source.includes(CUT)) throw new Error(`the snapshot plugin no longer marks where its window code starts ("${CUT}")`);
+  const body = stripped(source.slice(0, source.indexOf(CUT))).replace(/^const HEADLESS = .*$/m, 'const HEADLESS = true;');
   const code = body + '\n' + EPILOGUE;
   if (code.length > CAP) throw new Error(`the snapshot code is ${code.length} characters, over use_figma's ${CAP}`);
   return code;

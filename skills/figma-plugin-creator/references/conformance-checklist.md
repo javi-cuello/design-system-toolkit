@@ -52,6 +52,7 @@ grep -nE 'getNodeById\(|getStyleById\(|getFileThumbnailNode\(|getLocalTextStyles
 - Do this BEFORE the manifest gains dynamic-page.
 - *Read:* the script leaves `.instances` and `.consumers` to a read. A plugin's own arrays and maps carry those names as often as nodes do.
 - A generated block is not grepped. It is marked `/* <name> generated start … <name> generated end */` and written by a sync script. Its code is its source's, which runs under dynamic-page where it is written.
+- Only a block whose two markers carry the same name, one `conformance.mjs` `GENERATORS` lists, counts as generated. `check.sh` runs each of those generators with `--check`. A hand-typed or mismatched marker hides nothing.
 
 | Manifest change | Effect |
 |---|---|
@@ -68,6 +69,7 @@ The rule is §B 9's. Count the network calls:
 grep -cE 'fetch\(|XMLHttpRequest|WebSocket' code.js ui.html
 ```
 
+- Generated blocks are left out of the count, in code.js as in ui.html: their source answers for them (§2).
 - 0 hits: `allowedDomains` is `["none"]`.
 - Hits: enumerate the real domains, with scheme and subdomain wildcards as the standard says.
 - *Read:* the domains each fetch should be allowed.

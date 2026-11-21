@@ -1,6 +1,19 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.81.2] - 2026-11-21
+### Fixed
+- **The facts mode counts the bindings the store counts.** What the components bind (`used`) leaves out the icon page, whose glyph colours count through the icon facts as the stored `owns.iconColours` do, and scratch pages, which the stored specs leave out; the tokens read's own list of bindings leaves scratch pages out too. A live and a stored run of the unused-tokens check now agree on one file.
+- **A headless run puts `skipInvisibleInstanceChildren` back.** It was left on after a facts or walk read through the bridge, so the next script on the same file saw fewer layers.
+
+## [0.81.1] - 2026-11-21
+### Fixed
+- **The facts mode writes nothing to the file.** A text style whose line height is Auto was measured by drawing a text on a scratch page, an edit inside Audit lite, which promises none; no audit check reads a line height, so the facts mode takes the font's metric instead.
+
+## [0.81.0] - 2026-11-21
+### Added
+- **A facts mode for the audit.** Run headless with `const FACTS = true`, it returns what the audit's tokens and icons stages read: the tokens payload, each icon variant's size, unbound paints and glyph fill without its SVG, the variables the file's own components bind, and how many components it has. The dashboard, `bin/audit` and Audit lite run those stages on the live file through it, by this plugin's own reader rather than a second one (figma-project-audit `stages.json`).
+
 ## [0.80.0] - 2026-11-18
 ### Added
 - **Variables from another library.** Each collection of another library whose variables the components bind is sent, read as this file reads it and marked `remote`; a local collection of the same name is that one. A component file whose colours, spaces and radii live in a foundations file (Atlassian's) had none of its tokens in the store, and code drew every one empty.

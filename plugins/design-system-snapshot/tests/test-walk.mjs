@@ -234,4 +234,44 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("(planted) without the screens-only guard a library run takes them", "notes" in (await planted.walk(layer("I15:2054;1:2433", "App header"), 1)));
 }
 
+// 0.81.0: the facts mode the audit's tokens and icons stages read live (figma-project-audit stages.json),
+// run as another plugin runs it: `__html__` shadowed, `FACTS` set, `return __headless()` appended.
+{
+  const vars = { "V:1": { id: "V:1", name: "Icon/default", remote: false }, "V:2": { id: "V:2", name: "Space/4", remote: false }, "V:3": { id: "V:3", name: "Scratch/only", remote: false } };
+  const solid = (bound) => ({ type: "SOLID", visible: true, color: { r: 0, g: 0, b: 0 }, ...(bound ? { boundVariables: { color: { type: "VARIABLE_ALIAS", id: bound } } } : {}) });
+  const glyph = (name, fill) => ({ type: "COMPONENT", name, width: 16, visible: true, fills: [], strokes: [], children: [{ type: "VECTOR", name: "v", visible: true, fills: [fill], strokes: [], children: [] }],
+    exportAsync: async () => { throw new Error("the facts mode exported an SVG"); } });
+  const iconSet = { type: "COMPONENT_SET", name: "plus", children: [glyph("Size=16", solid("V:1")), glyph("Size=24", solid())] };
+  for (const k of iconSet.children) k.parent = iconSet;
+  const button = { type: "COMPONENT", name: "Button", parent: null, fills: [], strokes: [], effects: [], boundVariables: { itemSpacing: { type: "VARIABLE_ALIAS", id: "V:2" } }, findAll: () => [] };
+  // 0.81.2: a component on a page a person marks Scratch binds a token the stored specs never see
+  const draft = { type: "COMPONENT", name: "Draft", parent: null, fills: [], strokes: [], effects: [], boundVariables: { itemSpacing: { type: "VARIABLE_ALIAS", id: "V:3" } }, findAll: () => [] };
+  const page = (name, sets) => ({ type: "PAGE", name, findAll: (pred) => sets.filter(pred),
+    findAllWithCriteria: ({ types }) => (types.includes("COMPONENT") ? sets.flatMap((x) => [x, ...(x.type === "COMPONENT_SET" ? x.children : [])]) : []) });
+  const iconPage = page("❖ Icons", [iconSet]), compPage = page("❖ Button", [button]), scratch = page("Scratch", [draft]);
+  iconSet.parent = iconPage; button.parent = compPage; draft.parent = scratch;
+  const root = { name: "Lib", children: [compPage, iconPage, scratch], getPluginData: () => "",
+    findAllWithCriteria: ({ types }) => (types.includes("COMPONENT") ? [button, iconSet, ...iconSet.children, draft] : []) };
+  for (const c of [iconSet, ...iconSet.children]) c.findAll = c.findAll || (() => c.children || []);
+  const wrote = [];
+  const ff = { root, fileKey: "K", loadAllPagesAsync: async () => {}, skipInvisibleInstanceChildren: false,
+    variables: { getLocalVariableCollectionsAsync: async () => [], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async () => null },
+    // 0.81.1: an Auto line height is measured by drawing a text; the facts mode draws nothing
+    getLocalTextStylesAsync: async () => [{ id: "S:1", name: "Body", key: "k", fontName: { family: "Inter", style: "Regular" }, fontSize: 16, lineHeight: { unit: "AUTO" }, letterSpacing: { unit: "PERCENT", value: 0 }, boundVariables: {} }],
+    // (a refusal alone would pass: the measure falls back to the metric when drawing fails, so each call is counted)
+    createText: () => { wrote.push("text"); throw new Error("drew a text"); }, createPage: () => { wrote.push("page"); throw new Error("made a page"); },
+    loadFontAsync: async () => { wrote.push("font"); throw new Error("loaded a font to measure"); }, getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async () => null };
+  const facts = await vm.runInContext("(async () => { const __html__ = undefined; const FACTS = true;\n" + src + "\nreturn __headless(); })()",
+    vm.createContext({ figma: ff, __html__: "<ui/>", console, setTimeout, clearTimeout }));
+  ok("facts mode: run inside a plugin with a __html__ of its own, the shadow keeps it headless and it answers", facts && facts.fileKey === "K" && Array.isArray(facts.icons));
+  ok("…each icon variant with its size, unbound paints and glyph fill, and no SVG",
+    JSON.stringify(facts.icons) === JSON.stringify([{ name: "plus", size: 16, unbound: 0, fill: "Icon/default" }, { name: "plus", size: 24, unbound: 1 }]));
+  ok("…the icon page and its sets, as a snapshot names them", facts.iconPage === "❖ Icons" && JSON.stringify(facts.iconSets) === JSON.stringify(["plus"]));
+  // the icon page's glyph colour reaches the unused check through the icon facts (owns.iconColours), as the stored specs leave the icon page out
+  ok("…the variables the components bind, by name, off the icon and scratch pages as the stored specs are, and those components counted", JSON.stringify(facts.used) === JSON.stringify(["Space/4"]) && facts.components === 1, JSON.stringify(facts.used));
+  ok("…and skipInvisibleInstanceChildren put back as it was, so the caller's next read sees every layer", ff.skipInvisibleInstanceChildren === false);
+  ok("…an Auto line height taken from the metric, with nothing drawn in the file", facts.tokens.textStyles.length === 1 && facts.tokens.textStyles[0].lineHeightSource === "metric" && wrote.length === 0, wrote.join(", "));
+  ok("…and the tokens payload a snapshot sends", facts.tokens && facts.tokens._meta.plugin === VERSION && typeof facts.tokens.collections === "object");
+}
+
 console.log(n + "/" + n + " passed");

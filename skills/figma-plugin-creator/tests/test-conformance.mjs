@@ -8,7 +8,8 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { files, standardVersion } from "../scripts/scaffold.mjs";
-import { checkPlugin, pluginsUnder, restyled, handBuilt, misComposed } from "../scripts/conformance.mjs";
+import { checkPlugin, pluginsUnder, restyled, handBuilt, misComposed, GENERATORS, blankGenerated } from "../scripts/conformance.mjs";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 const SCRIPT = fileURLToPath(new URL("../scripts/conformance.mjs", import.meta.url));
 const PLUGINS = fileURLToPath(new URL("../../../plugins", import.meta.url));
@@ -53,13 +54,25 @@ try {
   });
 
   ok("P2, generated: a sync call inside a generated block is its source's to answer for; the same call outside one is still found", () => {
-    const dir = plant("generated-block", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\n/* scanner generated start */\nconst m = node.mainComponent;\n/* scanner generated end */\nconst n = other.mainComponent;\n"); return out; });
+    const dir = plant("generated-block", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\n/* audit-lite generated start */\nconst m = node.mainComponent;\n/* audit-lite generated end */\nconst n = other.mainComponent;\n"); return out; });
     const sync = said(checkPlugin(dir), /sync API/);
     assert.equal(sync.length, 1); assert.match(sync[0].text, /code\.js:6:/);
-    const walk = plant("generated-loads", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\n/* scanner generated start */\nawait figma.loadAllPagesAsync();\n/* scanner generated end */\nconst all = figma.root.findAll(() => true);\n"); return out; });
+    const walk = plant("generated-loads", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\n/* audit-lite generated start */\nawait figma.loadAllPagesAsync();\n/* audit-lite generated end */\nconst all = figma.root.findAll(() => true);\n"); return out; });
     assert.match(said(checkPlugin(walk), /sync API/)[0].text, /code\.js:6:/, "a block's page load does not excuse the plugin's own root walk");
   });
 
+  // Only a block a known generator writes is its source's: a hand-typed marker, or one whose start and end disagree, hides nothing.
+  ok("P2, generated (refused): a marker no generator writes, or a start and end that disagree, hides no code", () => {
+    const typed = plant("typed-marker", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\n/* handmade generated start */\nconst m = node.mainComponent;\n/* handmade generated end */\n"); return out; });
+    assert.match(said(checkPlugin(typed), /sync API/)[0].text, /code\.js:4/, "a name GENERATORS does not list is the plugin's own code");
+    const mixed = plant("mixed-marker", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\n/* audit-lite generated start */\nconst m = node.mainComponent;\n/* adoption-score generated end */\n"); return out; });
+    assert.match(said(checkPlugin(mixed), /sync API/)[0].text, /code\.js:4/, "a start and an end of two generators are no block");
+  });
+  ok("every generator conformance knows is run with --check by standards/tests/check.sh", () => {
+    const sh = fs.readFileSync(path.join(HERE, "..", "..", "..", "standards", "tests", "check.sh"), "utf8");
+    for (const [name, script] of Object.entries(GENERATORS)) assert.ok(new RegExp("node " + script.replace(/[.]/g, "\\.") + " --check").test(sh), name + ": check.sh never runs " + script + " --check");
+    assert.equal(blankGenerated("/* figui3 generated start */\nx\n/* figui3 generated end */"), "\n\n");
+  });
   ok("P3: a fetch under [\"none\"] is blocked, unpkg with no fallback and @latest are needs-decision", () => {
     const dir = plant("data-puller", (out) => {
       out["ui.html"] = out["ui.html"].replace("</script>", "fetch('https://api.example.com/x'); fetch('https://unpkg.com/lucide-static@latest/icons/a.svg');\n</script>");
@@ -69,6 +82,12 @@ try {
     assert.equal(said(found, /while allowedDomains is \["none"\]/)[0].level, "error");
     assert.equal(said(found, /unpkg\.com with no jsdelivr/)[0].kind, "needs-decision");
     assert.ok(said(found, /@latest/).length);
+  });
+  ok("P3, generated: a fetch inside a generated block is its source's; the same fetch outside one is still blocked", () => {
+    const dir = plant("generated-fetch", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\n/* audit-lite generated start */\nfetch('http://localhost:9317');\n/* audit-lite generated end */\n"); return out; });
+    assert.deepEqual(said(checkPlugin(dir), /allowedDomains/), []);
+    const out_ = plant("own-fetch", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\n/* audit-lite generated start */\nconst x = 1;\n/* audit-lite generated end */\nfetch('http://localhost:9317');\n"); return out; });
+    assert.match(said(checkPlugin(out_), /while allowedDomains is/)[0].text, /code\.js:6/);
   });
   ok("a local server in development, declared in devAllowedDomains, is not a blocked fetch", () => {
     const dir = plant("dev-server", (out) => {

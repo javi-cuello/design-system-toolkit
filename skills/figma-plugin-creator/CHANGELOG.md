@@ -1,5 +1,7 @@
 # Changelog — figma-plugin-creator
 
+- 1.20.1 (2026-11-21): `conformance.mjs` leaves out only a generated block whose markers both name a generator in `GENERATORS` (each run with `--check` by `check.sh`); owned-check reads the same list. Cases P2 and P3.
+- 1.20.0 (2026-11-21): `conformance.mjs` §3 reads code.js without its generated blocks, as §2 does and as it already read ui.html: audit-lite now carries the snapshot plugin's facts mode, whose router posts never run headless. A fetch outside a block is still found. Case P3.
 - 1.19.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I: steps and tables, Part B linked not restated, checklist contents list and tables. No rule removed.
 - 1.18.1 (2026-11-11): `conformance.mjs` §5c walks tags as the HTML parser does, so nested rows, unclosed switches and a switch wrapping a control are read right; a nested `:has()` is no restyle. Case P7.
 - 1.18.0 (2026-11-11): skill-standard 1.9.0 §B 4: `.text-btn` retired (a bare `<button>` is always hand-built); `conformance.mjs` §5c warns on a footer fig-button without `size="large"` and on text inside a switch or checkbox in a field row. Template's action is large. Case P7.

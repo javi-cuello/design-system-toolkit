@@ -12,6 +12,7 @@ const code = script();
 ok(`the code fits use_figma's ${CAP} characters`, code.length <= CAP);
 let parses = true; try { new vm.Script(`(async () => {\n${code}\n})`); } catch { parses = false; }
 ok('and parses as the body use_figma runs', parses);
+ok('the window and the headless entry, dead code there, are cut where the plugin marks them', !/figma\.ui\.onmessage|function __headless|function collectFacts/.test(code) && /function collectLibrary/.test(code));
 ok('it runs headless, and collects as the plugin does', /^const HEADLESS = true;$/m.test(code) && /await collectLibrary\(true\)/.test(code));
 ok('every page is loaded through the fallback, never loadAllPagesAsync alone', (code.match(/loadAllPagesAsync/g) || []).length === 1 && /const loadPages/.test(code));
 ok('no \\u or \\\\ escape in it, since the tool call that carries it decodes them (probed 2026-10-30: a \\u2028 in a regex arrived as a line break)', !/\\u|\\\\/.test(code));

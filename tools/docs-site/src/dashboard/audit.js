@@ -4,13 +4,14 @@ import { plural, scrollMotion } from './format.js';
 import { fillPrompt } from './prompt.js';
 import { go } from './views.js';
 import { api, askClaude, bridge, claudeReady, forgetClaude } from './api.js';
-import { contextRules, ownerChipLabel as ownerLabel } from './owners.js';
+import { contextRules, ownerChipLabel } from './owners.js';
 import { OWNER, isOpen } from './labels.js';
 import { ctx } from './context.js';
 import { pullRecord, store } from './record.js';
-import { loadBuckets, showCleared, state, toast } from './queue.js';
+import { showCleared, state, toast } from './queue.js';
 import { recordScores } from './scores.js';
 import { endProgress, runProgress } from './measures.js';
+import { bucketFor, gatherCode, runStages, stagesFor } from '../../../figma-audit/stages.mjs';
 
 // One phrasing of an audit's outcome, used by both of its endings.
 // `kept` is what survived judgement. A run that files nothing new and closes
@@ -250,7 +251,10 @@ async function fileStage(owner, target, read, findings, dismissed) {
   return r;
 }
 async function fileRows(judged, scan) {
-  loadBuckets((await api.scripts()).buckets);
+  // The components stage's bucket rule (stages.json: buckets.json, first-listed wins), through bucketFor as every
+  // runner files it. A service too old to send the list still sends buckets.json, which is all a `from` rule reads.
+  const sc = await api.scripts();
+  const comps = stagesFor(sc.stages, "dashboard").find((s) => s.id === "components") || { buckets: { from: true } };
   const findings = [], dismissed = [];
   const keptText = new Set(), why = {};
   for (const entry of judged) {
@@ -273,7 +277,7 @@ async function fileRows(judged, scan) {
         // Scoring attributes a finding to a dimension by rule, so a row
         // without one cannot be scored.
         rule: (match && match.rule) || null,
-        bucket: ctx.BUCKET_OF_RULE[(match && match.rule) || ""] || ctx.BUCKET_DEFAULT,
+        bucket: bucketFor(comps, (match && match.rule) || "", { rulesFile: sc.buckets }),
         sev: f.sev, fix: [f.text],
         // The scanner's own fix when it has one; the judge's reason otherwise.
         rec: [(match && match.advice) || f.why || "Decide how to handle it."]
@@ -662,454 +666,541 @@ async function otherStages(scan, rules, runId) {
     brief.push(label + " " + (bits.length ? bits.join(", ") : (note || "no change")));
   };
 
-  const fileLabel = ownerLabel("figma-foundations-audit");
-  try {
-    if (!sc.foundations) lines.push(fileLabel + ": skipped — the service has no foundations scanner.");
-    else {
-      runProgress(ctx.libKey, 60, "Checking the file");
-      say("Checking the file as a whole…", null, true);
-      const out = await bridge.exec("const TOKENS = " + JSON.stringify(rules.tokens) + ";\n" + sc.foundations, 180000);
-      if (!out || !out.audited) throw new Error("the bridge answered, but not with a file scan");
-      if (out.fileKey && ctx.libKey && out.fileKey !== ctx.libKey) throw new Error("that scanned " + (out.fileName || "another file") + ", not this library");
-      // Fixed rules (page order, a bare slash, a case collision) are filed as
-      // raised; only the part-rule question ("review") goes to the judge.
-      const fixed = [], asked = [];
-      for (const e of out.audited) {
-        const q = e.candidates.filter((c) => c.sev === "review"), fx = e.candidates.filter((c) => c.sev !== "review");
-        if (fx.length) fixed.push(Object.assign({}, e, { candidates: fx }));
-        if (q.length) asked.push(Object.assign({}, e, { candidates: q }));
-      }
-      /*
-       * Three of this stage's four checks are FIXED rules — page order, a
-       * bare separator, a case collision — and are filed as raised without
-       * ever going to the judge. The stage was nonetheless skipped whole when
-       * no Claude key was configured, so a dashboard with no key reported
-       * "Library file: skipped" and never checked the file's structure at
-       * all, on a button the reader believes ran.
-       *
-       * Only the part-name question needs judging. With no judge, it is the
-       * one thing held back, and the line says so.
-       */
-      const kept = ready ? await judgeAll(asked, rulingsOnly) : [];
-      const heldForJudge = ready ? 0 : asked.reduce((n, e) => n + e.candidates.length, 0);
-      /*
-       * The CHECK's two strings, not the judge's one. Every finding here now
-       * carries `text` (what is wrong) and `advice` (what to do), and they go
-       * to the two columns named for them.
-       *
-       * Before this, a part-naming row (figma-standard rule 9) put the new name in "The question" —
-       * "figma-standard rule 9 naming would be Table - Column - Table - Header / Hug" —
-       * while "My recommendation" restated the rule that had just been
-       * broken: the answer on the side that asks, and a rule number on the
-       * side that answers. The judge was writing both, and it writes about
-       * the rule because the rule is what it was given.
-       */
-      const rowOf = (where, node, c, bucket) => ({
-        where, node: node || null, check: c.text, key: c.key, rule: c.rule, bucket, sev: c.sev,
-        fix: [c.text], rec: [c.advice || "Decide how to handle it."] });
-      const findings = kept.map(({ entry, cand }) => rowOf(entry.set, entry.id, cand, 3));
-      for (const e of fixed) for (const c of e.candidates)
-        findings.push(rowOf(e.set, e.id, c, c.rule === "page-order" ? 1 : 3));
-      // The scanner walks every page and is handed no component list, so
-      // `reach` is every component that exists plus the page list, and it
-      // reports the rules it ran — a check whose setting was missing from
-      // the context document must not close the rows it never read.
-      const r = await fileStage("figma-foundations-audit", null,
-                                { names: out.reach || [], complete: true, everything: true, ran: out.ran || undefined, source: "figma" },
-                                findings, dismissedOf(asked, kept, ready ? undefined : []));
-      stageBrief(fileLabel, r);
-      lines.push(fileLabel + ": " + stageLine(out.audited.reduce((n, e) => n + e.candidates.length, 0), r) + unjudgedNote() +
-                 // Silence is only meaningful where the check ran.
-                 (heldForJudge
-                   ? " " + heldForJudge + " naming question" + (heldForJudge === 1 ? "" : "s") +
-                     " held back \u2014 no Claude key, so nothing could judge them against this project's rulings."
-                   : "") +
-                 ((out.notRun || []).length
-                   ? " NOT checked: " + out.notRun.join(", ") + " \u2014 the context document does not carry the setting each needs."
-                   : "") +
-                 // Different sentence, because it is a different fact: the
-                 // setting IS recorded and this library has nothing the check
-                 // looks at. Saying "not checked" of it was untrue.
-                 ((out.notApplicable || []).length
-                   ? " Nothing to check for " + out.notApplicable.join(", ") + " in this library."
+  /*
+   * THE STAGES, IN THE REGISTRY'S ORDER. skills/figma-project-audit/stages.json
+   * is the audit's one list of stages; bin/audit and Audit lite read it too,
+   * and skills/figma-project-audit/tests/test-stages.mjs holds this map to the
+   * stages it gives the dashboard. The components stage ran before this
+   * (runAudit), which is no deviation: the page applies no fixes between
+   * stages, and order matters only where fixes land.
+   */
+  // Each handler says its stage's one line through `tell`; the loop below puts the lines in the registry's order.
+  const said = {};
+  const tell = (stage, text) => { said[stage.id] = text; };
+  // Why a stage the registry gives the page does not apply, by its `applies` (appliesTo decided it).
+  const NOT_APPLIES = { componentSets: "the file has no components", tokens: "the file owns no variable collection, text style or effect style", icons: "the file has no icon page",
+                        codeTarget: "the settings name no code target", sourceLibrary: "the settings name no source library", code: "the settings name no code for this library" };
+  const notApplies = (stage) => { const a = (stage && stage.applies) || {}; return NOT_APPLIES[a.fact || a.setting] || "it does not apply to this library"; };
+  // The tokens and icons stages share one read of the file: the snapshot plugin's facts mode, then the service's run
+  // of the checks on it, made when the first of them asks (their appliesTo reads the same answer's `applies`).
+  let libraryRead = null;
+  const readLibrary = (stage) => libraryRead || (libraryRead = (async () => {
+    const script = sc[stage.gather.served];
+    if (!script) throw Object.assign(new Error("the service has no snapshot plugin to read the file with"), { skipped: true });
+    runProgress(ctx.libKey, 66, "Reading tokens and icons");
+    say("Reading the file\u2019s tokens and icons\u2026", null, true);
+    const facts = await bridge.exec(gatherCode(stage, script), 300000);
+    if (!facts || !facts.tokens) throw new Error("the bridge answered, but not with the file\u2019s tokens");
+    if (facts.fileKey && ctx.libKey && facts.fileKey !== ctx.libKey) throw new Error("that read " + (facts.fileName || "another file") + ", not this library");
+    const r = await api.libraryChecks(facts);
+    if (!r || !r.ok) throw new Error((r && r.error) || "the service did not check the file\u2019s tokens and icons");
+    // (a service from before `applies`: liveChecks answers null for a stage that does not apply, the same rule)
+    return Object.assign({ applies: { tokens: !!r.tokens, icons: !!r.icons } }, r);
+  })());
+  const libraryStage = async (stage) => {
+    const label = stage.label;
+    try {
+      const out = (await readLibrary(stage))[stage.checks.result];
+      // Not a skip: the icon page is there and holds nothing this stage reads.
+      if (!out || !out.ran.length) { tell(stage, label + ": nothing to check \u2014 the icon page holds no icons."); return "empty"; }
+      // Deterministic checks, filed as raised: nothing here is a question for the judge.
+      const findings = out.findings.map((f) => Object.assign({}, f, { bucket: bucketFor(stage, f.rule, { own: f.bucket }) }));
+      const r = await fileStage(stage.owner, stage.target, { names: out.scope, complete: true, everything: true, ran: out.ran, source: "figma" }, findings);
+      stageBrief(label, r);
+      tell(stage, label + ": " + stageLine(findings.length, r) +
+                 (stage.target === "tokens" && !out.ran.includes("tokens-unused")
+                   ? " Unused tokens NOT checked here \u2014 other files use these tokens, so the snapshot watch, which reads every components library, checks them."
                    : ""));
-    }
-  } catch (e) { lines.push(stageEnd(fileLabel, e)); }
-
-  const buildLabel = ownerLabel("component-validator");
-  try {
-    const target = rules.codeTarget;
-      // What the other side of a comparison is CALLED. A row that says "In
-      // MUI" names the thing the project builds with; one saying "In web"
-      // would name nothing a reader recognises.
-      const TARGET_NAMES = { web: "the web", ios: "SwiftUI", android: "Compose" };
-      const targetName = rules.frameworkName || TARGET_NAMES[target] || target;
-    if (!target) lines.push(buildLabel + ": skipped — the settings name no code target.");
-    else if (!sc.validator) lines.push(buildLabel + ": skipped — the service has no validator.");
-    else if (!ready) lines.push(buildLabel + ": skipped — nothing to judge the findings.");
-    else {
-      // Every set the components scan read, batched by variant count so one
-      // walk stays inside the plugin's patience. Page entries carry no variants.
-      // No tree walk. The service reads the project's STORED specs and runs
-      // the engine over them — the same input, through the same resolver, as
-      // each component's Implementation table in the docs build. It used to
-      // batch the whole library out through the plugin, which made this the
-      // slowest stage of a run AND gave the engine a second input that
-      // disagreed with the first in both directions.
-      const sets = scan.audited.filter((e) => e.id && e.variants > 0);
-      // The LIVE file, read by the snapshot plugin's own walk run headless
-      // through the bridge — the same function that writes a snapshot, so
-      // the audit and the store describe a component in one shape. It read
-      // the stored snapshot until 2026-09-22, and a shadow removed from a
-      // dialog at lunch was still on the Web build board at night while the
-      // Broken tokens tab, which reads Figma, had cleared (toolkit-standard
-      // §D 5). 120 sets, 2,112 variants: 18 seconds.
-      if (!sc.snapshot) throw new Error("the service has no snapshot plugin to read the library with");
-      runProgress(ctx.libKey, 72, "Reading the library");
-      say("Reading the library for the build check…", null, true);
-      // The project's own page rule, so this walk and the components scan
-      // select the same pages; the plugin's default is its own convention.
-      const T = rules.tokens || {};
-      const live = await bridge.exec("const PAGES = " + JSON.stringify(T.componentPages || "") + ";\nconst SECTION = " + JSON.stringify(T.sectionHeader || "") + ";\nconst EXCLUDE = " + JSON.stringify(T.excludeSections || []) + ";\n" + sc.snapshot, 600000);
-      if (!live || !Array.isArray(live.components)) throw new Error("the bridge answered, but not with the library's components");
-      if (live.fileKey && ctx.libKey && live.fileKey !== ctx.libKey) throw new Error("that read " + (live.fileName || "another file") + ", not this library");
-      runProgress(ctx.libKey, 76, "Checking the build");
-      say("Checking the build against the file…", null, true);
-      // The framework the project records, with its component map: MUI's
-      // rules apply on top of the platform target and fire only for the
-      // components the settings map, so both travel together or neither does.
-      const v = await api.validate(target, null, rules.framework || null, rules.frameworkComponents || null, live.components);
-      if (!v || !v.ok) throw new Error((v && v.error) || "the engine did not answer");
-      /*
-       * A read that could not be narrowed to THIS library is not a full run
-       * of it. The service used to answer an unrecognised file key with every
-       * spec in the store — 197 across three libraries — and this stage filed
-       * the result with `full: true`, so one library's audit raised and CLOSED
-       * component-validator rows for all of them. The service now says whether
-       * it could scope the read; a run that could not is a failure of the
-       * probe, not a verdict on the file.
-       */
-      if (v.scoped === false) throw new Error("the service could not tell which library to read \u2014 it would have validated every component in the store, so nothing was filed");
-      // The engine's findings become candidates, one set per component, so
-      // the same judgement pass drops what a ruling or convention covers.
-      // A finding whose fix lands ONLY in code is not a question for this
-      // board. It is a translation — a mask is `clip-path`, an inside stroke
-      // is a border — and the component's own documentation page already
-      // publishes it, under Implementation, built from this same engine
-      // (tools/docs-site/src/lib/snapshot.js, `codeNotes`). Filing it here as well
-      // put the same sentence in two places and made a queue of 78 rows read
-      // as 78 jobs for the designer when nine of them were notes for the
-      // build. `both` stays: it is a real decision, and the page shows it as
-      // "open with the designer" precisely because this board still asks it.
-      const notes = v.findings.filter((f) => f.lands === "code");
-      const byComp = {};
-      for (const f of v.findings) {
-        if (f.lands === "code") continue;
-        (byComp[f.component] = byComp[f.component] || []).push(f);
-      }
-      const entries = Object.entries(byComp).map(([set, fs]) => ({
-        set: set, id: (sets.find((e) => e.set === set) || {}).id || null, axes: [],
-        // `lands` travels with the candidate: where the fix goes is the
-        // engine's answer, computed beside the advice it reads it from, not
-        // something this page re-derives from the sentence it renders.
-        candidates: fs.map((f) => ({ sev: "review", rule: f.class, key: f.key, align: f.align, lands: f.lands || null, n: (f.variants || []).length,
-                                     expected: f.expected || null, usedBy: f.usedBy || [],
-                                     inFile: f.layer === "$root" ? "The component frame" : f.layer,
-                                     // Every particular the one decision covers, not just the
-                                     // first: a slot filled with three different sample
-                                     // components is one question about the slot, and the row
-                                     // should say which three.
-                                     drawn: (f.shared ? "“" + f.shared + "”" : f.layer === "$root" ? "The component frame" : "“" + f.layer + "”") + " — " +
-                                            ((f.details || []).length > 1 ? f.details.join("; ") : f.detail),
-                                     text: f.class + " · " + f.layer + " · " + f.detail })) }));
-      const kept = await judgeAll(entries, rulingsOnly);
-      const findings = kept.map(({ entry, cand, f }) => ({
-        where: entry.set, node: entry.id, check: cand.text, key: cand.key, rule: cand.rule, bucket: 3, sev: cand.sev === "preference" ? "pref" : "warn", lands: cand.lands || null,
-        // The ENGINE's words, not the judge's. The judge decides whether a
-        // finding survives; it was also writing the sentence the reader acts
-        // on, and it writes for whoever it imagines is reading — which put
-        // "Schedule a theme variant in `components.MuiButton.variants`, with
-        // TypeScript module augmentation" in a designer's question column,
-        // for a finding whose whole point is what to change in Figma.
-        //
-        // Left: what is drawn. Right: what to do, one bullet per side of the
-        // choice, so "in Figma" is a line of its own rather than a clause
-        // inside a paragraph about TypeScript.
-        // With a counterpart, the row is a comparison and says so; without
-        // one it stays the ordinary pair of cells, because inventing the
-        // other half would be this page writing the finding.
-        contrast: !!cand.expected,
-        fix: cand.expected
-          ? ["In Figma — " + cand.inFile + (cand.n ? " · " + cand.n + " variant" + (cand.n === 1 ? "" : "s") : ""),
-             "In " + targetName + " — " + cand.expected]
-          // A shared cause counts the components it reaches, not the variants
-          // it was seen in: the reader is asked for one change, and the number
-          // that matters is how far that change goes. They are named too: a
-          // map that names no counterpart for 50 components is acted on one
-          // name at a time, and a count alone sent the reader off to find them.
-          : [cand.drawn + (cand.usedBy.length
-               ? " · " + cand.usedBy.length + " component" + (cand.usedBy.length === 1 ? "" : "s") + ": " + cand.usedBy.join(", ")
-               : cand.n ? " · " + cand.n + " variant" + (cand.n === 1 ? "" : "s") : "")],
-        rec: adviceLines(cand.align) }));
-      /*
-       * TWO queues, because there are two questions. A platform class asks
-       * what the web can draw; a framework class asks what the component
-       * library the app is built with already owns. The page's chips have
-       * said so since the framework layer shipped — "Web build" and "MUI
-       * build" are keyed by owner AND target — and this call was filing both
-       * under the platform target alone.
-       *
-       * The cost was not cosmetic: a session had filed MUI findings under
-       * `web+mui`, this stage filed them under `web`, and `full: true` closes
-       * only rows of its own target. So neither run could ever close, refresh
-       * or replace the other's, and one board carried two MU2 rows for one
-       * finding — the older one still showing text from the day it was filed,
-       * surviving every rewrite since.
-       */
-      const composite = rules.framework ? target + "+" + rules.framework : null;
-      const isFramework = (row) => /^[A-Z]{2}\d/.test(row.rule || "");
-      const parts = [{ target: target, rows: findings.filter((f) => !isFramework(f)) }];
-      if (composite) parts.push({ target: composite, rows: findings.filter(isFramework) });
-      let r = null;
-      for (const part of parts) {
-        // Each target closes only its own: a full run of the platform queue
-        // must not clear the framework queue merely by not raising its rows.
-        // The walk read every component page of the live file, so a row
-        // naming a set it did not meet is about one renamed or removed.
-        const one = await fileStage("component-validator", part.target, { names: v.scope || [], complete: true, everything: true, source: "figma" },
-                                    part.rows, part.target === target ? dismissedOf(entries, kept) : []);
-        r = r ? { ok: true, added: r.added + one.added, closed: r.closed + one.closed,
-                  updated: r.updated + one.updated, reopened: r.reopened + one.reopened } : one;
-      }
-      // The notes are counted out loud. A stage that quietly drops nine of its
-      // own findings is indistinguishable from a stage that missed them.
-      stageBrief(buildLabel, r);
-      lines.push(buildLabel + ": " + stageLine(v.findings.length - notes.length, r) + unjudgedNote() +
-                 " Read " + (v.components || 0) + " live component" + (v.components === 1 ? "" : "s") + "." +
-                 (notes.length ? " " + notes.length + " code-only finding" + (notes.length === 1 ? "" : "s") +
-                                 " went to the components' Implementation tables instead of the queue." : "") +
-                 (v.silent && v.silent.length ? " Silent: " + v.silent.join(", ") + "." : "") +
-                 /*
-                  * Which components the framework map does not name. The
-                  * engine computes this and its own comment says "nothing is
-                  * what a clean result looks like, so the caller says this out
-                  * loud" — and the caller then dropped it. A component the map
-                  * does not name is checked by no framework rule at all, and
-                  * the stage read as though it had covered everything.
-                  */
-                 (v.unmapped && v.unmapped.length
-                   ? " NOT checked against " + rules.frameworkName + ": " +
-                     v.unmapped.length + " component" + (v.unmapped.length === 1 ? "" : "s") +
-                     " the map does not name \u2014 " + v.unmapped.slice(0, 6).join(", ") +
-                     (v.unmapped.length > 6 ? " and " + (v.unmapped.length - 6) + " more" : "") + "."
-                   : ""));
-    }
-  } catch (e) { lines.push(stageEnd(buildLabel, e)); }
-
-  // Token links: does every variable and style the components bind still
-  // exist in the source library, by key. Two calls to the plugin — the key
-  // set from the source (which must be open in Figma too), then the walk of
-  // this library against it — and a deterministic answer, filed as raised.
-  const linksLabel = ownerLabel("figma-variable-audit");
-  try {
-    const source = rules.sourceLibrary;
-    if (!source) lines.push(linksLabel + ": skipped — the settings name no source library.");
-    else if (!sc.links) lines.push(linksLabel + ": skipped — the service has no link scanner.");
-    else {
-      // The one stage that reads a second file, so the spinner moves to it:
-      // when this is the stage that hangs, the file it is waiting on is the
-      // one nobody opened, and the list now says which.
-      runProgress(source, 85, "Reading its keys");
-      say("Reading the source library’s keys…", null, true);
-      // Two minutes was the figure before either of these did real work. The
-      // keys read enumerates every collection in the source and every variable
-      // in each; the enumeration below walks every page of the consumer AND
-      // probes the team library for what it publishes. Both now take as long
-      // as a scan batch is allowed, because both are a scan of something.
-      // Each call names itself in its failure: "timed out" alone said nothing
-      // about which of a keys read, a set list and N batches gave up, and the
-      // stage timed out four times in a day with nothing to act on.
-      // Each plugin call named, and timed: the stage line ends with how long
-      // each took, so a run that overran the 240-second cap says which call
-      // did and a run that passed says how close it came. "4 of ~10 runs
-      // time out, cause unknown" stood for a day because nothing recorded it.
-      const took = [];
-      const named = async (label, run) => { const t0 = Date.now(); try { return await run(); } catch (e) { throw Object.assign(new Error(label + " (after " + Math.round((Date.now() - t0) / 1000) + "s): " + (e && e.message ? e.message : "failed")), { code: e && e.code, skipped: e && e.skipped }); } finally { took.push(label.replace(/ \(.*$/, "") + " " + Math.round((Date.now() - t0) / 1000) + "s"); } };
-      const k = await named("reading the source's keys", () => api.exec("const MODE = \"keys\";\n" + sc.links, 240000, source));
-      if (!k.ok) {
-        const shut = k.error === "wrong_file_not_open" || k.error === "plugin_not_connected";
-        throw Object.assign(new Error(shut ? "the source library is not open in Figma, so broken links cannot be told from live ones"
-                                           : (k.error || "the keys step did not answer")),
-                            shut ? { skipped: true } : {});
-      }
-      const keys = k.result && k.result.result !== undefined ? k.result.result : k.result;
-      if (!keys || !keys.variables) throw new Error("the source library answered, but not with its keys");
-      if (keys.fileKey && keys.fileKey !== source) throw new Error("that read " + (keys.fileName || "another file") + ", not the source library");
-      // Enumerate before scanning. One scan of the whole library is one call
-      // with no progress and no partial result: 121 sets overran the
-      // four-minute cap and the stage failed having already resolved most of
-      // them. This is cheap — no binding is resolved — and it also reads the
-      // published list once, for every batch below to share.
-      runProgress(ctx.libKey, 88, "Listing sets");
-      say("Listing the sets to check…", null, true);
-      // A library that is its own source binds its own variables, which are
-      // local and never a library link, so what it publishes cannot matter
-      // here — and probing the libraries it subscribes to asked the wrong
-      // file: one project's only one is its Documentation furniture, whose
-      // listing hangs, and every run waited 20 s to say "NOT checked".
-      const self = source === ctx.libKey;
-      const enumerated = await named("listing the sets", () => bridge.exec("const MODE = \"sets\";\nconst SELF = " + self + ";\nconst TOKENS = " + JSON.stringify(rules.tokens) + ";\n" + sc.links, 240000));
-      if (!enumerated || !enumerated.sets) throw new Error("the bridge answered, but not with a set list");
-      if (enumerated.fileKey && ctx.libKey && enumerated.fileKey !== ctx.libKey) throw new Error("that read " + (enumerated.fileName || "another file") + ", not this library");
-      // By variant count, which is what the walk actually costs. 120 variants
-      // a batch held for a fortnight and then overran the 240-second cap on
-      // three of nine full runs in one day, on two libraries, and a batch
-      // that overruns fails the whole stage with everything it resolved
-      // thrown away. Half the batch is twice the calls and none of the
-      // risk: each batch has headroom the cap was meant to give.
-      const linkBatches = []; let lcur = [], ln = 0;
-      for (const e of enumerated.sets) {
-        if (ln + e.variants > 60 && lcur.length) { linkBatches.push(lcur); lcur = []; ln = 0; }
-        lcur.push(e); ln += e.variants;
-      }
-      if (lcur.length) linkBatches.push(lcur);
-      const KEYSTR = JSON.stringify({ variables: keys.variables, styles: keys.styles, published: enumerated.published || { variables: [], styles: [] } });
-      const out = { audited: [], measures: { sets: 0, bindings: 0, styleRefs: 0, local: 0, broken: 0 }, publishedSeen: (enumerated.published || {}).variables ? enumerated.published.variables.length : 0 };
-      const seenVars = new Set(), seenStyles = new Set();
-      for (const [i, b] of linkBatches.entries()) {
-        runProgress(ctx.libKey, 88 + 11 * ((i + 1) / linkBatches.length), "Checking bindings");
-        say("Checking bindings against " + keys.variables.length + " variables and " + keys.styles.length + " styles", null, true);
-        const part = await named("batch " + (i + 1) + " of " + linkBatches.length + " (" + b.length + " sets, " + b.reduce((n, e) => n + e.variants, 0) + " variants)",
-                                 () => bridge.exec("const MODE = \"scan\";\nconst KEYS = " + KEYSTR + ";\n" +
-                                       "const SCOPE = " + JSON.stringify(b.map((e) => e.id)) + ";\n" +
-                                       "const TOKENS = " + JSON.stringify(rules.tokens) + ";\n" + sc.links, 240000));
-        if (!part || !part.audited) throw new Error("the bridge answered, but not with a link scan");
-        if (part.fileKey && ctx.libKey && part.fileKey !== ctx.libKey) throw new Error("that scanned " + (part.fileName || "another file") + ", not this library");
-        out.audited.push(...part.audited);
-        const pm = part.measures || {};
-        for (const k2 of ["sets", "bindings", "styleRefs", "local", "broken"]) out.measures[k2] += pm[k2] || 0;
-        // Union, never sum: a variable forty sets bind is one distinct
-        // variable, and the batches would have called it forty.
-        for (const id of (part.seen || {}).variables || []) seenVars.add(id);
-        for (const id of (part.seen || {}).styles || []) seenStyles.add(id);
-        // One batch that could not see the published list makes the whole
-        // run's visibility answer unproven, so the weakest batch wins.
-        if (i === 0) out.measures.publishedChecked = !!pm.publishedChecked;
-        else out.measures.publishedChecked = out.measures.publishedChecked && !!pm.publishedChecked;
-      }
-      out.measures.distinctVariables = seenVars.size;
-      out.measures.distinctStyles = seenStyles.size;
-      const findings = [];
-      // The scanner's own severity: a key the source neither holds nor
-      // publishes may be another library's, which only the maintainer can
-      // say, so it is a review rather than an error. Overwriting every one
-      // with "error" is how a check turns a question into an accusation.
-      for (const e of out.audited) for (const c of e.candidates) findings.push({
-        where: e.set, node: e.id || null, check: c.text, key: c.key, rule: "link", bucket: 3, sev: c.sev || "error",
-        // Left: WHICH token, and nothing else. Right: what to do, then the
-        // list of places to do it. The layers were on the left, under the
-        // token — but they are not part of the question, they are the work,
-        // and the work belongs in the column the reader acts from.
-        fix: [c.text],
-        rec: [c.advice || "Relink to a live token, or record the orphan as accepted in the context document."]
-               .concat(c.layers || []) });
-      // The sets the enumerate pass listed ARE the scope — `.name`, since it
-      // returns `{id, name, page, variants}` — and it listed every set on
-      // every component page, live, so the scan walked everything.
-      const r = await fileStage("figma-variable-audit", null,
-                                { names: enumerated.sets.map((e) => e.name), complete: true, everything: true, source: "figma" }, findings);
-      const m = out.measures || {};
-      stageBrief(linksLabel, r);
-      lines.push(linksLabel + ": " + stageLine(out.audited.reduce((n, e) => n + e.candidates.length, 0), r) +
-                 " " + (m.bindings || 0) + " bindings and " + (m.styleRefs || 0) + " style references checked across " + (m.sets || 0) + " sets." +
-                 // Silence is only meaningful where the check ran. Without the
-                 // published list a token that exists but is not published
-                 // reads as fine, and the line says so rather than implying
-                 // coverage it did not have.
-                 (self ? " Publish visibility does not apply: the library is its own source, so its bindings are local."
-                   : m.publishedChecked
-                   ? " Against " + (out.publishedSeen || 0) + " published tokens as well as what the source holds."
-                   : " NOT checked for publish visibility — the library published list came back empty.") +
-                 " Calls: " + took.join(", ") + "." +
-                 // Counted rather than raised: a weight bound on a layer with
-                 // no stroke paint does not appear in Figma's Stroke panel at
-                 // all, so a row naming one cannot be acted on. Said out loud,
-                 // because a number nobody states reads as a number that is
-                 // zero.
-                 ((m.dead || 0)
-                   ? " " + m.dead + " dead binding" + (m.dead === 1 ? "" : "s") +
-                     " not raised: each resolves to nothing AND paints nothing, so Figma's Stroke panel does not show it and there is nowhere to fix it by hand."
-                   : ""));
-    }
-  } catch (e) { lines.push(stageEnd(linksLabel, e)); }
-
-  // Code parity: which of this library's components its code has, and where
-  // one it lacks might be under another name. The first half is a comparison
-  // of names, made by the service. The second is a question only a reader of
-  // both lists can answer, so it is asked with design-code-parity's own
-  // instruction and filed as that skill's rows: a suggestion somebody
-  // confirms, which the docs site's Parity page shows as one and never draws
-  // as a pair.
-  const parityLabel = ownerLabel("design-code-parity");
-  try {
-    const PRIVATE = /^\s*_|\/\s*_/;
-    const sets = scan.audited.filter((e) => e.id && e.variants > 0 && !PRIVATE.test(e.set));
-    const p = await api.parity(sets.map((e) => e.set));
-    if (!p || !p.ok) throw new Error((p && p.error) || "the service did not compare the library with its code");
-    if (!p.stated) lines.push(parityLabel + ": skipped — the settings name no code for this library.");
-    else if (!sc.pairing) lines.push(parityLabel + ": skipped — the service has no pairing instruction.");
-    else if (!ready) lines.push(parityLabel + ": skipped — nothing to read the two lists.");
-    else {
-      runProgress(ctx.libKey, 95, "Pairing with the code");
-      say("Looking for components the code names differently…", null, true);
-      // Asked about: a component with no code of its own name, whether the
-      // code has nothing for it or only the component its framework name
-      // points to — that one is said, so a closer match has to beat it.
-      const asked = p.figmaOnly.map((name) => ({ name }))
-        .concat(p.both.filter((b) => !b.sameName).map((b) => ({ name: b.figma, builtAs: b.code })));
-      // One pass (prompt.js): a Figma name holding "{{CODE}}" stays a name.
-      const prompt = fillPrompt(sc.pairing, {
-        RULINGS: (rules.rulings || []).map((r) => "- " + r).join("\n") || "- none",
-        FIGMA: JSON.stringify(asked, null, 1),
-        // A nested component says what it sits in (`ContextualPanel` in Table),
-        // which is often the word its Figma name carries and its own does not.
-        CODE: JSON.stringify(p.codeOnly.map((k) => {
-          const at = k.path.split("/").slice(0, -1).join("/");
-          return at ? { name: k.name, in: at } : { name: k.name };
-        }), null, 1),
-      });
-      // The judge's settings: this is a judgement, and at the service's
-      // default the model thought its whole budget away and answered nothing
-      // (4,000 tokens out, no text, twice running).
-      const answer = asked.length && p.codeOnly.length
-        ? await askClaude.json(prompt, { max_tokens: 8000, spend: runSpend, use: "judge" })
-        : { pairs: [] };
-      // Only names that were on the two lists, each once: an answer naming
-      // anything else is the model writing a component, and a row about a
-      // component that does not exist could never be closed.
-      const onFigma = new Set(asked.map((x) => x.name)), onCode = new Set(p.codeOnly.map((k) => k.name));
-      const used = new Set();
-      const pairs = [];
-      for (const x of (answer && answer.pairs) || []) {
-        if (!x || !onFigma.has(x.figma) || !onCode.has(x.code) || used.has("f\n" + x.figma) || used.has("c\n" + x.code)) continue;
-        used.add("f\n" + x.figma); used.add("c\n" + x.code);
-        pairs.push(x);
-      }
-      const findings = pairs.map((x) => ({
-        where: x.figma, node: (sets.find((e) => e.set === x.figma) || {}).id || null,
-        check: "Possibly " + x.code + " in code", key: "pair|" + x.code, rule: "pair", bucket: 3, sev: "warn", lands: "accept",
-        fix: ["The code has no component of this name, and its " + x.code + " has no Figma component of its own"],
-        rec: ["Possibly the same component" + (x.why ? ": " + String(x.why).replace(/\s+/g, " ").trim() : ".")] }));
-      // Every public set was compared, so every one is in scope: a pair that
-      // is no longer proposed, or whose component now has code of its own
-      // name, closes.
-      const r = await fileStage("design-code-parity", null,
-                                { names: sets.map((e) => e.set), complete: true, source: "figma" }, findings);
-      stageBrief(parityLabel, r);
-      lines.push(parityLabel + ": " + p.both.length + " of " + sets.length + " components are in the code, which has " +
-                 p.components + ". " + stageLine(findings.length, r));
-    }
-  } catch (e) { lines.push(stageEnd(parityLabel, e)); }
+    } catch (e) { tell(stage, stageEnd(label, e)); }
+  };
+  const HANDLERS = {
+    // The page's Audit IS the components stage: runAudit ran and filed it before this (its result is `first`), and the
+    // page applies no fixes between stages, so the order does not matter here. Its line is the run's lead, not one here.
+    components: async () => "ran",
+    foundations: async (stage) => {
+      const fileLabel = stage.label;
+      try {
+        if (!sc[stage.gather.served]) tell(stage, fileLabel + ": skipped — the service has no foundations scanner.");
+        else {
+          runProgress(ctx.libKey, 60, "Checking the file");
+          say("Checking the file as a whole…", null, true);
+          const out = await bridge.exec(gatherCode(stage, sc[stage.gather.served], { TOKENS: rules.tokens }), 180000);
+          if (!out || !out.audited) throw new Error("the bridge answered, but not with a file scan");
+          if (out.fileKey && ctx.libKey && out.fileKey !== ctx.libKey) throw new Error("that scanned " + (out.fileName || "another file") + ", not this library");
+          // Fixed rules (page order, a bare slash, a case collision) are filed as
+          // raised; only the part-rule question ("review") goes to the judge.
+          const fixed = [], asked = [];
+          for (const e of out.audited) {
+            const q = e.candidates.filter((c) => c.sev === "review"), fx = e.candidates.filter((c) => c.sev !== "review");
+            if (fx.length) fixed.push(Object.assign({}, e, { candidates: fx }));
+            if (q.length) asked.push(Object.assign({}, e, { candidates: q }));
+          }
+          /*
+           * Three of this stage's four checks are FIXED rules — page order, a
+           * bare separator, a case collision — and are filed as raised without
+           * ever going to the judge. The stage was nonetheless skipped whole when
+           * no Claude key was configured, so a dashboard with no key reported
+           * "Library file: skipped" and never checked the file's structure at
+           * all, on a button the reader believes ran.
+           *
+           * Only the part-name question needs judging. With no judge, it is the
+           * one thing held back, and the line says so.
+           */
+          const kept = ready ? await judgeAll(asked, rulingsOnly) : [];
+          const heldForJudge = ready ? 0 : asked.reduce((n, e) => n + e.candidates.length, 0);
+          /*
+           * The CHECK's two strings, not the judge's one. Every finding here now
+           * carries `text` (what is wrong) and `advice` (what to do), and they go
+           * to the two columns named for them.
+           *
+           * Before this, a part-naming row (figma-standard rule 9) put the new name in "The question" —
+           * "figma-standard rule 9 naming would be Table - Column - Table - Header / Hug" —
+           * while "My recommendation" restated the rule that had just been
+           * broken: the answer on the side that asks, and a rule number on the
+           * side that answers. The judge was writing both, and it writes about
+           * the rule because the rule is what it was given.
+           */
+          const rowOf = (where, node, c, bucket) => ({
+            where, node: node || null, check: c.text, key: c.key, rule: c.rule, bucket, sev: c.sev,
+            fix: [c.text], rec: [c.advice || "Decide how to handle it."] });
+          const findings = kept.map(({ entry, cand }) => rowOf(entry.set, entry.id, cand, bucketFor(stage, cand.rule)));
+          for (const e of fixed) for (const c of e.candidates)
+            findings.push(rowOf(e.set, e.id, c, bucketFor(stage, c.rule)));
+          // The scanner walks every page and is handed no component list, so
+          // `reach` is every component that exists plus the page list, and it
+          // reports the rules it ran — a check whose setting was missing from
+          // the context document must not close the rows it never read.
+          const r = await fileStage(stage.owner, null,
+                                    { names: out.reach || [], complete: true, everything: true, ran: out.ran || undefined, source: "figma" },
+                                    findings, dismissedOf(asked, kept, ready ? undefined : []));
+          stageBrief(fileLabel, r);
+          tell(stage, fileLabel + ": " + stageLine(out.audited.reduce((n, e) => n + e.candidates.length, 0), r) + unjudgedNote() +
+                     // Silence is only meaningful where the check ran.
+                     (heldForJudge
+                       ? " " + heldForJudge + " naming question" + (heldForJudge === 1 ? "" : "s") +
+                         " held back \u2014 no Claude key, so nothing could judge them against this project's rulings."
+                       : "") +
+                     ((out.notRun || []).length
+                       ? " NOT checked: " + out.notRun.join(", ") + " \u2014 the context document does not carry the setting each needs."
+                       : "") +
+                     // Different sentence, because it is a different fact: the
+                     // setting IS recorded and this library has nothing the check
+                     // looks at. Saying "not checked" of it was untrue.
+                     ((out.notApplicable || []).length
+                       ? " Nothing to check for " + out.notApplicable.join(", ") + " in this library."
+                       : ""));
+        }
+      } catch (e) { tell(stage, stageEnd(fileLabel, e)); }
+    },
+    tokens: libraryStage,
+    icons: libraryStage,
+    validator: async (stage) => {
+      const buildLabel = stage.label;
+      try {
+        const target = rules.codeTarget;
+          // What the other side of a comparison is CALLED. A row that says "In
+          // MUI" names the thing the project builds with; one saying "In web"
+          // would name nothing a reader recognises.
+          const TARGET_NAMES = { web: "the web", ios: "SwiftUI", android: "Compose" };
+          const targetName = rules.frameworkName || TARGET_NAMES[target] || target;
+        // no code target is appliesTo's to say (stages.json `applies`), before this runs
+        if (!sc.validator) tell(stage, buildLabel + ": skipped — the service has no validator.");
+        else if (!ready) tell(stage, buildLabel + ": skipped — nothing to judge the findings.");
+        else {
+          // Every set the components scan read, batched by variant count so one
+          // walk stays inside the plugin's patience. Page entries carry no variants.
+          // No tree walk. The service reads the project's STORED specs and runs
+          // the engine over them — the same input, through the same resolver, as
+          // each component's Implementation table in the docs build. It used to
+          // batch the whole library out through the plugin, which made this the
+          // slowest stage of a run AND gave the engine a second input that
+          // disagreed with the first in both directions.
+          const sets = scan.audited.filter((e) => e.id && e.variants > 0);
+          // The LIVE file, read by the snapshot plugin's own walk run headless
+          // through the bridge — the same function that writes a snapshot, so
+          // the audit and the store describe a component in one shape. It read
+          // the stored snapshot until 2026-09-22, and a shadow removed from a
+          // dialog at lunch was still on the Web build board at night while the
+          // Broken tokens tab, which reads Figma, had cleared (toolkit-standard
+          // §D 5). 120 sets, 2,112 variants: 18 seconds.
+          if (!sc[stage.gather.served]) throw new Error("the service has no snapshot plugin to read the library with");
+          runProgress(ctx.libKey, 72, "Reading the library");
+          say("Reading the library for the build check…", null, true);
+          // The project's own page rule, so this walk and the components scan
+          // select the same pages; the plugin's default is its own convention.
+          const T = rules.tokens || {};
+          const live = await bridge.exec(gatherCode(stage, sc[stage.gather.served], { PAGES: T.componentPages || "", SECTION: T.sectionHeader || "", EXCLUDE: T.excludeSections || [] }), 600000);
+          if (!live || !Array.isArray(live.components)) throw new Error("the bridge answered, but not with the library's components");
+          if (live.fileKey && ctx.libKey && live.fileKey !== ctx.libKey) throw new Error("that read " + (live.fileName || "another file") + ", not this library");
+          runProgress(ctx.libKey, 76, "Checking the build");
+          say("Checking the build against the file…", null, true);
+          // The framework the project records, with its component map: MUI's
+          // rules apply on top of the platform target and fire only for the
+          // components the settings map, so both travel together or neither does.
+          const v = await api.validate(target, null, rules.framework || null, rules.frameworkComponents || null, live.components);
+          if (!v || !v.ok) throw new Error((v && v.error) || "the engine did not answer");
+          /*
+           * A read that could not be narrowed to THIS library is not a full run
+           * of it. The service used to answer an unrecognised file key with every
+           * spec in the store — 197 across three libraries — and this stage filed
+           * the result with `full: true`, so one library's audit raised and CLOSED
+           * component-validator rows for all of them. The service now says whether
+           * it could scope the read; a run that could not is a failure of the
+           * probe, not a verdict on the file.
+           */
+          if (v.scoped === false) throw new Error("the service could not tell which library to read \u2014 it would have validated every component in the store, so nothing was filed");
+          // The engine's findings become candidates, one set per component, so
+          // the same judgement pass drops what a ruling or convention covers.
+          // A finding whose fix lands ONLY in code is not a question for this
+          // board. It is a translation — a mask is `clip-path`, an inside stroke
+          // is a border — and the component's own documentation page already
+          // publishes it, under Implementation, built from this same engine
+          // (tools/docs-site/src/lib/snapshot.js, `codeNotes`). Filing it here as well
+          // put the same sentence in two places and made a queue of 78 rows read
+          // as 78 jobs for the designer when nine of them were notes for the
+          // build. `both` stays: it is a real decision, and the page shows it as
+          // "open with the designer" precisely because this board still asks it.
+          const notes = v.findings.filter((f) => f.lands === "code");
+          const byComp = {};
+          for (const f of v.findings) {
+            if (f.lands === "code") continue;
+            (byComp[f.component] = byComp[f.component] || []).push(f);
+          }
+          const entries = Object.entries(byComp).map(([set, fs]) => ({
+            set: set, id: (sets.find((e) => e.set === set) || {}).id || null, axes: [],
+            // `lands` travels with the candidate: where the fix goes is the
+            // engine's answer, computed beside the advice it reads it from, not
+            // something this page re-derives from the sentence it renders.
+            candidates: fs.map((f) => ({ sev: "review", rule: f.class, key: f.key, align: f.align, lands: f.lands || null, n: (f.variants || []).length,
+                                         expected: f.expected || null, usedBy: f.usedBy || [],
+                                         inFile: f.layer === "$root" ? "The component frame" : f.layer,
+                                         // Every particular the one decision covers, not just the
+                                         // first: a slot filled with three different sample
+                                         // components is one question about the slot, and the row
+                                         // should say which three.
+                                         drawn: (f.shared ? "“" + f.shared + "”" : f.layer === "$root" ? "The component frame" : "“" + f.layer + "”") + " — " +
+                                                ((f.details || []).length > 1 ? f.details.join("; ") : f.detail),
+                                         text: f.class + " · " + f.layer + " · " + f.detail })) }));
+          const kept = await judgeAll(entries, rulingsOnly);
+          const findings = kept.map(({ entry, cand, f }) => ({
+            where: entry.set, node: entry.id, check: cand.text, key: cand.key, rule: cand.rule, bucket: bucketFor(stage, cand.rule), sev: cand.sev === "preference" ? "pref" : "warn", lands: cand.lands || null,
+            // The ENGINE's words, not the judge's. The judge decides whether a
+            // finding survives; it was also writing the sentence the reader acts
+            // on, and it writes for whoever it imagines is reading — which put
+            // "Schedule a theme variant in `components.MuiButton.variants`, with
+            // TypeScript module augmentation" in a designer's question column,
+            // for a finding whose whole point is what to change in Figma.
+            //
+            // Left: what is drawn. Right: what to do, one bullet per side of the
+            // choice, so "in Figma" is a line of its own rather than a clause
+            // inside a paragraph about TypeScript.
+            // With a counterpart, the row is a comparison and says so; without
+            // one it stays the ordinary pair of cells, because inventing the
+            // other half would be this page writing the finding.
+            contrast: !!cand.expected,
+            fix: cand.expected
+              ? ["In Figma — " + cand.inFile + (cand.n ? " · " + cand.n + " variant" + (cand.n === 1 ? "" : "s") : ""),
+                 "In " + targetName + " — " + cand.expected]
+              // A shared cause counts the components it reaches, not the variants
+              // it was seen in: the reader is asked for one change, and the number
+              // that matters is how far that change goes. They are named too: a
+              // map that names no counterpart for 50 components is acted on one
+              // name at a time, and a count alone sent the reader off to find them.
+              : [cand.drawn + (cand.usedBy.length
+                   ? " · " + cand.usedBy.length + " component" + (cand.usedBy.length === 1 ? "" : "s") + ": " + cand.usedBy.join(", ")
+                   : cand.n ? " · " + cand.n + " variant" + (cand.n === 1 ? "" : "s") : "")],
+            rec: adviceLines(cand.align) }));
+          /*
+           * TWO queues, because there are two questions. A platform class asks
+           * what the web can draw; a framework class asks what the component
+           * library the app is built with already owns. The page's chips have
+           * said so since the framework layer shipped — "Web build" and "MUI
+           * build" are keyed by owner AND target — and this call was filing both
+           * under the platform target alone.
+           *
+           * The cost was not cosmetic: a session had filed MUI findings under
+           * `web+mui`, this stage filed them under `web`, and `full: true` closes
+           * only rows of its own target. So neither run could ever close, refresh
+           * or replace the other's, and one board carried two MU2 rows for one
+           * finding — the older one still showing text from the day it was filed,
+           * surviving every rewrite since.
+           */
+          const composite = rules.framework ? target + "+" + rules.framework : null;
+          const isFramework = (row) => /^[A-Z]{2}\d/.test(row.rule || "");
+          const parts = [{ target: target, rows: findings.filter((f) => !isFramework(f)) }];
+          if (composite) parts.push({ target: composite, rows: findings.filter(isFramework) });
+          let r = null;
+          for (const part of parts) {
+            // Each target closes only its own: a full run of the platform queue
+            // must not clear the framework queue merely by not raising its rows.
+            // The walk read every component page of the live file, so a row
+            // naming a set it did not meet is about one renamed or removed.
+            const one = await fileStage("component-validator", part.target, { names: v.scope || [], complete: true, everything: true, source: "figma" },
+                                        part.rows, part.target === target ? dismissedOf(entries, kept) : []);
+            r = r ? { ok: true, added: r.added + one.added, closed: r.closed + one.closed,
+                      updated: r.updated + one.updated, reopened: r.reopened + one.reopened } : one;
+          }
+          // The notes are counted out loud. A stage that quietly drops nine of its
+          // own findings is indistinguishable from a stage that missed them.
+          stageBrief(buildLabel, r);
+          tell(stage, buildLabel + ": " + stageLine(v.findings.length - notes.length, r) + unjudgedNote() +
+                     " Read " + (v.components || 0) + " live component" + (v.components === 1 ? "" : "s") + "." +
+                     (notes.length ? " " + notes.length + " code-only finding" + (notes.length === 1 ? "" : "s") +
+                                     " went to the components' Implementation tables instead of the queue." : "") +
+                     (v.silent && v.silent.length ? " Silent: " + v.silent.join(", ") + "." : "") +
+                     /*
+                      * Which components the framework map does not name. The
+                      * engine computes this and its own comment says "nothing is
+                      * what a clean result looks like, so the caller says this out
+                      * loud" — and the caller then dropped it. A component the map
+                      * does not name is checked by no framework rule at all, and
+                      * the stage read as though it had covered everything.
+                      */
+                     (v.unmapped && v.unmapped.length
+                       ? " NOT checked against " + rules.frameworkName + ": " +
+                         v.unmapped.length + " component" + (v.unmapped.length === 1 ? "" : "s") +
+                         " the map does not name \u2014 " + v.unmapped.slice(0, 6).join(", ") +
+                         (v.unmapped.length > 6 ? " and " + (v.unmapped.length - 6) + " more" : "") + "."
+                       : ""));
+        }
+      } catch (e) { tell(stage, stageEnd(buildLabel, e)); }
+    },
+    links: async (stage) => {
+      // Token links: does every variable and style the components bind still
+      // exist in the source library, by key. Two calls to the plugin — the key
+      // set from the source (which must be open in Figma too), then the walk of
+      // this library against it — and a deterministic answer, filed as raised.
+      const linksLabel = stage.label;
+      try {
+        const source = rules.sourceLibrary;
+        const links = sc[stage.gather.served];
+        // no source library is appliesTo's to say (stages.json `applies`), before this runs
+        if (!links) tell(stage, linksLabel + ": skipped — the service has no link scanner.");
+        else {
+          // The one stage that reads a second file, so the spinner moves to it:
+          // when this is the stage that hangs, the file it is waiting on is the
+          // one nobody opened, and the list now says which.
+          runProgress(source, 85, "Reading its keys");
+          say("Reading the source library’s keys…", null, true);
+          // Two minutes was the figure before either of these did real work. The
+          // keys read enumerates every collection in the source and every variable
+          // in each; the enumeration below walks every page of the consumer AND
+          // probes the team library for what it publishes. Both now take as long
+          // as a scan batch is allowed, because both are a scan of something.
+          // Each call names itself in its failure: "timed out" alone said nothing
+          // about which of a keys read, a set list and N batches gave up, and the
+          // stage timed out four times in a day with nothing to act on.
+          // Each plugin call named, and timed: the stage line ends with how long
+          // each took, so a run that overran the 240-second cap says which call
+          // did and a run that passed says how close it came. "4 of ~10 runs
+          // time out, cause unknown" stood for a day because nothing recorded it.
+          const took = [];
+          const named = async (label, run) => { const t0 = Date.now(); try { return await run(); } catch (e) { throw Object.assign(new Error(label + " (after " + Math.round((Date.now() - t0) / 1000) + "s): " + (e && e.message ? e.message : "failed")), { code: e && e.code, skipped: e && e.skipped }); } finally { took.push(label.replace(/ \(.*$/, "") + " " + Math.round((Date.now() - t0) / 1000) + "s"); } };
+          const k = await named("reading the source's keys", () => api.exec(gatherCode(stage, links, { MODE: "keys" }), 240000, source));
+          if (!k.ok) {
+            const shut = k.error === "wrong_file_not_open" || k.error === "plugin_not_connected";
+            throw Object.assign(new Error(shut ? "the source library is not open in Figma, so broken links cannot be told from live ones"
+                                               : (k.error || "the keys step did not answer")),
+                                shut ? { skipped: true } : {});
+          }
+          const keys = k.result && k.result.result !== undefined ? k.result.result : k.result;
+          if (!keys || !keys.variables) throw new Error("the source library answered, but not with its keys");
+          if (keys.fileKey && keys.fileKey !== source) throw new Error("that read " + (keys.fileName || "another file") + ", not the source library");
+          // Enumerate before scanning. One scan of the whole library is one call
+          // with no progress and no partial result: 121 sets overran the
+          // four-minute cap and the stage failed having already resolved most of
+          // them. This is cheap — no binding is resolved — and it also reads the
+          // published list once, for every batch below to share.
+          runProgress(ctx.libKey, 88, "Listing sets");
+          say("Listing the sets to check…", null, true);
+          // A library that is its own source binds its own variables, which are
+          // local and never a library link, so what it publishes cannot matter
+          // here — and probing the libraries it subscribes to asked the wrong
+          // file: one project's only one is its Documentation furniture, whose
+          // listing hangs, and every run waited 20 s to say "NOT checked".
+          const self = source === ctx.libKey;
+          const enumerated = await named("listing the sets", () => bridge.exec(gatherCode(stage, links, { MODE: "sets", SELF: self, TOKENS: rules.tokens }), 240000));
+          if (!enumerated || !enumerated.sets) throw new Error("the bridge answered, but not with a set list");
+          if (enumerated.fileKey && ctx.libKey && enumerated.fileKey !== ctx.libKey) throw new Error("that read " + (enumerated.fileName || "another file") + ", not this library");
+          // By variant count, which is what the walk actually costs. 120 variants
+          // a batch held for a fortnight and then overran the 240-second cap on
+          // three of nine full runs in one day, on two libraries, and a batch
+          // that overruns fails the whole stage with everything it resolved
+          // thrown away. Half the batch is twice the calls and none of the
+          // risk: each batch has headroom the cap was meant to give.
+          const linkBatches = []; let lcur = [], ln = 0;
+          for (const e of enumerated.sets) {
+            if (ln + e.variants > 60 && lcur.length) { linkBatches.push(lcur); lcur = []; ln = 0; }
+            lcur.push(e); ln += e.variants;
+          }
+          if (lcur.length) linkBatches.push(lcur);
+          const KEYS = { variables: keys.variables, styles: keys.styles, published: enumerated.published || { variables: [], styles: [] } };
+          const out = { audited: [], measures: { sets: 0, bindings: 0, styleRefs: 0, local: 0, broken: 0 }, publishedSeen: (enumerated.published || {}).variables ? enumerated.published.variables.length : 0 };
+          const seenVars = new Set(), seenStyles = new Set();
+          for (const [i, b] of linkBatches.entries()) {
+            runProgress(ctx.libKey, 88 + 11 * ((i + 1) / linkBatches.length), "Checking bindings");
+            say("Checking bindings against " + keys.variables.length + " variables and " + keys.styles.length + " styles", null, true);
+            const part = await named("batch " + (i + 1) + " of " + linkBatches.length + " (" + b.length + " sets, " + b.reduce((n, e) => n + e.variants, 0) + " variants)",
+                                     () => bridge.exec(gatherCode(stage, links, { MODE: "scan", KEYS, SCOPE: b.map((e) => e.id), TOKENS: rules.tokens }), 240000));
+            if (!part || !part.audited) throw new Error("the bridge answered, but not with a link scan");
+            if (part.fileKey && ctx.libKey && part.fileKey !== ctx.libKey) throw new Error("that scanned " + (part.fileName || "another file") + ", not this library");
+            out.audited.push(...part.audited);
+            const pm = part.measures || {};
+            for (const k2 of ["sets", "bindings", "styleRefs", "local", "broken"]) out.measures[k2] += pm[k2] || 0;
+            // Union, never sum: a variable forty sets bind is one distinct
+            // variable, and the batches would have called it forty.
+            for (const id of (part.seen || {}).variables || []) seenVars.add(id);
+            for (const id of (part.seen || {}).styles || []) seenStyles.add(id);
+            // One batch that could not see the published list makes the whole
+            // run's visibility answer unproven, so the weakest batch wins.
+            if (i === 0) out.measures.publishedChecked = !!pm.publishedChecked;
+            else out.measures.publishedChecked = out.measures.publishedChecked && !!pm.publishedChecked;
+          }
+          out.measures.distinctVariables = seenVars.size;
+          out.measures.distinctStyles = seenStyles.size;
+          const findings = [];
+          // The scanner's own severity: a key the source neither holds nor
+          // publishes may be another library's, which only the maintainer can
+          // say, so it is a review rather than an error. Overwriting every one
+          // with "error" is how a check turns a question into an accusation.
+          for (const e of out.audited) for (const c of e.candidates) findings.push({
+            where: e.set, node: e.id || null, check: c.text, key: c.key, rule: "link", bucket: bucketFor(stage, "link"), sev: c.sev || "error",
+            // Left: WHICH token, and nothing else. Right: what to do, then the
+            // list of places to do it. The layers were on the left, under the
+            // token — but they are not part of the question, they are the work,
+            // and the work belongs in the column the reader acts from.
+            fix: [c.text],
+            rec: [c.advice || "Relink to a live token, or record the orphan as accepted in the context document."]
+                   .concat(c.layers || []) });
+          // The sets the enumerate pass listed ARE the scope — `.name`, since it
+          // returns `{id, name, page, variants}` — and it listed every set on
+          // every component page, live, so the scan walked everything.
+          const r = await fileStage("figma-variable-audit", null,
+                                    { names: enumerated.sets.map((e) => e.name), complete: true, everything: true, source: "figma" }, findings);
+          const m = out.measures || {};
+          stageBrief(linksLabel, r);
+          tell(stage, linksLabel + ": " + stageLine(out.audited.reduce((n, e) => n + e.candidates.length, 0), r) +
+                     " " + (m.bindings || 0) + " bindings and " + (m.styleRefs || 0) + " style references checked across " + (m.sets || 0) + " sets." +
+                     // Silence is only meaningful where the check ran. Without the
+                     // published list a token that exists but is not published
+                     // reads as fine, and the line says so rather than implying
+                     // coverage it did not have.
+                     (self ? " Publish visibility does not apply: the library is its own source, so its bindings are local."
+                       : m.publishedChecked
+                       ? " Against " + (out.publishedSeen || 0) + " published tokens as well as what the source holds."
+                       : " NOT checked for publish visibility — the library published list came back empty.") +
+                     " Calls: " + took.join(", ") + "." +
+                     // Counted rather than raised: a weight bound on a layer with
+                     // no stroke paint does not appear in Figma's Stroke panel at
+                     // all, so a row naming one cannot be acted on. Said out loud,
+                     // because a number nobody states reads as a number that is
+                     // zero.
+                     ((m.dead || 0)
+                       ? " " + m.dead + " dead binding" + (m.dead === 1 ? "" : "s") +
+                         " not raised: each resolves to nothing AND paints nothing, so Figma's Stroke panel does not show it and there is nowhere to fix it by hand."
+                       : ""));
+        }
+      } catch (e) { tell(stage, stageEnd(linksLabel, e)); }
+    },
+    parity: async (stage) => {
+      // Code parity: which of this library's components its code has, and where
+      // one it lacks might be under another name. The first half is a comparison
+      // of names, made by the service. The second is a question only a reader of
+      // both lists can answer, so it is asked with design-code-parity's own
+      // instruction and filed as that skill's rows: a suggestion somebody
+      // confirms, which the docs site's Parity page shows as one and never draws
+      // as a pair.
+      const parityLabel = stage.label;
+      try {
+        const PRIVATE = /^\s*_|\/\s*_/;
+        const sets = scan.audited.filter((e) => e.id && e.variants > 0 && !PRIVATE.test(e.set));
+        const p = await api.parity(sets.map((e) => e.set));
+        if (!p || !p.ok) throw new Error((p && p.error) || "the service did not compare the library with its code");
+        // no code named is appliesTo's to say (stages.json `applies`); the service, reading the folder, can still find none
+        if (!p.stated) tell(stage, parityLabel + ": does not apply — the settings name no code for this library.");
+        else if (!sc.pairing) tell(stage, parityLabel + ": skipped — the service has no pairing instruction.");
+        else if (!ready) tell(stage, parityLabel + ": skipped — nothing to read the two lists.");
+        else {
+          runProgress(ctx.libKey, 95, "Pairing with the code");
+          say("Looking for components the code names differently…", null, true);
+          // Asked about: a component with no code of its own name, whether the
+          // code has nothing for it or only the component its framework name
+          // points to — that one is said, so a closer match has to beat it.
+          const asked = p.figmaOnly.map((name) => ({ name }))
+            .concat(p.both.filter((b) => !b.sameName).map((b) => ({ name: b.figma, builtAs: b.code })));
+          // One pass (prompt.js): a Figma name holding "{{CODE}}" stays a name.
+          const prompt = fillPrompt(sc.pairing, {
+            RULINGS: (rules.rulings || []).map((r) => "- " + r).join("\n") || "- none",
+            FIGMA: JSON.stringify(asked, null, 1),
+            // A nested component says what it sits in (`ContextualPanel` in Table),
+            // which is often the word its Figma name carries and its own does not.
+            CODE: JSON.stringify(p.codeOnly.map((k) => {
+              const at = k.path.split("/").slice(0, -1).join("/");
+              return at ? { name: k.name, in: at } : { name: k.name };
+            }), null, 1),
+          });
+          // The judge's settings: this is a judgement, and at the service's
+          // default the model thought its whole budget away and answered nothing
+          // (4,000 tokens out, no text, twice running).
+          const answer = asked.length && p.codeOnly.length
+            ? await askClaude.json(prompt, { max_tokens: 8000, spend: runSpend, use: "judge" })
+            : { pairs: [] };
+          // Only names that were on the two lists, each once: an answer naming
+          // anything else is the model writing a component, and a row about a
+          // component that does not exist could never be closed.
+          const onFigma = new Set(asked.map((x) => x.name)), onCode = new Set(p.codeOnly.map((k) => k.name));
+          const used = new Set();
+          const pairs = [];
+          for (const x of (answer && answer.pairs) || []) {
+            if (!x || !onFigma.has(x.figma) || !onCode.has(x.code) || used.has("f\n" + x.figma) || used.has("c\n" + x.code)) continue;
+            used.add("f\n" + x.figma); used.add("c\n" + x.code);
+            pairs.push(x);
+          }
+          const findings = pairs.map((x) => ({
+            where: x.figma, node: (sets.find((e) => e.set === x.figma) || {}).id || null,
+            check: "Possibly " + x.code + " in code", key: "pair|" + x.code, rule: "pair", bucket: bucketFor(stage, "pair"), sev: "warn", lands: "accept",
+            fix: ["The code has no component of this name, and its " + x.code + " has no Figma component of its own"],
+            rec: ["Possibly the same component" + (x.why ? ": " + String(x.why).replace(/\s+/g, " ").trim() : ".")] }));
+          // Every public set was compared, so every one is in scope: a pair that
+          // is no longer proposed, or whose component now has code of its own
+          // name, closes.
+          const r = await fileStage("design-code-parity", null,
+                                    { names: sets.map((e) => e.set), complete: true, source: "figma" }, findings);
+          stageBrief(parityLabel, r);
+          tell(stage, parityLabel + ": " + p.both.length + " of " + sets.length + " components are in the code, which has " +
+                     p.components + ". " + stageLine(findings.length, r));
+        }
+      } catch (e) { tell(stage, stageEnd(parityLabel, e)); }
+    },
+  };
+  // A service started before the registry sends no list: said once, as what to do, never a quiet shorter run.
+  if (!sc.stages) { lines.push("Audit: failed \u2014 the dashboard service is older than this page and sent no list of stages, so only the components stage ran. Restart the service (install.sh reloads it) and audit again."); brief.push("restart the service"); }
+  // The facts appliesTo reads for a stage: only the one its `applies` names, read when that stage comes up.
+  const factsFor = async (stage) => {
+    const fact = (stage.applies || {}).fact;
+    if (fact === "componentSets") return { componentSets: (scan.audited || []).length > 0 || !!(scan.measures && scan.measures.sets) };
+    if (fact === "tokens" || fact === "icons") return (await readLibrary(stage)).applies;
+    return {};
+  };
+  const settings = { codeTarget: rules.codeTarget, sourceLibrary: rules.sourceLibrary, code: rules.code };
+  // A run line names its stage as the queue chip its rows land under does (owners.js ownerChipLabel), so the page says
+  // one name for one queue; the registry's `label` is Audit lite's checkbox. A stage filing under a target of its own
+  // beside its owner's main queue (the file's tokens and icons) adds that label, or three lines would read "Library file".
+  const runLabel = (s) => {
+    const fromSetting = /^setting:/.test(s.target || "");
+    const chip = ownerChipLabel(s.owner, fromSetting ? settings[s.target.slice(8)] : s.target);
+    return s.target && !fromSetting ? chip + " (" + s.label + ")" : chip;
+  };
+  const registry = Object.assign({}, sc.stages, { stages: ((sc.stages && sc.stages.stages) || []).map((s) => Object.assign({}, s, { label: runLabel(s) })) });
+  const rows = await runStages(registry, "dashboard", HANDLERS, { facts: factsFor, settings });
+  // One line a stage, in the registry's order: the handler's own, or what the loop decided without it.
+  for (const row of rows) {
+    const stage = registry.stages.find((x) => x.id === row.id);
+    if (said[row.id]) lines.push(said[row.id]);
+    else if (row.status === "n/a") lines.push(row.label + ": does not apply \u2014 " + notApplies(stage) + ".");
+    else if (row.status === "stopped") lines.push(stageEnd(row.label, { message: row.why, skipped: row.skipped }));
+    else if (row.status === "unhandled") { lines.push(row.label + ": failed \u2014 this page has no handler for a stage the registry gives it."); brief.push(row.label + " failed"); }
+  }
 
   // The stage lines outlive the page: they go onto this run's entry, so the
   // history says what every stage did rather than only the components one.

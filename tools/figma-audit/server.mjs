@@ -56,6 +56,7 @@ import { decoder, MAX_MESSAGE } from "./frames.mjs";
 // The store's own resolver, so a stored spec becomes a tree here exactly as
 // it does in the docs build. Two resolvers would be two answers.
 import specTool from "../snapshot/spec.cjs";
+import { lucideVersion } from "./lucide.mjs";
 import store from "../snapshot/store.cjs";
 const { walkRulings, rulingsOf, rulingKey, appendRuling } = contract;
 
@@ -251,18 +252,20 @@ const VALIDATOR = arg("--validator", join(HERE, "..", "..", "skills", "component
 const VALIDATE = join(HERE, "..", "component-validator", "validate.mjs");
 if (!existsSync(VALIDATE)) { console.error(`validator      no engine at ${VALIDATE}: the toolkit checkout is incomplete`); process.exit(1); }
 const LINKS = arg("--links", join(HERE, "..", "..", "skills", "figma-variable-audit", "scripts", "links.js"));
+// The audit's one list of stages (figma-project-audit), served to the page so it runs them in that order.
+const STAGES = join(HERE, "..", "..", "skills", "figma-project-audit", "stages.json");
+// The tokens and icons checks (figma-foundations-audit), run on the live file's facts (/library-checks) and on the
+// stored snapshot when its tokens settle (below): one module, imported at call time so an edit reaches the next run.
+const LIBRARY = join(HERE, "..", "..", "skills", "figma-foundations-audit", "scripts", "library.mjs");
+const libraryChecks = () => import(pathToFileURL(LIBRARY).href + "?m=" + statSync(LIBRARY).mtimeMs);
+// The names a library's icons must keep, where its settings name an icon set (`icons.names`), at the importer's release.
+const iconNamesFor = async (L, ctx, key) => { const set = (((ctx && ctx.icons) || {})[key] || {}).names; return set ? await L.iconSetNames(set, lucideVersion()) : null; };
 // The instruction that asks which unpaired Figma and code components are one
 // component under two names: design-code-parity's, as the judge's is the
 // components audit's. And the one reading of "what the code has" (shared with
 // the docs site's Parity page, which draws the same comparison).
 const PAIRING = arg("--pairing", join(HERE, "..", "..", "skills", "design-code-parity", "scripts", "pairing.txt"));
 const INVENTORY = join(HERE, "..", "shared", "code-inventory.mjs");
-// The Lucide release the icon importer pins, so the icon-name check reads the
-// names of the set the library's icons were imported from (figma-foundations-audit).
-const lucideVersion = () => {
-  try { return (/LUCIDE_STATIC_VERSION = '([\d.]+)'/.exec(readFileSync(join(HERE, "..", "..", "plugins", "lucide-icon-importer", "ui.html"), "utf8")) || [])[1] || null; }
-  catch { return null; }
-};
 // The snapshot plugin's own file, served as a bridge body: run with no UI it
 // walks the live library into the very shape the store records, and that is
 // what the validator stage reads (toolkit-standard §D 5 — an audit reads the
@@ -781,7 +784,7 @@ const server = createServer(async (req, res) => {
     // families while the skill defined about twenty-five: two different tools
     // wearing the same button, and no error anywhere to say which one you got.
     if (url.pathname === "/scripts") {
-      const [sweep, audit, judge, fix, buckets, checks, scoring, measures, foundations, walker, links, snapshot, pairing] = await Promise.all([
+      const [sweep, audit, judge, fix, buckets, checks, scoring, measures, foundations, walker, links, snapshot, pairing, stages] = await Promise.all([
         readFile(join(SCANNER, "sweep.js"), "utf8"),
         readFile(join(SCANNER, "audit.js"), "utf8"),
         readFile(join(SCANNER, "judge.txt"), "utf8"),
@@ -795,14 +798,33 @@ const server = createServer(async (req, res) => {
         readIf(LINKS),
         // Served for headless use, where the bridge evaluates it as a function body: the return the plugin file itself cannot carry (see its tail).
         readIf(SNAPSHOT).then((t) => (t ? t + "\nreturn __headless();\n" : t)),
-        readIf(PAIRING)
+        readIf(PAIRING),
+        readIf(STAGES)
       ]);
       // Everything the audit DECIDES ships from the skill: what to check
       // (audit), what survives (judge), how a fix is written (fix), and which
       // bucket a finding lands in (buckets). The page decides only how to draw
       // the result.
       return json(res, 200, { sweep, audit, judge, fix, buckets: JSON.parse(buckets), checks: JSON.parse(checks), scoring: JSON.parse(scoring), measures: JSON.parse(measures),
-                              foundations, walker, validator: true, links, snapshot, pairing });
+                              foundations, walker, validator: true, links, snapshot, pairing, stages: stages ? JSON.parse(stages) : null });
+    }
+
+    // The tokens and icons stages on the LIVE file: the page gathers the facts through the snapshot plugin's
+    // facts mode and hands them here, because the checks are node modules and the page is not (as /validate).
+    // The same liveChecks bin/audit and Audit lite call, so the three runners file one answer. Who uses the tokens is
+    // the project record's to say: the file's own bindings decide what is unused only where it is its tokens' only user
+    // (selfUsedOf: tokens and components, and no other components library); otherwise the unused check is left to the snapshot watch below, which reads every components
+    // library. `applies` (liveApplies) is what the page's appliesTo reads for the two stages.
+    if (url.pathname === "/library-checks" && req.method === "POST") {
+      const { facts, fileKey } = JSON.parse(await body(req));
+      if (!facts || !facts.tokens || !fileKey) return json(res, 400, { ok: false, error: "facts and fileKey required" });
+      if (facts.fileKey && facts.fileKey !== fileKey) return json(res, 200, { ok: false, error: `those facts are ${facts.fileName || "another file"}'s, not ${fileKey}'s` });
+      try {
+        const L = await libraryChecks();
+        const { slug } = await import(pathToFileURL(join(HERE, "..", "snapshot", "spec.cjs")).href);
+        const out = L.liveChecks(facts, fileKey, { names: await iconNamesFor(L, await readContext(), fileKey), slug, selfUsed: L.selfUsedOf(contract.auditRecords(contract.layout(null, LABEL)), fileKey) });
+        return json(res, 200, Object.assign({ ok: true, applies: L.liveApplies(facts) }, out));
+      } catch (e) { return json(res, 200, { ok: false, error: e.message }); }
     }
 
     // The validator's engine, run here because it is node code and the page
@@ -1359,8 +1381,9 @@ server.listen(PORT, "127.0.0.1", () => {
  * The tokens library and the icon library, from the stored snapshot
  * (figma-foundations-audit, scripts/library.mjs): descriptions, unused
  * tokens, styles' bindings, names and shape; icon sizes, bound paints and
- * names. Their files have nothing for the live scan to read, and the store
- * holds every fact these need. Filed into each library's own record, under
+ * names. The audit runs the same checks on the live file (its tokens and
+ * icons stages, through /library-checks); this keeps the record current
+ * between audits, from the store. Filed into each library's own record, under
  * the target `tokens` or `icons`, as a full run: a finding no longer raised
  * closes. Run when the service starts and a moment after the tokens settle.
  */
@@ -1368,11 +1391,10 @@ server.listen(PORT, "127.0.0.1", () => {
   const { watch } = await import("node:fs");
   const where = contract.layout(null, LABEL);
   const P = (where && !where.error && where.paths) || {};
-  const LIB = join(HERE, "..", "..", "skills", "figma-foundations-audit", "scripts", "library.mjs");
   const fileLibrary = async () => {
     try {
       if (!P.tokens || !existsSync(P.tokens)) return;
-      const L = await import(pathToFileURL(LIB).href + "?m=" + statSync(LIB).mtimeMs);
+      const L = await libraryChecks();
       const { slug } = await import(pathToFileURL(join(HERE, "..", "snapshot", "spec.cjs")).href);
       const tokens = JSON.parse(await readFile(P.tokens, "utf8"));
       const records = contract.auditRecords(where);
@@ -1389,11 +1411,10 @@ server.listen(PORT, "127.0.0.1", () => {
       const used = L.namesUsed(specs);
       for (const r of records) {
         const runs = [];
-        if (r.roles.includes("tokens")) runs.push(["tokens", L.tokenChecks({ tokens, source: r.key, used })]);
-        if (r.roles.includes("icons")) {
-          const set = ((ctx.icons || {})[r.key] || {}).names;
-          runs.push(["icons", L.iconChecks({ tokens, source: r.key, names: set ? await L.iconSetNames(set, lucideVersion()) : null, slug })]);
-        }
+        // L.watchTargets: the tokens checks for every library whose stored source owns tokens or styles, any role
+        const targets = L.watchTargets(r, tokens);
+        if (targets.includes("tokens")) runs.push(["tokens", L.tokenChecks({ tokens, source: r.key, used })]);
+        if (targets.includes("icons")) runs.push(["icons", L.iconChecks({ tokens, source: r.key, names: await iconNamesFor(L, ctx, r.key), slug })]);
         for (const [target, { findings, ran, scope }] of runs) {
           if (!ran.length) { console.log(`${target.padEnd(15)}${LABEL}: nothing stored from ${r.key} yet`); continue; }
           await inOrder(r.key, async () => {

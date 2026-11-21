@@ -1,4 +1,12 @@
-# Eval cases — figma-project-audit (v1.5.0)
+# Eval cases — figma-project-audit (v1.7.2)
+
+**Walked: 2026-11-21 against v1.7.2** — main's clause-I rewrite (1.5.0) merged with the stage registry (1.6.0 to 1.7.2): the sequence is the list in `stages.json` again, in the clause-I layout. O7 executed: `node tests/test-stages.mjs` 85/85. O5 now traces to step 3 and *Breaking changes are not a stage*. O1 to O4 and O6 re-read and hold.
+
+**Walked: 2026-11-21 against v1.7.1** — O7 rewritten to what the test checks, and executed: `node tests/test-stages.mjs` 82/82. Each runner's HANDLERS run through `runStages` as stubs (a row per stage, in order, none unhandled); the planted missing handler, reversed handlers, skipped id and reordered rows are each caught.
+
+**Walked: 2026-11-21 against v1.7.0** — O7 executed: `node tests/test-stages.mjs` 66/66, Audit lite no longer skipped (its `HANDLERS` keys are the four stages the list gives it), every stage has a label and a one-line description, and `appliesTo` answers always, a fact and a setting. O1 holds: Audit lite now runs the file stage before the components, in the list's order. O2 to O6 unchanged.
+
+**Walked: 2026-11-21 against v1.6.0** — O7 added and executed: `node tests/test-stages.mjs` 54/54, its planted handler caught both ways. O1 and O6 re-read against the new sequence: O1's order now comes from `stages.json` and holds; O6's `bin/get` path holds because SKILL.md still says to run each owner, which the suite asserts. O2 to O5 unchanged.
 
 **Walked: 2026-11-21 against v1.5.0** — SKILL.md rewritten to skill-standard §A clause I; every case re-read. O1 to O4 and O6 hold unchanged (O6's *A stage whose skill is not installed* is kept). O5 now traces to step 7 and *Breaking changes are not a stage*, where old step 8 moved; the report still opens with the open breaking changes.
 
@@ -45,10 +53,17 @@ Fixture: a library whose audit record holds two open rows owned by `figma-snapsh
 Assert: the report's first line says two breaking changes are undecided and names them; no stage files, re-raises or closes a `figma-snapshot-router` row.
 Assert also (negative): the audit does not read the change log as a stage; a stage reads the live file (toolkit-standard §D 5).
 
-Traced: 2026-10-01 — to step 8, now step 7 and *Breaking changes are not a stage* (v1.5.0). The service half is executed in `test-breaking.mjs`.
+Traced: 2026-10-01 — to step 8, now step 3 and *Breaking changes are not a stage* (v1.7.2). The service half is executed in `test-breaking.mjs`.
 
 ## O6 · A stage skill that is not installed is named, and the rest run
 Fixture: a full run in a session where `component-validator` is not among the installed skills, on a library whose settings name a code target.
 Assert: the report's code-target line says the stage was skipped because `component-validator` is not installed, and how to get it (`bin/get skills/figma-project-audit`, then `./install.sh`). Every other stage runs. This skill performs none of the validator's checks in its place.
 
 Traced: 2026-10-31 — to *A stage whose skill is not installed*. That `bin/get skills/figma-project-audit` takes `component-validator` with it is executed by `bin/check`'s "every skill, from bin/get, has what it names".
+
+## O7 · One list of stages, and every runner holds to it
+Fixture: `stages.json` and the three runners: the dashboard page (`tools/docs-site/src/dashboard/audit.js`), `bin/audit` (`tools/figma-audit/audit-session.mjs`) and Audit lite.
+Assert: each runner's `const HANDLERS` keys are exactly the stages the list gives it; its source calls `runStages(…, "<runner>", HANDLERS` and has no `for (… of stagesFor(` loop of its own (Audit lite's own code, its generated block left out); and its handler keys, run through `runStages` as stubs, give every stage a row, in the list's order, each one run. SKILL.md says to run every owner the list names.
+Assert also (planted): a handler for a stage the list lacks, and a stage left without one, are caught in the source; through `runStages`, a missing handler is an `unhandled` row, handlers written in reverse still run in the list's order, and a run that skips an id or reorders the rows is caught.
+Assert also: `runStages` stops only a stage that throws (with its reason), never calls a handler `appliesTo` rules out (a fact, a setting) or a runner skips, and a facts read that fails stops only the stages that need it; every stage carries a `label` and a one-line `description`; `stoppedLines` gives one plain line per stopped or unhandled stage, and `bin/audit` prints them and exits 1 after writing the payload; the dashboard names each stage in its run lines by its queue chip (`ownerChipLabel`), the `label` being Audit lite's checkbox.
+Runs: node tests/test-stages.mjs — "it runs its stages through runStages, with its handlers", "it keeps no stage loop of its own", "its handlers, run through runStages, give every stage the list gives it a row, in order, each run", "(planted) a missing handler is a row that says unhandled, and the check names it", "(planted) handlers written in reverse still run in the registry's order", "(planted) a run that skips a stage's id is caught", "(planted) a run in another order is caught", "runStages: a stage that throws is stopped with its reason, and the stages after it still run", "runStages: a facts read that fails stops the stages that need it, and only those", "(planted) a handler for a stage the list does not name, and a stage left without one, are both caught", "stoppedLines: one plain line per stopped or unhandled stage, naming it and why; none for ran, n/a, empty or a skip", "bin/audit prints stoppedLines for its run and exits 1 when there are any, after writing the payload", "dashboard: its run lines name each stage by its queue chip, the registry it runs relabelled through ownerChipLabel"

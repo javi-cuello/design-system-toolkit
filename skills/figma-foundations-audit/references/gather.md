@@ -17,7 +17,7 @@ Step 3 of [SKILL.md](../SKILL.md): the three ways to gather the facts, and what 
 |---|---|---|
 | From the snapshot | The project has a stored snapshot | `scripts/from-snapshot.mjs` |
 | Live | A file with no snapshot | `scripts/foundations.js` through `figma_execute` |
-| Audit lite | A library with nothing else set up | The plugin's copy of `scripts/foundations.js` |
+| Audit lite | A library with nothing else set up | The plugin's copy of `scripts/foundations.js` and `scripts/library.mjs` |
 
 All paths end in the same pure `checkFacts`, so a finding is the same finding either way. A file-level finding names `Page list` as its set. The live and snapshot paths were diffed on a real library and gave identical findings.
 
@@ -53,9 +53,9 @@ It returns `{ audited: [{ set, id, page, candidates }], fileKey, fileName }`. Re
 
 ## From the Audit lite plugin
 
-The Audit lite plugin (`plugins/audit-lite`) carries `scripts/foundations.js` as a generated block. Its `sync.mjs` writes the block and `bin/check` holds it equal. The plugin runs it after the components scan, on the same settings.
+The Audit lite plugin (`plugins/audit-lite`) carries `scripts/foundations.js` and the live checks of `scripts/library.mjs` as a generated block. Its `sync.mjs` writes the block and `bin/check` holds it equal. The plugin runs them as the file, tokens and icons stages, in figma-project-audit's list order, on the same settings.
 
-**A change to `foundations.js` is followed by `node plugins/audit-lite/sync.mjs`.**
+**A change to either script is followed by `node plugins/audit-lite/sync.mjs`.**
 
 ## What the snapshot cannot say
 
