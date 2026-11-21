@@ -59,6 +59,24 @@ const run = async (p, key, fn = walker, { args = ['#a'] } = {}) => {
   ok('an answer is kept as the page gave it, not as the reader edited it', JSON.stringify(await rec2.step('eval', 'x', async () => null)) === '{"list":[1]}' && q.launched === 0);
 }
 
+// a part every combination shares (the tokens' :root rule, inherited by every element) is kept once, by its content
+{
+  const big = { cssProperties: Array.from({ length: 2000 }, (_, i) => ({ name: `--t-${i}`, value: `${i}px` })) };
+  const pool = (o) => Array.isArray(o.cssProperties);
+  for (const label of ['a', 'b', 'c']) {
+    const rec = recorder({ key: 'k6', dir, live: page().live, pool });
+    await rec.reset(label, async () => {});
+    await rec.step('levels', 'x', async () => ({ levels: [[big, { cssProperties: [{ name: 'width', value: label }] }]] }));
+    await rec.close();
+  }
+  const files = fs.readdirSync(dir, { recursive: true }).filter((f) => f.endsWith('.gz')).map((f) => path.join(dir, f));
+  const pooled = files.filter((f) => f.includes(`${path.sep}pool${path.sep}`));
+  const rec = recorder({ key: 'k6', dir, live: page().live, pool });
+  await rec.reset('b', async () => {});
+  const got = await rec.step('levels', 'x', async () => null);
+  ok('a pooled part is written once and given back whole', pooled.length === 4 && JSON.stringify(got.levels[0][0]) === JSON.stringify(big) && got.levels[0][1].cssProperties[0].value === 'b');
+}
+
 // a replay that disagrees with the cache stops the reading (a stale answer is a wrong measure), and drops the scope
 {
   const seed = recorder({ key: 'k4', dir, live: page().live });

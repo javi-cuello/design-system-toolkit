@@ -59,18 +59,40 @@ export const pageCode = () => pageCodeFiles().map((f) => `${path.basename(f)}\0$
    its tab (called at the first miss only). reset(label, render) starts a combination (`label` says what is rendered,
    `render` renders it on the live page when a miss needs it); step(kind, text, ask) answers one question, `ask(tab)`
    putting it to the page; send() is a question no key can say (it names node ids): it goes to the page and nothing
-   after it in the combination is kept. */
-export function recorder({ key, dir = cacheDir(), live }) {
+   after it in the combination is kept. `pool(object)` says which parts of an answer are kept once by their content,
+   whatever answer or combination holds them (an element's matched styles: the tokens' :root rule, inherited by every
+   element, is over a megabyte). */
+export function recorder({ key, dir = cacheDir(), live, pool = () => false }) {
   const stats = { hits: 0, misses: 0, kept: 0, launched: false };
   let tab = null, scope = null, at = hash(key, 'start'), table = {}, dirty = false, log = [], render = null, isLive = false, keep = true;
   const fileOf = (k) => path.join(dir, k.slice(0, 2), `${k}.json.gz`);
+  const write = (f, text) => {
+    const tmp = `${f}.${process.pid}.${Date.now()}.tmp`;
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    fs.writeFileSync(tmp, zlib.gzipSync(text));
+    fs.renameSync(tmp, f);
+  };
   const load = (k) => { try { return JSON.parse(zlib.gunzipSync(fs.readFileSync(fileOf(k)))); } catch { return {}; } };
+  // a pooled part, by the hash of its text: written once, read once per run
+  const poolOf = (h) => path.join(dir, 'pool', h.slice(0, 2), `${h}.json.gz`), pooled = new Map();
+  const out = (v) => {
+    if (Array.isArray(v)) return v.map(out);
+    if (!v || typeof v !== 'object') return v;
+    if (pool(v)) { const text = JSON.stringify(v), h = hash(text); if (!pooled.has(h)) { if (!fs.existsSync(poolOf(h))) write(poolOf(h), text); pooled.set(h, v); } return { $pool: h }; }
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, out(x)]));
+  };
+  const back = (v) => {
+    if (Array.isArray(v)) return v.map(back);
+    if (!v || typeof v !== 'object') return v;
+    if (typeof v.$pool === 'string' && Object.keys(v).length === 1) {
+      if (!pooled.has(v.$pool)) pooled.set(v.$pool, JSON.parse(zlib.gunzipSync(fs.readFileSync(poolOf(v.$pool)))));
+      return copy(pooled.get(v.$pool));
+    }
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, back(x)]));
+  };
   const flush = () => {
     if (!dirty || !scope) return;
-    const f = fileOf(scope), tmp = `${f}.${process.pid}.${Date.now()}.tmp`;
-    fs.mkdirSync(path.dirname(f), { recursive: true });
-    fs.writeFileSync(tmp, zlib.gzipSync(JSON.stringify(table)));
-    fs.renameSync(tmp, f);
+    write(fileOf(scope), JSON.stringify(table));
     dirty = false;
   };
   const page = async () => { if (!tab) { tab = await live(); stats.launched = true; } return tab; };
@@ -99,16 +121,14 @@ export function recorder({ key, dir = cacheDir(), live }) {
     },
     async step(kind, text, ask) {
       const k = hash(at, kind, text);
-      if (!isLive && Object.hasOwn(table, k)) {
-        stats.hits++; at = k;
-        const want = table[k].r;
-        log.push({ kind, ask, want });
-        return copy(want);
-      }
+      // (a pooled part gone missing is a miss, never an error)
+      let want, hit = !isLive && Object.hasOwn(table, k);
+      if (hit) try { want = back(table[k].r); } catch { hit = false; delete table[k]; }
+      if (hit) { stats.hits++; at = k; log.push({ kind, ask, want }); return copy(want); }
       if (!isLive) { stats.misses++; await goLive(); }
       const r = await ask(await page());
       at = k;
-      if (keep && scope) { table[k] = { r: copy(r) }; dirty = true; stats.kept++; }
+      if (keep && scope) { table[k] = { r: out(copy(r)) }; dirty = true; stats.kept++; }
       return r;
     },
     async send(method, params) {

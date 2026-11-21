@@ -920,13 +920,15 @@ export async function fetchLevels(tab, selector) {
   await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {});
   if (!nodeId) return null;
   const r = await tab.send('CSS.getMatchedStylesForNode', { nodeId });
-  // (each rule's style keeps its selector, `selector`: which rule a declaration won from, authoredSelector)
-  const own = [...(r.matchedCSSRules || []).map((x) => ({ ...x.rule.style, selector: x.rule.selectorList && x.rule.selectorList.text })), ...(r.inlineStyle ? [r.inlineStyle] : [])];
-  const inherited = (r.inherited || []).map((x) => [...(x.matchedCSSRules || []).map((m) => m.rule.style), ...(x.inlineStyle ? [x.inlineStyle] : [])]);
+  // (of each style only what winning and authoredSelector read: each declaration's name, value and flags, and the rule's
+  // selector, `selector`: which rule a declaration won from)
+  const keep = (st, selector) => ({ cssProperties: (st.cssProperties || []).map(({ name, value, important, disabled, parsedOk }) => ({ name, value, ...(important && { important }), ...(disabled && { disabled }), ...(parsedOk === false && { parsedOk }) })), ...(selector && { selector }) });
+  const own = [...(r.matchedCSSRules || []).map((x) => keep(x.rule.style, x.rule.selectorList && x.rule.selectorList.text)), ...(r.inlineStyle ? [keep(r.inlineStyle)] : [])];
+  const inherited = (r.inherited || []).map((x) => [...(x.matchedCSSRules || []).map((m) => keep(m.rule.style)), ...(x.inlineStyle ? [keep(x.inlineStyle)] : [])]);
   // the element's ::after, as a level of its own before the element's (it inherits the element's custom properties):
   // read as `<selector>::after` (a focus ring to-code draws on a box of its own over the element)
   const after = (r.pseudoElements || []).find((x) => x.pseudoType === 'after');
-  return { levels: [own, ...inherited], ...(after && { after: [(after.matches || []).map((m) => m.rule.style), own, ...inherited] }) };
+  return { levels: [own, ...inherited], ...(after && { after: [(after.matches || []).map((m) => keep(m.rule.style)), own, ...inherited] }) };
 }
 // a property asked of an element's ::after (`outline::after`): that pseudo-element's levels, the property's own name
 async function levelsFor(tab, selector, property, cache) {

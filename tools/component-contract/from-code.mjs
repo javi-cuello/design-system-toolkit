@@ -1335,7 +1335,8 @@ async function selfSource(project, name, { second = false } = {}) {
   const { chromeVersion } = await import('../shared/cdp.mjs');
   const key = pageKey({ files, chrome: chromeVersion(), fonts: fontsInstalled(), system: `${process.platform} ${(await import('node:os')).release()}`,
     code: [pageCode(), serveSite.toString(), forceAt.toString(), src.render.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
-  const rec = recorder({ key, live });
+  // (an element's matched styles kept once by their content: every element inherits the tokens' :root rule)
+  const rec = recorder({ key, live, pool: (o) => Array.isArray(o.cssProperties) });
   const render = src.render, close = src.close;
   // (an arg left undefined said so: the render tells it from one not given only by its value, but the label must not merge them)
   src.render = (all) => rec.reset(JSON.stringify([all, src.pseudoOf[all.__state] || null, src.stateArg || null], (k, v) => (v === undefined ? '\u0000undefined' : v)), () => render(all));
