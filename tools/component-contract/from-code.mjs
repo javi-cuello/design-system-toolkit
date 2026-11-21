@@ -356,7 +356,7 @@ export function axisValueOf(vals, attrs, innerDisabled = false) {
 /* A prop the mapping joins to exactly one design prop of its own kind (a boolean to a boolean, a text to a text) takes
    that prop's Figma name, as the design spells it; one already named, an enum (named by its values above), a swap
    (named by the layers it shows) or a name another prop holds is left. Changes props in place. Tested by test-from-code.mjs. */
-export function designNames(props, design, map = {}) {
+export function joinedNames(props, design, map = {}) {
   const joins = (x, c) => (typeof x === 'string' ? x === c : !!x && (x.code === c || x.arg === c));
   const held = new Set(Object.values(props).map((p) => p.figma).filter(Boolean));
   for (const p of Object.values(props)) {
@@ -2536,7 +2536,7 @@ async function main() {
       }
       // and every other prop the mapping joins to a design prop of its kind: under the design's own name (isBold, ✏️ label),
       // never one made up by convention for the code's
-      designNames(fromCode.props, figmaContract.props, (side.map || {}).props);
+      joinedNames(fromCode.props, figmaContract.props, (side.map || {}).props);
       // a fill or colour the code draws as nothing where the design binds a token that draws the same (a tertiary
       // button's ghost-rest, which is see-through): the design's token, at that combination and every one that holds it
       for (const r of compare) {
