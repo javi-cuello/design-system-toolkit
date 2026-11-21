@@ -42,6 +42,9 @@ ok('a component measured since the accept is held until accepted; one that came 
   // a variant that swaps an instance to another component names it in its set (`icon.component`): placed too
   { const swaps = { A: { folder: 'a', anatomy: { root: {}, icon: { kind: 'instance', component: 'Icon' } }, variants: [{ when: { loading: true }, set: { 'icon.component': 'S' } }] }, S: { folder: 's', anatomy: { root: {} } }, Icon: { folder: 'icon', anatomy: { root: {} } } };
     ok('closureOf: a component a variant swaps in is placed by it', JSON.stringify([...closureOf(swaps, ['a'])].sort()) === '["a","icon","s"]'); }
+  // placed by its Figma key under another name, or by its name in another case, as the drawing resolves it
+  { const keyed = { A: { folder: 'a', anatomy: { root: {}, g: { kind: 'instance', component: 'chevron-up', key: 'k1' } }, variants: [{ set: { 'g.component': 'other-name', 'g.key': 'k2' } }] }, 'Icons/chevron-up': { component: 'Icons/chevron-up', folder: 'chev', figma: { key: 'k1' }, anatomy: { root: {} } }, 'Icons/x': { component: 'Icons/x', folder: 'x', figma: { key: 'k2' }, anatomy: { root: {} } }, Lower: { component: 'Lower', folder: 'low', anatomy: { root: {} } }, B: { folder: 'b', anatomy: { root: {}, l: { kind: 'instance', component: 'lower' } } } };
+    ok('closureOf: a component placed by its key, or by its name in another case, is placed', JSON.stringify([...closureOf(keyed, ['a'])].sort()) === '["a","chev","x"]' && JSON.stringify([...closureOf(keyed, ['b'])].sort()) === '["b","low"]'); }
   { const slow = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-')), 'chrome'); fs.writeFileSync(slow, '#!/bin/sh\nsleep 3; echo Chrome 99.0\n'); fs.chmodSync(slow, 0o755);
     const t0 = Date.now(), v = chromeVersion(slow, 300);
     ok('a Chrome that does not answer its version in time is none, never a hang', v === '' && Date.now() - t0 < 2500);

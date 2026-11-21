@@ -39,10 +39,20 @@ export function selfMapping(c, { library, settings, naming = ELEMENT }) {
 
 /* The folders of `folders` and every component they place, transitively (`library` by component name, each with its
    folder): what a component's drawing and reading are made from, beside it (drawnAll's key, eval.mjs selfInputs). */
-// (placed: an instance's `component`, or a variant's swap of one, `<part>.component` in its set)
+// (placed: an instance's `component`, or a variant's swap of one, `<part>.component` in its set, each with its `key`
+// beside it, resolved as the drawing resolves it, derive's byComponentName: by key first, then by name in any case; the
+// exact name too, so the closure is never narrower than either)
 export function closureOf(library, folders) {
-  const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
-  const placed = (c) => { const out = new Set(); JSON.stringify(c, (k, v) => { if ((k === 'component' || k.endsWith('.component')) && typeof v === 'string' && library[v]) out.add(library[v].folder); return v; }); return out; };
+  const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c])), main = byComponentName(Object.values(library));
+  const placed = (c) => {
+    const out = new Set(), take = (name, key) => { for (const m of [main(name, key ?? null), library[name]]) if (m && m.folder) out.add(m.folder); };
+    JSON.stringify(c, function (k, v) {
+      if (typeof v === 'string' && k === 'component') take(v, this.key);
+      else if (typeof v === 'string' && k.endsWith('.component')) take(v, this[`${k.slice(0, -'.component'.length)}.key`]);
+      return v;
+    });
+    return out;
+  };
   const seen = new Set();
   const visit = (f) => { if (seen.has(f) || !byFolder[f]) return; seen.add(f); for (const g of placed(byFolder[f])) visit(g); };
   for (const f of folders) visit(f);
@@ -50,7 +60,7 @@ export function closureOf(library, folders) {
 }
 
 /* selfDrawn for every component of the library, by folder, each kept on disk between runs under the hash of what it is
-   drawn from: the generator's code (site.mjs's import closure), its settings and naming, and the contracts of it and
+   drawn from: the generator's code (site.mjs's import closure, and the house naming preferences), its settings and naming, and the contracts of it and
    every component it places (closureOf; checked on all three outside libraries, 2026-11-21: drawing a component from
    that closure alone writes the same as from the whole library). Every self reading drew the whole library, about three
    quarters of each (150 of 206 s, a Material 3 reading, 2026-11-21). `dir` null, or TOOLKIT_SELF_DRAWN_CACHE=0, draws
@@ -60,6 +70,8 @@ let generator;
 const generatorHash = () => (generator ||= (() => {
   const here = fileURLToPath(import.meta.url), h = createHash('sha1');
   for (const f of importClosure([here])) h.update(path.relative(path.dirname(here), f)).update('\0').update(fs.readFileSync(f)).update('\0');
+  // and the house naming preferences HOUSE is built from, read by a path importClosure does not follow (projects.cjs)
+  try { h.update(fs.readFileSync(path.join(path.dirname(here), '..', '..', 'standards', 'naming-preferences.json'))); } catch { /* none */ }
   return h.digest('hex');
 })());
 export function drawnAll(library, { settingsOf = () => undefined, naming = ELEMENT, dir = process.env.TOOLKIT_SELF_DRAWN_CACHE === '0' ? null : DRAWN_CACHE } = {}) {
