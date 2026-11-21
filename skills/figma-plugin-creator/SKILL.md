@@ -78,7 +78,7 @@ The audit stamp records the standard the plugin was last audited against. It is 
 
 **8. If the UI fetches external data, read [network-fetch-patterns.md](references/network-fetch-patterns.md) first.**
 
-- Default to jsdelivr, never unpkg: unpkg rejects null-origin requests outright, a confirmed failure.
+- Default to jsdelivr, not unpkg: unpkg rejects null-origin requests outright, a confirmed failure.
 - Pin an exact version.
 - For a grid or list that lazy-loads many items, inline `assets/fetch-queue.js` rather than reinventing it.
 - That file is not one of the seven templates. Copy it only when needed.
@@ -122,14 +122,15 @@ node scripts/conformance.mjs <plugin-folder-or-folder-of-plugins>
 **1. Ask for the actual browser console before proposing code changes.** Right-click the plugin UI → Inspect → Console → reproduce → copy the red lines.
 
 - A CORS rejection, a thrown exception and stale code all look identical from outside the browser.
+- Stale code means not re-imported, not deployed, or uninstalled.
 - Remote diagnostics (reading `pluginData`, re-testing logic, checking deployment) see none of them directly.
 - Chasing the wrong one can burn a long session. [network-fetch-patterns.md](references/network-fetch-patterns.md) holds the confirmed unpkg case.
 
-**2. Don't trust another plugin's empty `pluginData`.** A live diagnostic run through a bridge or dev-tools plugin reads that plugin's own data, not the target's. Only the target plugin's own code sees its data (§B 11).
+**2. An empty `pluginData` read from another plugin proves nothing.** Consider a live diagnostic run through a bridge or dev-tools plugin. It reads that plugin's own data, not the target's. Only the target plugin's own code sees its data (§B 11).
 
 ## Constraints, owned by Part B
 
-Don't re-derive these; the section named holds each.
+Don't re-derive these; the section named governs each.
 
 | Constraint | Section |
 |---|---|

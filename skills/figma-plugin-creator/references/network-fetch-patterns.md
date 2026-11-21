@@ -22,7 +22,7 @@ https://cdn.jsdelivr.net/npm/{package}@{version}/{path}
 In order, cheapest and most decisive first:
 
 1. **Ask for the actual browser console.** Right-click the plugin UI → Inspect → Console → reproduce → copy the red error lines. This is the ONLY way to see a CORS rejection; no remote or API diagnostic can see it.
-2. Only after that, check code correctness, retry and concurrency logic, and whether the re-import is fresh. A CORS wall looks identical to stale code or a flaky network from every angle except the console. So don't spend a long session on those before asking for it.
+2. Only after that, check code correctness, retry and concurrency logic, and whether the re-import is fresh. A CORS wall looks identical to stale code (not re-imported, not deployed, or uninstalled) or a flaky network. Only the console tells them apart. So don't spend a long session on those before asking for it.
 
 ## The house pattern: bounded concurrency, retry, honest failure
 
