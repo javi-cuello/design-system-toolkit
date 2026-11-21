@@ -1,5 +1,6 @@
 # Changelog — figma-properties-table
 
+- 1.15.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I: a lead, seven numbered steps, detail in four references (running, profile, table-rules, review-and-limits). No rule changed; source hash unchanged.
 - 1.14.0 (2026-11-04): rows come from the snapshot plugin's own walk of the open file, through the audit service's `/table-rows` and `contract-rows.mjs --live`, loaded with `PT.rows()`. The script's own walk and its copy of the rules are gone. Source hash changes. Cases A10, A11.
 - 1.13.1 (2026-11-04): the live walk skips a layer hidden with no boolean to show it, as the snapshot's reader does; the docs site lists props in the table's order; claims of one mechanism corrected. Source hash changes. Case A10.
 - 1.13.0 (2026-11-04): rows are read live from the open file (no snapshot, no `PT.rows()`), through `tools/shared/prop-rows.js` `propRows`, shared with `contract-rows.mjs`. Source hash changes. Cases A10, A11.
