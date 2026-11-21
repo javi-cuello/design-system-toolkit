@@ -36,7 +36,7 @@ import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel, keyMatches } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
 import { negative } from './rules.mjs';
-const { atProps, asPlaced, placedMatch, placedAs } = createRequire(import.meta.url)('./derive.cjs');
+const { atProps, asPlaced, placedMatch, placedAs, glyphColour } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
 import { cssName } from '../tokens/names.mjs';
 import { attrWords, propAttr } from '../shared/prop-attr.mjs';
@@ -389,8 +389,8 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
     if (e.kind !== 'instance' || Object.values(a).some((x) => x.parent === id && x.kind === 'graphic')) continue;
     const m = e.component && mains(e.component, e.key);
     if (!m) continue;
-    const glyphs = [...new Set(Object.values(atProps(m, e.with)).filter((x) => x.parent === 'root' && x.kind === 'graphic' && typeof x.background === 'string').map((x) => x.background))];
-    if (glyphs.length === 1) extra.push([id, [['color', tokenNames.token(glyphs[0])]]]);
+    const glyph = glyphColour(m, e.with);
+    if (glyph) extra.push([id, [['color', tokenNames.token(glyph)]]]);
   }
   // a gap below 0 is said by pull-backs (rules.mjs): each child's start margin on its own rule (an instance's
   // insides are its own sheet's)

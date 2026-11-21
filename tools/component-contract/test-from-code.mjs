@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, dropOwnGlyph, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -461,5 +461,19 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const swapped = { ...set, variants: [{ when: { error: true }, set: { 'glyph.component': 'Warning', 'glyph.key': 'warn' } }] };
   ok('a glyph a variant swaps to takes the key the design swaps it under', designKeyOf(swapped, null, 'Warning') === 'warn');
   ok('a swap to a glyph the design keys nowhere says no key, as null where the base icon has one (else it keeps the base\'s)', swapKeyOf(swapped, 'icon', 'Info') === null && swapKeyOf(swapped, undefined, 'Info') === undefined && swapKeyOf(swapped, 'icon', 'Warning') === 'warn');
+}
+{ // a colour the placed component draws its glyph in itself is no override (Atlassian's Slot: its magenta placeholder,
+  // a full-bleed rectangle, which to-code writes as the slot instance's color and the reader read back as an override)
+  const slot = { component: 'Slot', props: {}, variants: [], anatomy: { root: { kind: 'container', width: 204, height: 40 },
+    background: { kind: 'graphic', parent: 'root', position: 'absolute', shape: 'rectangle', background: 'color/magenta' } } };
+  const host = { component: 'Banner', props: {}, variants: [], anatomy: { root: { kind: 'container' }, slotChildren: { kind: 'instance', parent: 'root', component: 'Slot', width: 'fill' } } };
+  const mains = byComponentName([slot]);
+  ok('to-code writes the colour the placed component draws its glyph in on the instance', /magenta/.test(toCodeDrawn(host, {}, mains).slotChildren.decls.get('color').v));
+  const read = { kind: 'instance', parent: 'root', component: 'Slot', width: 'fill', background: 'color/magenta' }, vs = [{ when: { x: true }, set: { 'slotChildren.background': 'color/magenta' } }];
+  dropOwnGlyph('slotChildren', read, vs, mains);
+  ok('read back, that colour is the component\'s own: no override, in the base or a variant', read.background === undefined && !('slotChildren.background' in vs[0].set));
+  const other = { kind: 'instance', component: 'Slot', background: 'color/blue' };
+  dropOwnGlyph('slotChildren', other, [], mains);
+  ok('a colour the component does not draw stays an override', other.background === 'color/blue');
 }
 console.log(`${n}/${n} passed`);

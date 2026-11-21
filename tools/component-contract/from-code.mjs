@@ -421,6 +421,22 @@ export function modeKeysOf(axes, contract) {
 
 export const keepsName = (name, id) => partName(id) !== name;
 
+/* A glyph read as the instance of a component this library holds (asIcon) keeps no colour that component draws its glyph
+   in itself (derive's glyphColour, the colour to-code writes on it): that is the component's own, no override, as an
+   instance's styling equal to its component's root is (ownStyling). Atlassian's Slot, placed in a banner's and a top
+   nav's slots: its magenta placeholder fill, drawn by Slot itself, read back as the instance's background. At each
+   variant's props too. `e` the reading's instance at `id`, `variants` the reading's; `mains` resolves a component. */
+export function dropOwnGlyph(id, e, variants, mains) {
+  const m = e && e.kind === 'instance' && e.component && mains(e.component, e.key);
+  if (!m) return;
+  const { glyphColour } = req('./derive.cjs');
+  if (e.background != null && e.background === glyphColour(m, e.with)) delete e.background;
+  for (const v of variants || []) {
+    const s = v.set || {}, w = s[`${id}.with`];
+    if (s[`${id}.background`] != null && s[`${id}.background`] === glyphColour(m, { ...(e.with || {}), ...(w && typeof w === 'object' ? w : {}) })) delete s[`${id}.background`];
+  }
+}
+
 /* The key a reading's icon instance takes: the design's own, from the instance it places at that layer (or, for another
    glyph of the set, any instance of that name the design places). An instance named without its key resolves by name,
    so an icon that shares a component's name (Carbon's Checkbox glyph inside the Checkbox set) would become that
@@ -2352,6 +2368,7 @@ async function main() {
       // a glyph the code draws where the design draws an icon component's instance (Icon/house): that component at the
       // code's glyph, sized as the code sizes it, so the drawing places the library's icon, not a frame
       const figmaEl = (id) => figmaContract.anatomy[id] || (figmaContract.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
+      const mainsOfAll = req('./derive.cjs').byComponentName(contracts);
       const asIcon = (id, e) => {
         const fe = figmaEl(id);
         // (an icon in a folder, Icon/house, or one named bare, as a library that keeps its icons unfoldered names them: Add)
@@ -2378,6 +2395,8 @@ async function main() {
         // (where the design sets the icon's colour, on it or inside it, the code's is read as drawn and compared)
         // (a colour inside a component the library holds no contract for is that component's own: designSetsColour)
         if (!ownIcon.has(id) && !designSetsColour(figmaContract, id, mainOf)) { delete e.background; for (const v of fromCode.variants) if (v.set) delete v.set[`${id}.background`]; }
+        // and a colour the placed component draws its glyph in itself (a slot placeholder's fill) is its own, no override
+        dropOwnGlyph(id, e, fromCode.variants, mainsOfAll);
         // a variant that changes the glyph (an alert's error icon) changes the component in the same set, with its key
         if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = whole(v.set[`${id}.asset`]); delete v.set[`${id}.asset`]; const k = swapKeyOf(figmaContract, e.key, v.set[`${id}.component`]); if (k === undefined) delete v.set[`${id}.key`]; else v.set[`${id}.key`] = k; }
       };

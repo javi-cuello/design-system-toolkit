@@ -519,6 +519,13 @@ function ownStyling(anatomy, mains) {
   }
   return anatomy;
 }
+/* The one colour a placed component draws its glyph in at the instance's props: the background of its root's graphic
+   children, where they hold one colour (an icon's vector, a slot placeholder's fill), else null. to-code writes it on
+   the instance (its color), so a reading that finds it there reads the component's own colour, no override (from-code). */
+function glyphColour(m, withProps) {
+  const glyphs = [...new Set(Object.values(atProps(m, withProps)).filter((x) => x.parent === 'root' && x.kind === 'graphic' && typeof x.background === 'string').map((x) => x.background))];
+  return glyphs.length === 1 ? glyphs[0] : null;
+}
 /* A placed component as one of its instances draws it: at the instance's props, each swap it states applied (the
    target's own drawing where the library holds it), its own nested instances' styling left to theirs, and each part
    keyed as the instance names its layer (asPlaced). `swapped`: the swapped parts whose drawing is not the library's;
@@ -932,4 +939,4 @@ function bridge(stored) {
   return { paths: out(paths), ids: out(ids), props, clashes: [...new Set(clashes)] };
 }
 
-module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, ownStyling, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs };
+module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, glyphColour, ownStyling, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs };
