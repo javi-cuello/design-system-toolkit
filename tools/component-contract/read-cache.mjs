@@ -35,23 +35,58 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 export const cacheOff = () => /^(off|0|no|false)$/i.test(process.env.TOOLKIT_READ_CACHE || '');
 export const cacheDir = () => path.join(lockDir(), 'read-cache');
 
-/* The fonts installed here: a family the tokens name, once installed, is measured in place of the fallback. */
-export function fontsInstalled() {
+/* The fonts installed here: a family the tokens name, once installed, is measured in place of the fallback. `stat`: each
+   file's size and date beside its name, so one replaced under the same name moves it too (the read cache's key). */
+export function fontsInstalled({ stat = false } = {}) {
   const home = process.env.HOME || '';
+  const said = (f) => { if (!stat) return f; try { const s = fs.statSync(f); return `${f}\t${s.size}\t${s.mtimeMs}`; } catch { return f; } };
   return ['/Library/Fonts', '/System/Library/Fonts', path.join(home, 'Library', 'Fonts'), '/usr/share/fonts', '/usr/local/share/fonts', path.join(home, '.fonts'), path.join(home, '.local', 'share', 'fonts')]
-    .flatMap((d) => { try { return fs.readdirSync(d, { recursive: true }).map((f) => `${d}/${f}`); } catch { return []; } }).sort().join('\n');
+    .flatMap((d) => { try { return fs.readdirSync(d, { recursive: true }).map((f) => `${d}/${f}`); } catch { return []; } }).sort().map(said).join('\n');
 }
+/* The locale and time zone the page runs under (Chrome takes its language and dates from them). */
+export const localeHere = () => ['LANG', 'LC_ALL', 'TZ'].map((k) => `${k}=${process.env[k] ?? ''}`).join(' ');
 
 /* The node code that shapes what the page answers beyond the files it is served: how Chrome is launched (its flags, the
    window), how a function is evaluated in it, how a pointer state is forced and a page navigated. The reader's
    interpretation is not among them: its questions carry their own source. */
 export const pageCodeFiles = () => [path.join(HERE, '..', 'shared', 'cdp.mjs')];
 
-/* A page's key: its served files, the Chrome it runs in (the whole version), the fonts installed, the system and the
-   node code that drives it (`code`: pageCodeFiles' contents and whatever else the caller renders with). */
-export function pageKey({ files, chrome, fonts, system, code }) {
+/* A page's key: its served files, the Chrome it runs in (the whole version), the fonts installed, the system, the locale
+   and time zone (`env`) and the node code that drives it (`code`: pageCodeFiles' contents and whatever else the caller
+   renders with). */
+export function pageKey({ files, chrome, fonts, system, code, env = '' }) {
   const served = Object.keys(files).sort().map((f) => `${f}\0${files[f]}`).join('\0');
-  return hash(VERSION, served, chrome, fonts, system, code);
+  return hash(VERSION, served, chrome, fonts, system, code, env);
+}
+
+/* The cache kept from growing: a combination not read for `days` (a hit touches its file) is removed, then every pooled
+   part no kept combination names (one written in the last day is left: a run still going may not have written the
+   combination that names it yet), and a write a dead run left half done. Returns what it removed: { files, bytes }. */
+export function prune({ dir = cacheDir(), days = 14, now = Date.now() } = {}) {
+  const gone = { files: 0, bytes: 0 }, day = 864e5;
+  const remove = (f, st) => { try { fs.rmSync(f); gone.files++; gone.bytes += st.size; } catch { /* another run took it */ } };
+  const all = (() => { try { return fs.readdirSync(dir, { recursive: true }).map((f) => path.join(dir, f)); } catch { return []; } })();
+  const named = new Set(), pools = [];
+  for (const f of all) {
+    let st; try { st = fs.statSync(f); } catch { continue; }
+    if (!st.isFile()) continue;
+    if (f.endsWith('.tmp')) { if (now - st.mtimeMs > day) remove(f, st); continue; }
+    if (!f.endsWith('.json.gz')) continue;
+    if (f.includes(`${path.sep}pool${path.sep}`)) { pools.push([f, st]); continue; }
+    if (now - st.mtimeMs > days * day) { remove(f, st); continue; }
+    try { for (const m of zlib.gunzipSync(fs.readFileSync(f)).toString().matchAll(/"\$pool":"([0-9a-f]{40})"/g)) named.add(m[1]); } catch { /* unreadable: its parts are pruned with it */ }
+  }
+  for (const [f, st] of pools) if (!named.has(path.basename(f, '.json.gz')) && now - st.mtimeMs > day) remove(f, st);
+  return gone;
+}
+// at most once a day, by the date of a stamp beside the cache
+function pruneDaily(dir) {
+  const stamp = path.join(dir, 'pruned');
+  try { if (Date.now() - fs.statSync(stamp).mtimeMs < 864e5) return null; } catch { /* never pruned */ }
+  if (!fs.existsSync(dir)) return null;
+  const gone = prune({ dir });
+  try { fs.writeFileSync(stamp, ''); } catch { /* read-only: pruned again next run */ }
+  return gone;
 }
 export const pageCode = () => pageCodeFiles().map((f) => `${path.basename(f)}\0${fs.readFileSync(f, 'utf8')}`).join('\0');
 
@@ -63,7 +98,7 @@ export const pageCode = () => pageCodeFiles().map((f) => `${path.basename(f)}\0$
    whatever answer or combination holds them (an element's matched styles: the tokens' :root rule, inherited by every
    element, is over a megabyte). */
 export function recorder({ key, dir = cacheDir(), live, pool = () => false }) {
-  const stats = { hits: 0, misses: 0, kept: 0, launched: false };
+  const stats = { hits: 0, misses: 0, kept: 0, launched: false, pruned: pruneDaily(dir) };
   let tab = null, scope = null, at = hash(key, 'start'), table = {}, dirty = false, log = [], render = null, isLive = false, keep = true;
   const fileOf = (k) => path.join(dir, k.slice(0, 2), `${k}.json.gz`);
   const write = (f, text) => {
@@ -118,6 +153,8 @@ export function recorder({ key, dir = cacheDir(), live, pool = () => false }) {
       flush();
       scope = at = hash(key, 'render', label);
       table = load(scope); log = []; render = renderIt; isLive = false; keep = true;
+      // (read: its date says so to prune)
+      if (Object.keys(table).length) try { const t = new Date(); fs.utimesSync(fileOf(scope), t, t); } catch { /* gone meanwhile */ }
     },
     async step(kind, text, ask) {
       const k = hash(at, kind, text);

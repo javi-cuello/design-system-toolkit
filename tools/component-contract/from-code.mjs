@@ -59,7 +59,7 @@ import { realpathSync } from 'node:fs';
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const req = createRequire(import.meta.url);
 const { expand, variantDefaults, atProps } = req('./derive.cjs');
-import { recorder, pageKey, pageCode, fontsInstalled, cacheOff } from './read-cache.mjs';
+import { recorder, pageKey, pageCode, fontsInstalled, localeHere, cacheOff } from './read-cache.mjs';
 
 /* ---- pure parts ---- */
 
@@ -1333,7 +1333,7 @@ async function selfSource(project, name, { second = false } = {}) {
   // the read cache (read-cache.mjs): the page's key, every render a combination of it, and every question put to the
   // page through a tab that answers from it
   const { chromeVersion } = await import('../shared/cdp.mjs');
-  const key = pageKey({ files, chrome: chromeVersion(), fonts: fontsInstalled(), system: `${process.platform} ${(await import('node:os')).release()}`,
+  const key = pageKey({ files, chrome: chromeVersion(), fonts: fontsInstalled({ stat: true }), env: localeHere(), system: `${process.platform} ${(await import('node:os')).release()}`,
     code: [pageCode(), serveSite.toString(), forceAt.toString(), src.render.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
   // (an element's matched styles kept once by their content: every element inherits the tokens' :root rule)
   const rec = recorder({ key, live, pool: (o) => Array.isArray(o.cssProperties) });
@@ -2791,7 +2791,7 @@ async function main() {
     // what the run could not read as asked reaches whoever ran it, not only the file
     for (const x of notes) console.log(`  note: ${x}`);
   } finally {
-    if (L.cache) { const c = L.cache.stats; console.log(`read cache: ${c.hits} answers kept, ${c.misses} combination(s) asked of the page, ${c.kept} answer(s) newly kept; Chrome ${c.launched ? 'launched' : 'not launched'}`); }
+    if (L.cache) { const c = L.cache.stats; console.log(`read cache: ${c.hits} answers kept, ${c.misses} combination(s) asked of the page, ${c.kept} answer(s) newly kept; Chrome ${c.launched ? 'launched' : 'not launched'}${c.pruned ? `; pruned ${c.pruned.files} file(s), ${(c.pruned.bytes / 1e6).toFixed(1)} MB` : ''}`); }
     L.close();
   }
 }

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { recorder, pageKey, pageCodeFiles, cacheOff } from './read-cache.mjs';
+import { recorder, pageKey, pageCodeFiles, cacheOff, prune, fontsInstalled } from './read-cache.mjs';
 import { authoredWidth } from '../parity/external.mjs';
 
 let n = 0;
@@ -124,6 +124,40 @@ const run = async (p, key, fn = walker, { args = ['#a'] } = {}) => {
   const levels = [[{ cssProperties: [{ name: 'width', value: '12px' }] }]];
   const cache = Object.assign(new Map(), { through: async () => ({ levels }) });
   ok('a cache with `through` answers the matched styles, and Chrome is not asked', (await authoredWidth(tab, '#x', 'width', { cache })) === 12);
+}
+
+// growth: a combination not read for 14 days is removed, and a pooled part no kept combination names; a hit keeps it
+{
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'read-cache-prune-')), pool = (o) => Array.isArray(o.cssProperties);
+  const keep = async (label, v) => { const rec = recorder({ key: 'p', dir: d, live: page().live, pool }); await rec.reset(label, async () => {}); await rec.step('levels', 'x', async () => ({ levels: [[{ cssProperties: [{ name: 'w', value: v }] }]] })); await rec.close(); };
+  await keep('old', 'o'); await keep('read', 'r'); await keep('new', 'n');
+  const gz = () => fs.readdirSync(d, { recursive: true }).filter((f) => f.endsWith('.gz'));
+  const day = 864e5, past = new Date(Date.now() - 20 * day);
+  for (const f of gz()) fs.utimesSync(path.join(d, f), past, past);
+  // 'read' is read (a hit touches it), 'new' is written again: both stay
+  const rec = recorder({ key: 'p', dir: d, live: page().live, pool }); await rec.reset('read', async () => {}); await rec.step('levels', 'x', async () => null); await rec.close();
+  await keep('new', 'n2');
+  const before = gz().length, gone = prune({ dir: d });
+  const left = gz(), scopes = left.filter((f) => !f.includes('pool')), pools = left.filter((f) => f.includes('pool'));
+  ok('a prune removes what was not read for 14 days, says how much, and keeps a pooled part a kept combination names', gone.files === before - left.length && gone.files > 0 && gone.bytes > 0 && scopes.length === 2 && pools.length === 2);
+  const again = recorder({ key: 'p', dir: d, live: page().live, pool }); await again.reset('read', async () => {});
+  ok('and a kept combination still answers whole', (await again.step('levels', 'x', async () => null)).levels[0][0].cssProperties[0].value === 'r');
+  fs.rmSync(d, { recursive: true, force: true });
+}
+
+// the key: the locale and time zone the page runs under, and each font file's size and date, not only its name
+{
+  const base = { files: { a: 'a' }, chrome: 'c', fonts: 'f', system: 's', code: 'k', env: 'LANG=en' };
+  ok('the page key moves with the locale and time zone', pageKey({ ...base, env: 'LANG=nl' }) !== pageKey(base));
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'read-cache-home-')), was = process.env.HOME;
+  fs.mkdirSync(path.join(home, 'Library', 'Fonts'), { recursive: true });
+  const font = path.join(home, 'Library', 'Fonts', 'X.ttf'); fs.writeFileSync(font, 'one');
+  process.env.HOME = home;
+  const a = fontsInstalled({ stat: true });
+  fs.writeFileSync(font, 'other'); const b = fontsInstalled({ stat: true });
+  fs.utimesSync(font, new Date(0), new Date(0)); const c = fontsInstalled({ stat: true });
+  process.env.HOME = was; fs.rmSync(home, { recursive: true, force: true });
+  ok('a font file replaced under the same name moves the fonts said (its size, its date)', a !== b && b !== c);
 }
 
 ok('TOOLKIT_READ_CACHE=off turns it off', (process.env.TOOLKIT_READ_CACHE = 'off', cacheOff()) && (delete process.env.TOOLKIT_READ_CACHE, !cacheOff()));
