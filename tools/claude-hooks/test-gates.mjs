@@ -574,6 +574,17 @@ test("a background agent's work in a worktree it made itself (bin/worktree, no a
     else assert.match(String(got), /^Not pushed/, 'a review of other work leaves the agent\'s lines owed');
     fs.rmSync(path.dirname(sd), { recursive: true, force: true }); r.clean();
   }
+  // the plan gate asks the session for checks in its own repos only, never in an agent's tree
+  { const s2 = session([user('build it'), call('Agent', { description: 'Fix a cause', prompt: 'x', subagent_type: 'general-purpose' })]);
+    const sd2 = path.join(s2.file.replace(/\.jsonl$/, ''), 'subagents');
+    fs.mkdirSync(sd2, { recursive: true });
+    fs.writeFileSync(path.join(sd2, 'agent-3.jsonl'), JSON.stringify(edit('.claude/worktrees/diag-z/a.mjs', 150)) + '\n');
+    advance(s2.id, s2.file, REPOS);
+    fs.appendFileSync(s2.file, JSON.stringify(edit('tools/x.mjs', 150)) + '\n');
+    const got2 = String(planGate(s2.id, s2.file, REPOS, { id: 'p9', name: 'Edit', input: { file_path: path.join(TOOLKIT, 'tools/y.mjs'), old_string: 'a', new_string: 'b\n'.repeat(10) } }, TOOLKIT));
+    assert.match(got2, /full-size/, 'the session\'s own work is gated');
+    assert.doesNotMatch(got2, /diag-z/, 'and no check is asked in the agent\'s tree');
+    fs.rmSync(path.dirname(sd2), { recursive: true, force: true }); s2.clean(); }
   // a fork's edit in a tree the session writes in itself leaves it the session's
   const f = session([user('build it'), edit('.claude/worktrees/diag-y/a.mjs', 10), call('Agent', { description: 'Fork', prompt: 'x', subagent_type: 'fork' })]);
   const fd = path.join(f.file.replace(/\.jsonl$/, ''), 'subagents');

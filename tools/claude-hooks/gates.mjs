@@ -807,7 +807,8 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   const away = intoMain(st, call, cwd, repos, session) || strayWorktree(call, cwd, repos, sub);
   if (away) { if (call.id) { st.denied.push(call.id); delete st.pre[call.id]; } save(session, st); return away; }
   // the repos the work is in: those its files are in, and the one this call writes
-  const work = [...new Set([...Object.keys(st.total.files), ...writes(call, cwd)].map((f) => where(f, repos)?.repo).filter(Boolean))];
+  // the repos whose check the plan needs: the session's own work, never an agent's tree it left to the agent
+  const work = [...new Set([...Object.keys(sessionsOwn(st, st.total, repos).files), ...writes(call, cwd).filter((f) => !agentsTree(st, f, repos))].map((f) => where(f, repos)?.repo).filter(Boolean))];
   const gaps = fs.existsSync(plan) ? planGaps(fs.readFileSync(plan, 'utf8'), st, work, fs.statSync(plan).mtimeMs) : null;
   const planned = gaps !== null && !gaps.length;
   inherit(st, session, repos, cwd);
@@ -833,12 +834,13 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   const already = call.id && st.counted[call.id];
   if (!already && !add(pending, call, cwd, repos, sub).length) { save(session, st); return null; }
   // a subagent writing a worktree is the agent's own work, gated when its branch lands
-  if (sub && writes(call, cwd).every((f) => { const w = where(f, repos); return w?.worktree && !(st.ownTrees || []).includes(w.repo); })) { save(session, st); return null; }
+  // (a file outside every repo, a scratch file, is nobody's work: it never makes the call the session's)
+  if (sub && writes(call, cwd).every((f) => { const w = where(f, repos); return !w || (w.worktree && !(st.ownTrees || []).includes(w.repo)); })) { save(session, st); return null; }
   const s = size(sessionsOwn(pending, pending.total, repos));
   if (!s.full) { save(session, st); return null; }
   if (call.id) { st.denied.push(call.id); delete st.pre[call.id]; if (st.counted[call.id]) uncount(st, call.id); } // a refused call never ran, so it never counts
   save(session, st);
-  const files = Object.keys(pending.total.files);
+  const files = Object.keys(sessionsOwn(pending, pending.total, repos).files); // the session's own, never an agent's tree
   return `This work is full-size (${s.why.join(', ')}), so it is planned before it is built (toolkit-standard §D 13). ${gaps ? `The plan at ${plan} lacks ${gaps.join(' and ')}; complete it` : `Write the plan to ${plan}`}, then retry this call. Sections, each a heading:\n`
     + `  ## Before — the closing line of the repo's bin/check run before the work, pasted ("green…", "== N FAILED…", or the project's own), and the answers to §D 1, §D 2 and §D 5 (does the toolkit own this job; would the next project want it; is a new reader about stored state or the present)\n`
     + `  ## Aim — the main goal this work serves, as agreed with the person, kept as it is from piece to piece unless they agree to change it: what every Goal and course is held to\n`
