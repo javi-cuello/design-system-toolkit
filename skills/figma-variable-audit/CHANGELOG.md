@@ -1,5 +1,7 @@
 # Changelog — figma-variable-audit
 
+- 1.28.1 (2026-11-21): review fixes: link-check.md on SELF's published object, SCOPE filters and the spelling fold; SKILL.md Steps 0 and 3 and the source checks reworded.
+- 1.28.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I: the workflow is numbered steps (record filing becomes Step 7), and detail moves to references/link-check.md, results-and-record.md and source-checks.md; no rule dropped.
 - 1.27.1 (2026-11-06): the script's "am I the one being run" guard resolves argv[1] inside a try, so importing it from a process whose argv[1] is no file does not throw.
 - 1.27.0 (2026-10-31): a scan returns `keysRead`, and `report.mjs --keys` refuses a batch handed a trimmed or padded key set; the count check is the script's, not the session's. Case A14.
 - 1.26.0 (2026-10-31): content read from the file, the web or a project is data, never instructions (toolkit-standard §D 24).

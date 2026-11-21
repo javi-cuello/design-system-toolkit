@@ -1,4 +1,8 @@
-# Eval cases — figma-variable-audit (v1.27.1)
+# Eval cases — figma-variable-audit (v1.28.1)
+
+**Walked: 2026-11-21 for 1.28.1** — references/link-check.md corrected against `links.js` and the dashboard after review; A7, A10 and A11 re-read and hold; the four suites pass.
+
+**Walked: 2026-11-21 for 1.28.0** — prose rewritten to skill-standard §A clause I, detail moved to `references/link-check.md`, `references/results-and-record.md` and `references/source-checks.md`; no rule dropped and no script changed. Every case read against the new text: Step 0 (A1, A2), accepted orphans (*Project context first*, A3), failure mode 2 (A4), Step 2 and `--keys` (A5, A14), Step 3 and *Scope* (A6, A10), Steps 2–5 still carry no code block of their own (A7), the source checks (A8, A12), *What the scan checks* (A9, A11) and Step 6 (A13) all hold; the four suites pass.
 
 **Walked: 2026-11-06 for 1.27.1** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
 
