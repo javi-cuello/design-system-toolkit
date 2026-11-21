@@ -192,7 +192,7 @@ Thumbnails are generated on demand into `/media` and cached there:
 
 `/media` is regenerable — gitignore it, and delete it when thumbs look stale.
 
-`crop()` and `resize()` return the **original file unchanged** for an SVG, with no thumbnail and no error. Read the size off the returned object rather than repeating the numbers you asked for.
+`crop()` and `resize()` return the **original file unchanged** for an SVG, with no thumbnail and no error. Read the size off the returned object rather than repeating the numbers you asked for; see [gotchas.md](gotchas.md#my-crop-or-resize-did-nothing-and-the-image-is-stretched).
 
 ## Escaping and KirbyText
 

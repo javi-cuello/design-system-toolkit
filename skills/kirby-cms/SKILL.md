@@ -43,9 +43,10 @@ A page's **content file name** selects every layer that renders and edits it. On
 | Controller | `site/controllers/<name>.php` | variables for the template |
 | Page model | `site/models/<name>.php` | class `<Name>Page extends Page` |
 | Snippet | `site/snippets/*.php` | partials called from the template |
-| Blueprint | `site/blueprints/pages/<name>.yml` | the Panel form |
+| Blueprint | `site/blueprints/pages/<name>.yml` | the Panel form: [blueprints.md](references/blueprints.md) |
 
 - **The content file name chooses the template, not the folder name and not the blueprint.** `content/1_about/about.txt` renders through `about.php`. Rename the file to `default.txt` and it renders through `default.php`; this is how to change a page's type by hand.
+- **Once a blueprint tab or column mixes sections with fields, the fields go in a `fields` section.**
 - A controller named `projects.php` never runs for a template named `project.php`.
 - Templates get `$page`, `$site`, `$pages` and `$kirby` for free. A controller receives the ones it names as parameters, matched by name, in any order.
 - The folder tree, the content file format and UUIDs: [content-store.md](references/content-store.md).
@@ -96,6 +97,9 @@ Kirby escapes nothing for you: `<?= $page->text() ?>` prints raw.
 - The contexts are `html` (the default), `attr`, `css`, `js` and `url`. The wrong context is as unsafe as none.
 - KirbyText allows raw HTML and `javascript:` links. Untrusted KirbyText needs safe mode: `->kirbytext(['markdown' => ['safe' => true]])`, or `'markdown.safe' => true` globally.
 - Content you and your editors author needs no escaping. Anything from a form, an API, a database or a Panel with untrusted users must be escaped.
+- **Signed tokens:** put the model's id into the signed value, as in `contentToken($model, 'purpose:' . $model->id())`. Run fixtures with a fixed salt, and never remove `content.salt`. Why: [gotchas.md](references/gotchas.md#every-model-gets-the-same-signed-token).
+- **Deploys:** on any non-Apache server, check that `/content`, `/site` and `/kirby` are blocked by hand ([content-store.md](references/content-store.md#the-folder-structure)).
+- Never leave `'debug' => true` in the base config; it belongs in `config.localhost.php` ([plugins-hooks-routes.md](references/plugins-hooks-routes.md#config)).
 
 ## Content logic belongs to the page model
 
