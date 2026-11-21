@@ -543,4 +543,10 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   globalThis.document = was;
   ok('every field a placed instance\'s styling is read into names the CSS it is read from', ['background', 'layout', 'radius', 'border', 'shadow', 'overflow'].every((f) => INSTANCE_CSS[f] && INSTANCE_CSS[f].length));
 }
+{ // a part code centres reads back both edges as measured, as derive.cjs writes a centred part's: (x - end) / 2 its centre's offset
+  const { centredEdges } = await import('./from-code.mjs');
+  const at = centredEdges({ x: 8.3, y: 9.75 }, { horizontal: 'center', vertical: 'center' }, { x: 8.3, y: 9.75, end: 7.7, bottom: 10.25 });
+  const pinnedEnd = centredEdges({ x: 2, y: 0, end: 4 }, { horizontal: 'center', vertical: 'min' }, { x: 2, y: 0, end: 6, bottom: 3 });
+  ok('a centred part keeps its far edges as measured; a far edge the CSS says stays; a part pinned to an edge gains none', at.end === 7.7 && at.bottom === 10.25 && pinnedEnd.end === 4 && pinnedEnd.bottom === undefined);
+}
 console.log(`${n}/${n} passed`);

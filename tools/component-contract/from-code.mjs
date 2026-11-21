@@ -117,6 +117,16 @@ export function insidePlaced(raw, id) {
   return false;
 }
 
+/* A placed part's point with, on an axis code centres it, its far edge as measured (`inset`: its x, y, end and bottom in
+   its parent), as derive.cjs writes a centred part's: (x - end) / 2 is its centre's distance from the parent's. A far edge
+   already said stays. Tested by test-from-code.mjs. */
+export function centredEdges(at, constraints, inset) {
+  const out = { ...at };
+  if (constraints.horizontal === 'center' && out.end == null && inset.end != null) out.end = inset.end;
+  if (constraints.vertical === 'center' && out.bottom == null && inset.bottom != null) out.bottom = inset.bottom;
+  return out;
+}
+
 /* The design's name for each layer the mapping places (none where its id spells it), for nameInside: from the contract
    the markup was drawn from (`drawnFrom`: on --second, the first reading, so a name the first trip changed shows as the
    drift it is, and a layer only that reading has is named), else the design's. Tested by test-from-code.mjs. */
@@ -1824,6 +1834,7 @@ async function main() {
             const o = place.offsets, at = { x: insets[e.id].x, y: insets[e.id].y, ...(e.absolute || {}) };
             if (o.end != null) at.end = lengthOf(o.end) ?? insets[e.id].end;
             if (o.bottom != null) at.bottom = lengthOf(o.bottom) ?? insets[e.id].bottom;
+            Object.assign(at, centredEdges(at, place.constraints, insets[e.id]));
             if (!unplaced) e.absolute = at;
             // pinned to both edges, its size is theirs; on an axis it is not, its own or what it holds
             for (const [axis, to, i] of [['width', place.constraints.horizontal, 0], ['height', place.constraints.vertical, 1]]) {

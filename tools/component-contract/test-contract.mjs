@@ -247,6 +247,11 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('a part stretched with its parent is its offsets from both edges, no size; one pinned to the end, its offset from it',
     JSON.stringify(pinned.focusRing.absolute) === '{"x":-4,"y":-4,"end":-4,"bottom":-4}' && pinned.focusRing.width === undefined && pinned.focusRing.height === undefined
     && JSON.stringify(pinned.badge.absolute) === '{"x":71,"y":2,"end":2}' && pinned.badge.width === 8);
+  // an icon centred in a 40 box a fraction off its middle (Material's toggleable icon button, 8.3 and 7.75): its far edges
+  // too, so the distance of its centre from the parent's, (x - end) / 2, is said whatever sizes code gives either box
+  const centred = derive({ name: 'Toggle', id: '1:1', props: {}, variants: [{ name: 'Toggle', type: 'COMPONENT', w: 40, h: 40, children: [
+    { name: 'Icon', type: 'RECTANGLE', x: 8.3, y: 7.75, w: 24, h: 24, sizing: 'FIXED/FIXED', absolute: true, constraints: 'CENTER/CENTER' }] }] }).anatomy;
+  ok('a part centred in its parent is its offsets from both edges, and keeps its size', JSON.stringify(centred.icon.absolute) === '{"x":8.3,"y":7.75,"end":7.7,"bottom":8.25}' && centred.icon.width === 24 && centred.icon.height === 24);
   ok('part of a circle keeps its arc, and a line its rounded ends', JSON.stringify(A1['free/dot'].arc) === '{"start":0,"end":180,"inner":0}' && A1['free/line'].border.cap === 'round');
   ok('wrapped rows keep the gap between them, and a box stacked first on top says so', A1.box.layout.firstOnTop === true && A1.box.layout.wrap === true && A1.box.layout.crossGap === 'S/8');
   ok('a repeat takes its name from its id; a part in a box no layout places is at its point there', !A1['box/option_2'].name && JSON.stringify(A1['free/dot'].absolute) === '{"x":6,"y":4}' && !A1['box/option'].absolute);

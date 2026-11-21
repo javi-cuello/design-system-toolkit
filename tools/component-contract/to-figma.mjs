@@ -67,7 +67,8 @@ function room(x) {
 /* A placed part's position by what pins it: Figma stores x, y, end and bottom for every part, but only the pinned
    edge is a value: pinned to the far edge (max), the distance to it, x or y following from the parent's size; to the
    near edge (min), the distance from it. Centred in a parent that hugs, the offset follows from what the parent holds
-   (a spinner over a button's words): no value; in a parent of fixed size, or one that fills, it stays. Where the sides pin an axis
+   (a spinner over a button's words): no value; in a parent of fixed size, or one that fills, its near offset stays (its
+   far one, which derive writes so code can centre it, follows from the sizes). Where the sides pin an axis
    differently, the constraints row is the difference and that axis's offsets are not repeated. Tested by
    test-to-figma.mjs. */
 function pinned(x, other) {
@@ -80,6 +81,24 @@ function pinned(x, other) {
       else if (to === 'max') delete at[near];
       else if (to === 'min') delete at[far];
       else if (to === 'center' && (up[size] === 'hug' || up[size] === undefined)) { delete at[near]; delete at[far]; }
+      // centred, what the constraint keeps is its centre's distance from the parent's, (near - far) / 2, where both sides
+      // say both edges (derive writes them, from-code reads them): x alone moves with any width either box renders at;
+      // else the near offset, its far one following from it and the sizes (one difference, one row)
+      else if (to === 'center') {
+        const num = (a) => !!a && typeof a[near] === 'number' && typeof a[far] === 'number';
+        if (num(at) && num((other[id] || {}).absolute)) {
+          at[`${near}FromCentre`] = +((at[near] - at[far]) / 2).toFixed(2);
+          // and the room about it, near + far (its parent's size less its own), where no other row says that difference:
+          // neither its own size nor its parent's differs as written (a 24 icon centred alike in a state layer that fills,
+          // 40 tall in Figma, 44 in code); a size that differs is that size's row alone
+          const said = (a, b) => a !== undefined && b !== undefined && JSON.stringify(a) !== JSON.stringify(b);
+          // (where both sizes are numbers on both sides and the same, they fix the room: nothing it could add)
+          const fixed = [e, up, other[id], other[e.parent]].every((x) => typeof (x || {})[size] === 'number');
+          if (!fixed && !said(e[size], (other[id] || {})[size]) && !said(up[size], (other[e.parent] || {})[size])) at[`${near}Room`] = +(at[near] + at[far]).toFixed(2);
+          delete at[near];
+        }
+        delete at[far];
+      }
     }
     out[id] = { ...e, absolute: at };
   }
@@ -318,7 +337,8 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // a place a browser lays out in its own unit, 1/64 px (Blink's LayoutUnit, FixedPoint<6>: chromium
     // third_party/blink/renderer/platform/geometry/layout_unit.h), read back to two decimals: within that unit, the same place
     // (only where one side is a browser's reading, `layoutUnit`: Figma's own numbers are exact)
-    if (layoutUnit && /\.absolute\.(x|y|end|bottom)$/.test(at) && typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= 1 / 64 + 0.005) return;
+    // (the room about a centred part sums two such places: within two units)
+    if (layoutUnit && /\.absolute\.(x|y|end|bottom|xFromCentre|yFromCentre|xRoom|yRoom)$/.test(at) && typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= (/Room$/.test(at) ? 2 : 1) / 64 + 0.005) return;
     const bool = (v) => (typeof v === 'boolean' ? v : typeof v === 'string' && /^(true|false)$/i.test(v) ? v.toLowerCase() === 'true' : undefined);
     if (/\.with\.[^.]+$/.test(at) && bool(a) !== undefined && bool(a) === bool(b)) return;
     if (/(^|\.)component$/.test(at) && typeof a === 'string' && typeof b === 'string' && !b.includes('/') && a.split('/').pop() === b) return;

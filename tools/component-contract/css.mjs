@@ -183,8 +183,9 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
       const off = len(o ?? 0), offFar = f !== undefined ? len(f) : null;
       shift.push(to === 'center' ? '-50%' : '0');
       // centred keeps the distance of its centre from the parent's, as Figma's centre constraint does (a value
-      // indicator 52 off the track's middle): `calc(50% ± d)`, where the sizes are numbers; else at the middle
-      if (to === 'center') { const whole = box && box[k], own = e[k], d = typeof whole === 'number' && typeof own === 'number' && typeof o === 'number' ? +(o + own / 2 - whole / 2).toFixed(2) : 0; put(near, d ? `calc(50% ${d < 0 ? '-' : '+'} ${len(Math.abs(d))})` : '50%'); }
+      // indicator 52 off the track's middle): `calc(50% ± d)`, d half the near offset less the far (derive.cjs writes
+      // both), else from the sizes where they are numbers; else at the middle
+      if (to === 'center') { const whole = box && box[k], own = e[k], d = typeof o === 'number' && typeof f === 'number' ? +((o - f) / 2).toFixed(2) : typeof whole === 'number' && typeof own === 'number' && typeof o === 'number' ? +(o + own / 2 - whole / 2).toFixed(2) : 0; put(near, d ? `calc(50% ${d < 0 ? '-' : '+'} ${len(Math.abs(d))})` : '50%'); }
       else if (to === 'max') put(far, offFar ?? '0');
       // pinned to both edges, it takes its size from them
       else if (to === 'stretch') { put(near, off); put(far, offFar ?? off); for (let i = decls.length - 1; i >= 0; i--) if (decls[i][0] === size) decls.splice(i, 1); if (e.kind === 'instance') put(size, 'auto'); }

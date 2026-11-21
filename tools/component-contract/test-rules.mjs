@@ -65,6 +65,12 @@ ok('Figma\'s rotation (counter-clockwise) is CSS\'s rotate the other way: 90 →
     const b2 = placeFromCss(Object.fromEntries(css.map(([p, v]) => [p, v])));
     ok('centred off the middle keeps its centre\'s distance from the parent\'s (x -52 on a 44 box at 48 wide: calc(50% - 50px)), and reads back as centred', left === 'calc(50% - 3.125rem)' && top === 'calc(50% + 0.25rem)' && b2.constraints.horizontal === 'center' && b2.constraints.vertical === 'center');
   }
+  {
+    // its far edges say the centre's distance with no size: an icon in a box that fills (Material's toggleable icon button)
+    const css = declarations({ kind: 'instance', position: 'absolute', constraints: { horizontal: 'center', vertical: 'center' }, absolute: { x: 8.3, y: 7.75, end: 7.7, bottom: 8.25 }, width: 'hug', height: 24 }, { holds: false, row: true, box: { width: 'fill', height: 'fill' } }, names).decls;
+    const left = (css.find(([p]) => p === 'inset-inline-start') || [])[1], top = (css.find(([p]) => p === 'inset-block-start') || [])[1];
+    ok('centred off the middle where neither size is a number: (x - end) / 2 from the middle, as its far edges say it', left === "calc(50% + 0.0187rem)" && top === "calc(50% - 0.0156rem)");
+  }
   const s = back({ horizontal: 'stretch', vertical: 'max' }, { x: 0, y: 228, end: 0, bottom: 0 });
   ok('pinned to both side edges and the bottom: those insets as written, the point left to the caller', s.offsets.x === '0' && s.offsets.end === '0' && s.offsets.bottom === '0' && s.offsets.y === undefined);
   ok('in the flow is no placement; fixed is placed as absolute is; the inset shorthand reads as its four edges',

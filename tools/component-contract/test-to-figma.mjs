@@ -292,6 +292,20 @@ delete globalThis.figma;
   { const placed = (rootW, cons, at) => ({ component: 'Spin', props: {}, anatomy: { root: { kind: 'container', width: rootW, layout: { direction: 'row' } }, dot: { kind: 'container', parent: 'root', order: 0, constraints: cons, absolute: at } }, variants: [] });
     const mid = { horizontal: 'center', vertical: 'center' };
     ok('a part centred in a parent that hugs has no offset to compare', roundTrip(placed('hug', mid, { x: 21, y: 4 }), placed('hug', mid, { x: 20.14, y: 4.5 })).rows.length === 0);
+    { const rows = (a, b, o = {}) => roundTrip(placed('fill', mid, a), placed('fill', mid, b), o).rows.map((r) => r.at);
+      ok('a part centred in a parent that fills is compared by its centre\'s offset where both sides say both edges, and by the room about it (its parent less itself): another offset at the same room is one row, the same offset in more room another (a 24 icon in a state layer 40 tall in Figma, 44 in code)',
+        JSON.stringify(rows({ x: 40, y: 4, end: 40, bottom: 4 }, { x: 40, y: 4, end: 30, bottom: 4 })) === '["dot.absolute.xFromCentre","dot.absolute.xRoom"]'
+        && JSON.stringify(rows({ x: 40, y: 4, end: 40, bottom: 4 }, { x: 35, y: 4, end: 45, bottom: 4 })) === '["dot.absolute.xFromCentre"]'
+        && JSON.stringify(rows({ x: 8, y: 4, end: 8, bottom: 4 }, { x: 10, y: 4, end: 10, bottom: 4 })) === '["dot.absolute.xRoom"]'
+        && rows({ x: 8, y: 4, end: 8, bottom: 4 }, { x: 8.01, y: 4, end: 8, bottom: 4 }, { layoutUnit: true }).length === 0
+        && rows({ x: 8, y: 4, end: 8, bottom: 4 }, { x: 8.015, y: 4, end: 8.015, bottom: 4 }, { layoutUnit: true }).length === 0); }
+    { const sized = (rootW, w, at) => { const c = placed(rootW, mid, at); c.anatomy.dot.width = w; return c; };
+      const rows = (a, b) => roundTrip(a, b).rows.map((r) => r.at).sort();
+      ok('a centred part whose own size or whose parent\'s differs is that size\'s row alone, the room about it not a second',
+        JSON.stringify(rows(sized('fill', 24, { x: 8, y: 4, end: 8, bottom: 4 }), sized('fill', 28, { x: 6, y: 4, end: 6, bottom: 4 }))) === '["dot.width"]'
+        && JSON.stringify(rows(sized(40, 'S/24', { x: 8, y: 4, end: 8, bottom: 4 }), sized(44, 'S/24', { x: 10, y: 4, end: 10, bottom: 4 }))) === '["root.width"]'
+        && JSON.stringify(rows(sized(40, 24, { x: 8, y: 4, end: 8, bottom: 4 }), sized(40, 24, { x: 6, y: 4, end: 9, bottom: 4 }))) === '["dot.absolute.xFromCentre"]'); }
+    ok('a part centred in a parent of fixed size is one row where it moves, its far edge following from the sizes (not a second)', roundTrip(placed(100, mid, { x: 40, y: 4, end: 40, bottom: 4 }), placed(100, mid, { x: 30, y: 4, end: 50, bottom: 4 })).rows.length === 1);
     ok('a part centred in a parent of fixed size, or one that fills, keeps its offset', roundTrip(placed(100, mid, { x: 40, y: 4 }), placed(100, mid, { x: 30, y: 4 })).rows.length === 1 && roundTrip(placed('fill', mid, { x: 10, y: 4 }), placed('fill', mid, { x: 60, y: 4 })).rows.length === 1);
     const foot = { horizontal: 'min', vertical: 'max' };
     ok('a part pinned to the bottom is compared by its bottom, not the y its parent\'s height gives', roundTrip(placed('hug', foot, { x: 0, y: 300, bottom: 0 }), placed('hug', foot, { x: 0, y: 280, bottom: 0 })).rows.length === 0 && roundTrip(placed('hug', foot, { x: 0, y: 300, bottom: 0 }), placed('hug', foot, { x: 0, y: 300, bottom: 8 })).rows.length === 1);

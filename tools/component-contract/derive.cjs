@@ -326,12 +326,13 @@ function flatten(list, characters = new Map(), known = [], axes = []) {
     if (inInstance && !e.absolute && !(e.constraints && e.constraints.horizontal === 'scale' && e.constraints.vertical === 'scale')) delete e.constraints;
     // its far edges where it follows its parent's (a focus ring 4 outside its box, all round): how far from the
     // parent's end and bottom, as CSS's right and bottom say it; stretched, its size is its parent's less both
-    // offsets, never a number measured at one label's width
+    // offsets, never a number measured at one label's width; centred, both edges say how far its centre stands from
+    // the parent's, (x - end) / 2, which no size code gives either box changes (an icon 0.3 off the middle of a box that fills)
     if (e.absolute && e.constraints && up && up.w != null && node.w != null) {
       const at = (v) => Math.round(v * 100) / 100;
       for (const [axis, far, from, size, own] of [['horizontal', 'end', 'x', 'width', 'w'], ['vertical', 'bottom', 'y', 'height', 'h']]) {
         const c = e.constraints[axis];
-        if (c !== 'stretch' && c !== 'max') continue;
+        if (c !== 'stretch' && c !== 'max' && c !== 'center') continue;
         e.absolute[far] = at(up[own] - e.absolute[from] - node[own]);
         if (c === 'stretch' && typeof e[size] === 'number') delete e[size];
       }
