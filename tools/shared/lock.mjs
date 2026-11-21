@@ -91,13 +91,13 @@ export function wanted() {
 }
 /* Between pieces of work, with none running: when someone could take this slot, let it go, give the waiter time to
    take it (a waiter tries each second), and wait for a slot again. Resolves true when it yielded. */
-export async function yieldIfWanted(what, { say = (l) => console.error(l), pause = 2500 } = {}) {
+export async function yieldIfWanted(what, { say = (l) => console.error(l), pause = 2500, first = false } = {}) {
   const w = wanted();
   if (!w) return false;
   say(`measuring lock: giving the slot to ${describe(w)}`);
   release();
   await new Promise((r) => setTimeout(r, pause));
-  await hold(what, { say });
+  await hold(what, { say, first });
   return true;
 }
 /* Wait for the lock (saying who holds it, then each minute), lower this process's priority, and hold it until release()
