@@ -174,7 +174,9 @@ function routing(contextDoc) {
   const moved = expand(process.env.TOOLKIT_PROJECTS_ROOT);
   const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
   const out = repo && moved && path.relative(real(moved), real(repo)).split(path.sep)[0] === '..';
-  if (out && fs.existsSync(path.join(repo, HOME, 'design-system-context.md')))
+  const homed = (r) => { const h = path.join(r, HOME); if (fs.existsSync(path.join(h, 'design-system-context.md'))) return true;
+    try { return fs.readdirSync(h).some((s) => fs.existsSync(path.join(h, s, 'design-system-context.md'))); } catch { return false; } };
+  if (out && homed(repo))
     return { error: `${contextDoc} names repo ${repo}, another projects root's home outside TOOLKIT_PROJECTS_ROOT ${moved}: a copied root still points at the original; repoint its snapshot-routing "repo"` };
   return { repo, files: parsed.files, doc: contextDoc };
 }
