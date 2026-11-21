@@ -354,7 +354,7 @@ function overrideOf(a, host, rel, m, mains, B = a) {
   const ctx = (x, par) => ({ root: false, holds: holds(x.kind), row: !par || (par.layout || {}).direction !== 'column', anchors: false, box: null, pull: null });
   // a nested instance is placed, never restyled here: where it sits and how big (PLACED), as any placed instance
   // (and its own styling over its component's root, drawn whole on both sides: an override set on the nested instance itself)
-  const styled = (x, par) => (x.kind === 'instance' ? placedDecls(x, ctx(x, par), mains) : declarations(x, ctx(x, par), tokenNames).decls);
+  const styled = (x, par) => (x.kind === 'instance' ? placedDecls(x, ctx(x, par), mains, e && e.kind === 'instance' ? e : x) : declarations(x, ctx(x, par), tokenNames).decls);
   const theirs = new Map(styled(own, mid ? ownUp[mid.e.parent] : M[own.parent]).map(([p, v]) => [p, v]));
   if (!e) return { mine: [...theirs], theirs, removed: [], changed: [] };
   // the instance lays its insides out as its component's root does, where it states no layout of its own
@@ -371,9 +371,11 @@ function overrideOf(a, host, rel, m, mains, B = a) {
 /* A placed instance's declarations drawn whole: where it sits and how big (PLACED), and its own styling over its
    component's root at its props (derive's ownStyling keeps on an instance only a field that differs from that root: a
    fill, stroke or layout set on the instance itself, an override), said as that root with those fields over it; only
-   PLACED where the library does not hold the component. `ctx` is the instance's own (where it sits). */
-function placedDecls(x, ctx, mains) {
-  const m = x.component && mains(x.component, x.key), R = m && atProps(m, x.with).root;
+   PLACED where the library does not hold the component. `ctx` is the instance's own (where it sits); `at`, the instance
+   whose component and props give the root (the record compared with, so a nested instance's other props, which its own
+   sheet draws, never read as an override). */
+function placedDecls(x, ctx, mains, at = x) {
+  const m = at.component && mains(at.component, at.key), R = m && atProps(m, at.with).root;
   const placed = declarations(x, ctx, tokenNames).decls.filter(([p]) => PLACED.test(p));
   if (!R) return placed;
   const whole = { ...R, ...Object.fromEntries(OWN.filter((f) => x[f] != null).map((f) => [f, x[f]])) };
