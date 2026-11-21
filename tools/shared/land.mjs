@@ -144,10 +144,13 @@ async function landBatch(main, me) {
     if (!push.ok) {
       // only a main that moved is worth another attempt; a push refused with main where it was (a hook: a commit naming
       // a project) is said whole and fails each branch, never four "main moved" retries that hide the reason (2026-11-21)
-      tryGit(dir, 'fetch', '-q', 'origin');
-      if (tryGit(dir, 'rev-parse', 'origin/main').out !== base) { say(`main moved during the check (${push.out.split('\n').pop()}): again`); continue; }
+      // (a fetch that fails cannot say main is unmoved: tried again, as before)
+      if (!tryGit(dir, 'fetch', '-q', 'origin').ok || tryGit(dir, 'rev-parse', 'origin/main').out !== base) { say(`main moved during the check, or could not be asked (${push.out.split('\n').pop()}): again`); continue; }
       say(`the push was refused, main where it was:\n${push.out.split('\n').map((l) => `  ${l}`).join('\n')}`);
-      for (const a of applied) { say(`${a.branch}: not landed (the push was refused, above): fix it, then land again`); unqueue(main, a, 'refused'); }
+      // a batch: each alone, so the refusal falls on the branch that carries it and the rest still land
+      if (applied.length > 1) { alone = applied[0].branch; say('landing one at a time'); continue; }
+      say(`${applied[0].branch}: not landed (the push was refused, above): fix it, then land again`); unqueue(main, applied[0], 'refused');
+      alone = null;
       continue;
     }
     for (const a of applied) {
