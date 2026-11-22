@@ -241,8 +241,9 @@ What a front end does so that the page cannot be turned against the person readi
 **How**
 - [moderate] Commit the lockfile and install with `npm ci` (or the package manager's frozen mode), which fails if the lockfile and `package.json` disagree ([npm `ci`](https://docs.npmjs.com/cli/commands/npm-ci), [OWASP NPM](https://cheatsheetseries.owasp.org/cheatsheets/NPM_Security_Cheat_Sheet.html), "Enforce the lockfile").
 - [weak] Run `npm audit` (or the equivalent) in CI and gate on high and critical findings ([npm `audit`](https://docs.npmjs.com/cli/commands/npm-audit)); an advisory that does not apply is recorded with its reason, not silenced.
-- [weak] Install scripts run arbitrary code; OWASP advises `--ignore-scripts` where a package does not need them.
 - [weak] Prefer a platform feature to a package: `Intl` over a date library ([i18n](i18n.md)), `<dialog>` and popover over a modal package, native form validation over a validator.
+
+Install scripts are [platform security: npm supply chain](security-platform.md#npm-supply-chain)'s.
 
 **Cases**
 - A package is added for one function → write the function, or use the platform; every dependency is a supply chain.
