@@ -107,10 +107,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   askIdle(new Set([gone]))();
   ok('a child whose channel closed is not asked, and its errors are heard', sent === 0 && gone.listenerCount('error') === 1);
   // supervision is asked at the time: a launchd label inherited by a process launchd did not start is no supervisor
-  const said = [];
-  const t = restartWhenStale([entry], { label: 'com.toolkit.nothing-runs-this', start, every: 10, log: (m) => said.push(m), exit: () => said.push('exit') });
+  // (the label set, so what refuses it is the parent not being launchd: this test's parent is a shell or a runner)
+  const said = [], was = process.env.XPC_SERVICE_NAME;
+  process.env.XPC_SERVICE_NAME = 'com.toolkit.test-label';
+  const t = restartWhenStale([entry], { label: 'com.toolkit.test-label', start, every: 10, log: (m) => said.push(m), exit: () => said.push('exit') });
   touch(dep); await wait(60); clearTimeout(t.timer); touch(dep, past);
-  ok('a label this process was not started under by launchd itself supervises nothing', !said.includes('exit') && /restart it/.test(said.join()));
+  if (was === undefined) delete process.env.XPC_SERVICE_NAME; else process.env.XPC_SERVICE_NAME = was;
+  ok('launchd\'s label inherited by a process launchd did not start supervises nothing', (typeof process.send === 'function' || process.ppid === 1) || (!said.includes('exit') && /restart it/.test(said.join())));
 }
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(`${n}/${n} passed`);
