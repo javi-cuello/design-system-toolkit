@@ -37,7 +37,7 @@ What a report must specify: a period summary read to act on, such as what to bil
 ## Choosing the period
 
 **Use when**
-- [strong] Every report: the period is what the totals are totals of (see *Report or dashboard*).
+- [weak] Every report: the period is what the totals are totals of (see *Report or dashboard*).
 
 **How**
 - [moderate] Offer whole periods as presets and a custom range. Toggl's presets are today and yesterday; this week, month, quarter, semester or year; last week, two weeks, month, 30 days, 90 days, quarter, semester, 12 months or year; and week, month or year to today ([Toggl date range](https://support.toggl.com/selecting-a-date-range)). Custom ranges take a start and an end, picked or typed (same source). Clockify filters "by date in the date picker" ([Clockify scheduled vs tracked](https://clockify.me/help/reports/scheduled-vs-tracked-report)).
@@ -49,7 +49,7 @@ What a report must specify: a period summary read to act on, such as what to bil
 - [moderate] Products cap the range, and say so. Harvest's reports: "The timeframe supplied cannot exceed 1 year (365 days)" ([Harvest time reports API](https://help.getharvest.com/api-v2/reports-api/reports/time-reports)). Calendly tracks "data up to one year" ([Calendly analytics](https://calendly.com/help/calendly-analytics)). Toggl makes longer ranges a paid feature ([Toggl date range](https://support.toggl.com/selecting-a-date-range)).
 - [weak] No source opened defaults a report to the last complete period (last week, last month) rather than the current one. Toggl offers both as presets.
 
-Stepping between periods (previous, next) is a pager over periods; its behaviour with the address is [pagination: paging with filters, sort and the address](../patterns/pagination.md#paging-with-filters-sort-and-the-address). The calendar control for a custom range is [calendars](../patterns/calendars.md).
+Stepping between periods (Previous, Next, the current period) is [calendars: *Period navigation*](../patterns/calendars.md#period-navigation); the period in the address follows [pagination: paging with filters, sort and the address](../patterns/pagination.md#paging-with-filters-sort-and-the-address). Picking the dates of a custom range is [selection: *Date and time entry*](../patterns/selection.md#date-and-time-entry).
 
 **Cases**
 - A monthly billing report opens on this week → offer "Last month" one click away, or let the reader make it the default.
@@ -77,7 +77,7 @@ Stepping between periods (previous, next) is a pager over periods; its behaviour
 ## Summary first, then detail
 
 **Use when**
-- [strong] A report has both totals and the entries behind them.
+- [weak] A report has both totals and the entries behind them.
 
 **How**
 - [strong] Two levels: a summary of totals per group, and a detailed list of entries. Toggl ships a Summary report and a Detailed report that "shows each individual time entry" ([Toggl summary report](https://support.toggl.com/summary-report); [Toggl detailed report](https://support.toggl.com/detailed-report)). Clockify's Summary report groups entries; clicking a group opens the Detailed report filtered to it ([Clockify summary report](https://clockify.me/help/reports/summary-report)). Basecamp's Timesheet report "shows totals across your projects", and each project's full entries sit behind "See the Timesheet" ([Basecamp Timesheet](https://updates.37signals.com/post/new-in-basecamp-timesheet)).
@@ -109,7 +109,7 @@ Stepping between periods (previous, next) is a pager over periods; its behaviour
 ## Grouping and subtotals
 
 **Use when**
-- [strong] Totals are read per customer, per project, per task or per person.
+- [weak] Totals are read per customer, per project, per task or per person.
 
 **How**
 - [strong] Group by what the reader bills or reviews. Harvest's reports total hours for each customer, project, task or user ([Harvest time reports API](https://help.getharvest.com/api-v2/reports-api/reports/time-reports)). Clockify groups by project, customer, user, group, tag or date ([Clockify summary report](https://clockify.me/help/reports/summary-report)). Toggl groups by a primary and a secondary choice ([Toggl summary report](https://support.toggl.com/summary-report)).
@@ -142,7 +142,7 @@ Stepping between periods (previous, next) is a pager over periods; its behaviour
 ## Totals rows and figures
 
 **Use when**
-- [strong] A table of figures that the reader adds up or copies.
+- [weak] A table of figures that the reader adds up or copies.
 
 **How**
 - [moderate] A totals row surfaces column totals. Polaris: "Include a summary row to surface the column totals" and "Not include calculations within the summary row" ([Polaris data table](https://github.com/Shopify/polaris/blob/main/polaris.shopify.com/content/components/tables/data-table.mdx)). GOV.UK's example ends with a total row ([GOV.UK table](https://design-system.service.gov.uk/components/table/)).
@@ -183,7 +183,7 @@ Stepping between periods (previous, next) is a pager over periods; its behaviour
 **How**
 - [moderate] Rounding is a display setting on the report, and the entries keep their recorded length. Clockify: "Time rounding doesn't change any data, only how it's displayed, which can always be turned on/off" ([Clockify time rounding](https://clockify.me/help/track-time-and-expenses/time-rounding)). Toggl puts a Rounding button "next to the export button" on its reports ([Toggl rounding](https://support.toggl.com/rounding)).
 - [moderate] Rounding is up, down or to the nearest interval. Toggl offers intervals from 1 minute to 4 hours, 15 minutes among them, with Round Up To, Round to Nearest and Round Down To ([Toggl rounding](https://support.toggl.com/rounding)); Clockify offers the same three methods ([Clockify time rounding](https://clockify.me/help/track-time-and-expenses/time-rounding)).
-- [contested] What is rounded. Clockify rounds each entry, then adds: "Clockify will first round the duration of each time entry, and then add them up" ([Clockify time rounding](https://clockify.me/help/track-time-and-expenses/time-rounding)). Toggl rounds a group's total: "we total the individual entries in a group or sub-group as is, then apply the rounding setting to that sub-total" ([Toggl rounding](https://support.toggl.com/rounding)). The two give different totals for the same entries. The project decides, and the report says which.
+- [contested] What is rounded. Clockify rounds each entry, then adds: "Clockify will first round the duration of each time entry, and then add them up" ([Clockify time rounding](https://clockify.me/help/track-time-and-expenses/time-rounding)). Toggl rounds each entry in a detailed view, but a grouped total after adding: "we total the individual entries in a group or sub-group as is, then apply the rounding setting to that sub-total" ([Toggl rounding](https://support.toggl.com/rounding)). For a grouped total the two give different figures for the same entries. The project decides, and the report says which.
 - [moderate] Rounded figures follow into exports and amounts. Clockify: "durations and values will be rounded in the export too", and billable value uses rounded entries ([Clockify time rounding](https://clockify.me/help/track-time-and-expenses/time-rounding)). Harvest's report hours follow its Time Rounding settings ([Harvest time reports API](https://help.getharvest.com/api-v2/reports-api/reports/time-reports)).
 - [weak] Say when totals will not equal the sum of their parts. The Analysis Function: rounding "usually means that the reported totals no longer equal the sum of the component parts" ([Analysis Function, tables](https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-tables/)).
 
@@ -210,7 +210,7 @@ Stepping between periods (previous, next) is a pager over periods; its behaviour
 ## What counts: billable, non-billable and booked
 
 **Use when**
-- [strong] Some time is billed and some is not, or some work is booked ahead and not yet done.
+- [weak] Some time is billed and some is not, or some work is booked ahead and not yet done.
 
 **How**
 - [strong] Show billable and non-billable apart, with the total. Harvest returns `total_hours` and `billable_hours` side by side ([Harvest time reports API](https://help.getharvest.com/api-v2/reports-api/reports/time-reports)). Clockify's chart shows "how much of it is billable (dark green) vs non-billable (light green)" ([Clockify summary report](https://clockify.me/help/reports/summary-report)). Toggl's summary bar shows billable hours with their percentage ([Toggl summary report](https://support.toggl.com/summary-report)).
@@ -272,7 +272,7 @@ No source opened says whether an empty period keeps its table headers or exports
 ## Drill-down to the entries
 
 **Use when**
-- [strong] A total has entries behind it that the reader will check or correct before billing.
+- [weak] A total has entries behind it that the reader will check or correct before billing.
 
 **How**
 - [moderate] A group's total opens the entries filtered to it. Clockify: clicking a user, project or other item opens the Detailed report with the matching filter applied ([Clockify summary report](https://clockify.me/help/reports/summary-report)). Basecamp opens a project's full entries from "See the Timesheet" ([Basecamp Timesheet](https://updates.37signals.com/post/new-in-basecamp-timesheet)).
@@ -333,7 +333,7 @@ No source opened says whether an empty period keeps its table headers or exports
 ## Export, print and the invoice handoff
 
 **Use when**
-- [strong] The reader takes the report elsewhere: a spreadsheet, a PDF, a printed page, an invoice.
+- [weak] The reader takes the report elsewhere: a spreadsheet, a PDF, a printed page, an invoice.
 
 **How**
 - [strong] Offer CSV for data and PDF for reading. Toggl exports "as a PDF, CSV or Excel file" ([Toggl detailed report](https://support.toggl.com/detailed-report)); Clockify "in PDF (Free plan) or CSV/Excel" ([Clockify export](https://clockify.me/help/reports/exporting-reports)); Basecamp's Timesheet downloads "a CSV file" ([Basecamp Timesheet](https://updates.37signals.com/post/new-in-basecamp-timesheet)); Calendly exports "to a CSV file" ([Calendly analytics](https://calendly.com/help/calendly-analytics)).

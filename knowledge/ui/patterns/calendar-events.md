@@ -72,7 +72,7 @@ How a person adds, opens, edits, moves and deletes entries on a calendar, and ma
 **Build**
 - [required] The clicked date travels as a value: `<input type="date" name="date" value="2026-11-23">` filled by the server from the address, so the no-script page gets it too (code-standard rule 20; [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)).
 - [required] All day is `<input type="checkbox" name="allDay">`; checking it hides the time fields with `hidden`, never removes them (code-standard rule 17).
-- [strong] The title field takes `autofocus` inside the `dialog` or `popover`, so focus lands there on open ([APG modal dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)).
+- [moderate] Focus lands on the title field on open: APG moves focus into the dialog, by default to its first focusable element ([APG modal dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)), and `showModal()` sends it to the element marked `autofocus` ([HTML dialog focusing steps](https://html.spec.whatwg.org/multipage/interactive-elements.html#dialog-focusing-steps)).
 
 **Check**
 - *Script* could: open the form from a slot and assert the date field's value equals the slot's date; assert focus is in the title field.
