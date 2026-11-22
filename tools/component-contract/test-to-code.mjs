@@ -260,6 +260,16 @@ else console.log('skip: no stored contracts on this machine');
   ok('an instance the store does not hold draws its own stroke and corners, placed directly or inside a held one',
     /focus-visible[^{]*> \.ds-box__check \{[^}]*border-radius: 4px;[^}]*outline: 2px solid var\(--focus-focus\);/.test(sheet) && /focus-visible[^{]*> \.ds-box__note > \.ds-note__warn \{[^}]*box-shadow: inset 0 0 0 1px var\(--c-clear\);/.test(sheet)
     && selfCheck(box, rulesOf(box, mains).rules, mains).length === 0 && !/key on/.test(sheet));
+  // a host each variant adds at its own props (Carbon's text input adds Status notification per state): a part inside it
+  // is named by the variant that draws it there, whichever variant comes first (the first reading lists error's first)
+  const stat = { contract: 1, component: 'Stat', props: { status: { type: 'enum', values: ['alt', 'failed'], default: 'alt', figma: 'Status' } }, anatomy: { root: { kind: 'container' } },
+    variants: [{ when: { status: 'alt' }, add: { warnAlt: { kind: 'instance', parent: 'root', component: 'WarnAlt', key: 'a1', order: 0 } } }, { when: { status: 'failed' }, add: { warn: { kind: 'instance', parent: 'root', component: 'Warn', key: 'a2', order: 0 } } }] };
+  const field = { contract: 1, component: 'Field', props: { state: { type: 'enum', values: ['rest', 'warning', 'error'], default: 'rest', figma: 'State' } }, anatomy: { root: { kind: 'container' } },
+    variants: [{ when: { state: 'error' }, add: { stat: { kind: 'instance', parent: 'root', component: 'Stat', key: 's1', with: { Status: 'Failed' }, order: 0 } } },
+      { when: { state: 'warning' }, add: { stat: { kind: 'instance', parent: 'root', component: 'Stat', key: 's1', with: { Status: 'Alt' }, order: 0 }, 'stat/warnAlt': { kind: 'instance', parent: 'stat', component: 'WarnAlt', key: 'a1', order: 0, border: { color: 'C/clear', width: 1 } } } }] };
+  const fsheet = toCss(field, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Stat' ? { ...stat, folder: 'stat' } : null) });
+  ok('a part inside a host each variant adds is named by the variant that draws it, not the first to add the host',
+    /data-state="warning"[^{]*> \.ds-field__stat > \.ds-stat__warn-alt \{[^}]*box-shadow: inset 0 0 0 1px var\(--c-clear\)/.test(fsheet));
   ok('with no store given, a placed instance is given only its place', !/outline|box-shadow|border-radius/.test(toCss(box, 'box', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
 }
 

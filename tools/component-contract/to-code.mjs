@@ -789,7 +789,10 @@ function chain(c, n, id, rootCond, mains = () => null) {
   const hostAt = segs.findIndex((s) => (c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance');
   const host = hostAt >= 0 && hostAt < segs.length - 1 && segs[hostAt], m = host && (() => { const he = c.anatomy[host] || findAdded(c, host); return mains(he.component, he.key); })();
   if (m) {
-    const all = allOf(c), inner = [];
+    // (the placed component as the combination that adds this part draws it: a host each variant adds at its own props
+    // names the part by the variant that draws it there, never by whichever variant allOf meets first)
+    const adds = (c.variants || []).find((v) => !v.combination && v.add && v.add[own]);
+    const all = adds ? { ...allOf(c), ...expand(c, { ...variantDefaults(c), ...adds.when }) } : allOf(c), inner = [];
     // each placed component names its own parts, down to the next one placed in it, which names the rest
     for (let h = host, hm = m, rest = segs.slice(hostAt + 1); rest.length && hm;) {
       const n2 = namer(hm.folder || folderOf(hm.component), n.naming);
