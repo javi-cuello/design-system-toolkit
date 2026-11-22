@@ -2351,8 +2351,10 @@ async function main() {
     // (one of five props or more is read only where some three or more of them already build a layer together: on
     // every panel component measured, each such combination that kept a layer of its own had one, and the rest, three
     // in four on Carbon's radio button, were predicted by the layers; `worthReading`)
-    const layered = new Set(variants.filter((x) => !x.combination && Object.keys(x.when).length >= 3).map((x) => comboKey(Object.entries(x.when))));
-    const { read: readBeyond, skipped } = await readCombinations(beyond, layered, async (four) => {
+    // (its own name: `layered` is the reading's set of parts whose background lays a layer over the colour, which read
+    // adds to and the compare with Figma asks; one name shadowing it threw before its line, cards-horizontal-card)
+    const layerKeys = new Set(variants.filter((x) => !x.combination && Object.keys(x.when).length >= 3).map((x) => comboKey(Object.entries(x.when))));
+    const { read: readBeyond, skipped } = await readCombinations(beyond, layerKeys, async (four) => {
       const when = Object.fromEntries(four.map(([k, v]) => [k, argOf(props[k], v)]));
       const got = await read({ ...defaults, ...Object.fromEntries(four.map(([k, v]) => [props[k].code, v])) });
       const d = delta(expand(fromCode, { ...allDefaults, ...when }), got, base);

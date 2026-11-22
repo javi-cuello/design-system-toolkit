@@ -602,4 +602,9 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const c = colouredIn({ anatomy: { a: { background: 'C/1' }, b: {} }, variants: [{ when: {}, add: { c: { background: 'C/2' } }, set: { 'd.background': 'C/3', 'e.background': null, 'b.radius': 4 } }] });
   ok('a design\'s coloured layers: base, add and set, never a set to none', [...c].sort().join() === 'a,c,d' && !colouredIn(null).size);
 }
+// the reading's set of parts whose background lays a layer over the colour (`layered`) is one name in the reading: a
+// second declared later in the same scope (the five-prop pruning's combination keys) threw before its line wherever a
+// render lost a layer (Material's horizontal card and mobile gallery, log14) and was asked in place of the first
+{ const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
+  ok('the reading declares its layered set once', (src.match(/\b(const|let|var)\s+layered\b/g) || []).length === 1); }
 console.log(`${n}/${n} passed`);
