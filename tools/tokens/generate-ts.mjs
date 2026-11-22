@@ -23,7 +23,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { discover, camel } from './discover.mjs';
+import { discover, camel, moduleName } from './discover.mjs';
 
 const [, , TOKENS_DIR, OUT_ARG] = process.argv;
 if (!TOKENS_DIR) {
@@ -47,7 +47,6 @@ if (!collections.size) { console.error(`no collection folders in ${DIR}`); proce
 const key = k => (/^[A-Za-z_$][\w$]*$/.test(k) ? k : `'${k}'`);
 const access = k => (/^[A-Za-z_$][\w$]*$/.test(k) ? `.${k}` : `['${k}']`);
 const raw = expr => ({ __raw: expr });
-const moduleName = slug => camel(slug);
 
 /* ---- values ---- */
 const hex2 = n => Math.round(Math.max(0, Math.min(1, n)) * 255).toString(16).padStart(2, '0');
@@ -103,28 +102,74 @@ function refExpr(target, mode) {
   return over;
 }
 
+/* ---- references that cannot be expressions ---- */
+/* A reference that would close an import cycle takes the value it names instead: into its own collection (the
+ * module is the object being initialised, so `export const x = { a: x.b }` throws "Cannot access before
+ * initialization"), or into a collection that imports this one back (ES modules in a cycle: one reads the other
+ * before it is built). Both met in a stored project's semantic and brand collections (2026-11-22). Any other
+ * reference stays an expression into its module. */
+const docs = new Map();
+const docOf = (slug, mode) => {
+  const k = `${slug}\0${mode}`;
+  if (!docs.has(k)) docs.set(k, load(collections.get(slug).modes.get(mode)));
+  return docs.get(k);
+};
+const rootOf = (doc, slug) => (doc[slug] === undefined ? doc : doc[slug]);
+const refsOf = new Map();
+for (const [slug, { modes }] of collections) {
+  const to = new Set();
+  for (const mode of modes.keys()) for (const m of JSON.stringify(docOf(slug, mode)).matchAll(/"\{([^}]+)\}"/g)) to.add(m[1].split('.')[0]);
+  refsOf.set(slug, to);
+}
+const reaches = (from, to, seen = new Set()) => from === to || (!seen.has(from) && (seen.add(from), [...(refsOf.get(from) || [])].some(n => reaches(n, to, seen))));
+const inlined = (from, to) => reaches(to, from);
+
+// the value a reference names, every reference in it followed to its end; a mode the target lacks expands over
+// the target's modes, as refExpr does
+function literal(target, mode, seen) {
+  const key = `${target}@${mode}`;
+  if (seen.has(key)) throw new Error(`a reference loop: ${[...seen, key].join(' → ')}`);
+  const [slug, ...rest] = target.split('.');
+  const collection = collections.get(slug);
+  if (!collection) throw new Error(`reference into an unknown collection: ${target}`);
+  const pick = collection.single ? [...collection.modes.keys()][0] : collection.modes.has(mode) ? mode : null;
+  if (pick === null) {
+    const over = {};
+    for (const m of collection.modes.keys()) over[camel(m)] = literal(target, m, seen);
+    return over;
+  }
+  let node = rootOf(docOf(slug, pick), slug);
+  for (const seg of rest) node = node && node[seg];
+  if (node && node.$value === undefined && node.$root) node = node.$root;
+  if (!node || node.$value === undefined) throw new Error(`reference to a missing token: ${target}`);
+  const next = new Set([...seen, key]);
+  return value(node.$value, node.$type, (t) => literal(t, pick, next));
+}
+
+/* One recursive value walker, because a composite can be an array. A layered
+ * shadow's $value is an array of shadow objects, and the earlier version
+ * excluded arrays from the composite branch and fell through to returning the
+ * raw value — so every reference inside a multi-layer shadow was emitted as the
+ * literal string "{semantic.colour.shadow.medium}". It compiled, it read as a
+ * token, and a consumer got brace text where a colour belonged. */
+function value(v, type, ref) {
+  if (typeof v === 'string' && v.startsWith('{')) return ref(v.slice(1, -1));
+  if (Array.isArray(v)) return v.map(item => value(item, type, ref));
+  if (v && typeof v === 'object') {
+    if (v.unit !== undefined) return v.value;                    // dimension
+    if (type === 'color' || v.colorSpace !== undefined) return colorLiteral(v);
+    const composite = {};
+    for (const [k, sub] of Object.entries(v)) composite[k] = value(sub, undefined, ref);
+    return composite;
+  }
+  return v;
+}
+
 /* ---- walk one DTCG document ---- */
 function tree(doc, slug, mode) {
-  const root = doc[slug] === undefined ? doc : doc[slug];
-  /* One recursive value walker, because a composite can be an array. A layered
-   * shadow's $value is an array of shadow objects, and the earlier version
-   * excluded arrays from the composite branch and fell through to returning the
-   * raw value — so every reference inside a multi-layer shadow was emitted as the
-   * literal string "{semantic.colour.shadow.medium}". It compiled, it read as a
-   * token, and a consumer got brace text where a colour belonged. */
-  const value = (v, type) => {
-    if (typeof v === 'string' && v.startsWith('{')) return refExpr(v.slice(1, -1), mode);
-    if (Array.isArray(v)) return v.map(item => value(item, type));
-    if (v && typeof v === 'object') {
-      if (v.unit !== undefined) return v.value;                    // dimension
-      if (type === 'color' || v.colorSpace !== undefined) return colorLiteral(v);
-      const composite = {};
-      for (const [k, sub] of Object.entries(v)) composite[k] = value(sub, undefined);
-      return composite;
-    }
-    return v;
-  };
-  const leaf = token => value(token.$value, token.$type);
+  const root = rootOf(doc, slug);
+  const ref = (target) => (inlined(slug, target.split('.')[0]) ? literal(target, mode, new Set()) : refExpr(target, mode));
+  const leaf = token => value(token.$value, token.$type, ref);
   const walk = node => {
     const out = {};
     for (const [k, v] of Object.entries(node)) {
@@ -137,18 +182,12 @@ function tree(doc, slug, mode) {
 }
 
 /* ---- build every module ---- */
-// Imports are discovered from the document's own reference strings rather than
-// from the built tree, because by then a reference is an opaque expression.
+// Imports are what each document references, less what is taken by value (inlined above).
 const modules = new Map();
 for (const [slug, { modes, single }] of collections) {
-  const imports = new Set();
   const built = {};
-  for (const [mode, file] of modes) {
-    const doc = load(file);
-    for (const m of JSON.stringify(doc).matchAll(/"\{([^}]+)\}"/g)) imports.add(m[1].split('.')[0]);
-    built[camel(mode)] = tree(doc, slug, mode);
-  }
-  imports.delete(slug);
+  for (const mode of modes.keys()) built[camel(mode)] = tree(docOf(slug, mode), slug, mode);
+  const imports = new Set([...refsOf.get(slug)].filter(to => !inlined(slug, to)));
   modules.set(slug, { value: single ? built[camel([...modes.keys()][0])] : built, imports });
 }
 

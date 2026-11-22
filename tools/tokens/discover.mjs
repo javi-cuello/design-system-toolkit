@@ -31,3 +31,6 @@ export function discover(dir) {
 }
 
 export const camel = s => s.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+// a collection's module name: camel, and an identifier even where the collection's name starts with a number
+// ("1. Primitives colour" → _1PrimitivesColour), which TypeScript refuses as `export const 1PrimitivesColour`
+export const moduleName = slug => { const n = camel(slug); return /^[A-Za-z_$]/.test(n) ? n : `_${n}`; };

@@ -17,7 +17,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { discover, camel } from './discover.mjs';
+import { discover, camel, moduleName } from './discover.mjs';
 
 const [, , TOKENS_DIR, TS_ARG] = process.argv;
 if (!TOKENS_DIR) {
@@ -66,8 +66,8 @@ const composite = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 /* ---- one module per collection, carrying every token ---- */
 ok('a module exists for every collection',
-  [...collections.keys()].every(slug => mod[camel(slug)] !== undefined),
-  [...collections.keys()].filter(slug => mod[camel(slug)] === undefined).join(', '));
+  [...collections.keys()].every(slug => mod[moduleName(slug)] !== undefined),
+  [...collections.keys()].filter(slug => mod[moduleName(slug)] === undefined).join(', '));
 
 const at = (obj, segs) => segs.reduce((o, k) => (o === undefined || o === null ? undefined : o[k]), obj);
 const tokenPaths = (node, pre, into) => {
@@ -85,7 +85,7 @@ const tokenPaths = (node, pre, into) => {
  * deleting whole tokens still cleared the bar. That is how a real defect shipped
  * under "51/51 passed". */
 for (const [slug, { modes, single }] of collections) {
-  const m = mod[camel(slug)];
+  const m = mod[moduleName(slug)];
   if (!m) continue;
   for (const [mode, file] of modes) {
     const doc = load(file);
@@ -164,7 +164,7 @@ const expect = v => {
 
 let checked = 0; const wrong = [];
 for (const [slug, { modes, single }] of collections) {
-  const m = mod[camel(slug)];
+  const m = mod[moduleName(slug)];
   if (!m) continue;
   for (const [mode, file] of modes) {
     const branch = single ? m : m[camel(mode)];

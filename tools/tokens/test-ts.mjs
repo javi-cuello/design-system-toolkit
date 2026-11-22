@@ -87,4 +87,26 @@ const rg = run('generate-ts.mjs', rooted), rv = run('verify-ts.mjs', rooted);
 const icon = rg.status === 0 ? fs.readFileSync(path.join(rooted, 'dist', 'ts', 'icon.ts'), 'utf8') : rg.stderr;
 ok('a group\'s own token ($root) is generated, referred to, and verified', rg.status === 0 && /\$root/.test(icon) && !/'\{/.test(icon) && rv.status === 0, icon.slice(0, 600) + rv.stdout + rv.stderr);
 fs.rmSync(rooted, { recursive: true, force: true });
+// a collection named with a number first ("1. Primitives colour", two stored projects): its module's name is still
+// an identifier, and one that aliases it imports it by that name
+const digits = fs.mkdtempSync(path.join(os.tmpdir(), 'tokens-ts-digit-'));
+writeDtcg({ collections: {
+  '1. Primitives colour': { modes: ['Light', 'Dark'], values: { Light: { 'Red/500': '#aa0000' }, Dark: { 'Red/500': '#ff8888' } }, alias: {} },
+  '2. Semantic': { modes: ['Value'], values: { Value: { danger: '#aa0000', 'Alert/start': '#aa0000', 'Alert/end': '#aa0000' } }, alias: { Value: { danger: 'Red/500', 'Alert/start': 'danger', 'Alert/end': 'Alert/start' } } },
+}, textStyles: [], effects: [], paintStyles: [] }, digits);
+const dg = run('generate-ts.mjs', digits), dv = run('verify-ts.mjs', digits);
+ok('a collection whose name starts with a number generates, imports and verifies as an identifier; a token aliasing one in its own collection takes its value, a chain followed', dg.status === 0 && dv.status === 0, dg.stdout + dg.stderr + dv.stdout + dv.stderr.slice(0, 600));
+fs.rmSync(digits, { recursive: true, force: true });
+// two collections that reference each other (a brand's semantic set and the brand): neither module reads the other
+// before it is built; what closes the cycle takes its value, and what does not stays an import
+const cycle = fs.mkdtempSync(path.join(os.tmpdir(), 'tokens-ts-cycle-'));
+writeDtcg({ collections: {
+  Base: { modes: ['Value'], values: { Value: { 'Red/500': '#aa0000', 'Red/300': '#ff8888' } }, alias: {} },
+  Semantic: { modes: ['Light', 'Dark'], values: { Light: { danger: '#aa0000', accent: '#aa0000' }, Dark: { danger: '#ff8888', accent: '#ff8888' } }, alias: { Light: { danger: 'Red/500', accent: 'Brand/accent' }, Dark: { danger: 'Red/300', accent: 'Brand/accent' } } },
+  Brand: { modes: ['Light', 'Dark'], values: { Light: { 'Brand/accent': '#aa0000', icon: '#aa0000' }, Dark: { 'Brand/accent': '#ff8888', icon: '#ff8888' } }, alias: { Light: { 'Brand/accent': 'Red/500', icon: 'danger' }, Dark: { 'Brand/accent': 'Red/300', icon: 'danger' } } },
+}, textStyles: [], effects: [], paintStyles: [] }, cycle);
+const cg = run('generate-ts.mjs', cycle), cv = run('verify-ts.mjs', cycle);
+const semTs = cg.status === 0 ? fs.readFileSync(path.join(cycle, 'dist', 'ts', 'semantic.ts'), 'utf8') : '';
+ok('collections that reference each other import neither and verify; a reference outside the cycle stays an import', cg.status === 0 && cv.status === 0 && !/from '\.\/brand'/.test(semTs) && /from '\.\/base'/.test(semTs), cg.stderr + cv.stdout + cv.stderr.slice(0, 600) + semTs.slice(0, 400));
+fs.rmSync(cycle, { recursive: true, force: true });
 console.log(`${n}/${n} passed`);
