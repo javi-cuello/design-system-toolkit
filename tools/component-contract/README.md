@@ -65,6 +65,7 @@ It reads a project's stored specs and, for the code commands, the project's rend
 | `to-markup.mjs` | writes each component's markup, mapping and stories |
 | `site.mjs` | renders a library with no project code |
 | `from-code.mjs` | reads a contract back from code |
+| `read-cache.mjs` | keeps the self reading's page answers, so a reinterpretation skips Chrome (`TOOLKIT_READ_CACHE=off` bypasses it) |
 | `to-figma.mjs` | draws a contract in Figma as a component set |
 | `looks.mjs` | compares the drawn set with the library by pixels |
 | `eval.mjs` | runs the whole round trip and scores it |
