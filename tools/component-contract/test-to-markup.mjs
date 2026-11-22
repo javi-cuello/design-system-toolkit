@@ -593,6 +593,12 @@ else {
   // a narrower removal stacked on the put-back still takes it away
   const bar3 = { ...bar, props: { ...bar.props, busy: { type: 'boolean', default: false, figma: 'Busy' } }, variants: [...bar.variants, { when: { sm: true, end: true, busy: true }, remove: ['menu'] }] };
   ok('a removal narrower than a put-back still takes the part away', /\(sm && end\) && !\(sm && end && busy\)/.test(toReact(bar3, 'bar', { naming: CLASS, library: { Bar: { ...bar3, folder: 'bar' } } })));
+  // a part only variants draw, taken away by one and put back by a narrower one, is drawn there too; a broader add that
+  // the removal overrides is no put-back
+  const tag = { contract: 1, component: 'Tag', props: { x: { type: 'boolean', default: false, figma: 'X' }, off: { type: 'boolean', default: false, figma: 'Off' }, sm: { type: 'boolean', default: false, figma: 'Sm' } }, anatomy: { root: { kind: 'container' } },
+    variants: [{ when: { x: true }, add: { close: { kind: 'container', parent: 'root' } } }, { when: { x: true, off: true }, remove: ['close'] }, { when: { x: true, off: true, sm: true }, add: { close: { kind: 'container', parent: 'root' } } }] };
+  { const tr = toReact(tag, 'tag', { naming: CLASS, library: { Tag: { ...tag, folder: 'tag' } } });
+    ok('a part only variants draw, put back by a narrower add over a removal, is drawn there', tr.includes('{((((x) || (x && off && sm)) && !(x && off)) || (x && off && sm)) && ('), tr.split('\n').find((l) => /close/.test(l))); }
   // a part a variant puts back with other words says those there, the later variant over the earlier
   { const lab = { contract: 1, component: 'Lab', props: { required: { type: 'boolean', default: true, figma: 'Required' }, compact: { type: 'boolean', default: false, figma: 'Compact' } },
       anatomy: { root: { kind: 'container' }, mark: { kind: 'text', parent: 'root', content: '*' } },

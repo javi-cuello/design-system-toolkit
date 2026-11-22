@@ -345,9 +345,12 @@ function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, 
   const not = (x) => (/^![\w$]+$/.test(x) ? x.slice(1) : `!${wrap(x)}`);
   let cond = gone === 'false' ? add : gone === 'true' ? 'false' : add === 'true' ? not(gone) : add === 'false' ? 'false' : `${wrap(add)} && ${not(gone)}`;
   // a base part one variant takes away and a later one puts back (a bar's menu gone at sm, back at sm with end): drawn
-  // there too, but for a narrower removal stacked on it (gone again at sm, end and loading)
+  // there too, but for a narrower removal stacked on it (gone again at sm, end and loading); and so a part only variants
+  // draw, where an add narrower than a removal puts it back (a tag's close button gone at outline and disabled, back at
+  // medium with them): only those adds, as the broader ones are what the removal takes away
   const narrower = (w) => part.removes.filter((r) => Object.keys(r).length > Object.keys(w).length && Object.entries(w).every(([k, v]) => r[k] === v));
-  const backs = !part.base ? [] : part.adds.flatMap((w) => { const [t] = terms([w]); if (!t) return []; const rs = terms(narrower(w)); return [rs.length ? `${wrap(t)} && ${not(any(rs))}` : t]; });
+  const putsBack = (w) => part.base || part.removes.some((r) => Object.keys(r).length < Object.keys(w).length && Object.entries(r).every(([k, v]) => w[k] === v));
+  const backs = part.adds.filter(putsBack).flatMap((w) => { const [t] = terms([w]); if (!t) return []; const rs = terms(narrower(w)); return [rs.length ? `${wrap(t)} && ${not(any(rs))}` : t]; });
   const back = any(backs);
   if (back !== 'false' && cond !== 'true') cond = cond === 'false' || back === 'true' ? back : `${wrap(cond)} || ${wrap(back)}`;
   // a pointer state that puts the part in (partsOf `pointerShown`, base or added) holds it wherever that state's
