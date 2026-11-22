@@ -752,4 +752,19 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); }
   }
 }
+{ // a design boolean the mapping draws false by a text left empty (a card's status line, False: { status: '' }) is read as that boolean
+  const { emptyShows, emptiedArgs, onlyInCode } = await import('./from-code.mjs');
+  const design = { showStatus: { type: 'boolean', default: true, figma: 'Show status', shows: ['status'] } };
+  const code = () => ({ status: { type: 'string', code: 'status', sample: 'Label' }, title: { type: 'string', code: 'title', sample: 'Title' } });
+  const joins = { showStatus: { arg: 'status', values: { false: '' } } };
+  const p = emptyShows(code(), design, joins);
+  ok('a boolean the mapping draws false by an empty text is that boolean, over the same code prop', p.showStatus?.type === 'boolean' && p.showStatus.default === true && p.showStatus.code === 'status' && p.showStatus.figma === 'Show status' && p.status.type === 'string');
+  ok('it renders the story\'s words shown and the empty text hidden, every other arg as asked', JSON.stringify(emptiedArgs({ status: true, title: 'T' }, p)) === '{"status":"Label","title":"T"}' && emptiedArgs({ status: false }, p).status === '' && emptiedArgs({ status: 'Sent' }, p).status === 'Sent');
+  const none = (d, j, c = code()) => !('showStatus' in emptyShows(c, d, j));
+  ok('none where false is words, true states its own value, the design hides it by default, it shows no layer, or the story starts it empty',
+    none(design, { showStatus: { arg: 'status', values: { false: 'None' } } }) && none(design, { showStatus: { arg: 'status', values: { false: '', true: 'Sent' } } })
+    && none({ showStatus: { ...design.showStatus, default: false } }, joins) && none({ showStatus: { ...design.showStatus, shows: undefined } }, joins)
+    && none(design, joins, { status: { type: 'string', code: 'status', sample: '' } }) && none(design, {}));
+  ok('a text only that boolean speaks for is the code\'s alone; one the design has as a text stays the design\'s', onlyInCode(p, design).has('status') && !onlyInCode(p, { ...design, status: { type: 'string', figma: 'Status' } }).has('status') && !onlyInCode(p, design).has('title'));
+}
 console.log(`${n}/${n} passed`);

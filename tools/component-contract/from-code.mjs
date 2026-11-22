@@ -501,6 +501,34 @@ export function joinedNames(props, design, map = {}) {
   return props;
 }
 
+/* A design boolean the mapping draws false by a text left empty (a card's status line, `False: { status: '' }`): the
+   code has that boolean, said by whether the text is given. It is read beside the text as a boolean over the same code
+   prop: true is the story's words, false the empty text (emptiedArgs), so what it hides is rendered, never taken from
+   the mapping. Only one the design shows by default and the story starts with words. Changes props in place. Tested
+   by test-from-code.mjs. */
+export function emptyShows(props, design, joins = {}) {
+  for (const [k, d] of Object.entries(design || {})) {
+    const j = (joins || {})[k];
+    if (props[k] || d.type !== 'boolean' || d.default !== true || !(d.shows || []).length || !j || !j.arg || !j.values) continue;
+    if (j.values.false !== '' || j.values.true !== undefined) continue;
+    const text = Object.values(props).find((p) => p.type === 'string' && p.code === j.arg);
+    if (text && text.sample) props[k] = { type: 'boolean', default: true, code: j.arg, figma: d.figma || k, emptied: text.sample };
+  }
+  return props;
+}
+/* A render's args as the code takes them: emptyShows' booleans as their texts. Tested by test-from-code.mjs. */
+export function emptiedArgs(args, props) {
+  const out = { ...args };
+  for (const p of Object.values(props)) if (p.emptied !== undefined && typeof out[p.code] === 'boolean') out[p.code] = out[p.code] ? p.emptied : '';
+  return out;
+}
+/* The texts that only such a boolean speaks for, by code prop: the design has the boolean and no text of them, so the
+   text is the code's alone. Tested by test-from-code.mjs. */
+export function onlyInCode(props, design) {
+  const bools = new Set(Object.values(props).filter((p) => p.emptied !== undefined).map((p) => p.code));
+  return new Set(Object.entries(props).filter(([k, p]) => p.type === 'string' && bools.has(p.code) && (design || {})[k]?.type !== 'string').map(([, p]) => p.code));
+}
+
 /* A slot control in the toolkit's own story (the self leg): to-markup's swap of a library component (`placed`) says so,
    with the component it draws where the caller passes nothing. Only this story sets `placed`: a docgen default (a real
    Storybook's `icon = <ChevronDown />`) is no such mark. Tested by test-from-code.mjs. */
@@ -1591,6 +1619,8 @@ async function main() {
     const setStates = asArg ? asArg.values.filter((v) => v !== asArg.default && v !== 'rest' && !(v in L.pseudoOf)) : [];
     if (asArg && Object.keys(L.pseudoOf).length) { L.stateArg = asArg.code; delete props[stateKey]; }
     if (Object.keys(L.pseudoOf).length) props.state = { type: 'enum', values: ['rest', ...Object.keys(L.pseudoOf), ...setStates], default: 'rest', role: 'interaction', pointer: Object.keys(L.pseudoOf), code: '__state' };
+    if (L.governed && figmaContract) emptyShows(props, figmaContract.props, joinedProps);
+    const textsOnlyInCode = onlyInCode(props, figmaContract && figmaContract.props);
     let defaults = Object.fromEntries(Object.entries(props).filter(([, p]) => p.type !== 'string').map(([, p]) => [p.code, p.type === 'slot' && !p.placed ? slotMark(p.code) : p.default]));
     // each slot's stand-in, by the prop it stands in for: the element it lands in is the slot
     const marks = Object.entries(props).filter(([, p]) => p.type === 'slot' && !p.placed).map(([k, p]) => [slotMark(p.code), k]);
@@ -1642,14 +1672,16 @@ async function main() {
       const r = expand(figmaContract, { ...variantDefaults(figmaContract), ...combo }).root || {};
       return typeof r.width === 'number' ? r.width : r.width === 'fill' && r.canvas && typeof r.canvas.width === 'number' ? r.canvas.width : room;
     };
-    const read = async (args) => {
+    const read = async (asked) => {
+      // (the code's args; `asked` keeps a boolean said by an empty text a boolean, as the design's combination names it)
+      const args = emptiedArgs(asked, props);
       await show(args);
       // whether this combination is drawn focused (a forced :focus or :focus-visible): only there is an outline a focus
       // ring, as to-code writes one (ringOf) and code shows one; at any other state it is the box's own stroke (css.mjs
       // draws a centred or outside stroke as a solid outline)
       // (or drawn so by an arg: a state the code takes as a prop, focus among its values)
       const focused = /focus/.test(JSON.stringify((L.pseudoOf || {})[args.__state] || '')) || Object.values(args).some((v) => typeof v === 'string' && /focus/i.test(v));
-      const room = roomOf(args);
+      const room = roomOf(asked);
       if (room) await call(L.tab, ([sel, container, climb, w]) => {
         let root = document.querySelector(sel); if (!root) return;
         const holder = document.querySelector(container);
@@ -2280,7 +2312,7 @@ async function main() {
       // (as the design's own ring layer where it draws one: ringKeyOf)
       // (the rings and the combination both in the contract the markup was drawn from: drawnFrom is set only on --second,
       // which runs beside a design, from-code exiting without one; code-only reads have neither, and no combination)
-      placeRings(anatomy, ring, L.drawnFrom || figmaContract, figmaContract ? comboOf(args, L.drawnFrom || figmaContract) : null, settings);
+      placeRings(anatomy, ring, L.drawnFrom || figmaContract, figmaContract ? comboOf(asked, L.drawnFrom || figmaContract) : null, settings);
       // a placed component not opened (its insides its own audit's) that draws one graphic, coloured by the colour the
       // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
       // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
@@ -2381,7 +2413,7 @@ async function main() {
 
     // what two props do together that each alone does not explain: read every pair of
     // non-default values, and where expand() mispredicts it, a pair layer (as derive.cjs has)
-    const fromCode = { contract: 1, component: name, code: { story: m.story, from: 'code' }, props: Object.fromEntries(Object.entries(props).map(([k, p]) => { const { sample, ...rest } = p; return [k, rest]; })), anatomy: base, variants };
+    const fromCode = { contract: 1, component: name, code: { story: m.story, from: 'code' }, props: Object.fromEntries(Object.entries(props).map(([k, p]) => { const { sample, emptied, ...rest } = p; return [k, rest]; })), anatomy: base, variants };
     const valuesOf = (p) => (p.type === 'enum' ? p.values.filter((v) => v !== p.default) : p.type === 'boolean' ? [!p.default] : p.type === 'swap' && p.shows ? [p.glyph || 'none'] : []);
     const argOf = (p, v) => (p.type === 'boolean' ? v : String(v));
     const keys = Object.keys(props);
@@ -2873,7 +2905,8 @@ async function main() {
       const joined = new Set(Object.values((side.map || {}).props || {}).map((x) => (typeof x === 'string' ? x : x && (x.arg || x.code))).filter(Boolean));
       const all = Object.entries(shaped.contract.props);
       const matched = new Set(all.filter(([k, p]) => theirs.has(k) || theirs.has(sq(p.figma || k))).map(([, p]) => p.code).filter(Boolean));
-      for (const [k, p] of all) if (p.role !== 'interaction' && !theirs.has(k) && !theirs.has(sq(p.figma || k)) && !joined.has(p.code) && !matched.has(p.code)) p.only = 'code';
+      // (a text a boolean of the design's speaks for by being empty shares its code prop, and is still the code's alone)
+      for (const [k, p] of all) if (p.role !== 'interaction' && !theirs.has(k) && !theirs.has(sq(p.figma || k)) && ((!joined.has(p.code) && !matched.has(p.code)) || (p.type === 'string' && textsOnlyInCode.has(p.code)))) p.only = 'code';
     }
     const propsCompare = figmaContract ? compareProps(figmaContract, side.map, side.code, side.framework, side.fw || {}) : [];
     // a check that read nothing the layers were not built from cannot fail: said, not passed
