@@ -37,7 +37,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
-import { ALIGN_DATA, SIZE_ROWS, heldOpacity } from './rules.mjs';
+import { ALIGN_DATA, SIZE_ROWS, heldOpacity, heldGlyph } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 
 import { realpathSync } from 'node:fs';
@@ -112,14 +112,12 @@ function pinned(x, other) {
 function glyph(x) {
   if (!x) return x;
   const out = { ...x };
-  // a glyph's own words: what says where it is, and the colour and opacity that move up
-  const PLACE = new Set(['kind', 'parent', 'name', 'order', 'background', 'opacity']);
   for (const [id, e] of Object.entries(x)) {
     if (!e || e.kind !== 'instance') continue;
     const inside = Object.keys(x).filter((k) => k.startsWith(`${id}/`));
-    const kid = inside.length === 1 && x[inside[0]].parent === id && x[inside[0]].kind === 'graphic' ? x[inside[0]] : null;
-    // only a colour (and its opacity) moves up: a glyph that also overrides its size, or an instance with a colour of its own, is compared as it is
-    if (!kid || kid.background == null || e.background != null || Object.keys(kid).some((k) => !PLACE.has(k))) continue;
+    const kid = inside.length === 1 && x[inside[0]].parent === id ? x[inside[0]] : null;
+    // only a colour (and its opacity) moves up: a glyph that also overrides its size, or an instance with a colour of its own, is compared as it is (rules.mjs heldGlyph)
+    if (!heldGlyph(e, kid, !!kid)) continue;
     const opacity = heldOpacity(e, kid);
     out[id] = { ...e, background: kid.background, ...(opacity !== undefined && { opacity }) };
     delete out[inside[0]];

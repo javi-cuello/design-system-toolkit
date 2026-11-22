@@ -298,6 +298,9 @@ else console.log('skip: no stored contracts on this machine');
   const sheet = toCss(chip, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
   ok('a lone glyph\'s opacity is written on its instance, times the instance\'s own',
     /data-off[^{]*> \.ds-chip__icon \{[^}]*opacity: 0\.38;/.test(sheet) && /opacity: 0\.144;/.test(sheet) && selfCheck(chip, rulesOf(chip).rules).length === 0);
+  // (only a glyph the comparison folds up: one that also overrides its size keeps its opacity to itself, said as it is)
+  const sized = { ...chip, anatomy: { ...chip.anatomy, 'icon/vector': { ...chip.anatomy['icon/vector'], width: 12 } } };
+  ok('a glyph that overrides more than its colour and opacity gives the instance no opacity', !/opacity: 0\.144;/.test(toCss(sized, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
 }
 
 // an icon placed inside a placed component, which a variant recolours there (Carbon's disabled Toggletip icon): the

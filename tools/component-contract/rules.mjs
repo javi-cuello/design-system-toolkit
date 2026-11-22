@@ -56,11 +56,16 @@ export const SIZE_ROWS = [['hug', 'HUG'], ['fill', 'FILL']];
 export const sizeFromFigma = (v) => (SIZE_ROWS.find((r) => r[1] === v) || [])[0];
 export const sizeToFigma = (w) => (SIZE_ROWS.find((r) => r[0] === w) || [])[1];
 
-/* A lone glyph's opacity, said on the instance that holds it: one layer in a group shows at the group's opacity times its
-   own, so the instance's (1 where it has none) times the glyph's, to the three places a reading keeps (from-code: 0.38 by
-   0.38 is 0.144); undefined where the glyph has none.
-   to-code writes it on the instance, as code colours the instance; to-figma's comparison folds the glyph's there. */
-export const heldOpacity = (holder, glyph) => (typeof (glyph || {}).opacity === 'number' ? +((typeof (holder || {}).opacity === 'number' ? holder.opacity : 1) * glyph.opacity).toFixed(3) : undefined);
+/* A glyph said as its instance (code colours the instance, an svg in currentColor): the instance's one graphic, coloured,
+   saying nothing but where it is, its colour and its opacity, inside an instance with no colour of its own (`lone`: it
+   is the instance's only layer). to-code writes such a glyph's colour and opacity on the instance; to-figma's comparison
+   folds it there. */
+export const GLYPH_WORDS = new Set(['kind', 'parent', 'name', 'order', 'background', 'opacity']);
+export const heldGlyph = (holder, glyph, lone) => !!lone && !!holder && !!glyph && glyph.kind === 'graphic' && glyph.background != null && holder.background == null && Object.keys(glyph).every((k) => GLYPH_WORDS.has(k));
+/* Its opacity on the instance: one layer in a group shows at the group's opacity times its own, so the instance's times
+   the glyph's, to the three places a reading keeps (from-code: 0.38 by 0.38 is 0.144); the glyph's own where the
+   instance has none; undefined where the glyph has none. */
+export const heldOpacity = (holder, glyph) => (typeof (glyph || {}).opacity !== 'number' ? undefined : typeof (holder || {}).opacity === 'number' ? +(holder.opacity * glyph.opacity).toFixed(3) : glyph.opacity);
 
 /* Auto layout from an element's authored declarations: flex is Figma's auto layout (figma-handoff), its direction,
    gap, padding, alignment and wrap read as they were written (a token's var() kept, for the caller to name).

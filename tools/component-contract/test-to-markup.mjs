@@ -135,7 +135,10 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
       variants: [{ when: { size: 'small' }, add: { sw: { kind: 'instance', parent: 'root', component: 'Switch', with: { Toggled: 'False' } } } }] };
     const tog = (w) => ({ component: 'Toggle', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item', with: { Size: 'Small' } }, 'item/sw': { kind: 'instance', parent: 'item', component: 'Switch', with: w } }, variants: [] });
     ok('a prop no variant of the placed component gives a part it draws only at a variant is an override; one it gives is passed',
-      unexposed(tog({ Toggled: 'True' }), 'item/sw', (n) => (n === 'Item' ? item : null)) === 'field' && unexposed(tog({ Toggled: 'False' }), 'item/sw', (n) => (n === 'Item' ? item : null)) === false); }
+      unexposed(tog({ Toggled: 'True' }), 'item/sw', (n) => (n === 'Item' ? item : null)) === 'field' && unexposed(tog({ Toggled: 'False' }), 'item/sw', (n) => (n === 'Item' ? item : null)) === false);
+    // (and another component there, which no variant adds, is the part itself overridden)
+    const other = tog({ Toggled: 'False' }); other.anatomy['item/sw'].component = 'Checkbox';
+    ok('another component where the placed one adds its own only at a variant is a part no prop passes', unexposed(other, 'item/sw', (n) => (n === 'Item' ? item : null)) === 'part'); }
   { const date = { component: 'Date', folder: 'date', props: { value: { type: 'string', default: 'Value', figma: 'Value', sets: ['label'] }, hasValue: { type: 'boolean', default: false, figma: 'Has value' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Select a date' } }, variants: [{ when: { hasValue: true }, set: { 'label.content': '{value}' } }] };
     const out = toElement(date, 'date', { naming: ELEMENT, library: { Date: date } });
     ok('a text that holds a literal until a variant swaps a prop in draws the literal there, never the prop on both sides', /hasValue \? value : "Select a date"/.test(out) && !/hasValue \? value : value/.test(out)); }

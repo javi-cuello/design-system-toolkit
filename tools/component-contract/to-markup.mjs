@@ -156,7 +156,8 @@ export function unexposed(c, id, mainOf) {
   const added = passing.some((v) => (v.add || {})[rel]);
   const own = (main.anatomy || {})[rel] || (added ? atProps(main, he.with)[rel] : undefined);
   if (added && !own) return false;
-  const varied = (f) => passing.some((v) => `${rel}.${f}` in (v.set || {}) || ((v.add || {})[rel] || {})[f] !== undefined);
+  // (a variant that adds the part draws a field it names only at that value: it passes this one only where it is ours)
+  const varied = (f) => passing.some((v) => `${rel}.${f}` in (v.set || {}) || ((v.add || {})[rel] && JSON.stringify(v.add[rel][f] ?? null) === JSON.stringify(part.e[f] ?? null) && v.add[rel][f] !== undefined));
   // a part the component does not draw at all: nothing in the markup can pass it ('part', its insides with it)
   if (!own) return 'part';
   // else each field markup would have to pass, held to the prop that passes that field
