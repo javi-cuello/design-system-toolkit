@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss } from './rules.mjs';
+import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
@@ -185,8 +185,8 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
       shift.push(to === 'center' ? '-50%' : '0');
       // centred keeps the distance of its centre from the parent's, as Figma's centre constraint does (a value
       // indicator 52 off the track's middle): `calc(50% ± d)`, d half the near offset less the far (derive.cjs writes
-      // both), else from the sizes where they are numbers; else at the middle
-      if (to === 'center') { const whole = box && box[k], own = e[k], d = typeof o === 'number' && typeof f === 'number' ? +((o - f) / 2).toFixed(2) : typeof whole === 'number' && typeof own === 'number' && typeof o === 'number' ? +(o + own / 2 - whole / 2).toFixed(2) : 0; put(near, d ? `calc(50% ${d < 0 ? '-' : '+'} ${len(Math.abs(d))})` : '50%'); }
+      // both), else from the sizes where they are numbers; else at the middle; a pixel's rounding is none (centreOffset)
+      if (to === 'center') { const whole = box && box[k], own = e[k], d = typeof o === 'number' && typeof f === 'number' ? centreOffset(o, f) : typeof whole === 'number' && typeof own === 'number' && typeof o === 'number' ? centreOffset(o, whole - own - o) : 0; put(near, d ? `calc(50% ${d < 0 ? '-' : '+'} ${len(Math.abs(d))})` : '50%'); }
       else if (to === 'max') put(far, offFar ?? '0');
       // pinned to both edges, it takes its size from them
       else if (to === 'stretch') { put(near, off); put(far, offFar ?? off); for (let i = decls.length - 1; i >= 0; i--) if (decls[i][0] === size) decls.splice(i, 1); if (e.kind === 'instance') put(size, 'auto'); }

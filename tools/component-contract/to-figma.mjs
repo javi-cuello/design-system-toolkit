@@ -37,7 +37,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
-import { ALIGN_DATA, SIZE_ROWS, heldOpacity, heldGlyph } from './rules.mjs';
+import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 
 import { realpathSync } from 'node:fs';
@@ -87,7 +87,7 @@ function pinned(x, other) {
       else if (to === 'center') {
         const num = (a) => !!a && typeof a[near] === 'number' && typeof a[far] === 'number';
         if (num(at) && num((other[id] || {}).absolute)) {
-          at[`${near}FromCentre`] = +((at[near] - at[far]) / 2).toFixed(2);
+          at[`${near}FromCentre`] = centreOffset(at[near], at[far]);
           // and the room about it, near + far (its parent's size less its own), where no other row says that difference:
           // neither its own size nor its parent's differs as written (a 24 icon centred alike in a state layer that fills,
           // 40 tall in Figma, 44 in code); a size that differs is that size's row alone

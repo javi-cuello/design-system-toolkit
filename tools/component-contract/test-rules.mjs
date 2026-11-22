@@ -71,6 +71,14 @@ ok('Figma\'s rotation (counter-clockwise) is CSS\'s rotate the other way: 90 →
     const left = (css.find(([p]) => p === 'inset-inline-start') || [])[1], top = (css.find(([p]) => p === 'inset-block-start') || [])[1];
     ok('centred off the middle where neither size is a number: (x - end) / 2 from the middle, as its far edges say it', left === "calc(50% + 0.0187rem)" && top === "calc(50% - 0.0156rem)");
   }
+  {
+    // an odd room on Figma's pixel grid (a 24 spinner in a button 61 wide: 19 and 18) is centred, by either way of saying it
+    const at = (absolute, box) => Object.fromEntries(declarations({ kind: 'instance', position: 'absolute', constraints: { horizontal: 'center', vertical: 'center' }, absolute, width: box ? 24 : 'hug', height: box ? 24 : 'hug' }, { holds: false, row: true, box }, names).decls);
+    ok('centred in an odd room, a whole pixel either side is the middle; a whole pixel off, or a half that is no pixel-grid edge, is kept',
+      at({ x: 19, y: 8, end: 18, bottom: 9 })['inset-inline-start'] === '50%' && at({ x: 19, y: 8, end: 18, bottom: 9 })['inset-block-start'] === '50%'
+      && at({ x: 19, y: 8 }, { width: 61, height: 41 })['inset-inline-start'] === '50%'
+      && at({ x: 20, y: 8, end: 18, bottom: 8 })['inset-inline-start'] === 'calc(50% + 0.0625rem)' && at({ x: 19.5, y: 8, end: 18.5, bottom: 8 })['inset-inline-start'] !== '50%');
+  }
   const s = back({ horizontal: 'stretch', vertical: 'max' }, { x: 0, y: 228, end: 0, bottom: 0 });
   ok('pinned to both side edges and the bottom: those insets as written, the point left to the caller', s.offsets.x === '0' && s.offsets.end === '0' && s.offsets.bottom === '0' && s.offsets.y === undefined);
   ok('in the flow is no placement; fixed is placed as absolute is; the inset shorthand reads as its four edges',

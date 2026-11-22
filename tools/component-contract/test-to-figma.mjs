@@ -337,6 +337,9 @@ delete globalThis.figma;
         JSON.stringify(rows(sized('fill', 24, { x: 8, y: 4, end: 8, bottom: 4 }), sized('fill', 28, { x: 6, y: 4, end: 6, bottom: 4 }))) === '["dot.width"]'
         && JSON.stringify(rows(sized(40, 'S/24', { x: 8, y: 4, end: 8, bottom: 4 }), sized(44, 'S/24', { x: 10, y: 4, end: 10, bottom: 4 }))) === '["root.width"]'
         && JSON.stringify(rows(sized(40, 24, { x: 8, y: 4, end: 8, bottom: 4 }), sized(40, 24, { x: 6, y: 4, end: 9, bottom: 4 }))) === '["dot.absolute.xFromCentre"]'); }
+    ok('centred in an odd room on the pixel grid (19 and 18) compares as centred; two units of room off the middle does not',
+      !roundTrip(placed('fill', mid, { x: 19, y: 4, end: 18, bottom: 4 }), placed('fill', mid, { x: 18.5, y: 4, end: 18.5, bottom: 4 })).rows.length
+      && roundTrip(placed('fill', mid, { x: 20, y: 4, end: 17, bottom: 4 }), placed('fill', mid, { x: 18.5, y: 4, end: 18.5, bottom: 4 })).rows.length === 1);
     ok('a part centred in a parent of fixed size is one row where it moves, its far edge following from the sizes (not a second)', roundTrip(placed(100, mid, { x: 40, y: 4, end: 40, bottom: 4 }), placed(100, mid, { x: 30, y: 4, end: 50, bottom: 4 })).rows.length === 1);
     ok('a part centred in a parent of fixed size, or one that fills, keeps its offset', roundTrip(placed(100, mid, { x: 40, y: 4 }), placed(100, mid, { x: 30, y: 4 })).rows.length === 1 && roundTrip(placed('fill', mid, { x: 10, y: 4 }), placed('fill', mid, { x: 60, y: 4 })).rows.length === 1);
     const foot = { horizontal: 'min', vertical: 'max' };

@@ -52,6 +52,10 @@ export const ALIGN_DATA = { toFigma: Object.fromEntries(ALIGN_ROWS.map((r) => [r
 
 /* Sizing words: the contract's hug and fill are Figma's HUG and FILL (layoutSizingHorizontal/Vertical); anything else
    is a fixed size, a number or a token. */
+/* How far a centred part's centre stands from its parent's, from its two edges. Figma places it on a whole pixel, as
+   to-figma draws one, so in an odd room the edges differ by one (a 24 box in 61: 19 and 18): that is the middle, not an
+   offset of half a pixel. Any other difference is the design's. */
+export const centreOffset = (near, far) => (Number.isInteger(near) && Number.isInteger(far) && Math.abs(near - far) === 1 ? 0 : +((near - far) / 2).toFixed(2));
 export const SIZE_ROWS = [['hug', 'HUG'], ['fill', 'FILL']];
 export const sizeFromFigma = (v) => (SIZE_ROWS.find((r) => r[1] === v) || [])[0];
 export const sizeToFigma = (w) => (SIZE_ROWS.find((r) => r[0] === w) || [])[1];
