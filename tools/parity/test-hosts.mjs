@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { launch, newPage, attach, navigate, viewport as setViewport, findChrome } from '../shared/cdp.mjs';
-import { host, settle, declaredValue } from './hosts.mjs';
+import { host, settle, declaredValue, schemeOf } from './hosts.mjs';
 
 // no browser needed: a story's declared default, read back from Storybook's summary
 assert.ok(declaredValue("'medium'") === 'medium' && declaredValue('true') === true && declaredValue('12') === 12, 'a summary written as code is its value');
@@ -119,6 +119,13 @@ try {
   await A.open(tab, { route: '/projects/:project', tier: 'Light' });
   ok('the tier is the colour scheme the browser reports, whichever the machine is in', dark === 'rgb(1, 2, 3)'
     && (await tab.evaluate(`getComputedStyle(document.querySelector('main')).color`)) !== 'rgb(1, 2, 3)');
+  // log14 (2026-11-22): a tier named for no scheme (Mode 1) was passed as one, and the page kept the machine's, dark at night
+  { const night = await launch({ chrome: CHROME, args: ['--force-dark-mode'] }), nt = await attach(await newPage(night.endpoint));
+    await A.open(nt, { route: '/projects/:project', tier: 'Mode 1' });
+    const color = await nt.evaluate(`getComputedStyle(document.querySelector('main')).color`);
+    await night.close();
+    ok('a tier named for no colour scheme is read light, the base tier\'s, on a machine in dark mode',
+      color !== 'rgb(1, 2, 3)' && schemeOf('White Theme') === 'light' && schemeOf('Dark') === 'dark' && schemeOf('light') === 'light'); }
   // Review 2026-10-02 item 25: the readback was the emulation, never the page
   ok('an app that stamps its own tier is refused when the stamp is not the tier asked',
     await refused(A.open(tab, { route: '/stamped', tier: 'Dark' }), /page stamps data-theme="light"/) && (await A.open(tab, { route: '/stamped', tier: 'Light' }), true));

@@ -1196,7 +1196,8 @@ async function selfSource(project, name, { second = false } = {}) {
   const { contracts } = await import('./official.mjs');
   const { propsOf } = await import('./to-markup.mjs');
   const { siteFiles, serveSite, selfMapping } = await import('./site.mjs');
-  const { launch, newPage, attach, navigate, call, waitFor } = await import('../shared/cdp.mjs');
+  const { launch, newPage, attach, navigate, call, waitFor, media } = await import('../shared/cdp.mjs');
+  const { schemeOf } = await import('../parity/hosts.mjs');
   const { valueOf } = req('../snapshot/tokens.cjs');
   const store = req('../snapshot/store.cjs');
   const where = project.where;
@@ -1281,6 +1282,12 @@ async function selfSource(project, name, { second = false } = {}) {
     site = await serveSite(files);
     browser = await launch({});
     tab = await attach(await newPage(browser.endpoint));
+    // the tier's colour scheme, as the parity engine opens a page (hosts.mjs schemeOf): headless Chrome takes the
+    // system's otherwise, and a Mac that turns dark at night read Atlassian's dark tokens (a spinner's currentcolor as
+    // text/subtle), and kept them in the read cache
+    const scheme = schemeOf(tier);
+    await media(tab, { 'prefers-color-scheme': scheme });
+    if (!(await call(tab, (s) => matchMedia(`(prefers-color-scheme: ${s})`).matches, scheme))) throw new Error(`the toolkit's own page did not take the ${scheme} colour scheme`);
     return tab;
   };
   // the code's props as a story's controls say them: to-markup's own, at their defaults
@@ -1347,7 +1354,7 @@ async function selfSource(project, name, { second = false } = {}) {
   // page through a tab that answers from it
   const { chromeVersion } = await import('../shared/cdp.mjs');
   const key = pageKey({ files, chrome: chromeVersion(), fonts: fontsInstalled({ stat: true }), env: localeHere(), system: `${process.platform} ${(await import('node:os')).release()}`,
-    code: [pageCode(), serveSite.toString(), forceAt.toString(), src.render.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
+    code: [pageCode(), serveSite.toString(), forceAt.toString(), src.render.toString(), live.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
   // (an element's matched styles kept once by their content: every element inherits the tokens' :root rule)
   const rec = recorder({ key, live, pool: (o) => Array.isArray(o.cssProperties) });
   const render = src.render, close = src.close;

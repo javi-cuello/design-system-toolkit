@@ -23,6 +23,11 @@ import { navigate, viewport as setViewport, media } from '../shared/cdp.mjs';
    likes (`Dark`, `light`), and a page's `data-theme` is lower case. One rule,
    here, so a fragments page stamped `Dark` is not read as matching nothing. */
 export const tierName = (tier) => String(tier).toLowerCase();
+/* The colour scheme a tier is read in (code-standard rule 35: pinned, never the machine's): a tier named for one, else
+   light, the scheme under which a token build's base tier stands (build-tokens writes another theme mode under its
+   own `prefers-color-scheme`). A tier named otherwise (Mode 1, White Theme) passed as is was no scheme, so Chrome kept
+   the system's, and a Mac that turns dark at night read the dark tokens. */
+export const schemeOf = (tier) => (/^(light|dark)$/.test(tierName(tier)) ? tierName(tier) : 'light');
 
 /* Blank page around each batched section: see `open` in the fragments host. */
 const SECTION_GAP = 16;
@@ -233,7 +238,7 @@ export function app({ base, shell, login, params = {}, prefix }) {
     scope: null,
     async open(tab, { route: wanted, tier, viewport, keepFocus }) {
       if (viewport) await setViewport(tab, viewport[0], viewport[1]);
-      await media(tab, { 'prefers-color-scheme': tierName(tier) });
+      await media(tab, { 'prefers-color-scheme': schemeOf(tier) });
       const path = await route(tab, wanted);
       const url = `${base}${path}`;
       tab.trouble.length = 0;
