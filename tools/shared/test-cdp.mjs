@@ -52,11 +52,12 @@ const CDP = browser.endpoint;
 // the profile launch made, as it says; found by the port its DevToolsActivePort names, another run's leftover folder
 // on a reused port matched, and was not this browser's to remove (bin/land under load, 2026-11-23)
 const PROFILE = browser.profile;
-ok('the profile launch names is the one this browser runs in', !!PROFILE && readFileSync(join(PROFILE, 'DevToolsActivePort'), 'utf8').split('\n')[0] === new URL(CDP).port);
+const named = (() => { try { return readFileSync(join(PROFILE, 'DevToolsActivePort'), 'utf8').split('\n')[0]; } catch { return null; } })();
+ok('the profile launch names is the one this browser runs in', named === new URL(CDP).port);
 try {
   ok('launch returns the endpoint of a browser that answers', /^http:\/\/127\.0\.0\.1:\d+$/.test(CDP)
     && (await fetch(`${CDP}/json/version`)).ok);
-  ok('launch keeps the browser in a profile of its own', !!PROFILE);
+  ok('launch keeps the browser in a profile of its own: a fresh temporary folder', typeof PROFILE === 'string' && PROFILE.startsWith(join(tmpdir(), 'parity-chrome-')));
   const nothing = await within(2000, failure(launch({ chrome: '/no/such/browser', timeout: 5000 })), 'launch of nothing');
   ok('launch of a browser that cannot start rejects at once, naming it', nothing instanceof Error && /\/no\/such\/browser/.test(nothing.message));
   const muteDir = mkdtempSync(join(tmpdir(), 'test-cdp-'));
