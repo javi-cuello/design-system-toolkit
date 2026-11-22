@@ -199,6 +199,19 @@ export function designCombo(design, props, joinedProps, args, pseudoOf = {}, set
   return combo;
 }
 
+/* A reading's layers with its render state said in the design's words (designCombo's own rule: the same word, its rest
+   the design's default), for a trip that draws them against the design's props (from-code --second). A combination
+   layer names every prop, the rest state too: kept as the reading's `rest` beside Carbon's `enabled`, it held at no
+   combination the second trip drew, and a part a pointer state also adds was hidden there.
+   Tested by test-from-code.mjs. */
+export function inDesignStates(variants, reading, design) {
+  const fk = Object.keys(reading.props || {}).find((k) => reading.props[k].role === 'interaction' && reading.props[k].code === '__state');
+  const ik = Object.keys(design.props || {}).find((k) => design.props[k].role === 'interaction');
+  if (!fk || !ik) return variants;
+  const word = (s) => designCombo(design, { [fk]: reading.props[fk] }, {}, { __state: s })[ik] ?? (s === reading.props[fk].default ? design.props[ik].default : s);
+  return variants.map((v) => (v.when && fk in v.when ? { ...v, when: Object.fromEntries(Object.entries(v.when).map(([k, s]) => (k === fk ? [ik, word(s)] : [k, s]))) } : v));
+}
+
 /* The combinations read after the pairs and the triples, each a list of [prop, value]: every one of four props off their
    defaults, and every one of more that the design draws (`draws(list)`; none given, a reading only in code, stops at
    four, which has no grid to say which it draws). The round trip compares every combination the design draws, so one of
@@ -1220,7 +1233,7 @@ async function selfSource(project, name, { second = false } = {}) {
       const { parent: _, ...g } = rest[0][1];
       return [`${id}/${g.name ? camel(g.name) : rest[0][0]}`, g];
     };
-    const anatomy = { ...first.anatomy }, variants = JSON.parse(JSON.stringify(first.variants || []));
+    const anatomy = { ...first.anatomy }, variants = inDesignStates(JSON.parse(JSON.stringify(first.variants || [])), first, c);
     const opened = variants.flatMap((v) => Object.keys(v.add || {}));
     // a glyph for every instance a colour lands on (its own, or a variant's set), so a set has a part to land on
     const coloured = (id) => variants.some((v) => v.set && `${id}.background` in v.set);

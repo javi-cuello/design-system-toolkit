@@ -344,6 +344,20 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     JSON.stringify(designCombo(design, code, {}, { __state: 'Focus', invalid: true })) === '{"interaction":"focus","invalid":true}'
     && JSON.stringify(designCombo(design, code, {}, { __state: 'keyboard' }, { keyboard: { pseudo: 'focus-visible' } })) === '{"interaction":"focus"}'
     && JSON.stringify(designCombo(design, code, {}, { __state: 'keyboard' }, {})) === '{}');
+  // the second trip draws the first reading's layers against the design's props: a combination layer's rest (Carbon's
+  // Select, a toggletip at no label, inline, small) held nowhere under the design's `enabled`, and the part a hover also
+  // adds was hidden at rest by the sheet (log14, second leg +1)
+  { const { inDesignStates } = await import('./from-code.mjs');
+    const reading = { props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], code: '__state' }, small: { type: 'boolean', default: false } } };
+    const select = { props: { state: { type: 'enum', values: ['enabled', 'hover'], default: 'enabled', role: 'interaction', pointer: ['hover'] }, small: { type: 'boolean', default: false } },
+      anatomy: { root: { kind: 'container' } } };
+    const tip = { tip: { kind: 'container', parent: 'root' } };
+    const layers = [{ when: { small: true, state: 'rest' }, combination: true, add: tip }, { when: { small: true, state: 'hover' }, combination: true, add: tip }, { when: { small: true }, set: {} }];
+    const got = inDesignStates(layers, reading, select);
+    ok('the second trip says the first reading\'s render state in the design\'s words: its rest the design\'s default, a hover a hover',
+      JSON.stringify(got.map((v) => v.when)) === '[{"small":true,"state":"enabled"},{"small":true,"state":"hover"},{"small":true}]'
+      && !!expand({ ...select, variants: got }, { small: true, state: 'enabled' }).tip
+      && layers[0].when.state === 'rest' && inDesignStates(layers, { props: {} }, select) === layers); }
   ok('a design value of several words is matched to the pseudo-class its kebab-cased key forces',
     JSON.stringify(designCombo({ props: { interaction: { type: 'enum', values: ['Default', 'Focus visible'], default: 'Default', role: 'interaction' } } }, code, {}, { __state: 'keyboard' }, { keyboard: { pseudo: ':focus-visible' } }, { pseudoClasses: { 'Focus visible': ':focus-visible' } }))
       === '{"interaction":"Focus visible"}');
