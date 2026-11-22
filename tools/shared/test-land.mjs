@@ -177,16 +177,18 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
 
 // (n) a waiter whose branch another holder lands ends then, not when the lock comes free (2026-11-22: an hour after)
 { const D = wt('n7'); fs.writeFileSync(path.join(D, 'n7.txt'), 'n7\n'); git(D, 'add', '.'); git(D, 'commit', '-qm', 'n7');
-  const other = spawn(process.execPath, [path.join(HERE, 'lock.mjs'), '--run', 'another land', '--', 'sleep', '60'], { stdio: 'ignore', env: process.env });
-  for (let i = 0; i < 50 && !fs.existsSync(path.join(process.env.TOOLKIT_LOCK_DIR, 'toolkit-measure.holder.json')); i++) await new Promise((r) => setTimeout(r, 100));
-  await new Promise((r) => setTimeout(r, 500));
+  const other = spawn(process.execPath, [path.join(HERE, 'lock.mjs'), '--run', 'another land', '--', 'sleep', '60'], { stdio: 'ignore', env: process.env, detached: true });
+  // wait on the lock itself (the holder note of earlier cases is still there)
+  const held = () => spawnSync(process.execPath, [path.join(HERE, 'lock.mjs'), '--who'], { encoding: 'utf8', env: process.env }).stdout.includes('another land');
+  for (let i = 0; i < 100 && !held(); i++) await new Promise((r) => setTimeout(r, 100));
+  assert.ok(held(), 'the other holder took the lock');
   const sha = git(D, 'rev-parse', 'HEAD'), t0 = Date.now(), n0 = runs();
   // the other holder lands it: off the queue, outcome kept
   setTimeout(() => { const q = path.join(main, '.git', 'land-queue');
     fs.rmSync(path.join(q, 'worktree-n7'), { force: true });
     fs.writeFileSync(path.join(q, '.outcomes', `worktree-n7@${sha}`), JSON.stringify({ outcome: 'landed', at: Date.now() })); }, 1000);
   r = await quiet(() => land(D));
-  const alive = other.exitCode === null; other.kill();
+  const alive = other.exitCode === null; process.kill(-other.pid); // its sleep too
   assert.equal(r.code, 0, r.out);
   assert.ok(alive, 'the other holder still held the lock');
   assert.ok(Date.now() - t0 < 10000, `ended within seconds of being landed: ${Date.now() - t0} ms`);

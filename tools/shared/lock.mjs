@@ -120,6 +120,7 @@ export function hold(what, { say = (l) => console.error(l), first = false, stop 
     child.on('error', (e) => finish(false, `python3 could not run (${e.code || e.message})`));
     child.on('close', () => finish(false, 'the lock holder stopped before taking it')); // after its output is read
     child.stdout.on('data', (d) => {
+      if (done) return; // stopped (stop): a 'held' read after it is the killed helper's, not a hold
       buf += d;
       for (let i; (i = buf.indexOf('\n')) >= 0;) {
         const l = buf.slice(0, i); buf = buf.slice(i + 1);
@@ -133,7 +134,7 @@ export function hold(what, { say = (l) => console.error(l), first = false, stop 
             if (h) say(`measuring lock: waiting for ${describe(h)}`); else if (l) say(`measuring lock: slot 0 is kept for ${describe(l)}`);
           };
           tell(); timer = setInterval(tell, 60000);
-          if (stop) poll = setInterval(() => { if (stop()) finish(null); }, 2000);
+          if (stop) poll = setInterval(() => { let s = false; try { s = stop(); } catch { /* asked again in 2 s */ } if (s) finish(null); }, 2000);
         } else if (l === 'nolock') finish(false, `cannot open ${lockFile()}`);
         else if (l.startsWith('held')) {
           slotHeld = l.slice(5) || null;

@@ -212,11 +212,14 @@ export async function land(from, target) {
   // a run inside a holder (a test, a nested call) holds nothing new
   // inside a holder (a test, a nested call) the lock is the holder's: never let go of it here
   const outer = !!process.env.TOOLKIT_LOCK_HELD;
-  const state = { moved: 0 };
+  const state = { moved: 0 }, mine = qfile(main, branch); // the path once: no git call each 2 s
   for (;;) {
     // landed (or dropped) by another holder while this one waits: read it now, not after their checks
-    const gone = () => readJSON(qfile(main, branch))?.sha !== sha;
-    if (await hold(`bin/land ${branch}`, { first: true, stop: gone }) === null) { const o = settled(main, { branch, sha }); return o === 'landed' ? 0 : 1; }
+    if (await hold(`bin/land ${branch}`, { first: true, stop: () => readJSON(mine)?.sha !== sha }) === null) {
+      const o = settled(main, { branch, sha });
+      if (o) return o === 'landed' ? 0 : 1;
+      continue; // queued again at this commit by a second bin/land of it: wait on
+    }
     let out;
     try { out = await step(main, { branch, sha }, state); } finally { if (!outer) release(); }
     out ||= settled(main, { branch, sha }); // its own landing is read without another turn of the lock
