@@ -350,13 +350,22 @@
     .modal:has(input, select, textarea) { inset: 0; margin: 0; inline-size: 100%; block-size: 100svh; max-block-size: none; border-radius: 0; }
   }
   .modal td { overflow-wrap: anywhere; vertical-align: top; }
-  .modal__head, .modal__foot { flex: none; padding: var(--space-16); }
-  .modal__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); border-block-end: var(--stroke-1) solid var(--line); }
-  /* a modal's title one step over its body, so it reads as the title */
-  .modal__head h2 { margin: 0; font-size: var(--text-lg); line-height: var(--leading-lg); }
-  .modal__body { flex: 1 1 auto; overflow: auto; padding: var(--space-16); }
+  /* One inline inset for head, body and foot, so their edges line up. The head is a slim bar and the
+     body has the room, as Primer's dialog draws it (a header of 8px plus 6px, the title at its body
+     size and semibold; a body and footer of 16px: Dialog.module.css, primer/react main, read 2026-11-20). */
+  .modal__head, .modal__body, .modal__foot { padding-inline: var(--space-24); }
+  .modal__head, .modal__foot { flex: none; }
+  .modal__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); padding-block: var(--space-12); padding-inline-end: var(--space-12); border-block-end: var(--stroke-1) solid var(--line); }
+  /* the title one step over the dialog's small body text (text-md over text-sm), set apart mostly by weight and the bar */
+  .modal__head h2 { margin: 0; font-size: var(--text-md); line-height: var(--leading-body); }
+  .modal__body { flex: 1 1 auto; overflow: auto; padding-block: var(--space-24); }
+  .modal__foot { padding-block: var(--space-16); }
   .modal__body > * + :not(dialog) { margin-block-start: var(--space-12); }
+  /* a heading inside a dialog never outranks its title */
+  .modal__body :is(h2, h3) { font-size: var(--text-md); line-height: var(--leading-body); }
   .modal__foot { display: flex; justify-content: flex-end; gap: var(--space-8); border-block-start: var(--stroke-1) solid var(--line); }
+  /* A third, quieter action (Delete) sits at the far leading edge, the rest trailing (modal-dialog.md *Modal dialog anatomy*). */
+  .modal__foot > [data-leading] { margin-inline-end: auto; }
   /* One badge for the whole site: severity, a change's level, a status
      stamp, the record's freshness, counts and labels were each their own
      shape (999px mono pills, 4px sans, 4px mono, a filled block). Here, not in
@@ -546,6 +555,7 @@
     min-block-size: calc(var(--control-height) - 2px); padding: 0 var(--space-12);
     font: inherit; font-size: var(--text-sm); font-weight: var(--weight-medium);
     background: none; border: 0; color: var(--fg-soft); cursor: pointer;
+    text-decoration: none; /* a segment may be a link (a view in the address): it reads as the group, not as a link */
   }
   span.seg { cursor: default; } /* a segment that is a label, not a control */
   .seg + .seg { border-inline-start: var(--stroke-1) solid var(--line-strong); }
