@@ -753,18 +753,27 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   }
 }
 { // a design boolean the mapping draws false by a text left empty (a card's status line, False: { status: '' }) is read as that boolean
-  const { emptyShows, emptiedArgs, onlyInCode, stateHidden } = await import('./from-code.mjs');
+  const { emptyShows, emptiedArgs, onlyInCode, stateHidden, designCombo, subjectOf } = await import('./from-code.mjs');
   const design = { showStatus: { type: 'boolean', default: true, figma: 'Show status', shows: ['status'] } };
   const code = () => ({ status: { type: 'string', code: 'status', sample: 'Label' }, title: { type: 'string', code: 'title', sample: 'Title' } });
   const joins = { showStatus: { arg: 'status', values: { false: '' } } };
-  const p = emptyShows(code(), design, joins);
+  const p = emptyShows(code(), design, joins, { status: 'Label' });
   ok('a boolean the mapping draws false by an empty text is that boolean, over the same code prop', p.showStatus?.type === 'boolean' && p.showStatus.default === true && p.showStatus.code === 'status' && p.showStatus.figma === 'Show status' && p.status.type === 'string');
-  ok('it renders the story\'s words shown and the empty text hidden, every other arg as asked', JSON.stringify(emptiedArgs({ status: true, title: 'T' }, p)) === '{"status":"Label","title":"T"}' && emptiedArgs({ status: false }, p).status === '' && emptiedArgs({ status: 'Sent' }, p).status === 'Sent');
-  const none = (d, j, c = code()) => !('showStatus' in emptyShows(c, d, j));
+  ok('shown it sends nothing, so the story\'s own words draw; hidden, the empty text, every other arg as asked', JSON.stringify(emptiedArgs({ status: true, title: 'T' }, p)) === '{"title":"T"}' && emptiedArgs({ status: false }, p).status === '' && emptiedArgs({ status: 'Sent' }, p).status === 'Sent');
+  const none = (d, j, c = code(), start = { status: 'Label' }, twice = {}) => !('showStatus' in emptyShows(c, d, j, start, twice));
   ok('none where false is words, true states its own value, the design hides it by default, it shows no layer, or the story starts it empty',
     none(design, { showStatus: { arg: 'status', values: { false: 'None' } } }) && none(design, { showStatus: { arg: 'status', values: { false: '', true: 'Sent' } } })
     && none({ showStatus: { ...design.showStatus, default: false } }, joins) && none({ showStatus: { ...design.showStatus, shows: undefined } }, joins)
-    && none(design, joins, { status: { type: 'string', code: 'status', sample: '' } }) && none(design, {}));
+    && none(design, joins, code(), { status: '' }) && none(design, joins, code(), {}) && none(design, {})
+    && none(design, joins, code(), { status: 'Label' }, { showStatus: ['status', 'icon'] }));
+  {
+    const both = { ...design, status: { type: 'string', figma: 'Status' } }, at = (v) => designCombo(both, p, {}, { status: v });
+    ok('a text and its boolean over one code prop are each their own kind in the design\'s combination',
+      JSON.stringify(at(false)) === '{"showStatus":false}' && at('').showStatus === false && at('Sent').showStatus === true && at('Sent').status === 'Sent');
+    ok('a design text the mapping joins to that code prop, or of its Figma name, stays the design\'s', !onlyInCode(p, { ...design, message: { type: 'string', figma: 'Message' } }, { message: { arg: 'status' } }).has('status')
+      && !onlyInCode({ ...p, status: { ...p.status, figma: 'Message' } }, { ...design, message: { type: 'string', figma: 'Message' } }).has('status'));
+    ok('the element that takes a state is the selector\'s last compound', subjectOf('#root .card__status ~ .card__action') === '.card__action' && subjectOf('#root .card__action') === '.card__action' && subjectOf('.card>button:first-child') === 'button:first-child');
+  }
   const gone = new Error('state selector matched no element: #root .card__action');
   ok('a state whose target that boolean hid reads at rest; any other missing target still fails',
     stateHidden(gone, { status: false, __state: 'focus' }, p) && !stateHidden(gone, { status: true, __state: 'focus' }, p) && !stateHidden(gone, { status: false, __state: 'rest' }, p) && !stateHidden(new Error('drew nothing'), { status: false, __state: 'focus' }, p) && !stateHidden(gone, { status: false, __state: 'focus' }, {}));

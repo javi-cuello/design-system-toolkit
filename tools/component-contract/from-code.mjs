@@ -198,6 +198,9 @@ export function designCombo(design, props, joinedProps, args, pseudoOf = {}, set
   const joinedTo = (j) => (typeof j === 'string' ? j : j && typeof j === 'object' ? j.code || j.arg : null);
   for (const [k, q] of Object.entries(props)) {
     if (!q.code || args[q.code] === undefined) continue;
+    // a text and the boolean its emptiness says share a code prop (emptyShows): each takes its own kind of value
+    if (q.emptied !== undefined) { if (design.props[k]) combo[k] = args[q.code] !== false && args[q.code] !== ''; continue; }
+    if (q.type === 'string' && typeof args[q.code] === 'boolean') continue;
     const [ik, ip] = q.code === '__state' ? Object.entries(design.props).find(([, p]) => p.role === 'interaction') || [] : [];
     if (ip) {
       const s = args.__state, ps = pseudoClasses(settings), forced = (pseudoOf[s] || {}).pseudo, dk = ik, d = ip;
@@ -504,22 +507,24 @@ export function joinedNames(props, design, map = {}) {
 /* A design boolean the mapping draws false by a text left empty (a card's status line, `False: { status: '' }`): the
    code has that boolean, said by whether the text is given. It is read beside the text as a boolean over the same code
    prop: true is the story's words, false the empty text (emptiedArgs), so what it hides is rendered, never taken from
-   the mapping. Only one the design shows by default and the story starts with words. Changes props in place. Tested
+   the mapping. Only one the design shows by default, the story itself starts with words (a docgen's default is not
+   drawn) and the mapping says by that one prop (`twice`: false is then more than the empty text). Changes props in place. Tested
    by test-from-code.mjs. */
-export function emptyShows(props, design, joins = {}) {
+export function emptyShows(props, design, joins = {}, starts = {}, twice = {}) {
   for (const [k, d] of Object.entries(design || {})) {
     const j = (joins || {})[k];
     if (props[k] || d.type !== 'boolean' || d.default !== true || !(d.shows || []).length || !j || !j.arg || !j.values) continue;
     if (j.values.false !== '' || j.values.true !== undefined) continue;
     const text = Object.values(props).find((p) => p.type === 'string' && p.code === j.arg);
-    if (text && text.sample) props[k] = { type: 'boolean', default: true, code: j.arg, figma: d.figma || k, emptied: text.sample };
+    if (text && !twice[k] && typeof starts[j.arg] === 'string' && starts[j.arg]) props[k] = { type: 'boolean', default: true, code: j.arg, figma: d.figma || k, emptied: starts[j.arg] };
   }
   return props;
 }
-/* A render's args as the code takes them: emptyShows' booleans as their texts. Tested by test-from-code.mjs. */
+/* A render's args as the code takes them: emptyShows' booleans as their texts. Shown sends none, so the story's own
+   words draw (an address cannot carry every word: 007, a semicolon). Tested by test-from-code.mjs. */
 export function emptiedArgs(args, props) {
   const out = { ...args };
-  for (const p of Object.values(props)) if (p.emptied !== undefined && typeof out[p.code] === 'boolean') out[p.code] = out[p.code] ? p.emptied : '';
+  for (const p of Object.values(props)) if (p.emptied !== undefined && typeof out[p.code] === 'boolean') { if (out[p.code]) delete out[p.code]; else out[p.code] = ''; }
   return out;
 }
 /* Whether a render failed for a pointer state whose own target such a boolean hid (a card focused through its button,
@@ -529,11 +534,15 @@ export function stateHidden(err, asked, props) {
   return /^state selector matched no element/.test(String(err && err.message)) && !!asked.__state && asked.__state !== 'rest'
     && Object.values(props).some((p) => p.emptied !== undefined && asked[p.code] === false);
 }
+/* The element a state selector names, its last compound. Tested by test-from-code.mjs. */
+export const subjectOf = (selector) => String(selector).trim().split(/\s*[>+~]\s*|\s+/).pop();
 /* The texts that only such a boolean speaks for, by code prop: the design has the boolean and no text of them, so the
    text is the code's alone. Tested by test-from-code.mjs. */
-export function onlyInCode(props, design) {
+export function onlyInCode(props, design, joins = {}) {
   const bools = new Set(Object.values(props).filter((p) => p.emptied !== undefined).map((p) => p.code));
-  return new Set(Object.entries(props).filter(([k, p]) => p.type === 'string' && bools.has(p.code) && (design || {})[k]?.type !== 'string').map(([, p]) => p.code));
+  const arg = (j) => (typeof j === 'string' ? j : j && (j.arg || j.code));
+  const theirs = ([k, p]) => Object.entries(design || {}).some(([dk, d]) => d.type === 'string' && (dk === k || (p.figma && d.figma === p.figma) || arg((joins || {})[dk]) === p.code));
+  return new Set(Object.entries(props).filter((e) => e[1].type === 'string' && bools.has(e[1].code) && !theirs(e)).map(([, p]) => p.code));
 }
 
 /* A slot control in the toolkit's own story (the self leg): to-markup's swap of a library component (`placed`) says so,
@@ -1626,8 +1635,8 @@ async function main() {
     const setStates = asArg ? asArg.values.filter((v) => v !== asArg.default && v !== 'rest' && !(v in L.pseudoOf)) : [];
     if (asArg && Object.keys(L.pseudoOf).length) { L.stateArg = asArg.code; delete props[stateKey]; }
     if (Object.keys(L.pseudoOf).length) props.state = { type: 'enum', values: ['rest', ...Object.keys(L.pseudoOf), ...setStates], default: 'rest', role: 'interaction', pointer: Object.keys(L.pseudoOf), code: '__state' };
-    if (L.governed && figmaContract) emptyShows(props, figmaContract.props, joinedProps);
-    const textsOnlyInCode = onlyInCode(props, figmaContract && figmaContract.props);
+    if (L.governed && figmaContract) emptyShows(props, figmaContract.props, joinedProps, story.args, (L.joins(figmaContract, story.argTypes) || {}).twice);
+    const textsOnlyInCode = onlyInCode(props, figmaContract && figmaContract.props, joinedProps);
     let defaults = Object.fromEntries(Object.entries(props).filter(([, p]) => p.type !== 'string').map(([, p]) => [p.code, p.type === 'slot' && !p.placed ? slotMark(p.code) : p.default]));
     // each slot's stand-in, by the prop it stands in for: the element it lands in is the slot
     const marks = Object.entries(props).filter(([, p]) => p.type === 'slot' && !p.placed).map(([k, p]) => [slotMark(p.code), k]);
@@ -1684,16 +1693,20 @@ async function main() {
       let args = emptiedArgs(asked, props);
       try { await show(args); } catch (e) {
         if (!stateHidden(e, asked, props)) throw e;
+        // only where the boolean is what took it away: shown, the state finds it; hidden, no element of its own kind is left
+        await show(emptiedArgs({ ...asked, ...Object.fromEntries(Object.values(props).filter((p) => p.emptied !== undefined).map((p) => [p.code, true])) }, props));
+        await show({ ...args, __state: 'rest' });
+        const on = ((L.pseudoOf || {})[asked.__state] || {}).on;
+        if (!on || await call(L.tab, (s) => !!document.querySelector(s), subjectOf(on))) throw e;
         const said = `${asked.__state}: with what takes it hidden by an empty text, nothing takes that state; read as rest there`;
         if (!notes.includes(said)) notes.push(said);
         args = { ...args, __state: 'rest' };
-        await show(args);
       }
       // whether this combination is drawn focused (a forced :focus or :focus-visible): only there is an outline a focus
       // ring, as to-code writes one (ringOf) and code shows one; at any other state it is the box's own stroke (css.mjs
       // draws a centred or outside stroke as a solid outline)
       // (or drawn so by an arg: a state the code takes as a prop, focus among its values)
-      const focused = /focus/.test(JSON.stringify((L.pseudoOf || {})[args.__state] || '')) || Object.values(args).some((v) => typeof v === 'string' && /focus/i.test(v));
+      const focused = /focus/.test(JSON.stringify((L.pseudoOf || {})[args.__state] || '')) || Object.values(asked).some((v) => typeof v === 'string' && /focus/i.test(v));
       const room = roomOf(asked);
       if (room) await call(L.tab, ([sel, container, climb, w]) => {
         let root = document.querySelector(sel); if (!root) return;
@@ -2463,7 +2476,7 @@ async function main() {
     // combination that moves one is not compared, and not read)
     const drawsIt = figmaContract && ((list) => {
       const moved = comboOf(Object.fromEntries(list.map(([k, v]) => [props[k].code, v])));
-      if (Object.keys(moved).length < list.length) return false;
+      if (list.some(([k, v]) => !Object.keys(comboOf({ [props[k].code]: v })).length)) return false;
       const c = { ...variantDefaults(figmaContract), ...comboOf(defaults), ...moved };
       return !(figmaContract.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v)));
     });
