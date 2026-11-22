@@ -106,7 +106,8 @@ export async function launch({ chrome = findChrome(), port = 0, profile, args = 
     const at = existsSync(file) && readFileSync(file, 'utf8').split('\n')[0];
     if (!at) continue;
     const endpoint = `http://127.0.0.1:${at}`;
-    if (await fetch(`${endpoint}/json/version`).then((r) => r.ok, () => false)) return { endpoint, close };
+    // (`profile` is the folder it runs in: a caller's own, or the temporary one close() removes)
+    if (await fetch(`${endpoint}/json/version`).then((r) => r.ok, () => false)) return { endpoint, close, profile: dir };
   }
   const why = failed || `DevTools did not open in ${timeout / 1000}s`;
   await close();

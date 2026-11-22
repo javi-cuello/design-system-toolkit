@@ -3,7 +3,7 @@
 // ($CHROME, else the macOS default install) and skips, saying so, without one.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -49,10 +49,10 @@ const pngSize = (b64) => { const b = Buffer.from(b64, 'base64'); return b.toStri
 
 const browser = await within(30_000, launch({ chrome: CHROME }), 'launch');
 const CDP = browser.endpoint;
-// the profile launch made: the one whose DevToolsActivePort names this browser
-const PROFILE = readdirSync(tmpdir()).map((d) => join(tmpdir(), d)).find((d) => {
-  try { return readFileSync(join(d, 'DevToolsActivePort'), 'utf8').split('\n')[0] === new URL(CDP).port; } catch { return false; }
-});
+// the profile launch made, as it says; found by the port its DevToolsActivePort names, another run's leftover folder
+// on a reused port matched, and was not this browser's to remove (bin/land under load, 2026-11-23)
+const PROFILE = browser.profile;
+ok('the profile launch names is the one this browser runs in', !!PROFILE && readFileSync(join(PROFILE, 'DevToolsActivePort'), 'utf8').split('\n')[0] === new URL(CDP).port);
 try {
   ok('launch returns the endpoint of a browser that answers', /^http:\/\/127\.0\.0\.1:\d+$/.test(CDP)
     && (await fetch(`${CDP}/json/version`)).ok);
