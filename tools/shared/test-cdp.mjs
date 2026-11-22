@@ -181,6 +181,8 @@ try {
   server.close();
 }
 const gone = await fetch(`${CDP}/json/version`).then(() => false, () => true);
-ok('close stops the browser and removes its profile', gone && !existsSync(PROFILE));
+// two checks, not one: a failure under load (bin/land, 2026-11-23) did not say which
+ok('close stops the browser', gone);
+ok('close removes its profile', !existsSync(PROFILE));
 console.log(`\n${n} passed`);
 process.exit(0);

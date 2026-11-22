@@ -88,8 +88,9 @@ export async function launch({ chrome = findChrome(), port = 0, profile, args = 
     process.off('exit', tidy);
     if (child.exitCode === null && child.signalCode === null) { child.kill(); await Promise.race([gone, sleep(5000)]); }
     try { child.kill('SIGKILL'); } catch { /* already gone */ }
-    // its helpers can outlive it by a moment and write the profile meanwhile (seen on Linux CI), so the removal is tried again
-    if (!profile) for (let i = 0; i < 30; i++) { try { rmSync(dir, { recursive: true, force: true }); break; } catch { await sleep(100); } }
+    // its helpers can outlive it by a moment and write the profile meanwhile (seen on Linux CI, and on a loaded Mac
+    // after a removal had already succeeded: bin/land, 2026-11-23), so it is removed until it stays gone
+    if (!profile) for (let i = 0; i < 30; i++) { try { rmSync(dir, { recursive: true, force: true }); } catch { /* busy: again */ } if (!existsSync(dir)) break; await sleep(100); }
   };
   for (const end = Date.now() + timeout; Date.now() < end; await sleep(100)) {
     if (failed) break;
