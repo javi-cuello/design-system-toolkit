@@ -2949,10 +2949,13 @@ function editAsDraft() {
   status(`Editing a draft of ${draftName(state)}. ${fromCode() ? 'The code' : "Figma's version"} stays as it is.`);
 }
 // whether this browser took the page's last edit: one it refused (storage full or off) is asked about on leaving
-let draftKept = false, storeRefused = false;
+let draftKept = false, storeRefused = false, following = false;
 // a new component is a draft from its first edit, kept under its name as it changes; one opened from the library is
 // kept when it is left, as before
 function autoDraft() {
+  // the draft another tab kept, being drawn here, is kept already: written back, its fresh uids would read there as a
+  // change, and the two tabs would hand it to and fro for ever, an edit in either lost to the other's echo
+  if (following) return;
   // a library component is kept when it is left, and as it is edited once it is a draft
   if ((state.from && !currentDraft) || (!currentDraft && pageNow() === opened) || (!state.drafts.length && state.parts.length < 2 && !state.component.trim())) return;
   const was = currentDraft;
@@ -2974,8 +2977,8 @@ function followDraft() {
   state = restore(d);
   keptAs = JSON.stringify(d);
   hideUndo();
-  pageReplaced();
-  renderView();
+  following = true;
+  try { pageReplaced(); renderView(); } finally { following = false; }
   travelling = true;
   settle();
   status(`The draft of ${draftName(d)} was changed in another tab: this page shows it now.`);

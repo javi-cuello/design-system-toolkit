@@ -942,12 +942,16 @@ try {
     const was = (await json()).component;
     const count = `JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => /s$/.test(k) && Array.isArray(JSON.parse(localStorage.getItem(k) || 'null'))))).length`;
     const kept = await js(count);
+    // a tab drawing the other's draft never writes it back: restored with fresh uids it read there as a change, and the
+    // tabs handed it to and fro, for ever or until their uids met by chance, an edit made meanwhile lost to the echo (CI, 2026-11-22)
+    for (const t of [tab, two]) await t.evaluate(`window.heard = 0; addEventListener('storage', (e) => { try { if (Array.isArray(JSON.parse(e.newValue))) window.heard++; } catch {} })`);
     await named(two, was + ' Two');
     await waitFor(tab, `JSON.parse(document.querySelector('[data-json]').value).component === ${JSON.stringify(was + ' Two')}`).catch(() => {});
     ok('a draft edited in another tab is shown here as it is now', (await json()).component === was + ' Two');
+    await new Promise((r) => setTimeout(r, 300));
+    ok('and drawn here, it is not written back to that tab', await js(`window.heard`) === 1 && await two.evaluate(`window.heard`) === 0);
     await named(tab, was);
     await waitFor(two, `JSON.parse(document.querySelector('[data-json]').value).component === ${JSON.stringify(was)}`).catch(() => {});
-    // waitFor's own 30 s: under bin/check's load a 10 s wait missed the other tab's storage event in 2 of about 5 runs (2026-11-12); alone it passed 6 of 6
     ok('and an edit here is shown there', await two.evaluate(`JSON.parse(document.querySelector('[data-json]').value).component`) === was);
     ok('the one draft kept once', await js(count) === kept);
     await two.evaluate(`document.querySelector('[data-new]').click()`);
