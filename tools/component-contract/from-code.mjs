@@ -200,7 +200,7 @@ export function designCombo(design, props, joinedProps, args, pseudoOf = {}, set
     if (!q.code || args[q.code] === undefined) continue;
     // a text and the boolean its emptiness says share a code prop (emptyShows): each takes its own kind of value
     if (q.emptied !== undefined) { if (design.props[k]) combo[k] = args[q.code] !== false && args[q.code] !== ''; continue; }
-    if (q.type === 'string' && typeof args[q.code] === 'boolean') continue;
+    if (q.type === 'string' && typeof args[q.code] === 'boolean' && Object.values(props).some((p) => p.emptied !== undefined && p.code === q.code)) continue;
     const [ik, ip] = q.code === '__state' ? Object.entries(design.props).find(([, p]) => p.role === 'interaction') || [] : [];
     if (ip) {
       const s = args.__state, ps = pseudoClasses(settings), forced = (pseudoOf[s] || {}).pseudo, dk = ik, d = ip;
@@ -521,10 +521,11 @@ export function emptyShows(props, design, joins = {}, starts = {}, twice = {}) {
   return props;
 }
 /* A render's args as the code takes them: emptyShows' booleans as their texts. Shown sends none, so the story's own
-   words draw (an address cannot carry every word: 007, a semicolon). Tested by test-from-code.mjs. */
-export function emptiedArgs(args, props) {
+   words draw (an address cannot carry every word: 007, a semicolon); `words`: a host with none of its own
+   (fragments, drawn from what is sent) is sent them. Tested by test-from-code.mjs. */
+export function emptiedArgs(args, props, { words = false } = {}) {
   const out = { ...args };
-  for (const p of Object.values(props)) if (p.emptied !== undefined && typeof out[p.code] === 'boolean') { if (out[p.code]) delete out[p.code]; else out[p.code] = ''; }
+  for (const p of Object.values(props)) if (p.emptied !== undefined && typeof out[p.code] === 'boolean') { if (!out[p.code]) out[p.code] = ''; else if (words) out[p.code] = p.emptied; else delete out[p.code]; }
   return out;
 }
 /* Whether a render failed for a pointer state whose own target such a boolean hid (a card focused through its button,
@@ -535,7 +536,20 @@ export function stateHidden(err, asked, props) {
     && Object.values(props).some((p) => p.emptied !== undefined && asked[p.code] === false);
 }
 /* The element a state selector names, its last compound. Tested by test-from-code.mjs. */
-export const subjectOf = (selector) => String(selector).trim().split(/\s*[>+~]\s*|\s+/).pop();
+export function subjectOf(selector) {
+  const s = String(selector).trim();
+  let depth = 0, quote = null, from = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '\\') i++;
+    else if (quote) { if (c === quote) quote = null; }
+    else if (c === '"' || c === "'") quote = c;
+    else if (c === '(' || c === '[') depth++;
+    else if (c === ')' || c === ']') depth--;
+    else if (!depth && /[\s>+~]/.test(c)) from = i + 1;
+  }
+  return s.slice(from);
+}
 /* The texts that only such a boolean speaks for, by code prop: the design has the boolean and no text of them, so the
    text is the code's alone. Tested by test-from-code.mjs. */
 export function onlyInCode(props, design, joins = {}) {
@@ -1690,14 +1704,15 @@ async function main() {
     };
     const read = async (asked) => {
       // (the code's args; `asked` keeps a boolean said by an empty text a boolean, as the design's combination names it)
-      let args = emptiedArgs(asked, props);
+      const words = { words: L.container !== '#storybook-root' };
+      let args = emptiedArgs(asked, props, words);
       try { await show(args); } catch (e) {
         if (!stateHidden(e, asked, props)) throw e;
         // only where the boolean is what took it away: shown, the state finds it; hidden, no element of its own kind is left
-        await show(emptiedArgs({ ...asked, ...Object.fromEntries(Object.values(props).filter((p) => p.emptied !== undefined).map((p) => [p.code, true])) }, props));
+        await show(emptiedArgs({ ...asked, ...Object.fromEntries(Object.values(props).filter((p) => p.emptied !== undefined).map((p) => [p.code, true])) }, props, words));
         await show({ ...args, __state: 'rest' });
         const on = ((L.pseudoOf || {})[asked.__state] || {}).on;
-        if (!on || await call(L.tab, (s) => !!document.querySelector(s), subjectOf(on))) throw e;
+        if (!on || await call(L.tab, ([r, s]) => { const root = document.querySelector(r); return !root || !!root.querySelector(s); }, [rootSel, subjectOf(on)])) throw e;
         const said = `${asked.__state}: with what takes it hidden by an empty text, nothing takes that state; read as rest there`;
         if (!notes.includes(said)) notes.push(said);
         args = { ...args, __state: 'rest' };
@@ -1706,7 +1721,7 @@ async function main() {
       // ring, as to-code writes one (ringOf) and code shows one; at any other state it is the box's own stroke (css.mjs
       // draws a centred or outside stroke as a solid outline)
       // (or drawn so by an arg: a state the code takes as a prop, focus among its values)
-      const focused = /focus/.test(JSON.stringify((L.pseudoOf || {})[args.__state] || '')) || Object.values(asked).some((v) => typeof v === 'string' && /focus/i.test(v));
+      const focused = /focus/.test(JSON.stringify((L.pseudoOf || {})[args.__state] || '')) || Object.entries(args).some(([k, v]) => typeof v === 'string' && /focus/i.test(v) && !Object.values(props).some((p) => p.emptied !== undefined && p.code === k));
       const room = roomOf(asked);
       if (room) await call(L.tab, ([sel, container, climb, w]) => {
         let root = document.querySelector(sel); if (!root) return;
@@ -2476,7 +2491,7 @@ async function main() {
     // combination that moves one is not compared, and not read)
     const drawsIt = figmaContract && ((list) => {
       const moved = comboOf(Object.fromEntries(list.map(([k, v]) => [props[k].code, v])));
-      if (list.some(([k, v]) => !Object.keys(comboOf({ [props[k].code]: v })).length)) return false;
+      if (Object.keys(moved).length < list.length || list.some(([k, v]) => !Object.keys(comboOf({ [props[k].code]: v })).length)) return false;
       const c = { ...variantDefaults(figmaContract), ...comboOf(defaults), ...moved };
       return !(figmaContract.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v)));
     });

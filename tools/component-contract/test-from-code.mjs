@@ -772,6 +772,9 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       JSON.stringify(at(false)) === '{"showStatus":false}' && at('').showStatus === false && at('Sent').showStatus === true && at('Sent').status === 'Sent');
     ok('a design text the mapping joins to that code prop, or of its Figma name, stays the design\'s', !onlyInCode(p, { ...design, message: { type: 'string', figma: 'Message' } }, { message: { arg: 'status' } }).has('status')
       && !onlyInCode({ ...p, status: { ...p.status, figma: 'Message' } }, { ...design, message: { type: 'string', figma: 'Message' } }).has('status'));
+    ok('brackets, quotes and parentheses are inside a compound', subjectOf('#r .a button[aria-label="Add card"]') === 'button[aria-label="Add card"]' && subjectOf('.a :not(.b .c)') === ':not(.b .c)' && subjectOf('.a li:nth-child(2n + 1)') === 'li:nth-child(2n + 1)');
+    ok('a host that draws no words of its own (fragments) is sent the words', emptiedArgs({ status: true }, p, { words: true }).status === 'Label' && emptiedArgs({ status: false }, p, { words: true }).status === '');
+    ok('a text no such boolean shares takes a boolean as before', designCombo({ props: { showHelp: { type: 'boolean' } } }, { helper: { type: 'string', code: 'helper' } }, { showHelp: { arg: 'helper' } }, { helper: false }).showHelp === false);
     ok('the element that takes a state is the selector\'s last compound', subjectOf('#root .card__status ~ .card__action') === '.card__action' && subjectOf('#root .card__action') === '.card__action' && subjectOf('.card>button:first-child') === 'button:first-child');
   }
   const gone = new Error('state selector matched no element: #root .card__action');
