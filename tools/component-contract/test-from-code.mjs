@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -874,4 +874,9 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     stateHidden(gone, { status: false, __state: 'focus' }, p) && !stateHidden(gone, { status: true, __state: 'focus' }, p) && !stateHidden(gone, { status: false, __state: 'rest' }, p) && !stateHidden(new Error('drew nothing'), { status: false, __state: 'focus' }, p) && !stateHidden(gone, { status: false, __state: 'focus' }, {}));
   ok('a text only that boolean speaks for is the code\'s alone; one the design has as a text stays the design\'s', onlyInCode(p, design).has('status') && !onlyInCode(p, { ...design, status: { type: 'string', figma: 'Status' } }).has('status') && !onlyInCode(p, design).has('title'));
 }
+// an element's words as it draws them: collapsed white space is one space, kept white space (a code block, as Figma
+// keeps a text's newlines and indents) is the text as written, and kept breaks keep only the newlines
+ok('words read as drawn: collapsed white space is a space, preserved keeps newlines and runs, preserve-breaks keeps newlines only',
+  wordsAsDrawn('1\n2\n  x', 'collapse') === '1 2 x' && wordsAsDrawn('1\n2\n  x', 'preserve') === '1\n2\n  x'
+  && wordsAsDrawn('1\r\n2', 'break-spaces') === '1\n2' && wordsAsDrawn('a  \n  b c', 'preserve-breaks') === 'a\nb c');
 console.log(`${n}/${n} passed`);

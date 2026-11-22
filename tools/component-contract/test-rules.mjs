@@ -97,6 +97,7 @@ ok('Figma\'s rotation (counter-clockwise) is CSS\'s rotate the other way: 90 →
 // text: how it resizes is its sizes; its style is named by the declarations that say it
 ok('a text that hugs its width grows both ways, one that hugs its height wraps at its width, one fixed both ways is none',
   autoResizeOf('hug', 'hug') === 'width_and_height' && autoResizeOf('fill', 'hug') === 'height' && autoResizeOf(120, 'hug') === 'height' && autoResizeOf(120, 40) === 'none' && autoResizeOf('fill', 40) === 'none');
+ok('pre is a text written never to wrap, as nowrap is (css.mjs writes it for a hugging text whose white space is kept)', writtenNowrap('pre') && !writtenNowrap('pre-wrap') && !writtenNowrap('pre', true));
 ok('nowrap is the text\'s own only where it is written on the text: a loose text\'s parent saying it says nothing', writtenNowrap('nowrap') && !writtenNowrap('nowrap', true) && !writtenNowrap(null) && !writtenNowrap('normal'));
 ok('a text written never to wrap grows both ways whatever size it states (a WIDTH_AND_HEIGHT text placed by scale), as css.mjs writes it',
   autoResizeOf(19, 24, true) === 'width_and_height' && Object.fromEntries(declarations({ kind: 'text', width: 19, height: 24, autoResize: 'width_and_height' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls)['white-space'] === 'nowrap');

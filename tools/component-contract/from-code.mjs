@@ -111,6 +111,17 @@ export function cssOrderOf(n, parent, style) {
   return o && parent != null && n.parentElement && n.parentElement.getAttribute('data-contract-id') === parent && /flex|grid/.test(style(n.parentElement).display) ? o : null;
 }
 
+/* An element's words as it draws them, from its text and its computed white-space-collapse: collapsed, a run of white
+   space is one space (a newline in the source is a space on screen); preserved (pre, pre-wrap, break-spaces), the text
+   as written, newlines and runs of spaces kept, as Figma keeps a text's; preserve-breaks keeps its newlines alone.
+   Runs in the page (passed as source); tested by test-from-code.mjs. */
+export function wordsAsDrawn(t, collapse) {
+  const s = String(t).replace(/\r\n?/g, '\n');
+  if (collapse === 'preserve' || collapse === 'break-spaces') return s;
+  if (collapse === 'preserve-breaks') return s.replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n');
+  return s.replace(/[ \n\t]+/g, ' ');
+}
+
 /* Whether `m`, found in the placed instance `n` by its layer's selector `q`, is that instance's own layer, not one of
    another instance nested in it (`isRoot`). A layer that is itself a placed component is reached through its host
    (`[data-part=button] > button`): that host is the layer's own, so a selector that ends in a bare tag under the
@@ -1831,7 +1842,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)();
@@ -1848,7 +1859,7 @@ async function main() {
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
-        const textType = new Function(`return ${textTypeSrc}`)(), typeOf = (n, s) => textType(n, s, WEIGHT);
+        const wordsAsDrawn = new Function(`return ${wordsSrc}`)(), textType = new Function(`return ${textTypeSrc}`)(), typeOf = (n, s) => textType(n, s, WEIGHT);
         const slot = (n) => { if (partRe) for (const c of n.classList) { const x = c.match(new RegExp(partRe)); if (x && !(modRe && new RegExp(modRe).test(x[1]))) return x[1]; } return n.tagName.toLowerCase() === 'svg' ? 'icon' : n.tagName.toLowerCase(); };
         // where code placed a box over its parent, and, where it sits at its parent's centre on an axis (inset 50% and a
         // translate back, a spinner over a button), that it is centred there, as Figma's constraint says it
@@ -1888,8 +1899,9 @@ async function main() {
           const counted = id;
           seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id];
           // its own words, as drawn: a thin space is a character (MUI's required mark is "\u2009*", two text nodes)
-          const plain = (t) => t.replace(/[ \n\t\r]+/g, ' ');
-          const text = entryEl ? plain(n.value || n.placeholder || '').trim() : [...n.childNodes].filter((x) => x.nodeType === 3 && plain(x.textContent).replace(/ /g, '')).map((x) => plain(x.textContent)).join('').replace(/^ +| +$/g, '');
+          // (white space as the element draws it: a code block keeps its newlines and indents, from-code wordsAsDrawn)
+          const plain = (t) => t.replace(/[ \n\t\r]+/g, ' '), kept = s.whiteSpaceCollapse && s.whiteSpaceCollapse !== 'collapse';
+          const text = entryEl ? plain(n.value || n.placeholder || '').trim() : kept ? [...n.childNodes].filter((x) => x.nodeType === 3 && plain(x.textContent).replace(/ /g, '')).map((x) => wordsAsDrawn(x.textContent, s.whiteSpaceCollapse)).join('') : [...n.childNodes].filter((x) => x.nodeType === 3 && plain(x.textContent).replace(/ /g, '')).map((x) => plain(x.textContent)).join('').replace(/^ +| +$/g, '');
           // a box whose only content is its words is a text, unless the mapping says its words are a layer of their own
           // the element a slot's stand-in landed in is the slot, what the caller puts there its content, not its parts
           const filled = marks.find(([m]) => text === m);
@@ -2061,7 +2073,7 @@ async function main() {
         // placed by CSS order before the markup's (a variant that reverses its parts, to-code's `order`), ties as written
         for (const xs of Object.values(byParent)) xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).forEach(([e], i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)

@@ -204,7 +204,8 @@ export const textFromCss = (rows, own) => (rows.find((r) => word(own[r[1]]).spli
 // the design states all the same)
 // (written on the text's own element: a loose text, words its parent holds with no element of their own, reads its
 // parent's declarations, and a parent's nowrap says nothing of how this text resizes)
-export const writtenNowrap = (authored, loose = false) => !loose && /^\s*nowrap\s*$/.test(authored || '');
+// (`pre` is that too: css.mjs writes it for such a text whose white space is kept)
+export const writtenNowrap = (authored, loose = false) => !loose && /^\s*(nowrap|pre)\s*$/.test(authored || '');
 export function autoResizeOf(width, height, nowrap = false) {
   if (width === 'hug' || nowrap) return 'width_and_height';
   if (height === 'hug') return 'height';

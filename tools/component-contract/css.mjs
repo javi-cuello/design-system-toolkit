@@ -244,6 +244,9 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   // a text that hugs its width grows on one line and never wraps (Figma's WIDTH_AND_HEIGHT); CSS's shrink-to-fit
   // would wrap it at the room it has, so it is said with nowrap (rules.mjs autoResizeOf), one the design sizes all the
   // same too (a text placed by scale in a frame with no auto layout keeps the size it measured)
+  // a text's white space is drawn as typed (a code block's newlines and indents), where CSS collapses it: words that
+  // hold a newline, a tab or a run of spaces keep them, pre where the text hugs (still never wrapping), pre-wrap where it wraps
+  else if (e.kind === 'text' && /[\n\t]| {2}/.test(typeof e.content === 'string' ? e.content : '')) put('white-space', e.width === 'hug' || e.autoResize === 'width_and_height' ? 'pre' : 'pre-wrap');
   else if (e.kind === 'text' && (e.width === 'hug' || e.autoResize === 'width_and_height')) put('white-space', 'nowrap');
   if (take('verticalAlign') !== undefined) unread.push('verticalAlign (text set in a taller box)');
 

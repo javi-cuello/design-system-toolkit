@@ -31,6 +31,13 @@ ok('a text that hugs its width never wraps (Figma\'s WIDTH_AND_HEIGHT), one that
   decl({ kind: 'text', width: 'hug', height: 'hug' }, {})['white-space'] === 'nowrap' && decl({ kind: 'text', width: 'fill', height: 'hug' }, {})['white-space'] === undefined
   && decl({ kind: 'container', width: 'hug', height: 'hug' }, {})['white-space'] === undefined
   && decl({ kind: 'text', width: 'hug', height: 'hug', maxLines: 2, truncate: true }, {})['-webkit-line-clamp'] === '2');
+// a text's white space is drawn as typed in Figma (a code block's newlines and indents); CSS collapses it unless told,
+// so a text whose words hold a newline, a tab or a run of spaces keeps them: pre where it hugs, pre-wrap where it wraps
+ok('a text whose words hold a newline or a run of spaces keeps them: pre where it hugs its width, pre-wrap where it wraps',
+  decl({ kind: 'text', width: 'hug', height: 'hug', content: 'a\nb' }, {})['white-space'] === 'pre'
+  && decl({ kind: 'text', width: 'fill', height: 'hug', content: 'a  b' }, {})['white-space'] === 'pre-wrap'
+  && decl({ kind: 'text', width: 'hug', height: 'hug', content: 'a b' }, {})['white-space'] === 'nowrap'
+  && decl({ kind: 'text', width: 'fill', height: 'hug', content: 'a b' }, {})['white-space'] === undefined);
 ok('a text with no style writes no style\'s fields (no token defines --literal-*): it is said as unread, as an unstyled effect is',
   (() => { const r = declarations({ kind: 'text', typography: 'literal' }, {}, { token: (n) => `var(--${n})`, textStyle: (n) => [['font-size', `var(--${n}-font-size)`]] }); return !r.decls.length && r.unread.some((u) => /^typography \(a text with no style/.test(u)); })());
 // 2026-11-22: a library names a style by its size (`14/20 Regular`): read as a text's own values it lost its var()
