@@ -246,6 +246,21 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     !inPage(false, 'stops', false) && !inPage('showStopsStops', 'showStopsStops/trackStop1', false) && !inPage('other', 'showStopsStops/trackStop1', true));
 }
 
+// a placed component's place is written on the control its host wraps (to-code's `ds-icon-button > button`): its CSS
+// order is read there, as the browser lays it out (Material 3's text field: a trailing icon after the input's box)
+{
+  const { cssOrderOf } = await import('./from-code.mjs');
+  const inPage = new Function(`return ${cssOrderOf.toString()}`)();
+  const row = { display: 'flex', getAttribute: () => 'layer' };
+  const button = { style: { display: 'inline-flex', order: '2' } };
+  const host = { style: { display: 'contents', order: '0' }, firstElementChild: button, parentElement: { ...row, style: row } };
+  const style = (n) => n.style || n;
+  ok('a host that draws no box takes its control\'s CSS order; a box its own, and none outside a flex or grid parent',
+    inPage(host, 'layer', style) === 2 && inPage({ style: { display: 'block', order: '3' }, parentElement: host.parentElement }, 'layer', style) === 3
+    && inPage({ style: { display: 'block', order: '3' }, parentElement: { display: 'block', getAttribute: () => 'layer' } }, 'layer', style) === null
+    && inPage({ ...host, firstElementChild: { style: { order: '0' } } }, 'layer', style) === null);
+}
+
 // a layer the mapping places inside a placed component takes the design's name there, never the placed component's own
 // name for the element it lands on (Atlassian's date picker: Select's chevron, <ChevronDownIcon>, carries the design's
 // <SelectClearIcon>; read under Select's name, the second trip's mapping named a layer the design has not)
@@ -333,6 +348,10 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     ringKeyOf(twoRings, 'root', {}, { type: 'a', state: 'focus' }).key === 'focusBorder' && JSON.stringify(ringKeyOf(twoRings, 'root', {}, { type: 'b', state: 'focus' })) === '{"key":"outerRing","name":"Outer ring"}');
   ok('a ring kept in the base anatomy and shown by a set is not found (as ringOf finds none): a focusRing',
     ringKeyOf({ props, anatomy: { ...anatomy, focusBorder: { ...ring, parent: 'root', visible: false } }, variants: [{ when: { state: 'focus' }, set: { 'focusBorder.visible': true } }] }, 'root', {}, { state: 'focus' }).key === 'focusRing');
+  ok('a ring read from an outline takes the place the design gives it among the box\'s children, not the last',
+    (() => { const d = { props, anatomy: { ...anatomy, icon: { kind: 'graphic', parent: 'root', order: 1 } }, variants: [{ when: { state: 'focus' }, add: { focusBorder: { ...ring, parent: 'root', order: 1 } }, set: { 'icon.order': 2 } }] };
+      const got = placeRings({ root: {}, input: { kind: 'container', parent: 'root', order: 0 }, icon: { kind: 'graphic', parent: 'root', order: 1 } }, [['root', { ...ring, parent: 'root' }]], d, { state: 'focus' });
+      return got.input.order === 0 && got.focusBorder.order === 1 && got.icon.order === 2; })());
   ok('a design keeps a ring on a box by its focusRing or a ring layer of its own name, and on no other box',
     keepsRing(errored, 'input') && keepsRing({ props, anatomy, variants: [{ when: { state: 'focus' }, add: { 'input/focusRing': { parent: 'input' } } }] }, 'input') && !keepsRing(errored, 'root') && !keepsRing(null, 'input'));
   ok('the rings a render reads reach delta by the design\'s name: the corner shaped for the ring stays the box\'s own',

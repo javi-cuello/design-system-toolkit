@@ -100,6 +100,16 @@ export function opensPlaced(inside, id, mapped) {
   return !!mapped && (!inside || String(id).startsWith(`${inside}/`));
 }
 
+/* A part's CSS order where the browser lays it out by it, else null: the order of the box it renders at, in its own
+   parent box (`parent`: that box's contract id), a flex or grid one. A host that draws no box (display: contents, a
+   custom element wrapping its control) renders at its control, where to-code writes a placed component's place
+   (`ds-icon-button > button`, its `through`), so the order read is that control's. `style` is getComputedStyle. Runs in
+   the page (passed as source); tested by test-from-code.mjs. */
+export function cssOrderOf(n, parent, style) {
+  const s = style(n), box = s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n, o = +style(box).order;
+  return o && parent != null && n.parentElement && n.parentElement.getAttribute('data-contract-id') === parent && /flex|grid/.test(style(n.parentElement).display) ? o : null;
+}
+
 /* A layer's name where the walk reads it inside a placed component (`inside`: that instance's id): the markup there is
    the placed component's own, so its data-figma-name is that component's name for its layer (Select's
    <ChevronDownIcon>), never this design's for the layer the mapping places on it (a date picker's <SelectClearIcon>):
@@ -283,12 +293,24 @@ export function keepsRing(c, id, settings = undefined) {
 }
 
 /* A render's rings read from outlines (`ring`: [box id, layer]) placed in its reading as the design's ring layers
-   (ringKeyOf), after the box's other children; the keys listed on the reading as `rings` (not enumerable), so delta
-   knows them whatever they are called; `combo` the render's design props. Tested by test-from-code.mjs. */
+   (ringKeyOf), at the place the design gives that layer at this render among the box's other children (an outline holds
+   no place, as it holds no name: both are the design's), after them where the design names none; the keys listed on the
+   reading as `rings` (not enumerable), so delta knows them whatever they are called; `combo` the render's design props.
+   Tested by test-from-code.mjs. */
 export function placeRings(anatomy, ring, design, combo, settings = undefined) {
   // (the render's props, each it leaves unset at its default: an unset prop never matches another value's variant)
   const when = combo && design && design.props ? { ...variantDefaults(design), ...combo } : combo, rings = [];
-  for (const [id, e] of ring) { const { key, name } = ringKeyOf(design, id, anatomy, when, settings); rings.push(key); anatomy[key] = { ...e, ...(name && { name }), order: Object.values(anatomy).filter((y) => y.parent === id).length }; }
+  const drawn = when && design && design.props ? expand(design, when) : {};
+  for (const [id, e] of ring) {
+    const { key, name } = ringKeyOf(design, id, anatomy, when, settings); rings.push(key);
+    const sibs = Object.values(anatomy).filter((y) => y.parent === id).sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
+    // before the first sibling the design draws after the ring here (one the design lacks keeps its place)
+    const at = (k) => (drawn[k] && drawn[k].parent === id ? drawn[k].order ?? 0 : null);
+    const mine = at(key), ids = new Map(Object.entries(anatomy).map(([k, y]) => [y, k]));
+    const place = mine == null ? sibs.length : (((i) => (i < 0 ? sibs.length : i))(sibs.findIndex((y) => at(ids.get(y)) != null && at(ids.get(y)) > mine)));
+    sibs.forEach((y, i) => { y.order = i < place ? i : i + 1; });
+    anatomy[key] = { ...e, ...(name && { name }), order: place };
+  }
   Object.defineProperty(anatomy, 'rings', { value: rings, configurable: true });
   return anatomy;
 }
@@ -1610,7 +1632,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)();
@@ -1647,7 +1669,7 @@ async function main() {
           const [a, b, c, d] = m[1].split(',').map(Number);
           return a * d - b * c < 0 && Math.abs(b) < 1e-6 && Math.abs(c) < 1e-6 ? (a < 0 ? 'x' : 'y') : null;
         };
-        const placedBy = (n, s, parent) => !!+s.order && parent != null && n.parentElement && n.parentElement.getAttribute('data-contract-id') === parent && /flex|grid/.test(getComputedStyle(n.parentElement).display);
+        const cssOrderOf = new Function(`return ${cssOrderSrc}`)(), placedBy = (n, parent) => { const o = cssOrderOf(n, parent, getComputedStyle); return o == null ? {} : { cssOrder: o }; };
         const walk = (n, parent, order, inside = false) => {
           const s = getComputedStyle(n);
           // not drawn: hidden, or a native control MUI keeps for its behaviour at no opacity (a switch's input); a layer
@@ -1686,7 +1708,7 @@ async function main() {
           const hostSel = /^(.*\S)\s*>\s*[^>]+$/.exec(sel || '');
           const host = parent == null && hostSel && n.parentElement && n.parentElement.tagName.includes('-') && (() => { try { return n.parentElement.matches(hostSel[1]); } catch { return false; } })() ? n.parentElement : null;
           const modes = Object.fromEntries(modeKeys.map((k) => [k, n.getAttribute(`data-${k}`) || (host && host.getAttribute(`data-${k}`))]).filter(([, v]) => v));
-          const e = { id, kind, ...(parent != null && { parent, order }), ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
+          const e = { id, kind, ...(parent != null && { parent, order }), ...placedBy(n, parent), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
           // (a host that draws no box, display: contents, renders at its control's: the box in the flow)
           { const b = s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n, r = b.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
@@ -1706,7 +1728,7 @@ async function main() {
           if (other && !n.hasAttribute('data-figma-id')) { seen[counted]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id]; }
           if (other) {
             n.setAttribute('data-contract-id', id); up(id);
-            out.push({ id, kind: 'instance', parent, order, ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(figmaName && { name: figmaName }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
+            out.push({ id, kind: 'instance', parent, order, ...placedBy(n, parent), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(figmaName && { name: figmaName }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
               ...(s.position === 'absolute' && placed(n)),
               // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
@@ -1843,7 +1865,7 @@ async function main() {
         // placed by CSS order before the markup's (a variant that reverses its parts, to-code's `order`), ties as written
         for (const xs of Object.values(byParent)) xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).forEach(([e], i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
