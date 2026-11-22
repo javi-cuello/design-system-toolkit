@@ -767,7 +767,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     && none(design, joins, code(), { status: '' }) && none(design, joins, code(), {}) && none(design, {})
     && none(design, joins, code(), { status: 'Label' }, { showStatus: ['status', 'icon'] }));
   {
-    const both = { ...design, status: { type: 'string', figma: 'Status' } }, at = (v) => designCombo(both, p, {}, { status: v });
+    const both = { ...design, status: { type: 'string', figma: 'Status' } }, at = (v) => designCombo({ props: both }, p, {}, { status: v });
     ok('a text and its boolean over one code prop are each their own kind in the design\'s combination',
       JSON.stringify(at(false)) === '{"showStatus":false}' && at('').showStatus === false && at('Sent').showStatus === true && at('Sent').status === 'Sent');
     ok('a design text the mapping joins to that code prop, or of its Figma name, stays the design\'s', !onlyInCode(p, { ...design, message: { type: 'string', figma: 'Message' } }, { message: { arg: 'status' } }).has('status')
