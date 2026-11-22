@@ -52,7 +52,7 @@
     {
       "id": "icons",
       "label": "Icons",
-      "description": "Sizes, colours and names.",
+      "description": "Sizes, bound colours and names.",
       "owner": "figma-foundations-audit",
       "target": "icons",
       "gather": { "script": "plugins/design-system-snapshot/code.js", "shadow": ["__html__"], "set": { "FACTS": true }, "call": "__headless", "served": "snapshot" },

@@ -2,7 +2,7 @@
 
 ## [1.15.3] - 2026-11-22
 ### Fixed
-- **A checkbox's or switch's name reads in text colour, and a box just clicked shows no focus ring.** FigUI3 greys every label, so a name read as disabled, and its ring showed on a box under the pointer; the shared frame (ui-base v5) corrects both for every plugin, and a box reached by keyboard keeps its ring.
+- **A checkbox's or switch's own name reads in text colour.** FigUI3 greys every label, so its right-to-left box's name read as disabled; the shared frame (ui-base v5) corrects it for every plugin.
 
 ## [1.15.2] - 2026-11-11
 ### Fixed

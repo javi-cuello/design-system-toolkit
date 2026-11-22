@@ -3,8 +3,8 @@
    comes first in this block and its components (fig-button, fig-tabs, fig-field, fig-switch, fig-footer…) come from
    the module script block. Controls are fig-* elements, or the native elements FigUI3 styles; a plugin composes them
    and never restyles them (skill-standard §B 4). This layer adds only the window's frame: panels that scroll between a
-   tab bar and a footer, the footer's inset, the spacing tokens older bespoke rules still read, and two corrections to
-   FigUI3's checkbox and switch, commented where they stand. */
+   tab bar and a footer, the footer's inset, the spacing tokens older bespoke rules still read, and one correction to
+   FigUI3's checkbox and switch label, commented where it stands. */
 /* figui3 generated start — FigUI3 11.11.5 dist/fig.css (MIT, plugins/_shared/figui3/LICENSE) */
 /*!
 MIT License
@@ -43,9 +43,8 @@ body{margin:0;display:flex;flex-direction:column;overflow:hidden}
 /* the footer's inset is the panels' and the field rows', so its hint and action line up with the content above */
 fig-footer{padding-inline:var(--spacer-3,16px)}
 fig-footer>.footer-hint{flex:1;min-width:0;align-self:center;color:var(--figma-color-text-secondary);overflow-wrap:anywhere}
-/* FigUI3 greys every label, so a checkbox's or switch's own name read as disabled: it is the control's name, in text colour */
-fig-checkbox>label,fig-switch>label{color:var(--figma-color-text)}
-/* a box under the pointer was just clicked, not tabbed to: no ring there, so Figma's host showing one after a click is hidden */
-fig-checkbox:hover>input[type=checkbox]:focus-visible{outline:none}
+/* FigUI3 greys every label, so a checkbox's or switch's own name read as disabled: it is the control's name, in text
+   colour, unless the control is disabled (maintainer ruling 2026-11-22, skill-standard §B 4) */
+fig-checkbox:not(:has(>:disabled))>label,fig-switch:not(:has(>:disabled))>label{color:var(--figma-color-text)}
 [hidden]{display:none !important}
 /* ui-base v5 end */

@@ -1,6 +1,6 @@
 # Eval cases — figma-plugin-creator (v1.20.2)
 
-**Walked: 2026-11-22 for 1.20.2** — ui-base v5 synced into the template and assets: P1 and P7 executed (`node tests/test-scaffold.mjs` 9 passed, `node tests/test-conformance.mjs` 29 passed); the two new rules sit in the ui-base block, so §5c reads no restyle; `conformance.mjs plugins` 0 errors, 0 warnings.
+**Walked: 2026-11-22 for 1.20.2** — ui-base v5 synced into the template and assets: P1 and P7 executed (`node tests/test-scaffold.mjs` 9 passed, `node tests/test-conformance.mjs` 29 passed); the new rule sits in the ui-base block, so §5c reads no restyle; `conformance.mjs plugins` 0 errors, 0 warnings.
 
 **Walked: 2026-11-21 for 1.20.1** — main's clause-I rewrite (1.19.0) merged with the generated-block rules (now 1.20.0 and 1.20.1): the checklist's §2 and §3 say a block is left out only where `GENERATORS` names its generator. P2 and P3 read against the merged text and executed: `node tests/test-conformance.mjs` 29 passed.
 
