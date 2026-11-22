@@ -32,7 +32,7 @@ A card is a container for a few related pieces of content about one subject: an 
 
 **Cases**
 - A settings page draws each group of fields in its own bordered card → sections with headings; the border adds nothing a heading and space do not.
-- Forty invoices as cards, each showing number, client, amount and status → a table: every card shows the same four attributes and people compare amounts.
+- Forty invoices as cards, each showing number, customer, amount and status → a table: every card shows the same four attributes and people compare amounts.
 - A gallery of templates, each with a preview, a title and a line of text → cards: items are browsed and differ in content.
 - Event types on a scheduling home page, each with a name, a duration, a copy-link action and a menu → cards, as Calendly draws them ([Calendly event types](https://calendly.com/help/how-to-organize-and-manage-your-event-types)).
 

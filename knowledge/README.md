@@ -9,9 +9,9 @@ Any new UI work starts from the pages for what it builds, before its first line.
 | Folder | What it holds | Serves |
 |---|---|---|
 | `ui/design/` | The five areas' fundamentals: `ux.md`, `interaction.md`, `visual.md`, `content.md`, `accessibility.md` | design-standard |
-| `ui/patterns/` | Finding your way (navigation, menus, sidebars, pagination, search, filtering). Choosing (selection, chips). Entering (forms, upload, steppers, authentication, settings, property editors, consent). Acting (actions, dialogs, disclosure, feedback). Showing data (tables, data grid, data, data visualisation). | design-standard |
-| `ui/components/` | One page per component, covering design, Figma and code. Actions and wayfinding (button, link, tabs, breadcrumbs). Overlays and disclosure (modal dialog, drawer, popover, tooltip, accordion). Choices (checkbox, radio, switch, select, combobox, segmented control, slider). Text and status (text input, text area, search input, label, toast, alert, badge, chip, feedback message, progress indicator, spinner). | design-standard, figma-standard, code-standard |
-| `ui/profiles/` | What a kind of product must specify: `documentation.md`, `dashboards.md`, `editorial.md` (forms are `ui/patterns/forms.md`) | design-standard |
+| `ui/patterns/` | Finding your way (navigation, menus, sidebars, pagination, search, filtering). Choosing (selection, chips). Entering (forms, upload, steppers, authentication, settings, property editors, consent). Acting (actions, dialogs, disclosure, feedback). Showing data (tables, data grid, data, data visualisation, calendars, calendar events). | design-standard |
+| `ui/components/` | One page per component, covering design, Figma and code. Actions and wayfinding (button, link, tabs, breadcrumbs). Overlays and disclosure (modal dialog, drawer, popover, tooltip, accordion). Choices (checkbox, radio, switch, select, combobox, segmented control, slider). Text and status (text input, text area, search input, label, toast, alert, badge, chip, feedback message, progress indicator, spinner, card). | design-standard, figma-standard, code-standard |
+| `ui/profiles/` | What a kind of product must specify: `documentation.md`, `dashboards.md`, `reports.md`, `editorial.md` (forms are `ui/patterns/forms.md`) | design-standard |
 | `code/` | How to write front-end code. Markup and style (html semantics, accessibility, css architecture, tokens, token taxonomy, responsive). Handoff, scripts and agents (figma handoff, code connect, javascript, web components, react, agent prototyping, agent maintenance, adoption). Quality (performance, i18n, security, testing, browser support). Also `candidates.md`: lessons from single runs not yet rules, with the sources behind code-standard's rules. | code-standard |
 
 The `frontend-build` skill walks these pages when it builds or audits.
@@ -49,7 +49,7 @@ Every component page has one shape, checked by `check-standards`:
 | *Differences* | where the Figma build departs from the code on purpose, and why |
 | *Check*, *Sources* | as in any section |
 
-[`ui/components/button.md`](ui/components/button.md) is the model. Text field, card and the components with no section of their own yet are written when work first needs them.
+[`ui/components/button.md`](ui/components/button.md) is the model. Text field and the components with no section of their own yet are written when work first needs them.
 
 A design pattern never ships without its build part. A code page that implements a ui pattern names it in an **Implements:** line under its intro. A code page's own sections are the build, so they carry no build part.
 
