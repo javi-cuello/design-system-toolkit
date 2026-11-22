@@ -88,6 +88,12 @@ test('a weight keeps shared numbers lengths, and a style bound to one takes the 
   assert.equal(r.of['Scale/100'], 'dimension', 'a number bound as a font size is a length');
   r = type({ 'Thin/Font weight': 100, 'Scale/100': 100 }, { 'Thin/Font weight': 'Scale/100' }, {}, null, [{ name: 'Lift', layers: [{ bound: { y: b('Scale/100') } }] }]);
   assert.equal(r.of['Scale/100'], 'dimension', "a number bound as a shadow's offset is a length");
+  r = type({ 'Button/W': 700, 'Body/W': 700, 'Font weight/Bold': 700 }, { 'Button/W': 'Body/W', 'Body/W': 'Font weight/Bold' }, {}, { fontWeight: b('Body/W') });
+  assert.deepEqual([...new Set(Object.values(r.of))], ['fontWeight'], 'a bound number that aliases a named weight passes it up');
+  for (const field of ['lineHeight', 'letterSpacing']) {
+    r = type({ 'Thin/Font weight': 100, 'Scale/100': 100 }, { 'Thin/Font weight': 'Scale/100' }, {}, { [field]: b('Scale/100') });
+    assert.equal(r.of['Scale/100'], 'dimension', `a number bound as ${field} is a length`);
+  }
   r = type({ 'Body/W': 450.5 }, {}, { 'Body/W': ['FONT_WEIGHT'] }, { fontWeight: b('Body/W') });
   assert.deepEqual(r, { of: { 'Body/W': 'dimension' }, style: null }, 'a style never references a length as its weight');
   r = type({ Outer: 400, Mid: 400, bodyFontWeight: 400, 'Opacity/Font weight': 40, Styled: 600 }, { Outer: 'Mid', Mid: 'bodyFontWeight' }, { Styled: ['FONT_WEIGHT', 'FONT_STYLE'] });

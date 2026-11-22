@@ -180,26 +180,26 @@ export function toDtcgSnapshot(t) {
   // aliases, up from a weight by scope or name alone (a 400 a style binds may be a width's too), down only where all that
   // alias the target are weights, and dropped wherever an alias and its target would differ in type.
   const variableAt = (x) => x && byName.get(x.collection)?.get(x.name);
-  const asLength = new Set([...(t.textStyles || []).map((s) => s.bound.fontSize),
+  const asLength = new Set([...(t.textStyles || []).flatMap((s) => Object.keys(s.bound).filter((k) => k !== 'fontWeight').map((k) => s.bound[k])),
     ...(t.effects || []).flatMap((e) => (e.layers || []).flatMap((l) => Object.values(l.bound || {})))].map((b) => variableAt(own(b))));
-  const couldWeigh = new Set(), weighs = new Set(), byBinding = new Set();
+  const couldWeigh = new Set(), weighs = new Set(), said = new Set();
   out.forEach((c, i) => c.variables.forEach((v) => {
     const scopes = (collections[i][1].scopes || {})[v.name] || [];
     if (v.type !== 'FLOAT' || asLength.has(v) || DTCG.classify(v) !== 'dimension') return;
     if (!scopes.every((s) => ['FONT_WEIGHT', 'FONT_STYLE', 'TEXT_CONTENT', 'ALL_SCOPES'].includes(s))) return;
     if (!Object.values(v.values).every((x) => x?.alias || DTCG.fontWeight(x) !== null)) return;
     couldWeigh.add(v);
-    if (scopes.includes('FONT_WEIGHT') || /font[\s/_-]*weight/i.test(v.name)) weighs.add(v);
+    if (scopes.includes('FONT_WEIGHT') || /font[\s/_-]*weight/i.test(v.name)) { weighs.add(v); said.add(v); }
   }));
-  for (const s of t.textStyles || []) { const v = variableAt(own(s.bound.fontWeight)); if (couldWeigh.has(v) && !weighs.has(v)) { weighs.add(v); byBinding.add(v); } }
+  for (const s of t.textStyles || []) { const v = variableAt(own(s.bound.fontWeight)); if (couldWeigh.has(v)) weighs.add(v); }
   const links = out.flatMap((c) => c.variables.flatMap((v) => Object.values(v.values).map((x) => [v, variableAt(x?.alias)]).filter(([, to]) => to)));
   const aliasedBy = new Map();
   for (const [from, to] of links) aliasedBy.set(to, (aliasedBy.get(to) || new Set()).add(from));
-  for (let size = -1; size !== weighs.size;) {
-    size = weighs.size;
-    for (const [from, to] of links) {
-      if (weighs.has(to) && !byBinding.has(to) && couldWeigh.has(from)) weighs.add(from);
-      else if (weighs.has(from) && couldWeigh.has(to) && !weighs.has(to) && [...aliasedBy.get(to)].every((f) => weighs.has(f))) weighs.add(to);
+  for (let size = -1; size !== weighs.size + said.size;) {
+    size = weighs.size + said.size;
+    for (const [to, froms] of aliasedBy) {
+      if (said.has(to)) for (const from of froms) if (couldWeigh.has(from)) { weighs.add(from); said.add(from); }
+      if (couldWeigh.has(to) && !weighs.has(to) && [...froms].every((from) => weighs.has(from))) weighs.add(to);
     }
   }
   for (let size = -1; size !== weighs.size;) {
