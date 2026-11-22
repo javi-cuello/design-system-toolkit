@@ -128,6 +128,14 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   { const sw3 = { ...sw, props: { size: { type: 'enum', values: ['s', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/dot' } }, variants: [{ when: { size: 'l' }, set: { 'icon.content': 'x' } }] };
     const org3 = { ...org, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switcher' }, 'sw/icon': { kind: 'instance', parent: 'sw', component: 'Icon/case' } } };
     ok('a variant that sets one field of a part passes that field only: another component there is still an override', unexposed(org3, 'sw/icon', (n) => (n === 'Switcher' ? sw3 : null)) === 'part'); }
+  // a part the placed component draws only at one of its variants (Carbon's toggle item draws its small switch at Size
+  // Small, untoggled): the variant passes the part, but a prop of it no variant gives (the toggle's switch Toggled) is an
+  // override all the same; one a variant gives is passed
+  { const item = { component: 'Item', props: { size: { type: 'enum', values: ['default', 'small'], default: 'default', figmaValues: ['Default', 'Small'], figma: 'Size' } }, anatomy: { root: { kind: 'container' } },
+      variants: [{ when: { size: 'small' }, add: { sw: { kind: 'instance', parent: 'root', component: 'Switch', with: { Toggled: 'False' } } } }] };
+    const tog = (w) => ({ component: 'Toggle', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item', with: { Size: 'Small' } }, 'item/sw': { kind: 'instance', parent: 'item', component: 'Switch', with: w } }, variants: [] });
+    ok('a prop no variant of the placed component gives a part it draws only at a variant is an override; one it gives is passed',
+      unexposed(tog({ Toggled: 'True' }), 'item/sw', (n) => (n === 'Item' ? item : null)) === 'field' && unexposed(tog({ Toggled: 'False' }), 'item/sw', (n) => (n === 'Item' ? item : null)) === false); }
   { const date = { component: 'Date', folder: 'date', props: { value: { type: 'string', default: 'Value', figma: 'Value', sets: ['label'] }, hasValue: { type: 'boolean', default: false, figma: 'Has value' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Select a date' } }, variants: [{ when: { hasValue: true }, set: { 'label.content': '{value}' } }] };
     const out = toElement(date, 'date', { naming: ELEMENT, library: { Date: date } });
     ok('a text that holds a literal until a variant swaps a prop in draws the literal there, never the prop on both sides', /hasValue \? value : "Select a date"/.test(out) && !/hasValue \? value : value/.test(out)); }

@@ -148,12 +148,15 @@ export function unexposed(c, id, mainOf) {
   const main = mainOf(he.component, he.key);
   if (!main) return false;
   const rel = id.slice(host.length + 1);
-  const own = (main.anatomy || {})[rel], props = Object.values(main.props || {});
-  // a part the component draws in one of its variants is passed by that variant's prop, and a field a variant sets, by
-  // that field's; never a pointer state's (hover is no value markup passes)
+  const props = Object.values(main.props || {});
+  // a part the component draws in one of its variants is passed by that variant's prop, and a field a variant sets or
+  // draws it with, by that field's; never a pointer state's (hover is no value markup passes)
   const passing = (main.variants || []).filter((v) => !pointerWords(main, v.when));
-  if (passing.some((v) => (v.add || {})[rel])) return false;
-  const varied = (f) => passing.some((v) => `${rel}.${f}` in (v.set || {}));
+  // (one drawn only in a variant is held, as one of its base, to the part the component draws at the instance's props)
+  const added = passing.some((v) => (v.add || {})[rel]);
+  const own = (main.anatomy || {})[rel] || (added ? atProps(main, he.with)[rel] : undefined);
+  if (added && !own) return false;
+  const varied = (f) => passing.some((v) => `${rel}.${f}` in (v.set || {}) || ((v.add || {})[rel] || {})[f] !== undefined);
   // a part the component does not draw at all: nothing in the markup can pass it ('part', its insides with it)
   if (!own) return 'part';
   // else each field markup would have to pass, held to the prop that passes that field
@@ -166,7 +169,7 @@ export function unexposed(c, id, mainOf) {
   // (each prop it is given on its own: one a variant of the component sets to that value is passed by that variant's
   // prop; one no variant ever sets so, a Type no prop of the list reaches, is not, though another prop of it varies)
   const mine = (part.e.with && typeof part.e.with === 'object') ? part.e.with : {}, theirs = (own.with && typeof own.with === 'object') ? own.with : {};
-  const reached = (k) => passing.some((v) => { const w = (v.set || {})[`${rel}.with`]; return w && typeof w === 'object' && JSON.stringify(w[k]) === JSON.stringify(mine[k]); });
+  const reached = (k) => passing.some((v) => { const w = (v.set || {})[`${rel}.with`] ?? ((v.add || {})[rel] || {}).with; return w && typeof w === 'object' && JSON.stringify(w[k]) === JSON.stringify(mine[k]); });
   const unreached = Object.keys(mine).some((k) => JSON.stringify(mine[k]) !== JSON.stringify(theirs[k] ?? null) && !reached(k));
   if (differs('with') && (!varied('with') || unreached) && !props.some((q) => [...(q.sets || []), ...(q.swaps || [])].some((l) => l.startsWith(`${rel}/`) || l === rel))) return 'field';
   return false;
