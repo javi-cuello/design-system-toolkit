@@ -54,6 +54,27 @@ test('a string Figma scopes to font family is a fontFamily where its name says n
   writeDtcg(t, dir); // and the build writes: no reference left to a string it skips
 });
 
+test('a numeric weight is a fontWeight by scope, by name, by binding or along an alias; a length never is', () => {
+  const V = { 'Heavy': 700, 'Breakpoint/Body/Font weight': 400, 'Strong': 700, 'Base/653': 653, 'Display/Font weight': 653, 'Body/W': 500,
+    'Stroke/Weight/thin': 1, 'Line weight': 200, 'Number/400': 400, 'Quiet/Font weight': 400, 'Panel/width': 400, 'Odd/Font weight': 0 };
+  const t = { collections: { T: { modes: ['V'], values: { V }, alias: { V: { Strong: 'Heavy', 'Display/Font weight': 'Base/653', 'Quiet/Font weight': 'Number/400', 'Panel/width': 'Number/400' } },
+    scopes: { Heavy: ['FONT_WEIGHT'], 'Breakpoint/Body/Font weight': ['TEXT_CONTENT'], Strong: ['ALL_SCOPES'], 'Body/W': ['ALL_SCOPES'], 'Stroke/Weight/thin': ['STROKE_FLOAT'], 'Panel/width': ['WIDTH_HEIGHT'] } } },
+    textStyles: [{ name: 'Body', family: 'Inter', weight: 'Medium', size: 14, lineHeight: 1.5, bound: { fontWeight: { collection: 'T', name: 'Body/W' } } }] };
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeDtcg(t, dir);
+  const at = (n) => DTCG.pathFor('T', n).reduce((o, k) => o[k], JSON.parse(readFileSync(join(dir, 't', readdirSync(join(dir, 't'))[0]), 'utf8')));
+  const got = (n) => [at(n).$type, at(n).$value];
+  assert.deepEqual(got('Heavy'), ['fontWeight', 700], 'scoped');
+  assert.deepEqual(got('Breakpoint/Body/Font weight'), ['fontWeight', 400], 'named only, scoped to text content');
+  assert.deepEqual(got('Strong'), ['fontWeight', '{t.heavy}'], 'an alias to a weight');
+  assert.deepEqual([got('Display/Font weight')[0], ...got('Base/653')], ['fontWeight', 'fontWeight', 653], 'the target of a weight');
+  assert.deepEqual(got('Body/W'), ['fontWeight', 500], 'bound by a text style');
+  const style = JSON.parse(readFileSync(join(dir, 'text-style/value.json'), 'utf8'))['text-style'].body;
+  assert.equal(style.$value.fontWeight, `{${DTCG.pathFor('T', 'Body/W').join('.')}}`, 'the style references the number');
+  for (const n of ['Stroke/Weight/thin', 'Line weight', 'Odd/Font weight']) assert.equal(at(n).$type, 'dimension', `${n} stays a length`);
+  for (const n of ['Number/400', 'Quiet/Font weight', 'Panel/width']) assert.equal(at(n).$type, 'dimension', `${n}: a number a length shares stays one, and so does what aliases it`);
+});
+
 test('a text style binds to the variables the snapshot records', () => {
   const t = toDtcgSnapshot(snapshot()).textStyles[0];
   assert.deepEqual(t.bound.fontSize, { collection: 'Responsive type', name: 'Heading/lg/size' });

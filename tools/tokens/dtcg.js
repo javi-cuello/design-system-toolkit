@@ -169,7 +169,8 @@
     var hinted = groups[segments[0]];
     if (hinted) return hinted;
     if (variable.type === 'COLOR') return 'color';
-    if (variable.type === 'FLOAT') return isOpacity(variable.name) ? 'number' : 'dimension';
+    // (a number is a weight only where from-snapshot.mjs found it one: an alias and its target are one type)
+    if (variable.type === 'FLOAT') return isOpacity(variable.name) ? 'number' : variable.font === 'fontWeight' ? 'fontWeight' : 'dimension';
     if (variable.type === 'STRING') {
       var kind = function (re) { return segments.some(function (seg) { return re.test(seg); }); };
       if (kind(/^famil/i)) return 'fontFamily';

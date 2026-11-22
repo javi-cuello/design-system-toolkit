@@ -120,7 +120,7 @@ export function toDtcgSnapshot(t) {
           else values[mode] = isColour(raw) ? figmaRgba(raw) : raw;
         }
         // a string Figma scopes to font family (FONT_FAMILY) is a family where its name says no kind (dtcg.js classify:
-        // the name first, as it always was); a weight is not taken from a scope, which may be mis-set and which names a
+        // the name first, as it always was); a string weight is not taken from a scope, which may be mis-set and which names a
         // value the build may not map, and a reference to one it skips would refuse the build
         const scopes = (c.scopes || {})[name] || [];
         const font = type === 'STRING' && scopes.includes('FONT_FAMILY') ? 'fontFamily' : undefined;
@@ -174,6 +174,34 @@ export function toDtcgSnapshot(t) {
   // A binding to a variable this snapshot does not hold (another library's)
   // cannot become a reference the build resolves: the literal value stands.
   const own = (x) => { const n = x && held(x.name), h = n && homes.get(n); return h ? { collection: built(h.includes(x.collection) ? x.collection : h[0]), name: n } : null; };
+  // A number is a weight, never a length (400, not 25rem), where Figma scopes it to one, its name says "font weight"
+  // (a weight scoped to text or to everything; "weight" alone is also a stroke's) or a text style binds it as one, and
+  // only where every value is a weight and no scope is a length's. It is passed along aliases, to a target only where
+  // all that alias it are weights, and dropped wherever an alias and its target would differ in type.
+  const couldWeigh = new Set(), weighs = new Set();
+  out.forEach((c, i) => c.variables.forEach((v) => {
+    const scopes = (collections[i][1].scopes || {})[v.name] || [];
+    if (v.type !== 'FLOAT' || DTCG.classify(v) !== 'dimension') return;
+    if (!scopes.every((s) => ['FONT_WEIGHT', 'FONT_STYLE', 'TEXT_CONTENT', 'ALL_SCOPES'].includes(s))) return;
+    if (!Object.values(v.values).every((x) => x?.alias || DTCG.fontWeight(x) !== null)) return;
+    couldWeigh.add(v);
+    if (scopes.includes('FONT_WEIGHT') || /(^|[^a-z])font[\s/_-]*weight/i.test(v.name)) weighs.add(v);
+  }));
+  const variableAt = (x) => x && byName.get(x.collection)?.get(x.name);
+  for (const s of t.textStyles || []) { const v = variableAt(own(s.bound.fontWeight)); if (couldWeigh.has(v)) weighs.add(v); }
+  const links = out.flatMap((c) => c.variables.flatMap((v) => Object.values(v.values).map((x) => [v, variableAt(x?.alias)]).filter(([, to]) => to)));
+  for (let size = -1; size !== weighs.size;) {
+    size = weighs.size;
+    for (const [from, to] of links) {
+      if (weighs.has(to) && couldWeigh.has(from)) weighs.add(from);
+      else if (weighs.has(from) && couldWeigh.has(to) && links.every(([f, x]) => x !== to || weighs.has(f))) weighs.add(to);
+    }
+  }
+  for (let size = -1; size !== weighs.size;) {
+    size = weighs.size;
+    for (const [from, to] of links) if (weighs.has(from) !== weighs.has(to)) { weighs.delete(from); weighs.delete(to); }
+  }
+  for (const v of weighs) v.font = 'fontWeight';
   const boundOf = (s) => ({ fontFamily: own(s.bound.fontFamily), fontSize: own(s.bound.fontSize), fontWeight: own(s.bound.fontWeight) });
   const textStyles = (t.textStyles || []).map((s) => ({
     name: s.name,
