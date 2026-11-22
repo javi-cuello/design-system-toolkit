@@ -155,8 +155,13 @@ export function controlOf(name, placed = []) {
   return placed.some((x) => /button/i.test(String(x))) ? null : 'button';
 }
 export const placedIn = (c) => Object.values(c.anatomy || {}).filter((e) => e.kind === 'instance').map((e) => e.component);
-// what a placed instance holds, as its holder stores it: the components its own sheet's controlOf is given
-const heldIn = (c, id) => Object.entries(c.anatomy || {}).filter(([k, e]) => k.startsWith(`${id}/`) && e.kind === 'instance').map(([, e]) => e.component);
+// what a placed instance holds: the components its own sheet's controlOf is given, so a holder reaches it as its own
+// sheet draws it (its placedIn, where the library holds it: a holder's record may keep none of its insides), else as
+// its holder stores it
+const heldIn = (c, id, mains = () => null) => {
+  const e = (c.anatomy || {})[id] || findAdded(c, id) || {}, m = e.kind === 'instance' && mains(e.component, e.key);
+  return m ? placedIn(m) : Object.entries(c.anatomy || {}).filter(([k, x]) => k.startsWith(`${id}/`) && x.kind === 'instance').map(([, x]) => x.component);
+};
 /* With element naming the host is a custom element wrapping the native control (code-standard rule 8): the host has no
    box of its own (display: contents) and carries the attributes, and the control is the box the contract draws
    (`ds-button > button`). A component placed in another is reached the same way. With class naming the control is the
@@ -787,7 +792,7 @@ function chain(c, n, id, rootCond, mains = () => null) {
   if (entry && own === entry.input) { segs.push('input'); at = entry.box; }
   if (own.endsWith('/*')) { segs.push('*'); at = own.slice(0, -2); }
   for (; at && at !== 'root'; at = (c.anatomy[at] || findAdded(c, at) || {}).parent) segs.unshift(at);
-  const seg = (s) => (s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + through(n, ((c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance' && (c.anatomy[s] || findAdded(c, s)).component), heldIn(c, s)));
+  const seg = (s) => (s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + through(n, ((c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance' && (c.anatomy[s] || findAdded(c, s)).component), heldIn(c, s, mains)));
   // a part inside a placed component is that component's own: named as its own sheet names it, under the instance
   const hostAt = segs.findIndex((s) => (c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance');
   const host = hostAt >= 0 && hostAt < segs.length - 1 && segs[hostAt], m = host && (() => { const he = c.anatomy[host] || findAdded(c, host); return mains(he.component, he.key); })();
@@ -802,7 +807,7 @@ function chain(c, n, id, rootCond, mains = () => null) {
       const { M, back } = placedAs(all, h, hm, mains), match = placedOf(all, h, M), own = (s) => back[match[s.slice(h.length + 1)]] || s.slice(h.length + 1);
       const next = rest.slice(0, -1).findIndex((s) => all[s] && all[s].kind === 'instance' && mains(all[s].component, all[s].key));
       const take = next >= 0 ? rest.slice(0, next + 1) : rest;
-      inner.push(...take.map((s, i) => n2.part(partSeg(hm, own(s))) + (i === next ? through(n, all[s].component, heldIn(hm, own(s))) : '')));
+      inner.push(...take.map((s, i) => n2.part(partSeg(hm, own(s))) + (i === next ? through(n, all[s].component, heldIn(hm, own(s), mains)) : '')));
       rest = rest.slice(take.length);
       if (rest.length) { h = take[take.length - 1]; hm = mains(all[h].component, all[h].key); }
     }

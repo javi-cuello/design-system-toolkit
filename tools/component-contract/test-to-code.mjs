@@ -527,6 +527,18 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     /data-quiet[^{]*> \.ds-rail__knob \{[^}]*background: unset/.test(qs) && selfCheck(quiet, rulesOf(quiet, m2).rules, m2).length === 0);
   ok('a nested instance\'s own override is written through its holder', /\.ds-slider > \.ds-slider__rail > \.ds-rail__knob \{[^}]*background: var\(--c-strong\)/.test(toCss(slider, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: m2 })));
 }
+// a placed component is reached as its own sheet draws it: one whose name says button but which places a Button is a
+// box, no host wrapping a <button>, though its holder's record keeps none of its insides (Carbon's code snippet ghost button)
+{
+  const EL = { kind: 'element', prefix: 'ds-' };
+  const ghost = { contract: 1, component: 'Ghost button', props: {}, anatomy: { root: { kind: 'container' }, button: { kind: 'instance', parent: 'root', component: 'Button', with: {} } }, variants: [] };
+  const holder = { contract: 1, component: 'Snippet', props: { copy: { type: 'boolean', default: true, axis: true, figma: 'Copy' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, align: 'start', crossAlign: 'start' } }, spacer: { kind: 'container', parent: 'root', order: 0, width: 8 }, ghost: { kind: 'instance', parent: 'root', component: 'Ghost button', with: {}, order: 1 } },
+    variants: [{ when: { copy: false }, set: { 'ghost.order': 0, 'spacer.order': 1 } }] };
+  const own = toCss(ghost, 'ghost-button', { naming: EL }), held = toCss(holder, 'snippet', { naming: EL, mains: (x) => (x === 'Ghost button' ? ghost : null) });
+  ok('a placed component is reached through its control only where its own sheet makes its host draw no box',
+    !/display: contents/.test(own) && /\[data-part="ghost"\] \{[^}]*order: 1/.test(held) && !/\[data-part="ghost"\] > button/.test(held));
+}
 // a part scaled with a parent that is stretched between its own parent's edges takes its share of that parent's size, the
 // grandparent's less both offsets (Carbon's skeleton shimmer, scaled inside a fill stretched over the box)
 {
