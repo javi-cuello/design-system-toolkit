@@ -357,6 +357,14 @@ ok('one whose component the library does not hold is that component\'s, not read
       { when: { state: 'error' }, add: { status: { kind: 'instance', parent: 'root', component: 'Status', with: { Status: 'Failed' }, order: 0 }, 'status/fill': { kind: 'graphic', parent: 'status', order: 0 }, 'status/warn': { kind: 'graphic', parent: 'status', order: 1, background: 'C/red' } } }] };
   const ls = toParity(field, 'field', { naming: ELEMENT, library: { Status: { ...status, folder: 'status' }, Field: { ...field, folder: 'field' } }, framework: 'web-components' }).layers;
   ok('a part a placed component draws at the props one variant places it with is read there, though another places it without', ls['Status > Warn'] === 'ds-field > [data-part="status"] > [data-part="warn"]' && ls['Status > Alt'] === 'ds-field > [data-part="status"] > [data-part="alt"]', JSON.stringify(ls)); }
+// two parts at one stored path (a select's two ✏️ {value} texts, never drawn together): the mapping keeps that one path, as
+// parity reads it (#2 is the second drawn in one variant), and hands each part's selector by its id beside it, unwritten
+{ const sel = { contract: 1, component: 'Pick', props: { search: { type: 'boolean', default: false, figma: 'Search' } },
+    anatomy: { root: { kind: 'container' }, box: { kind: 'container', parent: 'root', order: 0 }, 'box/value': { kind: 'text', parent: 'box', name: '✏️ {value}', content: 'A', order: 0 } },
+    variants: [{ when: { search: true }, remove: ['box/value'], add: { 'box/searchValue': { kind: 'text', parent: 'box', name: '✏️ {value}', content: 'B', order: 0 } } }] };
+  const m = toParity(sel, 'pick', { naming: ELEMENT, library: {}, framework: 'web-components' });
+  ok('two parts at one stored path each keep their selector by id', !!m.byId && /search-value/.test(m.byId['box/searchValue']) && !!m.byId['box/value'] && !/search-value/.test(m.byId['box/value']));
+  ok('and no path the store does not hold is written for them', Object.keys(m.layers).join(',') === 'Box,Box > ✏️ {value}' && !JSON.stringify(m).includes('byId')); }
 const rows = toParity(library['Nav panel'], 'nav-panel', { naming: ELEMENT, library, framework: 'web-components' }).layers;
 ok('a repeat is its place among its own, whatever else the box holds', rows['List > Item#2'] === 'ds-nav-panel > [data-part="list"] > [data-part="item"]:nth-child(2 of [data-part="item"])');
 ok('the story id is Storybook\'s for the title, a platform\'s library its own', toParity(library.Button, 'button', { naming: CLASS, library, platform: 'web' }).storyId === 'design-system-button-web--default' && storyIdOf('Design system/Nav item', 'Default') === 'design-system-nav-item--default');

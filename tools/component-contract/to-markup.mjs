@@ -914,7 +914,7 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   // a layer as the store spells its path (tools/parity layers.mjs): a repeat by its number, Item#2
   const nameOf = (id) => { const e = (parts.get(id) || {}).e || {}; const m = /_(\d+)$/.exec(id); return (e.name || partName(id)) + (m ? `#${m[1]}` : ''); };
   const pathOf = (id) => { const names = []; for (let up = id; up && up !== 'root'; up = (parts.get(up) || {}).e?.parent) names.unshift(nameOf(up)); return names.join(' > '); };
-  const layers = {};
+  const layers = {}, byId = {};
   const mains = (name, key = null) => placedOf(library, { component: name, key });
   // what this component puts in a placed component's slot, at any depth there: that slot's selector, then each box's own
   // hook down to it; inside an instance it puts there, that instance's own (not read here)
@@ -932,12 +932,16 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     // a part the contract keeps inside a placed component is an override there: read where the sheet writes it
     // and what it puts in a placed component's slot (a menu's items), by its own hook under that slot
     const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains));
-    layers[pathOf(x.id)] = nested ? nested : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
+    const at = nested ? nested : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
       : x.slotted ? { skip: 'a sample of what a caller puts in the slot' }
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
       : partSelector(c, n, x.id, x);
+    layers[pathOf(x.id)] = at;
+    // each part's selector by its id too (not in the mapping written): a stored path may be two parts never drawn
+    // together, where the self leg needs each one's own (from-code swapPartsOf)
+    if (typeof at === 'string') byId[x.id] = at;
   }
-  return { storyId: storyIdOf(titleOf(c, platform), 'Default'), root, state: root, axes, layers, waivers: {} };
+  return Object.defineProperty({ storyId: storyIdOf(titleOf(c, platform), 'Default'), root, state: root, axes, layers, waivers: {} }, 'byId', { value: byId });
 }
 
 /* The stories: the component at its defaults, and one for each value and each yes-or-no the contract draws, the

@@ -386,7 +386,7 @@ function draw(where, label, into, only, retry = true) {
 
 
 /* The reader's own code: every file a self reading runs through (from-code.mjs and what it imports), but to-markup's and
-   to-code's, whose output selfInputs hashes instead (each component's markup, sheet, mapping and props, and what every
+   to-code's, whose output selfInputs hashes instead (each component's markup, sheet, mapping, parts and props, and what every
    page shares: the base sheet, the DOM helper, the pointer states), so a change to either moves only the components
    whose markup or sheet it changes, and a change to a tool the reading never runs (the editor, a test) moves none. */
 function readerCode() {
@@ -396,8 +396,12 @@ function readerCode() {
   return h.digest('hex');
 }
 
+/* What a reading takes of one component's drawing. */
+export const drawingInputs = ({ markup, sheet, mapping, parts }) => [markup, sheet, JSON.stringify(mapping), JSON.stringify(parts)];
+
 /* What each component's self reading is read from, as one hash per component: it and every component it places,
-   transitively (each one's contract, spec, markup, sheet, parity mapping and props as stories give them), the base sheet,
+   transitively (each one's contract, spec, markup, sheet, parity mapping, parts' selectors and props as stories give
+   them), the base sheet,
    the tokens and their values, the project's parity settings, and the reader's own code. Two readings from the same
    inputs are the same reading (--twice holds the leg to that), so --changed reads only the components whose hash moved. */
 export async function selfInputs(label, where, only = []) {
@@ -416,12 +420,12 @@ export async function selfInputs(label, where, only = []) {
   const need = only.length ? closureOf(library, only) : new Set(Object.keys(byFolder));
   const drawn = drawnAll(library, { settingsOf });
   for (const c of Object.values(library)) {
-    const { sheet, markup, mapping } = drawn[c.folder];
+    const { sheet } = drawn[c.folder];
     // every sheet is on the one page: one whose rules reach past its own element reaches every reading
     if (!scopedTo(sheet, `ds-${c.folder}`)) unscoped.push(sheet);
     if (!need.has(c.folder)) continue;
     let spec = ''; try { spec = JSON.stringify(store.readSpec(project.paths.components, c.folder, { compact: true })); } catch { /* none: its hash says so */ }
-    own[c.folder] = hash([JSON.stringify(c), spec, markup, sheet, JSON.stringify(mapping), JSON.stringify(propsOf(c, library)), JSON.stringify(entryOf(c) || null)]);
+    own[c.folder] = hash([JSON.stringify(c), spec, ...drawingInputs(drawn[c.folder]), JSON.stringify(propsOf(c, library)), JSON.stringify(entryOf(c) || null)]);
   }
   // what every reading shares: the reader's code and the house settings it reads (standards/audit-settings.json: the
   // pointer states, the pseudo-classes), the base sheet, an unscoped sheet, the tokens and the project's settings, every

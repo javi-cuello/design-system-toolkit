@@ -472,7 +472,15 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
 {
   const btn = { props: { size: { type: 'enum', values: ['sm', 'md'], default: 'md' }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon16'] }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon20'] } },
     anatomy: { root: { kind: 'container' }, icon20: { kind: 'instance', parent: 'root' } }, variants: [{ when: { size: 'sm' }, remove: ['icon20'], add: { icon16: { kind: 'instance', parent: 'root' } } }] };
-  ok('a glyph goes to the swap drawn at the size it is placed at, never both', JSON.stringify(glyphSwaps(btn, { size: 'sm' })) === '["Icon (16)"]' && JSON.stringify(glyphSwaps(btn, { size: 'md' })) === '["Icon (20)"]');
+  ok('a glyph goes to the swap drawn at the size it is placed at, never both', JSON.stringify(glyphSwaps(btn, { size: 'sm' }, ['Add'])) === '[["Icon (16)","Add"]]' && JSON.stringify(glyphSwaps(btn, { size: 'md' }, ['Add'])) === '[["Icon (20)","Add"]]');
+  // a select draws a caret glyph in its field and, at focus, its menu's slot holding the glyph the caller swapped in:
+  // the slot's swap takes the glyph drawn in its own layer, never the first the select draws (the caret)
+  const sel = { props: { state: { type: 'enum', values: ['default', 'focus'], default: 'default' }, slotOptions: { type: 'instance', figma: 'slot {Options}', swaps: ['menu/slot'] } },
+    anatomy: { root: { kind: 'container' } }, variants: [{ when: { state: 'focus' }, add: { caret: { kind: 'instance', parent: 'root' }, menu: { kind: 'container', parent: 'root' }, 'menu/slot': { kind: 'instance', parent: 'menu', swappedBy: 'slotOptions' } } }] };
+  ok('a swap takes the glyph drawn in the layer it swaps, not the first the instance draws; one holding none keeps its default',
+    JSON.stringify(glyphSwaps(sel, { state: 'focus' }, ['Caret', 'Calendar'], [['menu/slot', ['Calendar']]])) === '[["slot {Options}","Calendar"]]'
+    && JSON.stringify(glyphSwaps(sel, { state: 'focus' }, ['Caret'], [['menu/slot', []]])) === '[]'
+    && JSON.stringify(glyphSwaps(sel, { state: 'default' }, ['Caret'], [['menu/slot', []]])) === '[]');
   const cb = { props: { state: { type: 'enum', values: ['enabled', 'invalid'], figmaValues: ['Enabled', 'Invalid'], default: 'enabled', figma: 'State' }, err: { type: 'boolean', default: true, figma: 'Error message', shows: ['error'] }, label: { type: 'boolean', default: true, figma: 'Label', shows: ['label'] } },
     anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root' } }, variants: [{ when: { state: 'invalid' }, add: { error: { kind: 'container', parent: 'root' } } }] };
   ok('a boolean whose layer the main draws not at the placed props, on or off, is left unread; one it draws there is read from being seen',
@@ -722,6 +730,27 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     // each component at its defaults and at every other value of each of its props, one at a time
     const rendersOf = (c) => [{}, ...propsOf(c, library).flatMap((x) => (x.type === 'enum' ? (x.values || []).filter((v) => v !== x.default).map((v) => ({ [x.name]: v })) : x.type === 'boolean' ? [{ [x.name]: !x.default }] : []))];
     try {
+      // a placed select as the walker meets it, its layers found as a reading finds them (the writer's selectors by id): its
+      // caret first; then a nested copy's layers; then its own, another swap's among them, its two texts under one stored path
+      { const { glyphsDrawn, glyphSwaps, ownLayer, partsById, swappedLayers } = await import('./from-code.mjs');
+        const pick = { contract: 1, component: 'Pick', folder: 'pick', props: { o: { type: 'instance', figma: 'Options', swaps: ['late', 'early', 'shared'] }, b: { type: 'instance', figma: 'Badge', swaps: ['shared'] } },
+          anatomy: { root: { kind: 'container' }, value: { kind: 'text', parent: 'root', name: 'Value' }, valueTyped: { kind: 'text', parent: 'root', name: 'Value' },
+            shared: { kind: 'instance', parent: 'root', swappedBy: 'b' }, early: { kind: 'instance', parent: 'root', swappedBy: 'o' }, late: { kind: 'instance', parent: 'root', swappedBy: 'o' } }, variants: [] };
+        const { selfMapping } = await import('./site.mjs'), stored = selfMapping(pick, { library: { ...library, Pick: pick } });
+        const parts = partsById(() => stored, '#stage'), sels = swappedLayers(pick, { partsOf: () => null, swapPartsOf: () => parts }, 'pick');
+        ok('a placed component\'s swapped layers are found by id where two parts share a stored path, and none for a contract that cannot be drawn', Object.keys(stored.layers).filter((k) => /Value/.test(k)).length === 1 && parts.value !== parts.valueTyped && ['late', 'early', 'shared'].every((l) => sels[l]) && partsById(() => selfMapping(null, { library }), '#stage') === null);
+        ok('a governed reading, which has no writer\'s ids, takes no swapped layers: the first glyph drawn stands there',
+          Object.keys(swappedLayers(pick, { partsOf: () => parts }, 'pick')).length === 0);
+        const p = await open(selfSiteFiles(library, 'contact-card', { tokensCss }));
+        try {
+          const got = await call(p.tab, ([drawnSrc, ownSrc, sels]) => {
+            const el = (id, icon) => { const m = sels[id].match(/\[data-part="?([^"\]]+)"?\]/g).pop(); return `<i ${m.slice(1, -1)} data-icon="${icon}"></i>`; };
+            document.getElementById('stage').innerHTML = `<ds-pick><i data-icon="Caret"></i><i><ds-pick>${el('late', 'Dot')}</ds-pick></i>${el('shared', 'Flag')}${el('early', 'Home')}${el('late', 'Away')}</ds-pick>`;
+            return new Function(`return ${drawnSrc}`)()(document.querySelector('ds-pick'), { ...sels, absent: '#stage ds-pick > [data-part="none"]' }, null, (n) => n.localName === 'ds-pick', new Function(`return ${ownSrc}`)());
+          }, [glyphsDrawn.toString(), ownLayer.toString(), sels]);
+          ok('a swap takes the first glyph drawn in the layers it drives: no nested copy\'s, no other swap\'s, not the caret; a layer not found says nothing',
+            JSON.stringify(glyphSwaps(pick, {}, got.glyphs, got.layerGlyphs)) === '[["Options","Home"],["Badge","Flag"]]' && got.layerGlyphs.map(([l]) => l).join() === 'shared,early,late');
+        } finally { await p.close(); } }
       const differ = [], bled = [];
       let cut = 0, whole = 0, renders = 0;
       for (const c of Object.values(library)) {

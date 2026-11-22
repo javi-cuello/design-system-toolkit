@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, todayOf, mechanisms } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
 import { selfDrawn, siteFiles, drawnAll, GENERATOR } from './site.mjs';
@@ -273,6 +273,10 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
     drawnAll(lib(tile2), { settingsOf, dir });
     ok('drawnAll: a kept drawing is the one drawn; a placed component\'s change draws it and its holder again, not the rest',
       isDeepStrictEqual(first.card, again.card) && JSON.stringify(again) === JSON.stringify(first) && first.tile.sheet === fresh.tile.sheet && kept === 3 && files() === 5);
+    ok('the inputs hash takes the parts\' selectors: one moved moves it',
+      !isDeepStrictEqual(drawingInputs(again.tile), drawingInputs({ ...again.tile, parts: { ...again.tile.parts, root: 'elsewhere' } })));
+    ok('drawnAll: a kept drawing keeps each part\'s selector by id, which the inputs hash is taken of and no mapping writes',
+      Object.keys(again.tile.parts || {}).length > 0 && isDeepStrictEqual(again.tile.parts, fresh.tile.parts) && !JSON.stringify(again.tile.mapping).includes('byId'));
     fs.rmSync(dir, { recursive: true, force: true }); }
   ok('drawnAll: the generator\'s hash is taken as its code loads, never later, when the files may have moved on from the code running', /^[0-9a-f]{40}$/.test(GENERATOR));
 }

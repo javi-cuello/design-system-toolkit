@@ -29,7 +29,9 @@ export const ELEMENT = { kind: 'element', prefix: 'ds-' };
    source maps from it (from-code), and the inputs hash is taken of it (eval.mjs selfInputs), so a reading's hash moves
    with what is written. Tested by test-eval.mjs. */
 export function selfDrawn(c, { library, mains, settings, naming = ELEMENT }) {
-  return { markup: toElement(c, c.folder, { naming, library, settings }), sheet: toCss(c, c.folder, { naming, mains, settings }), mapping: selfMapping(c, { library, settings, naming }) };
+  const mapping = selfMapping(c, { library, settings, naming });
+  // (and each part's selector by id, which the mapping does not write: what a holder's reading finds it by, so in the hash)
+  return { markup: toElement(c, c.folder, { naming, library, settings }), sheet: toCss(c, c.folder, { naming, mains, settings }), mapping, parts: mapping.byId };
 }
 
 /* Its parity mapping alone, for a reader that needs no more (from-code's self source): selfDrawn's. */

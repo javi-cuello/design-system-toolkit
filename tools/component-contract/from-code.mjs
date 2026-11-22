@@ -111,6 +111,44 @@ export function cssOrderOf(n, parent, style) {
   return o && parent != null && n.parentElement && n.parentElement.getAttribute('data-contract-id') === parent && /flex|grid/.test(style(n.parentElement).display) ? o : null;
 }
 
+/* Whether `m`, found in the placed instance `n` by its layer's selector `q`, is that instance's own layer, not one of
+   another instance nested in it (`isRoot`). A layer that is itself a placed component is reached through its host
+   (`[data-part=button] > button`): that host is the layer's own, so a selector that ends in a bare tag under the
+   component's root also takes a nested copy's. Runs in the page (passed as source). */
+export function ownLayer(m, n, q, isRoot) {
+  const host = q.replace(/\s*>\s*[a-z][a-z0-9-]*\s*$/i, '');
+  for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (isRoot(up) && !(up === m.parentElement && host !== q && up.matches(host))) return false;
+  return true;
+}
+
+/* The icons' names drawn in a placed instance, in order (`glyphs`), and those drawn in each of its own layers a swap
+   swaps (`layerGlyphs`, [layer id, names] as the page orders the layers; `sels`, their selectors by id, each element
+   itself included): only where the layer is found, since a selector that matches nothing says nothing. Runs in the page
+   (passed as source). Tested by test-from-code.mjs. */
+export function glyphsDrawn(n, sels, iconRe, isRoot, ownLayer) {
+  const ICON = 'svg, [data-icon]:empty', all = [...n.querySelectorAll('*')];
+  const names = (els) => els.flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean));
+  const found = Object.entries(sels || {}).flatMap(([id, q]) => [...n.querySelectorAll(q)].filter((e) => ownLayer(e, n, q, isRoot)).map((e) => [id, e]));
+  found.sort((a, b) => all.indexOf(a[1]) - all.indexOf(b[1]));
+  return { glyphs: names([...n.querySelectorAll(ICON)]),
+    layerGlyphs: found.map(([id, e]) => [id, names([...(e.matches(ICON) ? [e] : []), ...e.querySelectorAll(ICON)])]) };
+}
+
+/* Each layer's selector under `container`, by the writer's own id (`mapping`, the self site's, drawn here), never back through the stored paths: two parts may
+   share one (a select's two value texts). None for a contract that cannot be drawn: every reading asks this of the whole
+   library, and only those that place it need it. */
+export function partsById(mapping, container) {
+  try { return Object.fromEntries(Object.entries(mapping().byId).map(([id, sel]) => [id, `${container} ${sel}`])); } catch { return null; }
+}
+
+/* The selectors, by id, of the layers a placed component's swaps swap, by the writer's ids, which only the self site
+   has: a governed reading finds none, and its first glyph drawn stands. */
+export function swappedLayers(fc, L, slug) {
+  const parts = fc && L.swapPartsOf?.(slug);
+  if (!parts) return {};
+  return Object.fromEntries(Object.values(fc.props).filter((q) => q.type === 'instance' || q.type === 'swap').flatMap((q) => q.swaps || []).filter((l) => parts[l]).map((l) => [l, parts[l]]));
+}
+
 /* A layer's name where the walk reads it inside a placed component (`inside`: that instance's id): the markup there is
    the placed component's own, so its data-figma-name is that component's name for its layer (Select's
    <ChevronDownIcon>), never this design's for the layer the mapping places on it (a date picker's <SelectClearIcon>):
@@ -608,14 +646,18 @@ export function shownRead(fc, w, shown) {
   return out;
 }
 
-/* The swaps a placed component's glyph goes to, by Figma name: the one that drives a layer drawn at these props (a
-   button's Icon (16) or Icon (20), by its size, never both), or one that names no layer; a prop no drawn layer of
-   which it drives keeps its default. Tested by test-from-code.mjs. */
-export function glyphSwaps(fc, w) {
+/* The swaps a placed component's glyphs go to, by Figma name, each with its glyph: the one that drives a layer drawn at
+   these props (a button's Icon (16) or Icon (20), by its size, never both), or one that names no layer; a prop no drawn
+   layer of which it drives keeps its default. Its glyph is the first drawn in the layers it drives, where the reading
+   found them (`inLayers`, glyphsDrawn's, as the page orders them; one holding none keeps its default: a select's menu slot is not given the
+   caret drawn in its field), else the first the instance draws. Tested by test-from-code.mjs. */
+export function glyphSwaps(fc, w, glyphs = [], inLayers = []) {
   const M = atProps(fc, w), out = [];
   for (const [k, p] of Object.entries(fc.props)) if (p.type === 'instance' || p.type === 'swap') {
-    const drives = (p.swaps || []).some((l) => M[l] && (M[l].swappedBy ? M[l].swappedBy === k : !Object.entries(fc.props).some(([k2, q]) => k2 !== k && (q.swaps || []).includes(l))));
-    if (drives || !(p.swaps || []).length) out.push(p.figma);
+    const driven = (p.swaps || []).filter((l) => M[l] && (M[l].swappedBy ? M[l].swappedBy === k : !Object.entries(fc.props).some(([k2, q]) => k2 !== k && (q.swaps || []).includes(l))));
+    const found = inLayers.filter(([l]) => driven.includes(l));
+    const g = (found.length ? found.flatMap(([, names]) => names) : glyphs)[0];
+    if ((driven.length || !(p.swaps || []).length) && g != null) out.push([p.figma, g]);
   }
   return out;
 }
@@ -1371,7 +1413,9 @@ async function selfSource(project, name, { second = false } = {}) {
   const tier = project.parity.tiers[0], container = '[data-parity="c"]';
   // to-markup's mapping, its rulings (a layer another instance draws, a slot's sample, a pointer-only part) left out
   // as a governed mapping keeps them in its waivers: what is not placed is not read
-  const mappingOf = (x) => { const m = selfMapping(x, { library, settings: settingsOf(x.folder) }); return { ...m, layers: Object.fromEntries(Object.entries(m.layers).filter(([, s]) => typeof s === 'string')) }; };
+  // (drawn once per contract: a placed component's is asked for its paths and again for its ids)
+  const drawnMappings = new Map(), drawnMapping = (x) => { if (!drawnMappings.has(x)) drawnMappings.set(x, selfMapping(x, { library, settings: settingsOf(x.folder) })); return drawnMappings.get(x); };
+  const mappingOf = (x) => { const m = drawnMapping(x); return { ...m, layers: Object.fromEntries(Object.entries(m.layers).filter(([, s]) => typeof s === 'string')) }; };
   const targetOf = (x) => { const mapping = mappingOf(x); return { mapping, variants: expand(mapping, store.readSpec(project.paths.components, x.folder, { compact: true }).variants, project.parity.variants) }; };
   const t = targetOf(c);
   const b = bridge(store.readSpec(project.paths.components, name, { compact: true }));
@@ -1426,6 +1470,9 @@ async function selfSource(project, name, { second = false } = {}) {
     instanceOf: (slug) => `ds-${slug}`,
     instancePattern: rootPattern('ds-{slug}'),
     partsOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); if (!x) return null; try { return Object.fromEntries(Object.entries(governedReading(targetOf(x), bridge(store.readSpec(project.paths.components, slug, { compact: true }))).elements()).map(([id, e]) => [id, e.selector])); } catch { return null; } },
+    // (a swap's layers alone by the writer's ids: a boolean keeps the lookup by stored paths, since a layer drawn is not
+    // what the boolean says, where its host states it and a variant draws the layer anyway)
+    swapPartsOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); return x ? partsById(() => drawnMapping(x), container) : null; },
     axesOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); return x ? mappingOf(x).axes || null : null; },
     combosOf: () => null,
     // each read on a clean page (render, below): a forced pointer state never outlives the args it was forced for
@@ -1662,6 +1709,9 @@ async function main() {
       if (!fc || !parts) return [slug, {}];
       return [slug, Object.fromEntries(Object.values(fc.props).filter((q) => q.type === 'boolean' && q.shows && parts[q.shows[0]]).map((q) => [q.figma, parts[q.shows[0]]]))];
     }));
+    // and the layers its swaps swap, so a glyph goes to the swap of the layer it is drawn in (a select's caret is no
+    // glyph of its menu's slot), as to-markup draws a swap's icon in its own layer
+    const swapSel = Object.fromEntries(Object.keys(others).map((slug) => [slug, swappedLayers(official.get(slug), L, slug)]));
     for (const [k, p] of Object.entries(props)) if (p.type === 'slot' && !p.placed) slotArgs[p.code] = slotMark(p.code);
 
     // one render, read as anatomy. The walk starts at the component's own root: the mapping's `root`, or
@@ -1740,7 +1790,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)();
@@ -1753,7 +1803,7 @@ async function main() {
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
         const elementOfLayer = new Function(`return ${elementOfLayerSrc}`)();
         const opensPlaced = new Function(`return ${opensPlacedSrc}`)();
-        const nameInside = new Function(`return ${nameInsideSrc}`)();
+        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)();
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -1848,12 +1898,8 @@ async function main() {
               // each boolean that shows a layer: whether that layer is drawn in it, found where its own mapping places it
               // (not one of another instance nested in it, and drawn: seen, not merely present)
               shown: Object.fromEntries(Object.entries(shownSel[other] || {}).map(([p, q]) => {
-                // (a layer that is itself a placed component is reached through its host, `[data-part=button] > button`:
-                // that host is the layer's own, not another instance's)
-                const host = q.replace(/\s*>\s*[a-z][a-z0-9-]*\s*$/i, '');
-                const own = (m) => { for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (isRoot(up) && !(up === m.parentElement && host !== q && up.matches(host))) return false; return true; };
                 const seen = (m) => { const cs = getComputedStyle(m); return m.getClientRects().length && cs.visibility !== 'hidden' && +cs.opacity > 0; };
-                return [p, [...n.querySelectorAll(q)].some((m) => own(m) && seen(m))];
+                return [p, [...n.querySelectorAll(q)].some((m) => ownLayer(m, n, q, isRoot) && seen(m))];
               })),
               // (its own root's included; none hidden, read to screen readers only, or of another instance nested in it)
               texts: [n, ...n.querySelectorAll('*')].filter((t) => {
@@ -1863,7 +1909,8 @@ async function main() {
                 for (let up = t === n ? null : t; up && up !== n; up = up.parentElement) if (isRoot(up)) return false;
                 return true;
               }).map((t) => [...t.childNodes].filter((c) => c.nodeType === 3).map((c) => c.textContent).join('').trim()),
-              glyphs: [...n.querySelectorAll('svg, [data-icon]:empty')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) });
+              // its icons' names, all and by the swapped layer each is drawn in
+              ...glyphsDrawn(n, swapSel[other], iconRe, isRoot, ownLayer) });
             // its own styling over its component's root (a toggle's fill on its toggle item), folded back where it is that root's
             // (ownStyling); drawn over its parent where it paints, as a box is
             // (no arc, focus ring or outline: those are its component's drawing, or the ring rule's, never an override read here)
@@ -1973,7 +2020,7 @@ async function main() {
         // placed by CSS order before the markup's (a variant that reverses its parts, to-code's `order`), ties as written
         for (const xs of Object.values(byParent)) xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).forEach(([e], i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -2207,12 +2254,12 @@ async function main() {
           const glyphOf = [];
           // the glyph goes to the swap that drives a layer drawn at these props: a button's Icon (16) or Icon (20), by its
           // size, never both; a prop no drawn layer of which it drives is left its default
-          if (fc && x.glyphs && x.glyphs.length) for (const f of glyphSwaps(fc, w)) { w[f] = x.glyphs[0]; glyphOf.push(f); }
+          if (fc) for (const [f, g] of glyphSwaps(fc, w, x.glyphs, x.layerGlyphs)) { w[f] = g; glyphOf.push(f); }
           if (Object.keys(w).length) x.with = w;
           // which of them name the glyph it draws: content, which the swap test below sets aside
           if (glyphOf.length) Object.defineProperty(x, 'glyphOf', { value: glyphOf });
         }
-        delete x.slug; delete x.attrs; delete x.innerDisabled; delete x.glyphs; delete x.texts; delete x.shown;
+        delete x.slug; delete x.attrs; delete x.innerDisabled; delete x.glyphs; delete x.layerGlyphs; delete x.texts; delete x.shown;
         // an instance's own styling is what this component writes on it: a field whose CSS wins from a rule of the placed
         // component's own (its sheet, a theme) is that component's drawing, whatever the design's root says, never an override
         if (x.kind === 'instance') for (const [f, css] of Object.entries(INSTANCE_CSS)) {
