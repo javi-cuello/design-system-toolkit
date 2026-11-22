@@ -61,7 +61,9 @@ A button does something here: submits, saves, opens a dialog, toggles, deletes. 
 ## Button sizes
 
 **Use when / don't use**
-- [strong] A short ladder of named heights that every control in a row shares, one of them the default; a size is chosen for the density and the pointer, and one screen keeps to one step ([visual: one size scale per screen](../design/visual.md#one-size-scale-per-screen)).
+- [strong] A short ladder of named heights, one of them the default, as all 13 systems below ship.
+
+One screen keeps to one step: see [visual: one size scale per screen](../design/visual.md#one-size-scale-per-screen).
 - [weak] Don't use a bigger size to rank an action ([button hierarchy](#button-hierarchy)).
 
 **How**
@@ -85,14 +87,14 @@ Heights in CSS px that 13 web systems ship, read from their source on 22 Novembe
 | [Chakra UI](https://raw.githubusercontent.com/chakra-ui/chakra-ui/main/packages/react/src/theme/recipes/button.ts) | 24, 32, 36, **40**, 44, 48, 64 |  |
 
 - [strong] **24, 32 and 40 are the core.** 32 ships in 12 of the 13, 24 in 11 and 40 in 10; 9 ship all three, among them systems of separate origin (Primer, Carbon, Fluent, Ant Design, TDesign, Spectrum), so the steps are 8px apart.
-- [strong] **32 is the commonest default on the web**, in 7 of the 13, each a system for product interfaces: Primer, Fluent, Atlassian, Spectrum, Radix, Ant Design and TDesign.
-- [contested] **A roomier default.** 36 in shadcn's Vega, HeroUI and Mantine; 40 in Chakra and WordPress, which deprecated its 36px default for 40 to end a 30 to 40px spread ([WordPress 6.8](https://make.wordpress.org/core/2025/03/25/updates-to-user-interface-components-in-wordpress-6-8/)); 48 in Carbon. The other way, shadcn's denser [Nova](https://ui.shadcn.com/r/styles/base-nova/button.json) takes 32 where Vega has 36.
-- [strong] **48 is the optional step above**, for the large or prominent button: Primer, Carbon, Spectrum, Radix and Chakra (5 of the 13).
-- [moderate] **28 is a dense step, rarely on the ladder**: Primer's small and Polaris's medium (2 of the 13). Ant Design reaches 28 as a mode instead, its compact theme lowering 32 by 4 ([compact theme](https://raw.githubusercontent.com/ant-design/ant-design/master/components/theme/themes/compact/index.ts)).
+- [strong] **32 is the commonest default on the web**, in 7 of the 13: Primer, Fluent, Atlassian, Spectrum, Radix, Ant Design and TDesign.
+- [contested] **A roomier default.** 36 in shadcn's Vega, HeroUI and Mantine; 40 in Chakra, and WordPress moves its editor components toward a 40px default, deprecating 36, to end a 30 to 40px spread ([WordPress 6.8](https://make.wordpress.org/core/2025/03/25/updates-to-user-interface-components-in-wordpress-6-8/)); 48 in Carbon. The other way, shadcn's denser [Nova](https://ui.shadcn.com/r/styles/base-nova/button.json) takes 32 where Vega has 36.
+- [strong] **48 is the optional step above**, for the large or prominent button: Primer, Spectrum, Radix and Chakra (4 of the 13); Carbon's 48 is its default.
+- [moderate] **28 is a dense step, rarely on the ladder**: Primer's small and Polaris's medium (2 of the 13). Ant Design reaches 28 as a mode instead, its compact theme lowering 32 by 4, and Mantine has compact heights of 22 to 40 ([compact theme](https://raw.githubusercontent.com/ant-design/ant-design/master/components/theme/themes/compact/index.ts)).
 - [moderate] **36 replaces or splits the 32 to 40 gap**: 4 of the 13, three of them on Tailwind's spacing scale or a copy of it (shadcn, HeroUI, Chakra), which count as one origin beside Mantine.
 - [moderate] **44 is a touch size, rarely a web step**: only Chakra's ladder has it (1 of the 13), HeroUI uses it for large on small screens, and Primer as the minimum target for a coarse pointer.
-- [strong] **Touch gets more than the pointer.** Spectrum's mobile scale takes 32 to 40, Polaris 28 to 32 and HeroUI 36 to 40; Material 3 goes the other way from the same idea, 40 to 36 for a precision pointer ([Compose Button](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt)).
-- [contested] **How touch gets it.** The box grows (Spectrum, Polaris, HeroUI), or only the target does (Primer's 44px `minTarget` for a coarse pointer; Android pads small components to 48dp).
+- [strong] **Small screens and touch get more.** Spectrum's mobile scale takes 32 to 40, Polaris 28 to 32 and HeroUI 36 to 40, the last two by breakpoint; Material 3 goes the other way from the same idea, 40 to 36 for a precision pointer ([Compose Button](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt)).
+- [contested] **How touch gets it.** The box grows (Spectrum, Polaris, HeroUI), or only the target does (Primer's 44px `minTarget` for a coarse pointer; Android pads small components to 48dp), or the box stays and the gap widens ([responsive: touch targets](../../code/responsive.md#touch-targets), a weak item).
 - [required] **In a native app the platform's numbers hold.** Apple: a 44 by 44pt hit region on iOS and iPadOS, 28 the smallest control; on macOS 28 by default and 20 the smallest ([Apple accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility)). Android: a 48dp target ([API defaults](https://developer.android.com/develop/ui/compose/accessibility/api-defaults)); Material 3's buttons are 32, 40 (default), 56, 96 and 136dp ([small tokens](https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ButtonSmallTokens.kt)).
 - [weak] For one-handed thumb use a 2006 study of handhelds found 9.2mm enough for single taps, about 58dp, above both platforms' minimums ([Parhi, Karlson and Bederson](https://www.microsoft.com/en-us/research/publication/target-size-study-for-one-handed-thumb-use-on-small-touchscreen-devices/)). No study read compares 24, 32, 36 and 40px buttons under a mouse: those steps rest on what ships.
 - [strong] **A size name carries no height across systems**: medium is 28 in Polaris, 32 in Primer and Fluent, 40 in Carbon and Chakra, so map a kit or a library by its pixels, never by its names.
@@ -108,8 +110,9 @@ Heights in CSS px that 13 web systems ship, read from their source on 22 Novembe
 - [required] [1.4.4](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html) and [1.4.12](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html): a step is a minimum height, so a wrapped or enlarged label grows the button and is never clipped.
 
 **Build**
-- [moderate] One control-height token per step, read by button, field and select alike ([tokens: spacing tokens](../../code/tokens.md#spacing-tokens)); in rem, as `min-block-size`.
-- [required] A touch change is keyed to the pointer where it is about fingers: `@media (pointer: coarse)` matches a primary pointer of limited accuracy, whatever the screen's width ([MDN *pointer*](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/pointer)).
+- [moderate] One control-height token per step, read by button, field and select alike ([tokens: spacing tokens](../../code/tokens.md#spacing-tokens)).
+- [required] A step is written in rem (code-standard rule 54) as `min-block-size`, so it grows with its text (1.4.4).
+- [contested] What switches the touch size: the pointer, as Primer's coarse target and Material's precision pointer do, or the width, as Polaris and HeroUI do. `@media (pointer: coarse)` matches a primary pointer of limited accuracy at any width ([MDN *pointer*](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/pointer)). By pointer:
   ```css
   :root { --control-height-sm: 1.5rem; --control-height-md: 2rem; --control-height-lg: 2.5rem; }
   @media (pointer: coarse) { :root { --control-height-md: 2.75rem; --control-height-lg: 3rem; } }
@@ -120,7 +123,7 @@ Heights in CSS px that 13 web systems ship, read from their source on 22 Novembe
 - *Script* could: collect rendered button and field heights per screen and flag one off the ladder, a row with two heights, a box under 24 by 24, and, with a coarse pointer emulated, a primary action under 44.
 - *Judgement*: does each step have a place it is used, or could it go?
 
-**Sources.** Each system's shipped source, linked in the table; Apple, Android and WCAG for minimums. Counts treat each system once, and the sample leans to React libraries and desktop products: Carbon and the consumer-facing kits show the roomier side. Values move with releases.
+**Sources.** Each system's shipped source: heights in the files linked in the table, defaults in the same packages' component props or seed tokens; Apple, Android and WCAG for minimums. Counts treat each system once, and the sample leans to React libraries and desktop products: Carbon and the consumer-facing kits show the roomier side. Values move with releases.
 
 ## Button labels
 
