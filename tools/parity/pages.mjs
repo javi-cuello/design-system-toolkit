@@ -37,6 +37,7 @@
  */
 import { loadProject } from './project.mjs';
 import { session } from './session.mjs';
+import { schemeOf } from './hosts.mjs';
 import * as cdp from '../shared/cdp.mjs';
 
 import { realpathSync } from 'node:fs';
@@ -284,7 +285,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const S = await session(project, { page: false, app: Boolean(viaApp), say: () => {} });
   const G = viaApp
     ? { acquire: S.acquire, release: S.release, discard: S.discard, go: (tab, route, width) => S.ROUTES.open(tab, { route, tier: project.parity.tiers[0], viewport: [width, project.limits.componentWindowHeight] }) }
-    : { acquire: S.acquire, release: S.release, discard: S.discard, scheme: String(project.parity.tiers[0]).toLowerCase() };
+    : { acquire: S.acquire, release: S.release, discard: S.discard, scheme: schemeOf(project.parity.tiers[0]) };
   // the window each page is measured in: the interface settings' width, the parity engine's window height
   Object.assign(G, { width: project.limits.viewportWidth, height: project.limits.componentWindowHeight });
   const pagesF = viaApp ? { ...(F || {}), base: '', paths: routes, find: null } : F;
