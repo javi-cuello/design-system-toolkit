@@ -264,6 +264,11 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   const raw = [{ id: 'root', kind: 'container' }, { id: 'spinner', kind: 'instance', parent: 'root' }, { id: 'spinner/anim', kind: 'instance', parent: 'spinner' }, { id: 'spinner/anim/ellipse1', kind: 'graphic', parent: 'spinner/anim' }, { id: 'label', kind: 'text', parent: 'root' }];
   ok('a part under a placed instance is inside it, at any depth', insidePlaced(raw, 'spinner/anim/ellipse1') && insidePlaced(raw, 'spinner/anim'));
   ok('the component\'s own boxes are not', !insidePlaced(raw, 'root') && !insidePlaced(raw, 'label') && !insidePlaced(raw, 'spinner'));
+  // a placed component drawn as an icon mark (Carbon's checkbox icon, one the store does not hold) is its own box: its
+  // outline at focus is the stroke to-code wrote on the instance, never a focus ring of this component's
+  const marked = [...raw, { id: 'check', kind: 'graphic', parent: 'root' }];
+  ok('a placed component drawn as an icon mark holds its own outline; a graphic that is no mark does not',
+    insidePlaced(marked, 'check', new Set(['check'])) && !insidePlaced(marked, 'check') && !insidePlaced(marked, 'label', new Set(['check'])));
 }
 
 // the names nameInside takes come from the contract the markup was drawn from: on --second the first reading, so a

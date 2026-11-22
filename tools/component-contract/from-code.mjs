@@ -111,8 +111,11 @@ export function nameInside(inside, id, markup, names) {
 
 /* Whether a layer of a reading sits inside a placed component's insides: an instance among its ancestors. An outline
    there is that layer's own stroke (a spinner's ellipse), never the focus ring a focused render draws on this
-   component's own boxes. Tested by test-from-code.mjs. */
-export function insidePlaced(raw, id) {
+   component's own boxes; so is one on a placed component drawn as an icon mark (`marks`), whose box to-code styles
+   as the instance's own. Tested by test-from-code.mjs. */
+export function insidePlaced(raw, id, marks = new Set()) {
+  // (a placed component drawn as an icon mark is its own box: its outline its own stroke, as to-code writes it there)
+  if (marks.has(id)) return true;
   const by = new Map(raw.map((e) => [e.id, e]));
   for (let up = by.get((by.get(id) || {}).parent); up; up = by.get(up.parent)) if (up.kind === 'instance') return true;
   return false;
@@ -1743,6 +1746,10 @@ async function main() {
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
           if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; if (tag !== 'svg') e.mark = true; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; if (n.getAttribute('data-icon-size')) e.iconSize = n.getAttribute('data-icon-size'); }
           else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
+          // an icon mark, a placed component drawn as the empty element to-markup leaves for it (one the store does not hold),
+          // is a box to-code styles as the instance's own: its stroke, corners and clipping read as a box's, its fill
+          // staying the glyph's colour (above)
+          if (kind === 'graphic' && e.mark) { const own = {}; boxStyling(own); for (const k of ['radius', 'full', 'cornerShape', 'outline', 'ownOutline', 'border', 'overflow', 'shadow', 'shadowAll', 'ringsUsed']) if (own[k] !== undefined) e[k] = own[k]; }
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             boxStyling(e);
             // a box no flex lays out, or one with nothing to hug, has a size of its own (a switch's thumb, an avatar's image)
@@ -2150,7 +2157,7 @@ async function main() {
         // keeps it: there the outline is no stroke of the design's)
         // (inside a placed component's insides, an outline is that part's own stroke at any state: insidePlaced)
         // (a design that keeps a ring there keeps it a ring: outlineIsOwn)
-        if (outlineIsOwn(x, focused, insidePlaced(raw, id), keepsRing(L.drawnFrom || figmaContract, id, settings))) { x.ownOutline = x.outline; delete x.outline; }
+        if (outlineIsOwn(x, focused, insidePlaced(raw, id, mark), keepsRing(L.drawnFrom || figmaContract, id, settings))) { x.ownOutline = x.outline; delete x.outline; }
         if (x.ownOutline) {
           const o = x.ownOutline, align = o.offset <= -o.width + 0.01 ? 'inside' : o.offset < -0.01 ? 'center' : 'outside';
           x.border = { color: await tok('stroke', o.color, `${id}.outline`, ['outline-color', 'outline']), width: await tok('width', o.width, `${id}.outline-width`, ['outline-width', 'outline']), ...(align !== 'inside' && { align }), ...(o.dashed && { dash: 'dashed' }) };
