@@ -190,7 +190,10 @@ test('a collection named for breakpoints that holds other tokens writes them as 
       'm-1024': { space: { padding: { small: { $type: 'dimension', $value: '{primitive.space.2}' } } }, font: { size: dim(16) } },
     },
     breakpoints: { value: { wide: { $type: 'dimension', $value: '{primitive.space.2}' }, lg: dim(1280) } },
+    // a breakpoints collection with modes, one token in one mode only: still values per viewport
+    'grid-breakpoints': { compact: { gutter: dim(8) }, spacious: {} },
   });
+  assert.doesNotMatch(out['_breakpoints.scss'], /\$gutter/);
   assert.doesNotMatch(out['_breakpoints.scss'], /NaN/);
   assert.doesNotMatch(out['_breakpoints.scss'], /\$space-|\$font-|\$wide/);
   assert.match(out['_breakpoints.scss'], /\$lg: 80rem;/, 'a literal width in a breakpoints collection is still a breakpoint');

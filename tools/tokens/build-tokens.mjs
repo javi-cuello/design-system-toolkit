@@ -316,8 +316,9 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
   // value in every mode of its collection (breakpointOf); a token named for one that is not stays a property.
   const breakpoints = {}, bpPaths = new Set();
   for (const [, c] of collections) {
-    const values = new Map();
-    for (const f of c.modes.values()) for (const [path, t] of tokensOf(read(f))) if (bpAt(path)) values.set(path.join('.'), [...(values.get(path.join('.')) || []), t.$value]);
+    // one value per mode of the collection, a mode that lacks the token holding undefined (no length)
+    const values = new Map(), files = [...c.modes.values()];
+    files.forEach((f, i) => { for (const [path, t] of tokensOf(read(f))) if (bpAt(path)) { const k = path.join('.'); if (!values.has(k)) values.set(k, Array(files.length).fill(undefined)); values.get(k)[i] = t.$value; } });
     for (const [k, vs] of values) {
       const name = breakpointOf(k.split('.'), vs);
       if (name) { breakpoints[name] = px(vs[0]); bpPaths.add(k); }
