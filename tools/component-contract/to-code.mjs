@@ -431,10 +431,13 @@ function placedGlyph(a, host, rel, m, mains) {
 /* The layers recorded inside a placed instance, each matched to the part of its component it is (derive's placedMatch). */
 const placedOf = (a, host, M) => placedMatch(M, Object.fromEntries(Object.keys(a).filter((k) => k.startsWith(`${host}/`)).map((k) => [k.slice(host.length + 1), a[k]])));
 
-/* Whether a part is inside a placed component this library holds, so named as that component's own. */
+/* Whether a part is inside a placed component this library holds, so named as that component's own: a part of it at
+   any props the instance is placed with (a status icon's Warning--filled at Failed, though another variant places it
+   at Warning alt, which draws none). */
 const hostIn = (c, id, mains) => { const a = allOf(c); const h = hostOf(a, id), m = h && a[h].component && mains(a[h].component, a[h].key);
   if (!m || copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h) || (hostOf(a, h) && !hostIn(c, h, mains))) return false;
-  return !!placedOf(a, h, placedAs(a, h, m, mains).M)[id.slice(h.length + 1)]; };
+  const withs = [a[h].with, ...(c.variants || []).flatMap((v) => [((v.add || {})[h] || {}).with, (v.set || {})[`${h}.with`]])].filter((w, i) => i === 0 || w);
+  return withs.some((w) => !!placedOf(a, h, placedAs({ ...a, [h]: { ...a[h], with: w } }, h, m, mains).M)[id.slice(h.length + 1)]); };
 
 /* Each part's declarations at one combination, as a map property → value (with its note). */
 // no store given: what a placed component draws is not known, so none is taken to be missing from it
