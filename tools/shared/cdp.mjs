@@ -93,8 +93,12 @@ export async function launch({ chrome = findChrome(), port = 0, profile, args = 
     // apart; one still there after three seconds is said, not left silently
     if (!profile) {
       let away = 0;
-      for (let i = 0; i < 30 && away < 2; i++) { try { rmSync(dir, { recursive: true, force: true }); } catch { /* busy: again */ } away = existsSync(dir) ? 0 : away + 1; await sleep(100); }
-      if (away < 2) console.error(`cdp: the browser profile ${dir} came back after its removal; the OS clears tmp`);
+      // (looked at before each removal, so a rewrite between two looks is seen, not erased unnoticed)
+      for (let i = 0; i < 30 && away < 2; i++) {
+        if (existsSync(dir)) { away = 0; try { rmSync(dir, { recursive: true, force: true }); } catch { /* busy: again */ } } else away++;
+        if (away < 2) await sleep(100);
+      }
+      if (away < 2) console.error(`cdp: the browser profile ${dir} is still there after three seconds of removing it; the OS clears tmp`);
     }
   };
   for (const end = Date.now() + timeout; Date.now() < end; await sleep(100)) {
