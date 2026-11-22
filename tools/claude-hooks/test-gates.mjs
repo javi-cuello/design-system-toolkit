@@ -203,9 +203,11 @@ test('plan gate: the call that makes the work full is refused until a plan with 
   fs.writeFileSync(planPath(moved.id), PLAN_TEXT);
   assert.equal(planGate(moved.id, moved.file, REPOS, next, TOOLKIT), null, 'a run the timeout moved to the background counts once its notification says it ended');
   moved.clean();
-  // and the tool's two other wordings (22 Nov 2026: neither matched, so a green quick check never counted)
+  // and the tool's other wordings, after partial output too (22 Nov 2026: none matched, so a green quick check never counted)
   for (const said of ['Command was moved to the background (ID: b3) after running for 180s. Output is being written to: /tmp/b3.output.',
-    'Command was moved to the background (ID: b3) so that a message that arrived while it was running can be read.']) {
+    'Command was moved to the background (ID: b3) so that a message that arrived while it was running can reach you; it was not interrupted.',
+    'Command was manually backgrounded by user with ID: b3. Output is being written to: /tmp/b3.output.',
+    '29 passed.\nCommand was moved to the background (ID: b3) after running for 180s. Output is being written to: /tmp/b3.output.']) {
     const start = [dated(withId(call('Bash', { command: 'bin/check --quick 2>&1 | tail -2' }), 'mv2')), dated(checkResult('mv2', said))];
     const ended = session([...start, harness('<task-notification>\n<tool-use-id>mv2</tool-use-id>\n<status>completed</status>\n</task-notification>'), user('go'), edit('a.mjs', 200)], { checked: false });
     fs.writeFileSync(planPath(ended.id), PLAN_TEXT);
@@ -215,6 +217,14 @@ test('plan gate: the call that makes the work full is refused until a plan with 
     fs.writeFileSync(planPath(going.id), PLAN_TEXT);
     assert.match(String(planGate(going.id, going.file, REPOS, next, TOOLKIT)), /a bin\/check run in/, `and not before it ended: ${said}`);
     going.clean();
+    // a run a signal ended proves nothing (exit 144, killed); a red that ran to its end is still a run
+    for (const [note, counts] of [['<status>failed</status>\n<summary>Background command "check" failed with exit code 144</summary>', false], ['<status>killed</status>', false], ['<status>failed</status>\n<summary>Background command "check" failed with exit code 1</summary>', true]]) {
+      const done = session([...start, harness(`<task-notification>\n<tool-use-id>mv2</tool-use-id>\n${note}\n</task-notification>`), user('go'), edit('a.mjs', 200)], { checked: false });
+      fs.writeFileSync(planPath(done.id), PLAN_TEXT);
+      if (counts) assert.equal(planGate(done.id, done.file, REPOS, next, TOOLKIT), null, `a red that ran to its end counts: ${said}`);
+      else assert.match(String(planGate(done.id, done.file, REPOS, next, TOOLKIT)), /a bin\/check run in/, `a run a signal ended never counts: ${note}`);
+      done.clean();
+    }
   }
   // each repo's own check, in that repo: another repo's run, or reading the check's helper, is not one
   const other = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gates-other-')));

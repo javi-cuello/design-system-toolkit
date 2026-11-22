@@ -531,7 +531,7 @@ function record(st, line, repos, sub) {
     const text = note;
     for (const m of text.matchAll(/<tool-use-id>([^<]+)<\/tool-use-id>/g)) {
       st.reviewing = st.reviewing.filter((r) => r.id !== m[1]);
-      if (m[1] in st.checks && /<status>completed<\/status>|exit code/.test(text)) checked(st, m[1], rec);
+      if (m[1] in st.checks && /<status>completed<\/status>|exit code (?:\d|[1-9]\d|1[01]\d|12[0-7])\b/.test(text)) checked(st, m[1], rec); // over 127 a signal ended it: no run
     }
   }
   if (rec.type === 'user' && Array.isArray(content)) {
@@ -546,8 +546,8 @@ function record(st, line, repos, sub) {
       // a foreground review is done when its result comes back; a background one only says it was launched
       const out = typeof r.content === 'string' ? r.content : (r.content || []).map((x) => x.text || '').join('\n');
       // the repo's check, run and its closing line come back (a background run's comes with its notification, and so
-      // does a foreground run moved to the background, by a timeout, its length or a message, each worded differently)
-      if (r.tool_use_id in st.checks) { if (CHECK_END.test(out)) checked(st, r.tool_use_id, rec); else if (!/^\s*Command running in background|^\s*Command (?:did not complete within its \d+s timeout and )?was moved to the background/.test(out)) delete st.checks[r.tool_use_id]; }
+      // does a foreground run moved to the background, by a timeout, its length, a message or the person, each worded differently, after any output so far)
+      if (r.tool_use_id in st.checks) { if (CHECK_END.test(out)) checked(st, r.tool_use_id, rec); else if (!/^\s*Command (?:running in background|was manually backgrounded by user|(?:did not complete within its \d+s timeout and )?was moved to the background)/m.test(out)) delete st.checks[r.tool_use_id]; }
       if (!/^\s*Async agent launched/.test(out)) st.reviewing = st.reviewing.filter((x) => x.id !== r.tool_use_id);
     }
     return;
