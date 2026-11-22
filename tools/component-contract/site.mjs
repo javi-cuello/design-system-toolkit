@@ -66,21 +66,23 @@ export function closureOf(library, folders) {
    quarters of each (150 of 206 s, a Material 3 reading, 2026-11-21). `dir` null, or TOOLKIT_SELF_DRAWN_CACHE=0, draws
    every one; a file that cannot be read or written is drawn. */
 export const DRAWN_CACHE = path.join(os.tmpdir(), 'toolkit-self-drawn');
-let generator;
-const generatorHash = () => (generator ||= (() => {
+// (taken as the module loads, beside the code it hashes: taken later, a run waiting on the measuring lock while the files
+// were edited kept its old drawings under the new code's hash, and every later run drew them from the cache)
+// (null where a file of it cannot be read: then nothing is kept or taken from the cache, every component drawn)
+export const GENERATOR = (() => { try {
   const here = fileURLToPath(import.meta.url), h = createHash('sha1');
   for (const f of importClosure([here])) h.update(path.relative(path.dirname(here), f)).update('\0').update(fs.readFileSync(f)).update('\0');
   // and the house naming preferences HOUSE is built from, read by a path importClosure does not follow (projects.cjs)
   try { h.update(fs.readFileSync(path.join(path.dirname(here), '..', '..', 'standards', 'naming-preferences.json'))); } catch { /* none */ }
   return h.digest('hex');
-})());
+} catch { return null; } })();
 export function drawnAll(library, { settingsOf = () => undefined, naming = ELEMENT, dir = process.env.TOOLKIT_SELF_DRAWN_CACHE === '0' ? null : DRAWN_CACHE } = {}) {
   const mains = byComponentName(Object.values(library)), byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
   const out = {};
   for (const c of Object.values(library)) {
     const settings = settingsOf(c.folder);
-    const key = () => createHash('sha1').update([generatorHash(), JSON.stringify(settings ?? null), JSON.stringify(naming), ...[...closureOf(library, [c.folder])].sort().map((f) => `${f}\0${JSON.stringify(byFolder[f])}`)].join('\0')).digest('hex');
-    const file = dir && path.join(dir, `${key()}.json`);
+    const key = () => createHash('sha1').update([GENERATOR, JSON.stringify(settings ?? null), JSON.stringify(naming), ...[...closureOf(library, [c.folder])].sort().map((f) => `${f}\0${JSON.stringify(byFolder[f])}`)].join('\0')).digest('hex');
+    const file = dir && GENERATOR && path.join(dir, `${key()}.json`);
     if (file) { try { out[c.folder] = JSON.parse(fs.readFileSync(file, 'utf8')); continue; } catch { /* not kept yet */ } }
     out[c.folder] = selfDrawn(c, { library, mains, settings, naming });
     if (file) { try { fs.mkdirSync(dir, { recursive: true }); const tmp = `${file}.${process.pid}`; fs.writeFileSync(tmp, JSON.stringify(out[c.folder])); fs.renameSync(tmp, file); } catch { /* drawn again next time */ } }

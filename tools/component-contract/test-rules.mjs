@@ -2,7 +2,7 @@
 // tools/component-contract/rules.mjs: the translation table, each row read both ways.
 import assert from 'node:assert/strict';
 import { declarations } from './css.mjs';
-import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss } from './rules.mjs';
+import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, writtenNowrap, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss } from './rules.mjs';
 import { tokenNames } from './to-code.mjs';
 
 let n = 0;
@@ -88,6 +88,9 @@ ok('Figma\'s rotation (counter-clockwise) is CSS\'s rotate the other way: 90 →
 // text: how it resizes is its sizes; its style is named by the declarations that say it
 ok('a text that hugs its width grows both ways, one that hugs its height wraps at its width, one fixed both ways is none',
   autoResizeOf('hug', 'hug') === 'width_and_height' && autoResizeOf('fill', 'hug') === 'height' && autoResizeOf(120, 'hug') === 'height' && autoResizeOf(120, 40) === 'none' && autoResizeOf('fill', 40) === 'none');
+ok('nowrap is the text\'s own only where it is written on the text: a loose text\'s parent saying it says nothing', writtenNowrap('nowrap') && !writtenNowrap('nowrap', true) && !writtenNowrap(null) && !writtenNowrap('normal'));
+ok('a text written never to wrap grows both ways whatever size it states (a WIDTH_AND_HEIGHT text placed by scale), as css.mjs writes it',
+  autoResizeOf(19, 24, true) === 'width_and_height' && Object.fromEntries(declarations({ kind: 'text', width: 19, height: 24, autoResize: 'width_and_height' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls)['white-space'] === 'nowrap');
 {
   const styles = ['Label/md', 'Label/md-medium', 'Body/md'];
   const own = Object.fromEntries(tokenNames.textStyle('Label/md-medium'));

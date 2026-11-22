@@ -31,12 +31,15 @@ ok('a text that hugs its width never wraps (Figma\'s WIDTH_AND_HEIGHT), one that
   decl({ kind: 'text', width: 'hug', height: 'hug' }, {})['white-space'] === 'nowrap' && decl({ kind: 'text', width: 'fill', height: 'hug' }, {})['white-space'] === undefined
   && decl({ kind: 'container', width: 'hug', height: 'hug' }, {})['white-space'] === undefined
   && decl({ kind: 'text', width: 'hug', height: 'hug', maxLines: 2, truncate: true }, {})['-webkit-line-clamp'] === '2');
+ok('a text with no style writes no style\'s fields (no token defines --literal-*): it is said as unread, as an unstyled effect is',
+  (() => { const r = declarations({ kind: 'text', typography: 'literal' }, {}, { token: (n) => `var(--${n})`, textStyle: (n) => [['font-size', `var(--${n}-font-size)`]] }); return !r.decls.length && r.unread.some((u) => /^typography \(a text with no style/.test(u)); })());
 ok('a literal carries its reason (code-standard rule 22)', lit[2] === 'no token in the design');
 ok('a radius stays px, a length goes rem (code-standard rule 54)', decl({ radius: 6 })['border-radius'] === '6px' && decl({ width: 8 })['inline-size'] === '0.5rem');
 ok('an inside stroke out of layout is an inset ring; in layout, a border per side; outside, an outline taking no room (rule 63)',
   decl({ border: { color: 'C/line', width: 'Stroke/1' } })['box-shadow'] === 'inset 0 0 0 var(--stroke-1) var(--c-line)'
   && decl({ border: { color: 'C/line', width: [0, 0, 'Stroke/1', 0], sides: { top: 0, end: 0, bottom: 1, start: 0 }, inLayout: true } })['border-bottom'] === 'var(--stroke-1) solid var(--c-line)'
   && decl({ border: { color: 'C/line', width: 2, align: 'outside' } }).outline === '2px solid var(--c-line)');
+ok('a side\'s weight with no one width stated is the weight its side records, never 1', decl({ border: { color: 'C/line', sides: { top: 0, end: 0, bottom: 3, start: 0 } } })['box-shadow'] === 'inset 0 -3px 0 0 var(--c-line)');
 ok('one inside edge is one inset shadow shifted from that edge, beside the effect style', decl({ border: { color: 'C/line', width: [0, 0, 1, 0], sides: { bottom: 1 } }, shadow: 'Elevation/Raised' })['box-shadow'] === 'inset 0 -1px 0 0 var(--c-line), var(--elevation-raised)');
 const centred = decl({ position: 'absolute', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'center', vertical: 'center' } });
 ok('a part centred out of the flow is pinned at the middle and moved back by half its size', centred['inset-inline-start'] === '50%' && centred.translate === '-50% -50%');

@@ -379,7 +379,14 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // a part's hook: its class (React) or its data-part (a web component)
   // and the design's own name for a layer whose name its id does not give back (Icon on a part called show-icon-icon), so
   // reading the code back names it as the design does
-  const nameAttr = (id) => { const nm = ((parts.get(id) || {}).e || {}).name; return nm ? [['data-figma-name', { lit: nm }]] : []; };
+  // (and where a variant renames it, that variant's name there, the later variant first, as modeAttrs says a mode; one
+  // a variant takes away, null, is empty there, which names nothing)
+  const nameAttr = (id) => {
+    const nm = ((parts.get(id) || {}).e || {}).name;
+    const sets = (c.variants || []).filter((v) => v.set && `${id}.name` in v.set).sort((x, y) => !!x.combination - !!y.combination);
+    const code = byVariant(sets, (v) => lang.str(v.set[`${id}.name`] || ''), lang.str(nm || ''));
+    return code ? [['data-figma-name', { code }]] : nm ? [['data-figma-name', { lit: nm }]] : [];
+  };
   const hook = (id) => [...(n.element ? [['data-part', { lit: seg(id) }]] : [['className', { lit: n.part(seg(id)).slice(1) }]]), ...nameAttr(id), ...modeAttrs(id)];
   const named = (key) => props.find((x) => x.key === key);
   // the code that holds at a variant's props (null: never in markup; 'true': always)
@@ -391,6 +398,13 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       out.push(typeof v === 'boolean' ? (v ? ref(x.name) : `!${ref(x.name)}`) : `${ref(x.name)} === ${lang.str(v)}`);
     }
     return out.length ? out.join(' && ') : 'true';
+  };
+  // a value each variant says in turn over `base`, the later variant first: the code that picks it, null where no variant
+  // the markup can test says one
+  const byVariant = (sets, valueOf, base) => {
+    let code = base, any = false;
+    for (const v of sets) { const t = testOf(v.when), w = valueOf(v); if (!t) continue; code = t === 'true' ? w : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${w} : ${any ? `(${code})` : code}`; any = true; }
+    return any ? code : null;
   };
   // a text's words: its property's, else its own, else, where a variant puts it back with other words (a label's * that
   // reads Optional when not required), those there, the later variant first
@@ -429,9 +443,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     const sets = (c.variants || []).filter((v) => v.set && `${id}.modes` in v.set).sort((x, y) => !!x.combination - !!y.combination);
     const keys = new Set([...Object.keys(e.modes || {}), ...sets.flatMap((v) => Object.keys(v.set[`${id}.modes`] || {}))]);
     return [...keys].sort().map((k) => {
-      let code = lang.str((e.modes || {})[k] || ''), any = false;
-      for (const v of sets) { const t = testOf(v.when), w = lang.str((v.set[`${id}.modes`] || {})[k] || ''); if (!t) continue; code = t === 'true' ? w : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${w} : ${any ? `(${code})` : code}`; any = true; }
-      return [MODES.attribute(k), any ? { code } : { lit: (e.modes || {})[k] || '' }];
+      const code = byVariant(sets, (v) => lang.str((v.set[`${id}.modes`] || {})[k] || ''), lang.str((e.modes || {})[k] || ''));
+      return [MODES.attribute(k), code ? { code } : { lit: (e.modes || {})[k] || '' }];
     });
   };
   const busy = props.find((x) => x.busy && x.busy.length);

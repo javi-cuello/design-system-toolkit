@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -62,6 +62,7 @@ ok('the token the code wrote holds its value in any of its modes: a contextual f
     return designTokenFor('background', '#ffffff', t, {}, null, null, null, ['--field-contextual']).token === 'field (contextual)'; })());
 ok('of two names a property ends in, the longer: Background/Primary before Primary',
   designTokenFor('background', '#fff', [['Primary', '#fff', null, 'A'], ['Colour/Background/Primary', '#fff', null, 'B']], {}, null, null, null, ['--ds-colour-background-primary']).token === 'Colour/Background/Primary');
+ok('a part\'s box in the flow is its host\'s control where the host draws none (display: contents), else the host', boxSelector('end', 'contents') === '[data-contract-id="end"] > :first-child' && boxSelector('end', 'flex') === '[data-contract-id="end"]');
 ok('a field nothing is known of (no scopes, never set by the library) names no token rather than guess among every token of that number',
   designTokenFor('fontSize', 14, [['Spacing/14', 14], ['Font/Size/14', 14]], {}, null, null, offerFor([])).value === 14);
 ok('Figma\'s own scopes, where the snapshot recorded them, decide before the library\'s groups',

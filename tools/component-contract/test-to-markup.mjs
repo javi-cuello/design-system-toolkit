@@ -147,6 +147,9 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   ok('an override a placed component has no prop for is named as a gap, never dropped without a word', /Icon: drawn here inside Sw, which has no prop for it/i.test(toElement(org, 'org', { naming: ELEMENT, library: { Switcher: sw, Org: org } }))); }
 const renamed = { component: 'Tag', props: {}, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', name: 'Icon' } }, variants: [], folder: 'tag' };
 ok('a layer whose name its id does not give back carries the design\'s name (data-figma-name)', /"data-part": "mark", "data-figma-name": "Icon"/.test(toElement(renamed, 'tag', { naming: ELEMENT, library: {} })));
+{ const flush = { ...renamed, props: { flush: { type: 'boolean', default: false, figma: 'Flush' } }, variants: [{ when: { flush: true }, set: { 'mark.name': null } }] };
+  const out = toReact(flush, 'tag', { naming: CLASS, library: {} });
+  ok('a name a variant takes away is empty there, the design\'s elsewhere: the reading names the layer as each combination does', /data-figma-name=\{flush \? "" : "Icon"\}/.test(out), out); }
 const quoted = { ...renamed, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', name: 'Say "hi" {x}' }, label: { kind: 'text', parent: 'root', content: 'Tag' } } };
 const placedNamed = { component: 'Row', props: {}, anatomy: { root: { kind: 'container' }, lead: { kind: 'instance', parent: 'root', component: 'Pill', name: 'Leading pill' } }, variants: [], folder: 'row' };
 ok('the name travels in React too, braced where it holds quotes, on a placed component, and a part with no name has none',

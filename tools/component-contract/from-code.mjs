@@ -45,7 +45,7 @@ import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -336,6 +336,11 @@ export function elementOfLayer(q, id, kind, rootRe, others) {
   if (kind === 'instance' && !its) return [h, false];
   return [q, kind === 'text' && !!its && id.startsWith(`${its}/`)];
 }
+
+/* The selector of a part's box in its parent's flow: the element the walk marks, or, where it is a host that draws no box
+   of its own (display: contents, a placed component's custom element around its control), that control, which to-code
+   writes the part's sizing and pull back on. */
+export const boxSelector = (id, display) => (display === 'contents' ? `[data-contract-id="${id}"] > :first-child` : `[data-contract-id="${id}"]`);
 
 export function cornerOf(css, w, h) {
   const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -1900,8 +1905,11 @@ async function main() {
       const readCut = async (e, loose) => {
         const sel = `[data-contract-id="${loose ? e.parent : e.id}"]`, cut = {};
         for (const p of LINES_CSS) cut[p] = await authoredWidth(L.tab, sel, p, { raw: true, cache: styles });
+        // (a text written never to wrap, and not cut, grows both ways whatever size it states: rules.mjs autoResizeOf)
+        const nowrap = e.kind === 'text' && writtenNowrap(cut['white-space'], loose);
         cut['white-space'] = await call(L.tab, (q) => { const n = document.querySelector(q); return n ? getComputedStyle(n).whiteSpace : null; }, sel);
         const lines = linesFromCss(cut);
+        if (e.kind === 'text') e.autoResize = autoResizeOf(e.width, e.height, nowrap && !lines);
         // (the overflow a cut needs is the cut's, as css.mjs writes it for one: no clip of the text's own beside it)
         if (lines) { Object.assign(e, lines); if (e.kind === 'text' && e.overflow === 'hidden') delete e.overflow; }
       };
@@ -1987,7 +1995,7 @@ async function main() {
               const designHugs = e.kind === 'instance' && figmaContract && [figmaContract.anatomy || {}, ...(figmaContract.variants || []).map((w) => w.add || {})].some((a) => a[e.id] && a[e.id][axis] === 'hug');
               e[axis] = (!v || /^(auto|fit-content|max-content|min-content)$/.test(v)) && (e.layout || e.kind === 'text' || designHugs) ? 'hug' : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
             }
-            if (e.kind === 'text') { e.autoResize = autoResizeOf(e.width, e.height); await readCut(e, !(e.id in shown)); }
+            if (e.kind === 'text') await readCut(e, !(e.id in shown));
             continue;
           }
         }
@@ -2002,7 +2010,7 @@ async function main() {
         // a host that draws no box of its own (display: contents, a placed button's custom element around its <button>,
         // code-standard rule 8): its size is the control's, the box in its parent's flow, as to-code writes it there
         const contents = !loose && shown[e.id][0] === 'contents';
-        const ownSel = contents ? `[data-contract-id="${e.id}"] > :first-child` : `[data-contract-id="${e.id}"]`;
+        const ownSel = boxSelector(e.id, contents ? 'contents' : null);
         for (const p of SIZING_CSS) {
           own[p] = loose ? null : await authoredWidth(L.tab, ownSel, p, { raw: true, cache: styles });
           up[p] = await authoredWidth(L.tab, loose ? `[data-contract-id="${e.parent}"]` : `[data-contract-up~="${e.id}"]`, p, { raw: true, cache: styles });
@@ -2011,17 +2019,19 @@ async function main() {
         if (up.display == null) up.display = loose ? (shown[e.parent] || [])[0] : shown[e.id][1];
         // the second child in the flow, whose start margin says a gap below 0 (rules.mjs: CSS has none)
         const second = e.layout && raw.filter((x) => x.parent === e.id && x.id in shown && x.position !== 'absolute' && !x.absolute).sort((x, y) => x.order - y.order)[1];
-        const next = second ? { 'margin-inline-start': await authoredWidth(L.tab, `[data-contract-id="${second.id}"]`, 'margin-inline-start', { raw: true, cache: styles }), 'margin-block-start': await authoredWidth(L.tab, `[data-contract-id="${second.id}"]`, 'margin-block-start', { raw: true, cache: styles }), 'margin-left': await authoredWidth(L.tab, `[data-contract-id="${second.id}"]`, 'margin-left', { raw: true, cache: styles }), 'margin-top': await authoredWidth(L.tab, `[data-contract-id="${second.id}"]`, 'margin-top', { raw: true, cache: styles }) } : null;
+        // (on the box in the flow: a placed component's host that draws none hands it to its control, as to-code writes it)
+        const nextSel = second && boxSelector(second.id, shown[second.id][0]);
+        const next = second ? Object.fromEntries(await Promise.all(['margin-inline-start', 'margin-block-start', 'margin-left', 'margin-top'].map(async (p) => [p, await authoredWidth(L.tab, nextSel, p, { raw: true, cache: styles })]))) : null;
         const lay = e.layout && layoutFromCss(own, next);
         if (lay) {
           Object.assign(e.layout, { direction: lay.direction, align: lay.align, crossAlign: lay.crossAlign }); if (lay.wrap) e.layout.wrap = true;
           // a gap below 0, said as the second child's pull back: its length, or, written as a token, the length it
           // renders at (the token named from the margin below)
           // taken only where it renders below 0: a token's or a calc()'s sign is its value's (a positive nudge is no gap)
-          const at = lay.pulled && await call(L.tab, ([sel, col]) => { const n = document.querySelector(sel); return n ? parseFloat(getComputedStyle(n)[col ? 'marginBlockStart' : 'marginInlineStart']) : null; }, [`[data-contract-id="${second.id}"]`, lay.direction === 'column']);
+          const at = lay.pulled && await call(L.tab, ([sel, col]) => { const n = document.querySelector(sel); return n ? parseFloat(getComputedStyle(n)[col ? 'marginBlockStart' : 'marginInlineStart']) : null; }, [nextSel, lay.direction === 'column']);
           if (lay.pulled && at < 0) {
             e.layout.gap = lengthOf(lay.gap) ?? at;
-            pulledBy[e.id] = { from: second.id, props: ['margin-inline-start', 'margin-block-start', 'margin-left', 'margin-top'] };
+            pulledBy[e.id] = { from: nextSel, props: ['margin-inline-start', 'margin-block-start', 'margin-left', 'margin-top'] };
           }
         }
         for (const [axis, i] of [['width', 0], ['height', 1]]) {
@@ -2039,7 +2049,6 @@ async function main() {
         }
         // how a text resizes is its sizes, said as Figma says it (rules.mjs)
         if (e.kind === 'text') {
-          e.autoResize = autoResizeOf(e.width, e.height);
           await readCut(e, loose);
         }
       }
@@ -2051,12 +2060,13 @@ async function main() {
       // (`guess` false: only a token the code's own var names, never one found by value: a box 320 wide is no token)
       const tok = async (kind, v, at, css = [], from = null, guess = true) => {
         let r = null;
+        // (`from`: the part whose css says it, or the selector of its box where that is not the part's own element)
         const el = from || at.slice(0, at.lastIndexOf('.'));
         // (`background:base`: the colour layer at the bottom of a layered background, the last of its layers, written
         // var() there; `box-shadow:width`, `box-shadow:colour`: that part of the inset stroke a border is drawn with, as written). Only a
         // token one of a property's vars names settles it: a guess by value there (a reset's var that holds another value)
         // leaves the next property to say
-        for (const p of css) { const [prop, part] = p.split(':'), at = `[data-contract-id="${el}"]`; const rawOf = part === 'base' ? await authoredValue(L.tab, at, prop, styles) : null; const vars = part === 'base' ? (() => { const ls = splitTop(String(rawOf || '')), m = ls.length && /^\s*var\(\s*(--[\w-]+)/.exec(ls[ls.length - 1]); return m ? [m[1]] : []; })() : part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles), { outside: /-out$/.test(part) }) || {})[part.replace(/-out$/, '')] || []) : await authoredVars(L.tab, at, p, styles); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
+        for (const p of css) { const [prop, part] = p.split(':'), at = el.startsWith('[') ? el : `[data-contract-id="${el}"]`; const rawOf = part === 'base' ? await authoredValue(L.tab, at, prop, styles) : null; const vars = part === 'base' ? (() => { const ls = splitTop(String(rawOf || '')), m = ls.length && /^\s*var\(\s*(--[\w-]+)/.exec(ls[ls.length - 1]); return m ? [m[1]] : []; })() : part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles), { outside: /-out$/.test(part) }) || {})[part.replace(/-out$/, '')] || []) : await authoredVars(L.tab, at, p, styles); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
         // (the toolkit's own rendering names every token it draws with, var() for var(): a value it wrote raw is the design's
         // raw value, never a token guessed by value, which a project's compiled code may need)
         // (unless nothing was offered to name a var by: a focus ring's corner, which to-code writes as a calc() of one)
@@ -2066,6 +2076,12 @@ async function main() {
         if (!r) r = designTokenFor(kind, v, table, usage, under, judge, offered);
         if (r.tie) ties.push({ at, token: r.token, tie: r.tie });
         return r.token ?? (['background', 'text', 'icon', 'stroke'].includes(kind) ? asRgba(r.value) : r.value);
+      };
+      // a fully round corner, a box's or its ring's (`after`: the ring is its ::after): the library's fullest radius
+      // (fullestOf) where the code names a radius token there, else null, the caller's raw value or reading. One rule for both.
+      const fullRadius = async (id, after = false) => {
+        for (const p of ['border-top-left-radius', 'border-radius']) if ((await authoredVars(L.tab, `[data-contract-id="${id}"]`, after ? `${p}::after` : p, styles)).length) return fullest();
+        return null;
       };
       const SIDE = { top: 'padding-top', end: 'padding-right', bottom: 'padding-bottom', start: 'padding-left' };
       for (const e of raw) {
@@ -2166,12 +2182,11 @@ async function main() {
         for (const [f, css] of [['minWidth', ['min-inline-size', 'min-width']], ['minHeight', ['min-block-size', 'min-height']], ['maxWidth', ['max-inline-size', 'max-width']], ['maxHeight', ['max-block-size', 'max-height']]]) if (typeof x[f] === 'number') { x[f] = await tok('size', x[f], `${id}.${f}`, css, null, false); if (typeof x[f] !== 'string' && viaVar.has(`${id}.${f}`)) delete x[f]; }
         // (a fully round corner is the library's fullest radius token only where the code names a token there: a raw
         // 100px the design draws raw stays its number, never a token found for it)
-        const namesOne = async () => { for (const p of ['border-top-left-radius', 'border-radius']) if ((await authoredVars(L.tab, `[data-contract-id="${id}"]`, p, styles)).length) return true; return false; };
         if (Array.isArray(x.radius)) {
           // a radius per corner (cornersOf), each corner its own token as to-code writes each (css.mjs), a square one 0
           const CORNER = ['border-top-left-radius', 'border-top-right-radius', 'border-bottom-right-radius', 'border-bottom-left-radius'];
-          x.radius = await Promise.all(x.radius.map(async (c, i) => (typeof c === 'object' ? ((await namesOne()) && fullest()) || c.radius : c === 0 ? 0 : await tok('radius', c, `${id}.radius`, [CORNER[i], 'border-radius']))));
-        } else if (x.radius) x.radius = x.full ? ((await namesOne()) && fullest()) || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
+          x.radius = await Promise.all(x.radius.map(async (c, i) => (typeof c === 'object' ? (await fullRadius(id)) || c.radius : c === 0 ? 0 : await tok('radius', c, `${id}.radius`, [CORNER[i], 'border-radius']))));
+        } else if (x.radius) x.radius = x.full ? (await fullRadius(id)) || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
         if (x.border) {
@@ -2211,7 +2226,7 @@ async function main() {
           ring.push([id, { kind: 'graphic', shape: 'rectangle', parent: id, position: 'absolute', absolute: { x: -clear, y: -clear, end: -clear, bottom: -clear }, constraints: { horizontal: 'stretch', vertical: 'stretch' },
             // (its tokens where the ring was written: the box's own outline, or its ::after's)
             border: { color: await tok('stroke', o.color, `${id}.outline`, (o.after ? ['outline-color::after', 'outline::after'] : ['outline-color', 'outline'])), width: await tok('width', o.width, `${id}.outline-width`, (o.after ? ['outline-width::after', 'outline::after'] : ['outline-width', 'outline'])) },
-            ...(o.radius > 0 && { radius: o.full ? fullest() || await tok('radius', o.radius + clear, `${id}.ring-radius`, []) : await tok('radius', o.radius + clear, `${id}.ring-radius`, []) }) }]);
+            ...(o.radius > 0 && { radius: (o.full ? await fullRadius(id, o.after) : null) ?? await tok('radius', o.radius + clear, `${id}.ring-radius`, []) }) }]);
           delete x.outline;
         }
         // a shadow is the library's effect style that draws it (layers matched by what they draw); none, its css

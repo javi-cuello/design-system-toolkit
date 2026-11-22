@@ -68,7 +68,7 @@ The pipeline held to its goal, end to end: `node tools/component-contract/eval.m
 
 ### `site.mjs`
 
-The toolkit's own rendering of a library, with no project code: each component's web component (`toElement`) and sheet (`toCss`) and the tokens on one static page served from memory, each render function as `window.R[<folder>]`. test-to-markup renders the sample library through it; from-code `--self` reads a project's library through it
+The toolkit's own rendering of a library, with no project code: each component's web component (`toElement`) and sheet (`toCss`) and the tokens on one static page served from memory, each render function as `window.R[<folder>]`. test-to-markup renders the sample library through it; from-code `--self` reads a project's library through it Each component's drawing is kept between runs (`drawnAll`, under the OS temp folder's `toolkit-self-drawn`) by the hash of the generator's code, taken as site.mjs loads (`GENERATOR`): a run that waited on the measuring lock while the code was edited once kept its old drawings under the new hash. The gap left: an edit landing between the loader reading site.mjs's imports and its body hashing them, a moment at start, would do the same; `TOOLKIT_SELF_DRAWN_CACHE=0` draws uncached.
 
 ### `to-markup.mjs`
 

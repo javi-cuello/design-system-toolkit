@@ -122,8 +122,13 @@ export function linesFromCss(own) {
   return null;
 }
 
-export function autoResizeOf(width, height) {
-  if (width === 'hug') return 'width_and_height';
+// (`nowrap`: the text is written never to wrap and is not cut, as css.mjs says a WIDTH_AND_HEIGHT text whose width
+// the design states all the same)
+// (written on the text's own element: a loose text, words its parent holds with no element of their own, reads its
+// parent's declarations, and a parent's nowrap says nothing of how this text resizes)
+export const writtenNowrap = (authored, loose = false) => !loose && /^\s*nowrap\s*$/.test(authored || '');
+export function autoResizeOf(width, height, nowrap = false) {
+  if (width === 'hug' || nowrap) return 'width_and_height';
   if (height === 'hug') return 'height';
   return 'none';
 }

@@ -9,7 +9,7 @@ import path from 'node:path';
 import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, todayOf, mechanisms } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
-import { selfDrawn, siteFiles, drawnAll } from './site.mjs';
+import { selfDrawn, siteFiles, drawnAll, GENERATOR } from './site.mjs';
 import { isDeepStrictEqual } from 'node:util';
 
 let n = 0;
@@ -274,6 +274,7 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
     ok('drawnAll: a kept drawing is the one drawn; a placed component\'s change draws it and its holder again, not the rest',
       isDeepStrictEqual(first.card, again.card) && JSON.stringify(again) === JSON.stringify(first) && first.tile.sheet === fresh.tile.sheet && kept === 3 && files() === 5);
     fs.rmSync(dir, { recursive: true, force: true }); }
+  ok('drawnAll: the generator\'s hash is taken as its code loads, never later, when the files may have moved on from the code running', /^[0-9a-f]{40}$/.test(GENERATOR));
 }
 
 { // rows grouped by mechanism across components: one cause in two libraries is one group, ranked first by the

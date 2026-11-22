@@ -111,9 +111,10 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   const b = take('border');
   const rings = [];
   if (b && b.color !== undefined) {
-    const widths = Array.isArray(b.width) ? b.width : SIDES.map(() => b.width ?? 1);
+    // a side's width by its token, else the weight the stroke records for that side (derive's `sides` where the stroke
+    // says no one width: a 3 on the bottom is 3, never the 1 an unstated width would be)
+    const widths = Array.isArray(b.width) ? b.width : SIDES.map((s) => b.width ?? (b.sides && typeof b.sides[s] === 'number' ? b.sides[s] : 1));
     const on = SIDES.map((s, i) => (b.sides ? !!b.sides[s] : widths[i] !== 0) && widths[i] !== 0);
-    // a side's width by its token, else the weight the stroke records for that side
     const w = (i) => len(widths[i], true) ?? (b.sides && typeof b.sides[SIDES[i]] === 'number' ? len(b.sides[SIDES[i]], true) : undefined);
     const c = names.token(b.color);
     const align = b.align || 'inside';
@@ -205,15 +206,19 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   } else if (anchors) put('position', 'relative');
 
   const ts = take('typography');
-  if (typeof ts === 'string') for (const [p, v] of names.textStyle(ts)) put(p, v);
+  // a text with no one style (the snapshot's literal, or mixed) names no style's fields, which no token defines: its values
+  // are not in the contract, so it is said, as an unstyled effect is
+  if (ts === 'literal' || ts === 'mixed') unread.push(`typography (a text with ${ts === 'mixed' ? 'several styles' : 'no style'}, whose values the contract does not hold)`);
+  else if (typeof ts === 'string') for (const [p, v] of names.textStyle(ts)) put(p, v);
   const align = take('textAlign');
   if (align && align !== 'start') put('text-align', align);
   const lines = take('maxLines'), cut = take('truncate');
   if (lines === 1 && cut) { put('overflow', 'hidden'); put('white-space', 'nowrap'); put('text-overflow', 'ellipsis'); }
   else if (lines > 1) { put('display', '-webkit-box'); put('-webkit-box-orient', 'vertical'); put('-webkit-line-clamp', String(lines)); put('overflow', 'hidden'); }
   // a text that hugs its width grows on one line and never wraps (Figma's WIDTH_AND_HEIGHT); CSS's shrink-to-fit
-  // would wrap it at the room it has, so it is said with nowrap (rules.mjs autoResizeOf)
-  else if (e.kind === 'text' && e.width === 'hug') put('white-space', 'nowrap');
+  // would wrap it at the room it has, so it is said with nowrap (rules.mjs autoResizeOf), one the design sizes all the
+  // same too (a text placed by scale in a frame with no auto layout keeps the size it measured)
+  else if (e.kind === 'text' && (e.width === 'hug' || e.autoResize === 'width_and_height')) put('white-space', 'nowrap');
   if (take('verticalAlign') !== undefined) unread.push('verticalAlign (text set in a taller box)');
 
   for (const k of Object.keys(e)) if (!done.has(k) && !STRUCTURE.has(k)) unread.push(k);
