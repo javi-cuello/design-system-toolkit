@@ -778,6 +778,8 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     ok('the element that takes a state is the selector\'s last compound', subjectOf('#root .card__status ~ .card__action') === '.card__action' && subjectOf('#root .card__action') === '.card__action' && subjectOf('.card>button:first-child') === 'button:first-child');
   }
   const gone = new Error('state selector matched no element: #root .card__action');
+  ok('only focus has nothing to take it: a card with its button hidden is still hovered',
+    !stateHidden(gone, { status: false, __state: 'hover' }, p, { hover: { pseudo: ':hover' } }) && stateHidden(gone, { status: false, __state: 'ring' }, p, { ring: { pseudo: ':focus-visible' } }));
   ok('a state whose target that boolean hid reads at rest; any other missing target still fails',
     stateHidden(gone, { status: false, __state: 'focus' }, p) && !stateHidden(gone, { status: true, __state: 'focus' }, p) && !stateHidden(gone, { status: false, __state: 'rest' }, p) && !stateHidden(new Error('drew nothing'), { status: false, __state: 'focus' }, p) && !stateHidden(gone, { status: false, __state: 'focus' }, {}));
   ok('a text only that boolean speaks for is the code\'s alone; one the design has as a text stays the design\'s', onlyInCode(p, design).has('status') && !onlyInCode(p, { ...design, status: { type: 'string', figma: 'Status' } }).has('status') && !onlyInCode(p, design).has('title'));

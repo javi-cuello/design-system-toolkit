@@ -528,11 +528,13 @@ export function emptiedArgs(args, props, { words = false } = {}) {
   for (const p of Object.values(props)) if (p.emptied !== undefined && typeof out[p.code] === 'boolean') { if (!out[p.code]) out[p.code] = ''; else if (words) out[p.code] = p.emptied; else delete out[p.code]; }
   return out;
 }
-/* Whether a render failed for a pointer state whose own target such a boolean hid (a card focused through its button,
+/* Whether a render failed for focus whose own target such a boolean hid (never hover or press, which what is round the
+   target takes too; a card focused through its button,
    read with no button): nothing is there to take the state, so it draws as rest. Any other missing target is a wrong
    mapping and still fails. Tested by test-from-code.mjs. */
-export function stateHidden(err, asked, props) {
+export function stateHidden(err, asked, props, pseudoOf = {}) {
   return /^state selector matched no element/.test(String(err && err.message)) && !!asked.__state && asked.__state !== 'rest'
+    && /focus/.test((pseudoOf[asked.__state] || {}).pseudo || asked.__state)
     && Object.values(props).some((p) => p.emptied !== undefined && asked[p.code] === false);
 }
 /* The element a state selector names, its last compound. Tested by test-from-code.mjs. */
@@ -1707,12 +1709,12 @@ async function main() {
       const words = { words: L.container !== '#storybook-root' };
       let args = emptiedArgs(asked, props, words);
       try { await show(args); } catch (e) {
-        if (!stateHidden(e, asked, props)) throw e;
+        if (!stateHidden(e, asked, props, L.pseudoOf)) throw e;
         // only where the boolean is what took it away: shown, the state finds it; hidden, no element of its own kind is left
         await show(emptiedArgs({ ...asked, ...Object.fromEntries(Object.values(props).filter((p) => p.emptied !== undefined).map((p) => [p.code, true])) }, props, words));
         await show({ ...args, __state: 'rest' });
         const on = ((L.pseudoOf || {})[asked.__state] || {}).on;
-        if (!on || await call(L.tab, ([r, s]) => { const root = document.querySelector(r); return !root || !!root.querySelector(s); }, [rootSel, subjectOf(on)])) throw e;
+        if (!on || await call(L.tab, ([r, s]) => { const box = document.querySelector(r); return !box || !!box.querySelector(s); }, [L.container, subjectOf(on)])) throw e;
         const said = `${asked.__state}: with what takes it hidden by an empty text, nothing takes that state; read as rest there`;
         if (!notes.includes(said)) notes.push(said);
         args = { ...args, __state: 'rest' };
