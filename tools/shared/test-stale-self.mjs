@@ -101,5 +101,16 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   touch(dep, past);
   ok('work that begins while it closes is let finish before it exits', r.code === 0 && Date.now() - t0 >= 60);
 }
+{
+  // a child whose channel has closed is not sent to, and an 'error' from a late send is heard, not thrown
+  const gone = child('idle'); gone.connected = false; let sent = 0; gone.send = () => { sent++; };
+  askIdle(new Set([gone]))();
+  ok('a child whose channel closed is not asked, and its errors are heard', sent === 0 && gone.listenerCount('error') === 1);
+  // supervision is asked at the time: a launchd label inherited by a process launchd did not start is no supervisor
+  const said = [];
+  const t = restartWhenStale([entry], { label: 'com.toolkit.nothing-runs-this', start, every: 10, log: (m) => said.push(m), exit: () => said.push('exit') });
+  touch(dep); await wait(60); clearTimeout(t.timer); touch(dep, past);
+  ok('a label this process was not started under by launchd itself supervises nothing', !said.includes('exit') && /restart it/.test(said.join()));
+}
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(`${n}/${n} passed`);

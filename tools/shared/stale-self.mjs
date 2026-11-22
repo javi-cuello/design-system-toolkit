@@ -25,7 +25,9 @@ export const held = (fn) => function (...a) {
   return out;
 };
 
-const supervisedBy = (label) => typeof process.send === 'function' || (!!label && process.env.XPC_SERVICE_NAME === label);
+// asked when it would restart: a parent still there on its channel, or launchd itself (pid 1) under the caller's own
+// label; a label inherited by something launchd's job started, or a parent that died, supervises nothing
+const supervisedBy = (label) => () => (typeof process.send === 'function' && process.connected) || (!!label && process.env.XPC_SERVICE_NAME === label && process.ppid === 1);
 
 export function restartWhenStale(entries, { servers = [], busy = () => false, onStale = null, label = null,
   supervised = supervisedBy(label), start = performance.timeOrigin, every = 60000, idleEvery = 1000, giveUp = 30000,
@@ -53,7 +55,7 @@ export function restartWhenStale(entries, { servers = [], busy = () => false, on
       const now = Date.now();
       // (newer than the process and not dated ahead of the clock: a file from the future would restart it forever)
       changed = importClosure(entries).find((f) => { try { const m = fs.statSync(f).mtimeMs; return m > start && m <= now; } catch { return false; } }) || null;
-      if (changed && !supervised) return log(`${path.basename(changed)} changed since this process started, so it runs the old file: restart it (nothing supervises this copy to bring it back)`);
+      if (changed && !(typeof supervised === 'function' ? supervised() : supervised)) return log(`${path.basename(changed)} changed since this process started, so it runs the old file: restart it (nothing supervises this copy to bring it back)`);
       if (changed) { log(`${path.basename(changed)} changed since this process started: restarting once nothing is in progress`); if (onStale) onStale(); }
     }
     if (changed && idle()) return stop();
@@ -82,7 +84,13 @@ export function askIdle(kids) {
     const ready = all.length > 0 && all.every((c) => said.get(c) === asked);
     asked++;
     for (const c of all) {
-      if (!c.__idleHeard) { c.__idleHeard = true; c.on('message', (m) => { if (m && m.idleSaid) { if (m.idle) said.set(c, m.idleSaid); else said.delete(c); } }); }
+      if (!c.__idleHeard) {
+        c.__idleHeard = true;
+        c.on('message', (m) => { if (m && m.idleSaid) { if (m.idle) said.set(c, m.idleSaid); else said.delete(c); } });
+        // a send to a child whose channel closed before its exit is an 'error' event, not a throw: unheard it crashes the parent
+        c.on('error', () => {});
+      }
+      if (c.connected === false) continue;
       try { c.send({ idleAsked: asked }); } catch {}
     }
     return !ready;
