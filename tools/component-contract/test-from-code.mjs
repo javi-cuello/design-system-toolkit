@@ -753,7 +753,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   }
 }
 { // a design boolean the mapping draws false by a text left empty (a card's status line, False: { status: '' }) is read as that boolean
-  const { emptyShows, emptiedArgs, onlyInCode } = await import('./from-code.mjs');
+  const { emptyShows, emptiedArgs, onlyInCode, stateHidden } = await import('./from-code.mjs');
   const design = { showStatus: { type: 'boolean', default: true, figma: 'Show status', shows: ['status'] } };
   const code = () => ({ status: { type: 'string', code: 'status', sample: 'Label' }, title: { type: 'string', code: 'title', sample: 'Title' } });
   const joins = { showStatus: { arg: 'status', values: { false: '' } } };
@@ -765,6 +765,9 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     none(design, { showStatus: { arg: 'status', values: { false: 'None' } } }) && none(design, { showStatus: { arg: 'status', values: { false: '', true: 'Sent' } } })
     && none({ showStatus: { ...design.showStatus, default: false } }, joins) && none({ showStatus: { ...design.showStatus, shows: undefined } }, joins)
     && none(design, joins, { status: { type: 'string', code: 'status', sample: '' } }) && none(design, {}));
+  const gone = new Error('state selector matched no element: #root .card__action');
+  ok('a state whose target that boolean hid reads at rest; any other missing target still fails',
+    stateHidden(gone, { status: false, __state: 'focus' }, p) && !stateHidden(gone, { status: true, __state: 'focus' }, p) && !stateHidden(gone, { status: false, __state: 'rest' }, p) && !stateHidden(new Error('drew nothing'), { status: false, __state: 'focus' }, p) && !stateHidden(gone, { status: false, __state: 'focus' }, {}));
   ok('a text only that boolean speaks for is the code\'s alone; one the design has as a text stays the design\'s', onlyInCode(p, design).has('status') && !onlyInCode(p, { ...design, status: { type: 'string', figma: 'Status' } }).has('status') && !onlyInCode(p, design).has('title'));
 }
 console.log(`${n}/${n} passed`);

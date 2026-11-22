@@ -522,6 +522,13 @@ export function emptiedArgs(args, props) {
   for (const p of Object.values(props)) if (p.emptied !== undefined && typeof out[p.code] === 'boolean') out[p.code] = out[p.code] ? p.emptied : '';
   return out;
 }
+/* Whether a render failed for a pointer state whose own target such a boolean hid (a card focused through its button,
+   read with no button): nothing is there to take the state, so it draws as rest. Any other missing target is a wrong
+   mapping and still fails. Tested by test-from-code.mjs. */
+export function stateHidden(err, asked, props) {
+  return /^state selector matched no element/.test(String(err && err.message)) && !!asked.__state && asked.__state !== 'rest'
+    && Object.values(props).some((p) => p.emptied !== undefined && asked[p.code] === false);
+}
 /* The texts that only such a boolean speaks for, by code prop: the design has the boolean and no text of them, so the
    text is the code's alone. Tested by test-from-code.mjs. */
 export function onlyInCode(props, design) {
@@ -1674,8 +1681,14 @@ async function main() {
     };
     const read = async (asked) => {
       // (the code's args; `asked` keeps a boolean said by an empty text a boolean, as the design's combination names it)
-      const args = emptiedArgs(asked, props);
-      await show(args);
+      let args = emptiedArgs(asked, props);
+      try { await show(args); } catch (e) {
+        if (!stateHidden(e, asked, props)) throw e;
+        const said = `${asked.__state}: with what takes it hidden by an empty text, nothing takes that state; read as rest there`;
+        if (!notes.includes(said)) notes.push(said);
+        args = { ...args, __state: 'rest' };
+        await show(args);
+      }
       // whether this combination is drawn focused (a forced :focus or :focus-visible): only there is an outline a focus
       // ring, as to-code writes one (ringOf) and code shows one; at any other state it is the box's own stroke (css.mjs
       // draws a centred or outside stroke as a solid outline)
