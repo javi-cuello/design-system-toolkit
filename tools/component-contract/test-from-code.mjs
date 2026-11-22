@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -150,6 +150,9 @@ ok('a percentage radius is of the box, not pixels: 50% on a 120px avatar is a fu
     && JSON.stringify(cornersOf(['0px', '999px', '999px', '0px'], 32, 32, cornerOf)) === '{"radius":[0,{"radius":999,"full":true},{"radius":999,"full":true},0]}'
     && JSON.stringify(cornersOf(['8px', '8px', '8px', '8px'], 32, 32, cornerOf)) === '{"radius":8}' && JSON.stringify(cornersOf(['0px', '0px', '0px', '0px'], 32, 32, cornerOf)) === '{}');
 }
+ok('the fullest radius is the largest corner token, never a larger one open to every field (a font weight of 400)',
+  fullestOf([{ name: 'Font weight', value: 400, scopes: ['ALL_SCOPES'] }, { name: 'Radius/Full', value: 9999, scopes: ['CORNER_RADIUS'] }, { name: 'Radius/M', value: 8, scopes: ['CORNER_RADIUS'] }].map((t, i) => (i === 1 ? { ...t, value: 200 } : t))) === 'Radius/Full'
+  && fullestOf([{ name: 'A', value: 4 }, { name: 'B', value: 12 }]) === 'B' && fullestOf([]) === null);
 
 // a governed mapping, read with nothing opened: the engine's expanded target and the component's bridge
 {

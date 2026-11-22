@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE } from './to-code.mjs';
+import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector } from './to-code.mjs';
 import { declarations } from './css.mjs';
 import { fillCss, fillsFromCss, smoothingToCss } from './rules.mjs';
 
@@ -271,6 +271,19 @@ else console.log('skip: no stored contracts on this machine');
   ok('a part inside a host each variant adds is named by the variant that draws it, not the first to add the host',
     /data-state="warning"[^{]*> \.ds-field__stat > \.ds-stat__warn-alt \{[^}]*box-shadow: inset 0 0 0 1px var\(--c-clear\)/.test(fsheet));
   ok('with no store given, a placed instance is given only its place', !/outline|box-shadow|border-radius/.test(toCss(box, 'box', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
+}
+
+// a part a placed component draws only at the props a variant places it with (Icon button's focus ring at state focus,
+// overridden inside Atlassian's split button): the mapping reads it where the sheet writes it, the host placed at those
+// props, never at its base ones, where the part is not, nor matched by place to another part there (its tooltip)
+{
+  const ib = { contract: 1, component: 'IB', props: { state: { type: 'enum', values: ['default', 'focus'], default: 'default' } }, anatomy: { root: { kind: 'container' } },
+    variants: [{ when: { state: 'focus' }, add: { ring: { kind: 'container', parent: 'root', order: 1, name: 'Ring', radius: 'R/F' } } }] };
+  const split = { contract: 1, component: 'Split', props: { state: { type: 'enum', values: ['default', 'focus'], default: 'default' } }, anatomy: { root: { kind: 'container' }, btn: { kind: 'instance', parent: 'root', component: 'IB', with: { state: 'default' } } },
+    variants: [{ when: { state: 'focus' }, set: { 'btn.with': { state: 'focus' } }, add: { 'btn/ring': { kind: 'container', parent: 'btn', order: 1, name: 'Ring', radius: [0, 'R/F', 'R/F', 0] } } }] };
+  const mains = (n) => (n === 'IB' ? { ...ib, folder: 'ib' } : null);
+  ok('a part a placed component draws only at a variant\'s props is mapped through the host placed at those props',
+    nestedSelector(split, namer('split'), 'btn/ring', mains) === '.split > .split__btn > .ib__ring');
 }
 
 // an icon placed inside a placed component, which a variant recolours there (Carbon's disabled Toggletip icon): the

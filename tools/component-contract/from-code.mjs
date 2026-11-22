@@ -351,6 +351,14 @@ export function cornersOf(cs, w, h, corner) {
   if (cs.every((c) => c === cs[0])) return parseFloat(cs[0]) ? corner(cs[0], w, h) : {};
   return { radius: cs.map((c) => { const k = corner(c, w, h); return k.full ? k : k.radius; }) };
 }
+/* A library's fullest radius: the largest number the radius field offers, of the tokens scoped to corners where any is
+   (a token open to every field, Atlassian's Body S font weight at 400, is offered too, and is no corner). Tested by
+   test-from-code.mjs. */
+export function fullestOf(offered) {
+  const ns = (offered || []).filter((t) => typeof t.value === 'number'), scoped = ns.filter((t) => (t.scopes || []).includes('CORNER_RADIUS'));
+  const r = (scoped.length ? scoped : ns).sort((a, b) => b.value - a.value)[0];
+  return r ? r.name : null;
+}
 
 const FIELDS = { background: ['background'], text: ['color'], icon: ['fill'], stroke: ['stroke'], space: ['gap', 'padding'], radius: ['radius'], width: ['strokeWidth'], fontSize: ['fontSize'] };
 
@@ -1476,7 +1484,7 @@ async function main() {
   const offered = offerFor(contracts);
   // the library's fullest radius: the largest the radius field offers
   const tokenList = table.map(([n, v, sc]) => ({ name: n, value: v, ...(sc && { scopes: sc }) }));
-  const fullest = () => { const r = (offered('radius', tokenList) || []).filter((t) => typeof t.value === 'number').sort((a, b) => b.value - a.value)[0]; return r ? r.name : null; };
+  const fullest = () => fullestOf(offered('radius', tokenList));
   // the ancestor as the design draws it: in the base anatomy, or added at some props (text input's feedback message)
   const kindIn = (c, id) => (c.anatomy[id] || (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean) || {}).kind;
   for (const x of m.elements.skipped || []) if (!figmaContract || kindIn(figmaContract, x.up) !== 'instance') { console.error(`${name}'s mapping: the layer ${x.path} is no layer of the design`); process.exit(2); }
