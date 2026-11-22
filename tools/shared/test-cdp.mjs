@@ -182,7 +182,8 @@ try {
 }
 const gone = await fetch(`${CDP}/json/version`).then(() => false, () => true);
 // two checks, not one: a failure under load (bin/land, 2026-11-23) did not say which
-ok('close stops the browser', gone);
-ok('close removes its profile', !existsSync(PROFILE));
+const stays = existsSync(PROFILE);
+ok(`close stops the browser${stays ? ' (and its profile stayed too)' : ''}`, gone);
+ok('close removes its profile', !stays);
 console.log(`\n${n} passed`);
 process.exit(0);

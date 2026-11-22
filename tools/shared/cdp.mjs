@@ -89,8 +89,13 @@ export async function launch({ chrome = findChrome(), port = 0, profile, args = 
     if (child.exitCode === null && child.signalCode === null) { child.kill(); await Promise.race([gone, sleep(5000)]); }
     try { child.kill('SIGKILL'); } catch { /* already gone */ }
     // its helpers can outlive it by a moment and write the profile meanwhile (seen on Linux CI, and on a loaded Mac
-    // after a removal had already succeeded: bin/land, 2026-11-23), so it is removed until it stays gone
-    if (!profile) for (let i = 0; i < 30; i++) { try { rmSync(dir, { recursive: true, force: true }); } catch { /* busy: again */ } if (!existsSync(dir)) break; await sleep(100); }
+    // after a removal had already succeeded: bin/land, 2026-11-23), so it is removed until it is seen gone twice, 100 ms
+    // apart; one still there after three seconds is said, not left silently
+    if (!profile) {
+      let away = 0;
+      for (let i = 0; i < 30 && away < 2; i++) { try { rmSync(dir, { recursive: true, force: true }); } catch { /* busy: again */ } away = existsSync(dir) ? 0 : away + 1; await sleep(100); }
+      if (away < 2) console.error(`cdp: the browser profile ${dir} came back after its removal; the OS clears tmp`);
+    }
   };
   for (const end = Date.now() + timeout; Date.now() < end; await sleep(100)) {
     if (failed) break;
