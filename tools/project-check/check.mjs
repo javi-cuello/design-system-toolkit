@@ -66,6 +66,9 @@ const { tokenFor } = req('../snapshot/version.cjs');
 const T = (p) => path.join(TOOLKIT, p);
 const git = (args) => { try { return execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
 
+// set only here, for this run and the gates it starts: a value inherited from a parent never redirects a main checkout
+delete process.env.TOOLKIT_WORKTREE;
+let inWorktree = false;
 let label = (contract.projects().list.find((p) => p.repo && realPath(p.repo) === REPO) || {}).name;
 // a git worktree of a registered project is that project: found by its main checkout, and every
 // tool the gates run is pointed at the worktree (projects.cjs worktreeOf), so none measures the main checkout
@@ -74,7 +77,7 @@ if (!label) {
   const main = common ? realPath(path.dirname(common)) : null;
   const of = main && main !== REPO && contract.projects().list.find((p) => p.repo && realPath(p.repo) === main);
   if (of) {
-    label = of.name; process.env.TOOLKIT_WORKTREE = `${label}=${REPO}`;
+    label = of.name; inWorktree = true; process.env.TOOLKIT_WORKTREE = `${label}=${REPO}`;
     // parity measures whatever answers on the app's port, the main checkout's server included: a worktree takes a free one
     if (!process.env.PARITY_APP_PORT) {
       const srv = net.createServer();
@@ -101,7 +104,7 @@ if (!noBrowser && BASE && C.renders) {
 }
 
 // a worktree's branch with no upstream, before its first push, counts from origin's default branch
-const origin = process.env.TOOLKIT_WORKTREE ? ['origin/HEAD', 'origin/main'].find((r) => git(['rev-parse', '--verify', '-q', `refs/remotes/${r}`])) : null;
+const origin = inWorktree ? ['origin/HEAD', 'origin/main'].find((r) => git(['rev-parse', '--verify', '-q', `refs/remotes/${r}`])) : null;
 const upstream = git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']) || origin || '';
 const range = BASE ? `${BASE}..HEAD` : upstream ? `${upstream}..HEAD` : null;
 
@@ -110,15 +113,17 @@ const V = C.validate || {};
 let site = label ? contract.layout(null, label).site : null;
 // the docs site is built in the main checkout only, from the project folder and the snapshot's store: a
 // worktree reads that build while those paths match the main checkout's commit and neither tree has changed them
-if (site && process.env.TOOLKIT_WORKTREE && !fs.existsSync(path.join(site, 'api/index.json'))) {
+if (site && inWorktree && !fs.existsSync(path.join(site, 'api/index.json'))) {
   const main = realPath(path.dirname(git(['rev-parse', '--path-format=absolute', '--git-common-dir'])));
-  const inputs = [contract.layout(null, label).projectDir, ...['tokens', 'components', 'icons', 'graphics', 'previews', 'screens', 'changes', 'index'].map((k) => where[k])]
-    .filter((p) => typeof p === 'string').map((p) => path.relative(REPO, p)).filter((p) => p && !p.startsWith('..'));
+  const inputs = [contract.layout(null, label).projectDir, path.join(REPO, 'snapshot.config.json'), ...['tokens', 'components', 'icons', 'graphics', 'previews', 'screens', 'changes', 'index'].map((k) => where[k])]
+    .filter((p) => typeof p === 'string').map((p) => path.relative(REPO, p)).filter(Boolean);
+  // an input outside the repo cannot be compared, so the main checkout's build is not trusted for it
+  const inside = inputs.every((p) => !p.startsWith('..') && !path.isAbsolute(p));
   const run = (dir, args) => { try { return { out: execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(), ok: true }; } catch { return { ok: false }; } };
   const head = run(main, ['rev-parse', 'HEAD']).out;
   const same = head && run(REPO, ['diff', '--quiet', head, 'HEAD', '--', ...inputs]).ok;
   const clean = (dir) => { const r = run(dir, ['status', '--porcelain', '--', ...inputs]); return r.ok && !r.out; };
-  if (same && clean(REPO) && clean(main)) site = path.join(main, path.relative(REPO, site));
+  if (inside && same && clean(REPO) && clean(main)) site = path.join(main, path.relative(REPO, site));
 }
 // a code-only project: the gates that read a snapshot or a Figma file do not apply to it
 const noDesign = () => (label && contract.layout(null, label).design === 'none' ? 'no design' : null);

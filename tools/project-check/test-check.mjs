@@ -111,6 +111,12 @@ console.log('ok the validate gate asks where the system\'s own code is');
     assert.equal(fs.readFileSync(path.join(wt, 'measured', 'accepted', 'components.json'), 'utf8'), '{"a":1}', 'a worktree starts from the main checkout\'s accepted measurements');
     assert.equal(git(wt, 'rev-parse', '--abbrev-ref', '@{u}').status !== 0, true, 'the worktree\'s branch has no upstream');
     assert.doesNotMatch(work, /no upstream branch/, 'a branch with no upstream counts from origin\'s default branch\n' + work);
+    // a main checkout keeps its old verdict, even with a worktree value inherited from a parent process
+    git(code, 'checkout', '-q', '-b', 'local');
+    const inherited = spawnSync(process.execPath, [path.join(HERE, 'check.mjs'), '--repo', code, '--plan'], { encoding: 'utf8', env: { ...env, TOOLKIT_WORKTREE: `acme=${wt}` } }).stdout;
+    assert.match(inherited, /no upstream branch/, 'a main checkout on a branch with no upstream does not fall back\n' + inherited);
+    assert.match(line(inherited, /a component read back/), /runs/, 'an inherited value does not point a main checkout at the worktree');
+    git(code, 'checkout', '-q', 'main'); git(code, 'branch', '-qD', 'local');
     // the built docs site exists in the main checkout only: a worktree reads it while its project folder matches
     fs.mkdirSync(path.join(home, 'site', 'api'), { recursive: true }); fs.writeFileSync(path.join(home, 'site', 'api', 'index.json'), '{}');
     fs.writeFileSync(path.join(code, '.gitignore'), '.claude/\nfigma-design-system/site/\n'); git(code, 'commit', '-qam', 'ignore the site'); git(code, 'push', '-q', 'origin', 'main');
