@@ -276,13 +276,15 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
     fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
-{ // rows grouped by mechanism across components: one cause in two libraries is one group, ranked by components
+{ // rows grouped by mechanism across components: one cause in two libraries is one group, ranked first by the
+  // components it finishes (every row of theirs in it), then by components
   const g = mechanisms({
+    'e:r': [{ at: 'name', library: 'a', drawn: 'b' }],
     'a:x': [{ at: 'icon.absolute.x', library: -2, drawn: 10 }, { at: 'label', library: { kind: 'text' }, drawn: null }],
     'b:y': [{ at: 'box/icon.absolute.x', library: 4, drawn: 5 }],
     'b:z': [],
     'c:p': [{ at: 'props', library: 'a', drawn: 'b' }, { at: 'box.fills.0.color', library: 'x/y', drawn: 'x/z' }] });
-  assert.deepStrictEqual(g.map((x) => [x.key, x.components, x.rows]), [['absolute.x | num → num', 2, 2], ['element | el:text → none', 1, 1], ['props | word → word', 1, 1], ['fills.N.color | token → token', 1, 1]]);
+  assert.deepStrictEqual(g.map((x) => [x.key, x.finishes, x.components, x.rows]), [['absolute.x | num → num', 1, 2, 2], ['name | word → word', 1, 1, 1], ['element | el:text → none', 0, 1, 1], ['props | word → word', 0, 1, 1], ['fills.N.color | token → token', 0, 1, 1]]);
   assert.match(g[0].examples[0], /^a:x: icon\.absolute\.x -2 \| 10$/); n++;
 }
 

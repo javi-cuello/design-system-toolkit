@@ -25,7 +25,7 @@
  *   node tools/component-contract/eval.mjs --project <label> --make-panel 30, then --panel with any of the above
  *   node tools/component-contract/eval.mjs --project <label> --second [components…]
  *   node tools/component-contract/eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]
- *   node tools/component-contract/eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top 25]   the panels' rows by mechanism, across libraries: what to fix first
+ *   node tools/component-contract/eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top 25] [--near 15]   the panels' rows by mechanism, across libraries, and the components nearest the same: what to fix first
  *
  * Each leg says how many components came back the same of all, how many were measured, and its rows folded to causes (a
  * part missing or extra is one cause at its root, `causes`); a reading taken of another contract than today's, or kept
@@ -103,8 +103,9 @@ export function causes(rows, combinations) {
 
 /* Rows grouped by mechanism, the ranking a fix is chosen from: the field a row differs in (its last part's field, or
    `element` for a whole part) and the shape of each side (none, a word, a token path, a number, an element's kind), so one
-   cause across libraries is one group. { 'field | design → code': { components, rows, examples } }, by components, then
-   rows. `by` is { component: rows }. */
+   cause across libraries is one group. { 'field | design → code': { components, finishes, rows, examples } }, ranked by
+   the components it finishes (those whose every row is in it: fixing it makes them the same), then components, then
+   rows, as the goal counts components the same, not rows. `by` is { component: rows }. */
 const shapeOf = (v) => (v == null ? 'none' : Array.isArray(v) ? 'array' : typeof v === 'object' ? (v.kind ? `el:${v.kind}` : 'obj') : typeof v === 'number' ? 'num' : typeof v === 'string' ? (v.includes('/') ? 'token' : 'word') : typeof v);
 export function mechanisms(by) {
   const out = new Map();
@@ -115,9 +116,11 @@ export function mechanisms(by) {
     const g = out.get(key) || { components: new Set(), rows: 0, examples: [] };
     g.components.add(c); g.rows++;
     if (g.examples.length < 2) g.examples.push(`${c}: ${r.at} ${JSON.stringify(r.library)?.slice(0, 60)} | ${JSON.stringify(r.drawn)?.slice(0, 60)}`);
+    g.per = g.per || {}; g.per[c] = (g.per[c] || 0) + 1;
     out.set(key, g);
   }
-  return [...out].map(([key, g]) => ({ key, components: g.components.size, rows: g.rows, examples: g.examples })).sort((a, b) => b.components - a.components || b.rows - a.rows);
+  const finishes = (g) => Object.entries(g.per).filter(([c, k]) => k === by[c].length).length;
+  return [...out].map(([key, g]) => ({ key, components: g.components.size, finishes: finishes(g), rows: g.rows, examples: g.examples })).sort((a, b) => b.finishes - a.finishes || b.components - a.components || b.rows - a.rows);
 }
 
 /* What the toolkit's own markup leaves to the code that uses it, by design: a part drawn only at a pointer state (a menu
@@ -608,7 +611,14 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     if (stale.length) console.log(`warning: ${stale.length} stale reading(s) ranked with the rest (${stale.slice(0, 3).join(', ')}${stale.length > 3 ? ', …' : ''}): read them again for a true ranking`);
     const all2 = Object.values(by);
     console.log(`${all2.length} measured, ${all2.filter((r) => !r.length).length} the same, ${all2.reduce((a, r) => a + r.length, 0)} rows`);
-    for (const g of mechanisms(by).slice(0, +(opt('--top') || 25))) console.log(`${String(g.components).padStart(4)} ${String(g.rows).padStart(5)}  ${g.key}\n            ${g.examples.join('\n            ')}`);
+    console.log('finishes components  rows  mechanism (finishes: components whose every row is this one)');
+    for (const g of mechanisms(by).slice(0, +(opt('--top') || 25))) console.log(`${String(g.finishes).padStart(8)} ${String(g.components).padStart(10)} ${String(g.rows).padStart(5)}  ${g.key}\n            ${g.examples.join('\n            ')}`);
+    // most components carry several mechanisms, so a single one finishes few: the components nearest the same, by how
+    // many mechanisms they have left, are what an agent is briefed to finish whole
+    const sum = (gs) => gs.reduce((s, g) => s + g.rows, 0);
+    const near = Object.entries(by).filter(([, r]) => r.length).map(([c, r]) => [c, mechanisms({ [c]: r })]).sort((a, b) => a[1].length - b[1].length || sum(a[1]) - sum(b[1]));
+    console.log('\nnearest the same (mechanisms left, rows):');
+    for (const [c, gs] of near.slice(0, +(opt('--near') || 15))) console.log(`  ${c}: ${gs.length}, ${sum(gs)} — ${gs.map((g) => g.key).join('; ')}`);
     process.exit(0);
   }
   if (all) {
