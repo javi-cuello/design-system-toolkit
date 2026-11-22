@@ -1250,6 +1250,10 @@ server.on("error", (e) => {
 // every route that waits on the plugin carries its own timeout.
 server.requestTimeout = 0;
 server.headersTimeout = 60000;
+// a file this binds at start that changes makes it restart itself, the parent (or launchd) bringing it back
+// with what is on disk: check-services.mjs no longer has to say so
+const { restartWhenStale } = await import("../shared/stale-self.mjs");
+restartWhenStale(fileURLToPath(import.meta.url), [server]);
 server.listen(PORT, "127.0.0.1", () => {
   console.log("figma audit      http://127.0.0.1:" + PORT);
   console.log("records          " + AUDIT_DIR + (LEGACY ? " (single record: audit.json)" : "/<library>.json"));

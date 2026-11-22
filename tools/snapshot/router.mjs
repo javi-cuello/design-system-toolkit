@@ -307,8 +307,10 @@ for (const e of errors) console.error(`  ${e}`);
 // made now if this machine has none, so the first snapshot is not the moment it is missing
 try { pairing.code(); } catch (e) { console.error(`  pairing: ${e.message} — snapshots are refused until it is fixed; each request reads the file again`); }
 
+const servers = [];
 await Promise.all(['127.0.0.1', '::1'].map((host) => new Promise((done) => {
   const s = http.createServer(server);
+  servers.push(s);
   s.on('error', (e) => {
     if (e.code === 'EADDRINUSE') {
       console.error(`\nPort ${PORT} on ${host} is already held — another router, or something else on it.`);
@@ -318,6 +320,9 @@ await Promise.all(['127.0.0.1', '::1'].map((host) => new Promise((done) => {
   });
   s.listen(PORT, host, () => done(host));
 })));
+// what load() cannot make fresh (an .mjs, this file) makes the router restart itself, launchd bringing it back
+const { restartWhenStale } = await import('../shared/stale-self.mjs');
+restartWhenStale(fileURLToPath(import.meta.url), servers);
 
 console.log(`figma-snapshot router on http://localhost:${PORT} (both loopback stacks) — ${list.length} project(s)`);
 for (const p of list) {

@@ -37,6 +37,7 @@ node tools/shared/model-routing.mjs                                # print the m
 | `real-path.mjs` | a path in its on-disk spelling |
 | `output.mjs` | the same written file for the same input |
 | `import-closure.mjs` | the files a module runs through |
+| `stale-self.mjs` | a service restarting once a file it bound changes |
 | `dialect.cjs` | which English spelling a project uses |
 | `names.js` | how a component's Figma name is shown |
 | `prop-attr.mjs` | a prop's name as an HTML attribute |
