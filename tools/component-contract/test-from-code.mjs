@@ -645,4 +645,96 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
 // render lost a layer (Material's horizontal card and mobile gallery, log14) and was asked in place of the first
 { const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
   ok('the reading declares its layered set once', (src.match(/\b(const|let|var)\s+layered\b/g) || []).length === 1); }
+// the self page (site.mjs selfSiteFiles, from-code's render): what it serves and when it loads again
+{ const { pageReusable } = await import('./from-code.mjs');
+  const at = (w, count) => { globalThis.window = w; globalThis.document = { body: { childElementCount: count } }; try { return pageReusable(); } finally { delete globalThis.window; delete globalThis.document; } };
+  ok('the self page takes the next render after a forced pointer state without loading again (each reload cost about 1.5 s), and loads again where a read left anything outside its stage or it is not ready',
+    at({ ready: true, bodyAt: 1, forced: true }, 1) && !at({ ready: true, bodyAt: 1 }, 2) && !at({ bodyAt: 1 }, 1)); }
+{ const { customProperties, reachedTokens } = await import('./site.mjs');
+  // several on a line, a string holding `;`, a comment holding `}` and a var(), brackets holding `;`, the last with no `;`
+  const css = ':root { --a: 1px; --s: "x;y"; /* } var(--gone) */ --f: fn(a;b) ; color: red; --last: var(--a) }\n@media screen { [data-t="d"] { --a: 2px;--b:var( --c , var(--d));} }';
+  const got = customProperties(css).map((d) => `${d.name}=${d.value}`);
+  ok('a sheet\'s custom properties are read by a scanner: several on one line, a `;` in a string or brackets, a comment, no `;` before the `}`',
+    JSON.stringify(got) === JSON.stringify(['--a=1px', '--s="x;y"', '--f=fn(a;b)', '--last=var(--a)', '--a=2px', '--b=var( --c , var(--d))']));
+  const cut = reachedTokens(css, '.x { color: var(--last) } .y { gap: var(--b) }');
+  ok('only the tokens the served sheets reach are kept, followed through each kept value\'s own var()s at any depth and in every block that sets them; every other statement as written',
+    JSON.stringify(customProperties(cut).map((d) => d.name)) === JSON.stringify(['--a', '--last', '--a', '--b']) && cut.includes('color: red') && cut.includes('/* } var(--gone) */') && cut.includes('@media screen { [data-t="d"] {') && !cut.includes('--s') && !cut.includes('--f'));
+  const odd = ':root { --c /* note */ : var(--e); --é: 1px; --q: "open\n--r: 2px; body { font: var(--t) } --t: 3px; --u: 4px; }';
+  ok('a comment before the colon, a name past ASCII and a string left open at the line\'s end (it ends there, its declaration running on to the next `;`) are read as CSS reads them',
+    JSON.stringify(customProperties(odd).map((d) => d.name)) === JSON.stringify(['--c', '--é', '--q', '--t', '--u']) && customProperties(odd)[2].value.endsWith('--r: 2px'));
+  ok('a token the sheet itself names outside a custom property (`font: var(--t)`) is kept, as is one a var() names past ASCII',
+    JSON.stringify(customProperties(reachedTokens(odd, 'var(--é)')).map((d) => d.name)) === JSON.stringify(['--é', '--t']));
+  ok('a sheet reaching nothing keeps no token, and one reaching all keeps the sheet as it was', customProperties(reachedTokens(css, '')).length === 0 && reachedTokens(css, 'var(--s) var(--f) var(--last) var(--b) var(--c) var(--d)') === css); }
+{ const fs = await import('node:fs'), path = await import('node:path');
+  const { selfSiteFiles, siteFiles, serveSite } = await import('./site.mjs');
+  const { cssName: nameOf } = await import('../tokens/names.mjs');
+  const SAMPLE = new URL('../contract-editor/sample/', import.meta.url).pathname, DIR = path.join(SAMPLE, 'components');
+  const library = Object.fromEntries(fs.readdirSync(DIR).map((f) => { const c = JSON.parse(fs.readFileSync(path.join(DIR, f, 'contract.json'), 'utf8')); return [c.component, { ...c, folder: f }]; }));
+  const files = selfSiteFiles(library, 'contact-card', { tokensCss: ':root { --x: 1px }' });
+  ok('the self page serves the component and the components it places, and no other', Object.keys(files).filter((f) => f.startsWith('components/') && f !== 'components/dom.js').sort().join() === 'components/avatar/avatar.js,components/contact-card/contact-card.js' && !/ds-button/.test(files['all.css']));
+  // the sample's tokens, every one set through an alias of its own (a var() chain), several declarations on each line, with
+  // tokens nothing reads: the reading must be the same on the whole page and on the cut one
+  const tokens = JSON.parse(fs.readFileSync(path.join(SAMPLE, 'tokens.json'), 'utf8'));
+  const vars = [];
+  for (const col of Object.values(tokens.collections)) for (const [name, v] of Object.entries(col.values[col.modes[0]])) { const c = nameOf('', name); vars.push(`${c}: var(${c}-raw);`, `${c}-raw: ${typeof v === 'number' ? (/opacity/i.test(name) ? v : `${v}px`) : v};`, `${c}-unread: var(${c}-raw);`); }
+  for (const t of tokens.textStyles) { const b = nameOf('', t.name); vars.push(`${b}-font-family: ${t.family};`, `${b}-font-size: ${t.size}px;`, `${b}-font-weight: ${t.weight};`, `${b}-line-height: ${t.lineHeight}px;`, `${b}-letter-spacing: ${t.letterSpacing}px;`); }
+  const lines = []; for (let i = 0; i < vars.length; i += 4) lines.push(vars.slice(i, i + 4).join(' '));
+  // (and a rule on an ancestor's pointer state, so a forced state that outlived its render would show in the next)
+  const tokensCss = `:root {\n${lines.join('\n')}\n}\n#stage:hover section * { color: rgb(1, 2, 3) }`;
+  const { findChrome, launch, newPage, attach, navigate, waitFor, call, forceState } = await import('../shared/cdp.mjs');
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read the self page in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const { authoredVars, authoredValue, authoredSelector, layerVars } = await import('../parity/external.mjs');
+    const { propsOf } = await import('./to-markup.mjs');
+    const browser = await launch({});
+    // what a reading takes of each element: its computed style whole (but the custom properties, which the cut page sets
+    // fewer of and no reading enumerates), and for every property its authored value, the custom properties it was
+    // written with, its rule's selector and its ::after's, from Chrome's matched styles
+    const readNow = async (tab) => {
+      const count = await call(tab, () => document.querySelectorAll('#stage *').length);
+      const out = [];
+      for (let i = 0; i < count; i++) {
+        const props = await call(tab, (k) => { document.querySelectorAll('[data-r]').forEach((x) => x.removeAttribute('data-r')); const el = document.querySelectorAll('#stage *')[k]; el.setAttribute('data-r', ''); const s = getComputedStyle(el); return [...s].filter((p) => !p.startsWith('--')).map((p) => [p, s.getPropertyValue(p)]); }, i);
+        const styles = new Map(), authored = [];
+        for (const [p] of props) authored.push(await authoredValue(tab, '[data-r]', p, styles), await authoredVars(tab, '[data-r]', p, styles), await authoredSelector(tab, '[data-r]', p, styles));
+        authored.push(await authoredVars(tab, '[data-r]', 'outline::after', styles), await layerVars(tab, '[data-r]', 'box-shadow', styles));
+        out.push([props, authored]);
+      }
+      return JSON.stringify(out);
+    };
+    const render = (tab, folder, args) => call(tab, ([f, a]) => { const s = document.createElement('section'); s.append(window.R[f](a)); document.getElementById('stage').replaceChildren(s); return document.fonts.ready.then(() => true); }, [folder, args]);
+    const open = async (served) => { const site = await serveSite(served), tab = await attach(await newPage(browser.endpoint)); await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 }); return { tab, close: async () => { tab.close(); await site.close(); } }; };
+    // each component at its defaults and at every other value of each of its props, one at a time
+    const rendersOf = (c) => [{}, ...propsOf(c, library).flatMap((x) => (x.type === 'enum' ? (x.values || []).filter((v) => v !== x.default).map((v) => ({ [x.name]: v })) : x.type === 'boolean' ? [{ [x.name]: !x.default }] : []))];
+    try {
+      const differ = [], bled = [];
+      let cut = 0, whole = 0, renders = 0;
+      for (const c of Object.values(library)) {
+        const self = selfSiteFiles(library, c.folder, { tokensCss }), all = siteFiles(library, { tokensCss });
+        cut += self['all.css'].length; whole += all['all.css'].length;
+        const a = await open(self), b = await open(all);
+        try {
+          for (const args of rendersOf(c)) {
+            renders++;
+            await render(a.tab, c.folder, args); await render(b.tab, c.folder, args);
+            if ((await readNow(a.tab)) !== (await readNow(b.tab))) differ.push(`${c.folder} ${JSON.stringify(args)}`);
+          }
+          // a render after one that forced hover and focus on the root and every ancestor, let go as from-code's render
+          // lets it go (the document fetched again) with no reload, reads as the same render on a page just loaded
+          await render(a.tab, c.folder, {});
+          await forceState(a.tab, [{ selector: '#stage section > *', pseudo: 'hover' }, { selector: '#stage section > *', pseudo: 'focus-visible' }]);
+          await a.tab.send('DOM.getDocument', { depth: 0 });
+          const last = rendersOf(c).at(-1);
+          await render(a.tab, c.folder, last);
+          const fresh = await open(self);
+          try { await render(fresh.tab, c.folder, last); if ((await readNow(a.tab)) !== (await readNow(fresh.tab))) bled.push(c.folder); } finally { await fresh.close(); }
+        } finally { await a.close(); await b.close(); }
+      }
+      if (differ.length) console.error('differ:', differ.join('; '));
+      ok(`every sample component reads the same on the cut self page as on the whole library's (cache off), at its defaults and every other value of each prop (${renders} renders), aliased tokens several to a line; ${Math.round(100 * cut / whole)}% of the sheet served`, differ.length === 0 && renders > Object.keys(library).length && cut < whole / 2);
+      ok('a render after one that forced hover and focus, let go with no reload, reads as the same render on a page just loaded', bled.length === 0);
+      if (bled.length) console.error('bled:', bled.join());
+    } finally { await browser.close(); }
+  }
+}
 console.log(`${n}/${n} passed`);

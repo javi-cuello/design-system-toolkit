@@ -948,6 +948,11 @@ async function forceAt(tab, at) {
   await waitFor(tab, 'document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)', { timeout: 3000 }).catch(() => {});
 }
 
+/* Whether the self page can take the next render without loading again (run in the page): loaded, and nothing left
+   outside its stage. A pointer state the last render forced is no reason (the render lets it go). Tested by
+   test-from-code.mjs. */
+export const pageReusable = () => !!window.ready && document.body.childElementCount === window.bodyAt;
+
 export async function openSource(label, name, { rebuild, codeOnly, self, second } = {}) {
   // (the round trip's legs read against a design, the one a code-only read has none of)
   if (codeOnly && (self || second)) throw Object.assign(new Error('from-code: --code-only reads a component with no design, and --self and --second read against one: give one of them'), { usage: true });
@@ -1241,7 +1246,7 @@ async function selfSource(project, name, { second = false } = {}) {
   const { rootPattern } = await import('../parity/pair.mjs');
   const { contracts } = await import('./official.mjs');
   const { propsOf } = await import('./to-markup.mjs');
-  const { siteFiles, serveSite, selfMapping } = await import('./site.mjs');
+  const { selfSiteFiles, serveSite, selfMapping } = await import('./site.mjs');
   const { launch, newPage, attach, navigate, call, waitFor, media } = await import('../shared/cdp.mjs');
   const { schemeOf } = await import('../parity/hosts.mjs');
   const { valueOf } = req('../snapshot/tokens.cjs');
@@ -1319,7 +1324,10 @@ async function selfSource(project, name, { second = false } = {}) {
   const read = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
   const tokensCss = (where.paths.styles ? read(path.join(where.paths.styles, '_tokens.scss')) : '');
   if (!tokensCss) throw Object.assign(new Error(`${project.config.project}: no _tokens.scss under paths.styles to render the tokens with`), { usage: true });
-  const files = siteFiles(library, { tokensCss, settingsOf });
+  // only the component and what it places, with only the tokens their sheets reach (site.mjs selfSiteFiles): every
+  // matched-styles answer matched the whole library's sheet and carried the whole tokens rule it inherits, 85 to 93% of
+  // a reading's time (a Material text field's 553 KB an answer, 31 ms to 3)
+  const files = selfSiteFiles(library, name, { tokensCss, settingsOf });
   // the page served and Chrome launched when a read first needs them: with the read cache, a reading whose every
   // answer is kept needs neither (read-cache.mjs)
   let site = null, browser = null, tab = null;
@@ -1370,16 +1378,21 @@ async function selfSource(project, name, { second = false } = {}) {
       // the has-value flag is the input's: on, it holds its value (the sample where none is given); off, it is left as given,
       // empty unless the mapping's own has-value state gives it one (the story's value starts empty)
       if (flag && flag.name in args) { if (args[flag.name] === flag.on && !args[flag.value]) args[flag.value] = flag.sample; delete args[flag.name]; }
-      // a page loaded once serves the next read, unless the last one forced a pointer state or left anything outside the
-      // stage (a popover on the body): then it is loaded again, so nothing a read did reaches the next
+      // a page loaded once serves the next read, unless the last one left anything outside the stage (a popover on the
+      // body): then it is loaded again, so nothing a read did reaches the next. A forced pointer state is let go instead
+      // of reloading (fetching the document again drops every one, shared/cdp.mjs forceState), before the next render
+      // goes in, so no ancestor still held hovered or focused styles it: each reload cost about 1.5 s, the page and the
+      // first matched styles after it (a Carbon dropdown read 184 of them, 1566 s to 283 s with the served page cut
+      // down below, the same reading, 2026-11-22)
       const tab = await live();
-      if (!src.clean || !(await call(tab, () => window.ready && document.body.childElementCount === window.bodyAt && !window.forced))) {
+      if (src.forced) { await tab.send('DOM.getDocument', { depth: 0 }); src.forced = false; }
+      if (!src.clean || !(await call(tab, pageReusable))) {
         await navigate(tab, `${site.url}index.html`);
         await waitFor(tab, '!!window.ready', { timeout: 10000 }).catch((e) => { throw new Error(`the toolkit's own page did not load: ${(tab.trouble || []).join('; ') || e.message}`); });
         await call(tab, () => { window.bodyAt = document.body.childElementCount; });
         src.clean = true;
       }
-      if (src.pseudoOf[__state]) await call(tab, () => { window.forced = true; });
+      if (src.pseudoOf[__state]) src.forced = true;
       await call(tab, ([folder, a, theme]) => {
         document.documentElement.setAttribute('data-theme', theme);
         const s = document.createElement('section'); s.setAttribute('data-parity', 'c'); s.style.cssText = 'display:flow-root;inline-size:max-content;padding:24px';
@@ -1400,7 +1413,7 @@ async function selfSource(project, name, { second = false } = {}) {
   // page through a tab that answers from it
   const { chromeVersion } = await import('../shared/cdp.mjs');
   const key = pageKey({ files, chrome: chromeVersion(), fonts: fontsInstalled({ stat: true }), env: localeHere(), system: `${process.platform} ${(await import('node:os')).release()}`,
-    code: [pageCode(), serveSite.toString(), forceAt.toString(), src.render.toString(), live.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
+    code: [pageCode(), serveSite.toString(), forceAt.toString(), pageReusable.toString(), src.render.toString(), live.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
   // (an element's matched styles kept once by their content: every element inherits the tokens' :root rule)
   const rec = recorder({ key, live, pool: (o) => Array.isArray(o.cssProperties) });
   const render = src.render, close = src.close;
