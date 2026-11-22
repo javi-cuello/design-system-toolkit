@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { hold, release } from './lock.mjs';
+import { hold, release, lockLost } from './lock.mjs';
 import { run as check } from './check-cache.mjs';
 import { mainOf, link } from './worktree.mjs';
 
@@ -142,7 +142,7 @@ async function step(main, me, state) {
   for (const c of conflicted) { say(c.gone ? `${c.branch}: commit ${c.sha.slice(0, 8)} no longer exists: dropped` : `${c.branch} does not apply on main (${c.files.join(', ') || 'conflict'}): rebase it on origin/main, then land again`); unqueue(main, c, 'conflict'); }
   if (conflicted.length) { setGroups(main, g); return null; } // the rest of its group is tried next, without it
   if (!applied.length) return settled(main, me) || 'landed';
-  const tree = git(dir, 'rev-parse', 'HEAD^{tree}');
+  const tree = git(dir, 'rev-parse', 'HEAD^{tree}'), checked = git(dir, 'rev-parse', 'HEAD');
   // a single branch is always checked: an inferred red that rests on a flake must never be blamed on one branch, and
   // then refused at that commit
   const known = applied.length > 1 && g.length && g[0].red === tree;
@@ -156,9 +156,13 @@ async function step(main, me, state) {
     return null;
   }
   // what is pushed is the tree that was checked, or nothing: a second lander in this worktree moves it under the check
-  if (git(dir, 'rev-parse', 'HEAD^{tree}') !== tree) { say('the integration worktree changed during the check: checking again'); return null; }
   const sha = git(dir, 'rev-parse', 'HEAD');
-  const push = tryGit(dir, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
+  if (sha !== checked || lockLost()) {
+    say(lockLost() ? 'the measuring lock was lost during the check: not pushed; again' : 'the integration worktree changed during the check: checking again');
+    if (++state.moved >= 4) { say('the integration worktree kept changing: run bin/land again'); return 'busy'; }
+    return null;
+  }
+  const push = tryGit(dir, 'push', '-q', 'origin', `${checked}:refs/heads/main`);
   if (!push.ok) {
     // only a main that moved is worth another attempt; a push refused with main where it was (a hook: a commit naming
     // a project) is said whole and fails each branch, never four "main moved" retries that hide the reason (2026-11-21)
@@ -221,10 +225,11 @@ export async function land(from, target) {
     // never without the lock: two landers share one integration worktree, and one pushed the other's tree as its own
     // batch, marking two branches landed that were not (2026-11-22)
     if (got === false && !outer) {
-      if (++state.unheld >= 3) { say('the measuring lock could not be taken three times: not landed; run bin/land again'); return 1; }
+      if (++state.unheld >= 3) { say('the measuring lock could not be taken three times: not landed by this run (still queued: a later holder may land it)'); return 1; }
       say('the measuring lock could not be taken: waiting again, never landing without it');
       await new Promise((r) => setTimeout(r, PAUSE)); continue;
     }
+    state.unheld = 0;
     if (got === null) {
       const o = settled(main, { branch, sha });
       if (o) return o === 'landed' ? 0 : 1;

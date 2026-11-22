@@ -73,7 +73,9 @@ export function holder({ first = false } = {}) {
 }
 export const describe = (h) => `${h.what} (pid ${h.pid}${h.session ? `, ${sessionName(h.session)}` : ''}, since ${new Date(h.at).toTimeString().slice(0, 5)})`;
 
-let child = null, slotHeld = null;
+let child = null, slotHeld = null, lostAt = 0;
+/* Whether the helper of the hold in force died while held (the kernel freed the flock: someone else may hold it now). */
+export const lockLost = () => lostAt > 0;
 /* Who waits (a want-<pid>.json in the lock dir while a hold is busy), so a long holder can give its slot up between
    pieces of work (yieldIfWanted) instead of keeping it for hours: an agent's re-read waited 2-4 h behind 3-4 h evals
    (2026-11-21). A note whose process is gone is no one. */
@@ -142,6 +144,7 @@ export function hold(what, { say = (l) => console.error(l), first = false, stop 
           try { os.setPriority(10); } catch { /* not allowed: run at the priority given */ }
           // the child must not keep this process alive: when this process ends, its pipe closes and the lock goes
           child.removeAllListeners('close'); child.unref(); child.stdin.unref?.(); child.stdout.destroy();
+          lostAt = 0; const mine = child; mine.on('close', () => { if (child === mine) lostAt = Date.now(); }); // release() clears child first
           finish(true);
         }
       }

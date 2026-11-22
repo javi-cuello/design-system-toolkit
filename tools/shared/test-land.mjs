@@ -23,7 +23,7 @@ execFileSync('git', ['init', '-q', '--bare', '-b', 'main', remote]);
 execFileSync('git', ['clone', '-q', remote, main], { stdio: 'ignore' });
 fs.mkdirSync(path.join(main, 'bin'));
 // the fake check counts its runs and is red when any tracked file says BAD
-fs.writeFileSync(path.join(main, 'bin', 'check'), `#!/bin/sh\ncd "$(dirname "$0")/.."\necho "run $(sed 's/.*"at":\\([0-9]*\\).*/\\1/' "$TOOLKIT_LOCK_DIR/toolkit-measure.holder.json" 2>/dev/null)" >> "${count}"\nif [ -n "$LAND_MOVE" ] && [ -f "$LAND_MOVE" ]; then rm "$LAND_MOVE"; echo moved > moved.txt; git add moved.txt; git commit -qm moved; fi\nif git grep -q BAD -- ':!bin'; then echo "== 1 FAILED (BAD)"; exit 1; fi\necho "green"\n`, { mode: 0o755 });
+fs.writeFileSync(path.join(main, 'bin', 'check'), `#!/bin/sh\ncd "$(dirname "$0")/.."\necho "run $(sed 's/.*"at":\\([0-9]*\\).*/\\1/' "$TOOLKIT_LOCK_DIR/toolkit-measure.holder.json" 2>/dev/null)" >> "${count}"\nif [ -n "$LAND_MOVE" ] && [ -f "$LAND_MOVE" ]; then rm "$LAND_MOVE"; echo moved > moved.txt; git add moved.txt; git commit -qm moved; fi\nif [ -n "$LAND_KILL" ] && [ -f "$LAND_KILL" ]; then rm "$LAND_KILL"; pkill -f "$TOOLKIT_LOCK_DIR/toolkit-measure.flock"; sleep 0.3; fi\nif git grep -q BAD -- ':!bin'; then echo "== 1 FAILED (BAD)"; exit 1; fi\necho "green"\n`, { mode: 0o755 });
 fs.writeFileSync(path.join(main, '.gitignore'), '.claude/\n');
 for (const f of ['a', 'b', 'c', 'd', 'e']) fs.writeFileSync(path.join(main, `${f}.txt`), `${f}\n`);
 git(main, 'add', '.'); git(main, 'commit', '-qm', 'base'); git(main, 'push', '-q', 'origin', 'main');
@@ -217,6 +217,15 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.equal(runs() - n0, 2, 'checked again');
   assert.equal(remoteHas('n9.txt'), 'n9');
   assert.throws(() => remoteHas('moved.txt'), 'the moved tree was not pushed'); }
+
+// (q) the lock's helper dies during the check (the flock is free for anyone): that check's tree is not pushed; again
+{ const G = wt('n10'); fs.writeFileSync(path.join(G, 'n10.txt'), 'n10\n'); git(G, 'add', '.'); git(G, 'commit', '-qm', 'n10');
+  process.env.LAND_KILL = path.join(tmp, 'kill'); fs.writeFileSync(process.env.LAND_KILL, '');
+  r = await quiet(() => land(G));
+  delete process.env.LAND_KILL;
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /lock was lost during the check: not pushed/, r.out);
+  assert.equal(remoteHas('n10.txt'), 'n10'); }
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');
