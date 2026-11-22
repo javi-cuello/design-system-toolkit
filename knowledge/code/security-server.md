@@ -9,7 +9,7 @@ What runs in the browser is [front-end security](security.md)'s. The database's,
 ## Threat model and what attacks web apps most
 
 **What good looks like**
-- [strong] Security work starts with known flaws in what is deployed, then credentials: 31% of breaches in the 2026 DBIR began with exploiting a vulnerability, which overtook stolen credentials as the first way in ([Verizon](https://www.verizon.com/about/news/breach-industry-wide-dbir-finds)).
+- [moderate] Security work starts with known flaws in what is deployed, then credentials: 31% of breaches in the 2026 DBIR began with exploiting a vulnerability, which overtook stolen credentials as the first way in ([Verizon](https://www.verizon.com/about/news/breach-industry-wide-dbir-finds)).
 - [strong] In the app's own code, access control comes first: it is A01 in the [OWASP Top 10:2025](https://top10.owasp.org/2025/0x00_2025-Introduction/), built on data from over 2.8 million applications, with server-side request forgery folded into it.
 - [strong] The specific flaws to design out are ranked by a year of CVE records in the [2025 CWE Top 25](https://cwe.mitre.org/top25/archive/2025/2025_cwe_top25.html): for a server, SQL injection (2), cross-site request forgery (3), missing authorisation (4), path traversal (6), command injection (9), code injection (10), unrestricted upload (12), unsafe deserialisation (15), incorrect authorisation (17), missing authentication (21), request forgery from the server (22), authorisation by a caller's key (24) and no resource limits (25).
 
