@@ -289,6 +289,17 @@ else console.log('skip: no stored contracts on this machine');
     nestedSelector(split, namer('split'), 'btn/ring', mains) === '.split > .split__btn > .ib__ring');
 }
 
+// a placed icon whose lone glyph a variant fades (material3's disabled chip: 0.38 on the glyph, the instance faded too where
+// it is elevated): code colours the instance, so the glyph's opacity is written there, times the instance's own
+{
+  const chip = { contract: 1, component: 'Chip', props: { off: { type: 'boolean', default: false, axis: true, figma: 'Disabled' }, raised: { type: 'boolean', default: false, axis: true, figma: 'Raised' } },
+    anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Check', width: 18, height: 18 }, 'icon/vector': { kind: 'graphic', parent: 'icon', background: 'C/on' } },
+    variants: [{ when: { off: true }, set: { 'icon/vector.opacity': 0.38 } }, { when: { off: true, raised: true }, set: { 'icon.opacity': 0.38 } }] };
+  const sheet = toCss(chip, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('a lone glyph\'s opacity is written on its instance, times the instance\'s own',
+    /data-off[^{]*> \.ds-chip__icon \{[^}]*opacity: 0\.38;/.test(sheet) && /opacity: 0\.144;/.test(sheet) && selfCheck(chip, rulesOf(chip).rules).length === 0);
+}
+
 // an icon placed inside a placed component, which a variant recolours there (Carbon's disabled Toggletip icon): the
 // instance differs from the component's part only in its glyph's colour, and that colour is written on the part
 {

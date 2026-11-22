@@ -529,6 +529,15 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     combos.every((w) => ['root', 'bar', 'tip', 'pop'].every((id) => fot(code, w, id) === undefined || fot(code, w, id) === fot(design, w, id)))
     && fot(code, { size: 'sm', open: false }, 'root') === true && fot(code, { size: 'md', open: true }, 'tip') === true && fot(code, { size: 'sm', open: true }, 'pop') === false
     && combos.every((w) => fot(code, w, 'free') === false)); }
+{ // a reading's rest state is the design's Enabled (Carbon's slider): its stacking goes on the reading's own rest, never
+  // on a layer naming `enabled`, a state the reading has no word for, which held at no combination it draws
+  const st = (values, def) => ({ type: 'enum', values, default: def, figma: 'State', role: 'interaction', pointer: ['hover'] });
+  const design = { props: { state: st(['enabled', 'hover', 'focus'], 'enabled') }, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, firstOnTop: true } } },
+    variants: [{ when: { state: 'hover' }, set: { 'root.layout': { direction: 'row', gap: 0 } } }, { when: { state: 'focus' }, set: { 'root.layout': { direction: 'row', gap: 0 } } }] };
+  const code = { props: { state: st(['rest', 'hover', 'focus'], 'rest') }, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0 } } }, variants: [] };
+  stackLikeDesign(code, design, (t) => t);
+  ok('stacking at the design\'s default state goes on the reading\'s rest, its own word for it',
+    !code.variants.some((v) => v.when.state === 'enabled') && expand(code, { state: 'rest' }).root.layout.firstOnTop === true && !expand(code, { state: 'hover' }).root.layout.firstOnTop); }
 { // (Atlassian's navigation: a search icon centred in the placed search's frame; the design keeps no constraints there)
   const c = { component: 'N', props: {}, anatomy: { root: { kind: 'container' }, s: { kind: 'instance', parent: 'root', component: 'Search' }, 's/i': { kind: 'container', parent: 's', constraints: { horizontal: 'center', vertical: 'center' } }, 's/g': { kind: 'graphic', parent: 's', constraints: { horizontal: 'scale', vertical: 'scale' } }, 's/a': { kind: 'graphic', parent: 's', position: 'absolute', absolute: { x: 1, y: 1 }, constraints: { horizontal: 'max', vertical: 'min' } }, 's/d': { kind: 'graphic', parent: 's', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } }, f: { kind: 'container', parent: 'root', constraints: { horizontal: 'center', vertical: 'min' } } }, variants: [{ when: {}, set: { 's/i.constraints': { horizontal: 'max', vertical: 'max' } } }] };
   const a = asFigma(c).contract.anatomy, v = asFigma(c).contract.variants[0].set;

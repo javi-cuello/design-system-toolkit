@@ -37,7 +37,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
-import { ALIGN_DATA, SIZE_ROWS } from './rules.mjs';
+import { ALIGN_DATA, SIZE_ROWS, heldOpacity } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 
 import { realpathSync } from 'node:fs';
@@ -108,19 +108,20 @@ function pinned(x, other) {
 /* An icon's colour, said two ways: Figma colours the one glyph inside an instance (Icon/house's vector), code colours
    the instance (an svg filled with currentColor). Compared as the instance's: the glyph's colour moves up to an
    instance that has none, and the glyph, whose shape is its component's, goes. Only where the instance holds that one
-   graphic and nothing else. */
+   graphic and nothing else. Its opacity goes up with it, times the instance's own (rules.mjs heldOpacity). */
 function glyph(x) {
   if (!x) return x;
   const out = { ...x };
-  // a glyph's own words: what says where it is, not what it draws
-  const PLACE = new Set(['kind', 'parent', 'name', 'order', 'background']);
+  // a glyph's own words: what says where it is, and the colour and opacity that move up
+  const PLACE = new Set(['kind', 'parent', 'name', 'order', 'background', 'opacity']);
   for (const [id, e] of Object.entries(x)) {
     if (!e || e.kind !== 'instance') continue;
     const inside = Object.keys(x).filter((k) => k.startsWith(`${id}/`));
     const kid = inside.length === 1 && x[inside[0]].parent === id && x[inside[0]].kind === 'graphic' ? x[inside[0]] : null;
-    // only a colour moves up: a glyph that also overrides its size, or an instance with a colour of its own, is compared as it is
+    // only a colour (and its opacity) moves up: a glyph that also overrides its size, or an instance with a colour of its own, is compared as it is
     if (!kid || kid.background == null || e.background != null || Object.keys(kid).some((k) => !PLACE.has(k))) continue;
-    out[id] = { ...e, background: kid.background };
+    const opacity = heldOpacity(e, kid);
+    out[id] = { ...e, background: kid.background, ...(opacity !== undefined && { opacity }) };
     delete out[inside[0]];
   }
   return out;
@@ -311,6 +312,20 @@ function atDefault(x, mains) {
   return out;
 }
 
+/* A combination of the design's in a drawing's words, as the round trip compares them: each prop the drawing's of the
+   same Figma name, its value of the same word in any case; the interaction prop's rest is each side's default, whatever
+   its word (a reading's `rest` is the design's Enabled: from-code designCombo's own rule). Used by from-code's
+   stackLikeDesign too. Tested by test-to-figma.mjs. */
+export function inWordsOf(library, drawn) {
+  const low = (x) => String(x).toLowerCase();
+  const named = Object.fromEntries(Object.entries(drawn.props || {}).map(([k, q]) => [low(q.figma || k), k]));
+  return (c) => Object.fromEntries(Object.entries(c).map(([k, v]) => {
+    const lq = library.props[k], dk = named[low(lq.figma || k)] || k, dq = (drawn.props || {})[dk];
+    const rest = lq.role === 'interaction' && dq && dq.role === 'interaction' && v === lq.default;
+    return [dk, dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? (rest ? dq.default : v) : v];
+  }));
+}
+
 export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false } = {}) {
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
@@ -357,14 +372,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   const invalid = combos.filter(notDrawn).length; combos = combos.filter((c) => !notDrawn(c));
   // past the limit the rest are not compared, and said: a cut that is not said reads as the same
   const cut = Math.max(0, combos.length - limit); combos = combos.slice(0, limit);
-  const named = Object.fromEntries(Object.entries(drawn.props).map(([k, q]) => [low(q.figma || k), k]));
-  const whole = wholeHosts(library, mains);
+  const whole = wholeHosts(library, mains), inTheirs = inWordsOf(library, drawn);
   for (const c of combos) {
-    const theirs = {};
-    for (const [k, v] of Object.entries(c)) {
-      const dk = named[low(library.props[k].figma || k)] || k, dq = drawn.props[dk];
-      theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
-    }
+    const theirs = inTheirs(c);
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
     const A = expand(library, { ...variantDefaults(library), ...c });

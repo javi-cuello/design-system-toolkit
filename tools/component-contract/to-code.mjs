@@ -35,7 +35,7 @@ import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel, keyMatches } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
-import { negative } from './rules.mjs';
+import { negative, heldOpacity } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
 import { cssName } from '../tokens/names.mjs';
@@ -482,7 +482,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       // in its element's color (currentColor), so the colour is the instance's
       // (a component this library holds draws it as its own part: an override on that part, below)
       if (a[e.parent] && a[e.parent].kind === 'instance' && e.kind === 'graphic' && typeof e.background === 'string') {
-        if (inside(e.parent)) recolour.set(e.parent, e.background); else extra.push([e.parent, [['color', tokenNames.token(e.background)]]]);
+        // (a lone glyph's opacity too, times the instance's own: rules.mjs heldOpacity)
+        const lone = !Object.entries(a).some(([k, x]) => k !== id && x.parent === e.parent), opacity = lone ? heldOpacity(a[e.parent], e) : undefined;
+        if (inside(e.parent)) recolour.set(e.parent, e.background); else extra.push([e.parent, [['color', tokenNames.token(e.background)], ...(opacity !== undefined ? [['opacity', String(opacity)]] : [])]]);
       }
       // an override inside a placed component this library holds (derive keeps only a part that differs from that
       // component drawn at the instance's props): what it changes there, on that component's own part, reached through

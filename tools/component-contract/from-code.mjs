@@ -45,6 +45,7 @@ import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
+import { inWordsOf } from './to-figma.mjs';
 import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
@@ -757,10 +758,8 @@ export function stackLikeDesign(code, design, value) {
   const mark = (l) => { if (!l || typeof l !== 'object') return; if (!sources.includes(l)) sources.push(l); Object.defineProperty(l, '__src', { value: sources.indexOf(l), enumerable: true, configurable: true }); };
   for (const e of Object.values(code.anatomy)) mark(e.layout);
   for (const v of vars) { for (const e of Object.values(v.add || {})) mark(e.layout); for (const [k, l] of Object.entries(v.set || {})) if (k.endsWith('.layout')) mark(l); }
-  // each combination in the code's words, as the round trip compares them: its prop of the design's name, its value of the same word in any case
-  const low = (x) => String(x).toLowerCase();
-  const named = Object.fromEntries(Object.entries(code.props || {}).map(([k, q]) => [low(q.figma || k), k]));
-  const theirs = combos.map((c) => Object.fromEntries(Object.entries(c).map(([k, v]) => { const dk = named[low(design.props[k].figma || k)] || k, dq = (code.props || {})[dk]; return [dk, dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v]; })));
+  // each combination in the code's words, as the round trip compares them (to-figma's inWordsOf)
+  const theirs = combos.map(inWordsOf(design, code));
   const C = theirs.map((c) => expand(code, { ...variantDefaults(code), ...c })), D = combos.map((c) => expand(design, { ...variantDefaults(design), ...c }));
   for (const l of sources) delete l.__src;
   const ids = [...new Set(C.flatMap((x) => Object.keys(x)))];

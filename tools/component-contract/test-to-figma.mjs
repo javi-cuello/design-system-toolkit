@@ -238,6 +238,16 @@ delete globalThis.figma;
     anatomy: { root: { kind: 'container', background: 'Bg/info' }, label: { kind: 'text', parent: 'root', color: 'Text/info', content: '{label}' } },
     variants: [{ when: { feedback: 'danger' }, set: { 'root.background': 'Bg/danger', 'label.color': 'Text/danger' } }] };
   ok('a drawing worded differently that draws every combination the same has no difference', roundTrip(lib, same).rows.length === 0 && roundTrip(lib, same).combinations === 2);
+  // a reading names its rest state `rest` where the design says Enabled (Carbon's button): a layer of the reading at rest
+  // holds at the design's default state, as designCombo maps a render's rest to it; another state is still its own word
+  {
+    const st = (values, def, layers) => ({ contract: 1, component: 'Button', props: { type: { type: 'enum', values: ['text', 'icon'], default: 'text', figma: 'Type' }, state: { type: 'enum', values, default: def, figma: 'State', role: 'interaction', pointer: ['hover'] } },
+      anatomy: { root: { kind: 'container' }, icon: { kind: 'container', parent: 'root', position: 'absolute', absolute: { x: 1, y: 1 } } }, variants: layers });
+    const design = st(['enabled', 'hover'], 'enabled', [{ when: { type: 'icon' }, set: { 'icon.position': null, 'icon.absolute': null } }]);
+    const reading = st(['rest', 'hover'], 'rest', [{ when: { type: 'icon' }, set: { 'icon.absolute': { x: 2, y: 1 } } }, { when: { type: 'icon', state: 'rest' }, set: { 'icon.position': null, 'icon.absolute': null } }, { when: { type: 'icon', state: 'hover' }, set: { 'icon.position': null, 'icon.absolute': null } }]);
+    ok('a reading\'s layer at its rest state holds at the design\'s default state', roundTrip(design, reading).rows.length === 0
+      && roundTrip(design, { ...reading, variants: reading.variants.slice(0, 2) }).rows.length === 2);
+  }
   // the label an empty slot, as from-code drew Badge on 2026-11-12: the bindings check passed it
   const slot = JSON.parse(JSON.stringify(lib));
   slot.props = { children: { type: 'slot', figma: 'Children' }, feedback: lib.props.feedback };
@@ -252,6 +262,13 @@ delete globalThis.figma;
       roundTrip(figma(), code('Icon/strong')).rows.length === 0 && roundTrip(figma(), code('Icon/soft')).rows.length === 1);
     ok('a glyph that overrides more than its colour (its size) is compared as it is, never folded away',
       roundTrip(figma({ width: 16.67 }), figma({ width: 20 })).rows.length === 1 && roundTrip(figma({ width: 16.67 }), code('Icon/strong')).rows.length > 0);
+    // a lone glyph's opacity shows at the instance's times its own (material3's disabled chip: 0.38 on the glyph, and on
+    // the instance too where it is elevated), as code says it on the instance it colours
+    const held = (e, g) => ic({ icon: { kind: 'instance', parent: 'root', component: 'Icon/house', ...e }, ...(g && { 'icon/vector': { kind: 'graphic', parent: 'icon', background: 'Icon/strong', ...g } }) });
+    ok('a lone glyph\'s opacity is the instance\'s, times the instance\'s own; another opacity differs',
+      roundTrip(held({}, { opacity: 0.38 }), held({ background: 'Icon/strong', opacity: 0.38 }, null)).rows.length === 0
+      && roundTrip(held({ opacity: 0.38 }, { opacity: 0.38 }), held({ background: 'Icon/strong', opacity: 0.144 }, null)).rows.length === 0
+      && roundTrip(held({}, { opacity: 0.38 }), code('Icon/strong')).rows.length === 1);
   }
   {
     const at = (e) => ({ contract: 1, component: 'Chip', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/x', ...e } }, variants: [] });
