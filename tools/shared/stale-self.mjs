@@ -35,13 +35,17 @@ export function restartWhenStale(entries, { servers = [], busy = () => false, on
   for (const s of servers) if (s.on) s.on('upgrade', (req, socket) => { sockets.add(socket); if (socket.on) socket.on('close', () => sockets.delete(socket)); });
   const handle = { timer: null };
   let changed = null;
+  const idle = () => open === 0 && !busy();
+  // work that began while the servers closed (a build a timer started) is let finish: nothing new can arrive
+  const done = () => (idle() ? exit(0) : setTimeout(done, idleEvery));
   const stop = () => {
     for (const s of sockets) s.destroy();
-    if (!servers.length) return exit(0);
-    let left = servers.length;
-    for (const s of servers) { s.close(() => { if (--left === 0) exit(0); }); if (s.closeIdleConnections) s.closeIdleConnections(); }
+    if (!servers.length) return done();
+    let left = servers.length, over = false;
+    const closed = () => { if (!over && --left === 0) { over = true; done(); } };
+    for (const s of servers) { s.close(closed); if (s.closeIdleConnections) s.closeIdleConnections(); }
     // nothing was in progress, so a connection that still holds close() open (a client keeping one alive) is ended
-    const late = setTimeout(() => { for (const s of servers) if (s.closeAllConnections) s.closeAllConnections(); exit(0); }, giveUp);
+    const late = setTimeout(() => { if (over) return; over = true; for (const s of servers) if (s.closeAllConnections) s.closeAllConnections(); done(); }, giveUp);
     if (late.unref) late.unref();
   };
   const tick = () => {
@@ -52,13 +56,35 @@ export function restartWhenStale(entries, { servers = [], busy = () => false, on
       if (changed && !supervised) return log(`${path.basename(changed)} changed since this process started, so it runs the old file: restart it (nothing supervises this copy to bring it back)`);
       if (changed) { log(`${path.basename(changed)} changed since this process started: restarting once nothing is in progress`); if (onStale) onStale(); }
     }
-    if (changed && open === 0 && !busy()) return stop();
+    if (changed && idle()) return stop();
     handle.timer = setTimeout(tick, changed ? idleEvery : every);
     if (handle.timer.unref) handle.timer.unref();
   };
-  // a parent that is itself stale asks its children to restart too: one it forked after the change would not see it
-  if (typeof process.send === 'function') process.on('message', (m) => { if (m && m.restartWhenIdle && !changed) { changed = 'the parent'; log('the parent asked for a restart: restarting once nothing is in progress'); } });
+  // a parent that is itself stale asks whether its children are idle before it stops them (askIdle below)
+  if (typeof process.send === 'function') process.on('message', (m) => { if (m && m.idleAsked) try { process.send({ idleSaid: m.idleAsked, idle: idle() }); } catch {} });
   handle.timer = setTimeout(tick, every);
   if (handle.timer.unref) handle.timer.unref();
   return handle;
+}
+
+/*
+ * For a parent supervising forked children (the dashboards' --all): its own `busy`, true until every child has
+ * said, in answer to the latest ask, that nothing is in progress. Each call asks again; a child forked since, or
+ * one that has not answered, counts as busy. A stale parent then stops idle children and restarts, launchd
+ * bringing back the whole service; a child with work or a plugin keeps it waiting, the others serving meanwhile.
+ */
+export function askIdle(kids) {
+  let asked = 0;
+  const said = new Map(); // child → the ask it last answered idle
+  return () => {
+    const all = [...kids];
+    if (!all.length) return false;
+    const ready = all.length > 0 && all.every((c) => said.get(c) === asked);
+    asked++;
+    for (const c of all) {
+      if (!c.__idleHeard) { c.__idleHeard = true; c.on('message', (m) => { if (m && m.idleSaid) { if (m.idle) said.set(c, m.idleSaid); else said.delete(c); } }); }
+      try { c.send({ idleAsked: asked }); } catch {}
+    }
+    return !ready;
+  };
 }

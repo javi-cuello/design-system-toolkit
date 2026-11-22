@@ -108,8 +108,8 @@ const queues = new Map();
 
 function deliver(project, kind, payload) {
   // work until it ends, queued or running: a stale router waits for it before restarting (stale-self.mjs)
-  const release = hold();
   const file = keep(project, kind, payload);
+  const release = hold();
   const run = async () => {
     console.log(`\n→ ${project.name} (${kind})`);
     try {

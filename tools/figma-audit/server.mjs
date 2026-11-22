@@ -52,7 +52,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
    there is one parser of the log and not one per reader. */
 import contract from "../snapshot/projects.cjs";
 import { isFigmaOrigin } from "../shared/origin.mjs";
-import { hold, held, restartWhenStale } from "../shared/stale-self.mjs";
+import { askIdle, hold, held, restartWhenStale } from "../shared/stale-self.mjs";
 import { boundBy } from "./bound.mjs";
 import { decoder, MAX_MESSAGE } from "./frames.mjs";
 // The store's own resolver, so a stored spec becomes a tree here exactly as
@@ -135,27 +135,23 @@ if (pairs.length > 1 || ALL) {
   const perChild = new Set(["--data", "--port"]);
   const passthrough = args.filter((a, i) => a !== "--all" && !(perChild.has(a) || perChild.has(args[i - 1])));
   const kids = new Set();
-  let draining = false;
   const run = (p) => {
     const child = fork(fileURLToPath(import.meta.url), ["--data", p.data, "--port", String(p.port), ...passthrough], { stdio: "inherit" });
     kids.add(child);
     // a child that dies — a port clash it reports itself, a crash, a restart onto changed files — comes back
-    // after a pause, the way the launch agent would bring the whole service back; not while this parent drains
-    child.on("exit", (code) => {
-      kids.delete(child);
-      if (draining) return console.error(`dashboard on ${p.port} exited (${code}); this parent restarts once every child has`);
-      console.error(`dashboard on ${p.port} exited (${code}); restarting in 5s`); setTimeout(() => run(p), 5000);
-    });
+    // after a pause, the way the launch agent would bring the whole service back
+    child.on("exit", (code) => { kids.delete(child); console.error(`dashboard on ${p.port} exited (${code}); restarting in 5s`); setTimeout(() => run(p), 5000); });
   };
-  // this parent binds the same files (discover, the ports, the re-fork): stale, it asks every child to restart once
-  // idle, forks none, and exits when the last has gone, launchd starting the whole service again on the files on disk
-  restartWhenStale(boundBy(HERE), { busy: () => kids.size > 0, label: "com.toolkit.figma-audit",
-    onStale: () => { draining = true; for (const c of kids) { try { c.send({ restartWhenIdle: true }); } catch {} } } });
+  // this parent binds the same files (discover, the ports, the re-fork): stale, it keeps serving and re-forking
+  // until every child says nothing is in progress (askIdle), then stops them and exits, launchd starting the whole
+  // service again on the files on disk; meanwhile each child restarts itself on its own once idle
+  restartWhenStale(boundBy(HERE), { busy: askIdle(kids), label: "com.toolkit.figma-audit",
+    exit: (code) => { for (const c of kids) c.kill(); process.exit(code); } });
   for (const p of pairs) run(p);
   if (ALL) {
     const serving = new Set(pairs.map((p) => p.data));
     if (!pairs.length) console.error("figma audit    no project states a port in its project block: nothing to serve yet");
-    setInterval(() => { for (const p of discover()) if (!draining && !serving.has(p.data)) { serving.add(p.data); console.log(`figma audit    ${p.label}: new project, serving on ${p.port}`); run(p); } }, 60_000);
+    setInterval(() => { for (const p of discover()) if (!serving.has(p.data)) { serving.add(p.data); console.log(`figma audit    ${p.label}: new project, serving on ${p.port}`); run(p); } }, 60_000);
   }
   await new Promise(() => {});
 }

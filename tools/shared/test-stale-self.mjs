@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert';
 import { EventEmitter } from 'node:events';
-const { restartWhenStale, hold, held } = await import('./stale-self.mjs');
+const { restartWhenStale, hold, held, askIdle } = await import('./stale-self.mjs');
 let n = 0;
 const ok = (name, cond) => { assert.ok(cond, name); n++; console.log(`ok ${name}`); };
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stale-self-'));
@@ -77,5 +77,29 @@ sock.destroyed = false; sock.destroy = () => { sock.destroyed = true; };
 r = await run({ act: () => { up.emit('upgrade', {}, sock); touch(dep); }, servers: [up] });
 touch(dep, past);
 ok('an upgraded socket (the plugin\'s, which reconnects itself) is ended so close can return', r.code === 0 && sock.destroyed);
+// the parent's busy: every child answers the latest ask idle, or it waits; a child that never answers, or is busy, holds it
+const child = (state) => { const c = new EventEmitter(); c.state = state; c.send = (m) => { if (m.idleAsked && c.state !== 'silent') setTimeout(() => c.emit('message', { idleSaid: m.idleAsked, idle: c.state === 'idle' }), 1); }; return c; };
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+{
+  const a = child('idle'), b = child('busy'), kids = new Set([a, b]), busyNow = askIdle(kids);
+  busyNow(); await wait(10);
+  const one = busyNow(); await wait(10);
+  b.state = 'idle'; busyNow(); await wait(10);
+  const two = busyNow(); await wait(10);
+  const c = child('silent'); kids.add(c);
+  const three = busyNow(); await wait(10);
+  const four = busyNow();
+  ok('a parent is busy while any child is busy or silent, idle once every child said so to the latest ask, and with no child', one && !two && three && four && !askIdle(new Set())());
+}
+// work begun while the servers close (a build a timer fired) is let finish before the exit
+{
+  let rel;
+  const closing = server();
+  closing.close = (cb) => { closing.closed = true; rel = hold(); setTimeout(cb, 5); setTimeout(() => rel(), 60); };
+  const t0 = Date.now();
+  r = await run({ act: () => touch(dep), servers: [closing], wait: 400 });
+  touch(dep, past);
+  ok('work that begins while it closes is let finish before it exits', r.code === 0 && Date.now() - t0 >= 60);
+}
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(`${n}/${n} passed`);
