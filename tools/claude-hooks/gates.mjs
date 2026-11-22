@@ -546,8 +546,8 @@ function record(st, line, repos, sub) {
       // a foreground review is done when its result comes back; a background one only says it was launched
       const out = typeof r.content === 'string' ? r.content : (r.content || []).map((x) => x.text || '').join('\n');
       // the repo's check, run and its closing line come back (a background run's comes with its notification, and so
-      // does a foreground run the tool's timeout moved to the background, whose message words it differently)
-      if (r.tool_use_id in st.checks) { if (CHECK_END.test(out)) checked(st, r.tool_use_id, rec); else if (!/^\s*Command running in background|^\s*Command did not complete within its \d+s timeout and was moved to the background/.test(out)) delete st.checks[r.tool_use_id]; }
+      // does a foreground run moved to the background, by a timeout, its length or a message, each worded differently)
+      if (r.tool_use_id in st.checks) { if (CHECK_END.test(out)) checked(st, r.tool_use_id, rec); else if (!/^\s*Command running in background|^\s*Command (?:did not complete within its \d+s timeout and )?was moved to the background/.test(out)) delete st.checks[r.tool_use_id]; }
       if (!/^\s*Async agent launched/.test(out)) st.reviewing = st.reviewing.filter((x) => x.id !== r.tool_use_id);
     }
     return;

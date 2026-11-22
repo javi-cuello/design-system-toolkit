@@ -203,6 +203,19 @@ test('plan gate: the call that makes the work full is refused until a plan with 
   fs.writeFileSync(planPath(moved.id), PLAN_TEXT);
   assert.equal(planGate(moved.id, moved.file, REPOS, next, TOOLKIT), null, 'a run the timeout moved to the background counts once its notification says it ended');
   moved.clean();
+  // and the tool's two other wordings (22 Nov 2026: neither matched, so a green quick check never counted)
+  for (const said of ['Command was moved to the background (ID: b3) after running for 180s. Output is being written to: /tmp/b3.output.',
+    'Command was moved to the background (ID: b3) so that a message that arrived while it was running can be read.']) {
+    const start = [dated(withId(call('Bash', { command: 'bin/check --quick 2>&1 | tail -2' }), 'mv2')), dated(checkResult('mv2', said))];
+    const ended = session([...start, harness('<task-notification>\n<tool-use-id>mv2</tool-use-id>\n<status>completed</status>\n</task-notification>'), user('go'), edit('a.mjs', 200)], { checked: false });
+    fs.writeFileSync(planPath(ended.id), PLAN_TEXT);
+    assert.equal(planGate(ended.id, ended.file, REPOS, next, TOOLKIT), null, `a run moved to the background counts once it ended: ${said}`);
+    ended.clean();
+    const going = session([...start, user('go'), edit('a.mjs', 200)], { checked: false });
+    fs.writeFileSync(planPath(going.id), PLAN_TEXT);
+    assert.match(String(planGate(going.id, going.file, REPOS, next, TOOLKIT)), /a bin\/check run in/, `and not before it ended: ${said}`);
+    going.clean();
+  }
   // each repo's own check, in that repo: another repo's run, or reading the check's helper, is not one
   const other = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gates-other-')));
   const away = session([dated(withId(call('Bash', { command: `cd ${other} && bin/check` }), 'o1')), dated(checkResult('o1', '== all green')), dated(withId(call('Bash', { command: 'sed -n 20,40p bin/check-lib.sh' }), 'o2')), dated(checkResult('o2', 'green() {')), user('go'), edit('a.mjs', 200)], { checked: false });
