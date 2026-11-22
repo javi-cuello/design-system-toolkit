@@ -1,5 +1,9 @@
 # Changelog — lucide-icon-importer
 
+## [1.15.3] - 2026-11-22
+### Fixed
+- **A checkbox's or switch's name reads in text colour, and a box just clicked shows no focus ring.** FigUI3 greys every label, so a name read as disabled, and its ring showed on a box under the pointer; the shared frame (ui-base v5) corrects both for every plugin, and a box reached by keyboard keeps its ring.
+
 ## [1.15.2] - 2026-11-11
 ### Fixed
 - Add icon and Reset are FigUI3's large buttons, and the footers are inset like the panels.

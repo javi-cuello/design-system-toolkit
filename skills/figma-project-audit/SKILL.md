@@ -5,7 +5,7 @@ description: Run a project's whole Figma audit by sequencing the stand-alone aud
 
 # Figma Project Audit
 
-**Version 1.7.3** — history in CHANGELOG.md.
+**Version 1.7.4** — history in CHANGELOG.md.
 
 This skill runs a project's whole Figma audit by sequencing the stand-alone audit skills into one audit record. Each of those skills owns one subject: the components, the file as a whole, the code target, the token links. This skill runs them in the one order that keeps their results consistent, so the dashboard shows the whole library. Use it to audit everything, check the whole library, update the dashboard, or run some audits together.
 

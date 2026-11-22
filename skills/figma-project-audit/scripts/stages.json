@@ -16,7 +16,7 @@
     {
       "id": "foundations",
       "label": "File",
-      "description": "Page order and names across the whole file.",
+      "description": "Page order and names.",
       "owner": "figma-foundations-audit",
       "target": null,
       "gather": { "script": "skills/figma-foundations-audit/scripts/foundations.js", "set": ["TOKENS"], "served": "foundations" },
@@ -28,7 +28,7 @@
     {
       "id": "components",
       "label": "Components",
-      "description": "How each component is built: tokens, layers, variants, states.",
+      "description": "Tokens, layers, variants, states.",
       "owner": "figma-components-audit",
       "target": null,
       "gather": { "script": "skills/figma-components-audit/scanner/audit.js", "set": ["TARGETS", "SCALES", "TOKENS"], "served": "audit" },
@@ -40,7 +40,7 @@
     {
       "id": "tokens",
       "label": "Variables & styles",
-      "description": "Descriptions, unused tokens, and styles bound to variables.",
+      "description": "Descriptions, names, bindings, unused tokens.",
       "owner": "figma-foundations-audit",
       "target": "tokens",
       "gather": { "script": "plugins/design-system-snapshot/code.js", "shadow": ["__html__"], "set": { "FACTS": true }, "call": "__headless", "served": "snapshot" },
@@ -52,7 +52,7 @@
     {
       "id": "icons",
       "label": "Icons",
-      "description": "Sizes, bound colours and names of the icon sets.",
+      "description": "Sizes, colours and names.",
       "owner": "figma-foundations-audit",
       "target": "icons",
       "gather": { "script": "plugins/design-system-snapshot/code.js", "shadow": ["__html__"], "set": { "FACTS": true }, "call": "__headless", "served": "snapshot" },

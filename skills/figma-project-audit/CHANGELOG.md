@@ -1,5 +1,6 @@
 # Changelog — figma-project-audit
 
+- 1.7.4 (2026-11-22): `stages.json`: the four descriptions Audit lite shows are a few words each; the window read as too verbose. No stage or rule changed. Case O7.
 - 1.7.3 (2026-11-22): the list of stages moves to `scripts/stages.json`. A tool that reads it (the figma-audit service) then takes only this skill's `scripts/` through `bin/get`, not the whole skill, so getting figma-foundations-audit no longer installs this one. No rule changed.
 - 1.7.2 (2026-11-21): `stages.json`'s `label` note says it is Audit lite's checkbox name; the dashboard's run lines name a stage by its queue chip. `bin/audit` exits 1 and names each stage that stopped (`stages.mjs` `stoppedLines`). Case O7.
 - 1.7.1 (2026-11-21): the three runners share one loop, `stages.mjs` `runStages`, and decide applicability through `appliesTo` alone; the SKILL says so. Case O7 says only what `tests/test-stages.mjs` checks, which now runs the loop with planted failures.

@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.81.3] - 2026-11-22
+### Fixed
+- **A checkbox's or switch's name reads in text colour, and a box just clicked shows no focus ring.** FigUI3 greys every label, so a name read as disabled, and its ring showed on a box under the pointer; the shared frame (ui-base v5) corrects both for every plugin, and a box reached by keyboard keeps its ring.
+
 ## [0.81.2] - 2026-11-21
 ### Fixed
 - **The facts mode counts the bindings the store counts.** What the components bind (`used`) leaves out the icon page, whose glyph colours count through the icon facts as the stored `owns.iconColours` do, and scratch pages, which the stored specs leave out; the tokens read's own list of bindings leaves scratch pages out too. A live and a stored run of the unused-tokens check now agree on one file.

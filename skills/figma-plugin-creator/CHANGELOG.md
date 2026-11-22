@@ -1,5 +1,6 @@
 # Changelog — figma-plugin-creator
 
+- 1.20.2 (2026-11-22): the template and assets carry ui-base v5: a `fig-checkbox`'s or `fig-switch`'s own label in text colour (FigUI3 greys every `label`), and no focus ring on a checkbox under the pointer. Case P7.
 - 1.20.1 (2026-11-21): `conformance.mjs` leaves out only a generated block whose markers both name a generator in `GENERATORS` (each run with `--check` by `check.sh`); owned-check reads the same list. Cases P2 and P3.
 - 1.20.0 (2026-11-21): `conformance.mjs` §3 reads code.js without its generated blocks, as §2 does and as it already read ui.html: audit-lite now carries the snapshot plugin's facts mode, whose router posts never run headless. A fetch outside a block is still found. Case P3.
 - 1.19.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I: steps and tables, Part B linked not restated, checklist contents list and tables. No rule removed.

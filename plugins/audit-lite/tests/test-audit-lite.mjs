@@ -297,10 +297,10 @@ const plugin = ({ fileKey, store = {} }) => {
   ok('…and a retry that reads the file offers its checks', posted.some((m) => m.type === 'stages'));
 }
 
-// The checks are one question in a fieldset whose legend asks it (knowledge/ui/components/checkbox.md, *How*), and a
+// The checks are one question in a fieldset whose legend puts it, in the fewest words (knowledge/ui/components/checkbox.md, *How*), and a
 // list that has not changed is not rebuilt, so focus and a box just clicked stay as they are.
 {
-  ok('the checks sit in a fieldset whose legend asks the question', /<fieldset class="checks" id="checks" hidden>\s*<legend class="checks-title">What should the audit check\?<\/legend>/.test(ui));
+  ok('the checks sit in a fieldset whose legend puts the question', /<fieldset class="checks" id="checks" hidden>\s*<legend class="checks-title">What to check<\/legend>/.test(ui));
   ok('the window rebuilds the checkboxes only when the list of checks changes', /if \(same\) \{ canRun\(\); return; \}/.test(ui));
 }
 

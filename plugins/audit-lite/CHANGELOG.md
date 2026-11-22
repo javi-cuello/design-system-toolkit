@@ -1,6 +1,12 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.3] - 2026-11-22
+### Fixed
+- **A checkbox's or switch's name reads in text colour, and a box just clicked shows no focus ring.** FigUI3 greys every label, so a name read as disabled, and its ring showed on a box under the pointer; the shared frame (ui-base v5) corrects both for every plugin, and a box reached by keyboard keeps its ring.
+### Changed
+- **The window says less.** The intro is one line ("Saves a report to upload to Claude.", or which components on a selection); "show me results" stays in the done message. The checks' legend is "What to check", and each check's description is a few words (figma-project-audit 1.7.4).
+
 ## [0.14.2] - 2026-11-21
 ### Fixed
 - **The checks fieldset keeps FigUI3's own look.** The plugin no longer overrides FigUI3's padding and border on the fieldset or its legend's inset; it sets only the space around the group and the question's weight.

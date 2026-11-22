@@ -5,7 +5,7 @@ description: Scaffold new Figma plugins and check existing ones against the hous
 
 # figma-plugin-creator
 
-**Version 1.20.1** — history in CHANGELOG.md.
+**Version 1.20.2** — history in CHANGELOG.md.
 
 This skill scaffolds new Figma plugins and checks existing ones against the plugin standard, [skill-standard Part B](../../standards/skill-standard.md) (cited below as §B). A plugin has no build step: a hand-written `code.js` and a single-file `ui.html`. Use it to create a plugin, add one to the toolkit, check or normalise one, or update the shared UI baseline.
 
