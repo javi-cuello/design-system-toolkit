@@ -565,7 +565,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // one icon for a swap Figma keeps per size: the one the instance draws (its glyph's own name, where its insides are
       // stated), else the swap its component draws that part by at the instance's props (Size xs: Icon (16)), else the first
       for (const x of theirs.filter((y) => y.figmas)) {
-        const drawnAs = String((at(c, `${id}/${x.p.swaps[0]}`) || {}).component || '').split('/').pop();
+        // (on any layer the swap drives that the instance states: a nav item swaps its icon and its icon_2, and a
+        // selected one states only icon_2's)
+        const drawnAs = String((x.p.swaps.map((s) => at(c, `${id}/${s}`)).find((y) => y && y.component) || {}).component || '').split('/').pop();
         const by = (atProps(placed, e.with)[x.p.swaps[0]] || {}).swappedBy, byFigma = by && (placed.props[by] || {}).figma;
         const byValue = byFigma && (e.with || {})[byFigma];
         const mine = given.filter(([k]) => k === x.name), keep = mine.find(([, v]) => String(v.lit) === drawnAs) || (byValue !== undefined && mine.find(([, v]) => String(v.lit) === String(byValue))) || mine[0];
