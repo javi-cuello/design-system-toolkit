@@ -25,7 +25,7 @@ ok('a stylesheet gets the visual and code fundamentals; markup the five design a
   && ['ux.md', 'interaction.md', 'visual.md', 'content.md', 'accessibility.md', 'html-semantics.md'].every((x) => p('src/a.tsx').includes(x)));
 ok('no pattern from a word that only contains one: a table is not tabs, design is not sign-in',
   !p('src/table.tsx').includes('navigation.md') && !p('src/design-system/x.tsx').includes('authentication.md'));
-const all = 'src/dialog-upload-form-settings-nav-sidebar-menu-pager-search-filter-select-chip-step-login-consent-button-accordion-toast-table-grid-chart-stats-inspector.tsx';
+const all = 'src/dialog-upload-form-settings-nav-sidebar-menu-pager-search-filter-select-chip-step-login-consent-button-accordion-toast-table-grid-chart-stats-inspector-calendar-event.tsx';
 ok('every page named exists, and every pattern page has a word that names it',
   ['src/a.scss', all].flatMap(pagesFor).every((x) => fs.existsSync(path.join(TK, x)))
   && pagesFor(all).filter((x) => x.includes('/patterns/')).length === fs.readdirSync(path.join(TK, 'knowledge/ui/patterns')).filter((f) => f.endsWith('.md')).length);
@@ -35,7 +35,7 @@ ok('a path\'s words name its component page before its pattern: a tooltip, a but
   && p('src/ui/icon-button.scss')[0] === 'button.md' && p('src/SegmentedControl.vue').includes('segmented-control.md')
   && !p('src/table.tsx').some((x) => x === 'tabs.md')
   && !['src/OrderDetails.tsx', 'src/DateRangePicker.tsx', 'src/ActionSheet.tsx', 'src/ThemeToggle.tsx'].some((f) => pagesFor(f).some((x) => x.includes('/components/'))));
-const comps = 'src/button-link-tabs-breadcrumbs-dialog-drawer-popover-tooltip-accordion-checkbox-radio-switch-select-combobox-segmented-slider-toast-alert-badge-chip-input-textarea-searchbox-label-feedback-message-progress-spinner.tsx';
+const comps = 'src/button-link-tabs-breadcrumbs-dialog-drawer-popover-tooltip-accordion-checkbox-radio-switch-select-combobox-segmented-slider-toast-alert-badge-chip-input-textarea-searchbox-label-feedback-message-progress-spinner-card.tsx';
 ok('every component page has a word that names it, and every one named exists',
   pagesFor(comps).filter((x) => x.includes('/components/')).length === fs.readdirSync(path.join(TK, 'knowledge/ui/components')).filter((f) => f.endsWith('.md') && f !== 'README.md').length
   && pagesFor(comps).every((x) => fs.existsSync(path.join(TK, x))));
@@ -54,5 +54,5 @@ ok('…the head noun, last in English, wins over a modifier', c('Alert dialog') 
   && c('Link button') === 'button.md' && c('Tag input') === 'text-input.md');
 ok('…and a project\'s own name routes through its aliases', (componentPage('Notice', { Notice: 'alert' }) || '').endsWith('/alert.md') && componentPage('Notice') === null);
 ok('…and a button group is no component page, a radio group is the radio page', componentPage('Button group') === null && c('Radio group') === 'radio.md' && c('Tab bar') === 'tabs.md');
-ok('…and a name no page holds is no page, not a guess', componentPage('Avatar') === null && componentPage('Card header') === null);
+ok('…and a name no page holds is no page, not a guess; a card\'s part is the card\'s', componentPage('Avatar') === null && c('Card header') === 'card.md');
 console.log(`${n}/${n} passed`);

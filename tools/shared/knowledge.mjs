@@ -53,6 +53,8 @@ const PATTERNS = [
   [/^(chart|graph|viz|sparkline)/, 'data-visualisation'],
   [/^(stats?|kpi|dashboard|metric)/, 'data'],
   [/^(inspector|properties|property)/, 'property-editors'],
+  [/^(calendar|agenda|schedule|month|week)/, 'calendars'],
+  [/^(events?|bookings?|appointments?|timeoff)$/, 'calendar-events'],
 ];
 
 // a word of the path → the component page it names, listed before the patterns: the component is what is being built.
@@ -66,7 +68,7 @@ const COMPONENTS = [
   [/^(toast|snackbar)s?$/, 'toast'], [/^(alert|banner|callout)s?$/, 'alert'], [/^(badge|pill)s?$/, 'badge'], [/^(chip|tag)s?$/, 'chip'],
   [/^(input|textfield|textinput)$/, 'text-input'], [/^textareas?$/, 'text-area'], [/^(searchbox|searchfield|searchinput|searchbar)$/, 'search-input'],
   [/^labels?$/, 'label'], [/^(feedbackmessage|fielderror|errormessage|helpertext|inlinemessage)s?$/, 'feedback-message'],
-  [/^(progress|progressbar|progressindicator)$/, 'progress-indicator'], [/^spinners?$/, 'spinner'],
+  [/^(progress|progressbar|progressindicator)$/, 'progress-indicator'], [/^spinners?$/, 'spinner'], [/^cards?$/, 'card'],
 ];
 
 export function pagesFor(rel) {
