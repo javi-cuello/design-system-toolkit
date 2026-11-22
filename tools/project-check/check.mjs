@@ -86,7 +86,7 @@ if (!label) {
     // checkout's last accepted run, copied once and never written back
     const dir = ((config.parity || {}).baseline || {}).dir;
     const from = dir && path.join(main, dir, 'accepted'), to = dir && path.join(REPO, dir, 'accepted');
-    if (from && fs.existsSync(from) && !fs.existsSync(to)) fs.cpSync(from, to, { recursive: true });
+    if (!PLAN && from && fs.existsSync(from) && !fs.existsSync(to)) fs.cpSync(from, to, { recursive: true });
   }
 }
 // where the snapshot stored things: the canonical layout where `paths` is silent
@@ -100,22 +100,25 @@ if (!noBrowser && BASE && C.renders) {
   if (hit === null) noBrowser = `nothing a render follows changed since ${BASE.slice(0, 10)}`;
 }
 
-// a branch with no upstream (a worktree's, before its first push) counts from origin's default branch
-const origin = ['origin/HEAD', 'origin/main'].find((r) => git(['rev-parse', '--verify', '-q', `refs/remotes/${r}`]));
+// a worktree's branch with no upstream, before its first push, counts from origin's default branch
+const origin = process.env.TOOLKIT_WORKTREE ? ['origin/HEAD', 'origin/main'].find((r) => git(['rev-parse', '--verify', '-q', `refs/remotes/${r}`])) : null;
 const upstream = git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']) || origin || '';
 const range = BASE ? `${BASE}..HEAD` : upstream ? `${upstream}..HEAD` : null;
 
 /* Each gate: what it needs (null when fed, else the missing fact) and how it runs. */
 const V = C.validate || {};
 let site = label ? contract.layout(null, label).site : null;
-// the docs site is built in the main checkout only; a worktree whose project folder is the same commit's
-// tree as the main checkout's reads that build, and one that changed its folder has none until it is rebuilt
+// the docs site is built in the main checkout only, from the project folder and the snapshot's store: a
+// worktree reads that build while those paths match the main checkout's commit and neither tree has changed them
 if (site && process.env.TOOLKIT_WORKTREE && !fs.existsSync(path.join(site, 'api/index.json'))) {
   const main = realPath(path.dirname(git(['rev-parse', '--path-format=absolute', '--git-common-dir'])));
-  const rel = path.relative(REPO, contract.layout(null, label).projectDir);
-  const tree = (dir) => { try { return execFileSync('git', ['-C', dir, 'rev-parse', `HEAD:${rel}`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
-  const clean = (dir) => !git(['status', '--porcelain', '--', rel]) && !execFileSync('git', ['-C', dir, 'status', '--porcelain', '--', rel], { encoding: 'utf8' }).trim();
-  if (tree(REPO) && tree(REPO) === tree(main) && clean(main)) site = path.join(main, path.relative(REPO, site));
+  const inputs = [contract.layout(null, label).projectDir, ...['tokens', 'components', 'icons', 'graphics', 'previews', 'screens', 'changes', 'index'].map((k) => where[k])]
+    .filter((p) => typeof p === 'string').map((p) => path.relative(REPO, p)).filter((p) => p && !p.startsWith('..'));
+  const run = (dir, args) => { try { return { out: execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(), ok: true }; } catch { return { ok: false }; } };
+  const head = run(main, ['rev-parse', 'HEAD']).out;
+  const same = head && run(REPO, ['diff', '--quiet', head, 'HEAD', '--', ...inputs]).ok;
+  const clean = (dir) => { const r = run(dir, ['status', '--porcelain', '--', ...inputs]); return r.ok && !r.out; };
+  if (same && clean(REPO) && clean(main)) site = path.join(main, path.relative(REPO, site));
 }
 // a code-only project: the gates that read a snapshot or a Figma file do not apply to it
 const noDesign = () => (label && contract.layout(null, label).design === 'none' ? 'no design' : null);

@@ -19,6 +19,8 @@ Run from a git worktree of a project, it checks that worktree, not the main chec
 - It reads the main checkout's docs site while the project folder is unchanged.
 - Without an upstream branch it counts commits from `origin`'s default branch.
 
+It redirects the one design system it found; in a repo with several, the others still read the main checkout. Files git does not hold, such as `.env.local`, come from the project's own worktree setup, or the gates that need them go red.
+
 | Option | What it does |
 |---|---|
 | `--plan` | runs only the cheap gates and lists the rest. `bin/closing` reads it. |
