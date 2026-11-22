@@ -155,6 +155,8 @@ async function step(main, me, state) {
     setGroups(main, [group(applied.slice(0, h)), group(applied.slice(h), tree), ...rest]);
     return null;
   }
+  // what is pushed is the tree that was checked, or nothing: a second lander in this worktree moves it under the check
+  if (git(dir, 'rev-parse', 'HEAD^{tree}') !== tree) { say('the integration worktree changed during the check: checking again'); return null; }
   const sha = git(dir, 'rev-parse', 'HEAD');
   const push = tryGit(dir, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
   if (!push.ok) {
@@ -212,10 +214,18 @@ export async function land(from, target) {
   // a run inside a holder (a test, a nested call) holds nothing new
   // inside a holder (a test, a nested call) the lock is the holder's: never let go of it here
   const outer = !!process.env.TOOLKIT_LOCK_HELD;
-  const state = { moved: 0 }, mine = qfile(main, branch); // the path once: no git call each 2 s
+  const state = { moved: 0, unheld: 0 }, mine = qfile(main, branch); // the path once: no git call each 2 s
   for (;;) {
     // landed (or dropped) by another holder while this one waits: read it now, not after their checks
-    if (await hold(`bin/land ${branch}`, { first: true, stop: () => readJSON(mine)?.sha !== sha }) === null) {
+    const got = await hold(`bin/land ${branch}`, { first: true, stop: () => readJSON(mine)?.sha !== sha });
+    // never without the lock: two landers share one integration worktree, and one pushed the other's tree as its own
+    // batch, marking two branches landed that were not (2026-11-22)
+    if (got === false && !outer) {
+      if (++state.unheld >= 3) { say('the measuring lock could not be taken three times: not landed; run bin/land again'); return 1; }
+      say('the measuring lock could not be taken: waiting again, never landing without it');
+      await new Promise((r) => setTimeout(r, PAUSE)); continue;
+    }
+    if (got === null) {
       const o = settled(main, { branch, sha });
       if (o) return o === 'landed' ? 0 : 1;
       continue; // queued again at this commit by a second bin/land of it: wait on

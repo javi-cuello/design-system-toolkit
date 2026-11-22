@@ -23,7 +23,7 @@ execFileSync('git', ['init', '-q', '--bare', '-b', 'main', remote]);
 execFileSync('git', ['clone', '-q', remote, main], { stdio: 'ignore' });
 fs.mkdirSync(path.join(main, 'bin'));
 // the fake check counts its runs and is red when any tracked file says BAD
-fs.writeFileSync(path.join(main, 'bin', 'check'), `#!/bin/sh\ncd "$(dirname "$0")/.."\necho "run $(sed 's/.*"at":\\([0-9]*\\).*/\\1/' "$TOOLKIT_LOCK_DIR/toolkit-measure.holder.json" 2>/dev/null)" >> "${count}"\nif git grep -q BAD -- ':!bin'; then echo "== 1 FAILED (BAD)"; exit 1; fi\necho "green"\n`, { mode: 0o755 });
+fs.writeFileSync(path.join(main, 'bin', 'check'), `#!/bin/sh\ncd "$(dirname "$0")/.."\necho "run $(sed 's/.*"at":\\([0-9]*\\).*/\\1/' "$TOOLKIT_LOCK_DIR/toolkit-measure.holder.json" 2>/dev/null)" >> "${count}"\nif [ -n "$LAND_MOVE" ] && [ -f "$LAND_MOVE" ]; then rm "$LAND_MOVE"; echo moved > moved.txt; git add moved.txt; git commit -qm moved; fi\nif git grep -q BAD -- ':!bin'; then echo "== 1 FAILED (BAD)"; exit 1; fi\necho "green"\n`, { mode: 0o755 });
 fs.writeFileSync(path.join(main, '.gitignore'), '.claude/\n');
 for (const f of ['a', 'b', 'c', 'd', 'e']) fs.writeFileSync(path.join(main, `${f}.txt`), `${f}\n`);
 git(main, 'add', '.'); git(main, 'commit', '-qm', 'base'); git(main, 'push', '-q', 'origin', 'main');
@@ -194,6 +194,29 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.ok(Date.now() - t0 < 10000, `ended within seconds of being landed: ${Date.now() - t0} ms`);
   assert.equal(runs(), n0, 'no check of its own');
   assert.equal(fs.readdirSync(process.env.TOOLKIT_LOCK_DIR).filter((f) => f.startsWith('want-')).length, 0, 'no waiter note left'); }
+
+// (o) a lock that cannot be taken lands nothing: no check, no push (2026-11-22: a lander run without it pushed another's tree)
+{ const E = wt('n8'); fs.writeFileSync(path.join(E, 'n8.txt'), 'n8\n'); git(E, 'add', '.'); git(E, 'commit', '-qm', 'n8');
+  const dir = process.env.TOOLKIT_LOCK_DIR, n0 = runs(), head = git(remote, 'rev-parse', 'main');
+  process.env.TOOLKIT_LOCK_DIR = path.join(tmp, 'a-file'); fs.writeFileSync(process.env.TOOLKIT_LOCK_DIR, '');
+  r = await quiet(() => land(E));
+  process.env.TOOLKIT_LOCK_DIR = dir;
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /could not be taken three times: not landed/, r.out);
+  assert.equal(runs(), n0, 'no check');
+  assert.equal(git(remote, 'rev-parse', 'main'), head, 'nothing pushed'); }
+
+// (p) the integration worktree moved during the check (a second lander in it): that tree is never pushed; checked again
+{ const F = wt('n9'); fs.writeFileSync(path.join(F, 'n9.txt'), 'n9\n'); git(F, 'add', '.'); git(F, 'commit', '-qm', 'n9');
+  process.env.LAND_MOVE = path.join(tmp, 'move'); fs.writeFileSync(process.env.LAND_MOVE, '');
+  const n0 = runs();
+  r = await quiet(() => land(F));
+  delete process.env.LAND_MOVE;
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /changed during the check: checking again/, r.out);
+  assert.equal(runs() - n0, 2, 'checked again');
+  assert.equal(remoteHas('n9.txt'), 'n9');
+  assert.throws(() => remoteHas('moved.txt'), 'the moved tree was not pushed'); }
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');
