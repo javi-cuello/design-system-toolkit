@@ -344,7 +344,8 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // third_party/blink/renderer/platform/geometry/layout_unit.h), read back to two decimals: within that unit, the same place
     // (only where one side is a browser's reading, `layoutUnit`: Figma's own numbers are exact)
     // (the room about a centred part sums two such places: within two units)
-    if (layoutUnit && /\.absolute\.(x|y|end|bottom|xFromCentre|yFromCentre|xRoom|yRoom)$/.test(at) && typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= (/Room$/.test(at) ? 2 : 1) / 64 + 0.005) return;
+    // (and so is an element's size the browser lays out: a mark drawn 8.65 wide is 553/64 px, read 8.64)
+    if (layoutUnit && /(\.absolute\.(x|y|end|bottom|xFromCentre|yFromCentre|xRoom|yRoom)|^[^.]+\.(width|height))$/.test(at) && typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= (/Room$/.test(at) ? 2 : 1) / 64 + 0.005) return;
     const bool = (v) => (typeof v === 'boolean' ? v : typeof v === 'string' && /^(true|false)$/i.test(v) ? v.toLowerCase() === 'true' : undefined);
     if (/\.with\.[^.]+$/.test(at) && bool(a) !== undefined && bool(a) === bool(b)) return;
     if (/(^|\.)component$/.test(at) && typeof a === 'string' && typeof b === 'string' && !b.includes('/') && a.split('/').pop() === b) return;
