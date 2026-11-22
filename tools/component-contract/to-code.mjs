@@ -626,8 +626,11 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
   // to unset (rulesOf); nowhere set, nothing is written, so the component's own sheet, its states included, holds
   for (const id of Object.keys(ALL)) {
     if (id in a || out[id]) continue;
-    const host = hostOf(ALL, id), m = host && a[host] && ALL[host].component === a[host].component && mains(a[host].component, a[host].key);
+    const host = hostOf(ALL, id), m = host && a[host] && mains(a[host].component, a[host].key);
     if (!m || (hostOf(ALL, host) && !hostIn(c, host, mains)) || copyOf(c, host) || Object.keys(ALL).some((k) => k !== host && copyOf(c, k) === host)) continue;
+    // (where a variant places another component there, the part is that one's own drawing: nothing of the base's
+    // override holds, as a part it records there says nothing either, above)
+    if (ALL[host].component !== a[host].component) { out[id] = { decls: new Map(), unread: [] }; continue; }
     const now = overrideOf(a, host, id.slice(host.length + 1), m, mains, ALL);
     if (now) out[id] = { decls: new Map([...now.theirs].map(([p, v]) => [p, { v, given: true }])), unread: [] };
     // (an icon's colour too: back to the one the placed component draws it in, not unset, which would inherit)

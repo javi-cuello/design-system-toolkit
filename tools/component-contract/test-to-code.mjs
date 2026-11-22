@@ -344,6 +344,15 @@ else console.log('skip: no stored contracts on this machine');
   const two2 = { ...loud, props: { ...loud.props, big: { type: 'boolean', default: false, axis: true, figma: 'Big' } }, variants: [{ when: { loud: true }, set: { 'tag/text.color': 'C/x' } }, { when: { loud: true, big: true }, remove: ['tag/text'] }] };
   const t2 = toCss(two2, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
   ok('what a variant rule gave a layer a later combination drops goes back to the component\'s own; nowhere else is it restated', selfCheck(two2, rulesOf(two2, mains).rules, mains).length === 0 && /data-big[^{]*> \.ds-tag__text \{\s*color: var\(--c-strong\);\s*\}/.test(t2) && (t2.match(/\.ds-tag__text \{/g) || []).length === 3);
+  // a variant that places another component there and drops the override (drawn as that component draws it): nothing of
+  // the base's override reaches it, as nothing does where it keeps the layer (a selected menu item's trailing element)
+  const tagSel = { ...tag, component: 'Tag selected' };
+  const mains2 = (n) => (n === 'Tag' ? tag : n === 'Tag selected' ? tagSel : null);
+  const swapped = { ...loud, variants: [{ when: { loud: true }, set: { 'tag.component': 'Tag selected' }, remove: ['tag/text'] }] };
+  const kept = { ...loud, variants: [{ when: { loud: true }, set: { 'tag.component': 'Tag selected' } }] };
+  const at = (x) => toCss(x, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: mains2 }).split('@layer').slice(1).join('').match(/data-loud[^{]*> \.ds-tag__text \{[^}]*\}/g) || [];
+  ok('an override a variant drops where it places another component goes back there, as where it keeps the layer',
+    at(swapped).length === 1 && /color: unset;/.test(at(swapped)[0]) && JSON.stringify(at(swapped)) === JSON.stringify(at(kept)) && selfCheck(swapped, rulesOf(swapped, mains2).rules, mains2).length === 0);
   // what the component declares that the instance does not is unset
   const bare = { ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/strong' } } };
   ok('a declaration the instance takes away is unset', /\.ds-tag__text \{[^}]*font[\w-]*: unset;/.test(toCss(bare, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains })));
