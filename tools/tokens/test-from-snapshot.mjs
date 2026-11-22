@@ -55,17 +55,17 @@ test('a string Figma scopes to font family is a fontFamily where its name says n
 });
 
 test('a numeric weight is a fontWeight by scope, by name, by binding or along an alias; a length never is', () => {
-  const V = { 'Heavy': 700, 'Breakpoint/Body/Font weight': 400, 'Strong': 700, 'Base/653': 653, 'Display/Font weight': 653, 'Body/W': 500,
+  const V = { 'Heavy': 700, 'font/Body M/Font weight': 400, 'Strong': 700, 'Base/653': 653, 'Display/Font weight': 653, 'Body/W': 500,
     'Stroke/Weight/thin': 1, 'Line weight': 200, 'Number/400': 400, 'Quiet/Font weight': 400, 'Panel/width': 400, 'Odd/Font weight': 0 };
   const t = { collections: { T: { modes: ['V'], values: { V }, alias: { V: { Strong: 'Heavy', 'Display/Font weight': 'Base/653', 'Quiet/Font weight': 'Number/400', 'Panel/width': 'Number/400' } },
-    scopes: { Heavy: ['FONT_WEIGHT'], 'Breakpoint/Body/Font weight': ['TEXT_CONTENT'], Strong: ['ALL_SCOPES'], 'Body/W': ['ALL_SCOPES'], 'Stroke/Weight/thin': ['STROKE_FLOAT'], 'Panel/width': ['WIDTH_HEIGHT'] } } },
+    scopes: { Heavy: ['FONT_WEIGHT'], 'font/Body M/Font weight': ['TEXT_CONTENT'], Strong: ['ALL_SCOPES'], 'Body/W': ['ALL_SCOPES'], 'Stroke/Weight/thin': ['STROKE_FLOAT'], 'Panel/width': ['WIDTH_HEIGHT'] } } },
     textStyles: [{ name: 'Body', family: 'Inter', weight: 'Medium', size: 14, lineHeight: 1.5, bound: { fontWeight: { collection: 'T', name: 'Body/W' } } }] };
   const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
   writeDtcg(t, dir);
   const at = (n) => DTCG.pathFor('T', n).reduce((o, k) => o[k], JSON.parse(readFileSync(join(dir, 't', readdirSync(join(dir, 't'))[0]), 'utf8')));
   const got = (n) => [at(n).$type, at(n).$value];
   assert.deepEqual(got('Heavy'), ['fontWeight', 700], 'scoped');
-  assert.deepEqual(got('Breakpoint/Body/Font weight'), ['fontWeight', 400], 'named only, scoped to text content');
+  assert.deepEqual(got('font/Body M/Font weight'), ['fontWeight', 400], 'named only, scoped to text content');
   assert.deepEqual(got('Strong'), ['fontWeight', '{t.heavy}'], 'an alias to a weight');
   assert.deepEqual([got('Display/Font weight')[0], ...got('Base/653')], ['fontWeight', 'fontWeight', 653], 'the target of a weight');
   assert.deepEqual(got('Body/W'), ['fontWeight', 500], 'bound by a text style');
@@ -73,6 +73,27 @@ test('a numeric weight is a fontWeight by scope, by name, by binding or along an
   assert.equal(style.$value.fontWeight, `{${DTCG.pathFor('T', 'Body/W').join('.')}}`, 'the style references the number');
   for (const n of ['Stroke/Weight/thin', 'Line weight', 'Odd/Font weight']) assert.equal(at(n).$type, 'dimension', `${n} stays a length`);
   for (const n of ['Number/400', 'Quiet/Font weight', 'Panel/width']) assert.equal(at(n).$type, 'dimension', `${n}: a number a length shares stays one, and so does what aliases it`);
+});
+
+test('a weight keeps shared numbers lengths, and a style bound to one takes the number', () => {
+  const type = (V, alias = {}, scopes = {}, bound = null, effects = []) => {
+    const r = toDtcgSnapshot({ collections: { T: { modes: ['V'], values: { V }, alias: { V: alias }, scopes } }, effects,
+      textStyles: bound ? [{ name: 'Body', family: 'Inter', weight: 'Medium', size: 100, lineHeight: 1.5, bound }] : [] });
+    return { of: Object.fromEntries(r.collections[0].variables.map((v) => [v.name, DTCG.classify(v)])), style: r.textStyles[0]?.bound.fontWeight };
+  };
+  const b = (name) => ({ collection: 'T', name });
+  let r = type({ 'Panel/width': 500, 'Number/500': 500 }, { 'Panel/width': 'Number/500' }, {}, { fontWeight: b('Number/500') });
+  assert.deepEqual(r, { of: { 'Panel/width': 'dimension', 'Number/500': 'dimension' }, style: null }, 'a binding does not pass up to what else aliases the number; the style takes its own 500');
+  r = type({ 'Thin/Font weight': 100, 'Scale/100': 100 }, { 'Thin/Font weight': 'Scale/100' }, {}, { fontSize: b('Scale/100') });
+  assert.equal(r.of['Scale/100'], 'dimension', 'a number bound as a font size is a length');
+  r = type({ 'Thin/Font weight': 100, 'Scale/100': 100 }, { 'Thin/Font weight': 'Scale/100' }, {}, null, [{ name: 'Lift', layers: [{ bound: { y: b('Scale/100') } }] }]);
+  assert.equal(r.of['Scale/100'], 'dimension', "a number bound as a shadow's offset is a length");
+  r = type({ 'Body/W': 450.5 }, {}, { 'Body/W': ['FONT_WEIGHT'] }, { fontWeight: b('Body/W') });
+  assert.deepEqual(r, { of: { 'Body/W': 'dimension' }, style: null }, 'a style never references a length as its weight');
+  r = type({ Outer: 400, Mid: 400, bodyFontWeight: 400, 'Opacity/Font weight': 40, Styled: 600 }, { Outer: 'Mid', Mid: 'bodyFontWeight' }, { Styled: ['FONT_WEIGHT', 'FONT_STYLE'] });
+  assert.deepEqual(r.of, { Outer: 'fontWeight', Mid: 'fontWeight', bodyFontWeight: 'fontWeight', 'Opacity/Font weight': 'number', Styled: 'fontWeight' });
+  r = type({ Width: 400, Number: 400, 'Font weight': 400, Outer: 400 }, { Width: 'Number', 'Font weight': 'Number', Outer: 'Font weight' }, { Width: ['WIDTH_HEIGHT'] });
+  assert.deepEqual([...new Set(Object.values(r.of))], ['dimension'], 'a chain undone is undone to its end');
 });
 
 test('a text style binds to the variables the snapshot records', () => {

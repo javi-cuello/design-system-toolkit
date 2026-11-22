@@ -176,25 +176,30 @@ export function toDtcgSnapshot(t) {
   const own = (x) => { const n = x && held(x.name), h = n && homes.get(n); return h ? { collection: built(h.includes(x.collection) ? x.collection : h[0]), name: n } : null; };
   // A number is a weight, never a length (400, not 25rem), where Figma scopes it to one, its name says "font weight"
   // (a weight scoped to text or to everything; "weight" alone is also a stroke's) or a text style binds it as one, and
-  // only where every value is a weight and no scope is a length's. It is passed along aliases, to a target only where
-  // all that alias it are weights, and dropped wherever an alias and its target would differ in type.
-  const couldWeigh = new Set(), weighs = new Set();
+  // only where every value is a weight, no scope is a length's and no style binds it as a length. It is passed along
+  // aliases, up from a weight by scope or name alone (a 400 a style binds may be a width's too), down only where all that
+  // alias the target are weights, and dropped wherever an alias and its target would differ in type.
+  const variableAt = (x) => x && byName.get(x.collection)?.get(x.name);
+  const asLength = new Set([...(t.textStyles || []).map((s) => s.bound.fontSize),
+    ...(t.effects || []).flatMap((e) => (e.layers || []).flatMap((l) => Object.values(l.bound || {})))].map((b) => variableAt(own(b))));
+  const couldWeigh = new Set(), weighs = new Set(), byBinding = new Set();
   out.forEach((c, i) => c.variables.forEach((v) => {
     const scopes = (collections[i][1].scopes || {})[v.name] || [];
-    if (v.type !== 'FLOAT' || DTCG.classify(v) !== 'dimension') return;
+    if (v.type !== 'FLOAT' || asLength.has(v) || DTCG.classify(v) !== 'dimension') return;
     if (!scopes.every((s) => ['FONT_WEIGHT', 'FONT_STYLE', 'TEXT_CONTENT', 'ALL_SCOPES'].includes(s))) return;
     if (!Object.values(v.values).every((x) => x?.alias || DTCG.fontWeight(x) !== null)) return;
     couldWeigh.add(v);
-    if (scopes.includes('FONT_WEIGHT') || /(^|[^a-z])font[\s/_-]*weight/i.test(v.name)) weighs.add(v);
+    if (scopes.includes('FONT_WEIGHT') || /font[\s/_-]*weight/i.test(v.name)) weighs.add(v);
   }));
-  const variableAt = (x) => x && byName.get(x.collection)?.get(x.name);
-  for (const s of t.textStyles || []) { const v = variableAt(own(s.bound.fontWeight)); if (couldWeigh.has(v)) weighs.add(v); }
+  for (const s of t.textStyles || []) { const v = variableAt(own(s.bound.fontWeight)); if (couldWeigh.has(v) && !weighs.has(v)) { weighs.add(v); byBinding.add(v); } }
   const links = out.flatMap((c) => c.variables.flatMap((v) => Object.values(v.values).map((x) => [v, variableAt(x?.alias)]).filter(([, to]) => to)));
+  const aliasedBy = new Map();
+  for (const [from, to] of links) aliasedBy.set(to, (aliasedBy.get(to) || new Set()).add(from));
   for (let size = -1; size !== weighs.size;) {
     size = weighs.size;
     for (const [from, to] of links) {
-      if (weighs.has(to) && couldWeigh.has(from)) weighs.add(from);
-      else if (weighs.has(from) && couldWeigh.has(to) && links.every(([f, x]) => x !== to || weighs.has(f))) weighs.add(to);
+      if (weighs.has(to) && !byBinding.has(to) && couldWeigh.has(from)) weighs.add(from);
+      else if (weighs.has(from) && couldWeigh.has(to) && !weighs.has(to) && [...aliasedBy.get(to)].every((f) => weighs.has(f))) weighs.add(to);
     }
   }
   for (let size = -1; size !== weighs.size;) {
@@ -202,7 +207,9 @@ export function toDtcgSnapshot(t) {
     for (const [from, to] of links) if (weighs.has(from) !== weighs.has(to)) { weighs.delete(from); weighs.delete(to); }
   }
   for (const v of weighs) v.font = 'fontWeight';
-  const boundOf = (s) => ({ fontFamily: own(s.bound.fontFamily), fontSize: own(s.bound.fontSize), fontWeight: own(s.bound.fontWeight) });
+  // (a number left a length is no reference for a weight: the style's own weight stands)
+  const asWeight = (b) => { const v = variableAt(b); return v?.type === 'FLOAT' && !weighs.has(v) ? null : b; };
+  const boundOf = (s) => ({ fontFamily: own(s.bound.fontFamily), fontSize: own(s.bound.fontSize), fontWeight: asWeight(own(s.bound.fontWeight)) });
   const textStyles = (t.textStyles || []).map((s) => ({
     name: s.name,
     description: s.description || '',
