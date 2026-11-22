@@ -29,6 +29,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hold, restartWhenStale } from '../shared/stale-self.mjs';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { isFigmaOrigin } from '../shared/origin.mjs';
@@ -106,6 +107,8 @@ function keep(project, kind, payload) {
 const queues = new Map();
 
 function deliver(project, kind, payload) {
+  // work until it ends, queued or running: a stale router waits for it before restarting (stale-self.mjs)
+  const release = hold();
   const file = keep(project, kind, payload);
   const run = async () => {
     console.log(`\n→ ${project.name} (${kind})`);
@@ -129,6 +132,7 @@ function deliver(project, kind, payload) {
   };
   const next = (queues.get(project.name) || Promise.resolve()).then(run, run);
   queues.set(project.name, next.catch(() => 'failed'));
+  next.then(release, release);
   return next;
 }
 
@@ -320,9 +324,9 @@ await Promise.all(['127.0.0.1', '::1'].map((host) => new Promise((done) => {
   });
   s.listen(PORT, host, () => done(host));
 })));
-// what load() cannot make fresh (an .mjs, this file) makes the router restart itself, launchd bringing it back
-const { restartWhenStale } = await import('../shared/stale-self.mjs');
-restartWhenStale(fileURLToPath(import.meta.url), servers);
+// what load() cannot make fresh (an .mjs, this file) makes the router restart itself once no snapshot is being
+// read or delivered, launchd bringing it back with the files on disk; a router run by hand only says so
+restartWhenStale([fileURLToPath(import.meta.url)], { servers, busy: () => held > 0, label: 'com.toolkit.figma-snapshot' });
 
 console.log(`figma-snapshot router on http://localhost:${PORT} (both loopback stacks) — ${list.length} project(s)`);
 for (const p of list) {

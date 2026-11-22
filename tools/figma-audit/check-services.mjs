@@ -68,11 +68,10 @@ export function judge(found, wanted, newest) {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   // Not server.mjs alone: every module it binds once, at start, is as stale as
-  // it is — the files its static imports reach, walked rather than listed, so a
-  // new dependency is covered without anyone remembering to add it. What it
-  // loads per request (rows.mjs, the scanners) arrives by dynamic import and is
-  // rightly not here.
-  const { closure } = await import('../snapshot/unpack.mjs');
+  // it is — the files its imports reach, walked rather than listed, from the
+  // entries bound.mjs names (what it loads by a built path binds its own imports).
+  // A dashboard restarts itself on the same files once idle; this names one
+  // that has not yet (busy, or started by hand).
   // The services run from the main checkout (the launch agents name its path). From a linked worktree,
   // this folder's files were all stamped at checkout, later than every service's start, and every
   // service read as stale (bin/review's worktree, 2026-11-11): read the main checkout's files instead.
@@ -82,7 +81,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const main = join(dirname(common), 'tools', 'figma-audit');
     if (basename(common) === '.git' && existsSync(join(main, 'server.mjs'))) SERVED = main;
   } catch {}
-  const BOUND = closure(join(SERVED, 'server.mjs'));
+  // the same files the dashboards restart on (bound.mjs): what server.mjs loads by a built path is bound too
+  const { importClosure } = await import('../shared/import-closure.mjs');
+  const { boundBy } = await import('./bound.mjs');
+  const BOUND = importClosure(boundBy(SERVED));
   const newest = BOUND.map((f) => ({ f, mtime: statSync(f).mtime })).sort((a, b) => b.mtime - a.mtime)[0];
 
   const wanted = new Map();

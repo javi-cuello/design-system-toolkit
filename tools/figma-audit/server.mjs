@@ -52,6 +52,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
    there is one parser of the log and not one per reader. */
 import contract from "../snapshot/projects.cjs";
 import { isFigmaOrigin } from "../shared/origin.mjs";
+import { hold, held, restartWhenStale } from "../shared/stale-self.mjs";
+import { boundBy } from "./bound.mjs";
 import { decoder, MAX_MESSAGE } from "./frames.mjs";
 // The store's own resolver, so a stored spec becomes a tree here exactly as
 // it does in the docs build. Two resolvers would be two answers.
@@ -132,17 +134,28 @@ if (pairs.length > 1 || ALL) {
   // mode was silently dropped and every child fell back to the default.
   const perChild = new Set(["--data", "--port"]);
   const passthrough = args.filter((a, i) => a !== "--all" && !(perChild.has(a) || perChild.has(args[i - 1])));
+  const kids = new Set();
+  let draining = false;
   const run = (p) => {
     const child = fork(fileURLToPath(import.meta.url), ["--data", p.data, "--port", String(p.port), ...passthrough], { stdio: "inherit" });
-    // a child that dies — a port clash it reports itself, a crash — comes back
-    // after a pause, the way the launch agent would bring the whole service back
-    child.on("exit", (code) => { console.error(`dashboard on ${p.port} exited (${code}); restarting in 5s`); setTimeout(() => run(p), 5000); });
+    kids.add(child);
+    // a child that dies — a port clash it reports itself, a crash, a restart onto changed files — comes back
+    // after a pause, the way the launch agent would bring the whole service back; not while this parent drains
+    child.on("exit", (code) => {
+      kids.delete(child);
+      if (draining) return console.error(`dashboard on ${p.port} exited (${code}); this parent restarts once every child has`);
+      console.error(`dashboard on ${p.port} exited (${code}); restarting in 5s`); setTimeout(() => run(p), 5000);
+    });
   };
+  // this parent binds the same files (discover, the ports, the re-fork): stale, it asks every child to restart once
+  // idle, forks none, and exits when the last has gone, launchd starting the whole service again on the files on disk
+  restartWhenStale(boundBy(HERE), { busy: () => kids.size > 0, label: "com.toolkit.figma-audit",
+    onStale: () => { draining = true; for (const c of kids) { try { c.send({ restartWhenIdle: true }); } catch {} } } });
   for (const p of pairs) run(p);
   if (ALL) {
     const serving = new Set(pairs.map((p) => p.data));
     if (!pairs.length) console.error("figma audit    no project states a port in its project block: nothing to serve yet");
-    setInterval(() => { for (const p of discover()) if (!serving.has(p.data)) { serving.add(p.data); console.log(`figma audit    ${p.label}: new project, serving on ${p.port}`); run(p); } }, 60_000);
+    setInterval(() => { for (const p of discover()) if (!draining && !serving.has(p.data)) { serving.add(p.data); console.log(`figma audit    ${p.label}: new project, serving on ${p.port}`); run(p); } }, 60_000);
   }
   await new Promise(() => {});
 }
@@ -747,7 +760,8 @@ const sameOrigin = (req) => {
   return ALLOWED.has(o);
 };
 
-const server = createServer(async (req, res) => {
+// held(): a request is work until its handler settles, so a stale dashboard restarts only between requests
+const server = createServer(held(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   try {
     // Only requests addressed to this machine: a page on another site that
@@ -1191,7 +1205,7 @@ const server = createServer(async (req, res) => {
   } catch (e) {
     json(res, 500, { error: e.message });
   }
-});
+}));
 
 // The socket needs the same Origin discipline as the HTTP routes, and did not
 // have it. A WebSocket is exempt from the same-origin policy but still SENDS an
@@ -1250,10 +1264,11 @@ server.on("error", (e) => {
 // every route that waits on the plugin carries its own timeout.
 server.requestTimeout = 0;
 server.headersTimeout = 60000;
-// a file this binds at start that changes makes it restart itself, the parent (or launchd) bringing it back
-// with what is on disk: check-services.mjs no longer has to say so
-const { restartWhenStale } = await import("../shared/stale-self.mjs");
-restartWhenStale(fileURLToPath(import.meta.url), [server]);
+// a file this binds that changes (bound.mjs) makes it restart itself once no request, build or upload is in
+// progress and no plugin is connected (a dropped plugin is reopened in Figma by hand: REFERENCE.md), the parent
+// bringing it back with what is on disk; check-services.mjs names one still waiting
+restartWhenStale(boundBy(HERE), { servers: [server], label: "com.toolkit.figma-audit",
+  busy: () => pending.size > 0 || [...plugins.values()].some((e) => !e.socket.destroyed) });
 server.listen(PORT, "127.0.0.1", () => {
   console.log("figma audit      http://127.0.0.1:" + PORT);
   console.log("records          " + AUDIT_DIR + (LEGACY ? " (single record: audit.json)" : "/<library>.json"));
@@ -1518,6 +1533,7 @@ server.listen(PORT, "127.0.0.1", () => {
     let now; try { now = contract.layout(null, label); } catch (e) { now = { error: e.message }; }
     if (now.error) { lastBuildError = `not built: ${now.error}`; return; }
     building = true;
+    const releaseBuild = hold();
     const started = Date.now();
     const env = { ...process.env, DOCS_PROJECT: label };
     delete env.DOCS_OUT;
@@ -1534,6 +1550,7 @@ server.listen(PORT, "127.0.0.1", () => {
       if (finished) return;
       finished = true;
       building = false;
+      releaseBuild();
       if (ok) {
         retried = 0; lastBuildError = null;
         console.log(`docs site      ${label} built in ${((Date.now() - started) / 1000).toFixed(1)}s`);
@@ -1568,6 +1585,7 @@ server.listen(PORT, "127.0.0.1", () => {
     if (!mode) return;
     if (deploying) { redeploy = true; return; }
     deploying = true;
+    const releaseDeploy = hold();
     // launchd's PATH may not hold node, and bin/deploy runs npx.
     const env = { ...process.env, PATH: `${dirname(process.execPath)}:${process.env.PATH || ""}` };
     const child = spawn("sh", [join(HERE, "..", "..", "bin", "deploy"), label, `--${mode}`], { env, stdio: ["ignore", "ignore", "pipe"] });
@@ -1576,7 +1594,7 @@ server.listen(PORT, "127.0.0.1", () => {
     let over = false;
     const end = (ok, why) => {
       if (over) return;
-      over = true; deploying = false;
+      over = true; deploying = false; releaseDeploy();
       if (ok) console.log(`docs site      ${label} published (${mode})`);
       else console.error(`docs site      ${label} publish failed; the published site keeps the last good upload: ${why}`);
       if (redeploy) { redeploy = false; deploy(); }

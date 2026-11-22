@@ -70,8 +70,9 @@ It runs node through a `figma-snapshot` link beside this file, made by
 `install.sh`, so Login Items names it rather than "node". Output goes to
 `~/Library/Logs/toolkit/figma-snapshot.log`, and errors to `figma-snapshot.err`
 beside it, a folder only you can read.
-After changing `router.mjs`, restart it:
-`launchctl kickstart -k gui/$(id -u)/com.toolkit.figma-snapshot`.
+After a change to `router.mjs` or anything it imports, it restarts itself once no
+snapshot is being read or delivered, and launchd brings it back
+([`stale-self.mjs`](../shared/stale-self.mjs)); a router started by hand only says so in its log.
 
 ## Why it exists
 

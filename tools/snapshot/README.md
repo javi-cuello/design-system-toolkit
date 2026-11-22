@@ -4,7 +4,7 @@ A local service that receives a design snapshot from the Figma plugin and stores
 
 ## Status
 
-Working, and run as a macOS login agent. The repo's `install.sh` sets that up, so the router starts with the Mac and restarts if it stops. After changing `router.mjs`, restart it with the `launchctl` line below.
+Working, and run as a macOS login agent. The repo's `install.sh` sets that up, so the router starts with the Mac and restarts if it stops. After a change to `router.mjs` or anything it imports, it restarts itself between snapshots.
 
 ## What it needs
 

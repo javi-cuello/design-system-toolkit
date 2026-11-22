@@ -113,4 +113,19 @@ ok('as a script it gives one verdict', /^dashboards: /.test(out) && (code === 0 
   }
 }
 
+// the files a dashboard restarts on, and check-services judges by, reach every module server.mjs names (bound.mjs):
+// one loaded by a built path is named as an entry, or an edit to it is never served (the review of 943b1545)
+{
+  const { readFileSync } = await import('node:fs');
+  const { basename, dirname } = await import('node:path');
+  const { boundBy } = await import('./bound.mjs');
+  const { importClosure } = await import('../shared/import-closure.mjs');
+  const here = dirname(fileURLToPath(import.meta.url));
+  const reached = new Set(importClosure(boundBy(here)).map((f) => basename(f)));
+  // build.mjs is the docs build, run as its own process: nothing of it is bound here
+  const named = [...readFileSync(`${here}/server.mjs`, 'utf8').matchAll(/["'](?:[\w./-]*\/)?([\w-]+\.(?:mjs|cjs))["']/g)].map((m) => m[1]).filter((f) => f !== 'build.mjs');
+  const missing = [...new Set(named)].filter((f) => !reached.has(f));
+  ok(`every module server.mjs names is in what it restarts on${missing.length ? ` (missing: ${missing.join(', ')})` : ''}`, named.length > 10 && !missing.length);
+}
+
 console.log(`${n}/${n} passed`);

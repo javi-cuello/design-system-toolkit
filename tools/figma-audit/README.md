@@ -61,6 +61,7 @@ node tools/figma-audit/check-services.mjs
 | `score-model.mjs` | the score arithmetic |
 | `judge-rules.mjs` | what the judge is told |
 | `breaking.mjs` | files breaking changes |
+| `bound.mjs` | the files a dashboard restarts on |
 | `audit-session.mjs` | the `bin/audit` path |
 | `stages.mjs` | reads the audit's list of stages, and holds the one loop every runner runs it with |
 | `lucide.mjs` | the icon importer's Lucide release |
