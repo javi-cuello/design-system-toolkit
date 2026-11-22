@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync, execFileSync } from 'node:child_process';
+import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -174,6 +174,24 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.match(r.out, /was red on main at .*: commit a fix/, r.out);
   assert.equal(runs(), n0, 'no check');
   assert.equal(queued(main).length, 0, 'not queued'); }
+
+// (n) a waiter whose branch another holder lands ends then, not when the lock comes free (2026-11-22: an hour after)
+{ const D = wt('n7'); fs.writeFileSync(path.join(D, 'n7.txt'), 'n7\n'); git(D, 'add', '.'); git(D, 'commit', '-qm', 'n7');
+  const other = spawn(process.execPath, [path.join(HERE, 'lock.mjs'), '--run', 'another land', '--', 'sleep', '60'], { stdio: 'ignore', env: process.env });
+  for (let i = 0; i < 50 && !fs.existsSync(path.join(process.env.TOOLKIT_LOCK_DIR, 'toolkit-measure.holder.json')); i++) await new Promise((r) => setTimeout(r, 100));
+  await new Promise((r) => setTimeout(r, 500));
+  const sha = git(D, 'rev-parse', 'HEAD'), t0 = Date.now(), n0 = runs();
+  // the other holder lands it: off the queue, outcome kept
+  setTimeout(() => { const q = path.join(main, '.git', 'land-queue');
+    fs.rmSync(path.join(q, 'worktree-n7'), { force: true });
+    fs.writeFileSync(path.join(q, '.outcomes', `worktree-n7@${sha}`), JSON.stringify({ outcome: 'landed', at: Date.now() })); }, 1000);
+  r = await quiet(() => land(D));
+  const alive = other.exitCode === null; other.kill();
+  assert.equal(r.code, 0, r.out);
+  assert.ok(alive, 'the other holder still held the lock');
+  assert.ok(Date.now() - t0 < 10000, `ended within seconds of being landed: ${Date.now() - t0} ms`);
+  assert.equal(runs(), n0, 'no check of its own');
+  assert.equal(fs.readdirSync(process.env.TOOLKIT_LOCK_DIR).filter((f) => f.startsWith('want-')).length, 0, 'no waiter note left'); }
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');

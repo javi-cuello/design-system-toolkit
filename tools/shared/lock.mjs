@@ -106,12 +106,15 @@ export async function yieldIfWanted(what, { say = (l) => console.error(l), pause
 }
 /* Wait for the lock (saying who holds it, then each minute), lower this process's priority, and hold it until release()
    or this process ends. Resolves false when it could not be taken at all: the run goes ahead unlocked, said. */
-export function hold(what, { say = (l) => console.error(l), first = false } = {}) {
+/* stop: asked every 2 s while waiting; once true, the wait ends unheld and hold resolves null (bin/land: another holder
+   landed this branch, so waiting on for the lock would only make holders yield to no one: 2026-11-22, an hour). */
+export function hold(what, { say = (l) => console.error(l), first = false, stop = null } = {}) {
   if (process.env.TOOLKIT_LOCK_HELD) return Promise.resolve(true);
   try { fs.mkdirSync(lockDir(), { recursive: true }); } catch { /* the open says it */ }
   return new Promise((resolve) => {
-    let timer = null, buf = '', done = false;
-    const finish = (ok, why) => { if (done) return; done = true; clearInterval(timer); unwant(); if (!ok) { say(`measuring lock: ${why}; running without it`); child = null; } resolve(ok); };
+    let timer = null, poll = null, buf = '', done = false;
+    const finish = (ok, why) => { if (done) return; done = true; clearInterval(timer); clearInterval(poll); unwant();
+      if (ok === null) { try { child.kill(); } catch { /* gone */ } child = null; resolve(null); return; } if (!ok) { say(`measuring lock: ${why}; running without it`); child = null; } resolve(ok); };
     const note = JSON.stringify({ pid: process.pid, what, session: process.env.CLAUDE_CODE_SESSION_ID || '', at: Date.now() });
     child = spawn('python3', ['-c', HOLD, note, first ? '' : lockDir(), infoFile(0), ...order(first).map((i) => [lockFile(i), infoFile(i)]).flat()], { stdio: ['pipe', 'pipe', 'ignore'] });
     child.on('error', (e) => finish(false, `python3 could not run (${e.code || e.message})`));
@@ -130,6 +133,7 @@ export function hold(what, { say = (l) => console.error(l), first = false } = {}
             if (h) say(`measuring lock: waiting for ${describe(h)}`); else if (l) say(`measuring lock: slot 0 is kept for ${describe(l)}`);
           };
           tell(); timer = setInterval(tell, 60000);
+          if (stop) poll = setInterval(() => { if (stop()) finish(null); }, 2000);
         } else if (l === 'nolock') finish(false, `cannot open ${lockFile()}`);
         else if (l.startsWith('held')) {
           slotHeld = l.slice(5) || null;

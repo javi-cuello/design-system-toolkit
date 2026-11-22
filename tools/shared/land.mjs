@@ -214,7 +214,9 @@ export async function land(from, target) {
   const outer = !!process.env.TOOLKIT_LOCK_HELD;
   const state = { moved: 0 };
   for (;;) {
-    await hold(`bin/land ${branch}`, { first: true });
+    // landed (or dropped) by another holder while this one waits: read it now, not after their checks
+    const gone = () => readJSON(qfile(main, branch))?.sha !== sha;
+    if (await hold(`bin/land ${branch}`, { first: true, stop: gone }) === null) { const o = settled(main, { branch, sha }); return o === 'landed' ? 0 : 1; }
     let out;
     try { out = await step(main, { branch, sha }, state); } finally { if (!outer) release(); }
     out ||= settled(main, { branch, sha }); // its own landing is read without another turn of the lock
