@@ -343,6 +343,14 @@ export function cornerOf(css, w, h) {
   const radius = pct === null ? px(css) : px((pct / 100) * Math.min(w, h));
   return { radius, ...((pct === null ? radius * 2 > Math.max(w, h) : pct >= 50) && { full: true }) };
 }
+/* A box's four computed corners (top-left, top-right, bottom-right, bottom-left: Figma's order, and CSS's, which to-code
+   writes a radius per corner in) as the contract says them: one radius where all four agree (cornerOf's), none where
+   that one is 0; else the four, each in pixels, a full one cornerOf's marked object. `corner`: cornerOf, passed in so
+   the page runs the one rule. Tested by test-from-code.mjs. */
+export function cornersOf(cs, w, h, corner) {
+  if (cs.every((c) => c === cs[0])) return parseFloat(cs[0]) ? corner(cs[0], w, h) : {};
+  return { radius: cs.map((c) => { const k = corner(c, w, h); return k.full ? k : k.radius; }) };
+}
 
 const FIELDS = { background: ['background'], text: ['color'], icon: ['fill'], stroke: ['stroke'], space: ['gap', 'padding'], radius: ['radius'], width: ['strokeWidth'], fontSize: ['fontSize'] };
 
@@ -1632,8 +1640,8 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc]) => {
-        const corner = new Function(`return ${cornerSrc}`)();
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc]) => {
+        const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)();
         // a colour that paints nothing: fully transparent, whatever its channels
@@ -1792,7 +1800,7 @@ async function main() {
             if (!clear(s.backgroundColor)) e.background = s.backgroundColor;
             // its background's layers above the colour (a gradient, a colour laid over another): read back as Figma's fills below
             if (s.backgroundImage && s.backgroundImage !== 'none') { const r = n.getBoundingClientRect(); e.paint = { image: s.backgroundImage, size: s.backgroundSize, repeat: s.backgroundRepeat, w: r.width, h: r.height }; }
-            if (px(s.borderTopLeftRadius)) { const r = n.getBoundingClientRect(); Object.assign(e, corner(s.borderTopLeftRadius, r.width, r.height)); }
+            { const r = n.getBoundingClientRect(); Object.assign(e, corners([s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius, s.borderBottomLeftRadius], r.width, r.height, corner)); }
             // a corner's shape where it is not the plain circle, on whichever corner says one (rules.mjs reads it back as
             // smoothing; to-code writes it on all four, a square corner included)
             { const sh = ['top-left', 'top-right', 'bottom-right', 'bottom-left'].map((c) => s.getPropertyValue(`corner-${c}-shape`)).find((v) => v && v !== 'round'); if (sh) e.cornerShape = sh; }
@@ -1865,7 +1873,7 @@ async function main() {
         // placed by CSS order before the markup's (a variant that reverses its parts, to-code's `order`), ties as written
         for (const xs of Object.values(byParent)) xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).forEach(([e], i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -2151,7 +2159,11 @@ async function main() {
         // (a fully round corner is the library's fullest radius token only where the code names a token there: a raw
         // 100px the design draws raw stays its number, never a token found for it)
         const namesOne = async () => { for (const p of ['border-top-left-radius', 'border-radius']) if ((await authoredVars(L.tab, `[data-contract-id="${id}"]`, p, styles)).length) return true; return false; };
-        if (x.radius) x.radius = x.full ? ((await namesOne()) && fullest()) || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
+        if (Array.isArray(x.radius)) {
+          // a radius per corner (cornersOf), each corner its own token as to-code writes each (css.mjs), a square one 0
+          const CORNER = ['border-top-left-radius', 'border-top-right-radius', 'border-bottom-right-radius', 'border-bottom-left-radius'];
+          x.radius = await Promise.all(x.radius.map(async (c, i) => (typeof c === 'object' ? ((await namesOne()) && fullest()) || c.radius : c === 0 ? 0 : await tok('radius', c, `${id}.radius`, [CORNER[i], 'border-radius']))));
+        } else if (x.radius) x.radius = x.full ? ((await namesOne()) && fullest()) || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
         if (x.border) {

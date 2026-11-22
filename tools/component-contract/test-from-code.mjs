@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
-import { drawn as toCodeDrawn } from './to-code.mjs';
+import { drawn as toCodeDrawn, toCss } from './to-code.mjs';
 import { judge } from '../parity/external.mjs';
 
 let n = 0;
@@ -140,6 +140,16 @@ ok('an emphasis is not a category: values whose own word is the token\'s leaf ke
 ok('a percentage radius is of the box, not pixels: 50% on a 120px avatar is a full round of 60, 10% a corner of 12',
   JSON.stringify(cornerOf('50%', 120, 120)) === '{"radius":60,"full":true}' && JSON.stringify(cornerOf('10%', 120, 120)) === '{"radius":12}'
   && cornerOf('999px', 32, 32).full === true && !cornerOf('8px', 32, 32).full);
+{
+  // the corners to-code writes one per corner (top-left, top-right, bottom-right, bottom-left: Figma's order and CSS's)
+  // read back in that order, a square corner 0, a full one marked; four alike are one radius, as the design says them
+  const written = (toCss({ contract: 1, component: 'split', props: {}, anatomy: { root: { kind: 'container', radius: [0, 'Radius/M', 'Radius/M', 0] } }, variants: [] }, 'split').match(/border-radius: ([^;]+);/) || [])[1] || '';
+  const px = { 'var(--radius-m)': '8px' }, cs = written.split(' ').map((v) => px[v] || (v === '0' ? '0px' : v));
+  ok('a radius per corner is read per corner, in the order to-code writes it; four alike stay one radius',
+    written === '0 var(--radius-m) var(--radius-m) 0' && JSON.stringify(cornersOf(cs, 32, 32, cornerOf)) === '{"radius":[0,8,8,0]}'
+    && JSON.stringify(cornersOf(['0px', '999px', '999px', '0px'], 32, 32, cornerOf)) === '{"radius":[0,{"radius":999,"full":true},{"radius":999,"full":true},0]}'
+    && JSON.stringify(cornersOf(['8px', '8px', '8px', '8px'], 32, 32, cornerOf)) === '{"radius":8}' && JSON.stringify(cornersOf(['0px', '0px', '0px', '0px'], 32, 32, cornerOf)) === '{}');
+}
 
 // a governed mapping, read with nothing opened: the engine's expanded target and the component's bridge
 {
