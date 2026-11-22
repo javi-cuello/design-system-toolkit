@@ -10,6 +10,15 @@ node tools/project-check/check.mjs --repo <dir> [--no-browser] [--plan]
 
 This runs every gate the toolkit holds a project to, in one entry. A gate a project cannot feed is RED. It stays RED until the project supplies the fact, or rules it out in `check.without`.
 
+Run from a git worktree of a project, it checks that worktree, not the main checkout:
+
+- It finds the project through the worktree's main checkout.
+- It sets `TOOLKIT_WORKTREE`, so every tool it runs reads the worktree's files.
+- It gives the app a free port, so parity never measures the main checkout's server.
+- It copies the main checkout's accepted parity measurements once, as they are not in git.
+- It reads the main checkout's docs site while the project folder is unchanged.
+- Without an upstream branch it counts commits from `origin`'s default branch.
+
 | Option | What it does |
 |---|---|
 | `--plan` | runs only the cheap gates and lists the rest. `bin/closing` reads it. |

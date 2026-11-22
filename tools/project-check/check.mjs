@@ -38,6 +38,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import net from 'node:net';
 import { spawnSync, execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { pushHookProblem } from '../shared/push-hook.mjs';
@@ -65,7 +66,29 @@ const { tokenFor } = req('../snapshot/version.cjs');
 const T = (p) => path.join(TOOLKIT, p);
 const git = (args) => { try { return execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
 
-const label = (contract.projects().list.find((p) => p.repo && realPath(p.repo) === REPO) || {}).name;
+let label = (contract.projects().list.find((p) => p.repo && realPath(p.repo) === REPO) || {}).name;
+// a git worktree of a registered project is that project: found by its main checkout, and every
+// tool the gates run is pointed at the worktree (projects.cjs worktreeOf), so none measures the main checkout
+if (!label) {
+  const common = git(['rev-parse', '--path-format=absolute', '--git-common-dir']);
+  const main = common ? realPath(path.dirname(common)) : null;
+  const of = main && main !== REPO && contract.projects().list.find((p) => p.repo && realPath(p.repo) === main);
+  if (of) {
+    label = of.name; process.env.TOOLKIT_WORKTREE = `${label}=${REPO}`;
+    // parity measures whatever answers on the app's port, the main checkout's server included: a worktree takes a free one
+    if (!process.env.PARITY_APP_PORT) {
+      const srv = net.createServer();
+      await new Promise((ok) => srv.listen(0, '127.0.0.1', ok));
+      process.env.PARITY_APP_PORT = String(srv.address().port);
+      await new Promise((ok) => srv.close(ok));
+    }
+    // parity's accepted measurements are gitignored, so a new worktree has none: it starts from the main
+    // checkout's last accepted run, copied once and never written back
+    const dir = ((config.parity || {}).baseline || {}).dir;
+    const from = dir && path.join(main, dir, 'accepted'), to = dir && path.join(REPO, dir, 'accepted');
+    if (from && fs.existsSync(from) && !fs.existsSync(to)) fs.cpSync(from, to, { recursive: true });
+  }
+}
 // where the snapshot stored things: the canonical layout where `paths` is silent
 const where = req('../snapshot/store.cjs').paths(REPO, config.paths || {});
 
@@ -77,12 +100,23 @@ if (!noBrowser && BASE && C.renders) {
   if (hit === null) noBrowser = `nothing a render follows changed since ${BASE.slice(0, 10)}`;
 }
 
-const upstream = git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
+// a branch with no upstream (a worktree's, before its first push) counts from origin's default branch
+const origin = ['origin/HEAD', 'origin/main'].find((r) => git(['rev-parse', '--verify', '-q', `refs/remotes/${r}`]));
+const upstream = git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']) || origin || '';
 const range = BASE ? `${BASE}..HEAD` : upstream ? `${upstream}..HEAD` : null;
 
 /* Each gate: what it needs (null when fed, else the missing fact) and how it runs. */
 const V = C.validate || {};
-const site = label ? contract.layout(null, label).site : null;
+let site = label ? contract.layout(null, label).site : null;
+// the docs site is built in the main checkout only; a worktree whose project folder is the same commit's
+// tree as the main checkout's reads that build, and one that changed its folder has none until it is rebuilt
+if (site && process.env.TOOLKIT_WORKTREE && !fs.existsSync(path.join(site, 'api/index.json'))) {
+  const main = realPath(path.dirname(git(['rev-parse', '--path-format=absolute', '--git-common-dir'])));
+  const rel = path.relative(REPO, contract.layout(null, label).projectDir);
+  const tree = (dir) => { try { return execFileSync('git', ['-C', dir, 'rev-parse', `HEAD:${rel}`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
+  const clean = (dir) => !git(['status', '--porcelain', '--', rel]) && !execFileSync('git', ['-C', dir, 'status', '--porcelain', '--', rel], { encoding: 'utf8' }).trim();
+  if (tree(REPO) && tree(REPO) === tree(main) && clean(main)) site = path.join(main, path.relative(REPO, site));
+}
 // a code-only project: the gates that read a snapshot or a Figma file do not apply to it
 const noDesign = () => (label && contract.layout(null, label).design === 'none' ? 'no design' : null);
 const changedCode = () => {

@@ -78,4 +78,48 @@ console.log('ok the validate gate asks where the system\'s own code is');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   console.log('ok a code-only project: the snapshot and Figma gates are not applicable, the code gates run; with a design, unchanged');
 }
-console.log('4/4 passed');
+// a git worktree of a project is that project, measured in the worktree: its home, its repo and its
+// commits, never the main checkout's (22 Nov: a project's worktrees read "not a registered project")
+{
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'worktree-')));
+  const code = path.join(dir, 'projects', 'acme'), home = path.join(code, 'figma-design-system');
+  const remote = path.join(dir, 'origin.git'), wt = path.join(code, '.claude', 'worktrees', 'w');
+  const git = (cwd, ...a) => spawnSync('git', ['-C', cwd, ...a], { encoding: 'utf8' });
+  fs.mkdirSync(path.join(home, 'round-trip'), { recursive: true });
+  fs.writeFileSync(path.join(home, 'design-system-context.md'), '# acme\n\n```json snapshot-routing\n'
+    + JSON.stringify({ repo: code, files: { library: [{ key: 'KEYA', id: 'IDA', roles: ['components', 'tokens'] }] } }) + '\n```\n');
+  fs.writeFileSync(path.join(home, 'round-trip', 'accepted.json'), '{}');
+  fs.writeFileSync(path.join(code, 'snapshot.config.json'), JSON.stringify({ toolkit: path.join(HERE, '../..'), project: 'acme', check: { validate: { system: ['lib/'] } }, parity: { baseline: { dir: 'measured' } } }));
+  fs.writeFileSync(path.join(code, '.gitignore'), '.claude/\nmeasured/\n');
+  fs.mkdirSync(path.join(code, 'measured', 'accepted'), { recursive: true }); fs.writeFileSync(path.join(code, 'measured', 'accepted', 'components.json'), '{"a":1}');
+  git(dir, 'init', '-q', '--bare', remote);
+  git(code, 'init', '-q', '-b', 'main'); git(code, 'config', 'user.email', 'check@localhost'); git(code, 'config', 'user.name', 'check');
+  git(code, 'add', '.'); git(code, 'commit', '-qm', 'base'); git(code, 'remote', 'add', 'origin', remote); git(code, 'push', '-q', 'origin', 'main');
+  git(code, 'worktree', 'add', '-q', '-b', 'work', wt, 'origin/main');
+  // the worktree differs from the main checkout in one thing a gate reads
+  fs.rmSync(path.join(wt, 'figma-design-system', 'round-trip', 'accepted.json'));
+  const env = { ...process.env, TOOLKIT_PROJECTS_ROOT: path.join(dir, 'projects') };
+  const plan = (repo) => spawnSync(process.execPath, [path.join(HERE, 'check.mjs'), '--repo', repo, '--plan'], { encoding: 'utf8', env }).stdout;
+  const line = (out, g) => out.split('\n').find((l) => g.test(l)) || '';
+  try {
+    const main = plan(code), work = plan(wt);
+    assert.match(line(main, /a component read back/), /runs/, main);
+    assert.doesNotMatch(work, /not a registered project/, work);
+    assert.match(line(work, /a component read back/), /no accepted round-trip counts/, 'the worktree is measured, not the main checkout\n' + work);
+    assert.equal(fs.readFileSync(path.join(wt, 'measured', 'accepted', 'components.json'), 'utf8'), '{"a":1}', 'a worktree starts from the main checkout\'s accepted measurements');
+    assert.doesNotMatch(work, /no upstream branch/, 'a branch with no upstream counts from origin\'s default branch\n' + work);
+    // the built docs site exists in the main checkout only: a worktree reads it while its project folder matches
+    fs.mkdirSync(path.join(home, 'site', 'api'), { recursive: true }); fs.writeFileSync(path.join(home, 'site', 'api', 'index.json'), '{}');
+    fs.writeFileSync(path.join(code, '.gitignore'), '.claude/\nfigma-design-system/site/\n'); git(code, 'commit', '-qam', 'ignore the site'); git(code, 'push', '-q', 'origin', 'main');
+    git(wt, 'checkout', '-q', 'figma-design-system'); git(wt, 'merge', '-q', '--ff-only', 'origin/main');
+    assert.match(line(plan(code), /changed code uses/), /\bok\b|runs/, 'the main checkout reads its build');
+    assert.match(line(plan(wt), /changed code uses/), /\bok\b|runs/, 'a worktree whose folder matches reads the main checkout\'s build');
+    fs.writeFileSync(path.join(wt, 'figma-design-system', 'design-system-context.md'), fs.readFileSync(path.join(home, 'design-system-context.md'), 'utf8') + '\nchanged\n');
+    assert.match(line(plan(wt), /changed code uses/), /no built docs site/, 'a worktree that changed its folder does not');
+    const seen = spawnSync(process.execPath, ['-e', `const c=require(${JSON.stringify(path.join(HERE, '../snapshot/projects.cjs'))});const l=c.layout(null,'acme');console.log(l.projectDir+'|'+l.repo)`],
+      { encoding: 'utf8', env: { ...env, TOOLKIT_WORKTREE: `acme=${wt}` } }).stdout.trim();
+    assert.equal(seen, `${path.join(wt, 'figma-design-system')}|${wt}`, 'under TOOLKIT_WORKTREE a tool resolves the project to the worktree');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  console.log('ok a worktree of a project runs its gates, measured in the worktree');
+}
+console.log('5/5 passed');

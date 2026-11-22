@@ -47,9 +47,20 @@ const CONTEXT = 'design-system-context.md';
 /** The folder holding a project's design-system files: `<label>/figma-design-system`, or a system's folder inside one (`<repo>-<system>`). */
 function homeOf(label) {
   const direct = path.join(root(), label, HOME);
-  if (fs.existsSync(path.join(direct, CONTEXT))) return direct;
-  const nested = homes().find((h) => h.name === label);
-  return nested ? nested.home : direct;
+  const nested = fs.existsSync(path.join(direct, CONTEXT)) ? null : homes().find((h) => h.name === label);
+  const home = nested ? nested.home : direct;
+  const w = worktreeOf(label), repo = repoDirOf(home);
+  return w && repo ? path.join(w, path.relative(repo, home)) : home;
+}
+/*
+ * A git worktree stands in for its project: TOOLKIT_WORKTREE="<label>=<folder>",
+ * which tools/project-check sets for the gates it runs from one, so every lookup
+ * of that label reads the worktree's home and repo, never the main checkout's.
+ */
+function worktreeOf(label) {
+  const v = process.env.TOOLKIT_WORKTREE || '';
+  const i = v.indexOf('=');
+  return i > 0 && v.slice(0, i) === label ? v.slice(i + 1) : null;
 }
 /**
  * The label a home folder belongs to: its repo's name, or `<repo>-<system>` for
@@ -388,7 +399,8 @@ function projects(projectsDir) {
       continue;
     }
     // `design` "none": a code-only project, listed like any other; its routing block claims no file
-    list.push({ name: entry.name, home: entry.home, repo: route.repo, doc, files: route.files, design: project(doc).design || 'figma' });
+    const w = worktreeOf(entry.name), home = w ? homeOf(entry.name) : entry.home;
+    list.push({ name: entry.name, home, repo: w || route.repo, doc: path.join(home, CONTEXT), files: route.files, design: project(doc).design || 'figma' });
   }
   return { list, errors };
 }
@@ -1063,9 +1075,10 @@ function layout(projectsDir, label) {
   if (!route.repo) {
     return { ...base, repo: null, files: route.files, figmaKey: figmaKey(route.files.library), paths: paths(path.join(home, 'snapshot')) };
   }
-  const where = locate(route.repo);
+  const repo = worktreeOf(label) || route.repo;
+  const where = locate(repo);
   if (where.error) return { ...base, error: where.error };
-  return { ...base, repo: route.repo, files: route.files, figmaKey: figmaKey(route.files.library), paths: paths(route.repo, where.paths) };
+  return { ...base, repo, files: route.files, figmaKey: figmaKey(route.files.library), paths: paths(repo, where.paths) };
 }
 
 /**
