@@ -74,9 +74,10 @@ ok('Figma\'s rotation (counter-clockwise) is CSS\'s rotate the other way: 90 →
   {
     // an odd room on Figma's pixel grid (a 24 spinner in a button 61 wide: 19 and 18) is centred, by either way of saying it
     const at = (absolute, box) => Object.fromEntries(declarations({ kind: 'instance', position: 'absolute', constraints: { horizontal: 'center', vertical: 'center' }, absolute, width: box ? 24 : 'hug', height: box ? 24 : 'hug' }, { holds: false, row: true, box }, names).decls);
-    ok('centred in an odd room, a whole pixel either side is the middle; a whole pixel off, or a half that is no pixel-grid edge, is kept',
-      at({ x: 19, y: 8, end: 18, bottom: 9 })['inset-inline-start'] === '50%' && at({ x: 19, y: 8, end: 18, bottom: 9 })['inset-block-start'] === '50%'
-      && at({ x: 19, y: 8 }, { width: 61, height: 41 })['inset-inline-start'] === '50%'
+    ok('centred in an odd room, the pixel Figma rounds up to is the middle; rounded the other way, said by sizes alone, a pixel off or no whole edge, it is kept',
+      at({ x: 19, y: -4, end: 18, bottom: -5 })['inset-inline-start'] === '50%' && at({ x: 19, y: -4, end: 18, bottom: -5 })['inset-block-start'] === '50%'
+      && at({ x: 18, y: 8, end: 19, bottom: 8 })['inset-inline-start'] === 'calc(50% - 0.0313rem)'
+      && at({ x: 19, y: 8 }, { width: 61, height: 41 })['inset-inline-start'] === 'calc(50% + 0.0313rem)'
       && at({ x: 20, y: 8, end: 18, bottom: 8 })['inset-inline-start'] === 'calc(50% + 0.0625rem)' && at({ x: 19.5, y: 8, end: 18.5, bottom: 8 })['inset-inline-start'] !== '50%');
   }
   const s = back({ horizontal: 'stretch', vertical: 'max' }, { x: 0, y: 228, end: 0, bottom: 0 });

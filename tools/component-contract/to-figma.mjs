@@ -71,7 +71,8 @@ function room(x) {
    far one, which derive writes so code can centre it, follows from the sizes). Where the sides pin an axis
    differently, the constraints row is the difference and that axis's offsets are not repeated. Tested by
    test-to-figma.mjs. */
-function pinned(x, other) {
+// (`design`: x is a design's, on Figma's pixel grid: centreOffset)
+function pinned(x, other, design) {
   const out = { ...x };
   for (const [id, e] of Object.entries(x)) {
     if (!e || !e.absolute || !e.constraints) continue;
@@ -87,7 +88,7 @@ function pinned(x, other) {
       else if (to === 'center') {
         const num = (a) => !!a && typeof a[near] === 'number' && typeof a[far] === 'number';
         if (num(at) && num((other[id] || {}).absolute)) {
-          at[`${near}FromCentre`] = centreOffset(at[near], at[far]);
+          at[`${near}FromCentre`] = design ? centreOffset(at[near], at[far]) : +((at[near] - at[far]) / 2).toFixed(2);
           // and the room about it, near + far (its parent's size less its own), where no other row says that difference:
           // neither its own size nor its parent's differs as written (a 24 icon centred alike in a state layer that fills,
           // 40 tall in Figma, 44 in code); a size that differs is that size's row alone
@@ -325,6 +326,7 @@ export function inWordsOf(library, drawn) {
 }
 
 export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false } = {}) {
+  const design = library.code?.from !== 'code';
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
   let adds = 0; // every row added, a repeat too (diff reads it to tell whether a component differed)
@@ -378,7 +380,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
     const A = expand(library, { ...variantDefaults(library), ...c });
     const a = same(A), b = same(ownInPlaced(A, expand(drawn, { ...variantDefaults(drawn), ...theirs }), mains, whole));
-    diff(unswapped(pinned(ranked(a, b), b), b), unswapped(pinned(ranked(b, a), a), a), '');
+    diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));

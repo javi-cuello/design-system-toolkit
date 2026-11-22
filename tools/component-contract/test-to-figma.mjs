@@ -340,6 +340,10 @@ delete globalThis.figma;
     ok('centred in an odd room on the pixel grid (19 and 18) compares as centred; two units of room off the middle does not',
       !roundTrip(placed('fill', mid, { x: 19, y: 4, end: 18, bottom: 4 }), placed('fill', mid, { x: 18.5, y: 4, end: 18.5, bottom: 4 })).rows.length
       && roundTrip(placed('fill', mid, { x: 20, y: 4, end: 17, bottom: 4 }), placed('fill', mid, { x: 18.5, y: 4, end: 18.5, bottom: 4 })).rows.length === 1);
+    ok('only the design is on the pixel grid: code that draws the half pixel, or a reading of code it is compared with, keeps it',
+      roundTrip(placed('fill', mid, { x: 18.5, y: 4, end: 18.5, bottom: 4 }), placed('fill', mid, { x: 19, y: 4, end: 18, bottom: 4 })).rows.length === 1
+      && roundTrip({ ...placed('fill', mid, { x: 19, y: 4, end: 18, bottom: 4 }), code: { from: 'code' } }, placed('fill', mid, { x: 18.5, y: 4, end: 18.5, bottom: 4 })).rows.length === 1
+      && roundTrip(placed('fill', mid, { x: 18, y: 4, end: 19, bottom: 4 }), placed('fill', mid, { x: 18.5, y: 4, end: 18.5, bottom: 4 })).rows.length === 1);
     ok('a part centred in a parent of fixed size is one row where it moves, its far edge following from the sizes (not a second)', roundTrip(placed(100, mid, { x: 40, y: 4, end: 40, bottom: 4 }), placed(100, mid, { x: 30, y: 4, end: 50, bottom: 4 })).rows.length === 1);
     ok('a part centred in a parent of fixed size, or one that fills, keeps its offset', roundTrip(placed(100, mid, { x: 40, y: 4 }), placed(100, mid, { x: 30, y: 4 })).rows.length === 1 && roundTrip(placed('fill', mid, { x: 10, y: 4 }), placed('fill', mid, { x: 60, y: 4 })).rows.length === 1);
     const foot = { horizontal: 'min', vertical: 'max' };
