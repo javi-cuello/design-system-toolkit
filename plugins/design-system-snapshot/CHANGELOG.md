@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.82.0] - 2026-11-22
+### Added
+- **A text with no style records its size and face** (`fontSize`, `fontFamily`, `fontStyle`). A style names them; a text without one said neither, so the contract could not hold them and code drew its browser's 16px where 12px was drawn. A text of several styles records none, as before.
+
 ## [0.81.3] - 2026-11-22
 ### Fixed
 - **A checkbox's or switch's own name reads in text colour.** FigUI3 greys every label, so a control's name read as disabled; the shared frame (ui-base v5) corrects it for every plugin. Nothing in this plugin shows it today: none of its checkboxes or switches carries its own label.

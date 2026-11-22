@@ -274,4 +274,14 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("…and the tokens payload a snapshot sends", facts.tokens && facts.tokens._meta.plugin === VERSION && typeof facts.tokens.collections === "object");
 }
 
+// 2026-11-22: a text with no style recorded no size or face, so code drew its
+// browser's 16px where 12px was drawn; a styled text's are its style's.
+{
+  const text = (textStyleId) => ({ name: "Label", type: "TEXT", width: 30, height: 16, x: 0, y: 0, characters: "Label", textStyleId, textAlignHorizontal: "LEFT", fontSize: 12, fontName: { family: "Inter", style: "Semi Bold" }, lineHeight: { unit: "PIXELS", value: 16 }, letterSpacing: { unit: "PIXELS", value: 0 }, boundVariables: {} });
+  const bare = await walk(text(""), 1);
+  ok("a text with no style records its size and face", bare.textStyle === "literal" && bare.fontSize === 12 && bare.fontFamily === "Inter" && bare.fontStyle === "Semi Bold");
+  const several = await walk({ ...text(Symbol("mixed")), fontSize: Symbol("mixed"), fontName: Symbol("mixed") }, 1);
+  ok("…a text of several styles records none", several.textStyle === "mixed" && !("fontSize" in several) && !("fontFamily" in several));
+}
+
 console.log(n + "/" + n + " passed");

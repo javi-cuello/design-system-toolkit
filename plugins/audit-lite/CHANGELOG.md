@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.4] - 2026-11-22
+### Changed
+- **Carries the snapshot plugin's walk at 0.82.0**: a text with no style records its size and face. No check reads them yet.
+
 ## [0.14.3] - 2026-11-22
 ### Fixed
 - **A checkbox's or switch's own name reads in text colour.** FigUI3 greys every label, so the check names read as disabled; the shared frame (ui-base v5) corrects it for every plugin.

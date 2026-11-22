@@ -16,7 +16,7 @@
  * normal (css-flexbox-1 §8.3); a block-level box's auto width fills its container, its auto height is its content's
  * (css2 §10.3.3, §10.6.3); an inline-level box (inline-flex) shrinks to fit.
  */
-import { splitTop, parseGradient, COLOUR } from '../parity/values.mjs';
+import { splitTop, parseGradient, COLOUR, WEIGHTS, figmaWeight, weightName } from '../parity/values.mjs';
 import { stopPositions } from '../parity/schema.mjs';
 
 /* A colour written as itself (no variable): css.mjs writes it so, and the editor's preview draws it so. */
@@ -136,6 +136,69 @@ export function linesFromCss(own) {
   if (word(own['text-overflow']) === 'ellipsis' && /nowrap/.test(word(own['white-space'])) && /hidden|clip/.test(word(own.overflow))) return { maxLines: 1, truncate: true };
   return null;
 }
+
+/* A text no style names, said by its values in the one form both sides write and read: the snapshot's own word for
+   one, `literal`, then `size/lineHeight weight`, in px, a line height of 0 the font's own (Figma's Auto, CSS's
+   normal), the weight by its DTCG name (parity/values.mjs WEIGHTS), then ` italic` where it slants, then its family
+   (`literal 14/20 semibold italic IBM Plex Sans`). The word leads because a style's name may be all the rest
+   (`14/20 Regular`): without it that style was taken for values and lost its var(). From Figma, the
+   snapshot's own fields (0.82.0 on: fontSize, fontFamily, fontStyle; lineHeight as `16`, `150%` or `auto`); null where
+   it holds no size, face or line height, or a weight the table has no name for. A weight code computes that the table has no name
+   for is said as its number, which no form parses: the text is then a value no writer can write, said unread. */
+export const typeValue = (t) => `literal ${t.size}/${t.lineHeight} ${t.weight}${t.italic ? ' italic' : ''}${t.family ? ` ${t.family}` : ''}`;
+export function typeOfValue(v) {
+  const m = /^literal (\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?) ([a-z]+)( italic)?(?: (.+))?$/.exec(word(v));
+  return m && Object.hasOwn(WEIGHTS, m[3]) ? { size: +m[1], lineHeight: +m[2], weight: m[3], cssWeight: WEIGHTS[m[3]], italic: !!m[4], family: m[5] } : null;
+}
+// (a value in the form's shape, parsed or not: never a style's name, so never written as one)
+export const looksLikeValue = (v) => /^literal \d+(?:\.\d+)?\/\d/.test(word(v));
+export function typeFromFigma(n) {
+  const size = n.fontSize;
+  // (a face may join its words, BoldItalic or Bold_Italic; an italic alone, or Roman, is the regular weight's)
+  const face = word(n.fontStyle).replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2'), slant = /\b(italic|oblique)\b/i.test(face);
+  const rest = face.replace(/\b(italic|oblique)\b/gi, '').trim();
+  const w = n.fontStyle ? figmaWeight(!rest || /^roman$/i.test(rest) ? 'Regular' : rest) : undefined;
+  if (typeof size !== 'number' || w === undefined || !n.fontFamily) return null;
+  const lh = word(n.lineHeight);
+  // (none recorded is several in one text, which no value says: only a recorded auto is Auto)
+  if (!lh) return null;
+  const lineHeight = lh === 'auto' ? 0 : lh.endsWith('%') ? +((size * parseFloat(lh)) / 100).toFixed(2) : +lh;
+  return Number.isFinite(lineHeight) ? typeValue({ size, lineHeight, weight: weightName(w), italic: slant, family: FAMILY_KEYWORD.test(n.fontFamily) ? JSON.stringify(n.fontFamily) : n.fontFamily }) : null;
+}
+/* A family as CSS writes it: a keyword bare (CSS Fonts 4 §2.1.2's generic families, and the two system names browsers
+   take as keywords), as quoted it names a font of that name; any other quoted. Back, the first family a computed or
+   written font-family names, unquoted and unescaped, whatever a quoted one holds. */
+const FAMILY_KEYWORD = /^(serif|sans-serif|monospace|cursive|fantasy|math|system-ui|ui-serif|ui-sans-serif|ui-monospace|ui-rounded|-apple-system|blinkmacsystemfont)$/i;
+// (a font called as a keyword keeps its quotes where the value read has them: Chrome quotes back only the seven serif,
+// sans-serif, monospace, cursive, fantasy, math and system-ui, so a quoted "ui-rounded" or "-apple-system" reads bare
+// and is written as that keyword; generic(…) is no keyword here, as Chrome refuses the declaration)
+export const familyToCss = (f) => (FAMILY_KEYWORD.test(f) || (/^".*"$/.test(f) && FAMILY_KEYWORD.test(f.slice(1, -1))) ? f : JSON.stringify(f));
+export function firstFamily(v) {
+  const s = word(v), m = /^"((?:\\.|[^"\\])*)"|^'((?:\\.|[^'\\])*)'|^((?:\\.|[^,\\])*)/.exec(s);
+  const f = (m[1] ?? m[2] ?? m[3].trim()).replace(/\\(?:([0-9a-f]{1,6}) ?|(.))/gi, (_, hex, ch) => (hex ? String.fromCodePoint(parseInt(hex, 16) || 0xfffd) : ch));
+  // (Chrome computes BlinkMacSystemFont as a quoted "system-ui", which is that keyword all the same)
+  return (m[1] ?? m[2]) !== undefined && FAMILY_KEYWORD.test(f) && !/^system-ui$/i.test(f) ? JSON.stringify(f) : f;
+}
+
+/* Letter spacing where no style gives it: px as a number, a share of the font size as `N%` (the snapshot's own), which
+   CSS writes as em (CSS has no % for it in every browser). Read, it is the px computed, whatever unit wrote it: a
+   text read always has a size, and a share of a known size is its px (spacingFromFigma). */
+export const spacingToCss = (v) => (typeof v === 'string' && v.endsWith('%') ? `${+(parseFloat(v) / 100).toFixed(4)}em` : undefined);
+export function spacingFromCss(computed) {
+  const px = +(parseFloat(computed) || 0).toFixed(2);
+  return px || undefined;
+}
+// (a share of a size the contract knows is that many px, as code computes it whatever unit wrote it; only where the
+// size is unknown does the share stay one)
+export const spacingFromFigma = (v, size) => (v == null || v === '' ? undefined : String(v).endsWith('%') ? (!parseFloat(v) ? undefined : typeof size === 'number' ? +((size * parseFloat(v)) / 100).toFixed(2) || undefined : String(v)) : +v || undefined);
+
+/* Case and decoration where no style gives them, Figma's word (lower case, as the contract keeps it) to CSS's property
+   and value and back. */
+export const CASE_ROWS = [['upper', 'text-transform', 'uppercase'], ['lower', 'text-transform', 'lowercase'], ['title', 'text-transform', 'capitalize'], ['small_caps', 'font-variant-caps', 'small-caps'], ['small_caps_forced', 'font-variant-caps', 'all-small-caps']];
+export const DECORATION_ROWS = [['underline', 'text-decoration-line', 'underline'], ['strikethrough', 'text-decoration-line', 'line-through']];
+export const textToCss = (rows, w) => { const r = rows.find((x) => x[0] === w); return r ? [r[1], r[2]] : null; };
+// `own`: the element's computed values, { property: value }; the first row whose property holds its value
+export const textFromCss = (rows, own) => (rows.find((r) => word(own[r[1]]).split(/\s+/).includes(r[2])) || [])[0];
 
 // (`nowrap`: the text is written never to wrap and is not cut, as css.mjs says a WIDTH_AND_HEIGHT text whose width
 // the design states all the same)

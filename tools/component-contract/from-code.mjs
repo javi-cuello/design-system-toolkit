@@ -46,7 +46,7 @@ import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, spl
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
 import { inWordsOf } from './to-figma.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -480,11 +480,46 @@ export function writtenAs(custom, token, collection = '') {
 
 export function styleFor(t, styles, usage) {
   const hits = styles.filter((s) => s.size === t.size && Math.abs(s.size * s.lineHeight - t.lineHeight) < 0.6 && String(s.weight).replace(/\s/g, '').toLowerCase() === t.weight);
-  if (!hits.length) return { value: `${t.size}/${t.lineHeight} ${t.weight}` };
+  if (!hits.length) return { value: typeValue(t) };
   hits.sort((a, b) => (usage[b.name] || 0) - (usage[a.name] || 0) || compareNames(a.name, b.name));
   const top = usage[hits[0].name] || 0;
   const tie = hits.slice(1).filter((s) => (usage[s.name] || 0) === top).map((s) => s.name);
   return { token: hits[0].name, ...(tie.length && { tie }) };
+}
+
+/* What the page reads of a text's type: its computed values, and what a text with no style says beside them (spacing,
+   case, decoration). A line an ancestor draws is drawn on the text and not in its own computed value (decoration is
+   not inherited): propagated to what is in the flow, a flex item too, never to what is out of it or inside an atomic
+   inline (CSS Text Decoration 3 §2), so each ancestor's is taken up to the first such box. Runs in the page, so it
+   names nothing outside itself. */
+export function textTypeOf(n, s, WEIGHT) {
+  const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
+  const lines = new Set();
+  for (let at = n, c = s; ;) {
+    for (const l of String(c.textDecorationLine || '').split(' ')) if (l && l !== 'none') lines.add(l);
+    // (a flex or grid item's display computes as a block's, so an inline one here is an atomic inline; its float does
+    // nothing and is still computed as written, so a floated flex item wrongly stops the walk: known, not handled)
+    if (/^(absolute|fixed)$/.test(c.position) || (c.float && c.float !== 'none') || /^inline-/.test(c.display) || !at || !at.parentElement) break;
+    at = at.parentElement; c = getComputedStyle(at);
+  }
+  return { size: px(s.fontSize), lineHeight: px(s.lineHeight), weight: WEIGHT[s.fontWeight] ?? String(s.fontWeight), italic: s.fontStyle !== 'normal', family: s.fontFamily, own: { 'letter-spacing': s.letterSpacing, 'text-transform': s.textTransform, 'font-variant-caps': s.fontVariantCaps, 'text-decoration-line': [...lines].join(' ') || 'none' } };
+}
+
+/* A text's type (textTypeOf's) as the contract says it: the style that holds its values, else those values (`raw`: the
+   toolkit's own rendering wrote them so) with the spacing, case and decoration beside them (rules.mjs, as css.mjs
+   writes them). A text matched to a style by size, line height and weight reads as that style alone; what the design
+   says of the layer takes nothing out. `fields` is the element's; `pick` how a style was chosen. */
+export function typedText(t, { styles = [], usage = {}, raw = false } = {}) {
+  const type = { ...t, family: firstFamily(t.family) }, own = t.own || {};
+  const pick = raw ? { value: typeValue(type) } : styleFor(type, styles, usage);
+  const fields = { typography: pick.token ?? pick.value };
+  if (!pick.token) {
+    const ls = spacingFromCss(own['letter-spacing']), tc = textFromCss(CASE_ROWS, own), td = textFromCss(DECORATION_ROWS, own);
+    if (ls !== undefined) fields.letterSpacing = ls;
+    if (tc) fields.textCase = tc;
+    if (td) fields.textDecoration = td;
+  }
+  return { pick, fields };
 }
 
 /* How often each token and text style is named across a library's contracts. */
@@ -1790,7 +1825,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)();
@@ -1807,7 +1842,7 @@ async function main() {
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
-        const typeOf = (s) => ({ size: px(s.fontSize), lineHeight: px(s.lineHeight), weight: WEIGHT[s.fontWeight] });
+        const textType = new Function(`return ${textTypeSrc}`)(), typeOf = (n, s) => textType(n, s, WEIGHT);
         const slot = (n) => { if (partRe) for (const c of n.classList) { const x = c.match(new RegExp(partRe)); if (x && !(modRe && new RegExp(modRe).test(x[1]))) return x[1]; } return n.tagName.toLowerCase() === 'svg' ? 'icon' : n.tagName.toLowerCase(); };
         // where code placed a box over its parent, and, where it sits at its parent's centre on an axis (inset 50% and a
         // translate back, a spinner over a button), that it is centred there, as Figma's constraint says it
@@ -1871,7 +1906,7 @@ async function main() {
           // (a host that draws no box, display: contents, renders at its control's: the box in the flow)
           { const b = s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n, r = b.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
           // a slot holding only words: its text styles kept aside, for where the design draws a text there
-          if (filled && !n.children.length) e.asText = { color: s.color, type: typeOf(s), textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign };
+          if (filled && !n.children.length) e.asText = { color: s.color, type: typeOf(n, s), textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign };
           n.setAttribute('data-contract-id', id);
           // and its box's parent, for its own declarations read beside its parent's (a size is the two together)
           const up = (x) => { if (n.parentElement) n.parentElement.setAttribute('data-contract-up', `${n.parentElement.getAttribute('data-contract-up') || ''} ${x}`.trim()); };
@@ -1922,7 +1957,7 @@ async function main() {
             return; }
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
           if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; if (tag !== 'svg') e.mark = true; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; if (n.getAttribute('data-icon-size')) e.iconSize = n.getAttribute('data-icon-size'); }
-          else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
+          else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(n, s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
           // an icon mark, a placed component drawn as the empty element to-markup leaves for it (one the store does not hold),
           // is a box to-code styles as the instance's own: its stroke, corners and clipping read as a box's, its fill
           // staying the glyph's colour (above)
@@ -2005,7 +2040,7 @@ async function main() {
                 seen[tid] = (seen[tid] || 0) + 1; if (seen[tid] > 1) tid += seen[tid];
                 // drawn over this box's own fill where it paints one, else over what this box is drawn over
                 const over = clear(s.backgroundColor) ? under : s.backgroundColor;
-                out.push({ id: tid, kind: 'text', parent: id, order: i++, color: s.color, type: typeOf(s),
+                out.push({ id: tid, kind: 'text', parent: id, order: i++, color: s.color, type: typeOf(n, s),
                   textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign, content: text, under: over });
               }
             }
@@ -2020,7 +2055,7 @@ async function main() {
         // placed by CSS order before the markup's (a variant that reverses its parts, to-code's `order`), ties as written
         for (const xs of Object.values(byParent)) xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).forEach(([e], i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -2394,7 +2429,15 @@ async function main() {
         // a text style named by the declarations that say it (rules.mjs), else by its values
         const said = x.type && x.kind === 'text' ? styleFromCss(Object.fromEntries(await Promise.all(['font-family', 'font-weight', 'font-size', 'line-height', 'letter-spacing'].map(async (p) => [p, await authoredWidth(L.tab, `[data-contract-id="${id in shown ? id : x.parent}"]`, p, { raw: true, cache: styles })]))), (L.tokens.textStyles || []).map((t) => t.name), (n) => textStyleFields(cssName('', n).slice(2))) : null;
         if (said) { x.typography = said; delete x.type; }
-        if (x.type) { const r = styleFor(x.type, L.tokens.textStyles || [], usage); if (r.tie) ties.push({ at: `${id}.typography`, token: r.token, tie: r.tie }); x.typography = r.token ?? r.value; delete x.type; }
+        if (x.type) {
+          const sel = `[data-contract-id="${id in shown ? id : x.parent}"]`;
+          // (the toolkit's own rendering writes a style's fields var() for var(): a size it wrote raw is the design's own
+          // values, never a style that happens to share them, as a raw colour is never a token guessed by value)
+          const raw = self && /^\s*-?[\d.]+(px|rem)\s*$/.test(String(await authoredWidth(L.tab, sel, 'font-size', { raw: true, cache: styles }) || ''));
+          const { pick, fields } = typedText(x.type, { styles: L.tokens.textStyles || [], usage, raw });
+          if (pick.tie) ties.push({ at: `${id}.typography`, token: pick.token, tie: pick.tie });
+          Object.assign(x, fields); delete x.type;
+        }
         // (two props holding the same words, a value's and a suffix's "Label": the one the design has set this layer first)
         if (x.kind === 'text') { const k = boundText(x.content, id, props, args, figmaContract, joinedProps); if (k) x.content = `{${k}}`; }
         anatomy[id] = x;

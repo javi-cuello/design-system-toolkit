@@ -2,7 +2,7 @@
 // tools/component-contract/rules.mjs: the translation table, each row read both ways.
 import assert from 'node:assert/strict';
 import { declarations } from './css.mjs';
-import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, writtenNowrap, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss } from './rules.mjs';
+import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, writtenNowrap, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss, typeValue, typeOfValue, familyToCss, firstFamily, typeFromFigma, spacingToCss, spacingFromCss, spacingFromFigma, CASE_ROWS, DECORATION_ROWS, textToCss, textFromCss } from './rules.mjs';
 import { tokenNames } from './to-code.mjs';
 
 let n = 0;
@@ -116,4 +116,29 @@ ok('corner smoothing goes to corner-shape and back the same, 0.1 to 1; none, 0 a
 { // a mirror (the snapshot's flip) is its own property, scale, as rotate is
   const d = (flip) => JSON.stringify(declarations({ kind: 'container', flip }, { holds: false, row: true }).decls);
   ok('a horizontal mirror writes scale: -1 1, a vertical one 1 -1, none nothing', d('x') === '[["scale","-1 1"]]' && d('y') === '[["scale","1 -1"]]' && d(undefined) === '[]'); }
+
+{ // 2026-11-22: a text with no style, its values in one form both ways, and each reading the inverse of its writing
+  ok('a text\'s values from Figma are the form code reads them in', typeFromFigma({ fontSize: 12, fontFamily: 'Inter', fontStyle: 'Semi Bold', lineHeight: '16' }) === typeValue({ size: 12, lineHeight: 16, weight: 'semibold', family: 'Inter' })
+    && typeFromFigma({ fontSize: 14, fontFamily: 'Inter', fontStyle: 'Bold Italic', lineHeight: '150%' }) === 'literal 14/21 bold italic Inter' && typeFromFigma({ fontSize: 14, fontFamily: 'Inter', fontStyle: 'Regular', lineHeight: 'auto' }) === 'literal 14/0 regular Inter');
+  ok('…and its form parses back whole, the family last whatever it holds', JSON.stringify(typeOfValue('literal 14/21 bold italic IBM Plex Sans')) === JSON.stringify({ size: 14, lineHeight: 21, weight: 'bold', cssWeight: 700, italic: true, family: 'IBM Plex Sans' })
+    && typeOfValue('literal 12/16 450 Inter') === null && typeOfValue('14/20 regular') === null && firstFamily('"IBM Plex Sans", sans-serif') === 'IBM Plex Sans');
+  ok('…none without a size or face recorded, or a weight with no name', typeFromFigma({ lineHeight: '16' }) === null && typeFromFigma({ fontSize: 12, fontFamily: 'Inter', lineHeight: '16' }) === null && typeFromFigma({ fontSize: 12, fontStyle: 'Regular', lineHeight: '16' }) === null && typeFromFigma({ fontSize: 12, fontFamily: 'Inter', fontStyle: 'Wide', lineHeight: '16' }) === null);
+  const face = (fontStyle) => typeFromFigma({ fontSize: 12, fontFamily: 'Inter', fontStyle, lineHeight: '16' });
+  ok('…a face whose words are joined is read by them, and Roman is the regular one; an unknown face is still none', face('BoldItalic') === 'literal 12/16 bold italic Inter' && face('SemiBoldOblique') === 'literal 12/16 semibold italic Inter'
+    && face('Roman') === 'literal 12/16 regular Inter' && face('Roman Italic') === 'literal 12/16 regular italic Inter' && face('Bold Italic') === 'literal 12/16 bold italic Inter' && face('Italic') === 'literal 12/16 regular italic Inter'
+    && face('Display Bold') === null && face('BoldWide') === null && face('Bold Roman') === null);
+  ok('letter spacing reads as derive says it, the px of it whatever unit code wrote: 0.02em on 14px is the design\'s 2%', spacingFromCss('0.28px') === spacingFromFigma('2%', 14) && spacingFromCss('-0.24px') === spacingFromFigma('-2%', 12) && spacingFromCss('normal') === undefined && spacingToCss('2%') === '0.02em');
+  ok('…only a recorded auto is Auto: a line height not recorded (several in one text) is no value of 0',
+    typeFromFigma({ fontSize: 12, fontFamily: 'Inter', fontStyle: 'Regular' }) === null && typeFromFigma({ fontSize: 12, fontFamily: 'Inter', fontStyle: 'Regular', lineHeight: 'auto' }) === 'literal 12/0 regular Inter');
+  ok('…an underscore joins a face\'s words as a space does', face('Bold_Italic') === 'literal 12/16 bold italic Inter' && face('Semi_Bold') === 'literal 12/16 semibold Inter');
+  ok('a family that holds a comma, a bracket or an escape reads back whole from the first a font-family names',
+    firstFamily('"Foo, Bar", serif') === 'Foo, Bar' && firstFamily('"Odd (Pro", serif') === 'Odd (Pro' && firstFamily("'Odd) Pro', serif") === 'Odd) Pro'
+    && firstFamily(JSON.stringify('Say "Hi"') + ', serif') === 'Say "Hi"' && firstFamily('"A\\\\B"') === 'A\\B' && firstFamily('A\\,B, serif') === 'A,B' && firstFamily('system-ui, serif') === 'system-ui');
+  ok('a font called serif or Math, of the seven keywords Chrome quotes back, keeps its quotes, so it is never written as the generic; BlinkMacSystemFont\'s computed "system-ui" is system-ui',
+    firstFamily('"serif", sans-serif') === '"serif"' && firstFamily("'Math'") === '"Math"' && firstFamily('serif') === 'serif' && firstFamily('"system-ui"') === 'system-ui');
+  ok('a Figma family called as a CSS keyword is a font, quoted, never written as the generic',
+    typeFromFigma({ fontSize: 14, lineHeight: '20', fontStyle: 'Regular', fontFamily: 'Fantasy' }) === 'literal 14/20 regular "Fantasy"' && familyToCss('"Fantasy"') === '"Fantasy"');
+  ok('case and decoration read back as written', CASE_ROWS.every(([w]) => { const [p, v] = textToCss(CASE_ROWS, w); return textFromCss(CASE_ROWS, { [p]: v, 'text-transform': p === 'text-transform' ? v : 'none' }) === w; })
+    && textFromCss(DECORATION_ROWS, { 'text-decoration-line': 'underline line-through' }) === 'underline' && textFromCss(CASE_ROWS, { 'text-transform': 'none', 'font-variant-caps': 'normal' }) === undefined);
+}
 console.log(`${n}/${n} passed`);

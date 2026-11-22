@@ -1547,6 +1547,42 @@ export function writeDrawn(out, rows) {
   return true;
 }
 
+/* The index's entry for a component of that name. Where two libraries hold one (web and iOS), the one in the file
+   asked of, else the one of its published key (`keyAt`: an entry's); none where neither tells, never the first. */
+export function entryOf(index, name, { file, key, keyAt = () => null } = {}) {
+  const named = Object.keys(index).filter((k) => index[k].name === name);
+  if (named.length < 2) return named[0];
+  const only = [named.filter((k) => file && index[k].file === file), key ? named.filter((k) => keyAt(k) === key) : []].find((xs) => xs.length === 1);
+  return only && only[0];
+}
+
+/* The library component --verify holds a drawing to: { folder, file }, nothing where the library has none of that
+   name, `refused` where it has several and none is told apart. An explicit --library is always the one held to, and
+   chooses among several by its own key. */
+export function heldTo(index, name, { folder, library, libraryKey, key, keyAt, fileOf, exists = () => true }) {
+  const at = folder || entryOf(index, name, { key: libraryKey || key, keyAt });
+  if (at) {
+    const file = library || fileOf(at);
+    return exists(file) ? { folder: at, file } : { refused: `refused: no contract at ${file}, so the drawing cannot be held to it; check --folder, or snapshot the library again` };
+  }
+  if (Object.values(index).some((x) => x.name === name)) return { refused: `refused: the library has several components called ${name} and none is told apart, so the drawing cannot be held to one; pass --folder <its folder>` };
+  return library ? { file: library } : {};
+}
+
+/* The live walk as the stored snapshot recorded a text with no style. The walk records such a text's size and face
+   (0.82.0 on), and derive then says its values, spacing and case; a snapshot from before records none, and its
+   contract says `literal` alone. Only against such a snapshot are they left out, so the same library is never a
+   change. Which it is, the stored figma.json says by its own fields, never the contract's text (which drops a text
+   equal to its component's own and has no value for a face with no weight). `comp` is the walk's, its variants whole;
+   with no stored snapshot to ask, nothing is left out. */
+const SIZED = ['fontSize', 'fontFamily', 'fontStyle'];
+export function walkedAs(comp, stored) {
+  if (!stored) return comp;
+  const sized = (n) => (n.textStyle === 'literal' && SIZED.some((k) => n[k] != null)) || (n.children || []).some(sized);
+  if ((req('../snapshot/spec.cjs').resolve(stored).variants || []).some(sized)) return comp;
+  return JSON.parse(JSON.stringify(comp), (k, v) => { if (v && v.textStyle === 'literal') for (const f of SIZED) delete v[f]; return v; });
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   // a refused call (a file to reopen, a service gone) is its message, not a stack trace
   process.on('uncaughtException', (e) => { console.error(e && e.message || e); process.exit(1); });
@@ -1574,6 +1610,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
   const where = contractRouter.layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
+  // an entry's published key, as its stored figma.json has it (entryOf)
+  const keyAt = (k) => { try { return JSON.parse(fs.readFileSync(path.join(where.paths.components, k, 'figma.json'), 'utf8')).key; } catch { return null; } };
   const { serviceFor, figmaExec } = await import('../figma-audit/services.mjs');
   const svc = serviceFor(where.audit);
   if (!svc) { console.error(`${label}: no docs service running for ${where.audit}`); process.exit(2); }
@@ -1604,8 +1642,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     let back = 0;
     let index = {};
     try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index: no library component to hold it to */ }
-    const folder = !target && (libraryFolder || Object.keys(index).find((k) => index[k].name === p.name));
-    const libFile = folder && (libraryFile || path.join(where.paths.components, folder, 'contract.json'));
+    let lent; try { lent = (JSON.parse(fs.readFileSync(libraryFile, 'utf8')).figma || {}).key; } catch (e) { if (libraryFile && !target) { console.error(`refused: --library ${libraryFile} cannot be read (${e.message})`); process.exit(2); } }
+    const { folder, file: libFile, refused } = target ? {} : heldTo(index, p.name, { folder: libraryFolder, library: libraryFile, libraryKey: lent, key: (c.figma || {}).key, keyAt, fileOf: (k) => path.join(where.paths.components, k, 'contract.json'), exists: fs.existsSync });
+    if (refused) { console.error(refused); process.exit(2); }
     if (libFile && fs.existsSync(libFile)) {
       const setId = await exec(`await figma.loadAllPagesAsync(); const pg = figma.root.children.find((x) => x.name === ${JSON.stringify(p.name)}); const s = pg && pg.children.find((x) => (x.type === 'COMPONENT_SET' || x.type === 'COMPONENT') && x.name === ${JSON.stringify(p.name)}); return s ? s.id : null;`, into, 60000);
       const walk = fs.readFileSync(path.join(TOOLKIT, 'plugins/design-system-snapshot/code.js'), 'utf8');
@@ -1615,10 +1654,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       if (comp) {
         const { compact } = req('../snapshot/spec.cjs');
         const { derive } = req('./derive.cjs');
-        const now = derive(compact(comp), Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains });
+        const held = JSON.parse(fs.readFileSync(libFile, 'utf8'));
+        // (the snapshot it was derived from, beside the library's contract)
+        let snap = null; try { snap = JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, 'figma.json'), 'utf8')); } catch { /* none stored: the walk as read */ }
+        const now = derive(compact(walkedAs(comp, snap)), Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(folder).mains });
         // the library's components by name, as eval.mjs compares with them: the same rules on every leg
         const { contracts } = await import('./official.mjs');
-        const rt = roundTrip(JSON.parse(fs.readFileSync(libFile, 'utf8')), now, { mains: req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract)) });
+        const rt = roundTrip(held, now, { mains: req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract)) });
         back = rt.rows.length;
         const rtOut = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`);
         const body = JSON.stringify({ component: p.name, combinations: rt.combinations, ...(rt.invalid && { invalid: rt.invalid }), ...(rt.cut && { cut: rt.cut }), rows: rt.rows }, null, 2) + '\n';
@@ -1674,18 +1716,20 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const { derive } = req('./derive.cjs');
     let index = {};
     try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index: only its own name is known */ }
-    const entry = Object.values(index).find((x) => x.name === comp.name) || {};
-    const spec = entry.platform ? { ...compact(comp), platform: entry.platform } : compact(comp);
-    const now = derive(spec, [...Object.values(index).map((x) => x.name), comp.name], { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains });
+    const at = entryOf(index, comp.name, { file: into, key: comp.key, keyAt }), entry = index[at] || {};
+    let snap = null; try { snap = JSON.parse(fs.readFileSync(path.join(where.paths.components, at, 'figma.json'), 'utf8')); } catch { /* none stored: the walk as read */ }
+    const walked = compact(walkedAs(comp, snap)), spec = entry.platform ? { ...walked, platform: entry.platform } : walked;
+    const base = JSON.parse(fs.readFileSync(baseFile, 'utf8'));
+    const now = derive(spec, [...Object.values(index).map((x) => x.name), comp.name], { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(at).mains });
     if (process.env.DEBUG) console.error('live', JSON.stringify(now));
     const sorted = (x) => (Array.isArray(x) ? x.map(sorted) : x && typeof x === 'object' ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, sorted(x[k])])) : x);
-    if (JSON.stringify(sorted(now)) !== JSON.stringify(sorted(JSON.parse(fs.readFileSync(baseFile, 'utf8'))))) {
+    if (JSON.stringify(sorted(now)) !== JSON.stringify(sorted(base))) {
       // a snapshot whose contracts an older toolkit derived differs from any read now, changed or not: said so, as
       // opening it again from the library would bring the same old contract back
-      const folder = Object.keys(index).find((k) => index[k].name === comp.name);
+      const folder = at;
       const read = (f) => { try { return JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, f), 'utf8')); } catch { return null; } };
       const stored = folder && read('figma.json'), kept = folder && read('contract.json');
-      const older = stored && kept && JSON.stringify(sorted(derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains }))) !== JSON.stringify(sorted(kept));
+      const older = stored && kept && JSON.stringify(sorted(derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(at).mains }))) !== JSON.stringify(sorted(kept));
       console.error(older ? `refused: ${comp.name}'s snapshot is older than the toolkit's contracts, so it cannot be told whether the library changed; take a snapshot, then open it again and make the change; nothing was changed` : `refused: ${comp.name} has changed in the library since this draft was made; nothing was changed`);
       process.exit(1);
     }
@@ -1710,7 +1754,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // the component has a spec, the drawing hides what the contract does not list there and nowhere else
   const wholeFrom = (() => {
     let index = {}; try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index */ }
-    const folder = libraryFolder || Object.keys(index).find((k) => index[k].name === p.name);
+    const folder = libraryFolder || entryOf(index, p.name, { key: (c.figma || {}).key, keyAt });
     const read = (f) => { try { return folder && JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, f), 'utf8')); } catch { return null; } };
     const stored = read('figma.json'), own = read('contract.json');
     // only for the library's own contract: another (a report from code) names its parts its own way

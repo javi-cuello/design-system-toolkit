@@ -33,7 +33,38 @@ ok('a text that hugs its width never wraps (Figma\'s WIDTH_AND_HEIGHT), one that
   && decl({ kind: 'text', width: 'hug', height: 'hug', maxLines: 2, truncate: true }, {})['-webkit-line-clamp'] === '2');
 ok('a text with no style writes no style\'s fields (no token defines --literal-*): it is said as unread, as an unstyled effect is',
   (() => { const r = declarations({ kind: 'text', typography: 'literal' }, {}, { token: (n) => `var(--${n})`, textStyle: (n) => [['font-size', `var(--${n}-font-size)`]] }); return !r.decls.length && r.unread.some((u) => /^typography \(a text with no style/.test(u)); })());
+// 2026-11-22: a library names a style by its size (`14/20 Regular`): read as a text's own values it lost its var()
+{ const style = (n) => [['font-size', `var(--${n})`]];
+  for (const name of ['14/20 Regular', '14/20 regular', '14/20 medium Inter', '12/16 450'])
+    ok(`a style named like a value (${name}) is that style, written with its var()`,
+      (() => { const r = declarations({ kind: 'text', typography: name }, {}, { token: (n) => `var(--${n})`, textStyle: style }); return r.decls.length === 1 && r.decls[0][1] === `var(--${name})` && !r.unread.length; })());
+  const px = declarations({ kind: 'text', letterSpacing: '0.16' }, {}, { token: (n) => `var(--${n})`, textStyle: style }).decls;
+  ok('a letter spacing kept as the snapshot spells it (0.16, a text with no style said) is px, never a token of that name', px[0][1] === '0.16px'); }
 ok('a literal carries its reason (code-standard rule 22)', lit[2] === 'no token in the design');
+// 2026-11-22: a text with no style, its values known (snapshot 0.82.0 on), is written as values, never a var() no token
+// defines; its spacing, case and decoration too, which css.mjs left unread
+{ const r = declarations({ kind: 'text', typography: 'literal 12/18 semibold italic IBM Plex Sans', letterSpacing: 0.16, textCase: 'upper', textDecoration: 'underline' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] });
+  const d = Object.fromEntries(r.decls.map((x) => [x[0], x[1]]));
+  ok('a text with no style writes its own size, line height and weight, spacing, case and decoration, as values with their reason',
+    d['font-family'] === '"IBM Plex Sans"' && d['font-style'] === 'italic' && d['font-size'] === '0.75rem' && d['line-height'] === '1.125rem' && d['font-weight'] === '600' && d['letter-spacing'] === '0.16px' && d['text-transform'] === 'uppercase' && d['text-decoration-line'] === 'underline'
+    && !r.decls.some((x) => /var\(/.test(x[1])) && r.decls.find((x) => x[0] === 'font-size')[2] === 'no text style in the design' && !r.unread.length);
+  ok('…their reason is the true one: the snapshot records no binding of theirs, so none says there is no token', !r.decls.some((x) => x[2] === 'no token in the design'));
+  const a = Object.fromEntries(declarations({ kind: 'text', typography: 'literal 14/0 regular', letterSpacing: '2%', textCase: 'small_caps' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls.map((x) => [x[0], x[1]]));
+  const family = (f) => Object.fromEntries(declarations({ kind: 'text', typography: `literal 14/20 regular ${f}` }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls.map((x) => [x[0], x[1]]))['font-family'];
+  ok('…a generic or system family is a keyword, written bare (quoted, it names another font); a family called as a CSS-wide word stays quoted',
+    ['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'math', 'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace', 'ui-rounded', '-apple-system', 'BlinkMacSystemFont'].every((f) => family(f) === f)
+    && family('"serif"') === '"serif"' && family('generic(fangsong)') === '"generic(fangsong)"' && family('generic(foo)') === '"generic(foo)"' && family('Inter') === '"Inter"' && family('inherit') === '"inherit"' && family('Noto Sans-serif') === '"Noto Sans-serif"' && family('Foo, Bar') === '"Foo, Bar"');
+  const upright = (x) => Object.fromEntries(declarations({ kind: 'text', typography: 'literal 14/20 regular Inter', ...x }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls.map((y) => [y[0], y[1]]));
+  const plain = upright({}), small = upright({ textCase: 'small_caps' }), big = upright({ textCase: 'upper', letterSpacing: 0.5 });
+  ok('…one that says no slant, spacing or case writes none of them, or it takes its host\'s',
+    plain['font-style'] === 'normal' && plain['letter-spacing'] === 'normal' && plain['text-transform'] === 'none' && plain['font-variant-caps'] === 'normal'
+    && small['font-variant-caps'] === 'small-caps' && small['text-transform'] === 'none' && big['text-transform'] === 'uppercase' && big['font-variant-caps'] === 'normal' && big['letter-spacing'] === '0.5px'
+    && !declarations({ kind: 'text', typography: 'literal' }, {}, { token: (n) => n, textStyle: () => [] }).decls.length && declarations({ kind: 'text', typography: 'Body' }, {}, { token: (n) => n, textStyle: () => [['font-size', 'var(--body)']] }).decls.length === 1);
+  const spaced = (letterSpacing) => declarations({ kind: 'text', letterSpacing }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls[0];
+  ok('…a letter spacing that is a token, or 0, carries no reason', spaced('Type/tracking').length === 2 && spaced(0).length === 2 && spaced('0').length === 2 && spaced(0.2).length === 3 && spaced('2%').length === 3);
+  ok('…the font\'s own line height is normal, a share of the size em, small caps a variant', a['line-height'] === 'normal' && a['letter-spacing'] === '0.02em' && a['font-variant-caps'] === 'small-caps');
+  const odd = declarations({ kind: 'text', typography: 'literal 12/16 450 Inter' }, {}, { token: (n) => `var(--${n})`, textStyle: (n) => [['font-size', `var(--${n}-font-size)`]] });
+  ok('…a value no form parses (a weight with no name) is said unread, never written as a style no token defines', !odd.decls.length && odd.unread.some((u) => /^typography \(literal 12\/16 450/.test(u))); }
 ok('a radius stays px, a length goes rem (code-standard rule 54)', decl({ radius: 6 })['border-radius'] === '6px' && decl({ width: 8 })['inline-size'] === '0.5rem');
 ok('an inside stroke out of layout is an inset ring; in layout, a border per side; outside, an outline taking no room (rule 63)',
   decl({ border: { color: 'C/line', width: 'Stroke/1' } })['box-shadow'] === 'inset 0 0 0 var(--stroke-1) var(--c-line)'

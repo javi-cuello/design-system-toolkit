@@ -259,6 +259,29 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('words no style sets keep their spacing and case, and how their box follows them', A1.words.autoResize === 'height' && A1.words.verticalAlign === undefined && A1.words.letterSpacing === '2%' && A1.words.textCase === 'upper');
 }
 
+// 2026-11-22: the snapshot says a text with no style `literal`, never nothing, so the test above (no textStyle at all)
+// passed while every real one lost its spacing, case and decoration. Snapshot 0.82.0 records its size and face, and
+// only where it does are they carried: an older snapshot's contract stays as stored, its check with it
+{
+  const w = (t) => derive({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'VERTICAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi', ...t }] }] }).anatomy.w;
+  const before = { text: 'Hi\nyou', lineHeight: '16', letterSpacing: '0.16', textCase: 'UPPER', textDecoration: 'UNDERLINE', paragraphSpacing: 8, listSpacing: 8 };
+  // (each expected side is what derive wrote at d67ed92d, before the fields, byte for byte)
+  ok('a text of a snapshot before 0.82.0 (no size) derives as it did before the fields, whether literal, mixed or of no style said',
+    JSON.stringify(w({ ...before, textStyle: 'literal' })) === '{"kind":"text","parent":"root","typography":"literal","content":"Hi\\nyou","order":0}'
+    && JSON.stringify(w({ ...before, textStyle: 'mixed' })) === '{"kind":"text","parent":"root","typography":"mixed","content":"Hi\\nyou","order":0}'
+    && JSON.stringify(w(before)) === '{"kind":"text","parent":"root","letterSpacing":"0.16","lineHeight":"16","paragraphSpacing":8,"listSpacing":8,"textCase":"upper","textDecoration":"underline","content":"Hi\\nyou","order":0}');
+  const now = w({ ...before, text: 'Hi', textStyle: 'literal', fontSize: 12, fontFamily: 'Inter', fontStyle: 'Regular' });
+  ok('a literal text whose size is recorded keeps its spacing, case and decoration; its line height is its typography\'s; paragraph spacing in one line of words draws nothing',
+    now.typography === 'literal 12/16 regular Inter' && now.letterSpacing === 0.16 && now.textCase === 'upper' && now.textDecoration === 'underline' && now.lineHeight === undefined && now.paragraphSpacing === undefined && now.listSpacing === undefined);
+  const sized = w({ textStyle: 'literal', fontSize: 12, fontFamily: 'Inter', fontStyle: 'Semi Bold', lineHeight: '150%', letterSpacing: '2%' });
+  ok('…with its size and face recorded, its typography is its values, size/line height weight in px and its family; a share of that size for letter spacing its px', sized.typography === 'literal 12/18 semibold Inter' && sized.letterSpacing === 0.24 && sized.lineHeight === undefined, JSON.stringify(sized));
+  ok('…an Auto line height is the font\'s own, 0, as code reads normal; an italic says so', w({ textStyle: 'literal', fontSize: 14, fontFamily: 'Inter', fontStyle: 'Regular', lineHeight: 'auto' }).typography === 'literal 14/0 regular Inter'
+    && w({ textStyle: 'literal', fontSize: 14, fontFamily: 'IBM Plex Sans', fontStyle: 'Bold Italic', lineHeight: '20' }).typography === 'literal 14/20 bold italic IBM Plex Sans');
+  const styled = w({ textStyle: 'Body/md', fontSize: 14, fontStyle: 'Regular', lineHeight: '20', letterSpacing: '0.16', textCase: 'UPPER' });
+  ok('…a styled text says its style alone: its spacing and case are the style\'s', styled.typography === 'Body/md' && styled.letterSpacing === undefined && styled.textCase === undefined);
+  ok('…and words over two lines keep the spacing between their paragraphs', w({ textStyle: 'literal', fontSize: 12, text: 'a\nb', paragraphSpacing: 8 }).paragraphSpacing === 8);
+}
+
 // a set giving each size its own icon swap on the one layer (snapshot 0.61.0): each instance names its own
 {
   const names = (size) => spec.variants.filter((v) => v.name.startsWith(`Size=${size}`) && !/icon=/.test(v.name)).map((v) => v.name);
@@ -611,4 +634,20 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('derive writes the key the snapshot recorded on the instance', e && e.key === 'icon');
   const local = structuredClone(icon); delete local.variants[0].children[0].instanceOfKey;
   ok('a local component (no key) is written without one', !('key' in Object.values(derive(local).anatomy).find((x) => x.kind === 'instance'))); }
+
+// 2026-11-22: the snapshot router reads derive.cjs fresh and keeps the rules.mjs it first loaded (clearing require.cache
+// never reloads an .mjs), and store.cjs deletes a contract whose derive threw: rules without the 0.82.0 helpers are
+// the old derive, never a throw
+{
+  const file = require.resolve('./derive.cjs'), real = createRequire(file), src = (await import('node:fs')).readFileSync(file, 'utf8').replace(/^#!.*/, '');
+  const older = (...without) => { const m = { exports: {} }, rules = { ...real('./rules.mjs') }; for (const k of without) delete rules[k];
+    new Function('require', 'module', 'exports', src)(Object.assign((id) => (id === './rules.mjs' ? rules : real(id)), { resolve: real.resolve }), m, m.exports); return m.exports.derive; };
+  const spec = { name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'VERTICAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi', textStyle: 'literal', fontSize: 12, fontFamily: 'Inter', fontStyle: 'Regular', lineHeight: '16', letterSpacing: '0.16', textCase: 'UPPER', textDecoration: 'UNDERLINE' }] }] };
+  const was = '{"kind":"text","parent":"root","typography":"literal","content":"Hi","order":0}';
+  for (const without of [['typeFromFigma', 'spacingFromFigma'], ['typeFromFigma'], ['spacingFromFigma']]) {
+    let got; try { got = JSON.stringify(older(...without)(spec).anatomy.w); } catch (e) { got = e.message; }
+    ok(`rules without ${without.join(' and ')}: a literal text stays as stored, no new field and no throw`, got === was);
+  }
+  ok('…and with them it carries its values', older()(spec).anatomy.w.typography === 'literal 12/16 regular Inter');
+}
 console.log(`${n}/${n} passed`);

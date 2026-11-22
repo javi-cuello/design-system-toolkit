@@ -459,4 +459,70 @@ delete globalThis.figma;
   const inner = host({ 'i/head': { kind: 'instance', parent: 'i', component: 'Head', order: 0, with: { Size: 'Small' } }, 'i/head/label': { kind: 'text', parent: 'i/head', order: 0, color: 'C' } });
   ok('a part inside an inner instance placed at other props is held to that component\'s own at those props',
     JSON.stringify(roundTrip(inner, host({}), { mains: mains3 }).rows.map((r) => [r.at, r.library, r.drawn])) === '[["i/head/label.color","C","S"]]'); }
+{ // 2026-11-22: the live walk records the size of a text with no style (0.82.0 on), an older snapshot does not: the same
+  // library must not read as changed against one, and only against one is anything of the live read left out. Which it
+  // is, the stored figma.json says by what it records, never the contract's text (which drops a text equal to its
+  // component's own, says nothing of a face with no weight, and may name a prop textCase)
+  const { createRequire } = await import('node:module');
+  const req = createRequire(import.meta.url);
+  const { derive } = req('./derive.cjs'), { compact } = req('../snapshot/spec.cjs');
+  const { walkedAs } = await import('./to-figma.mjs');
+  const j = JSON.stringify;
+  const one = (name, children, props = {}) => ({ name, props, variants: [{ name, type: 'COMPONENT', layout: 'VERTICAL', children }] });
+  const text = (x) => ({ name: 'L', type: 'TEXT', text: 'Hi', textStyle: 'literal', lineHeight: '20', ...x });
+  const sizes = (fontStyle = 'Regular') => ({ fontSize: 14, fontFamily: 'Inter', fontStyle });
+  const glyph = (fill) => ({ name: 'G', type: 'VECTOR', w: 8, h: 8, sizing: 'FIXED/FIXED', fills: [fill] });
+  // Item, and a host that places it with its glyph alone overridden: the text is Item's own, and derive drops it
+  const host = (x) => one('Host', [{ name: 'I', type: 'INSTANCE', instanceOf: 'Item', overrides: ['fills'], children: [text(x), glyph('#ff0000')] }]);
+  const read = (spec, item) => derive(spec, ['Item', 'Host'], { mains: (name) => (name === 'Item' && item ? derive(item) : null) });
+  // refused: the live read, as --patch holds it to the snapshot the contract came from, is not that contract
+  const refused = (live, snap, item) => j(read(compact(walkedAs(live, compact(snap))), item)) !== j(read(compact(snap), item));
+  const item = (x) => one('Item', [text(x), glyph('#000000')]);
+  ok('1: a host whose only text is its component\'s own, dropped from the contract, read live is the same: no refusal, no row',
+    !refused(host(sizes()), host(sizes()), item(sizes())) && roundTrip(read(host(sizes()), item(sizes())), read(compact(walkedAs(host(sizes()), compact(host(sizes())))), item(sizes()))).rows.length === 0);
+  const bold = sizes('Display Bold');
+  ok('2: a case added to a text whose face has no weight is still a change, inside an instance and on its own',
+    refused(host({ ...bold, textCase: 'UPPER' }), host(bold), item(bold)) && refused(one('Top', [text({ ...bold, textCase: 'UPPER' })]), one('Top', [text(bold)]))
+    && !refused(one('Top', [text(bold)]), one('Top', [text(bold)])));
+  ok('3: where the snapshot records sizes, a size that changes is seen, whatever stale rules derived beside it',
+    refused(one('Top', [text({ ...sizes(), fontSize: 16 })]), one('Top', [text(sizes())]))
+    && j(walkedAs(one('Top', [text(sizes())]), compact(one('Top', [text(sizes())])))).includes('"fontSize":14'));
+  const said = { letterSpacing: '0.16', textCase: 'UPPER' }, named = { textCase: 'Upper', letterSpacing: '0' };
+  ok('4: the same library read live against an older snapshot is as stored, one with a prop named textCase too',
+    !refused(one('Top', [text({ ...said, ...sizes() })]), one('Top', [text(said)])) && !refused(one('Top', [text({ ...said, ...sizes() })], named), one('Top', [text(said)], named))
+    && !refused(host(sizes()), host({}), item({})) && refused(one('Top', [text({ ...sizes(), textStyle: 'Body/md' })]), one('Top', [text(said)])));
+  // (a variant is kept as what differs from the first: a size in a delta names no textStyle beside it)
+  const two = (a, b) => ({ name: 'Two', props: { V: ['A', 'B'] }, variants: [['A', a], ['B', b]].map(([v, x]) => ({ name: `V=${v}`, type: 'COMPONENT', layout: 'VERTICAL', children: [text(x)] })) });
+  ok('…a variant kept as a delta is read whole, on both sides',
+    !refused(two(sizes(), { ...sizes(), fontSize: 18 }), two({}, {})) && refused(two(sizes(), { ...sizes(), fontSize: 20 }), two(sizes(), { ...sizes(), fontSize: 18 })));
+  ok('…with no stored snapshot to ask, nothing of the live read is left out', j(walkedAs(one('Top', [text(sizes())]), null)).includes('"fontSize":14'));
+}
+{ // 2026-11-22: with two platforms an index holds one name twice: --patch read the first's figma.json, so it refused
+  // an unchanged library and passed a change
+  const to = await import('./to-figma.mjs');
+  // (as the lookup was, where there is none yet: the first of that name)
+  const entryOf = to.entryOf || ((index, name) => Object.keys(index).find((k) => index[k].name === name));
+  const index = { 'web-button': { name: 'Button', file: 'WEB' }, 'ios-button': { name: 'Button', file: 'IOS', platform: 'ios' }, card: { name: 'Card', file: 'WEB' } };
+  const keyAt = (k) => ({ 'web-button': 'k-web', 'ios-button': 'k-ios' })[k];
+  ok('of two entries of one name, the one in the file patched, else of the component\'s key, is its own; where neither tells, none',
+    entryOf(index, 'Button', { file: 'IOS', key: 'k-web', keyAt }) === 'ios-button' && entryOf(index, 'Button', { file: 'SCRATCH', key: 'k-ios', keyAt }) === 'ios-button'
+    && entryOf(index, 'Button', { file: 'SCRATCH', keyAt }) === undefined && entryOf(index, 'Card', { file: 'SCRATCH', keyAt }) === 'card' && entryOf(index, 'None', { keyAt }) === undefined);
+}
+{ // 2026-11-22: --verify with no --folder and two platforms of one name skipped the library round trip and exited 0,
+  // --library given or not
+  const to = await import('./to-figma.mjs');
+  // (as the choice was, where there is none yet: the folder found, else nothing held)
+  const heldTo = to.heldTo || ((index, name, { folder, library, key, keyAt, fileOf }) => { const at = folder || to.entryOf(index, name, { key, keyAt }); return at ? { folder: at, file: library || fileOf(at) } : {}; });
+  const index = { 'web-button': { name: 'Button', file: 'WEB' }, 'ios-button': { name: 'Button', file: 'IOS' } };
+  const o = { keyAt: (k) => ({ 'web-button': 'k-web', 'ios-button': 'k-ios' })[k], fileOf: (k) => `${k}/contract.json` };
+  ok('--verify of two entries of one name, neither told apart, is refused asking for --folder, never passed unheld',
+    /--folder/.test(heldTo(index, 'Button', o).refused || '') && /--folder/.test(heldTo(index, 'Button', { ...o, library: 'mine.json' }).refused || ''));
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  ok('…an explicit --library is the one held to: it chooses the twin by its key, and stands where the index has none of that name',
+    same(heldTo(index, 'Button', { ...o, library: 'mine.json', libraryKey: 'k-ios' }), { folder: 'ios-button', file: 'mine.json' })
+    && same(heldTo({}, 'Button', { ...o, library: 'mine.json' }), { file: 'mine.json' }) && same(heldTo({}, 'Button', o), {})
+    && same(heldTo(index, 'Button', { ...o, folder: 'web-button' }), { folder: 'web-button', file: 'web-button/contract.json' }));
+  ok('a folder named or chosen with no contract there is refused, never a round trip skipped',
+    /no contract/.test(heldTo(index, 'Button', { ...o, folder: 'ios-buton', exists: () => false }).refused || ''));
+}
 console.log(`${n}/${n} passed`);

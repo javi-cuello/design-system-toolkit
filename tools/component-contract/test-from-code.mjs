@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -778,6 +778,51 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       ok(`every sample component reads the same on the cut self page as on the whole library's (cache off), at its defaults and every other value of each prop (${renders} renders), aliased tokens several to a line; ${Math.round(100 * cut / whole)}% of the sheet served`, differ.length === 0 && renders > Object.keys(library).length && cut < whole / 2);
       ok('a render after one that forced hover and focus, let go with no reload, reads as the same render on a page just loaded', bled.length === 0);
       if (bled.length) console.error('bled:', bled.join());
+    } finally { await browser.close(); }
+  }
+}
+
+// 2026-11-22: a same component stays same, and the reading says what code draws: a text in its style says the style
+// alone, one in none its spacing, case and decoration, whatever a design says of that layer (held to the design, the
+// reading lost what code drew)
+{ const t = { size: 12, lineHeight: 16, weight: 'regular', italic: false, family: 'Inter', own: { 'letter-spacing': '1px', 'text-transform': 'uppercase', 'font-variant-caps': 'normal', 'text-decoration-line': 'underline' } };
+  const at = (...o) => Object.keys(typedText(t, ...o).fields).join();
+  ok('a text drawn in its style stays that style alone; one in none says the spacing, case and decoration code draws, a styled design\'s too',
+    at({ styles: [{ name: 'Body/sm', size: 12, lineHeight: 16 / 12, weight: 'Regular', family: 'Inter' }] }) === 'typography'
+    && at({ design: { w: { kind: 'text', typography: 'Body/sm' } }, id: 'w' }) === 'typography,letterSpacing,textCase,textDecoration');
+}
+
+// 2026-11-22: a text with no style goes round as itself: css.mjs writes its values, spacing, case and decoration, and
+// the reader's own two halves (textTypeOf in the page, typedText after it) read them back as the contract said them
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
+  const { declarations } = await import('./css.mjs');
+  const { weightName } = await import('../parity/values.mjs');
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a literal text in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({});
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      const WEIGHT = Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)]));
+      const cssOf = (c) => declarations({ kind: 'text', ...c }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls.map(([p, v]) => `${p}: ${v}`).join('; ');
+      const cases = [{ typography: 'literal 12/18 semibold italic Inter', letterSpacing: 0.16, textCase: 'upper', textDecoration: 'underline' }, { typography: 'literal 14/0 regular IBM Plex Sans', letterSpacing: 0.28, textCase: 'small_caps' },
+        { typography: 'literal 14/20 regular sans-serif' }, { typography: 'literal 16/24 bold "serif"' }];
+      // (the second written by code in em, as css.mjs never writes a share whose size it knows: the design's px all the same)
+      const written = cases.map((c, i) => (i === 1 ? { ...c, letterSpacing: '2%' } : c));
+      const host = 'font-style: italic; letter-spacing: 2px; text-transform: uppercase; font-variant-caps: small-caps';
+      const read = async (body) => {
+        await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html>${body}` });
+        const types = await call(tab, ([src, W]) => { const typeOf = new Function(`return ${src}`)(); return [...document.querySelectorAll('[data-t]')].map((n) => typeOf(n, getComputedStyle(n), W)); }, [textTypeOf.toString(), WEIGHT]);
+        return types.map((t) => typedText(t).fields);
+      };
+      const got = await read(`<style>${written.map((c, i) => `#t${i} { ${cssOf(c)} }`).join(' ')}</style><div style="${host}">${cases.map((_, i) => `<span id="t${i}" data-t>Hi</span>`).join('')}</div>`);
+      const deco = await read('<div style="text-decoration: underline">'
+        + ['', 'display: block', 'display: inline-block', 'position: absolute', 'float: left', 'display: block; text-decoration: line-through'].map((css) => `<span style="${css}" data-t>Hi</span>`).join('') + '</div>'
+        + '<div style="display: flex; text-decoration: underline"><span style="display: inline-block" data-t>Hi</span></div>');
+      const lines = deco.map((f) => f.textDecoration || '-').join();
+      ok('an ancestor\'s underline is read where CSS draws it on the text (CSS Text Decoration 3 §2): in the flow, a flex item too, never out of it or inside an inline block',
+        lines === 'underline,underline,-,-,-,underline,underline', lines);
+      ok('a text with no style reads back from Chrome, by the reader itself, as css.mjs wrote it, whatever its host is: its values, spacing, case and decoration', JSON.stringify(got) === JSON.stringify(cases), JSON.stringify(got));
     } finally { await browser.close(); }
   }
 }

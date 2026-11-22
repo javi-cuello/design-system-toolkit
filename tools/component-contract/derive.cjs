@@ -33,7 +33,11 @@ const { variantValues: valuesOf } = require('../shared/names.js');
 
 const KIND = { TEXT: 'text', INSTANCE: 'instance', SLOT: 'slot', FRAME: 'container', GROUP: 'container', COMPONENT: 'container', COMPONENT_SET: 'container', SECTION: 'container' };
 // alignment and sizing words, from the one table every direction reads
-const { alignFromFigma, sizeFromFigma } = require('./rules.mjs');
+const { alignFromFigma, sizeFromFigma, typeFromFigma, spacingFromFigma } = require('./rules.mjs');
+// a long-running process (the snapshot router) reads this file fresh and keeps the rules.mjs it first loaded, which
+// clearing require.cache never reloads: one without these helpers derives as before them, never a throw (store.cjs
+// deletes a contract whose derive threw)
+const VALUES = typeof typeFromFigma === 'function' && typeof spacingFromFigma === 'function';
 /* Where a layer's box stands in its parent: its x and y, except a mirrored one's, whose x (or y) Figma gives as its
    matrix's origin, the far edge; its box's near edge is what CSS's left and code's box say (the snapshot's `visual`). */
 // (a vertical mirror carries no visual box: the snapshot writes one only with a turn, and a mirror unturned is its far
@@ -129,7 +133,9 @@ function element(n, parent, known, up = null, axes = []) {
   // a variable mode the layer sets (snapshot 0.75.0 on), under the attribute the token build writes it as
   if (n.modes) { const m = MODES.keyed(axes, n.modes); if (Object.keys(m).length) e.modes = m; }
   if (n.type === 'TEXT') {
-    if (n.textStyle) e.typography = n.textStyle;
+    // a library style by its name; a text with none (the snapshot's literal) by its values, in the form code reads them
+    // in (rules.mjs typeValue), where the snapshot holds them (0.82.0 on), else said as literal; several styles, mixed
+    if (n.textStyle) e.typography = (VALUES && n.textStyle === 'literal' && typeFromFigma(n)) || n.textStyle;
     if (n.textAlign) e.textAlign = TEXT_ALIGN[n.textAlign] || n.textAlign;
     if (n.maxLines) e.maxLines = n.maxLines;
     if (n.truncate) e.truncate = true;
@@ -142,6 +148,16 @@ function element(n, parent, known, up = null, axes = []) {
     if (!n.textStyle) for (const k of ['letterSpacing', 'lineHeight', 'paragraphSpacing', 'listSpacing']) if (n[k] != null) e[k] = n[k];
     if (!n.textStyle && n.textCase) e.textCase = n.textCase.toLowerCase();
     if (!n.textStyle && n.textDecoration) e.textDecoration = n.textDecoration.toLowerCase();
+    // the same for a literal text, only where the snapshot records its size (0.82.0 on), so an older snapshot's contract
+    // stays as stored, and a mixed text, which records none, as it was (the line height is the typography's; the
+    // spacing between paragraphs and list items only where the words hold more than one line, as it draws nothing else)
+    if (VALUES && n.textStyle === 'literal' && typeof n.fontSize === 'number') {
+      const ls = spacingFromFigma(n.letterSpacing, n.fontSize);
+      if (ls !== undefined) e.letterSpacing = ls;
+      if (typeof n.text === 'string' && n.text.includes('\n')) for (const k of ['paragraphSpacing', 'listSpacing']) if (n[k] != null) e[k] = n[k];
+      if (n.textCase) e.textCase = n.textCase.toLowerCase();
+      if (n.textDecoration) e.textDecoration = n.textDecoration.toLowerCase();
+    }
     if (n.text !== undefined) e.content = n.text;
   }
   return e;

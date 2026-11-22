@@ -339,3 +339,12 @@ test('every stamped note in every project\'s change log has a graded change of i
   assert.ok(logs > 0 && logs === contract.projects().list.length - noLog.length && stamped > 0, `read ${logs} logs of ${contract.projects().list.length} registered projects and ${stamped} stamped notes`);
   assert.deepEqual(bad.slice(0, 10), [], `${bad.length} stamped notes with no graded change of their rule`);
 });
+
+test('a text\'s own face is named in a designer\'s words', () => {
+  const of = (fontFamily, fontStyle) => ({ tokens: TOKENS, specs: { chip: require('./spec.cjs').compact({ name: 'Chip', id: '1:1', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 40, h: 20, children: [{ name: 'Label', type: 'TEXT', text: 'Hi', textStyle: 'literal', fontSize: 14, fontFamily, fontStyle }] }] }) } });
+  const said = JSON.stringify(store.diff(of('Inter', 'Regular'), of('Roboto', 'Bold')).components.detail.chip);
+  assert.ok(said.includes('font family') && said.includes('font style') && !/fontFamily|fontStyle/.test(said), said);
+  const beside = (textCase, textDecoration, paragraphSpacing) => { const x = of('Inter', 'Regular'); x.specs.chip = require('./spec.cjs').compact({ name: 'Chip', id: '1:1', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 40, h: 20, children: [{ name: 'Label', type: 'TEXT', text: 'Hi', textStyle: 'literal', fontSize: 14, textCase, textDecoration, paragraphSpacing }] }] }); return x; };
+  const also = JSON.stringify(store.diff(beside('UPPER', 'UNDERLINE', 4), beside('LOWER', 'STRIKETHROUGH', 8)).components.detail.chip);
+  assert.ok(!/textCase|textDecoration|paragraphSpacing/.test(also) && also.includes('text case'), also);
+});

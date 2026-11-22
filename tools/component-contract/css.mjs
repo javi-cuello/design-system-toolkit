@@ -21,10 +21,14 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss } from './rules.mjs';
+import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
+// a text's own values say why they are values and no more: a variable may be bound to one, which the snapshot does not record
+const TEXT_NOTE = 'no text style in the design';
+// what a text with no style says by leaving it out, each inherited in CSS, so written or it takes its host's
+const UNSAID = [['font-style', 'normal'], ['letter-spacing', 'normal'], ['text-transform', 'none'], ['font-variant-caps', 'normal']];
 
 const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
 
@@ -205,11 +209,27 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
     if (shift.includes('-50%')) put('translate', shift.join(' '));
   } else if (anchors) put('position', 'relative');
 
-  const ts = take('typography');
-  // a text with no one style (the snapshot's literal, or mixed) names no style's fields, which no token defines: its values
-  // are not in the contract, so it is said, as an unstyled effect is
-  if (ts === 'literal' || ts === 'mixed') unread.push(`typography (a text with ${ts === 'mixed' ? 'several styles' : 'no style'}, whose values the contract does not hold)`);
+  const ts = take('typography'), own = typeOfValue(ts);
+  // a text with no style, by its values (rules.mjs typeValue), written as values, never a var() no token defines; one
+  // whose values the contract does not hold (an older snapshot's literal, or mixed) is said, as an unstyled effect is
+  if (own) {
+    if (own.family) put('font-family', familyToCss(own.family), TEXT_NOTE);
+    put('font-size', len(own.size), TEXT_NOTE); put('line-height', own.lineHeight ? len(own.lineHeight) : 'normal', own.lineHeight ? TEXT_NOTE : undefined); put('font-weight', String(own.cssWeight), TEXT_NOTE);
+    if (own.italic) put('font-style', 'italic');
+  }
+  else if (ts === 'literal' || ts === 'mixed') unread.push(`typography (a text with ${ts === 'mixed' ? 'several styles' : 'no style'}, whose values the contract does not hold)`);
+  else if (looksLikeValue(ts)) unread.push(`typography (${ts}: values no form writes)`);
   else if (typeof ts === 'string') for (const [p, v] of names.textStyle(ts)) put(p, v);
+  // spacing, case and decoration no style gives (derive.cjs says them only then)
+  const said = take('letterSpacing');
+  // (a number the snapshot spells as words, `0.16`, kept so where no style is said at all, is that many px, not a token)
+  const ls = typeof said === 'string' && said !== '' && !isNaN(said) ? +said : said;
+  if (ls !== undefined) { const share = spacingToCss(ls); put('letter-spacing', share ?? len(ls, true), share || literal(ls) ? TEXT_NOTE : undefined); }
+  for (const [k, rows] of [['textCase', CASE_ROWS], ['textDecoration', DECORATION_ROWS]]) {
+    const w = take(k), d = w && textToCss(rows, w);
+    if (d) put(d[0], d[1]); else if (w) unread.push(`${k} (${w}: no CSS writes it)`);
+  }
+  if (own) for (const [p, v] of UNSAID) if (!decls.some(([q]) => q === p)) put(p, v);
   const align = take('textAlign');
   if (align && align !== 'start') put('text-align', align);
   const lines = take('maxLines'), cut = take('truncate');
