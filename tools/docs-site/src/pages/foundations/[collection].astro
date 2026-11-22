@@ -117,7 +117,7 @@ const modeCss = `@layer components { ${modes.map((m) => `[data-views="mode"][dat
 const modeOptions = [...(manyModes ? [] : [{ value: '', label: modes.length === 2 ? 'Both' : 'All modes' }]), ...modes.map((m) => ({ value: m, label: m }))];
 const id = (...parts) => slug(parts.filter(Boolean).join(' ')) || 'variables';
 // The property each variable becomes, or null where the build writes none.
-const codeOf = (v) => sassName(c.name, v.name) || (inCss(v.name, v.values[cols[0]]) ? cssName(c.name, v.name) : null);
+const codeOf = (v) => sassName(c.name, v) || (inCss(v.name, v.values[cols[0]]) ? cssName(c.name, v.name) : null);
 ---
 <Base title={`${c.label} (tokens)`}>
   <h1>{c.label}</h1>
@@ -185,7 +185,7 @@ const codeOf = (v) => sassName(c.name, v.name) || (inCss(v.name, v.values[cols[0
                 <thead><tr><th scope="col">Name</th><th scope="col">Code</th>{cols.map((m) => <th scope="col" class:list={[numeric(vars, m) && 'num']} data-mode={varies ? m : undefined}>{varies ? m : 'Value'}</th>)}{isDurations(vars) && <th scope="col">Preview</th>}</tr></thead>
                 <tbody>
                   {vars.map((v) => {
-                    const sass = sassName(c.name, v.name);
+                    const sass = sassName(c.name, v);
                     const code = codeOf(v);
                     const desc = descriptions[v.name];
                     return (

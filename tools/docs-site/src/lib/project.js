@@ -46,8 +46,9 @@ export const inventory = await import(pathToFileURL(join(TOOLKIT, 'tools/shared/
 const pathOf = (collection, name) => DTCG.pathFor(collection, name);
 /** The custom property a variable becomes: `--colour-background-ghost`. */
 export const { cssName } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/names.mjs')).href);
-/** The Sass variable a breakpoint becomes (`$md`), or null for any other variable. */
-export const sassName = (collection, name) => { const b = build.breakpointName(pathOf(collection, name)); return b ? '$' + b : null; };
+/** The Sass variable a breakpoint becomes (`$md`), or null for any other variable: by its name and its value in each
+    mode, as the build decides (an alias is no breakpoint there, so none here). */
+export const sassName = (collection, v) => { const b = build.breakpointOf(pathOf(collection, v.name), Object.keys(v.values).map((m) => (v.aliases[m] ? NaN : v.values[m]))); return b ? '$' + b : null; };
 /** The mixin a text style becomes: its path, slugged the same way. */
 export const mixinName = (style) => build.nameOf(pathOf('text-style', style));
 /** A Figma weight name as the CSS number the export writes ("Heavy" is 900). */

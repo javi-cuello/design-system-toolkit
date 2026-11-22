@@ -70,11 +70,25 @@ const kebab = (s) => String(s).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCas
 const ROOT_SD = '@root';
 export const nameOf = (path) => path.slice(1).filter((x) => x !== '$root' && x !== ROOT_SD).map(kebab).join('-');
 const refName = (ref) => nameOf(String(ref).replace(/^\{|\}$/g, '').split('.'));
-// A breakpoint is a `Breakpoint/<name>` variable, or any variable in a
-// collection named for breakpoints; its Sass name is what follows either.
+// A breakpoint is named for one, a `Breakpoint/<name>` variable or any variable
+// in a collection named for breakpoints; its Sass name is what follows either.
 const bpAt = (path) => (path[1] === 'breakpoint' ? 2 : /(^|-)breakpoints?$/.test(path[0]) ? 1 : 0);
-/** A token path's Sass breakpoint name (`$md`, less the `$`), or null. */
+/** A token path's Sass breakpoint name (`$md`, less the `$`), or null: by the name alone. */
 export const breakpointName = (path) => (bpAt(path) ? path.slice(bpAt(path)).filter((x) => x !== '$root' && x !== ROOT_SD).join('-') : null);
+/** A token's Sass breakpoint name, or null, from its path and its value in each of its collection's modes. The name
+ *  alone is not enough: a breakpoint is one width a media query reads at build time, so it is a literal length and
+ *  the same in every mode (a query reads neither a mode nor a var(); knowledge/code/tokens.md, "a mode carries no
+ *  breakpoint width"). A collection named for breakpoints that has modes is a responsive axis, its tokens values per
+ *  viewport (a padding, a font size), and they are custom properties like any other: taken as breakpoints by the
+ *  name, they were written as `NaNrem` from an alias, or as a width from a font weight, and the properties they
+ *  should have been were never written. An alias is not followed: a breakpoint aliasing another token is written as
+ *  a property. */
+export const breakpointOf = (path, values) => {
+  const name = breakpointName(path);
+  if (!name || !values.length || (bpAt(path) === 1 && values.length > 1)) return null;
+  const at = values.map(px);
+  return at.every((n) => Number.isFinite(n) && n === at[0]) ? name : null;
+};
 
 const read = (f) => JSON.parse(readFileSync(f, 'utf8'));
 
@@ -290,8 +304,6 @@ const TRANSFORMS = (SD) => [
 export async function buildTokens(SD, { tokens, out, write = true, banner = 'Generated from the Figma snapshot by the toolkit token build. Do not edit: change Figma, snapshot, and this regenerates.' }) {
   register(SD);
   const collections = discover(tokens);
-  const isBreakpoint = (path) => bpAt(path) > 0;
-
   const { single, axes } = axesOf(collections);
   const baseMode = (axis) => {
     const k = axis.kind;
@@ -300,10 +312,20 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
   };
   const baseFiles = [...single, ...axes.flatMap((a) => a.members.map((s) => collections.get(s).modes.get(baseMode(a))))];
 
-  // Breakpoints, read straight from the files: they are Sass, not properties.
-  const breakpoints = {};
-  for (const f of baseFiles) for (const [path, t] of tokensOf(read(f))) if (isBreakpoint(path) && breakpointName(path)) breakpoints[breakpointName(path)] = px(t.$value);
+  // Breakpoints, read straight from the files: they are Sass, not properties. A token is one by its name and its
+  // value in every mode of its collection (breakpointOf); a token named for one that is not stays a property.
+  const breakpoints = {}, bpPaths = new Set();
+  for (const [, c] of collections) {
+    const values = new Map();
+    for (const f of c.modes.values()) for (const [path, t] of tokensOf(read(f))) if (bpAt(path)) values.set(path.join('.'), [...(values.get(path.join('.')) || []), t.$value]);
+    for (const [k, vs] of values) {
+      const name = breakpointOf(k.split('.'), vs);
+      if (name) { breakpoints[name] = px(vs[0]); bpPaths.add(k); }
+    }
+  }
   // (a `Breakpoint` token beside `Breakpoint/md` names no breakpoint: a Sass name of nothing is not written)
+  // (a Style Dictionary path, asFile below, first called once it is defined)
+  const isBreakpoint = (path) => bpPaths.has(asFile(path.join('.')));
 
   const tmp = mkdtempSync(join(tmpdir(), 'tokens-'));
   const platform = (file, selector, filter) => ({

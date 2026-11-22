@@ -14,6 +14,10 @@ Node 22.12+, and Style Dictionary installed in the project repo (`pnpm add -D st
 
 For every other reader, `names.mjs` `cssName(collection, name)` is the custom property the build writes for a variable (`Color/textStrong` → `--color-text-strong`) and `cssFamily(name)` the prefix its family shares (`--spacing-`), composed from the build's own two steps. Its callers include the docs site, the system MCP's validator, the parity engine's hints, the stylesheet lint and the component-contract tools; `test-names.mjs` holds it.
 
+## Which tokens are breakpoints
+
+`build-tokens.mjs` `breakpointOf(path, values)` decides, and the docs site's Sass names read it. A token is a breakpoint, written to `_breakpoints.scss` and never as a property, when its name says so (a `Breakpoint/<name>` group, or a collection named for breakpoints) and it is one literal length in every mode of its collection: a media query reads neither a mode nor a `var()`. A collection named for breakpoints that has modes is a responsive axis, its tokens values per viewport (a padding, a font size), written as properties under `data-<collection>` like any other mode. An alias is not followed, so a breakpoint aliasing another token is written as a property; and a Mobile/Tablet/Desktop collection that then finds no `sm`/`md` fails the build, as before.
+
 ## Modes and the two conversion steps
 
 How a collection's modes are named in code is `modes.cjs`'s, the one owner: collections sharing a mode set are one axis, written under one attribute (`data-theme` for Light/Dark, else `data-<first collection>`). `build-tokens.mjs` writes every mode, the base too, as that attribute after the page-wide switches (the system's dark preference, a breakpoint), re-declaring the axis's tokens and every single-mode token aliasing them, since a custom property's `var()` resolves where it is declared; so a layer Figma sets to a mode is that mode in code wherever it sits. A token of another axis aliasing it cannot be scoped and is warned about.

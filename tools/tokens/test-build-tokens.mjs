@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { buildTokens, shadowCss, modeSelector, breakpointName } from './build-tokens.mjs';
+import { buildTokens, shadowCss, modeSelector, breakpointName, breakpointOf } from './build-tokens.mjs';
 
 // A registered project repo with Style Dictionary installed lends it, read from the projects the toolkit knows
 // (as test-check.mjs does): this read ~/Projects, a folder only one machine has, and skipped silently elsewhere.
@@ -178,6 +178,35 @@ test('a collection named for breakpoints is Sass too, never custom properties', 
   assert.match(out['_breakpoints.scss'], /\$tablet: 64rem;/);
   assert.match(out['_breakpoints.scss'], /\$xl: 80rem;/, 'a Breakpoint/ group inside a Breakpoints collection is named by the group');
   assert.doesNotMatch(out['_tokens.scss'], /--tablet:/);
+});
+
+test('a collection named for breakpoints that holds other tokens writes them as properties, never NaN', { skip }, async () => {
+  // a library's "Breakpoint" collection whose modes are viewports and whose tokens are a padding and a font size per
+  // viewport; and a breakpoints collection of one mode whose token aliases another: neither is a width a query reads
+  const out = await build({
+    ...LIBRARY,
+    breakpoint: {
+      'xs-480': { space: { padding: { small: { $type: 'dimension', $value: '{primitive.space.2}' } } }, font: { size: dim(14) } },
+      'm-1024': { space: { padding: { small: { $type: 'dimension', $value: '{primitive.space.2}' } } }, font: { size: dim(16) } },
+    },
+    breakpoints: { value: { wide: { $type: 'dimension', $value: '{primitive.space.2}' }, lg: dim(1280) } },
+  });
+  assert.doesNotMatch(out['_breakpoints.scss'], /NaN/);
+  assert.doesNotMatch(out['_breakpoints.scss'], /\$space-|\$font-|\$wide/);
+  assert.match(out['_breakpoints.scss'], /\$lg: 80rem;/, 'a literal width in a breakpoints collection is still a breakpoint');
+  assert.match(out['_tokens.scss'], /--space-padding-small: var\(--space-2\);/);
+  assert.match(out['_tokens.scss'], /\[data-breakpoint="m-1024"\] \{[^}]*--font-size: 1rem;/);
+  assert.match(out['_tokens.scss'], /--wide: var\(--space-2\);/);
+});
+
+test('breakpointOf: one literal length in every mode, by name', () => {
+  assert.equal(breakpointOf(['primitive', 'breakpoint', 'md'], [{ value: 1024, unit: 'px' }]), 'md');
+  assert.equal(breakpointOf(['primitive', 'breakpoint', 'md'], [{ value: 1024, unit: 'px' }, { value: 1024, unit: 'px' }]), 'md', 'the same width in every mode');
+  assert.equal(breakpointOf(['primitive', 'breakpoint', 'md'], [{ value: 1024, unit: 'px' }, { value: 768, unit: 'px' }]), null, 'a width that changes by mode');
+  assert.equal(breakpointOf(['breakpoints', 'md'], [{ value: 1024, unit: 'px' }, { value: 1024, unit: 'px' }]), null, 'a breakpoints collection with modes is a responsive axis');
+  assert.equal(breakpointOf(['breakpoints', 'md'], ['{size.1024}']), null, 'an alias is not followed');
+  assert.equal(breakpointOf(['breakpoints', 'md'], [1024]), 'md', "a bare number, as the snapshot's own values are");
+  assert.equal(breakpointOf(['space', 'md'], [{ value: 16, unit: 'px' }]), null, 'not named for one');
 });
 
 test('shadowCss is the box-shadow the build writes, inset and layers included', () => {
