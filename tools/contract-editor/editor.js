@@ -2060,24 +2060,32 @@ function dragPart(e, p, { isNew = false, label = 'Part' } = {}) {
       }
     });
   };
+  // a row's box as laid out, not where its easing aside has it for the moment: aimed at mid-move, a row sliding under a
+  // still pointer read as its other edge, and the drop went after it (CI, 2026-11-22)
+  const laidOut = (r) => {
+    const b = r.getBoundingClientRect();
+    let dy = 0;
+    for (let n = r; n && n !== tree; n = n.parentElement) dy += new DOMMatrix(getComputedStyle(n).transform).m42;
+    return { left: b.left, right: b.right, top: b.top - dy, bottom: b.bottom - dy, height: b.height };
+  };
   const aim = (x, y) => {
-    const hit = document.elementFromPoint(x, y);
-    // over the slot itself, the drop stays where the slot is
-    if (hit && slot.contains(hit)) return;
-    const over = hit?.closest('[data-parts] .ce-row[data-uid]');
-    // below the last row, across the tree: the part goes last in the outer box, as a list takes a drop under its end
     const rows = [...tree.querySelectorAll('.ce-row[data-uid]')].filter((r) => r.checkVisibility());
-    const end = rows.at(-1)?.getBoundingClientRect(), across = tree.getBoundingClientRect();
+    const under = [slot.isConnected ? slot.firstElementChild : null, ...rows].filter(Boolean).find((r) => { const b = laidOut(r); return x >= b.left && x <= b.right && y >= b.top && y < b.bottom; });
+    // over the slot itself, the drop stays where the slot is
+    if (under && under === slot.firstElementChild) return;
+    const over = under;
+    // below the last row, across the tree: the part goes last in the outer box, as a list takes a drop under its end
+    const end = rows.length ? laidOut(rows.at(-1)) : null, across = tree.getBoundingClientRect();
     if (!over && end && y > end.bottom && x > across.left - 48 && x < across.right + 48) {
       const next = place(parts(), p.uid, 'root', 'inside') !== parts() ? { target: 'root', where: 'inside' } : null;
       if (JSON.stringify(next) !== JSON.stringify(drop)) { drop = next; show(); }
       return;
     }
-    // between rows, or over one still easing aside, the drop stays; it is lost only off the tree
-    if (!over && hit && tree.contains(hit)) return;
+    // between rows, the drop stays; it is lost only off the tree
+    if (!over && x >= across.left && x <= across.right && y >= across.top && y <= across.bottom) return;
     let next = null;
     if (over && over.dataset.uid !== p.uid) {
-      const b = over.getBoundingClientRect();
+      const b = laidOut(over);
       const t = (y - b.top) / b.height;
       const container = holds(over.dataset.kind);
       // an open container with parts showing: its bottom edge is the top of its own list, so a drop there goes inside

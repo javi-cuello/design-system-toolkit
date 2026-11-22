@@ -738,6 +738,9 @@ try {
     const side = await js(`(() => { const r = [...document.querySelectorAll('[data-parts] .ce-row')].find(x => x.querySelector('.ce-row__name').textContent === 'Side').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
     await mouse('mousePressed', handle.x, handle.y);
     for (let k = 1; k <= 8; k++) await mouse('mouseMoved', handle.x + (side.x - handle.x) * k / 8, handle.y + (side.y - handle.y) * k / 8);
+    // the pointer still, but moved once more where it is, as a hand or the browser does while the rows ease aside: aimed at
+    // a row mid-move, the drop went after Side (CI, 2026-11-22)
+    await mouse('mouseMoved', side.x, side.y);
     // the copy laid out as the rows are: its handle inside it, its columns the list's
     ok('the carried copy is laid out as a row in the tree is', await js(`(() => { const g = document.querySelector('.ce-lift'), r = document.querySelector('[data-parts] .ce-row--part:not(.ce-row--slot)'); const h = g.querySelector('.ce-handle').getBoundingClientRect(), b = g.getBoundingClientRect(); return h.left >= b.left && g.querySelector('.ce-row__main').style.gridTemplateColumns.split(' ').length === getComputedStyle(r.querySelector('.ce-row__main')).gridTemplateColumns.split(' ').length; })()`));
     ok('dragging over a container\'s middle shows the part dashed inside it, a copy of its row under the pointer', !!(await js(`document.querySelector('body > .ce-lift')`)) && await js(`!![...document.querySelectorAll('[data-parts] .ce-row[data-uid]')].find(x => x.querySelector('.ce-row__name').textContent === 'Side').closest('.ce-node').querySelector(':scope > .ce-subtree .ce-row--slot')`));
