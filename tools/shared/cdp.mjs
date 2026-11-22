@@ -98,7 +98,7 @@ export async function launch({ chrome = findChrome(), port = 0, profile, args = 
         if (existsSync(dir)) { away = 0; try { rmSync(dir, { recursive: true, force: true }); } catch { /* busy: again */ } } else away++;
         if (away < 2) await sleep(100);
       }
-      if (away < 2) console.error(`cdp: the browser profile ${dir} is still there after three seconds of removing it; the OS clears tmp`);
+      if (away < 2) console.error(`cdp: the browser profile ${dir} was not confirmed gone after three seconds of removing it; the OS clears tmp`);
     }
   };
   for (const end = Date.now() + timeout; Date.now() < end; await sleep(100)) {
