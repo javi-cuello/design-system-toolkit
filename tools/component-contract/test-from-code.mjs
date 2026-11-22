@@ -676,9 +676,15 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('a sheet reaching nothing keeps no token, and one reaching all keeps the sheet as it was', customProperties(reachedTokens(css, '')).length === 0 && reachedTokens(css, 'var(--s) var(--f) var(--last) var(--b) var(--c) var(--d)') === css); }
 { const fs = await import('node:fs'), path = await import('node:path');
   const { selfSiteFiles, siteFiles, serveSite } = await import('./site.mjs');
+  // (a browser's spare connection, opened and never asked anything: Node 22 waits on it forever, and CI timed out at 30 min)
+  { const site = await serveSite({}), net = await import('node:net'), spare = net.connect(+new URL(site.url).port, '127.0.0.1').on('error', () => {});
+    await new Promise((r) => spare.on('connect', r)); await new Promise((r) => setTimeout(r, 100));
+    const shut = await Promise.race([site.close().then(() => true), new Promise((r) => setTimeout(r, 3000, false))]);
+    spare.destroy();
+    ok('the self page\'s server closes with a connection still open that sent no request', shut); }
   const { cssName: nameOf } = await import('../tokens/names.mjs');
   const SAMPLE = new URL('../contract-editor/sample/', import.meta.url).pathname, DIR = path.join(SAMPLE, 'components');
-  const library = Object.fromEntries(fs.readdirSync(DIR).map((f) => { const c = JSON.parse(fs.readFileSync(path.join(DIR, f, 'contract.json'), 'utf8')); return [c.component, { ...c, folder: f }]; }));
+  const library = Object.fromEntries(fs.readdirSync(DIR, { withFileTypes: true }).filter((e) => e.isDirectory()).map(({ name: f }) => { const c = JSON.parse(fs.readFileSync(path.join(DIR, f, 'contract.json'), 'utf8')); return [c.component, { ...c, folder: f }]; }));
   const files = selfSiteFiles(library, 'contact-card', { tokensCss: ':root { --x: 1px }' });
   ok('the self page serves the component and the components it places, and no other', Object.keys(files).filter((f) => f.startsWith('components/') && f !== 'components/dom.js').sort().join() === 'components/avatar/avatar.js,components/contact-card/contact-card.js' && !/ds-button/.test(files['all.css']));
   // the sample's tokens, every one set through an alias of its own (a var() chain), several declarations on each line, with
