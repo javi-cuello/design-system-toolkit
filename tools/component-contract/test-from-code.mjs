@@ -291,6 +291,34 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     && inPage({ ...host, firstElementChild: { style: { order: '0' } } }, 'layer', style) === null);
 }
 
+// a child out of the flow paints where the browser paints it, never where a CSS order would put it: order moves only a
+// flex or grid item (CSS Flexbox 4.1, 4.3), and an absolute child paints over the box's unpositioned children, in markup
+// order among the positioned, a z-index over all (CSS 2 Appendix E); the children in the flow keep their laid-out order
+{
+  const { stackOf } = await import('./from-code.mjs'), { siblingOrder } = await import('./rules.mjs');
+  const stack = new Function(`return ${stackOf.toString()}`)(), order = new Function(`return ${siblingOrder.toString()}`)();
+  const style = (n) => n.style || n;
+  const kid = (st) => ({ style: { display: 'block', position: 'static', zIndex: 'auto', ...st }, parentElement: { style: { display: 'flex' } } });
+  const said = (n) => JSON.stringify(stack(n, style));
+  ok('what stacks a child: out of the flow, positioned in it, a z-index where it applies (positioned, or a flex item), none on a block\'s child',
+    said(kid({ position: 'absolute' })) === '{"out":true}' && said(kid({ position: 'relative' })) === '{"lifted":true}' && said(kid({})) === '{}'
+    && said(kid({ zIndex: '2' })) === '{"z":2}' && said(kid({ position: 'absolute', zIndex: '-1' })) === '{"out":true,"z":-1}'
+    && said({ ...kid({ zIndex: '2' }), parentElement: { style: { display: 'block' } } }) === '{}');
+  ok('a host that draws no box stacks as its control does',
+    said({ style: { display: 'contents', position: 'static', zIndex: 'auto' }, firstElementChild: { style: { display: 'block', position: 'absolute', zIndex: '3' } }, parentElement: { style: { display: 'flex' } } }) === '{"out":true,"z":3}');
+  const ids = (xs) => order(xs).map((e) => e.id).join();
+  ok('an absolute child written between two others with a CSS order paints over both, its order read from no declaration',
+    ids([{ id: 'a' }, { id: 'abs', cssOrder: 1, stack: { out: true } }, { id: 'b', cssOrder: 2 }]) === 'a,b,abs');
+  ok('two absolute children paint in markup order; the flow keeps its CSS order',
+    ids([{ id: 'x', stack: { out: true } }, { id: 'a', cssOrder: 1 }, { id: 'y', stack: { out: true } }, { id: 'b', cssOrder: 0 }]) === 'b,a,x,y');
+  ok('a z-index puts an absolute child between the children it paints over and under, and absolute children in z order',
+    ids([{ id: 'a', stack: { z: 1 } }, { id: 'abs', stack: { out: true, z: 2 } }, { id: 'b', stack: { z: 3 } }]) === 'a,abs,b'
+    && ids([{ id: 'abs', stack: { out: true, z: 2 } }, { id: 'abs2', stack: { out: true, z: 1 } }, { id: 'a', stack: { z: 3 } }]) === 'abs2,abs,a');
+  ok('below 0 it paints under the flow; a child in the flow positioned after it in the markup paints over it',
+    ids([{ id: 'a' }, { id: 'abs', stack: { out: true, z: -1 } }]) === 'abs,a'
+    && ids([{ id: 'abs', stack: { out: true } }, { id: 'a', stack: { lifted: true } }]) === 'abs,a' && ids([{ id: 'a', stack: { lifted: true } }, { id: 'abs', stack: { out: true } }]) === 'a,abs');
+}
+
 // a layer the mapping places inside a placed component takes the design's name there, never the placed component's own
 // name for the element it lands on (Atlassian's date picker: Select's chevron, <ChevronDownIcon>, carries the design's
 // <SelectClearIcon>; read under Select's name, the second trip's mapping named a layer the design has not)

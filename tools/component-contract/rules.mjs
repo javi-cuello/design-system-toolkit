@@ -444,3 +444,25 @@ export function sizeFromCss(axis, own, parent, { root = false } = {}) {
   const align = !self || self === 'auto' ? word(parent['align-items']) : self;
   return { value: !align || align === 'normal' || align === 'stretch' ? 'fill' : 'hug' };
 }
+
+/* A box's children in the order they paint, the contract's `order`: `xs` in markup order, each with its CSS order
+   (`cssOrder`) and how it stacks (`stack`: from-code stackOf, { out, lifted, z }). The children in the flow keep the
+   order the box lays them out in (CSS order, then markup: what their `order` says first is their place); a child out of
+   the flow takes its place by paint alone, its CSS order moving nothing (CSS Flexbox 4.1): after the last child in the
+   flow it paints over (CSS 2 Appendix E: by z-index; at one z-index, an unpositioned child in the flow under a positioned
+   one; among positioned ones, markup order, which Chromium keeps for flex items too). Out-of-flow children in one place
+   go in paint order. A child in the flow that paints out of its laid-out order (positioned before a static sibling)
+   cannot say both: it says its layout. Runs in the page as well (from-code passes it as source); to-code draws by it. */
+export function siblingOrder(xs) {
+  const all = xs.map((e, i) => ({ e, i, s: e.stack || {} }));
+  const flow = all.filter((x) => !x.s.out).sort((a, b) => (a.e.cssOrder || 0) - (b.e.cssOrder || 0) || a.i - b.i);
+  flow.forEach((x, r) => { x.r = r; });
+  const plain = (x) => x.s.z == null && !x.s.out && !x.s.lifted;
+  const key = (x) => [x.s.z ?? 0, plain(x) ? 0 : 1, plain(x) ? x.r : x.i];
+  const under = (a, b) => { const p = key(a), q = key(b); for (let k = 0; k < 3; k++) if (p[k] !== q[k]) return p[k] < q[k]; return false; };
+  const outs = all.filter((x) => x.s.out).sort((a, b) => (under(a, b) ? -1 : under(b, a) ? 1 : 0));
+  const slot = new Map(outs.map((o) => [o, flow.reduce((at, f, k) => (under(f, o) ? k : at), -1)]));
+  const res = outs.filter((o) => slot.get(o) === -1);
+  flow.forEach((f, k) => { res.push(f, ...outs.filter((o) => slot.get(o) === k)); });
+  return res.map((x) => x.e);
+}
