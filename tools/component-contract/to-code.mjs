@@ -129,6 +129,9 @@ export function copyOf(c, id) {
   const a = c.anatomy, m = /^(.*)_\d+$/.exec(id);
   const first = m && a[m[1]], e = a[id];
   if (!first || !e || first.kind !== 'instance' || e.kind !== 'instance' || first.parent !== e.parent || first.component !== e.component || SAME(first) !== SAME(e)) return null;
+  // (in a box a variant reorders, each child says its own place: a copy is a part of its own there, or one shared rule
+  // would give every copy the first's place)
+  if (reordered(c).has(e.parent)) return null;
   const touched = (k) => (c.variants || []).some((v) => (v.remove || []).includes(k) || k in (v.add || {}) || Object.keys(v.set || {}).some((x) => x.startsWith(`${k}.`)));
   return touched(id) || touched(m[1]) ? null : m[1];
 }
@@ -139,10 +142,17 @@ const REORDERED = new WeakMap();
 function reordered(c) {
   if (!REORDERED.has(c)) {
     const ids = (c.variants || []).flatMap((v) => Object.keys(v.set || {}).filter((k) => k.endsWith('.order')).map((k) => k.slice(0, -'.order'.length)));
+    const boxes = new Set(ids.map((id) => (c.anatomy[id] || findAdded(c, id) || {}).parent).filter(Boolean));
+    // (each place within one box: a part two variants add under different boxes is compared in each box on its own)
     const places = new Map();
-    for (const v of c.variants || []) for (const [id, e] of Object.entries(v.add || {})) if (typeof e.order === 'number') places.set(id, (places.get(id) || new Set([(c.anatomy[id] || {}).order].filter((o) => typeof o === 'number'))).add(e.order));
-    for (const [id, at] of places) if (at.size > 1) ids.push(id);
-    REORDERED.set(c, new Set(ids.map((id) => (c.anatomy[id] || findAdded(c, id) || {}).parent).filter(Boolean)));
+    for (const v of c.variants || []) for (const [id, e] of Object.entries(v.add || {})) {
+      if (typeof e.order !== 'number' || !e.parent) continue;
+      const key = `${e.parent}\0${id}`, base = c.anatomy[id];
+      if (!places.has(key)) places.set(key, { box: e.parent, at: new Set(base && base.parent === e.parent && typeof base.order === 'number' ? [base.order] : []) });
+      places.get(key).at.add(e.order);
+    }
+    for (const { box, at } of places.values()) if (at.size > 1) boxes.add(box);
+    REORDERED.set(c, boxes);
   }
   return REORDERED.get(c);
 }
@@ -626,7 +636,8 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     }
     if (sample) kept.push(['inline-size', '100%']);
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
-    if (parent && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
+    // (only where an auto layout lays it out: an absolute child, or one in a box with none, is placed by no order)
+    if (parent && parent.layout && !(e.position === 'absolute' || e.absolute) && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: (e.kind === 'instance' && !unheld) || slotted ? [] : unheld ? unread.filter((f) => !/^(key|component|with|swappedBy)\b/.test(f)) : unread,
       // (the axes a scale constraint went unwritten on: eval.mjs leftToCode leaves what code draws there to code)
       ...(unshared.length && !slotted && { unshared }) };
@@ -686,6 +697,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       out[key] = { decls: new Map(decls.filter(([p]) => keep(p)).map(([p, v, note]) => [p, { v, note }])), unread };
     };
     put(entry.input, value, () => true);
+    // (in a box a variant reorders, the input stands where its value text does, or the placeholder where that is drawn)
+    const own = value || placeholder, P = a[entry.box];
+    if (out[entry.input] && own && P && P.layout && !(own.position === 'absolute' || own.absolute) && reordered(c).has(entry.box) && typeof own.order === 'number') out[entry.input].decls.set('order', { v: String(own.order) });
     put(`${entry.input}::placeholder`, placeholder, (p) => p === 'color' || /^(font|line-height|letter-spacing|text-)/.test(p));
   }
   return out;

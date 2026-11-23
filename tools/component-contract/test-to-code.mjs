@@ -6,6 +6,8 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector } from './to-code.mjs';
 import { declarations } from './css.mjs';
+import { toElement } from './to-markup.mjs';
+import { ELEMENT } from './site.mjs';
 import { fillCss, fillsFromCss, smoothingToCss } from './rules.mjs';
 
 let n = 0;
@@ -167,14 +169,51 @@ const rcss2 = toCss(rev, 'chip', { naming: { kind: 'class', prefix: 'ds-', part:
 ok('a reordering variant writes each child\'s order', /__texts > \.ds-chip__a \{[^}]*order: 0;/.test(rcss2) && /:where\(\[data-reversed\]:not\(\[data-reversed="false"\]\)\) > \.ds-chip__texts > \.ds-chip__a \{\s*order: 1;/.test(rcss2) && selfCheck(rev).length === 0);
 // two variants that each add a box's children, in different orders (a caret before the words, then after them): each
 // child says its place there too, so the order follows the props, not the one the markup writes them in
-{ const box = { kind: 'container', parent: 'root', order: 0, layout: { direction: 'row' } };
-const caretAt = (n) => ({ kind: 'graphic', parent: 'box', order: n, width: 1, height: 16 }), wordsAt = (n) => ({ kind: 'text', parent: 'box', order: n, content: 'Find' });
-const typed = { ...chip, props: { ...chip.props, mode: { type: 'enum', values: ['idle', 'armed', 'typed'], default: 'idle' } },
-  variants: [...chip.variants, { when: { mode: 'armed' }, add: { box, 'box/caret': caretAt(0), 'box/words': wordsAt(1) } }, { when: { mode: 'typed' }, add: { box, 'box/words': wordsAt(0), 'box/caret': caretAt(1) } }] };
-const tcss = toCss(typed, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
-ok('two variants adding a box\'s children in other orders write each child\'s order',
-  /:where\(\[data-mode="armed"\]\) > \.ds-chip__box > \.ds-chip__caret \{[^}]*order: 0;/.test(tcss) && /:where\(\[data-mode="typed"\]\) > \.ds-chip__box > \.ds-chip__caret \{[^}]*order: 1;/.test(tcss)
-  && /:where\(\[data-mode="typed"\]\) > \.ds-chip__box > \.ds-chip__words \{[^}]*order: 0;/.test(tcss)); }
+{ const CLS = { kind: 'class', prefix: 'ds-', part: '__' };
+  // what the browser draws in a box at one condition: its children in markup order, then by the CSS order the sheet gives
+  // each, the defaults' rule and then the condition's (the later winning), as a flex box lays them out
+  const drawn = (markup, css, kids, cond) => {
+    const orderOf = (k) => { let o = 0; for (const m of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) { const sel = m[1].trim(), v = /(?:^|\s)order: (-?\d+);/.exec(m[2]);
+      if (!v || !sel.endsWith(`[data-part="${k}"]`) || (sel.includes(':where(') && !(cond && sel.includes(cond)))) continue; o = +v[1]; } return o; };
+    const at = (k) => markup.indexOf(`"data-part": "${k}"`);
+    return kids.filter((k) => at(k) >= 0).sort((x, y) => orderOf(x) - orderOf(y) || at(x) - at(y));
+  };
+  const box = { kind: 'container', parent: 'root', order: 0, layout: { direction: 'row' } };
+  const at = (kind, n) => ({ kind, parent: 'box', order: n, ...(kind === 'text' ? { content: 'Find' } : { width: 1, height: 16 }) });
+  const typed = { ...chip, props: { ...chip.props, mode: { type: 'enum', values: ['idle', 'armed', 'typed'], default: 'idle' } }, anatomy: { ...chip.anatomy, box, 'box/lead': at('graphic', 0) },
+    variants: [...chip.variants, { when: { mode: 'armed' }, add: { 'box/caret': at('graphic', 1), 'box/words': at('text', 2) } }, { when: { mode: 'typed' }, add: { 'box/words': at('text', 1), 'box/caret': at('graphic', 2) } }] };
+  const tcss = toCss(typed, 'chip', { naming: CLS }), tmk = toElement(typed, 'chip', { naming: ELEMENT, library: {} }), tel = toCss(typed, 'chip', { naming: ELEMENT });
+  ok('two variants adding a box\'s children in other orders write each child\'s order, the defaults\' children theirs',
+    /\.ds-chip > \.ds-chip__box > \.ds-chip__lead \{[^}]*order: 0;/.test(tcss)
+    && /:where\(\[data-mode="armed"\]\) > \.ds-chip__box > \.ds-chip__caret \{[^}]*order: 1;/.test(tcss) && /:where\(\[data-mode="typed"\]\) > \.ds-chip__box > \.ds-chip__caret \{[^}]*order: 2;/.test(tcss)
+    && /:where\(\[data-mode="typed"\]\) > \.ds-chip__box > \.ds-chip__words \{[^}]*order: 1;/.test(tcss) && selfCheck(typed).length === 0);
+  ok('and the browser draws each in the design\'s order, whatever order the markup writes them in',
+    drawn(tmk, tel, ['lead', 'caret', 'words'], '[mode="armed"]').join() === 'lead,caret,words' && drawn(tmk, tel, ['lead', 'caret', 'words'], '[mode="typed"]').join() === 'lead,words,caret');
+  // a part two variants add under different boxes is in another order in neither: neither box says orders
+  const tip = (parent, n) => ({ kind: 'graphic', parent, order: n, width: 1, height: 1 });
+  const moved = { ...chip, props: typed.props, anatomy: { ...chip.anatomy, box, other: { ...box, order: 1 }, 'box/a': tip('box', 0), 'other/b': tip('other', 0), 'other/c': tip('other', 1) },
+    variants: [...chip.variants, { when: { mode: 'armed' }, add: { tip: tip('box', 1) } }, { when: { mode: 'typed' }, add: { tip: tip('other', 2) } }] };
+  ok('places are compared within one box: a part two variants add under different boxes at one place there reorders neither', !/order:/.test(toCss(moved, 'chip', { naming: CLS })));
+  // an absolute child, and a box no auto layout lays out, take no order: CSS order moves nothing there
+  const loose = { ...typed, anatomy: { ...typed.anatomy, 'box/pin': { kind: 'graphic', parent: 'box', order: 1, position: 'absolute', absolute: { x: 0, y: 0 }, width: 1, height: 1 } } };
+  const flat = { ...typed, anatomy: { ...typed.anatomy, box: { kind: 'container', parent: 'root', order: 0 } } };
+  ok('order is written only where an auto layout lays the child out', !/__pin \{[^}]*order:/.test(toCss(loose, 'chip', { naming: CLS })) && !/order:/.test(toCss(flat, 'chip', { naming: CLS })));
+  // numbered copies of one placed component in a reordered box, a sibling between them: each says its own place
+  const tagAt = (n) => ({ kind: 'instance', parent: 'box', order: n, component: 'Tag', key: 't1' });
+  const list = { ...chip, props: typed.props, anatomy: { ...chip.anatomy, box, 'box/item': tagAt(0), 'box/sep': at('graphic', 1), 'box/item_2': tagAt(2) },
+    variants: [...chip.variants, { when: { mode: 'armed' }, add: { 'box/badge': at('graphic', 3) } }, { when: { mode: 'typed' }, add: { 'box/note': at('graphic', 3), 'box/badge': at('graphic', 4) } }] };
+  const lmk = toElement(list, 'chip', { naming: ELEMENT, library: {} }), lcss = toCss(list, 'chip', { naming: ELEMENT });
+  ok('copies in a reordered box each keep their own place between the siblings that part them',
+    drawn(lmk, lcss, ['item', 'sep', 'item-2', 'badge', 'note'], '[mode="typed"]').join() === 'item,sep,item-2,note,badge' && selfCheck(list).length === 0);
+  // a text entry in a reordered box: the input stands where its value text does, not at 0 before the parts ahead of it
+  const entry = { ...field, props: { ...field.props, mode: typed.props.mode },
+    anatomy: { ...field.anatomy, 'field/lead': { kind: 'graphic', parent: 'field', order: 0, width: 1, height: 1 }, 'field/prefix': { kind: 'text', parent: 'field', order: 1, content: '$' },
+      'field/placeholder': { ...field.anatomy['field/placeholder'], order: 2 }, 'field/clear': { kind: 'graphic', parent: 'field', order: 3, width: 1, height: 1 } },
+    variants: [{ ...field.variants[0], add: { 'field/value': { ...field.variants[0].add['field/value'], order: 2 } } }, ...field.variants.slice(1),
+      { when: { mode: 'armed' }, add: { 'field/hint': { kind: 'graphic', parent: 'field', order: 4, width: 1, height: 1 }, 'field/err': { kind: 'graphic', parent: 'field', order: 5, width: 1, height: 1 } } },
+      { when: { mode: 'typed' }, add: { 'field/err': { kind: 'graphic', parent: 'field', order: 4, width: 1, height: 1 }, 'field/hint': { kind: 'graphic', parent: 'field', order: 5, width: 1, height: 1 } } }] };
+  const ecss = toCss(entry, 'search', { naming: CLS });
+  ok('a text entry\'s input in a reordered box takes its value text\'s place', /\.ds-search__field > \.ds-search__input \{[^}]*order: 2;/.test(ecss) && /__prefix \{[^}]*order: 1;/.test(ecss) && selfCheck(entry).length === 0); }
 // a placed control the Selected layer names is the one the state reaches, at its depth; another control is not
 const card = { ...chip, anatomy: { ...chip.anatomy, top: { kind: 'container', parent: 'root', order: 1, layout: { direction: 'row' } }, 'top/check': { kind: 'instance', parent: 'top', order: 0, component: 'Checkbox', with: { Selected: 'False' } }, foot: { kind: 'instance', parent: 'root', order: 2, component: 'Button' } },
   variants: [...chip.variants, { when: { selected: true }, set: { 'top/check.with': { Selected: 'True' } } }] };
