@@ -82,7 +82,9 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
     if (v === undefined || v === 'hug') continue;
     // filled across and capped (a dialog's panel to 556): stretched, the cap would pin it to the start, so it takes
     // the full size instead and sits where its parent aligns it, as Figma has it
-    if (v === 'fill') { if (root) continue; if (along) put('flex', '1 1 0'); else if (e[k === 'width' ? 'maxWidth' : 'maxHeight'] !== undefined) put(prop, '100%'); else { put('align-self', 'stretch'); if (e.kind === 'instance') put(prop, 'auto'); } continue; }
+    // (along, its share and no more: Figma's fill does not grow to what it holds, a state layer 40 tall holding 44, so
+    // CSS's automatic minimum, min-width: auto (css-flexbox-1 §4.5), is set to 0, unless the part has a minimum of its own)
+    if (v === 'fill') { if (root) continue; if (along) { put('flex', '1 1 0'); if (e[k === 'width' ? 'minWidth' : 'minHeight'] === undefined) put(`min-${prop}`, '0'); } else if (e[k === 'width' ? 'maxWidth' : 'maxHeight'] !== undefined) put(prop, '100%'); else { put('align-self', 'stretch'); if (e.kind === 'instance') put(prop, 'auto'); } continue; }
     put(prop, len(v), literal(v));
   }
   for (const [k, prop] of [['minWidth', 'min-inline-size'], ['minHeight', 'min-block-size'], ['maxWidth', 'max-inline-size'], ['maxHeight', 'max-block-size']]) {

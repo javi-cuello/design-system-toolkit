@@ -28,6 +28,13 @@ ok('auto layout is flex: direction, gap, padding (shortest form), alignment, eac
   && box['justify-content'] === 'center' && box['align-items'] === 'stretch' && !('inline-size' in box) && box['min-block-size'] === '1.5rem');
 ok('a hugging outer box is inline-flex, as it sits in a line of text', decl({ layout: {}, width: 'hug' }, { holds: true, root: true }).display === 'inline-flex');
 ok('fill grows along the parent\'s row and stretches across its column', decl({ width: 'fill' }, { row: true }).flex === '1 1 0' && decl({ width: 'fill' }, { row: false })['align-self'] === 'stretch');
+// Figma's fill takes its share of the parent and no more, what it holds overflowing (a state layer 40 tall with 10 padding
+// about a 24 icon): along a flex row CSS's automatic minimum (min-width: auto, css-flexbox-1 §4.5) would keep it its
+// content's, so it is set to 0; a minimum of the part's own stays
+ok('a part that fills along its parent may shrink below what it holds, as in Figma; a minimum of its own is kept',
+  decl({ width: 'fill' }, { row: true })['min-inline-size'] === '0' && decl({ height: 'fill' }, { row: false })['min-block-size'] === '0'
+  && decl({ height: 'fill' }, { row: true })['min-block-size'] === undefined && decl({ width: 'fill', minWidth: 24 }, { row: true })['min-inline-size'] === '1.5rem'
+  && declarations({ width: 'fill', minWidth: 24 }, { row: true }, names).decls.filter(([p]) => p === 'min-inline-size').length === 1);
 const lit = declarations({ minHeight: 24 }, {}, names).decls[0];
 ok('a text that hugs its width never wraps (Figma\'s WIDTH_AND_HEIGHT), one that fills or is cut keeps its own',
   decl({ kind: 'text', width: 'hug', height: 'hug' }, {})['white-space'] === 'nowrap' && decl({ kind: 'text', width: 'fill', height: 'hug' }, {})['white-space'] === undefined
@@ -161,7 +168,7 @@ ok('a line no wide is a border on its leading edge, no outline', (() => { const 
 ok('a fill with no variable is written as its colour, never a made-up token', decl({ background: 'rgb(0 0 0 / 0.5)' }).background === 'rgb(0 0 0 / 0.5)');
 ok('spaced between, the gap Figma sets aside is not written', !('gap' in decl({ layout: { direction: 'row', gap: 'S/16', align: 'space-between' } }, { holds: true })));
 const placed = toCss({ ...chip, anatomy: { ...chip.anatomy, badge: { kind: 'instance', parent: 'root', order: 1, component: 'Badge', width: 'fill', background: 'C/x', radius: 4, shadow: 'E/1' } } }, 'chip');
-ok('a placed component is given its place and size, never its look', /__badge \{\s*flex: 1 1 0;\s*\}/.test(placed) && !/var\(--c-x\)|var\(--e-1\)/.test(placed));
+ok('a placed component is given its place and size, never its look', /__badge \{\s*flex: 1 1 0;\s*min-inline-size: 0;\s*\}/.test(placed) && !/var\(--c-x\)|var\(--e-1\)/.test(placed));
 // a variant that puts a box's children in another order: each child says its place, in the defaults and the variant
 const rev = { ...chip, props: { ...chip.props, reversed: { type: 'boolean', default: false, axis: true } }, anatomy: { ...chip.anatomy, texts: { kind: 'container', parent: 'root', order: 1, layout: { direction: 'column' } }, 'texts/a': { kind: 'text', parent: 'texts', order: 0 }, 'texts/b': { kind: 'text', parent: 'texts', order: 1 } },
   variants: [...chip.variants, { when: { reversed: true }, set: { 'texts/a.order': 1, 'texts/b.order': 0 } }] };
