@@ -567,7 +567,7 @@ function overrideOf(a, host, rel, m, mains, B = a, c = null) {
   // (the placed part's own words: what it shows at the instance's props, a literal there, else its binding's default)
   const lit = (x) => (x && typeof x.content === 'string' && !/^\{.+\}$/.test(x.content) ? x.content : null);
   const ownWords = lit(own) ?? (mid && mid.e.content !== undefined ? wordsOf(mid.of, own) : wordsOf(m, own)), wordsAt = (x) => (x === own ? ownWords : x === e ? wordsOf(c, e) ?? ownWords : wordsOf(m, x));
-  const ctx = (x, par) => ({ root: false, holds: holds(x.kind), row: !par || (par.layout || {}).direction !== 'column', anchors: false, box: null, pull: null, words: wordsAt(x) });
+  const ctx = (x, par) => ({ root: false, holds: holds(x.kind), row: !par || (par.layout || {}).direction !== 'column', wrap: !!(par && par.layout && par.layout.wrap), anchors: false, box: null, pull: null, words: wordsAt(x) });
   // a nested instance is placed, never restyled here: where it sits and how big (PLACED), as any placed instance
   // (and its own styling over its component's root, drawn whole on both sides: an override set on the nested instance itself)
   const styled = (x, par) => (x.kind === 'instance' ? placedDecls(x, ctx(x, par), mains, e && e.kind === 'instance' ? e : x) : declarations(x, ctx(x, par), tokenNames).decls);
@@ -797,7 +797,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     // (and a combination that drops the sample's mark but keeps its size has the defaults' kept size still: dropped too)
     const empty = [...new Set([...(e.whileEmpty || []), ...(slotted && B[id] ? (B[id].whileEmpty || []).filter((f) => e[f] === B[id][f]) : [])])].filter((f) => e[f] !== undefined);
     if (empty.length) { e = { ...e }; for (const f of empty) delete e[f]; delete e.whileEmpty; }
-    const { decls, unread, unshared } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box, pull, words: wordsOf(c, e) }, tokenNames);
+    const { decls, unread, unshared } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', wrap: !!(parent && parent.layout && parent.layout.wrap), anchors, box, pull, words: wordsOf(c, e) }, tokenNames);
     // a placed component is placed here and looks as its own sheet says (code-standard rule 5): where it sits and
     // how big, never its fill, stroke, corners or type, which a prop changes in code
     // (but an instance of a component the store does not hold, an icon of another library: no sheet of its own draws
@@ -809,7 +809,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     // props: Carbon's toggle fills its toggle item per state): written on the instance, and where the defaults' override
     // no longer holds, the component's own value, as an override inside one is
     if (e.kind === 'instance' && !unheld && !slotted) {
-      const ictx = { root: false, holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors: false, box: null, pull: null };
+      const ictx = { root: false, holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', wrap: !!(parent && parent.layout && parent.layout.wrap), anchors: false, box: null, pull: null };
       const over = ownOverride(e, ictx, mains), said = new Set(over.changed.map(([p]) => p));
       // (the component's own value said only where a rule before this one sets it otherwise, `given`: elsewhere nothing,
       // so the component's own sheet, its pointer states included, holds there)

@@ -35,6 +35,10 @@ ok('a part that fills along its parent may shrink below what it holds, as in Fig
   decl({ width: 'fill' }, { row: true })['min-inline-size'] === '0' && decl({ height: 'fill' }, { row: false })['min-block-size'] === '0'
   && decl({ height: 'fill' }, { row: true })['min-block-size'] === undefined && decl({ width: 'fill', minWidth: 24 }, { row: true })['min-inline-size'] === '1.5rem'
   && declarations({ width: 'fill', minWidth: 24 }, { row: true }, names).decls.filter(([p]) => p === 'min-inline-size').length === 1);
+// (in a parent that wraps, the content size is what decides where a row breaks: each item keeps it, or every chip counts
+// as 0 wide and none ever wraps)
+ok('a part that fills a parent that wraps keeps its content\'s minimum, so the row still breaks', decl({ width: 'fill' }, { row: true, wrap: true })['min-inline-size'] === undefined
+  && /__chip \{[^}]*flex: 1 1 0;(?![^}]*min-inline-size)[^}]*\}/.test(toCss({ component: 'Chips', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', wrap: true } }, chip: { kind: 'container', parent: 'root', order: 0, width: 'fill' } }, variants: [] }, 'chips')));
 const lit = declarations({ minHeight: 24 }, {}, names).decls[0];
 ok('a text that hugs its width never wraps (Figma\'s WIDTH_AND_HEIGHT), one that fills or is cut keeps its own',
   decl({ kind: 'text', width: 'hug', height: 'hug' }, {})['white-space'] === 'nowrap' && decl({ kind: 'text', width: 'fill', height: 'hug' }, {})['white-space'] === undefined
