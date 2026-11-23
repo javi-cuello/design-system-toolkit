@@ -1,6 +1,6 @@
 # Data visualisation: choosing, drawing and reading charts
 
-How an interface turns figures into a chart that says one thing clearly, to everyone: choosing the form by the data's job, or no chart at all; keeping it simple; colour by job; stacked bars, line charts with few points, calendar heatmaps, sparklines and small multiples; axes and labels; how a pie or donut is built in Figma and maps to chart libraries; hover and focus; narrow screens; accessibility in depth (Chartability, long descriptions and tables, colour-vision deficiency, contrast, keyboard and screen-reader access, touch targets, reduced motion, zoom and reflow, cognitive load); and empty or sparse data. It serves design-standard's principles *honest*, *clear words, clear hierarchy* and *for everyone, in any context*. Formatting the numbers a chart shows, KPI tiles and provenance captions are [data](data.md); how a dashboard composes several charts is [dashboards](../profiles/dashboards.md).
+How an interface turns figures into a chart that says one thing clearly, to everyone: choosing the form by the data's job, or no chart at all; keeping it simple; colour by job; stacked bars, line charts with few points, calendar heatmaps, sparklines and small multiples; axes and labels; how a pie or donut is ordered, labelled and built in Figma and maps to chart libraries; hover and focus; narrow screens; accessibility in depth (Chartability, long descriptions and tables, colour-vision deficiency, contrast, keyboard and screen-reader access, touch targets, reduced motion, zoom and reflow, cognitive load); and empty or sparse data. It serves design-standard's principles *honest*, *clear words, clear hierarchy* and *for everyone, in any context*. Formatting the numbers a chart shows, KPI tiles and provenance captions are [data](data.md); how a dashboard composes several charts is [dashboards](../profiles/dashboards.md).
 
 ## Choosing a chart by its job
 
@@ -697,6 +697,41 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 
 **Sources.** Tufte (opened) for sparklines; the Analysis Function, ONS and Datawrapper for small multiples. They differ on independent scales: the Analysis Function forbids, Datawrapper discourages; the toolkit shares the scale and names any exception.
 
+## Pies and donuts
+
+**Use when / don't use**
+- [contested] Only for a part of a whole with five or fewer categories and one dominant; otherwise a sorted bar ([choosing a chart by its job](#choosing-a-chart-by-its-job)). A donut is "a pie chart with a hollow centre" and follows the same rules ([ONS, pie and doughnut charts](https://service-manual.ons.gov.uk/data-visualisation/chart-types/pie-and-doughnut-charts)).
+
+**How**
+- [strong] Order: clockwise from 12 o'clock, largest to smallest, "Other" last. ONS: "Arrange the segments clockwise starting from the 12 position on a clock", largest to smallest, "with the 'other' category, if used, placed last" (ONS, pie and doughnut charts). Datawrapper sorts "Largest first (the default)", with "Keep order" to follow the dataset ([Datawrapper, how to create a pie chart](https://www.datawrapper.de/docs/how-to-create-a-pie-chart)).
+- [weak] Categories with an order of their own (severity, an age band) keep that order instead of sorting by size, as an ordinal axis would ([colour by job](#colour-by-job)).
+- [required] Colour follows the category, never the rank: sorting moves a slice, not its colour, so a filter or new data that re-sorts the slices keeps each category's colour ([colour by job](#colour-by-job)).
+- [moderate] Label each slice's category and value on or beside it, and a legend only where space is short. ONS: "Label both the categories and their values directly on the pie chart wherever possible" and use a legend "when space is limited" (ONS, pie and doughnut charts; [simplicity](#simplicity)). A value table under the chart, in the slices' order, serves as both.
+- [moderate] Past five categories, group the smallest into "Other" ([colour by job](#colour-by-job), *How many*).
+- [weak] A donut's centre holds the total of the slices drawn, or nothing: Carbon's centre number defaults to the sum of the displayed values ([alignment with code](#alignment-with-code)). A centre figure that is not that sum reads as one.
+
+**Cases**
+- Seven slices in the dataset's order, a centre reading "97 Total" over values summing to 677 → five slices sorted largest first, the tail as "Other" last, and the centre the sum of the slices.
+- A filter re-sorts the slices and every colour shifts → colours pinned to categories.
+- A donut with a legend beside it and room for labels → labels and values on the slices, or a value table under the chart.
+
+**Accessibility**
+- [required] 1.4.11 Non-text Contrast: adjacent slices reach 3:1 against each other, unless "visible labels and values" carry the same information ([contrast of marks and text](#contrast-of-marks-and-text)).
+- [required] 1.4.1 Use of Color: each slice is named by a label or a table row, never by its colour alone ([colour-vision deficiency](#colour-vision-deficiency)).
+- [required] 1.1.1 Non-text Content: the chart's name states the message ("Deleted items were over a third of last month's 97"), and the table lists the slices in the chart's order, so the reading order matches the drawing order ([long descriptions and data tables](#long-descriptions-and-data-tables)).
+- [moderate] Keyboard focus moves slice by slice in drawing order; a slice too thin to focus is reachable in the table ([keyboard and screen-reader access to points](#keyboard-and-screen-reader-access-to-points), [empty and sparse data](#empty-and-sparse-data)).
+- [weak] A centre label drawn as SVG text inside a `role="img"` chart is hidden from assistive technology; its figure belongs in the chart's name or summary too.
+
+**Build**
+- [required] The order is set once, in the model or the library's option, and the chart, the legend and the table read the same sorted array (code-standard rule 29). MUI's series takes `sortingValues` (`'none'` by default, `'asc'`, `'desc'` or a function, [MUI pie.ts](https://github.com/mui/mui-x/blob/master/packages/x-charts/src/models/seriesType/pie.ts)); "Other" last needs the function form.
+- [required] The centre total is computed from the same data, never typed (code-standard rule 29).
+
+**Check**
+- *Script* could: assert slices run largest first with "Other" last, unless the categories are ordinal; assert the centre figure equals the sum of the slices; assert each category keeps its colour across filters.
+- *Judgement*: does the first slice at 12 o'clock carry the message, and does the table read in the same order?
+
+**Sources.** ONS and Datawrapper agree on largest first clockwise from 12 o'clock; ONS alone puts "Other" last and asks for direct labels. The ordinal exception is the toolkit's reading of its colour rules, not a sourced pie rule.
+
 ## In Figma
 
 How a pie or donut, its legend and its centre label are drawn in a Figma library. Other chart forms follow when work needs them. Which charts may be a pie at all is [choosing a chart by its job](#choosing-a-chart-by-its-job); a legend only where direct labels will not fit is [simplicity](#simplicity).
@@ -757,6 +792,7 @@ How the Figma parts above map to chart libraries' props. MUI X Charts is the ref
   | legend placement | `slotProps.legend.position` `{ vertical, horizontal }` |
   | `Mark` | `labelMarkType` |
   | `Centre label` | a project component in the chart's children |
+  | slice order | `sortingValues` on the series, a function for "Other" last |
 
 **States**
 - [moderate] Keyboard navigation is on by default in MUI's charts, off with `disableKeyboardNavigation` ([MUI accessibility](https://github.com/mui/mui-x/blob/master/docs/data/charts/accessibility/accessibility.md)); a focused slice is a frame the Figma sample draws ([keyboard and screen-reader access to points](#keyboard-and-screen-reader-access-to-points)).
