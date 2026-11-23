@@ -1844,19 +1844,23 @@ export function heldTo(index, name, { folder, library, libraryKey, key, keyAt, f
    change. Which it is, the stored figma.json says by its own fields, never the contract's text (which drops a text
    equal to its component's own and has no value for a face with no weight). `comp` is the walk's, its variants whole;
    with no stored snapshot to ask, nothing is left out. The same for each layer's place among all its parent's
-   children (`index`, 0.83.0 on), which derive reads to order two layers two booleans show where they would tie. */
+   children (`index`, 0.83.0 on), which derive reads to order two layers two booleans show where they would tie; and a
+   vector's outline and paths (`outline` 0.85.0 on, `paths` 0.86.0 on: a snapshot that records an outline records the
+   paths beside it, so the outline says which it is). */
 const SIZED = ['fontSize', 'fontFamily', 'fontStyle'];
 export function walkedAs(comp, stored) {
   if (!stored) return comp;
   const sized = (n) => (n.textStyle === 'literal' && SIZED.some((k) => n[k] != null)) || (n.children || []).some(sized);
   const placed = (n) => typeof n.index === 'number' || (n.children || []).some(placed);
   const trees = req('../snapshot/spec.cjs').resolve(stored).variants || [];
-  const keepSizes = trees.some(sized), keepPlaces = trees.some(placed);
-  if (keepSizes && keepPlaces) return comp;
+  const outlined = (n) => typeof n.outline === 'string' || (n.children || []).some(outlined);
+  const keepSizes = trees.some(sized), keepPlaces = trees.some(placed), keepOutlines = trees.some(outlined);
+  if (keepSizes && keepPlaces && keepOutlines) return comp;
   // (a node is a layer by its type: a prop or a link named index is not one)
   return JSON.parse(JSON.stringify(comp), (k, v) => {
     if (v && !keepSizes && v.textStyle === 'literal') for (const f of SIZED) delete v[f];
     if (v && !keepPlaces && typeof v.type === 'string' && typeof v.index === 'number') delete v.index;
+    if (v && !keepOutlines && v.type === 'VECTOR') { delete v.outline; delete v.paths; }
     return v;
   });
 }

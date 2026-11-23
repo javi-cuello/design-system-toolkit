@@ -625,6 +625,11 @@ delete globalThis.figma;
   ok('the same library read live against a snapshot from before each layer\'s place was recorded is as stored; against one that records it, the place is kept',
     !refused(menu(true), menu(false)) && !refused(menu(true), menu(true)) && j(walkedAs(menu(true), compact(menu(true)))).includes('"index":1')
     && j(read(compact(menu(true)))) !== j(read(compact(menu(false)))));
+  // a vector's outline and paths (0.85.0, 0.86.0): left out against a snapshot that records no outline, kept against one that does
+  const dot = (drawn) => one('Dot', [{ name: 'V', type: 'VECTOR', w: 8, h: 8, sizing: 'FIXED/FIXED', ...(drawn ? { outline: 'a1b2c3d4', paths: [{ windingRule: 'NONE', data: 'M 8 4 C 8 6.21 6.21 8 4 8 Z' }] } : {}) }]);
+  ok('the same library read live against a snapshot from before a vector\'s outline was recorded is as stored; against one that records it, its paths are kept',
+    !refused(dot(true), dot(false)) && j(walkedAs(dot(true), compact(dot(false)))).indexOf('outline') < 0 && j(walkedAs(dot(true), compact(dot(true)))).includes('"paths"')
+    && roundTrip(read(compact(dot(false))), read(compact(walkedAs(dot(true), compact(dot(false)))))).rows.length === 0);
 }
 { // 2026-11-22: with two platforms an index holds one name twice: --patch read the first's figma.json, so it refused
   // an unchanged library and passed a change
