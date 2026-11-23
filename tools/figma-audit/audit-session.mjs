@@ -87,10 +87,16 @@ const where = contract.layout(null, project);
 if (!where || !where.doc) die(contract.notFound(project));
 const ctx = contract.auditContext(where.doc);
 if (!ctx.ok) die(ctx.errors.join('\n'));
-const keys = Object.keys(ctx.libraries);
+// Every routed library file: the audit settings name the components libraries;
+// a tokens or icons file has none of its own, and its stages need none (they
+// read the file's facts), so it runs with no settings and the stages that
+// need one say they do not apply.
+const routed = contract.auditRecords(where).filter((r) => !ctx.libraries[r.key]);
+const nameOf = (r) => r.name || `the ${(r.roles || []).join(' and ')} library`;
+const keys = Object.keys(ctx.libraries).concat(routed.map((r) => r.key));
 const fileKey = keyArg || (keys.length === 1 ? keys[0] : null);
-if (!fileKey || !ctx.libraries[fileKey]) die(`name the library: ${keys.map((k) => `${k} (${ctx.libraries[k].name})`).join(', ')}`);
-const lib = ctx.libraries[fileKey];
+const lib = ctx.libraries[fileKey] || ((r) => r && { name: nameOf(r) })(routed.find((r) => r.key === fileKey));
+if (!fileKey || !lib) die(`name the library: ${keys.map((k) => `${k} (${ctx.libraries[k] ? ctx.libraries[k].name : nameOf(routed.find((r) => r.key === k))})`).join(', ')}`);
 const { port } = serviceOf(project);
 const status = await call(port, '/status');
 if (!(status.files || []).some((f) => f.fileKey === fileKey)) die(`${lib.name} is not open on the bridge (port ${port}); open it in Figma with the plugin running`);

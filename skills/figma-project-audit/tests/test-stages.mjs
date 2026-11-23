@@ -214,6 +214,8 @@ for (const [f, heads] of [["tools/figma-audit/audit-session.mjs", ["exec(port, f
   ok("runFiles: a closed components file is skipped and said, a closed tokens or icons file is checked from its snapshot",
      /kind === "components" && !f\.open\) \{ done\.push\(name \+ ": skipped/.test(run) && /api\.auditStored\(f\.key\)/.test(run));
   ok("runFiles: an open file is switched to, then audited live", /await ctx\.switchLib\(f\.key\)/.test(run) && /await runAudit\(targets\)/.test(run) && /await runOtherStages\(/.test(run));
+  const sess = readFileSync(join(ROOT, "tools/figma-audit/audit-session.mjs"), "utf8");
+  ok("bin/audit takes every routed library file, a tokens or icons file with no settings of its own", /contract\.auditRecords\(where\)\.filter\(\(r\) => !ctx\.libraries\[r\.key\]\)/.test(sess) && /ctx\.libraries\[fileKey\] \|\| /.test(sess));
   ok("runFiles: the lock is held for the whole run and released once, in finally", /batching = true; lock\(\)/.test(run) && /finally \{[\s\S]*unlock\(\)/.test(run) && /if \(!batching\) unlock\(\)/.test(audit));
 }
 
