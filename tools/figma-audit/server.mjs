@@ -51,6 +51,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
    are the snapshot contract's, shared with the docs site and the tracker, so
    there is one parser of the log and not one per reader. */
 import contract from "../snapshot/projects.cjs";
+import { createRequire } from "node:module";
 import { isFigmaOrigin } from "../shared/origin.mjs";
 import { askIdle, hold, held, restartWhenStale } from "../shared/stale-self.mjs";
 import { boundBy } from "./bound.mjs";
@@ -442,6 +443,26 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", "
 
 // The project's audit settings merged over the house defaults, and its
 // rulings: the contract's reader, shared with the docs site's read-only copy.
+const require_ = createRequire(import.meta.url);
+let freshAt = 0, freshLast = null;
+async function freshness() {
+  if (freshLast && Date.now() - freshAt < 300000) return freshLast;
+  const version = require_("../snapshot/version.cjs");
+  const { runs } = require_("../snapshot/deliver.cjs");
+  const where = contract.layout(null, LABEL);
+  const token = version.tokenFor(null, null);
+  if (!token) return (freshAt = Date.now(), freshLast = { files: {}, note: "no Figma token (bin/set-key figma), so no file is marked \u201csnapshot again\u201d" });
+  const last = runs(), files = {};
+  for (const r of contract.auditRecords(where)) {
+    try {
+      const edited = await version.lastEdit(r.key, token);
+      const snapped = last[r.key] || null;
+      files[r.key] = { edited, snapped, stale: !!(edited && (!snapped || edited > snapped)) };
+    } catch (e) { files[r.key] = { error: e.message }; }
+  }
+  freshAt = Date.now();
+  return (freshLast = { files });
+}
 // The stored-snapshot checks for the tokens and icons libraries, set by the watch below once it knows the layout.
 let fileStored = null;
 const readContext = async () => contract.auditContext(CONTEXT);
@@ -831,6 +852,15 @@ const server = createServer(held(async (req, res) => {
     // watch's own filing (fileStored below) for one file, so a file that is not
     // open in Figma is still audited from what was last stored, and the run
     // says which it read. A components library is audited live, never here.
+    // Whether each file's stored snapshot is older than its last save in Figma:
+    // the dashboard marks such a file "snapshot again". Figma's newest version
+    // (autosaves included) against the file's last delivery here. Asked of
+    // Figma at most every five minutes; with no token, said once, no marks.
+    if (url.pathname === "/freshness" && req.method === "GET") {
+      try { return json(res, 200, Object.assign({ ok: true }, await freshness())); }
+      catch (e) { return json(res, 200, { ok: false, error: e.message }); }
+    }
+
     if (url.pathname === "/audit-stored" && req.method === "POST") {
       const { fileKey } = JSON.parse(await body(req));
       if (!fileKey) return json(res, 400, { ok: false, error: "fileKey required" });

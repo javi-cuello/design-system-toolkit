@@ -34,7 +34,7 @@ process.on("exit", done);
 const up = await onFreePort([await freePort()], async (port) => {
   log = "";
   const s = server = spawn("node", [path.join(HERE, "server.mjs"), "--data", path.join(dir, "audit"), "--port", String(port), "--key-file", path.join(dir, "no-key")],
-  { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ANTHROPIC_API_KEY: "", FIGMA_AUDIT_TEST_PORT: "1", TOOLKIT_PROJECTS_ROOT: path.join(dir, "projects") } });
+  { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, FIGMA_TOKEN: "", FIGMA_TOKEN_FILE: path.join(dir, "no-figma-token"), ANTHROPIC_API_KEY: "", FIGMA_AUDIT_TEST_PORT: "1", TOOLKIT_PROJECTS_ROOT: path.join(dir, "projects") } });
   s.stdout.on("data", (c) => { log += c; });
   s.stderr.on("data", (c) => { log += c; });
   for (let i = 0; i < 80 && !log.includes("figma audit") && s.exitCode === null; i++) await sleep(100);
@@ -116,6 +116,8 @@ try {
   ok("…and says which of the two stages apply, for the page's appliesTo", JSON.stringify(lc.json.applies) === JSON.stringify({ tokens: true, icons: true }));
   ok("/library-checks refuses facts read from another file", (await post("/library-checks", { facts, fileKey: "K2" })).json.ok === false);
   ok("/library-checks without facts is a 400", (await post("/library-checks", { fileKey: "K1" })).code === 400);
+  { const fr = (await ask("GET", "/freshness", { origin: SELF })).json;
+    ok("/freshness with no Figma token marks no file and says why", fr.ok && !Object.keys(fr.files).length && /no Figma token/.test(fr.note), JSON.stringify(fr)); }
   ok("/audit-stored without a fileKey is a 400", (await post("/audit-stored", {})).code === 400);
   { const st = (await post("/audit-stored", { fileKey: "K1" })).json;
     ok("/audit-stored on a service with no stored tokens says so, never files nothing as a clean run", st.ok === false && /no tokens snapshot/.test(st.error), JSON.stringify(st)); }

@@ -261,7 +261,7 @@ async function pinned(project) {
   return { stale, notes };
 }
 
-module.exports = { toolkitSteps, deliver, repin, pinned, routedScreens };
+module.exports = { toolkitSteps, deliver, repin, pinned, routedScreens, runs };
 
 if (require.main === module) {
   const [name, kind, file] = process.argv.slice(2);
