@@ -11,6 +11,7 @@ import { OWNER, OWNER_LABEL } from './labels.js';
 import { renderQueuePane } from './measures.js';
 import { askInput, openAsk } from './ask.js';
 import { go, setFilterHash } from './views.js';
+import { gatherTimeout, stageOf } from '../../../figma-audit/stages.mjs';
 
 // Targets that name the file rather than a component. The per-component
 // re-run has nothing to open for these, so Verify reports them as clearing on
@@ -1056,20 +1057,20 @@ const targetOf = (r) => componentOf(r.where);
 const OWNER_CHECK = {
   // component -> the candidate texts that check currently raises for it.
   "figma-components-audit": async (targets, rulesV) => {
-    const { audit } = await api.scripts();
+    const { audit, stages } = await api.scripts();
     if (!audit) throw new Error("The components audit script could not be loaded from the service.");
     const scan = await bridge.exec("const TARGETS = " + JSON.stringify(targets) + ";\n" +
                                    "const SCALES = " + JSON.stringify(rulesV.optionOrder) + ";\n" +
-                                   "const TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + audit);
+                                   "const TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + audit, gatherTimeout(stageOf(stages, "components")));
     if (!scan || !scan.audited) throw new Error("The components audit ran in Figma but returned nothing to compare against.");
     if (scan.fileKey && ctx.libKey && scan.fileKey !== ctx.libKey)
       throw new Error("Figma answered from a different file than this library, so its result cannot clear these rows.");
     return textsBySet(scan.audited);
   },
   "figma-foundations-audit": async (targets, rulesV) => {
-    const { foundations } = await api.scripts();
+    const { foundations, stages } = await api.scripts();
     if (!foundations) throw new Error("The foundations audit script could not be loaded from the service.");
-    const out = await bridge.exec("const TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + foundations, 180000);
+    const out = await bridge.exec("const TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + foundations, gatherTimeout(stageOf(stages, "foundations")));
     if (!out || !out.audited) throw new Error("The foundations audit ran in Figma but returned nothing to compare against.");
     if (out.fileKey && ctx.libKey && out.fileKey !== ctx.libKey)
       throw new Error("Figma answered from a different file than this library, so its result cannot clear these rows.");
@@ -1080,10 +1081,10 @@ const OWNER_CHECK = {
     // The live file, by the snapshot plugin's headless walk — the same input
     // the audit stage gives the engine. A verify that read the stored
     // snapshot could only ever confirm what the morning's spec said.
-    const { snapshot } = await api.scripts();
+    const { snapshot, stages } = await api.scripts();
     if (!snapshot) throw new Error("The service has no snapshot plugin to read the library with.");
     const T = rulesV.tokens || {};
-    const live = await bridge.exec("const PAGES = " + JSON.stringify(T.componentPages || "") + ";\nconst SECTION = " + JSON.stringify(T.sectionHeader || "") + ";\nconst EXCLUDE = " + JSON.stringify(T.excludeSections || []) + ";\n" + snapshot, 600000);
+    const live = await bridge.exec("const PAGES = " + JSON.stringify(T.componentPages || "") + ";\nconst SECTION = " + JSON.stringify(T.sectionHeader || "") + ";\nconst EXCLUDE = " + JSON.stringify(T.excludeSections || []) + ";\n" + snapshot, gatherTimeout(stageOf(stages, "validator")));
     if (!live || !Array.isArray(live.components)) throw new Error("The bridge answered, but not with the library's components.");
     if (live.fileKey && ctx.libKey && live.fileKey !== ctx.libKey)
       throw new Error("Figma answered from a different file than this library, so its result cannot clear these rows.");
@@ -1094,16 +1095,17 @@ const OWNER_CHECK = {
     return by;
   },
   "figma-variable-audit": async (targets, rulesV) => {
-    const { links } = await api.scripts();
+    const { links, stages } = await api.scripts();
     const source = rulesV.sourceLibrary;
+    const wait = gatherTimeout(stageOf(stages, "links"));
     if (!links) throw new Error("The variable audit script could not be loaded from the service.");
     if (!source) throw new Error("This project records no source library, so the variable audit cannot resolve its keys.");
-    const k = await api.exec("const MODE = \"keys\";\n" + links, 120000, source);
+    const k = await api.exec("const MODE = \"keys\";\n" + links, wait, source);
     // The source is shut: unchecked, not cleared — and which file it is matters.
     if (!k.ok) throw Object.assign(new Error("The source library isn\u2019t open in Figma, so its keys could not be read."), { code: "no_plugin" });
     const keys = k.result && k.result.result !== undefined ? k.result.result : k.result;
     if (!keys || !keys.variables) throw new Error("The source library returned no variables, so nothing can be resolved against it.");
-    const listed = await bridge.exec("const MODE = \"sets\";\nconst TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + links, 120000);
+    const listed = await bridge.exec("const MODE = \"sets\";\nconst TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + links, wait);
     if (!listed || !listed.sets) throw new Error("The library returned no variable sets to scan.");
     const want = new Set(targets.map((t) => t.toLowerCase()));
     const scope = listed.sets.filter((e) => want.has(String(e.name).toLowerCase())).map((e) => e.id);
@@ -1114,7 +1116,7 @@ const OWNER_CHECK = {
     const out = await bridge.exec("const MODE = \"scan\";\n" +
       "const KEYS = " + JSON.stringify({ variables: keys.variables, styles: keys.styles, published: listed.published || { variables: [], styles: [] } }) + ";\n" +
       "const SCOPE = " + JSON.stringify(scope) + ";\n" +
-      "const TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + links, 240000);
+      "const TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + links, wait);
     if (!out || !out.audited) throw new Error("The variable audit ran in Figma but returned nothing to compare against.");
     return textsBySet(out.audited);
   },

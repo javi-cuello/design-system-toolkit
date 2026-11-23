@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { appliesTo, bucketFor, gatherCode, runStages, stagesFor, stoppedLines } from "../../../tools/figma-audit/stages.mjs";
+import { appliesTo, bucketFor, gatherCode, gatherTimeout, runStages, stageOf, stagesFor, stoppedLines } from "../../../tools/figma-audit/stages.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..", "..", "..");
@@ -171,5 +171,20 @@ ok("appliesTo: always, a fact the file has, a setting that is set; nothing else"
   appliesTo(fnd, {}) && appliesTo(comps, { componentSets: true }) && !appliesTo(comps, { componentSets: false })
   && appliesTo(tokens, { tokens: true }) && !appliesTo(tokens, { icons: true })
   && appliesTo(registry.stages.find((s) => s.id === "validator"), {}, { codeTarget: "web" }) && !appliesTo(registry.stages.find((s) => s.id === "validator"), {}, {}));
+
+// ---- how long a runner waits: said once, in the list, for every stage a runner sends to Figma
+const sent = registry.stages.filter((s) => s.gather);
+ok("gatherTimeout: every stage that runs in Figma says how long to wait for each call",
+  sent.every((s) => Number.isInteger(s.gather.timeout) && s.gather.timeout > 0), sent.filter((s) => !(s.gather.timeout > 0)).map((s) => s.id).join(", "));
+ok("gatherTimeout: the whole-library scan waits at least four minutes, the most the session runner's 240s let it have",
+  gatherTimeout(comps) > 240000);
+let threw = false; try { gatherTimeout({ id: "x", gather: {} }); } catch { threw = true; }
+ok("gatherTimeout: a stage with no timeout is refused, never given a default", threw);
+let named = ""; try { stageOf({}, "components"); } catch (e) { named = e.message; }
+ok("stageOf: finds a stage by id, and an old service's missing list is said, not a crash", stageOf(registry, "components") === comps && /restart/.test(named));
+for (const f of ["tools/figma-audit/audit-session.mjs", "tools/docs-site/src/dashboard/audit.js", "tools/docs-site/src/dashboard/queue.js"]) {
+  const src = readFileSync(join(ROOT, f), "utf8");
+  ok(`${f}: waits on no stage with a number of its own`, !/\b(120000|180000|240000|300000|600000)\b/.test(src));
+}
 
 console.log(n + "/" + n + " passed");

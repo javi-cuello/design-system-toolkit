@@ -24,6 +24,21 @@ export function stagesFor(registry, runner) {
  * snapshot plugin with `return __headless();` appended). `values` gives the
  * constants a list-form `set` leaves to the runner, from the settings.
  */
+// How long a runner waits for a stage's call in Figma: the stage's own `gather.timeout` (stages.json), the one
+// place it is said. The 30s and 240s the runners hard-coded each timed out on one 143-set library's scan (2026-11-23).
+export function gatherTimeout(stage) {
+  const ms = stage && stage.gather && stage.gather.timeout;
+  if (!Number.isInteger(ms) || ms <= 0) throw new Error(`stage ${stage && stage.id} names no gather.timeout in stages.json`);
+  return ms;
+}
+
+// A stage by its id in the registry (stages.json, or the service's copy of it); the old service sent none.
+export function stageOf(registry, id) {
+  const stage = ((registry && registry.stages) || []).find((s) => s.id === id);
+  if (!stage) throw new Error(`the stage list has no ${id} stage: restart the dashboard service so it sends the current one`);
+  return stage;
+}
+
 export function gatherCode(stage, script, values = {}) {
   const g = stage.gather || {};
   const set = Array.isArray(g.set) ? Object.fromEntries(g.set.filter((k) => k in values).map((k) => [k, values[k]])) : Object.assign({}, g.set || {}, values);

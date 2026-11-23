@@ -24,7 +24,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { serviceFor, call as serve, figmaExec } from './services.mjs';
 import { applyRows, isOpen } from './rows.mjs';
-import { bucketFor, gatherCode, runStages, stoppedLines } from './stages.mjs';
+import { bucketFor, gatherCode, gatherTimeout, runStages, stoppedLines } from './stages.mjs';
 import { lucideVersion } from './lucide.mjs';
 
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -41,7 +41,7 @@ function serviceOf(project) {
   return { port: s.port, data };
 }
 const call = (port, route, body) => serve({ port }, route, body);
-const exec = (port, fileKey, code, ms = 240000) => figmaExec({ port }, fileKey, code, ms);
+const exec = (port, fileKey, code, ms) => figmaExec({ port }, fileKey, code, ms);
 
 if (args[0] === '--file') {
   const file = args[1]; if (!file || !fs.existsSync(file)) die('usage: bin/audit --file <payload> [--write]');
@@ -110,7 +110,7 @@ const records = contract.auditRecords(where);
 // made when the first of them asks; the dashboard's timeout for it. A read that fails stops those two stages only.
 let library = null;
 const readLibrary = (stage) => library || (library = (async () => {
-  const facts = await exec(port, fileKey, gatherCode(stage, read(stage.gather.script)), 300000);
+  const facts = await exec(port, fileKey, gatherCode(stage, read(stage.gather.script)), gatherTimeout(stage));
   if (!facts || !facts.tokens) throw new Error('the facts read answered, but not with the file\'s tokens; is the snapshot plugin current?');
   if (facts.fileKey && facts.fileKey !== fileKey) throw new Error(`that read ${facts.fileName || 'another file'}, not ${lib.name}`);
   const L = await import(path.join(TOOLKIT, stage.checks.script));
@@ -139,12 +139,12 @@ const HANDLERS = {
   // The closing scope is every component the script reached, never only the ones with candidates:
   // with `exhaustive`, a row on a component outside the scope closes as renamed or removed.
   foundations: async (stage) => {
-    const fnd = await exec(port, fileKey, gatherCode(stage, read(stage.gather.script), { TOKENS: lib.tokens }));
+    const fnd = await exec(port, fileKey, gatherCode(stage, read(stage.gather.script), { TOKENS: lib.tokens }), gatherTimeout(stage));
     if (!fnd || !fnd.reach) throw new Error('the foundations script returned no reach, so nothing it closes can be scoped; is it current?');
     file(stage, { scope: fnd.reach, ran: fnd.ran, findings: findings(fnd, stage) });
   },
   components: async (stage) => {
-    scan = await exec(port, fileKey, gatherCode(stage, read(stage.gather.script), { TARGETS: [], SCALES: lib.optionOrder, TOKENS: lib.tokens }));
+    scan = await exec(port, fileKey, gatherCode(stage, read(stage.gather.script), { TARGETS: [], SCALES: lib.optionOrder, TOKENS: lib.tokens }), gatherTimeout(stage));
     if (!scan || !scan.audited) throw new Error('the components scanner answered, but not with a scan');
     file(stage, { scope: scan.audited.map((e) => e.set), ran: scan.ran, findings: findings(scan, stage, JSON.parse(read(stage.buckets.from))),
       ...(!scan.measures && { full: false, exhaustive: false }) });

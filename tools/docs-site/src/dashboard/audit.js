@@ -11,7 +11,7 @@ import { pullRecord, store } from './record.js';
 import { showCleared, state, toast } from './queue.js';
 import { recordScores } from './scores.js';
 import { endProgress, runProgress } from './measures.js';
-import { bucketFor, gatherCode, runStages, stagesFor } from '../../../figma-audit/stages.mjs';
+import { bucketFor, gatherCode, gatherTimeout, runStages, stageOf, stagesFor } from '../../../figma-audit/stages.mjs';
 
 // One phrasing of an audit's outcome, used by both of its endings.
 // `kept` is what survived judgement. A run that files nothing new and closes
@@ -689,7 +689,7 @@ async function otherStages(scan, rules, runId) {
     if (!script) throw Object.assign(new Error("the service has no snapshot plugin to read the file with"), { skipped: true });
     runProgress(ctx.libKey, 66, "Reading tokens and icons");
     say("Reading the file\u2019s tokens and icons\u2026", null, true);
-    const facts = await bridge.exec(gatherCode(stage, script), 300000);
+    const facts = await bridge.exec(gatherCode(stage, script), gatherTimeout(stage));
     if (!facts || !facts.tokens) throw new Error("the bridge answered, but not with the file\u2019s tokens");
     if (facts.fileKey && ctx.libKey && facts.fileKey !== ctx.libKey) throw new Error("that read " + (facts.fileName || "another file") + ", not this library");
     const r = await api.libraryChecks(facts);
@@ -724,7 +724,7 @@ async function otherStages(scan, rules, runId) {
         else {
           runProgress(ctx.libKey, 60, "Checking the file");
           say("Checking the file as a whole…", null, true);
-          const out = await bridge.exec(gatherCode(stage, sc[stage.gather.served], { TOKENS: rules.tokens }), 180000);
+          const out = await bridge.exec(gatherCode(stage, sc[stage.gather.served], { TOKENS: rules.tokens }), gatherTimeout(stage));
           if (!out || !out.audited) throw new Error("the bridge answered, but not with a file scan");
           if (out.fileKey && ctx.libKey && out.fileKey !== ctx.libKey) throw new Error("that scanned " + (out.fileName || "another file") + ", not this library");
           // Fixed rules (page order, a bare slash, a case collision) are filed as
@@ -829,7 +829,7 @@ async function otherStages(scan, rules, runId) {
           // The project's own page rule, so this walk and the components scan
           // select the same pages; the plugin's default is its own convention.
           const T = rules.tokens || {};
-          const live = await bridge.exec(gatherCode(stage, sc[stage.gather.served], { PAGES: T.componentPages || "", SECTION: T.sectionHeader || "", EXCLUDE: T.excludeSections || [] }), 600000);
+          const live = await bridge.exec(gatherCode(stage, sc[stage.gather.served], { PAGES: T.componentPages || "", SECTION: T.sectionHeader || "", EXCLUDE: T.excludeSections || [] }), gatherTimeout(stage));
           if (!live || !Array.isArray(live.components)) throw new Error("the bridge answered, but not with the library's components");
           if (live.fileKey && ctx.libKey && live.fileKey !== ctx.libKey) throw new Error("that read " + (live.fileName || "another file") + ", not this library");
           runProgress(ctx.libKey, 76, "Checking the build");
@@ -996,7 +996,7 @@ async function otherStages(scan, rules, runId) {
           // time out, cause unknown" stood for a day because nothing recorded it.
           const took = [];
           const named = async (label, run) => { const t0 = Date.now(); try { return await run(); } catch (e) { throw Object.assign(new Error(label + " (after " + Math.round((Date.now() - t0) / 1000) + "s): " + (e && e.message ? e.message : "failed")), { code: e && e.code, skipped: e && e.skipped }); } finally { took.push(label.replace(/ \(.*$/, "") + " " + Math.round((Date.now() - t0) / 1000) + "s"); } };
-          const k = await named("reading the source's keys", () => api.exec(gatherCode(stage, links, { MODE: "keys" }), 240000, source));
+          const k = await named("reading the source's keys", () => api.exec(gatherCode(stage, links, { MODE: "keys" }), gatherTimeout(stage), source));
           if (!k.ok) {
             const shut = k.error === "wrong_file_not_open" || k.error === "plugin_not_connected";
             throw Object.assign(new Error(shut ? "the source library is not open in Figma, so broken links cannot be told from live ones"
@@ -1019,7 +1019,7 @@ async function otherStages(scan, rules, runId) {
           // file: one project's only one is its Documentation furniture, whose
           // listing hangs, and every run waited 20 s to say "NOT checked".
           const self = source === ctx.libKey;
-          const enumerated = await named("listing the sets", () => bridge.exec(gatherCode(stage, links, { MODE: "sets", SELF: self, TOKENS: rules.tokens }), 240000));
+          const enumerated = await named("listing the sets", () => bridge.exec(gatherCode(stage, links, { MODE: "sets", SELF: self, TOKENS: rules.tokens }), gatherTimeout(stage)));
           if (!enumerated || !enumerated.sets) throw new Error("the bridge answered, but not with a set list");
           if (enumerated.fileKey && ctx.libKey && enumerated.fileKey !== ctx.libKey) throw new Error("that read " + (enumerated.fileName || "another file") + ", not this library");
           // By variant count, which is what the walk actually costs. 120 variants
@@ -1041,7 +1041,7 @@ async function otherStages(scan, rules, runId) {
             runProgress(ctx.libKey, 88 + 11 * ((i + 1) / linkBatches.length), "Checking bindings");
             say("Checking bindings against " + keys.variables.length + " variables and " + keys.styles.length + " styles", null, true);
             const part = await named("batch " + (i + 1) + " of " + linkBatches.length + " (" + b.length + " sets, " + b.reduce((n, e) => n + e.variants, 0) + " variants)",
-                                     () => bridge.exec(gatherCode(stage, links, { MODE: "scan", KEYS, SCOPE: b.map((e) => e.id), TOKENS: rules.tokens }), 240000));
+                                     () => bridge.exec(gatherCode(stage, links, { MODE: "scan", KEYS, SCOPE: b.map((e) => e.id), TOKENS: rules.tokens }), gatherTimeout(stage)));
             if (!part || !part.audited) throw new Error("the bridge answered, but not with a link scan");
             if (part.fileKey && ctx.libKey && part.fileKey !== ctx.libKey) throw new Error("that scanned " + (part.fileName || "another file") + ", not this library");
             out.audited.push(...part.audited);
@@ -1285,7 +1285,7 @@ async function runAudit(targets) {
   try {
 
 
-    const { audit: auditScript } = await api.scripts();
+    const { audit: auditScript, stages } = await api.scripts();
     if (!auditScript) { say("The dashboard service did not return its scanner.", "warn"); return; }
 
     // The option-order scale is a project rule, so it travels from the
@@ -1294,7 +1294,7 @@ async function runAudit(targets) {
     const prelude = "const TARGETS = " + JSON.stringify(scope) + ";\n" +
                     "const SCALES = " + JSON.stringify(rules0.optionOrder) + ";\n" +
                     "const TOKENS = " + JSON.stringify(rules0.tokens) + ";\n";
-    const scan = await bridge.exec(prelude + auditScript);
+    const scan = await bridge.exec(prelude + auditScript, gatherTimeout(stageOf(stages, "components")));
     runProgress(ctx.libKey, 15, "Scanned");
     if (!scan || !scan.audited) { say("The bridge answered, but not with a scan.", "warn"); return; }
     if (scan.fileKey && ctx.libKey && scan.fileKey !== ctx.libKey) {
