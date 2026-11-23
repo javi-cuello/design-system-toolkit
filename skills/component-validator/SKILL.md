@@ -5,7 +5,7 @@ description: "Validate Figma components for a target platform before anyone buil
 
 # Component validator
 
-**Version 2.33.0** — history in CHANGELOG.md.
+**Version 2.33.1** — history in CHANGELOG.md.
 
 This skill checks Figma components against one code target (web, iOS or Android) before anyone builds them. Each platform refuses some part of a drawing, and documents it: the web has no centre stroke, SwiftUI no line height. The skill reads the component trees, applies the target's rule set and puts each difference to the designer as a decision. Use it before a component is built, when someone asks whether it can be built as drawn, or as the validator stage of an audit.
 

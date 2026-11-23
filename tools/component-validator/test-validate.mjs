@@ -179,7 +179,7 @@ ok('translations · every row has Figma, code and why', tr.every((x) => x.figma 
 ok('WT1 · State values become pseudo-classes, Loading stays a property', tid('WT1', /`Hover`.*\| .*`:hover`/) && tid('WT1', /`Loading` is not a pointer state/));
 ok('WT2 · Disabled is the element\'s own', tid('WT2'));
 ok('WT4 · Indeterminate is the checkbox property, not an attribute', tid('WT4', /^`Indeterminate` \| .*`indeterminate` property/));
-ok('WT3 · Role becomes variant (suffix stripped), Align is a taken name, Size is plain', tid('WT3', /^`Role` \| `variant`/) && tid('WT3', /`align` is already an HTML attribute/) && !tr.some((x) => /`Size`/.test(row(x))));
+ok('WT3 · Role becomes appearance (suffix stripped), Align is a taken name, Size is plain', tid('WT3', /^`Role` \| `appearance`/) && tid('WT3', /`align` is already an HTML attribute/) && !tr.some((x) => /`Size`/.test(row(x))));
 ok('WT6 · a focus ring layer, only on Focus, is an outline 4px out; its inside stroke is no WT7', tid('WT6', /\*\*Focus ring\*\*, a layer 4px outside/) && !tr.some((x) => x.id === 'WT7' && x.layers.includes('Focus ring')));
 ok('WT7 · the root\'s inside stroke, named once across two variants', tr.filter((x) => x.id === 'WT7').length === 1 && tid('WT7', /^The component, inside stroke/));
 ok('WT10 · Auto gap is space-between', tid('WT10', /space-between/));

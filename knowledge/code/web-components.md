@@ -79,9 +79,9 @@ Which components get a script at all is code-standard rule 8; this page is for t
 - [moderate] **Both ways for primitives.** web.dev: "Always accept primitive data (strings, numbers, booleans) as either attributes or properties", "Aim to keep primitive data attributes and properties in sync", "Aim to only accept rich data (objects, arrays) as properties", "Do not reflect rich data properties to attributes" ([web.dev: custom element best practices](https://web.dev/articles/custom-elements-best-practices)).
 - [required] **The attribute is the source of truth for anything CSS keys on.** A variant axis is an attribute because the stylesheet selects on it (code-standard rule 9), so the getter reads the attribute and the setter writes it; `attributeChangedCallback` then does the side effects. This is web.dev's pattern for avoiding re-entrant loops ([web.dev](https://web.dev/articles/custom-elements-best-practices)).
   ```js
-  static observedAttributes = ['variant'];
-  get variant() { return this.getAttribute('variant') ?? 'primary'; }
-  set variant(v) { this.setAttribute('variant', v); }
+  static observedAttributes = ['appearance'];
+  get appearance() { return this.getAttribute('appearance') ?? 'primary'; }
+  set appearance(v) { this.setAttribute('appearance', v); }
   ```
 - [strong] **Booleans.** Present means true: `disabled="false"` is still true ([open-wc: attributes and properties](https://open-wc.org/guides/knowledge/attributes-and-properties/)). Lit: "For a boolean property to be configurable from an attribute, it must default to false" ([Lit: boolean attributes](https://lit.dev/docs/components/properties/#boolean-attributes)); Web Awesome: "Boolean props should *always* default to `false`" ([Web Awesome contributing](https://webawesome.com/docs/resources/contributing)). A default-on option is named for its opposite (`without-icon`, `hide-label`). Use `toggleAttribute(name, force)` to set one (HTML).
 - [required] **`observedAttributes` lists only what the element reacts to** ([MDN: responding to attribute changes](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements#responding_to_attribute_changes)). `attributeChangedCallback` runs once per observed attribute present at upgrade, before `connectedCallback` ([HTML: upgrade an element](https://html.spec.whatwg.org/multipage/custom-elements.html#concept-upgrade-an-element)), so it must not assume the inner nodes exist yet.
@@ -90,12 +90,12 @@ Which components get a script at all is code-standard rule 8; this page is for t
   #upgrade(prop) {
     if (Object.hasOwn(this, prop)) { const v = this[prop]; delete this[prop]; this[prop] = v; }
   }
-  connectedCallback() { ['items', 'variant'].forEach((p) => this.#upgrade(p)); }
+  connectedCallback() { ['items', 'appearance'].forEach((p) => this.#upgrade(p)); }
   ```
 - [moderate] **Never self-apply `class`.** "Do not self-apply classes"; `class` belongs to the author ([web.dev](https://web.dev/articles/custom-elements-best-practices)). State the element owns is an attribute or a custom state (`ElementInternals.states`, styled with `:state()`) ([MDN: custom states](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements#custom_states_and_custom_state_pseudo-class_css_selectors)).
 
 **Cases**
-- `el.variant = 'danger'` changes the property and the button stays primary → the setter does not write the attribute the stylesheet keys on; make the attribute the source of truth.
+- `el.appearance = 'danger'` changes the property and the button stays primary → the setter does not write the attribute the stylesheet keys on; make the attribute the source of truth.
 - A getter treats `open="false"` as false → it breaks HTML's rule and every framework that renders `open="false"` disagrees with the browser's own elements; presence is true.
 - A React wrapper sets `el.options` before the module loads and the list renders empty → upgrade the property in `connectedCallback`.
 - An element adds `class="is-open"` to itself and the author's `class` binding wipes it on the next render → use an attribute or a custom state.
