@@ -245,6 +245,15 @@ delete globalThis.figma;
 }
 
 {
+  // a drawing made inside the library's own file, which is not published: every key is first looked for among the
+  // file's own components, sets, styles and variables, and asked of the team library only when the file has none
+  const code = pluginCode({ component: 'Chip', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }, {});
+  const imports = [...code.matchAll(/figma\.(?:variables\.)?import\w+ByKeyAsync\(/g)].length;
+  const owned = [...code.matchAll(/own\([^,]+, \(\) => (?:new Promise\([^]*?)?figma\.(?:variables\.)?import\w+ByKeyAsync\(/g)].length;
+  ok('every import by key is asked of the open file first', imports > 0 && code.includes('getLocalVariablesAsync') && code.includes("findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] })") && owned >= imports - 1);
+}
+
+{
   // Review of 30 October 2026: --verify rewrote <report>.drawn.json with a new time on every run, nothing else changed
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'drawn-'));
   const out = path.join(dir, 'chip.drawn.json');

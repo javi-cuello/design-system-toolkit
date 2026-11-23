@@ -553,9 +553,22 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // a main imported once per key, its answer kept: each instance asking again made a key that would not answer cost
   // sixteen seconds per instance, and a side navigation of many items outran the drawing's time
   const mains = new Map();
+  // a key the open file holds itself (a drawing made inside the library's own file, which need not be published)
+  // is taken from the file, not asked of the team library: an import by key answers only a published key. The
+  // file's own components, sets, styles and variables are listed once, by key, the first time one is asked for
+  let ownKeys = null;
+  const ownByKey = () => ownKeys || (ownKeys = (async () => {
+    const m = new Map();
+    await figma.loadAllPagesAsync();
+    for (const n of figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] })) if (n.key) m.set(n.key, n);
+    for (const st of [...await figma.getLocalTextStylesAsync(), ...await figma.getLocalEffectStylesAsync()]) m.set(st.key, st);
+    for (const v of await figma.variables.getLocalVariablesAsync()) m.set(v.key, v);
+    return m;
+  })());
+  const own = (key, f) => ownByKey().then((m) => m.get(key) || f());
   // a key is a set's or a component's: both asked at once, the first that answers taken (asked one after the other, a
   // set import given a component's key was seen never to answer, neither resolving nor failing, and held the drawing)
-  const either = (key) => new Promise((ok, no) => { let failed = 0; for (const f of [() => figma.importComponentSetByKeyAsync(key), () => figma.importComponentByKeyAsync(key)]) f().then(ok, () => { if (++failed === 2) no(new Error('neither a set nor a component by that key')); }); });
+  const either = (key) => own(key, () => new Promise((ok, no) => { let failed = 0; for (const f of [() => figma.importComponentSetByKeyAsync(key), () => figma.importComponentByKeyAsync(key)]) f().then(ok, () => { if (++failed === 2) no(new Error('neither a set nor a component by that key')); }); }));
   const importMain = (what, key) => { if (!mains.has(key)) mains.set(key, tried(what, () => either(key))); return mains.get(key); };
   // every call to Figma is made up front, side by side, then the layers are built without waiting on it:
   // with Figma in the background each call waits its turn for a slow tick, and a drawing that made its
@@ -568,7 +581,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (typeof t === 'string' && t.includes('/')) names.add(t);
   const vars = {};
   // side by side, then once more one at a time for any that went unanswered side by side
-  const imp = (n) => figma.variables.importVariableByKeyAsync(lib[n]);
+  const imp = (n) => own(lib[n], () => figma.variables.importVariableByKeyAsync(lib[n]));
   await Promise.all([...names].map(async (n) => { vars[n] = lib[n] ? await Promise.race([imp(n).catch(() => null), new Promise((r) => setTimeout(() => r(null), 8000))]) : null; }));
   // three in a row with no answer: the library is not answering this file, and each more would cost 16 s (a drawing of
   // thirty variables outran its nine minutes); the rest are said as not bound
@@ -585,7 +598,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // `key` one variable of that collection, imported to reach it; `names` its modes by the contract's spelling)
   const cols = {};
   const modeSets = [...new Set(els.flatMap((e) => Object.keys(e.modes || {})))].flatMap((a) => (K.modes || {})[a] || []);
-  await Promise.all(modeSets.filter((m) => m.key).map(async (m) => { const v = await tried(`a variable of ${m.collection}`, () => figma.variables.importVariableByKeyAsync(m.key)); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
+  await Promise.all(modeSets.filter((m) => m.key).map(async (m) => { const v = await tried(`a variable of ${m.collection}`, () => own(m.key, () => figma.variables.importVariableByKeyAsync(m.key))); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
   // (each collection on its own, a failure said and the rest still set; a layer that cannot hold a mode, said)
   const setModes = (n, e, id) => {
     if (!('setExplicitVariableModeForCollection' in n)) { missing.add(`${e.name || id} (its modes: a ${n.type} holds none)`); return; }
@@ -642,13 +655,13 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   const styles = {}, fonts = {}, icons = {}, sets = {}, effects = {}, toEffect = [];
   const typos = [...new Set(els.map((e) => e.typography).filter(Boolean))], assets = [...new Set(els.map((e) => e.asset).filter(Boolean))];
   const [container] = await Promise.all([
-    K.iconContainer ? tried('icon container', () => figma.importComponentSetByKeyAsync(K.iconContainer)) : null,
-    ...typos.map(async (t) => { const key = K.styles && K.styles[t]; if (key) styles[key] = await tried(t, () => figma.importStyleByKeyAsync(key)); }),
-    ...assets.map(async (a) => { if (K.icons && K.icons[a]) icons[a] = await tried(`icon ${a}`, () => figma.importComponentByKeyAsync(K.icons[a])); }),
+    K.iconContainer ? tried('icon container', () => own(K.iconContainer, () => figma.importComponentSetByKeyAsync(K.iconContainer))) : null,
+    ...typos.map(async (t) => { const key = K.styles && K.styles[t]; if (key) styles[key] = await tried(t, () => own(key, () => figma.importStyleByKeyAsync(key))); }),
+    ...assets.map(async (a) => { if (K.icons && K.icons[a]) icons[a] = await tried(`icon ${a}`, () => own(K.icons[a], () => figma.importComponentByKeyAsync(K.icons[a]))); }),
     tried('Inter', () => figma.loadFontAsync({ family: 'Inter', style: 'Regular' })),
     // a component Figma never publishes (`_`, `.`) has no key that imports: placed from this file's own page instead
-    ...Object.entries(K.sets || {}).filter(([name]) => !/^[_.]/.test(name)).map(async ([name, key]) => { sets[name] = await tried(name, () => figma.importComponentSetByKeyAsync(key)); }),
-    ...Object.entries(K.effects || {}).map(async ([name, key]) => { effects[name] = await tried(name, () => figma.importStyleByKeyAsync(key)); }),
+    ...Object.entries(K.sets || {}).filter(([name]) => !/^[_.]/.test(name)).map(async ([name, key]) => { sets[name] = await tried(name, () => own(key, () => figma.importComponentSetByKeyAsync(key))); }),
+    ...Object.entries(K.effects || {}).map(async ([name, key]) => { effects[name] = await tried(name, () => own(key, () => figma.importStyleByKeyAsync(key))); }),
   ]);
   await Promise.all(Object.values(styles).filter(Boolean).map(async (st) => { fonts[JSON.stringify(st.fontName)] = await tried(`font of ${st.name}`, () => figma.loadFontAsync(st.fontName)) !== null; }));
   // a text's style is applied at the end, all at once (it is the one call per layer left)
