@@ -111,15 +111,17 @@ export function cssOrderOf(n, parent, style) {
   return o && parent != null && n.parentElement && n.parentElement.getAttribute('data-contract-id') === parent && /flex|grid/.test(style(n.parentElement).display) ? o : null;
 }
 
-/* An element's words as it draws them, from its text and its computed white-space-collapse: collapsed, a run of white
-   space is one space (a newline in the source is a space on screen); preserved (pre, pre-wrap, break-spaces), the text
-   as written, newlines and runs of spaces kept, as Figma keeps a text's; preserve-breaks keeps its newlines alone.
-   Runs in the page (passed as source); tested by test-from-code.mjs. */
-export function wordsAsDrawn(t, collapse) {
-  const s = String(t).replace(/\r\n?/g, '\n');
-  if (collapse === 'preserve' || collapse === 'break-spaces') return s;
-  if (collapse === 'preserve-breaks') return s.replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n');
-  return s.replace(/[ \n\t]+/g, ' ');
+/* An element's words as it draws them, from its text nodes' text and its computed style `s`: collapsed, a run of white
+   space is one space (a newline in the source is a space on screen) and a node of white space alone is none;
+   preserved (pre, pre-wrap, break-spaces), the text as written, newlines and runs of spaces kept, as Figma keeps a
+   text's; preserve-breaks keeps its newlines alone. The ends are trimmed either way (a template's line breaks around
+   a label are not its words). white-space-collapse where computed, else white-space (an older browser). Runs in the
+   page (passed as source); tested by test-from-code.mjs. */
+export function wordsAsDrawn(texts, s) {
+  const collapse = s.whiteSpaceCollapse || ({ pre: 'preserve', 'pre-wrap': 'preserve', 'break-spaces': 'break-spaces', 'pre-line': 'preserve-breaks' })[s.whiteSpace] || 'collapse';
+  const kept = collapse === 'preserve' || collapse === 'break-spaces';
+  const one = (t) => { const x = String(t).replace(/\r\n?/g, '\n'); return kept ? x : collapse === 'preserve-breaks' ? x.replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n') : x.replace(/[ \n\t]+/g, ' '); };
+  return texts.filter((t) => (kept ? String(t).length : String(t).replace(/[ \n\t\r]+/g, ''))).map(one).join('').replace(/^[ \n\t]+|[ \n\t]+$/g, '');
 }
 
 /* Whether `m`, found in the placed instance `n` by its layer's selector `q`, is that instance's own layer, not one of
@@ -1900,8 +1902,8 @@ async function main() {
           seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id];
           // its own words, as drawn: a thin space is a character (MUI's required mark is "\u2009*", two text nodes)
           // (white space as the element draws it: a code block keeps its newlines and indents, from-code wordsAsDrawn)
-          const plain = (t) => t.replace(/[ \n\t\r]+/g, ' '), kept = s.whiteSpaceCollapse && s.whiteSpaceCollapse !== 'collapse';
-          const text = entryEl ? plain(n.value || n.placeholder || '').trim() : kept ? [...n.childNodes].filter((x) => x.nodeType === 3 && plain(x.textContent).replace(/ /g, '')).map((x) => wordsAsDrawn(x.textContent, s.whiteSpaceCollapse)).join('') : [...n.childNodes].filter((x) => x.nodeType === 3 && plain(x.textContent).replace(/ /g, '')).map((x) => plain(x.textContent)).join('').replace(/^ +| +$/g, '');
+          const plain = (t) => t.replace(/[ \n\t\r]+/g, ' ');
+          const text = entryEl ? plain(n.value || n.placeholder || '').trim() : wordsAsDrawn([...n.childNodes].filter((x) => x.nodeType === 3).map((x) => x.textContent), s);
           // a box whose only content is its words is a text, unless the mapping says its words are a layer of their own
           // the element a slot's stand-in landed in is the slot, what the caller puts there its content, not its parts
           const filled = marks.find(([m]) => text === m);
@@ -2093,7 +2095,7 @@ async function main() {
         const sel = `[data-contract-id="${loose ? e.parent : e.id}"]`, cut = {};
         for (const p of LINES_CSS) cut[p] = await authoredWidth(L.tab, sel, p, { raw: true, cache: styles });
         // (a text written never to wrap, and not cut, grows both ways whatever size it states: rules.mjs autoResizeOf)
-        const nowrap = e.kind === 'text' && writtenNowrap(cut['white-space'], loose);
+        const nowrap = e.kind === 'text' && writtenNowrap(cut['white-space'], loose, e.width === 'hug');
         cut['white-space'] = await call(L.tab, (q) => { const n = document.querySelector(q); return n ? getComputedStyle(n).whiteSpace : null; }, sel);
         const lines = linesFromCss(cut);
         if (e.kind === 'text') e.autoResize = autoResizeOf(e.width, e.height, nowrap && !lines);

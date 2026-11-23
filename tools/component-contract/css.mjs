@@ -37,7 +37,7 @@ const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
    draws there is code's (eval.mjs leftToCode, through to-code's unsharedAt). */
 export const shareable = (whole, offset, own) => typeof whole === 'number' && whole > 0 && typeof offset === 'number' && typeof own === 'number';
 
-export function declarations(e, { root = false, holds = false, row = true, anchors = false, box = null, pull = null } = {}, names) {
+export function declarations(e, { root = false, holds = false, row = true, anchors = false, box = null, pull = null, words = null } = {}, names) {
   // (unshared: the axes a scale constraint could not be written on, as a share of the parent: shareable)
   const decls = [], unread = [], unshared = [];
   const put = (prop, value, note) => { if (value !== undefined && value !== null && !/\bundefined\b/.test(String(value))) decls.push(note ? [prop, value, note] : [prop, value]); };
@@ -239,14 +239,18 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   const align = take('textAlign');
   if (align && align !== 'start') put('text-align', align);
   const lines = take('maxLines'), cut = take('truncate');
+  // a text's white space is drawn as typed (a code block's newlines and indents), where CSS collapses it: words that
+  // hold a newline, a tab or a run of spaces keep them (`words`: what a text bound to a property shows, its default)
+  // (a single trailing newline is a gap: Figma's hug draws its empty last line, a browser under pre draws none)
+  const kept = e.kind === 'text' && /[\n\t]| {2}/.test(typeof e.content === 'string' && !/^\{.+\}$/.test(e.content) ? e.content : words || '');
+  // (one cut to a single line stays nowrap, which its ellipsis needs: its newlines are spaces there)
   if (lines === 1 && cut) { put('overflow', 'hidden'); put('white-space', 'nowrap'); put('text-overflow', 'ellipsis'); }
-  else if (lines > 1) { put('display', '-webkit-box'); put('-webkit-box-orient', 'vertical'); put('-webkit-line-clamp', String(lines)); put('overflow', 'hidden'); }
+  else if (lines > 1) { put('display', '-webkit-box'); put('-webkit-box-orient', 'vertical'); put('-webkit-line-clamp', String(lines)); put('overflow', 'hidden'); if (kept) put('white-space', 'pre-wrap'); }
   // a text that hugs its width grows on one line and never wraps (Figma's WIDTH_AND_HEIGHT); CSS's shrink-to-fit
   // would wrap it at the room it has, so it is said with nowrap (rules.mjs autoResizeOf), one the design sizes all the
   // same too (a text placed by scale in a frame with no auto layout keeps the size it measured)
-  // a text's white space is drawn as typed (a code block's newlines and indents), where CSS collapses it: words that
-  // hold a newline, a tab or a run of spaces keep them, pre where the text hugs (still never wrapping), pre-wrap where it wraps
-  else if (e.kind === 'text' && /[\n\t]| {2}/.test(typeof e.content === 'string' ? e.content : '')) put('white-space', e.width === 'hug' || e.autoResize === 'width_and_height' ? 'pre' : 'pre-wrap');
+  // (kept white space: pre where the text hugs, still never wrapping; pre-wrap where it wraps)
+  else if (kept) put('white-space', e.width === 'hug' || e.autoResize === 'width_and_height' ? 'pre' : 'pre-wrap');
   else if (e.kind === 'text' && (e.width === 'hug' || e.autoResize === 'width_and_height')) put('white-space', 'nowrap');
   if (take('verticalAlign') !== undefined) unread.push('verticalAlign (text set in a taller box)');
 

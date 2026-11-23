@@ -590,7 +590,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     // (and a combination that drops the sample's mark but keeps its size has the defaults' kept size still: dropped too)
     const empty = [...new Set([...(e.whileEmpty || []), ...(slotted && B[id] ? (B[id].whileEmpty || []).filter((f) => e[f] === B[id][f]) : [])])].filter((f) => e[f] !== undefined);
     if (empty.length) { e = { ...e }; for (const f of empty) delete e[f]; delete e.whileEmpty; }
-    const { decls, unread, unshared } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box, pull }, tokenNames);
+    // (a text bound to a text property shows its default: its white space is said from it, css.mjs `words`)
+    const bound = e.kind === 'text' && typeof e.content === 'string' && /^\{(.+)\}$/.exec(e.content), words = bound && c.props && c.props[bound[1]] ? c.props[bound[1]].default : null;
+    const { decls, unread, unshared } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box, pull, words: typeof words === 'string' ? words : null }, tokenNames);
     // a placed component is placed here and looks as its own sheet says (code-standard rule 5): where it sits and
     // how big, never its fill, stroke, corners or type, which a prop changes in code
     // (but an instance of a component the store does not hold, an icon of another library: no sheet of its own draws

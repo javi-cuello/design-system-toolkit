@@ -133,7 +133,7 @@ export function linesFromCss(own) {
   const n = parseInt(word(own['-webkit-line-clamp'] ?? own['line-clamp']), 10);
   if (n > 0) return { maxLines: n, truncate: true };
   // (an ellipsis cuts only where the overflow is hidden)
-  if (word(own['text-overflow']) === 'ellipsis' && /nowrap/.test(word(own['white-space'])) && /hidden|clip/.test(word(own.overflow))) return { maxLines: 1, truncate: true };
+  if (word(own['text-overflow']) === 'ellipsis' && /nowrap|^pre$/.test(word(own['white-space'])) && /hidden|clip/.test(word(own.overflow))) return { maxLines: 1, truncate: true };
   return null;
 }
 
@@ -204,8 +204,10 @@ export const textFromCss = (rows, own) => (rows.find((r) => word(own[r[1]]).spli
 // the design states all the same)
 // (written on the text's own element: a loose text, words its parent holds with no element of their own, reads its
 // parent's declarations, and a parent's nowrap says nothing of how this text resizes)
-// (`pre` is that too: css.mjs writes it for such a text whose white space is kept)
-export const writtenNowrap = (authored, loose = false) => !loose && /^\s*(nowrap|pre)\s*$/.test(authored || '');
+// (`pre` is that too where the width hugs, as css.mjs writes it for a hugging text whose white space is kept; at a set or
+// filled width a pre text's size is its own. A text at a set width Figma says grows both ways, whose white space is
+// kept, is read by its sizes: a gap)
+export const writtenNowrap = (authored, loose = false, hug = false) => !loose && (/^\s*nowrap\s*$/.test(authored || '') || (hug && /^\s*pre\s*$/.test(authored || '')));
 export function autoResizeOf(width, height, nowrap = false) {
   if (width === 'hug' || nowrap) return 'width_and_height';
   if (height === 'hug') return 'height';

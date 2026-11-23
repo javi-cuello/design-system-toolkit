@@ -38,6 +38,13 @@ ok('a text whose words hold a newline or a run of spaces keeps them: pre where i
   && decl({ kind: 'text', width: 'fill', height: 'hug', content: 'a  b' }, {})['white-space'] === 'pre-wrap'
   && decl({ kind: 'text', width: 'hug', height: 'hug', content: 'a b' }, {})['white-space'] === 'nowrap'
   && decl({ kind: 'text', width: 'fill', height: 'hug', content: 'a b' }, {})['white-space'] === undefined);
+ok('a cut text whose words hold a newline: pre-wrap beside a clamp of several lines; one cut to a single line stays nowrap (its ellipsis needs it)',
+  decl({ kind: 'text', width: 'fill', height: 'hug', maxLines: 3, truncate: true, content: 'a\nb' }, {})['white-space'] === 'pre-wrap'
+  && decl({ kind: 'text', width: 'fill', height: 'hug', maxLines: 3, truncate: true, content: 'a\nb' }, {})['-webkit-line-clamp'] === '3'
+  && decl({ kind: 'text', width: 'fill', height: 'hug', maxLines: 1, truncate: true, content: 'a\nb' }, {})['white-space'] === 'nowrap');
+{ const snippet = { component: 'Snippet', props: { code: { type: 'string', default: 'a\n  b', sets: ['code'] } }, anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, code: { kind: 'text', parent: 'root', order: 0, width: 'hug', height: 'hug', content: '{code}' } }, variants: [] };
+  const sheet = toCss(snippet, 'snippet', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('a text bound to a text property keeps the white space its default holds: pre where it hugs', /white-space: pre;/.test(sheet) && !/nowrap/.test(sheet)); }
 ok('a text with no style writes no style\'s fields (no token defines --literal-*): it is said as unread, as an unstyled effect is',
   (() => { const r = declarations({ kind: 'text', typography: 'literal' }, {}, { token: (n) => `var(--${n})`, textStyle: (n) => [['font-size', `var(--${n}-font-size)`]] }); return !r.decls.length && r.unread.some((u) => /^typography \(a text with no style/.test(u)); })());
 // 2026-11-22: a library names a style by its size (`14/20 Regular`): read as a text's own values it lost its var()

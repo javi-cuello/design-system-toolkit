@@ -874,9 +874,19 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     stateHidden(gone, { status: false, __state: 'focus' }, p) && !stateHidden(gone, { status: true, __state: 'focus' }, p) && !stateHidden(gone, { status: false, __state: 'rest' }, p) && !stateHidden(new Error('drew nothing'), { status: false, __state: 'focus' }, p) && !stateHidden(gone, { status: false, __state: 'focus' }, {}));
   ok('a text only that boolean speaks for is the code\'s alone; one the design has as a text stays the design\'s', onlyInCode(p, design).has('status') && !onlyInCode(p, { ...design, status: { type: 'string', figma: 'Status' } }).has('status') && !onlyInCode(p, design).has('title'));
 }
-// an element's words as it draws them: collapsed white space is one space, kept white space (a code block, as Figma
-// keeps a text's newlines and indents) is the text as written, and kept breaks keep only the newlines
-ok('words read as drawn: collapsed white space is a space, preserved keeps newlines and runs, preserve-breaks keeps newlines only',
-  wordsAsDrawn('1\n2\n  x', 'collapse') === '1 2 x' && wordsAsDrawn('1\n2\n  x', 'preserve') === '1\n2\n  x'
-  && wordsAsDrawn('1\r\n2', 'break-spaces') === '1\n2' && wordsAsDrawn('a  \n  b c', 'preserve-breaks') === 'a\nb c');
+// an element's words as it draws them, from its text nodes and its computed white space: collapsed white space is one
+// space, kept white space (a code block, as Figma keeps a text's newlines and indents) the text as written, kept breaks
+// keep only the newlines; the ends trimmed either way (a template's own line breaks around a label), a node of white
+// space alone kept where white space is kept, and white-space read where white-space-collapse is not computed
+{ const c = { whiteSpaceCollapse: 'collapse' }, k = { whiteSpaceCollapse: 'preserve' };
+  ok('words read as drawn: collapsed is a space, preserved keeps newlines and runs, preserve-breaks newlines only',
+    wordsAsDrawn(['1\n2\n  x'], c) === '1 2 x' && wordsAsDrawn(['1\n2\n  x'], k) === '1\n2\n  x'
+    && wordsAsDrawn(['1\r\n2'], { whiteSpaceCollapse: 'break-spaces' }) === '1\n2' && wordsAsDrawn(['a  \n  b c'], { whiteSpaceCollapse: 'preserve-breaks' }) === 'a\nb c');
+  ok('the ends are trimmed, so a label a template wraps in line breaks is still its words; collapsed, a node of white space alone is dropped',
+    wordsAsDrawn(['\n  Save\n'], { whiteSpaceCollapse: 'preserve-breaks' }) === 'Save' && wordsAsDrawn(['  Save '], c) === 'Save' && wordsAsDrawn(['a', '\n  ', 'b'], c) === 'ab');
+  ok('where white space is kept, a node of white space alone is kept: two lines written as three nodes are two lines',
+    wordsAsDrawn(['line1', '\n', 'line2'], k) === 'line1\nline2');
+  ok('with no white-space-collapse computed (an older browser), white-space says it: pre and pre-wrap keep, pre-line keeps breaks',
+    wordsAsDrawn(['a\n  b'], { whiteSpace: 'pre' }) === 'a\n  b' && wordsAsDrawn(['a\n  b'], { whiteSpace: 'pre-wrap' }) === 'a\n  b'
+    && wordsAsDrawn(['a  \n  b'], { whiteSpace: 'pre-line' }) === 'a\nb' && wordsAsDrawn(['a\n  b'], { whiteSpace: 'normal' }) === 'a b'); }
 console.log(`${n}/${n} passed`);
