@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.32.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.33.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -10,9 +10,9 @@ Cite a rule as `figma-standard rule N`.
 
 ## Components and variants
 
-1. **Axis order**: `Size → Variant → Feedback/… → Disabled → State`, above every other property, where Figma pins variant axes. `State` always last; `Disabled` a VARIANT False/True immediately before it. A True/False axis lists its default first, so the panel opens on what a designer gets; a validation axis takes rule 57's order.
+1. **Axis order**: `Size → Appearance → Feedback/… → Disabled → State`, above every other property, where Figma pins variant axes. The emphasis axis (`Primary`, `Secondary`…) is `Appearance`, in code `appearance`: never `Variant`, since every axis is a Figma variant, nor `Type`, HTML's own on a button, nor `Role` or `Style`, which name tokens and styles. `State` always last; `Disabled` a VARIANT False/True immediately before it. A True/False axis lists its default first, so the panel opens on what a designer gets; a validation axis takes rule 57's order.
 
-   *Why:* one canon keeps property panels predictable across projects.
+   *Why:* one canon keeps property panels predictable across projects. `Appearance` is Atlassian's and Fluent's prop, the one name free of all four clashes (maintainer, 2026-11-23).
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "schema|axis-order|state"; `skills/figma-components-audit/scanner/audit.js` "schema|axis-order|disabled"; `skills/figma-components-audit/scanner/audit.js` "schema|bool-default|"; `skills/figma-components-audit/scanner/audit.js` "schema|order|" — State last, Disabled before it, a True/False axis's default first, and each axis's options against the recorded order.
 

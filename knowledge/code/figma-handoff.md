@@ -206,7 +206,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - [required] An axis named like an HTML or ARIA attribute is renamed (code-standard rules 9 and 10).
 
 **How**
-- [required] `Size=sm|md|lg`, `Variant=primary|outline` → `size="sm"`, `variant="primary"`, selected as `[size=sm]`. The default value is the bare element (code-standard rule 9).
+- [required] `Size=sm|md|lg`, `Appearance=primary|outline` → `size="sm"`, `appearance="primary"`, selected as `[size=sm]`. The default value is the bare element (code-standard rule 9).
 - [required] `State=Rest|Hover|Focus|Press` → `:hover`, `:focus-visible`, `:active`; `Disabled=True` → native `disabled` or `aria-disabled`, and the dim is the host's, once (code-standard rule 62).
 - [moderate] A boolean that toggles a layer's visibility is usually a slot or an attribute that shows a part; a boolean that is really a state (`Selected`, `Checked`, `Expanded`) is the platform's state (`:checked`, `aria-expanded`, `aria-selected`). `component-validator` reports booleans that are states.
 - [required] An instance-swap property is a slot (code-standard rule 13); a text property is slot content or an attribute, never a hard-coded string.
