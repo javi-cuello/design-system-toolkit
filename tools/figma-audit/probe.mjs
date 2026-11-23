@@ -39,9 +39,20 @@ const step = async (k, f) => { try { out[k] = await f(); } catch (e) { out[k] = 
 // the mainComponent getter, which throws there)
 const insts = figma.currentPage.findAllWithCriteria({ types: ['INSTANCE'] });
 await step('instances', async () => {
-  const inst = insts.find((n) => n.children && n.children.length);
-  if (!inst) return 'none on this page';
-  return (await figma.getNodeByIdAsync(inst.children[0].id)) ? 'ok' : 'gone';
+  // the degraded plugin (mode 5) loses every instance's insides, so the first of up to three that reads back passes
+  // (each failed read waits Figma's 10 s, and the whole in-file check has 40);
+  // one instance can fail alone where its insides are another library's, which Figma fetches from its servers
+  // ("Unable to establish connection to Figma"); in the library's own file only its own components' instances count
+  const own = typeof OWN !== 'undefined' && OWN;
+  let tried = 0, first = null;
+  for (const n of insts.slice(0, 200)) {
+    if (tried >= 3) break;
+    if (!n.children || !n.children.length) continue;
+    if (own) { const m = await n.getMainComponentAsync(); if (!m || m.remote) continue; }
+    tried++;
+    try { if (await figma.getNodeByIdAsync(n.children[0].id)) return 'ok'; first = first || 'gone'; } catch (e) { first = first || { error: String(e && e.message || e) }; }
+  }
+  return tried ? first : own ? "none of this file's own on this page" : 'none on this page';
 });
 await step('font', async () => { const t0 = Date.now(); await figma.loadFontAsync({ family: 'Inter', style: 'Regular' }); return Date.now() - t0; });
 await step('library', async () => {

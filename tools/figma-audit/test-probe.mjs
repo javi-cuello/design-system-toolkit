@@ -32,4 +32,21 @@ assert.deepEqual(await run({ own: true, inFile: { instances: 'ok', font: 1, libr
 // Figma's plugin parser refuses the text "import (" anywhere in the code, a comment too ("possible import expression
 // rejected"), so the code sent to the file never holds it
 { const { IN_FILE } = await import('./probe.mjs'); assert.ok(!/\bimport\s*\(/.test(IN_FILE), 'the in-file code holds no text Figma reads as an import'); }
-console.log('probe: 15 passed');
+// the instance read: in the library's own file only its own components' instances, and the first of three that reads
+// back passes (one whose insides are another library's can fail alone), run as Figma runs it
+{
+  const { IN_FILE } = await import('./probe.mjs');
+  const inst = (remote, reads) => ({ children: [{ id: reads }], getMainComponentAsync: async () => ({ remote }) });
+  const runIn = async (own, insts) => {
+    const figma = { currentPage: { findAllWithCriteria: () => insts }, getNodeByIdAsync: async (id) => { if (id === 'throws') throw new Error('Unable to establish connection to Figma'); return id === 'ok' ? {} : null; }, loadFontAsync: async () => {}, importComponentByKeyAsync: async () => {} };
+    return (await new (async () => {}).constructor('figma', (own ? 'const OWN = true;\n' : '') + IN_FILE)(figma)).instances;
+  };
+  assert.equal(await runIn(true, [inst(true, 'throws'), inst(false, 'throws'), inst(false, 'ok')]), 'ok', 'a later own instance that reads back passes');
+  assert.equal(await runIn(true, [inst(true, 'ok')]), "none of this file's own on this page", 'another library\'s instance is not read in the own file');
+  assert.deepEqual(await runIn(false, [inst(false, 'throws'), inst(false, 'throws'), inst(false, 'throws'), inst(false, 'ok')]), { error: 'Unable to establish connection to Figma' }, 'three that fail are a failure, the fourth not tried');
+  assert.equal(await runIn(false, [inst(false, 'gone')]), 'gone', 'an instance whose insides are gone by id is still mode 5');
+}
+// the code sent to the file parses as Figma reads it, an async function body (it is a template, so a quote escaped
+// in the source arrives unescaped)
+{ const { IN_FILE } = await import('./probe.mjs'); const AsyncFunction = (async () => {}).constructor; assert.doesNotThrow(() => new AsyncFunction('const OWN = true;\n' + IN_FILE), 'the in-file code parses'); }
+console.log('probe: 21 passed');
