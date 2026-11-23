@@ -125,6 +125,12 @@ export function entryOf(c) {
    values, words and place in the box aside) and changed by no variant, so one rule says both. One that differs (a
    day drawn disabled, a button of another hierarchy) stays a part of its own. */
 const SAME = (e) => JSON.stringify({ ...e, order: undefined, name: undefined, with: undefined, inner: undefined, content: undefined, text: undefined, swappedBy: undefined, figma: undefined });
+/* A part as one variant layer draws it: its entry (`base`), what the layer adds for it, and the fields the layer sets on it. */
+function layerAt(v, id, base) {
+  const e = { ...(base || {}), ...((v.add || {})[id] || {}) };
+  for (const [k, x] of Object.entries(v.set || {})) if (k.startsWith(`${id}.`) && !k.slice(id.length + 1).includes('.')) e[k.slice(id.length + 1)] = x;
+  return e;
+}
 export function copyOf(c, id) {
   const a = c.anatomy, m = /^(.*)_\d+$/.exec(id);
   const first = m && a[m[1]], e = a[id];
@@ -135,8 +141,10 @@ export function copyOf(c, id) {
   const lo = Math.min(first.order ?? 0, e.order ?? 0), hi = Math.max(first.order ?? 0, e.order ?? 0);
   // (a part out of the flow between the two, at the defaults or in a variant: the copy may paint over it where the first
   // paints under, so each says its own place by z-index where the box is restacked; a part of its own, never the first's rule)
+  // (each part as the layer draws it, a variant's sets on it too: layerAt, as restacked reads it)
   const outBetween = (x) => x && x.parent === e.parent && (x.position === 'absolute' || x.absolute) && typeof x.order === 'number' && x.order > lo && x.order < hi;
-  if (Object.values(a).some(outBetween) || (c.variants || []).some((v) => Object.values(v.add || {}).some(outBetween))) return null;
+  const ids = (v) => new Set([...Object.keys(a), ...Object.keys(v.add || {}), ...Object.keys(v.set || {}).map((k) => k.slice(0, k.lastIndexOf('.')))]);
+  if ([{}, ...(c.variants || [])].some((v) => [...ids(v)].some((k) => outBetween(layerAt(v, k, a[k] || findAdded(c, k)))))) return null;
   if (reordered(c).has(e.parent)) {
     const family = new RegExp(`^${m[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(_\\d+)?$`);
     const between = (k, o, parent) => parent === e.parent && !family.test(k) && typeof o === 'number' && o > lo && o < hi;
@@ -285,7 +293,14 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
   if (!memo.has(mains)) {
     const boxes = new Set(), parts = partsOf(c, t), kids = childrenOf(parts);
     const outOf = (e) => e.position === 'absolute' || !!e.absolute;
-    const said = (decls) => { const d = new Map(decls); return (k) => d.get(k); };
+    // (whether declarations lift a box: true, false, or null where an opacity by a token decides it, its value unknown here)
+    const lifts = (decls) => {
+      const d = new Map(decls), o = d.get('opacity');
+      if (o == null || !/var\(/.test(o)) return liftsAlone((k) => d.get(k));
+      const one = liftsAlone((k) => (k === 'opacity' ? '1' : d.get(k))), less = liftsAlone((k) => (k === 'opacity' ? '0' : d.get(k)));
+      return one === less ? one : null;
+    };
+    const either = (...xs) => (xs.includes(true) ? true : xs.includes(null) ? null : false);
     for (let grew = true; grew;) {
     grew = false;
     for (const [box, list] of kids) {
@@ -294,7 +309,7 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
       const dom = new Map(markupOrder(c, list).order.map((p, i) => [p.id, i]));
       for (const v of [{}, ...(c.variants || [])]) {
         const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
-        const asAt = (p) => { const e = { ...p.e, ...(add[p.id] || {}) }; for (const [k, x] of Object.entries(set)) if (k.startsWith(`${p.id}.`) && !k.slice(p.id.length + 1).includes('.')) e[k.slice(p.id.length + 1)] = x; return e; };
+        const asAt = (p) => layerAt(v, p.id, p.e);
         const here = list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id))));
         if (!here.some((p) => outOf(asAt(p)))) continue;
         const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? p.e.order ?? 0;
@@ -304,15 +319,17 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
           if (boxes.has(p.id)) return true;
           const e = asAt(p), m = e.kind === 'instance' && e.component && mains(e.component, e.key);
           // (a placed component this library holds is placed here, its look its own sheet's: what drawn keeps, PLACED)
-          const own = declarations(e, { root: false, holds: holds(e.kind), row: true, anchors: e.kind !== 'instance' && anchors(p), box: null, pull: null }, tokenNames).decls.filter(([k]) => !m || PLACED.test(k));
-          if (liftsAlone(said(own))) return true;
-          if (!m) return false;
-          const R = (m.anatomy || {}).root || {}, rootAnchors = Object.values(m.anatomy || {}).some((x) => x.parent === 'root' && outOf(x));
-          return liftsAlone(said(declarations(R, { root: true, holds: holds(R.kind), row: true, anchors: rootAnchors, box: null, pull: null }, tokenNames).decls));
+          const own = lifts(declarations(e, { root: false, holds: holds(e.kind), row: true, anchors: e.kind !== 'instance' && anchors(p), box: null, pull: null }, tokenNames).decls.filter(([k]) => !m || PLACED.test(k)));
+          if (!m) return own;
+          // (its root as drawn at the props it is placed at, as placedDecls and ownOverride draw it: atProps)
+          const A = atProps(m, e.with) || {}, R = A.root || {}, rootAnchors = Object.values(A).some((x) => x && x.parent === 'root' && outOf(x));
+          return either(own, lifts(declarations(R, { root: true, holds: holds(R.kind), row: true, anchors: rootAnchors, box: null, pull: null }, tokenNames).decls));
         };
-        const xs = [...here].sort((x, y) => dom.get(x.id) - dom.get(y.id)).map((p) => { const out = outOf(asAt(p)); return { id: p.id, cssOrder: out ? 0 : at(p), stack: { ...(out && { out: true }), ...(!out && lifted(p) && { lifted: true }) } }; });
+        const lift = new Map(here.map((p) => [p.id, outOf(asAt(p)) ? false : lifted(p)]));
         const want = [...here].sort((x, y) => at(x) - at(y) || dom.get(x.id) - dom.get(y.id)).map((p) => p.id).join();
-        if (siblingOrder(xs).map((e) => e.id).join() !== want) { boxes.add(box); grew = true; break; }
+        // (an unknown one drawn both ways: the box is restacked where either paints out of the design's order)
+        const paints = (unknown) => siblingOrder([...here].sort((x, y) => dom.get(x.id) - dom.get(y.id)).map((p) => { const out = outOf(asAt(p)), l = lift.get(p.id) ?? unknown; return { id: p.id, cssOrder: out ? 0 : at(p), stack: { ...(out && { out: true }), ...(l && { lifted: true }) } }; })).map((e) => e.id).join();
+        if (paints(true) !== want || paints(false) !== want) { boxes.add(box); grew = true; break; }
       }
     }
     }

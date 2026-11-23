@@ -285,6 +285,19 @@ ok('a reordering variant writes each child\'s order', /__texts > \.ds-chip__a \{
   const badge = { contract: 1, component: 'Badge', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, dot: { ...absAt(0), parent: 'root' } }, variants: [] };
   const placed = { ...seen, anatomy: { ...seen.anatomy, a: { kind: 'instance', parent: 'root', order: 2, component: 'Badge', key: 'b1' } } };
   ok('so does a placed component whose own root holds a part out of the flow', !/z-index|isolation/.test(toCss(placed, 'pin', { naming: ELEMENT, mains: (n) => (n === 'Badge' ? { ...badge, folder: 'badge' } : null) })));
+  // (at the props it is placed at: a disabled one see-through there, though not at its defaults)
+  const dim = { contract: 1, component: 'Dim', props: { state: { type: 'enum', values: ['rest', 'disabled'], figmaValues: ['Rest', 'Disabled'], default: 'rest', figma: 'State' } }, anatomy: { root: { kind: 'container', layout: { direction: 'row' } } },
+    variants: [{ when: { state: 'disabled' }, set: { 'root.opacity': 0.4 } }] };
+  const dimmed = { ...seen, anatomy: { ...seen.anatomy, a: { kind: 'instance', parent: 'root', order: 2, component: 'Dim', key: 'd1', with: { State: 'Disabled' } } } };
+  ok('a placed component see-through at the props it is placed at paints over it too', !/z-index|isolation/.test(toCss(dimmed, 'pin', { naming: ELEMENT, mains: (n) => (n === 'Dim' ? { ...dim, folder: 'dim' } : null) })));
+  // (an opacity said by a token, whose value the sheet does not know: drawn either way, z-index where either needs it)
+  const tokened = { ...pin, props: {}, anatomy: { root: pin.anatomy.root, x: absAt(0), a: { ...flowAt(1), opacity: 'Opacity/soft' } }, variants: [] };
+  ok('an opacity by a token the sheet cannot resolve is drawn right whichever value it holds', /z-index/.test(toCss(tokened, 'pin', { naming: ELEMENT })));
+  // a variant that takes a part between two copies out of the flow: the copy is a part of its own there too
+  const moved = { ...copies, props: { loose: { type: 'boolean', default: false, axis: true } }, anatomy: { ...copies.anatomy, x: flowAt(1) }, variants: [{ when: { loose: true }, set: { 'x.position': 'absolute', 'x.absolute': { x: 0, y: 0 } } }] };
+  const mmk = toElement(moved, 'pin', { naming: ELEMENT, library: {} }), mcss = toCss(moved, 'pin', { naming: ELEMENT });
+  ok('a copy whose sibling between a variant takes out of the flow is a part of its own',
+    mmk.includes('"data-part": "item-2"') && paints(mmk, mcss, ['item', 'x', 'item-2'], '[loose]') === 'item,x,item-2' && selfCheck(moved).length === 0);
 }
 // a placed control the Selected layer names is the one the state reaches, at its depth; another control is not
 const card = { ...chip, anatomy: { ...chip.anatomy, top: { kind: 'container', parent: 'root', order: 1, layout: { direction: 'row' } }, 'top/check': { kind: 'instance', parent: 'top', order: 0, component: 'Checkbox', with: { Selected: 'False' } }, foot: { kind: 'instance', parent: 'root', order: 2, component: 'Button' } },
