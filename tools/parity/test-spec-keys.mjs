@@ -54,3 +54,9 @@ ok('an excuse is stale only when no registered project records its key; a missin
   return both.stale.join() === 'maxHeight' && both.projects.join() === 'a,b' && both.unreadable.length === 0 && /^c: no repo/.test(missing.unreadable[0]);
 })());
 console.log(`${n}/${n} passed`);
+
+// a variant's place in its set (snapshot 0.84.0) is declared, so a project's next snapshot does not fail gate 10
+{ const { SPEC_KEYS } = await import('./adapt.mjs');
+  const r2 = checkContract([{ name: 'Size=md', type: 'COMPONENT', w: 10, h: 10, place: { x: 0, y: 0 } }], SPEC_KEYS);
+  if (r2.undeclared.length) { console.error('FAIL a variant\'s place is declared:', r2.undeclared); process.exit(1); }
+  console.log('ok a variant\'s place is declared'); }
