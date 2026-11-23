@@ -218,6 +218,10 @@ ok('the custom properties a value was written with, followed through the element
   varChain([[D('background-color', 'var(--button-bg)'), D('--button-bg', 'var(--color-primary, red)')], [D('--color-primary', '#00f')]], 'background-color').join() === '--button-bg,--color-primary'
   && varChain([[D('background-color', '#00f')]], 'background-color').length === 0
   && varChain([[D('color', 'var(--a)'), D('--a', 'var(--a)')]], 'color').join() === '--a');
+ok('a value given (one side of a shorthand) is followed as a property\'s is: through the vars it names, a set one\'s fallback never listed',
+  varChain([[D('--btn-pad-y', 'var(--space-2)')], [D('--space-2', '8px')]], null, { value: 'var(--btn-pad-y)' }).join() === '--btn-pad-y,--space-2'
+  && varChain([[D('--pad', '8px')]], null, { value: 'var(--pad, var(--space-4))' }).join() === '--pad'
+  && varChain([[]], null, { value: 'var(--pad, var(--space-4))' }).join() === '--pad,--space-4' && varChain([[]], null, { value: '' }).length === 0);
 ok('an unset custom property draws its fallback: the vars the fallback writes are what the value came through (a focus ring a host may restyle)',
   varChain([[D('outline', 'var(--ds-ring, var(--focus-width) solid var(--focus-colour))'), D('--focus-colour', 'var(--grey-12)')]], 'outline').join() === '--ds-ring,--focus-width,--focus-colour,--grey-12'
   && varChain([[D('outline', 'var(--ds-ring, var(--focus-width))'), D('--ds-ring', '2px solid red')]], 'outline').join() === '--ds-ring'

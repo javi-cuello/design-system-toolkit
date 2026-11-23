@@ -508,22 +508,43 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     const fx = (name, color, x = -1) => ({ name, layers: [{ type: 'INNER_SHADOW', x, y: 0, blur: 0, spread: 0, color }] });
     const effects = [fx('Line one/Right', '#c6c6c6'), fx('Line two/Right', '#e0e0e0')];
     const read = [{ inset: true, x: -1, y: 0, blur: 0, spread: 0, color: 'rgb(224, 224, 224)' }];
-    ok('a whole shadow is the effect style the code names where it draws that style\'s layers, whatever colour its modes give it',
-      wholeShadowStyle(read, effects[0], effects, shadowKey) === effects[0]);
+    // (each style layer's colour in every mode its variable takes: the first's variable is #e0e0e0 in a second mode)
+    const modes = (l) => (l.color === '#c6c6c6' ? ['#c6c6c6', '#e0e0e0'] : [l.color]);
+    ok('a whole shadow is the effect style the code names where it draws that style\'s layers, in a colour its variable takes in some mode',
+      wholeShadowStyle(read, effects[0], effects, shadowKey, modes) === effects[0]);
+    ok('one the code names in a colour its variable takes in no mode (its own custom property overriding it) is matched by value, so the difference shows',
+      wholeShadowStyle([{ ...read[0], color: '#ff0000' }], effects[0], effects, shadowKey, modes) === undefined
+      && wholeShadowStyle(read, effects[0], effects, shadowKey) === effects[1]);
     ok('one the code names drawing other layers, or none named, is the style that draws the same, colour and all; none, none',
-      wholeShadowStyle(read, fx('Wide/Right', '#e0e0e0', -2), effects, shadowKey) === effects[1]
-      && wholeShadowStyle(read, null, effects, shadowKey) === effects[1] && wholeShadowStyle([{ ...read[0], x: -3 }], null, effects, shadowKey) === undefined);
+      wholeShadowStyle(read, fx('Wide/Right', '#e0e0e0', -2), effects, shadowKey, modes) === effects[1]
+      && wholeShadowStyle(read, null, effects, shadowKey, modes) === effects[1] && wholeShadowStyle([{ ...read[0], x: -3 }], null, effects, shadowKey, modes) === undefined);
   }
   {
-    const { shorthandOf, sideVars } = await import('./from-code.mjs');
-    // a longhand written inside a shorthand with a var() (Chrome reports it empty): its side of the shorthand's 1 to 4 values
+    const { shorthandOf, sidePiece, instanceWrites } = await import('./from-code.mjs');
+    // a longhand written inside a shorthand with a var() (Chrome reports it empty), or under its logical name (Chrome
+    // reports the physical one not at all): where its value is written
     ok('a side\'s longhand names its shorthand and side; one with none, none',
       JSON.stringify(shorthandOf('padding-bottom')) === '{"prop":"padding","side":2}' && shorthandOf('border-top-left-radius').prop === 'border-radius'
       && shorthandOf('column-gap').side === 1 && shorthandOf('top').prop === 'inset' && shorthandOf('border-left-width').side === 3 && shorthandOf('color') === null);
-    ok('a side of a shorthand is the var()s its own value writes, by the one to four values the shorthand takes, fallbacks too',
-      JSON.stringify(sideVars('0 0 var(--space-8) 0', 'padding', 2)) === '["--space-8"]' && JSON.stringify(sideVars('var(--a) var(--b, var(--c))', 'padding', 3)) === '["--b","--c"]'
-      && JSON.stringify(sideVars('var(--a)', 'margin', 1)) === '["--a"]' && JSON.stringify(sideVars('var(--a) 0 var(--b)', 'padding', 3)) === '[]'
-      && JSON.stringify(sideVars('var(--r) 0 / 2px', 'border-radius', 2)) === '["--r"]' && JSON.stringify(sideVars('var(--g)', 'gap', 1)) === '["--g"]' && JSON.stringify(sideVars('', 'padding', 0)) === '[]');
+    ok('its logical longhand and shorthand by the element\'s direction: left is the inline start, or the end right to left',
+      JSON.stringify(shorthandOf('padding-left', { logical: true })) === '{"longhand":"padding-inline-start","prop":"padding-inline","side":0}'
+      && JSON.stringify(shorthandOf('padding-left', { logical: true, rtl: true })) === '{"longhand":"padding-inline-end","prop":"padding-inline","side":1}'
+      && JSON.stringify(shorthandOf('top', { logical: true })) === '{"longhand":"inset-block-start","prop":"inset-block","side":0}'
+      && JSON.stringify(shorthandOf('margin-bottom', { logical: true })) === '{"longhand":"margin-block-end","prop":"margin-block","side":1}'
+      && JSON.stringify(shorthandOf('border-right-width', { logical: true })) === '{"longhand":"border-inline-end-width","prop":"border-inline-width","side":1}'
+      && JSON.stringify(shorthandOf('border-top-left-radius', { logical: true, rtl: true })) === '{"longhand":"border-start-end-radius","prop":null}'
+      && shorthandOf('row-gap', { logical: true }) === null);
+    ok('a side of a shorthand is its own value, by the one to four values the shorthand takes (a logical one\'s or a gap\'s one or two)',
+      sidePiece('0 0 var(--space-8) 0', 'padding', 2) === 'var(--space-8)' && sidePiece('var(--a) var(--b, var(--c))', 'padding', 3) === 'var(--b, var(--c))'
+      && sidePiece('var(--a)', 'margin', 1) === 'var(--a)' && sidePiece('var(--a) 0 var(--b)', 'padding', 3) === '0'
+      && sidePiece('var(--g)', 'gap', 1) === 'var(--g)' && sidePiece('var(--s) var(--e)', 'padding-inline', 1) === 'var(--e)' && sidePiece('var(--s)', 'inset-block', 1) === 'var(--s)'
+      && sidePiece('', 'padding', 0) === null && sidePiece(null, 'padding', 0) === null);
+    ok('a slash cuts a corner\'s radii only, and only outside a function: a calc() keeps its division',
+      sidePiece('calc(var(--space-2) / 2) var(--space-4)', 'padding', 3) === 'var(--space-4)' && sidePiece('calc(var(--space-2) / 2) var(--space-4)', 'padding', 0) === 'calc(var(--space-2) / 2)'
+      && sidePiece('var(--r) 0 / 2px', 'border-radius', 2) === 'var(--r)' && sidePiece('calc(var(--a) / 2) 0', 'border-radius', 0) === 'calc(var(--a) / 2)');
+    ok('a placed instance\'s field is this component\'s where its rule reaches the instance; an opacity written inline on it too, never another field',
+      instanceWrites('background', '.a > .b', true) && !instanceWrites('background', '.b', false) && instanceWrites('opacity', null, false, '0.4')
+      && !instanceWrites('opacity', null, false, null) && !instanceWrites('background', null, false, 'red'));
   }
   ok('an empty box takes the shape the design draws at the combination read: none where a variant takes its rectangle away',
     asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false, { kind: 'graphic' }).shape === undefined

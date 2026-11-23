@@ -949,6 +949,13 @@ export async function authoredVars(tab, selector, property, cache = null, opts =
   return levels ? varChain(levels, name, opts) : [];
 }
 
+/* The custom properties a value given on the element was written with (one side of a shorthand), followed as
+   authoredVars follows a property's. */
+export async function valueVars(tab, selector, value, cache = null) {
+  const levels = await matchedLevels(tab, selector, cache);
+  return levels ? varChain(levels, null, { value }) : [];
+}
+
 /* The custom properties a value lists as whole layers of its own (a box-shadow that adds a ring to an effect token:
    `inset 0 0 0 1px var(--stroke), var(--elevation-raised)` lists the elevation), each followed to where it is set. */
 export async function layerVars(tab, selector, property, cache = null) {
@@ -964,7 +971,7 @@ export const wholeVars = (raw) => (raw ? splitTop(raw).map((p) => /^\s*var\(\s*(
 
 /* varChain, with nothing opened: `levels` are the styles of the element and
    then of each ancestor, each listed lowest precedence first. Tested by test-external.mjs. */
-export function varChain(levels, property, { leading = false } = {}) {
+export function varChain(levels, property, { leading = false, value } = {}) {
   const first = (name) => { for (const styles of levels) { const v = winning(styles, name, { raw: true }); if (v != null) return v; } return null; };
   const names = [];
   // every var() a value writes, in order (a shorthand's `var(--stroke-1) solid var(--stroke-neutral-soft)` writes two),
@@ -987,7 +994,8 @@ export function varChain(levels, property, { leading = false } = {}) {
       at = leading ? -1 : v.indexOf('var(', end);
     }
   };
-  walk(winning(levels[0] || [], property, { raw: true }), 0);
+  // (`value`: a value given in place of the property's own, one side of a shorthand, followed the same way)
+  walk(value !== undefined ? value : winning(levels[0] || [], property, { raw: true }), 0);
   return names;
 }
 
