@@ -379,12 +379,17 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
     const A = expand(library, { ...variantDefaults(library), ...c }), B = expand(drawn, { ...variantDefaults(drawn), ...theirs });
-    // a host kept whole over the whole contract (the reading keeps it so in every combination) where this combination
-    // hides nothing in it (derive's own cut of it shrinks nothing): the design left its parts equal to its component's
-    // out here, so a part the drawing keeps there is held to that component's own, as the other way round below; where
-    // the combination hides a layer, a part drawn there stays a difference (a radio's icon box, read whole at focus and
-    // checked, where the design lists none)
-    const here = mains ? req('./derive.cjs').wholeIn(A, mains) : new Set(), loose = [...whole].filter((h) => !here.has(h));
+    // a host kept whole over the whole contract (the reading keeps it so in every combination) that this combination
+    // may hide no layer in: derive's own test of a hidden layer (ownInsides `found`: a part of its component not drawn
+    // there), the one derive keeps a host whole by. Only a host listing nothing inside passes it (it draws its component
+    // as is: a radio's icon box at focus and checked); one that lists insides and lacks a part may hide it, as a
+    // contract keeps no difference between a layer hidden and one left out as its component's (beside overrides only,
+    // the two read alike), so nothing is filled there and a part drawn there stays a difference. The design left the
+    // parts of the first out as its component's, so a part the drawing keeps there is held to that component's own, as
+    // the other way round below
+    const here = new Set();
+    if (mains) req('./derive.cjs').ownInsides(JSON.parse(JSON.stringify(A)), mains, { found: here });
+    const loose = [...whole].filter((h) => !here.has(h));
     const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`))));
     const a = same(loose.length ? ownInPlaced(theirsIn, A, mains, here) : A), b = same(ownInPlaced(A, B, mains, whole));
     diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');
