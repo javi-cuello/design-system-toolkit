@@ -206,6 +206,12 @@ ok('a reordering variant writes each child\'s order', /__texts > \.ds-chip__a \{
   const cmk = toElement(cycle, 'chip', { naming: ELEMENT, library: {} }), ccss = toCss(cycle, 'chip', { naming: ELEMENT });
   ok('children no one markup order keeps are each given their place: the browser draws every variant\'s',
     drawn(cmk, ccss, ['a', 'c'], '[mode="typed"]').join() === 'c,a' && drawn(cmk, ccss, ['b', 'c'], '[mode="armed"]').join() === 'b,c' && drawn(cmk, ccss, ['a', 'b'], null).join() === 'a,b' && selfCheck(cycle).length === 0);
+  // a ring only a pointer state draws, among the children a variant reorders: the markup holds no element for it, and
+  // the box the sheet orders is the one the markup orders, both from the same parts
+  const ringed = { ...typed, variants: [...typed.variants, { when: { state: 'hover' }, add: { 'box/ring': { kind: 'graphic', parent: 'box', order: 3, position: 'absolute', absolute: { x: -2, y: -2, end: -2, bottom: -2 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'C/focus', width: 2 } } } }] };
+  const gmk = toElement(ringed, 'chip', { naming: ELEMENT, library: {} }), gcss = toCss(ringed, 'chip', { naming: ELEMENT });
+  ok('a ring only a pointer state draws leaves the reordered box\'s order as the browser draws it',
+    drawn(gmk, gcss, ['lead', 'caret', 'words'], '[mode="typed"]').join() === 'lead,words,caret' && drawn(gmk, gcss, ['lead', 'caret', 'words'], '[mode="armed"]').join() === 'lead,caret,words' && selfCheck(ringed).length === 0);
   // a part of the defaults a variant puts in another box is not in its own box there, at the other box's place
   const away = { ...chip, props: typed.props, anatomy: { ...chip.anatomy, box, other: { ...box, order: 1 }, 'box/x': at('graphic', 0), 'box/y': at('graphic', 1), 'other/z': { ...at('graphic', 0), parent: 'other' } },
     variants: [...chip.variants, { when: { mode: 'armed' }, add: { 'box/x': { ...at('graphic', 5), parent: 'other' } } }] };

@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { namer, partSeg, copyOf, markupOrder, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
+import { namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf } from './layers.mjs';
 
@@ -228,72 +228,11 @@ function slotParts(c, key) {
   return [...new Set([own, ...moved])];
 }
 
-/* Each part, base and added, with its parent and the conditions it is drawn under: the variants that add it and those
-   that take it away, a pointer state's left to the stylesheet. A part only a pointer state draws is a gap; a focus ring
-   drawn as a layer of its own is the ringed element's outline; a part inside a placed component is that component's;
-   one inside a slot is a caller's sample. */
-export function partsOf(c, t = HOUSE) {
-  const props = c.props || {};
-  const pointer = (k, v) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v);
-  const parts = new Map();
-  const swapsIn = (w, id) => { const k = (/^\{(.+)\}$/.exec(w) || [])[1]; return !!k && (props[k] || {}).type === 'string' && (props[k].sets || []).includes(id); };
-  for (const [id, e] of Object.entries(c.anatomy || {})) parts.set(id, { id, e, base: true, adds: [], removes: [], pointerOnly: false, rings: [], words: [] });
-  for (const v of c.variants || []) {
-    const when = v.when || {};
-    const byPointer = Object.entries(when).some(([k, x]) => pointer(k, x));
-    for (const [id, e] of Object.entries(v.add || {})) {
-      if (!parts.has(id)) parts.set(id, { id, e, base: false, adds: [], removes: [], pointerOnly: true, rings: [], words: [] });
-      // (a pointer state's add drawn as a ring is the ringed element's outline there, never an element the markup holds)
-      if (byPointer) { const ring = !!ringOf(c, when, id, e, { ...c.anatomy, ...v.add }, t); parts.get(id).rings.push(ring); if (!ring) parts.get(id).pointerAdds = [...(parts.get(id).pointerAdds || []), when]; continue; }
-      parts.get(id).pointerOnly = false;
-      parts.get(id).adds.push(when);
-      const at = parts.get(id);
-      if (at.base && typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) && (e.content !== at.e.content || at.words.length)) at.words.push([when, e.content]);
-      // (a part only variants draw: each one's words, set out below)
-      if (!at.base && typeof e.content === 'string') (at.texts = at.texts || []).push([when, e.content]);
-    }
-    for (const id of v.remove || []) if (parts.has(id)) { if (byPointer) parts.get(id).pointerGone = true; else parts.get(id).removes.push(when); }
-    // words a pointer state sets on a base text (a field's "Search" at focus): marked, for textOf's gap
-    if (byPointer) for (const k of Object.keys(v.set || {})) { const m = /^(.+)\.content$/.exec(k); if (m && parts.has(m[1])) parts.get(m[1]).pointerWords = true; }
-    // words a variant sets on a base text (a label's * that reads Optional where it is not required)
-    if (!byPointer) for (const [k, w] of Object.entries(v.set || {})) {
-      const m = /^(.+)\.content$/.exec(k), at = m && parts.get(m[1]);
-      // (or another string prop that sets this text, put in its place: a value text where a placeholder was)
-      const swap = typeof w === 'string' && (/^\{(.+)\}$/.exec(w) || [])[1], swaps = swap && ((c.props || {})[swap] || {}).type === 'string' && ((c.props[swap].sets || []).includes(m && m[1]));
-      if (at && at.base && typeof w === 'string' && (swaps || !/^\{.*\}$/.test(w)) && (w !== at.e.content || at.words.length)) at.words.push([when, w]);
-    }
-  }
-  for (const part of parts.values()) {
-    // a part only variants draw, each with its own words (a message at error says the error text, at warning the warning
-    // text): in an order no listing changes, the broader variant first and a narrower one over it, so its words are
-    // the first's and each other's where it draws them, a prop's that sets this text or words of its own
-    if (part.texts && part.texts.length > 1) {
-      // (each when said with its props sorted, so the order they are written in changes nothing)
-      const said = (w) => JSON.stringify(Object.keys(w).sort().map((k) => [k, w[k]]));
-      const ts = [...part.texts].sort(([a], [b]) => Object.keys(a).length - Object.keys(b).length || (said(a) < said(b) ? -1 : said(a) > said(b) ? 1 : 0));
-      part.e = { ...part.e, content: ts[0][1] };
-      for (const [when, w] of ts.slice(1)) if ((!/^\{.*\}$/.test(w) || swapsIn(w, part.id)) && (w !== part.e.content || part.words.length)) part.words.push([when, w]);
-    }
-    delete part.texts;
-    // a ring where to-code makes it the ringed element's outline at every focus that draws it (to-code's ringOf, the one rule)
-    part.ring = !part.base && part.pointerOnly && part.rings.length > 0 && part.rings.every(Boolean);
-    // a part the rest of the grid draws that a pointer state also puts in where the rest take it out (a tile's border at
-    // hover, a search's clear icon at focus): the markup holds it wherever that state's combination draws it, the
-    // pointer value aside, and the sheet hides it where the contract draws none (to-code's pointerShown)
-    if (!part.pointerOnly && part.pointerAdds) {
-      part.pointerShown = part.pointerAdds.map((w) => Object.fromEntries(Object.entries(w).filter(([k, x]) => !pointer(k, x))));
-    }
-    for (let up = part.e.parent; up && up !== 'root'; up = ((parts.get(up) || {}).e || {}).parent) {
-      const k = ((parts.get(up) || {}).e || {}).kind;
-      if (k === 'instance') part.inside = up;
-      if (k === 'slot') part.slotted = up;
-    }
-  }
-  return parts;
-}
 
 /* A box's children in the one order every variant draws them: to-code's markupOrder, the pass its CSS order is written
    by where no one order keeps every variant's (an icon added before a label, the label's order set after it). */
+export { partsOf };
+
 const inOrder = (c, list) => markupOrder(c, list).order;
 
 /* A part's condition as code, over the props' names in code: null where it is always drawn, 'false' where never. */
@@ -357,8 +296,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const inline = phrasing(c);
   const gaps = [];
   const used = new Set(); // the placed components the markup draws, each imported once
-  const kids = new Map();
-  for (const part of parts.values()) if (part.id !== 'root') { const up = part.e.parent || 'root'; kids.set(up, [...(kids.get(up) || []), part]); }
+  const kids = childrenOf(parts);
   for (const [up, list] of kids) kids.set(up, inOrder(c, list));
   const seg = (id) => partSeg(c, copyOf(c, id) || id);
   // a part's hook: its class (React) or its data-part (a web component)
