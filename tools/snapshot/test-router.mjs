@@ -1240,8 +1240,12 @@ test('a changed component says which fields moved: description, bindings and a r
   const plain = { name: 'Size=sm', type: 'COMPONENT', w: 1, h: 1, children: [{ name: 'A', type: 'FRAME' }] };
   const withEffects = { name: 'Size=sm', type: 'COMPONENT', w: 1, h: 1, children: [{ name: 'A', type: 'FRAME', effects: ['DROP_SHADOW'] }] };
   const r3 = store.diff({ tokens: t(), specs: { button: mk({ variants: [plain] }) } }, { tokens: t(), specs: { button: mk({ variants: [withEffects] }) } }).components;
-  assert.deepEqual(r3.detail.button, [], 'a field arriving with a newer plugin is not listed as a change');
-  assert.deepEqual(r3.changed, ['button'], 'but the component still counts as changed');
+  // (2026-11-23: nor counted changed, as the grade says nothing moved: "changed" with no note was a component every
+  // snapshot after a release named for nothing a reader could find; a vector's outline, 0.85.0, did it to every vector)
+  assert.deepEqual(r3.detail.button, undefined, 'a field arriving with a newer plugin is not listed as a change');
+  assert.deepEqual(r3.changed, [], 'nor counted changed');
+  const moved = { name: 'Size=sm', type: 'COMPONENT', w: 2, h: 1, children: [{ name: 'A', type: 'FRAME', effects: ['DROP_SHADOW'] }] };
+  assert.deepEqual(store.diff({ tokens: t(), specs: { button: mk({ variants: [plain] }) } }, { tokens: t(), specs: { button: mk({ variants: [moved] }) } }).components.changed, ['button'], 'one beside a real change still counts');
   // …and the grade says nothing moved either: it said "its values moved" with no note to show which
   const g3 = store.grade({ tokens: t(), specs: { button: mk({ variants: [plain] }) } }, { tokens: t(), specs: { button: mk({ variants: [withEffects] }) } });
   assert.deepEqual(g3.changes, [], 'a field arriving with a newer plugin is not graded as a change');
@@ -1884,4 +1888,28 @@ test('lastEdit reads the newest version, autosaves included, and says why a file
     globalThis.fetch = async () => ({ json: async () => ({ status: 404, err: 'Not found' }) });
     await assert.rejects(lastEdit('K', 't'), /account cannot open the file/);
   } finally { globalThis.fetch = saved; }
+});
+
+// 2026-11-23: snapshot 0.85.0 and 0.86.0 record a vector's outline and paths. The first snapshot to carry them, against
+// a stored one that records none, changes no component and edits no screen; an outline that then changes is a change.
+test('a vector\'s outline and paths first recorded change no component and edit no screen; a new outline later does', async () => {
+  const { createRequire } = await import('node:module');
+  const store = createRequire(import.meta.url)('./store.cjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'outline-'));
+  try {
+    const P = { ...store.paths(dir), screens: path.join(dir, 'screens'), index: path.join(dir, 'index.json'), logs: null };
+    const dot = (outline) => ({ name: 'Dot', type: 'VECTOR', w: 8, h: 8, x: 0, y: 0, ...(outline ? { outline, paths: [{ windingRule: 'NONE', data: `M 8 4 Z ${outline}` }] } : {}) });
+    const chip = (outline) => ({ name: 'Chip', id: '1:1', page: 'A', props: { Size: ['sm'] }, variants: [{ name: 'Size=sm', type: 'COMPONENT', w: 10, h: 10, children: [dot(outline)] }] });
+    store.writeLibrary(lib('L', { components: [chip()] }), P);
+    const w = store.writeLibrary(lib('L', { components: [chip('a1b2c3d4')] }), P);
+    assert.equal(w.lines.find((l) => l.label === 'components').text, 'none changed', JSON.stringify(w.lines));
+    assert.deepEqual(store.diff({ tokens: lib('L').tokens, specs: { chip: chip() } }, { tokens: lib('L').tokens, specs: { chip: chip('a1b2c3d4') } }).components.changed, [], 'nor does the change log');
+    const again = store.writeLibrary(lib('L', { components: [chip('b2c3d4e5')] }), P);
+    assert.notEqual(again.lines.find((l) => l.label === 'components').text, 'none changed', 'a new outline is a change');
+    const tree = (outline) => ({ name: '<S> 1-1 - List', type: 'FRAME', w: 100, children: [dot(outline)] });
+    const post = (outline) => store.writeScreens({ _meta: { fileId: 'A' }, screens: [{ section: 'S', page: 'P', frame: '<S> 1-1 - List', id: '1:1', devStatus: { type: 'READY_FOR_DEV' }, tree: tree(outline) }] }, P);
+    post();
+    assert.equal(post('a1b2c3d4').lines.find((l) => l.label === 'changed').text, 'none since the last snapshot');
+    assert.notEqual(post('b2c3d4e5').lines.find((l) => l.label === 'changed').text, 'none since the last snapshot', 'a new outline edits the screen');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
