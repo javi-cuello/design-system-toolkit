@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { appliesTo, bucketFor, gatherCode, gatherTimeout, runStages, stageOf, stagesFor, stoppedLines } from "../../../tools/figma-audit/stages.mjs";
+import { appliesTo, bucketFor, gatherCode, gatherTimeout, runStages, stageById, stagesFor, stoppedLines } from "../../../tools/figma-audit/stages.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..", "..", "..");
@@ -180,8 +180,8 @@ ok("gatherTimeout: the whole-library scan waits at least four minutes, the most 
   gatherTimeout(comps) > 240000);
 let threw = false; try { gatherTimeout({ id: "x", gather: {} }); } catch { threw = true; }
 ok("gatherTimeout: a stage with no timeout is refused, never given a default", threw);
-let named = ""; try { stageOf({}, "components"); } catch (e) { named = e.message; }
-ok("stageOf: finds a stage by id, and an old service's missing list is said, not a crash", stageOf(registry, "components") === comps && /restart/.test(named));
+let named = ""; try { stageById({}, "components"); } catch (e) { named = e.message; }
+ok("stageById: finds a stage by id, and an old service's missing list is said, not a crash", stageById(registry, "components") === comps && /restart/.test(named));
 for (const f of ["tools/figma-audit/audit-session.mjs", "tools/docs-site/src/dashboard/audit.js", "tools/docs-site/src/dashboard/queue.js"]) {
   const src = readFileSync(join(ROOT, f), "utf8");
   ok(`${f}: waits on no stage with a number of its own`, !/\b(120000|180000|240000|300000|600000)\b/.test(src));

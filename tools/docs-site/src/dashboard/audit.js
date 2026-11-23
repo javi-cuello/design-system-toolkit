@@ -11,7 +11,7 @@ import { pullRecord, store } from './record.js';
 import { showCleared, state, toast } from './queue.js';
 import { recordScores } from './scores.js';
 import { endProgress, runProgress } from './measures.js';
-import { bucketFor, gatherCode, gatherTimeout, runStages, stageOf, stagesFor } from '../../../figma-audit/stages.mjs';
+import { bucketFor, gatherCode, gatherTimeout, runStages, stageById, stagesFor } from '../../../figma-audit/stages.mjs';
 
 // One phrasing of an audit's outcome, used by both of its endings.
 // `kept` is what survived judgement. A run that files nothing new and closes
@@ -1294,7 +1294,7 @@ async function runAudit(targets) {
     const prelude = "const TARGETS = " + JSON.stringify(scope) + ";\n" +
                     "const SCALES = " + JSON.stringify(rules0.optionOrder) + ";\n" +
                     "const TOKENS = " + JSON.stringify(rules0.tokens) + ";\n";
-    const scan = await bridge.exec(prelude + auditScript, gatherTimeout(stageOf(stages, "components")));
+    const scan = await bridge.exec(prelude + auditScript, gatherTimeout(stageById(stages, "components")));
     runProgress(ctx.libKey, 15, "Scanned");
     if (!scan || !scan.audited) { say("The bridge answered, but not with a scan.", "warn"); return; }
     if (scan.fileKey && ctx.libKey && scan.fileKey !== ctx.libKey) {

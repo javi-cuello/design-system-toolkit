@@ -1,5 +1,7 @@
 # Eval cases — figma-project-audit (v1.7.4)
 
+**Walked: 2026-11-23 against v1.8.0** — `gather.timeout` added to every Figma stage: O7 re-run, `node tests/test-stages.mjs` 92/92 (each stage carries a timeout, none is defaulted, no runner keeps a number of its own); O1 to O6 untouched, no stage or order changed.
+
 **Walked: 2026-11-22 against v1.7.4** — four `stages.json` descriptions shortened: O7 re-run, `node tests/test-stages.mjs` 85/85 (each is still a one-line sentence); O1 to O6 untouched by a wording change.
 
 **Walked: 2026-11-22 against v1.7.3** — the registry moved to `scripts/stages.json`: O7 re-run, `node tests/test-stages.mjs` 85/85.

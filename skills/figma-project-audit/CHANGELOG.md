@@ -1,5 +1,6 @@
 # Changelog — figma-project-audit
 
+- 1.8.0 (2026-11-23): `stages.json`: every stage that runs in Figma carries `gather.timeout`, how long each runner waits for its call, read through `stages.mjs` `gatherTimeout`. The runners had hard-coded 30s (the dashboard's scan) and 240s (`bin/audit`), and both timed out on a 143-set library. Case O7.
 - 1.7.4 (2026-11-22): `stages.json`: the four descriptions Audit lite shows are a few words each; the window read as too verbose. No stage or rule changed. Case O7.
 - 1.7.3 (2026-11-22): the list of stages moves to `scripts/stages.json`. A tool that reads it (the figma-audit service) then takes only this skill's `scripts/` through `bin/get`, not the whole skill, so getting figma-foundations-audit no longer installs this one. No rule changed.
 - 1.7.2 (2026-11-21): `stages.json`'s `label` note says it is Audit lite's checkbox name; the dashboard's run lines name a stage by its queue chip. `bin/audit` exits 1 and names each stage that stopped (`stages.mjs` `stoppedLines`). Case O7.

@@ -33,7 +33,7 @@ export function gatherTimeout(stage) {
 }
 
 // A stage by its id in the registry (stages.json, or the service's copy of it); the old service sent none.
-export function stageOf(registry, id) {
+export function stageById(registry, id) {
   const stage = ((registry && registry.stages) || []).find((s) => s.id === id);
   if (!stage) throw new Error(`the stage list has no ${id} stage: restart the dashboard service so it sends the current one`);
   return stage;

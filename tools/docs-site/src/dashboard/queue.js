@@ -11,7 +11,7 @@ import { OWNER, OWNER_LABEL } from './labels.js';
 import { renderQueuePane } from './measures.js';
 import { askInput, openAsk } from './ask.js';
 import { go, setFilterHash } from './views.js';
-import { gatherTimeout, stageOf } from '../../../figma-audit/stages.mjs';
+import { gatherTimeout, stageById } from '../../../figma-audit/stages.mjs';
 
 // Targets that name the file rather than a component. The per-component
 // re-run has nothing to open for these, so Verify reports them as clearing on
@@ -1061,7 +1061,7 @@ const OWNER_CHECK = {
     if (!audit) throw new Error("The components audit script could not be loaded from the service.");
     const scan = await bridge.exec("const TARGETS = " + JSON.stringify(targets) + ";\n" +
                                    "const SCALES = " + JSON.stringify(rulesV.optionOrder) + ";\n" +
-                                   "const TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + audit, gatherTimeout(stageOf(stages, "components")));
+                                   "const TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + audit, gatherTimeout(stageById(stages, "components")));
     if (!scan || !scan.audited) throw new Error("The components audit ran in Figma but returned nothing to compare against.");
     if (scan.fileKey && ctx.libKey && scan.fileKey !== ctx.libKey)
       throw new Error("Figma answered from a different file than this library, so its result cannot clear these rows.");
@@ -1070,7 +1070,7 @@ const OWNER_CHECK = {
   "figma-foundations-audit": async (targets, rulesV) => {
     const { foundations, stages } = await api.scripts();
     if (!foundations) throw new Error("The foundations audit script could not be loaded from the service.");
-    const out = await bridge.exec("const TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + foundations, gatherTimeout(stageOf(stages, "foundations")));
+    const out = await bridge.exec("const TOKENS = " + JSON.stringify(rulesV.tokens) + ";\n" + foundations, gatherTimeout(stageById(stages, "foundations")));
     if (!out || !out.audited) throw new Error("The foundations audit ran in Figma but returned nothing to compare against.");
     if (out.fileKey && ctx.libKey && out.fileKey !== ctx.libKey)
       throw new Error("Figma answered from a different file than this library, so its result cannot clear these rows.");
@@ -1084,7 +1084,7 @@ const OWNER_CHECK = {
     const { snapshot, stages } = await api.scripts();
     if (!snapshot) throw new Error("The service has no snapshot plugin to read the library with.");
     const T = rulesV.tokens || {};
-    const live = await bridge.exec("const PAGES = " + JSON.stringify(T.componentPages || "") + ";\nconst SECTION = " + JSON.stringify(T.sectionHeader || "") + ";\nconst EXCLUDE = " + JSON.stringify(T.excludeSections || []) + ";\n" + snapshot, gatherTimeout(stageOf(stages, "validator")));
+    const live = await bridge.exec("const PAGES = " + JSON.stringify(T.componentPages || "") + ";\nconst SECTION = " + JSON.stringify(T.sectionHeader || "") + ";\nconst EXCLUDE = " + JSON.stringify(T.excludeSections || []) + ";\n" + snapshot, gatherTimeout(stageById(stages, "validator")));
     if (!live || !Array.isArray(live.components)) throw new Error("The bridge answered, but not with the library's components.");
     if (live.fileKey && ctx.libKey && live.fileKey !== ctx.libKey)
       throw new Error("Figma answered from a different file than this library, so its result cannot clear these rows.");
@@ -1097,7 +1097,7 @@ const OWNER_CHECK = {
   "figma-variable-audit": async (targets, rulesV) => {
     const { links, stages } = await api.scripts();
     const source = rulesV.sourceLibrary;
-    const wait = gatherTimeout(stageOf(stages, "links"));
+    const wait = gatherTimeout(stageById(stages, "links"));
     if (!links) throw new Error("The variable audit script could not be loaded from the service.");
     if (!source) throw new Error("This project records no source library, so the variable audit cannot resolve its keys.");
     const k = await api.exec("const MODE = \"keys\";\n" + links, wait, source);
