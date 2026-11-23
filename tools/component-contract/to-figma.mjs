@@ -325,14 +325,12 @@ export function inWordsOf(library, drawn) {
   }));
 }
 
-export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false, whens = false } = {}) {
+export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false } = {}) {
   const design = library.code?.from !== 'code';
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
   let adds = 0; // every row added, a repeat too (diff reads it to tell whether a component differed)
-  // (`whens`: each row also names the combinations it is in, as rows merge them: eval.mjs judges a row per combination)
-  let now = null;
-  const add = (at, a, b) => { adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0, ...(whens && { whens: [] }) }; r.in++; if (whens) r.whens.push(now); rows.set(k, r); };
+  const add = (at, a, b) => { adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0 }; r.in++; rows.set(k, r); };
   const diff = (a, b, at) => {
     if (JSON.stringify(a) === JSON.stringify(b)) return;
     // a placed instance's key is which component it is, compared only where both sides hold one (a reading from code
@@ -377,7 +375,6 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   const cut = Math.max(0, combos.length - limit); combos = combos.slice(0, limit);
   const whole = wholeHosts(library, mains), inTheirs = inWordsOf(library, drawn);
   for (const c of combos) {
-    now = c;
     const theirs = inTheirs(c);
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
@@ -386,7 +383,6 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
-  now = null;
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));
   if (library.component !== drawn.component) add('name', library.component, drawn.component);
   return { combinations: combos.length, ...(invalid && { invalid }), ...(cut && { cut }), rows: [...rows.values()] };

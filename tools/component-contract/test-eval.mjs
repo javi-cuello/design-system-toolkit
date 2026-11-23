@@ -196,28 +196,27 @@ ok('a component measured since the accept is held until accepted; one that came 
     && !left('icon.with.Size', { library: '16' }) && !left('icon.width', { library: 'fill' }) && !left('icon.minWidth', { library: 24 }) && !left('root.layout', { library: {} })
     && !known('icon.with.size', { library: 'S' })); }
 
-{ const box = (h) => ({ contract: 1, component: 'Badge', props: { size: { type: 'enum', values: ['s', 'l'], default: 's' }, tone: { type: 'enum', values: ['a', 'b'], default: 'a' } },
+{ const box = (h, sized = true) => ({ contract: 1, component: 'Badge', props: { size: { type: 'enum', values: ['s', 'l'], default: 's' }, tone: { type: 'enum', values: ['a', 'b'], default: 'a' } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, frame: { kind: 'container', parent: 'root', layout: { direction: 'row' }, width: 12, height: h },
       'frame/mark': { kind: 'graphic', parent: 'frame', width: 12, height: 12, position: 'absolute', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } } },
-    variants: [{ when: { size: 'l' }, set: { 'frame.height': 20, 'frame.width': 20, 'frame/mark.width': 20, 'frame/mark.height': 20 } }],
-    invalid: [{ size: 'l', tone: 'b' }] });
-  const s = [{ size: 's', tone: 'a' }, { size: 's', tone: 'b' }], l = [{ size: 'l', tone: 'a' }];
-  const left = leftToCode(box('hug'));
-  ok('a scale constraint the sheet writes at none of the combinations a row is in (its parent hugs there) is code\'s to say; a row also in one where the share is written, the axis that has a size, and a parent sized everywhere, are not',
-    left('frame/mark.constraints.vertical', { library: 'scale', drawn: 'min', whens: s }) && !left('frame/mark.constraints.vertical', { library: 'scale', drawn: 'min', whens: [...s, ...l] })
-    && !left('frame/mark.constraints.vertical', { library: 'scale', drawn: 'min', whens: l }) && !left('frame/mark.constraints.vertical', { library: 'scale', drawn: 'min' })
-    && !left('frame/mark.constraints.horizontal', { library: 'scale', drawn: 'min', whens: s }) && !left('frame/mark.constraints.vertical', { library: 'min', drawn: 'max', whens: s })
-    && !leftToCode(box(12))('frame/mark.constraints.vertical', { library: 'scale', drawn: 'min', whens: s })); }
+    variants: sized ? [{ when: { size: 'l' }, set: { 'frame.height': 20, 'frame.width': 20, 'frame/mark.width': 20, 'frame/mark.height': 20 } }, { when: { tone: 'b' }, set: { 'frame.height': 'hug' } }] : [{ when: { tone: 'b' }, set: { 'frame.width': 'hug' } }] });
+  const row = { library: 'scale', drawn: 'min' };
+  ok('a scale constraint the sheet writes at no layer (its parent hugs wherever it is drawn) is code\'s to say; one whose share is in the sheet at any layer (the cascade carries it, size l over tone b), the axis that has a size, and a parent sized everywhere, are not',
+    leftToCode(box('hug', false))('frame/mark.constraints.vertical', row) && !leftToCode(box('hug'))('frame/mark.constraints.vertical', row)
+    && !leftToCode(box('hug', false))('frame/mark.constraints.horizontal', row) && !leftToCode(box('hug', false))('frame/mark.constraints.vertical', { library: 'min', drawn: 'max' })
+    && !leftToCode(box(12))('frame/mark.constraints.vertical', row));
+  ok('a row held to a reading rather than the contract the sheet was written from (the second leg) is never left by the share',
+    !leftToCode(box('hug', false), null, undefined, { ownSheet: false })('frame/mark.constraints.vertical', row)); }
 { // a part the sheet does not write itself (one inside a placed component, which its own sheet places) is never judged by its share
   const c = { contract: 1, component: 'Host', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, chip: { kind: 'instance', parent: 'root', component: 'Chip', height: 'hug', width: 12 },
     'chip/mark': { kind: 'graphic', parent: 'chip', width: 12, height: 12, position: 'absolute', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } } }, variants: [] };
   const chip = { contract: 1, component: 'Chip', props: {}, anatomy: { root: { kind: 'container', width: 12, height: 'hug' }, mark: { kind: 'graphic', parent: 'root', width: 12, height: 12, position: 'absolute', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } } }, variants: [] };
   ok('a scale constraint on a part inside a placed component is not left to code by its share',
-    !leftToCode(c, (n) => (n === 'Chip' ? chip : null))('chip/mark.constraints.vertical', { library: 'scale', drawn: 'min', whens: [{}] })); }
+    !leftToCode(c, (n) => (n === 'Chip' ? chip : null))('chip/mark.constraints.vertical', { library: 'scale', drawn: 'min' })); }
 { const c = { contract: 1, component: 'Pointer', props: {}, anatomy: { root: { kind: 'container' }, tip: { kind: 'graphic', parent: 'root', width: 15, height: 9, radius: 'mixed' }, card: { kind: 'container', parent: 'root', radius: 'mixed' }, bar: { kind: 'graphic', parent: 'root', shape: 'rectangle', radius: 'mixed' }, box: { kind: 'container', parent: 'root', radius: 4 } }, variants: [] };
   const left = leftToCode(c);
   ok('a radius the design holds only as mixed on a path (its corners, which no box\'s four say) is code\'s to say; mixed on a box (an older snapshot\'s), and a radius it holds, are not',
-    left('tip.radius', { library: 'mixed', drawn: null }) && !left('card.radius', { library: 'mixed', drawn: 8 }) && !left('bar.radius', { library: 'mixed', drawn: null }) && !left('box.radius', { library: 4, drawn: null })); }
+    left('tip.radius', { library: 'mixed', drawn: null }) && !leftToCode({ ...c, variants: [{ when: {}, set: { 'tip.shape': 'rectangle' } }] })('tip.radius', { library: 'mixed', drawn: null }) && !left('card.radius', { library: 'mixed', drawn: 8 }) && !left('bar.radius', { library: 'mixed', drawn: null }) && !left('box.radius', { library: 4, drawn: null })); }
 { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'stale-')), r = createRequire(import.meta.url);
   const { compact } = r('../snapshot/spec.cjs'), { derive } = r('./derive.cjs');
   const spec = compact({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'VERTICAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi' }] }] });
