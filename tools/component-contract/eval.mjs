@@ -52,6 +52,7 @@ import { fileURLToPath } from 'node:url';
 import { contracts, hashOf } from './official.mjs';
 import { roundTrip } from './to-figma.mjs';
 import { partsOf, unexposed, pointerWords } from './to-markup.mjs';
+import { scaleUnwritten } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { closureOf } from './site.mjs';
@@ -176,7 +177,11 @@ export function leftToCode(contract, mainOf = null, settings = undefined) {
   const inForeign = (el) => el.split('/').some((_, i, s) => i < s.length - 1 && foreign(s.slice(0, i + 1).join('/')));
   // (but its Size: to-markup passes that one, data-icon-size, and from-code reads it back)
   const foreignOwn = (el, field) => foreign(el) && field !== 'with.Size' && /^(with|layout|overflow)(\.|$)/.test(field);
-  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
+  // a scale constraint the sheet cannot write, its parent having no size there to take a share of (to-code's
+  // scaleUnwritten, said unread in the sheet): where it is pinned instead is code's to say
+  const unscaled = scaleUnwritten(contract);
+  const unwritten = (at, row) => !!row && row.library === 'scale' && unscaled.has(at);
+  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || unwritten(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 

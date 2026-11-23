@@ -196,6 +196,14 @@ ok('a component measured since the accept is held until accepted; one that came 
     && !left('icon.with.Size', { library: '16' }) && !left('icon.width', { library: 'fill' }) && !left('icon.minWidth', { library: 24 }) && !left('root.layout', { library: {} })
     && !known('icon.with.size', { library: 'S' })); }
 
+{ const box = (h) => ({ contract: 1, component: 'Badge', props: { size: { type: 'enum', values: ['s', 'l'], default: 's' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, frame: { kind: 'container', parent: 'root', layout: { direction: 'row' }, width: 12, height: h },
+      'frame/mark': { kind: 'graphic', parent: 'frame', width: 12, height: 12, position: 'absolute', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } } },
+    variants: [{ when: { size: 'l' }, set: { 'frame.height': 20, 'frame.width': 20, 'frame/mark.width': 20, 'frame/mark.height': 20 } }] });
+  const left = leftToCode(box('hug'));
+  ok('a scale constraint on an axis whose parent has no size to take a share of (it hugs) is code\'s to say; the axis that has one, and a parent sized in every combination, are not',
+    left('frame/mark.constraints.vertical', { library: 'scale', drawn: 'min' }) && !left('frame/mark.constraints.horizontal', { library: 'scale', drawn: 'min' })
+    && !left('frame/mark.constraints.vertical', { library: 'min', drawn: 'max' }) && !leftToCode(box(12))('frame/mark.constraints.vertical', { library: 'scale', drawn: 'min' })); }
 { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'stale-')), r = createRequire(import.meta.url);
   const { compact } = r('../snapshot/spec.cjs'), { derive } = r('./derive.cjs');
   const spec = compact({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'VERTICAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi' }] }] });

@@ -34,7 +34,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel, keyMatches } from './layers.mjs';
-import { declarations, holds } from './css.mjs';
+import { declarations, holds, shareable } from './css.mjs';
 import { negative, heldOpacity, heldGlyph } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
@@ -447,6 +447,53 @@ const hostIn = (c, id, mains) => { const a = allOf(c); const h = hostOf(a, id), 
 /* Each part's declarations at one combination, as a map property → value (with its note). */
 // no store given: what a placed component draws is not known, so none is taken to be missing from it
 const NO_MAINS = () => null;
+/* A part's own size in one combination's layers `a`, where it is a number: what a part that scales with it is a share of
+   (or one stretched between its own parent's edges, placed out of the flow: that parent's size less both offsets, as a
+   skeleton's shimmer scales inside a fill stretched over its box). Null where it is none (hug, fill). */
+function sizeIn(a, pid, k, depth = 0) {
+  const p = a[pid];
+  if (!p || depth > 32) return null;
+  if (typeof p[k] === 'number') return p[k];
+  const [axis, near, far] = k === 'width' ? ['horizontal', 'x', 'end'] : ['vertical', 'y', 'bottom'];
+  const at = p.absolute || {};
+  if (p.parent && (p.constraints || {})[axis] === 'stretch' && typeof at[near] === 'number' && typeof at[far] === 'number') {
+    const whole = sizeIn(a, p.parent, k, depth + 1);
+    return typeof whole === 'number' ? +(whole - at[near] - at[far]).toFixed(2) : null;
+  }
+  return null;
+}
+
+/* Where the sheet cannot write a scale constraint: `<id>.constraints.<axis>` for a placed part that scales on an axis
+   where css.mjs cannot write its share of its parent (shareable: its parent hugs or fills there, so has no size to
+   take a share of). Read at the defaults and at the combination of each layer that changes the part or a size it
+   depends on, never the whole grid (too many anatomies in a large component): a parent that hugs only where two such
+   layers meet is missed, which leaves its row a difference, never hides one. The sheet says each unread; what code
+   draws there is code's (eval.mjs leftToCode). */
+export function scaleUnwritten(c) {
+  const out = new Set();
+  if (!JSON.stringify(c).includes('"scale"')) return out;
+  const vs = c.variants || [], records = (id) => [c.anatomy?.[id], ...vs.map((v) => (v.add || {})[id])].filter(Boolean);
+  const scales = (id) => records(id).some((e) => e.constraints && Object.values(e.constraints).includes('scale')) || vs.some((v) => Object.values((v.set || {})[`${id}.constraints`] || {}).includes('scale'));
+  const ids = [...new Set([...Object.keys(c.anatomy || {}), ...vs.flatMap((v) => Object.keys(v.add || {}))])];
+  const drawnAt = new Map(), at = (when) => { const key = JSON.stringify(when); if (!drawnAt.has(key)) drawnAt.set(key, expand(c, when)); return drawnAt.get(key); };
+  for (const id of ids.filter(scales)) {
+    const chain = new Set();
+    for (let todo = [id]; todo.length;) { const x = todo.pop(); if (chain.has(x)) continue; chain.add(x); for (const e of records(x)) if (e.parent) todo.push(e.parent); for (const v of vs) { const p = (v.set || {})[`${x}.parent`]; if (p) todo.push(p); } }
+    // (a box above it only by what its size depends on: sizeIn's fields)
+    const sized = (k) => { const x = k.slice(0, k.indexOf('.')), f = k.slice(x.length + 1); return x === id || (chain.has(x) && /^(width|height|absolute|constraints|parent)(\.|$)/.test(f)); };
+    const touches = (v) => [...Object.keys(v.add || {}), ...(v.remove || [])].some((x) => chain.has(x)) || Object.keys(v.set || {}).some(sized);
+    for (const when of [{}, ...vs.filter(touches).map((v) => v.when || {})]) {
+      const a = at(when), e = a[id];
+      if (!e || !e.parent || !(e.position === 'absolute' || e.absolute) || !e.constraints) continue;
+      const kept = new Set(e.whileEmpty || []);
+      for (const [axis, k, o] of [['horizontal', 'width', (e.absolute || {}).x], ['vertical', 'height', (e.absolute || {}).y]]) {
+        if (e.constraints[axis] === 'scale' && !shareable(sizeIn(a, e.parent, k), o, kept.has(k) ? undefined : e[k])) out.add(`${id}.constraints.${axis}`);
+      }
+    }
+  }
+  return out;
+}
+
 export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
   mains ||= NO_MAINS;
   const a = expand(c, when);
@@ -562,22 +609,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     const sample = id === 'root' && e.layout && e.layout.direction && typeof e.width === 'number';
     if (sample) e = { ...e, width: 'fill' };
     const anchors = Object.values(a).some((x) => x.parent === id && (x.position === 'absolute' || x.absolute) && !ringOf(c, when, Object.keys(a).find((k) => a[k] === x), x, a, t));
-    // the parent's own size, where it is a number: what a part that scales with it is a share of
-    // (or one stretched between its own parent's edges, placed out of the flow: that parent's size less both offsets,
-    // as a skeleton's shimmer scales inside a fill stretched over its box)
-    const sizeOf = (pid, k, depth = 0) => {
-      const p = a[pid];
-      if (!p || depth > 32) return null;
-      if (typeof p[k] === 'number') return p[k];
-      const [axis, near, far] = k === 'width' ? ['horizontal', 'x', 'end'] : ['vertical', 'y', 'bottom'];
-      const at = p.absolute || {};
-      if (p.parent && (p.constraints || {})[axis] === 'stretch' && typeof at[near] === 'number' && typeof at[far] === 'number') {
-        const whole = sizeOf(p.parent, k, depth + 1);
-        return typeof whole === 'number' ? +(whole - at[near] - at[far]).toFixed(2) : null;
-      }
-      return null;
-    };
-    const box = parent ? { width: sizeOf(e.parent, 'width'), height: sizeOf(e.parent, 'height') } : null;
+    const box = parent ? { width: sizeIn(a, e.parent, 'width'), height: sizeIn(a, e.parent, 'height') } : null;
     // in a box whose gap is below 0 in any combination, every child says its pull back in every one: the gap after
     // the first in the flow, 0 for the first and for a placed part, 0 where the gap is not below 0 (a variant's own
     // value, never an unset that would leave the base's)

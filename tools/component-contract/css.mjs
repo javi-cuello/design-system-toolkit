@@ -31,6 +31,10 @@ const TEXT_NOTE = 'no text style in the design';
 const UNSAID = [['font-style', 'normal'], ['letter-spacing', 'normal'], ['text-transform', 'none'], ['font-variant-caps', 'normal']];
 
 const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
+/* Whether a part that scales with its parent can be written as a share of it: the parent's size on that axis, its own
+   offset and its own size, each a number (the parent's above 0). Where not, the sheet says it unread, and what code
+   draws there is code's (eval.mjs leftToCode, through to-code's scaleUnwritten). */
+export const shareable = (whole, offset, own) => typeof whole === 'number' && whole > 0 && typeof offset === 'number' && typeof own === 'number';
 
 export function declarations(e, { root = false, holds = false, row = true, anchors = false, box = null, pull = null } = {}, names) {
   const decls = [], unread = [];
@@ -198,7 +202,7 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
       // its offset and its size each a percentage of the parent's size
       else if (to === 'scale') {
         const whole = box && box[k], own = e[k];
-        if (typeof whole === 'number' && whole > 0 && typeof o === 'number' && typeof own === 'number') {
+        if (shareable(whole, o, own)) {
           put(near, share(o, whole));
           for (let i = decls.length - 1; i >= 0; i--) if (decls[i][0] === size) decls.splice(i, 1);
           put(size, share(own, whole));
