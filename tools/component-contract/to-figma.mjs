@@ -291,7 +291,8 @@ function atDefault(x, mains) {
     // (a swap with no layer it swaps, none swapped by it, at any props; and none drawn inside this instance here, where the
     // design would say what it swapped in, compared as such)
     const layers = [main.anatomy || {}, ...(main.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a)).filter(Boolean);
-    const swapsNothing = (q, key) => !(q.swaps || []).length && !layers.some((y) => y.swappedBy === key)
+    // (only where the library's snapshot records what its props drive, `mains.linked`: an older one records it for none)
+    const swapsNothing = (q, key) => mains.linked !== false && !(q.swaps || []).length && !layers.some((y) => y.swappedBy === key)
       && !(main.variants || []).some((v) => Object.entries(v.set || {}).some(([sk, y]) => sk.endsWith('.swappedBy') && y === key))
       && !Object.entries(x).some(([k, y]) => k.startsWith(`${id}/`) && y && y.kind === 'instance');
     const rest = Object.fromEntries(Object.entries(e.with).filter(([k, v]) => {
@@ -303,16 +304,18 @@ function atDefault(x, mains) {
         const key = Object.keys(main.props).find((kk) => main.props[kk] === q);
         // a swap that drives no layer draws nothing, whatever it names: an override on nothing, which no code can say
         if (swapsNothing(q, key)) return false;
-        // a swap another prop drives the layer for at these props (Icon (20) on a button drawn at xs, whose icon Icon (16)
-        // swaps) draws nothing: Figma keeps its override, which no code can say
-        if (part && M[part] && M[part].swappedBy && M[part].swappedBy !== key) return false;
-        const drawnAt = (sp) => (M[sp] || {}).component || ([main.anatomy || {}, ...(main.variants || []).map((w) => w.add || {})].map((a) => a[sp]).find((y) => y && y.component) || {}).component;
-        // (a swap the design ties to several layers, none of them said to be its alone: the icon any of them draws there,
-        // as which layer it drives at these props is the design's own tie, no value code reads back)
         // (a layer said to be its own at these props is the one it drives)
         const mine = (q.swaps || []).filter((sp) => M[sp] && M[sp].swappedBy === key);
-        const drawn = (mine.length ? mine : [part, ...(q.swaps || []).slice(1).filter((sp) => !(M[sp] && M[sp].swappedBy && M[sp].swappedBy !== key))]).filter(Boolean).map(drawnAt).filter(Boolean);
-        return !drawn.length || !drawn.some((d) => low(d) === low(v) || low(d).endsWith(`/${low(v)}`));
+        // a swap another prop drives the layer for at these props (Icon (20) on a button drawn at xs, whose icon Icon (16)
+        // swaps) draws nothing: Figma keeps its override, which no code can say
+        if (!mine.length && part && M[part] && M[part].swappedBy && M[part].swappedBy !== key) return false;
+        // (a swap the design ties to several layers, none of them said to be its alone: the icon any of them draws there,
+        // as which layer it drives at these props is the design's own tie, no value code reads back; a later layer only
+        // as drawn at these props)
+        const first = part && ((M[part] || {}).component || ([main.anatomy || {}, ...(main.variants || []).map((w) => w.add || {})].map((a) => a[part]).find((y) => y && y.component) || {}).component);
+        const drawn = mine.length ? mine.map((sp) => M[sp].component)
+          : [first, ...(q.swaps || []).slice(1).filter((sp) => !(M[sp] && M[sp].swappedBy && M[sp].swappedBy !== key)).map((sp) => (M[sp] || {}).component)];
+        return !drawn.filter(Boolean).length || !drawn.filter(Boolean).some((d) => low(d) === low(v) || low(d).endsWith(`/${low(v)}`));
       }
       if (!q || q.default === undefined) return true;
       const words = [q.default, (q.figmaValues || [])[(q.values || []).indexOf(q.default)]].filter((w) => w !== undefined).map(low);

@@ -204,10 +204,13 @@ export function leftToCode(contract, mainOf = null, settings = undefined, { ownS
     if (!row || !/^with(\.|$)/.test(field)) return false;
     const lib = field === 'with' ? row.library : { [field.slice(5)]: row.library };
     if (!lib || typeof lib !== 'object' || !Object.keys(lib).length) return false;
-    // (a value the instance holds at rest too is no pointer state's: a rest the reading lost stays a difference)
+    // (a value the instance holds at rest too, or another state adds it with, is no pointer state's: a rest the reading
+    // lost stays a difference; per prop. One another state sets is roundTrip's `pointer` to tell, per combination)
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     const rest = ((contract.anatomy || {})[el] || {}).with || {};
-    const byMine = (only.get(`${el}.with`) || row.pointer === true) && Object.entries(lib).every(([k, v]) => JSON.stringify(rest[k]) !== JSON.stringify(v))
-      && (words.get(`${el}.with`) || []).some((w) => w && typeof w === 'object' && Object.entries(lib).every(([k, v]) => JSON.stringify(w[k]) === JSON.stringify(v)));
+    const elsewhere = (k, v) => same(rest[k], v) || vs.some((x) => !pointerWords(contract, x.when) && (((x.add || {})[el] || {}).with || {})[k] !== undefined && same(((x.add || {})[el] || {}).with[k], v));
+    const byMine = (only.get(`${el}.with`) || row.pointer === true) && Object.entries(lib).every(([k, v]) => !elsewhere(k, v))
+      && (words.get(`${el}.with`) || []).some((w) => w && typeof w === 'object' && Object.entries(lib).every(([k, v]) => same(w[k], v)));
     return byMine || Object.entries(lib).every(([k, v]) => ownPointer(el, k, v));
   };
   return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || pointerWith(el, field, row) || unwritten(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };

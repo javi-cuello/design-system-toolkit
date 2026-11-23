@@ -363,6 +363,20 @@ delete globalThis.figma;
       roundTrip(holder({ Icon: 'line', 'Icon (on)': 'full' }), holder(null), m).rows.length === 0 && roundTrip(holder({ Icon: 'star' }), holder(null), m).rows.length === 1
       // (but a layer said to be its own is the one it drives: the other's icon is stated)
       && roundTrip(holder({ Icon: 'full' }), holder(null), { mains: (n) => (n === 'Button' ? { ...pair, anatomy: { ...pair.anatomy, b: { ...pair.anatomy.b, swappedBy: 'icon' } } } : null) }).rows.length === 1); }
+  { // (review: a layer said to be the swap's own is reached though the first layer is another prop's; a later layer is held
+    // only to what it draws at these props; a library whose snapshot recorded no links unstates no swap)
+    const turn = { component: 'Button', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' }, icon: { type: 'instance', figma: 'Icon', swaps: ['a', 'b'] }, iconOn: { type: 'instance', figma: 'Icon (on)', swaps: ['a', 'b'] } },
+      anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Icon/full' }, b: { kind: 'instance', parent: 'root', component: 'Icon/line' } },
+      variants: [{ when: { on: true }, set: { 'a.swappedBy': 'iconOn', 'b.swappedBy': 'icon', 'b.component': 'Icon/star' } }] };
+    const m = (main) => ({ mains: (n) => (n === 'Button' ? main : null) });
+    ok('a swap whose own layer is not the first is held to that layer: another icon there is stated, its own icon is not',
+      roundTrip(holder({ On: 'True', Icon: 'x' }), holder({ On: 'True' }), m(turn)).rows.length === 1 && roundTrip(holder({ On: 'True', Icon: 'star' }), holder({ On: 'True' }), m(turn)).rows.length === 0);
+    const late = { component: 'Button', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' }, icon: { type: 'instance', figma: 'Icon', swaps: ['a', 'b'] } },
+      anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Icon/line' } }, variants: [{ when: { on: true }, add: { b: { kind: 'instance', parent: 'root', component: 'Icon/full' } } }] };
+    ok('a later layer not drawn at the instance\'s props says nothing of its default there', roundTrip(holder({ On: 'False', Icon: 'full' }), holder({ On: 'False' }), m(late)).rows.length === 1);
+    const inert = { component: 'Button', props: { icon: { type: 'instance', figma: 'Icon' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+    const old = Object.assign((n) => (n === 'Button' ? inert : null), { linked: false });
+    ok('where the snapshot recorded no links, a swap with none is not taken for one driving nothing', roundTrip(holder({ Icon: 'x' }), holder(null), { mains: old }).rows.length === 1); }
   const sized = { component: 'Button', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon: { type: 'instance', figma: 'Icon', swaps: ['i'] } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/house' } }, variants: [{ when: { size: 'xs' }, set: { 'i.component': 'Icon/star' } }] };
   ok('a swap is held to the icon drawn at the instance\'s own props: house at xs, where xs draws star, is stated', roundTrip(holder({ Size: 'xs', Icon: 'house' }), holder({ Size: 'xs' }), { mains: (n) => (n === 'Button' ? sized : null) }).rows.length === 1);
   const twoSwaps = { component: 'Button', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['i'] }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['i'] } },

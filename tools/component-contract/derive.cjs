@@ -818,7 +818,10 @@ function byComponentName(contracts) {
   const by = new Map(contracts.filter((c) => count[low(c.component)] === 1).map((c) => [low(c.component), c]));
   const byKey = new Map(contracts.filter((c) => c.figma && c.figma.key).map((c) => [c.figma.key, c]));
   // by its key where one is given and held; else by name, never the one a key says it is not
-  return (name, key = null) => (key && byKey.get(key)) || [by.get(low(name)) || null].filter((c) => c && keyMatches(c.figma && c.figma.key, key))[0] || null;
+  const found = (name, key = null) => (key && byKey.get(key)) || [by.get(low(name)) || null].filter((c) => c && keyMatches(c.figma && c.figma.key, key))[0] || null;
+  // whether the snapshot recorded what props drive (its links, plugin 0.50.0 on): some text or swap of the library says so
+  found.linked = contracts.some((c) => Object.values(c.props || {}).some((q) => (q.sets || []).length || (q.swaps || []).length));
+  return found;
 }
 function mainsFrom(specs, known = [], optionsOf = () => ({})) {
   const done = new Map(), low = (x) => String(x).toLowerCase();

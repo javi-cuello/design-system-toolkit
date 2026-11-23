@@ -184,6 +184,12 @@ ok('a component measured since the accept is held until accepted; one that came 
       && !L({ ...card(), anatomy: { ...card().anatomy, link: { ...card().anatomy.link, with: { On: 'True' } } } })('link.with.On', { library: 'True', drawn: null })
       && !L(card([{ when: { state: 'rest' }, set: { 'link.with': { On: 'True' } } }]))('link.with.On', { library: 'True', drawn: null })
       && L(card([{ when: { state: 'rest' }, set: { 'link.with': { On: 'True' } } }]))('link.with', { library: { On: 'True' }, drawn: null, pointer: true })); }
+  { // (review: a variant at another state that adds the instance with the same props makes them no pointer state's alone)
+    const link = { component: 'Link', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+    const card = { ...c, props: { ...c.props, size: { type: 'enum', values: ['sm', 'lg'], default: 'sm', figma: 'Size' } }, anatomy: { ...c.anatomy, link: { kind: 'instance', parent: 'root', component: 'Link', with: { On: 'False' } } },
+      variants: [{ when: { state: 'focus' }, set: { 'link.with': { On: 'True' } } }, { when: { size: 'lg' }, add: { link: { kind: 'instance', parent: 'root', component: 'Link', with: { On: 'True' } } } }] };
+    const L = leftToCode(card, (n) => (n === 'Link' ? link : null));
+    ok('props another state adds the instance with are no pointer state\'s: a difference there stays one', !L('link.with.On', { library: 'True', drawn: null }) && !L('link.with', { library: { On: 'True' }, drawn: null, pointer: true })); }
   ok('the rows left to code are counted, as a leg of their own, so a rise there is said', worse(counts({ self: { a: { rows: [], left: [{}, {}] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).some((w) => /self left a: 1 → 2/.test(w))
     && !worse(counts({ self: { a: { rows: [], left: [] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).length); }
 
