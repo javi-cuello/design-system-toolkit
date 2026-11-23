@@ -692,7 +692,7 @@ delete globalThis.figma;
     src.includes("else if (e.kind === 'graphic' && !P.fromCode && !e.asset && e.radius == null && !e.full && !ids.some((x) => variant.anatomy[x].parent === id)) {") && (src.match(/n = figma\.createVector\(\); n\.strokes = \[\];/g) || []).length === 2
     && src.includes("const along = e.height === 0 ? (c.horizontal === 'stretch' && at.end != null ? w : null)"));
   ok('a placed instance takes its own fill, stroke, corners, shadow and clipping, and a layer inside one its stroke\'s weights and place, never its colour alone; neither from a contract read from code',
-    src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); await lookOver(n, e); }")
+    src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e); await lookOver(n, e); }")
     && src.includes("if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);") && src.includes("await lookOver(n, e); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")
     && src.includes("for (const [i, f] of fields.entries()) if (!(await sameNum(n, f, side(i)))) await num(n, f, side(i));"));
   ok('the walk\'s page-qualified name of a drawing on the round trip page is the component\'s own, that exact prefix only',
@@ -702,6 +702,21 @@ delete globalThis.figma;
     && src.includes('before: BEFORE(pageName, token)') && src.includes('${JSON.stringify(pageName)});')
     && !/children\.find\(\(x\) => x\.name === \$\{JSON\.stringify\(p\.name\)\}\)/.test(src)
     && /DRAWN\(spec\.name, drawingPage\(spec\.name, own\)\)/.test(fs.readFileSync(new URL('./looks.mjs', import.meta.url), 'utf8')));
+}
+
+{
+  // 2026-11-23: a layer the library paints with a colour style is drawn with that style, never its colour alone
+  const lib = { contract: 1, component: 'S', props: {}, anatomy: { root: { kind: 'container', background: 'C/error', fillStyle: 'Sys/error' } }, variants: [] };
+  const plain = { ...lib, anatomy: { root: { kind: 'container', background: 'C/error' } } };
+  ok('a colour style the drawing lost is a row; a reading from code, which has no styles, is not held to one',
+    roundTrip(lib, plain).rows.some((r) => r.at === 'root.fillStyle' && r.library === 'Sys/error' && r.drawn === null)
+    && !roundTrip(lib, plain, { layoutUnit: true }).rows.length && !roundTrip(lib, lib).rows.length);
+  ok('…the styles a plan paints with are among what it needs keys for', JSON.stringify(needs({ variants: [{ anatomy: lib.anatomy }] }).fillStyles) === '["Sys/error"]');
+  const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
+  ok('…applied by its key once the layer is painted, taken in the library\'s own file from its styles and the copies its own component uses, looked up where the library uses it',
+    src.includes('n.setFillStyleIdAsync(st.id)') && src.includes("await listing(\"this file's colour styles\", () => figma.getLocalPaintStylesAsync());")
+    && src.includes("if (typeof n.fillStyleId === 'string' && n.fillStyleId) styleIds.add(n.fillStyleId);") && src.includes('fillStyles[ps.name] = ps.key'));
+  ok('…and a patch carries a layer\'s colour style over with its fills', src.includes("if ('fillStyleId' in from && from.fillStyleId !== to.fillStyleId && typeof from.fillStyleId === 'string') { await to.setFillStyleIdAsync(from.fillStyleId); n++; }"));
 }
 
 console.log(`${n}/${n} passed`);

@@ -96,6 +96,8 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
   // its fills, bottom up as Figma lists them, as CSS's background layers (rules.mjs fillCss): a colour with no variable
   // written as itself, said so; a name its token's
   const bg = take('background');
+  // (a colour style is Figma's name for the colour beside it, which background or color writes: nothing of its own)
+  take('fillStyle');
   const fill = fillCss(bg, { w: e.width, h: e.height }, (f) => (raw(f) ? f : names.token(f)));
   put('background', fill.value, [].concat(bg ?? []).some((f) => raw(f) || (f && Array.isArray(f.stops) && f.stops.some((st) => raw(st.color)))) ? NOTE : undefined);
   unread.push(...fill.unread);

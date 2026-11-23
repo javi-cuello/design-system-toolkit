@@ -707,4 +707,16 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('…and where nothing would tie, a snapshot that records the place derives the very contract one before it did',
     JSON.stringify(derive(one(true))) === JSON.stringify(derive(one(false))));
 }
+// 2026-11-23: a layer the library paints with a colour style kept only the style's colour, so the drawing painted the
+// colour unstyled (the Figma leg's biggest shared row on two libraries). The style is the contract's, beside its colour
+{
+  const box = (x) => ({ name: 'Box', type: 'FRAME', sizing: 'HUG/HUG', fills: ['Schemes/Error'], fillStyle: 'Sys/error', ...x });
+  const c = derive({ name: 'S', props: {}, variants: [{ name: 'S', type: 'COMPONENT', layout: 'VERTICAL', fillStyle: 'Sys/surface', children: [box(), { name: 'W', type: 'TEXT', text: 'Hi', textStyle: 'Body', fills: ['Schemes/On error'], fillStyle: 'Sys/on-error' }] }] });
+  ok('a fill or a text colour from a colour style keeps the style beside its colour; a style whose colour paints nothing keeps the style alone',
+    c.anatomy.root.fillStyle === 'Sys/surface' && c.anatomy.root.background === undefined && c.anatomy.box.fillStyle === 'Sys/error' && c.anatomy.box.background === 'Schemes/Error'
+    && c.anatomy.w.fillStyle === 'Sys/on-error' && c.anatomy.w.color === 'Schemes/On error');
+  const main = { component: 'Chip', anatomy: { root: { kind: 'container', background: 'Schemes/Error', fillStyle: 'Sys/error' } }, variants: [], props: {} };
+  const placed = ownStyling({ chip: { kind: 'instance', component: 'Chip', background: 'Schemes/Error', fillStyle: 'Sys/error' } }, byComponentName([main]));
+  ok('…and a placed instance whose style is its component\'s own leaves it to the component', placed.chip.fillStyle === undefined && placed.chip.background === undefined);
+}
 console.log(`${n}/${n} passed`);

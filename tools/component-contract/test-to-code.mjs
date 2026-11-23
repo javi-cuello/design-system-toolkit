@@ -851,4 +851,9 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a part centred in a stretched parent keeps its centre\'s distance from that parent\'s (its size the grandparent\'s less both offsets)',
     /inset-inline-start: calc\(50% - 4rem\)/.test(rule) && /inset-block-start: 50%;/.test(rule));
 }
+{
+  // 2026-11-23: a colour style is the colour beside it, which the sheet already writes: nothing more, nothing unread
+  const r = declarations({ kind: 'container', background: 'C/error', fillStyle: 'Sys/error' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] });
+  ok('a colour style writes its colour alone and is never said unread', r.decls.length === 1 && r.decls[0][1] === 'var(--C/error)' && !r.unread.length);
+}
 console.log(`${n} passed`);
