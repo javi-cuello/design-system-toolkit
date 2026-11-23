@@ -24,7 +24,10 @@ const { knownFor } = req('../snapshot/store.cjs');
 /* The walk keeps two decimals (code.js round()): one value read twice can land a step apart across a rounding edge. */
 export const TOLERANCE = 0.01;
 // how the store finds things, as specNotes ignores them, and what a row's place already says
-const IDS = new Set(['id', 'key', 'instanceOfId', 'instanceOfKey', 'index', 'name', 'children']);
+const IDS = new Set(['id', 'key', 'instanceOfId', 'instanceOfKey', 'index', 'name', 'children',
+  // an instance's overrides: the fields Figma marks as touched, names only, no values (code.js); a value set equal to
+  // the main's still marks one, and every value it could hide is compared on its own field (parity's adapt.mjs agrees)
+  'overrides']);
 // (a row's place is read by `/` and `.`: a name holding them keeps one segment)
 const seg = (s) => String(s).replace(/[/.]/g, '_');
 // (a single component's own name leads its flipped variants', `_Badge, Dot=false`, and the drawing's is the contract's:

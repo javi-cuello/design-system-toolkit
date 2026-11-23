@@ -94,5 +94,11 @@ ok('a single component\'s flipped variants match by their axes, whatever it is n
 const singleOff = copy(singleDrawn); singleOff.variants[1].w = 18;
 ok('and are compared', JSON.stringify(geometry(single, singleOff)) === JSON.stringify([{ at: 'Dot=false.w', library: 16, drawn: 18 }]), geometry(single, singleOff));
 
+// an instance's `overrides` names the fields Figma marks as touched, no values (code.js): a correct drawing can touch
+// fewer, and the values it would hide are compared on their own fields
+{ const lib = copy(library), drawn = copy(library);
+  lib.variants[0].children[0].overrides = ['fills,height,name,width', 'fillStyleId,fills,fontSize'];
+  drawn.variants[0].children[0].overrides = ['height,name,width'];
+  ok('an instance\'s overrides list is bookkeeping, no row', geometry(lib, drawn).length === 0, geometry(lib, drawn)); }
 console.log(failed ? `${failed} of ${n} failed` : `${n}/${n} passed`);
 process.exit(failed ? 1 : 0);
