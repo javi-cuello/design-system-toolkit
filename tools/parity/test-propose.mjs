@@ -242,7 +242,8 @@ try {
     fs.chmodSync(path.join(repo, 'real'), 0o555);
     const locked = run('plain', '--write');
     fs.chmodSync(path.join(repo, 'real'), 0o755);
-    ok('…and a map that cannot be replaced is one line, exit 2, the map as it was and no temp file left',
+    // what it got is said on a failure: once, under a loaded machine's full check, this failed and said nothing more
+    ok(`…and a map that cannot be replaced is one line, exit 2, the map as it was and no temp file left${locked.status === 2 ? '' : ` (got exit ${locked.status}${locked.signal ? `, ${locked.signal}` : ''}: ${String(locked.stderr).trim().slice(0, 300)})`}`,
       locked.status === 2 && locked.stderr.trim().split('\n').length === 1 && /could not be replaced/.test(locked.stderr)
       && fs.readFileSync(path.join(repo, 'real/screens.json'), 'utf8') === '{"plain": {"route": "/list", "layers": {}}}\n' && fs.readdirSync(path.join(repo, 'real')).length === 1);
     // a map that is code: the lines are said, under the key the entry reads, and nothing is written
