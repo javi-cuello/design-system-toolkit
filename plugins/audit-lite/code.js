@@ -1304,7 +1304,7 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
 function snapshotFacts() {
 const __html__ = undefined;
 const FACTS = true;
-// Design system snapshot — v0.83.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.84.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -2050,7 +2050,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.83.0';
+const VERSION = '0.84.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -2946,7 +2946,15 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
        */
       const links = propLinks(s.type === 'COMPONENT_SET' ? s.children : [s]);
       const variants = [];
-      for (const v of s.type === 'COMPONENT_SET' ? s.children : [s]) variants.push(await walk(v, 0));
+      // Each variant's place in its set, beside its tree (never its x and
+      // y, which readers add up as a layer's place in its parent): the set's
+      // arrangement is the library's, and a drawing that invents a grid of
+      // boxes overlaps what paints outside them (a tooltip's bubbles).
+      for (const v of s.type === 'COMPONENT_SET' ? s.children : [s]) {
+        const t = await walk(v, 0);
+        if (s.type === 'COMPONENT_SET') t.place = { x: round(v.x), y: round(v.y) };
+        variants.push(t);
+      }
       // A boolean property is a variant the grid does not show: it hides or
       // shows layers inside every variant. Each one is flipped from its
       // default on each variant — one at a time, never the power set — and
@@ -3059,6 +3067,8 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
       // `slots` only where the set has one, so its absence on a component
       // without slots is not mistaken for a snapshot that cannot see them.
       const base = { name: display, id: s.id, page: page.name, description, props, variants };
+      // the set's size, with its variants' places above
+      if (s.type === 'COMPONENT_SET') base.set = { w: round(s.width), h: round(s.height) };
       if (Object.keys(slots).length) base.slots = slots;
       if (Object.keys(links).length) base.links = links;
       // which variant Figma treats as the default, so a contract's defaults are Figma's
