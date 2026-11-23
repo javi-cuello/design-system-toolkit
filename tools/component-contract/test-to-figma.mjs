@@ -674,6 +674,8 @@ delete globalThis.figma;
     && src.includes("n in lib)) return null;") && src.includes('Object.values(col.values || {}).flatMap((m) => Object.keys(m || {}))') && src.includes("(K.vars && t in K.vars))) names.add(t);"));
   ok('a lent text style whose copy withholds its font is drawn in the font of a text that uses it',
     src.includes("typeof st.fontName === 'symbol' ? lentFont.get(st.key)") && src.includes('fonts[JSON.stringify(fontOf(st))]'));
+  ok('a text no style names is drawn in its values\' face, size and line height; a placed text keeps its resizing',
+    src.includes("const FACES = { thin:") && src.includes("n.fontName = lit.fontName; n.fontSize = lit.size;") && src.includes("n.resize(px(w), px(h)); if (n.type === 'TEXT' && e.autoResize) n.textAutoResize"));
   ok('the walk\'s page-qualified name of a drawing on the round trip page is the component\'s own, that exact prefix only',
     src.includes('if (comp && comp.name === `${pageName}/${p.name}`) comp.name = p.name;'));
   ok('a drawing in the library\'s own file goes on a page of its own, which every reader of the drawing asks for',

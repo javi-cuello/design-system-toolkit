@@ -733,6 +733,23 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     ...Object.entries(K.effects || {}).map(async ([name, key]) => { effects[name] = await tried(name, () => own(key, () => figma.importStyleByKeyAsync(key))); }),
   ]);
   await Promise.all(Object.values(styles).filter(Boolean).map(async (st) => { const f = fontOf(st); fonts[JSON.stringify(f)] = !!f && await tried(`font of ${st.name}`, () => figma.loadFontAsync(f)) !== null; }));
+  // a text no style names, by its values (rules.mjs typeValue: `literal 14/20 semibold italic IBM Plex Sans`): its
+  // family's face for that weight, the first of the face names fonts use for it that loads (a font names its own faces:
+  // SemiBold, Semibold, Semi Bold); none that loads is the text's typography not drawn
+  const FACES = { thin: ['Thin', 'Hairline'], extralight: ['ExtraLight', 'Extra Light', 'UltraLight'], light: ['Light'], regular: ['Regular', 'Normal', 'Book', 'Roman'], medium: ['Medium'], semibold: ['SemiBold', 'Semibold', 'Semi Bold', 'DemiBold'], bold: ['Bold'], extrabold: ['ExtraBold', 'Extra Bold', 'UltraBold', 'Heavy'], black: ['Black', 'Heavy'] };
+  const literals = {}, parsed = new Set();
+  for (const t of typos) {
+    const m = /^literal (\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?) ([a-z]+)( italic)?(?: (.+))?$/.exec(t);
+    if (!m || !m[5] || !FACES[m[3]]) continue;
+    parsed.add(t);
+    const family = m[5].startsWith('"') ? JSON.parse(m[5]) : m[5], italic = !!m[4];
+    const faces = FACES[m[3]].flatMap((w) => (italic ? (m[3] === 'regular' ? ['Italic', `${w} Italic`] : [`${w} Italic`, `${w}Italic`]) : [w]));
+    for (const style of faces) {
+      const fontName = { family, style };
+      if (await Promise.resolve().then(() => figma.loadFontAsync(fontName)).then(() => true, () => false)) { literals[t] = { fontName, size: +m[1], lineHeight: +m[2] }; break; }
+    }
+    if (!literals[t]) missing.add(`${t} (no face of ${family} for ${m[3]}${italic ? ' italic' : ''} loads)`);
+  }
   // a text's style is applied at the end, all at once (it is the one call per layer left)
   const toStyle = [];
   // a part centred on its parent, once text styles have given every box its final size
@@ -911,7 +928,10 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         n = figma.createText(); nodes[e.parent].appendChild(n);
         const key = K.styles && K.styles[e.typography];
         const st = key && styles[key];
-        if (st && fonts[JSON.stringify(fontOf(st))]) toStyle.push([n, st, e.typography]); else missing.add(e.typography);
+        const lit = literals[e.typography];
+        if (st && fonts[JSON.stringify(fontOf(st))]) toStyle.push([n, st, e.typography]);
+        else if (lit) { n.fontName = lit.fontName; n.fontSize = lit.size; n.lineHeight = lit.lineHeight ? { unit: 'PIXELS', value: lit.lineHeight } : { unit: 'AUTO' }; }
+        else if (!parsed.has(e.typography)) missing.add(e.typography);
         // the prop's sample where a prop sets it, else the words code drew (a required mark's *)
         n.characters = e.text || (typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) ? e.content : 'Text');
         if (e.textAlign) n.textAlignHorizontal = { center: 'CENTER', end: 'RIGHT', justify: 'JUSTIFIED' }[e.textAlign] || 'LEFT';
@@ -1104,7 +1124,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       const c = e.constraints || {}, up = n.parent, at = e.absolute;
       const w = c.horizontal === 'stretch' && at.end != null ? up.width - at.x - at.end : typeof e.width === 'number' ? e.width : n.width;
       const h = c.vertical === 'stretch' && at.bottom != null ? up.height - at.y - at.bottom : typeof e.height === 'number' ? e.height : n.height;
-      if ('resize' in n && n.type !== 'VECTOR' && (Math.abs(w - n.width) > 0.01 || Math.abs(h - n.height) > 0.01)) n.resize(px(w), px(h));
+      // (resize sets a text's resizing to fixed: said again after, as where it is first sized)
+      if ('resize' in n && n.type !== 'VECTOR' && (Math.abs(w - n.width) > 0.01 || Math.abs(h - n.height) > 0.01)) { n.resize(px(w), px(h)); if (n.type === 'TEXT' && e.autoResize) n.textAutoResize = e.autoResize.toUpperCase(); }
       // pinned to its parent's end or bottom: from there; centred, as code read it (centred within 0.75 px): at the centre;
       // a Figma contract's centred layer where it sat, as its centre constraint keeps it
       at_(n, e);
