@@ -691,6 +691,10 @@ delete globalThis.figma;
   ok('a graphic with no shape and no parts is a vector, never a frame; no vector keeps Figma\'s own stroke; a line a stretch sizes is drawn that long',
     src.includes("else if (e.kind === 'graphic' && !ids.some((x) => variant.anatomy[x].parent === id)) {") && (src.match(/n = figma\.createVector\(\); n\.strokes = \[\];/g) || []).length === 2
     && src.includes("const along = e.height === 0 ? (c.horizontal === 'stretch' && at.end != null ? w : null)"));
+  ok('a placed instance takes its own fill, stroke, corners, shadow and clipping, and a layer inside one its stroke\'s weights and place, never its colour alone',
+    src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); await lookOver(n, e); }")
+    && src.includes("if (e.kind !== 'text') await lookOver(n, e);") && !src.includes("if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")
+    && src.includes("for (const [i, f] of fields.entries()) if (!(await sameNum(n, f, side(i)))) await num(n, f, side(i));"));
   ok('the walk\'s page-qualified name of a drawing on the round trip page is the component\'s own, that exact prefix only',
     src.includes('if (comp && comp.name === `${pageName}/${p.name}`) comp.name = p.name;'));
   ok('a drawing in the library\'s own file goes on a page of its own, which every reader of the drawing asks for',

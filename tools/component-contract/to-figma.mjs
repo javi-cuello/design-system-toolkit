@@ -869,6 +869,26 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     const pad = e.layout.padding || {};
     for (const [side, f] of [['top', 'paddingTop'], ['end', 'paddingRight'], ['bottom', 'paddingBottom'], ['start', 'paddingLeft']]) if (pad[side] != null && await differs(f, pad[side])) await num(n, f, pad[side]);
   };
+  // a placed layer's own look where the design overrides it there (a focus ring's stroke on a placed checkbox, a field's
+  // bottom border on a menu's inner box): its stroke's weights, side by side, and where it is drawn, its corners, its
+  // shadow and whether it clips, each only where it differs from what the layer already has. A stroke's colour alone
+  // left the main's weight (a 2 px focus read back 1, one bottom side read back all four)
+  const sameNum = async (n, f, t) => { const v = await V(t); if (v) return !!(n.boundVariables && n.boundVariables[f] && n.boundVariables[f].id === v.id); const raw = typeof t === 'number' ? t : K.values && K.values[t]; return raw == null || n[f] === raw; };
+  const lookOver = async (n, e) => {
+    const b = e.border;
+    if (b && typeof b === 'object' && 'strokes' in n) {
+      if (b.color) await paintIf(n, 'strokes', b.color);
+      const align = (b.align || 'inside').toUpperCase();
+      if ('strokeAlign' in n && n.strokeAlign !== align) n.strokeAlign = align;
+      const side = (i) => (Array.isArray(b.width) ? b.width[i] : b.width ?? (b.sides || {})[['top', 'end', 'bottom', 'start'][i]] ?? 1);
+      const fields = 'strokeTopWeight' in n ? ['strokeTopWeight', 'strokeRightWeight', 'strokeBottomWeight', 'strokeLeftWeight'] : ['strokeWeight'];
+      for (const [i, f] of fields.entries()) if (!(await sameNum(n, f, side(i)))) await num(n, f, side(i));
+      if (b.dash && 'dashPattern' in n) { const d = Array.isArray(b.dash) ? b.dash : [4, 4]; if (JSON.stringify(n.dashPattern) !== JSON.stringify(d)) n.dashPattern = d; }
+    }
+    if (e.radius != null && 'topLeftRadius' in n) for (const [i, f] of ['topLeftRadius', 'topRightRadius', 'bottomRightRadius', 'bottomLeftRadius'].entries()) { const t = Array.isArray(e.radius) ? e.radius[i] : e.radius; if (!(await sameNum(n, f, t))) await num(n, f, t); }
+    if (e.overflow != null && 'clipsContent' in n && n.clipsContent !== (e.overflow === 'hidden')) n.clipsContent = e.overflow === 'hidden';
+    if (e.shadow && 'effectStyleId' in n) { if (!effects[e.shadow]) missing.add(`shadow ${e.shadow}`); else if (n.effectStyleId !== effects[e.shadow].id) toEffect.push([n, effects[e.shadow], e.shadow]); }
+  };
   const override = async (n, e) => {
     await layoutOver(n, e);
     if (e.kind === 'instance' && e.component && n.type === 'INSTANCE') { await swapTo(n, e); await withProps(n, e); }
@@ -878,7 +898,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (words !== null && n.characters !== words && n.fontName !== figma.mixed) { await tried(`font of ${n.name}`, () => figma.loadFontAsync(n.fontName)); n.characters = words; }
     } else if (e.kind === 'graphic' && n.type === 'VECTOR') await paintIf(n, n.strokes.length ? 'strokes' : 'fills', e.background, true);
     else if (e.kind !== 'text') await paintIf(n, 'fills', e.background);
-    if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
+    if (e.kind !== 'text') await lookOver(n, e);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
     const flowing = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
     // (a layer inside an instance: never drawn in a wrapper by to-code.mjs)
@@ -1032,6 +1052,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // read from code only (a Figma contract's instance background is its own fill override); a token, not a gradient;
       // only one with no fill of its own: another component's box fill (an avatar's circle) is its background, not its paths'
       if (P.fromCode && e.kind === 'instance' && typeof e.background === 'string' && n.type === 'INSTANCE' && !(Array.isArray(n.fills) && n.fills.some((f) => f.visible !== false && (f.opacity ?? 1) > 0))) recolour(n, await solid(e.background));
+      // a Figma contract's placed instance: its own fill, stroke, corners, shadow and clipping, where the design overrides
+      // them (derive keeps on an instance only what differs from its component: ownStyling)
+      if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); await lookOver(n, e); }
       if (e.rotation) n.rotation = e.rotation;
       // a placed instance's own bounds (a dialog's modal at most 556 wide): a frame drawn here takes them with its layout
       if (n.type === 'INSTANCE') for (const f of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (e[f] != null) await num(n, f, e[f]);
