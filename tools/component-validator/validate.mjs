@@ -151,7 +151,7 @@ const MUI_ENUMS = {
 /** `loading` is a prop on these two and nothing else (v6.4.0+). */
 const MUI_LOADING = new Set(['Button', 'IconButton']);
 /** A Figma axis name that means the same as an MUI prop, however it is spelled. */
-const MUI_PROP = { variant: /^(variant|appearance|type|style|role)$/i, size: /^size$/i, iconPosition: /^icon ?position$/i, placement: /^(placement|position|direction)$/i };
+const MUI_PROP = { variant: /^(variant|appearance|hierarchy|type|style|role)$/i, size: /^size$/i, iconPosition: /^icon ?position$/i, placement: /^(placement|position|direction)$/i };
 const canon = (s) => String(s).trim().replace(/[\s_-]+/g, '').toLowerCase();
 // Figma marks a component private by a leading underscore, on the name or on
 // its last segment: a part other components are built from.

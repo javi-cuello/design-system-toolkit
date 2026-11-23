@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.8] - 2026-11-23
+### Changed
+- The bundled settings pair a `Role` or `Hierarchy` axis with code's `appearance` before `variant` (standards/audit-settings.json `codeProps.sameJob`).
+
 ## [0.14.7] - 2026-11-23
 ### Changed
 - **The house emphasis axis is `Appearance`** (figma-standard 2.33.0): the axis-order check places it after `Size`, where it placed `Role`.
