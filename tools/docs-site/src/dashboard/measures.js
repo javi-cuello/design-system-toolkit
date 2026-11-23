@@ -42,7 +42,7 @@ export function renderLibrary(lib) {
     // A file with no rows has not been in a snapshot yet.
     const has = Object.keys(state).length > 0;
     document.getElementById("measuredLine").textContent = has && window.DASH_SNAPSHOT
-      ? "Checked from its snapshot when not open in Figma; tick it and press Audit to check it now."
+      ? "Checked from its snapshot when it is not open in Figma."
       : "No snapshot of this file yet: it is checked from the first one stored.";
   } else {
     // Rows with no run behind them were filed from the snapshot's change log
@@ -225,11 +225,44 @@ const picks = new Map();
 let fresh = {};
 export function setFreshness(files) { fresh = files || {}; paintFiles(); }
 const canRun = (r, open) => r.role === "audited" && (open || r.kind !== "components");
+// What the Audit reads for a file, said where it is chosen.
+const readsNote = (r, open) => open ? "Open in Figma \u00b7 audited live"
+  : r.kind === "components" ? "Not open \u00b7 run the Desktop Bridge in it to audit it"
+  : "Not open \u00b7 checked from its last snapshot";
+// The Audit dialog's file list, built fresh each time it opens.
+export function paintPicks() {
+  const host = document.getElementById("auditFiles");
+  if (!host) return;
+  const files = (lastStatus && lastStatus.files) || [];
+  host.textContent = "";
+  for (const r of fileRows().filter((x) => x.role === "audited")) {
+    const open = files.some((f) => f.fileKey === r.key);
+    const runnable = canRun(r, open);
+    const li = document.createElement("li");
+    const box = document.createElement("input"); box.type = "checkbox"; box.id = "pick-" + r.key; box.value = r.key;
+    box.disabled = !runnable;
+    box.checked = runnable && (picks.has(r.key) ? picks.get(r.key) : true);
+    box.addEventListener("change", () => picks.set(r.key, box.checked));
+    const label = document.createElement("label"); label.htmlFor = box.id;
+    const name = document.createElement("span");
+    name.textContent = r.label + (r.name ? " \u00b7 " + r.name : "");
+    label.append(box, name);
+    const hint = document.createElement("span"); hint.className = "hint"; hint.textContent = readsNote(r, open);
+    const f = fresh[r.key];
+    if (f && f.stale) {
+      const st = document.createElement("span"); st.className = "file-stale"; st.textContent = "\u26a0 Snapshot again";
+      st.title = "Saved in Figma at " + f.edited + ", after its last snapshot. Run the snapshot plugin in it again.";
+      hint.appendChild(st);
+    }
+    li.append(label, hint);
+    host.appendChild(li);
+  }
+}
 export function pickedFiles() {
   const files = (lastStatus && lastStatus.files) || [];
   return fileRows().filter((r) => {
-    const open = files.some((f) => f.fileKey === r.key);
-    return canRun(r, open) && (picks.has(r.key) ? picks.get(r.key) : true);
+    const box = document.getElementById("pick-" + r.key);
+    return box && box.checked && !box.disabled;
   }).map((r) => ({ key: r.key, kind: r.kind, open: files.some((f) => f.fileKey === r.key), label: r.label }));
 }
 const fileRows = () => {
@@ -283,15 +316,11 @@ export function paintFiles(st) {
       li.className = "file";
       li.dataset.key = r.key;
       const dot = document.createElement("span"); dot.className = "file-dot";
-      // a checkbox, not a switch: it acts only when Audit is pressed (switch.md)
-      const pick = document.createElement("input"); pick.type = "checkbox"; pick.className = "file-pick";
-      pick.id = "pick-" + r.key;
-      pick.addEventListener("change", () => { picks.set(r.key, pick.checked); });
-      const name = document.createElement("label"); name.className = "file-what"; name.htmlFor = pick.id;
+      const name = document.createElement("span"); name.className = "file-what";
       const note = document.createElement("span"); note.className = "file-note";
       const stale = document.createElement("span"); stale.className = "file-stale"; stale.hidden = true;
       stale.textContent = "\u26a0 Snapshot again";
-      li.append(dot, pick, name, note, stale);
+      li.append(dot, name, note, stale);
       host.appendChild(li);
     }
     host.dataset.keys = want;
@@ -317,16 +346,9 @@ export function paintFiles(st) {
       // static for its whole duration \u2014 which read as stalled, repeatedly,
       // and was the whole reason a progress figure was asked for.
       ? running.label + " \u00b7 " + Math.round(running.pct) + "% \u00b7 " + running.secs + "s"
-      : r.role === "source" ? (open ? "open \u00b7 read for its keys" : "not open \u00b7 read from its snapshot")
-      // What the Audit will read: the live file, its snapshot, or nothing.
-      : open ? "open \u00b7 audited live"
-      : r.kind === "components" ? "not open \u00b7 open the Desktop Bridge in it to audit it"
-      : "not open \u00b7 audits its last snapshot";
-    const [, pickEl, nameEl, noteEl, staleEl] = li.children;
-    const runnable = canRun(r, !!open);
-    pickEl.hidden = r.role !== "audited";
-    pickEl.disabled = !runnable || !!(ctx.running);
-    pickEl.checked = runnable && (picks.has(r.key) ? picks.get(r.key) : true);
+      // Status only: what the Audit reads is said in its dialog.
+      : open ? "open" : "not open";
+    const [, nameEl, noteEl, staleEl] = li.children;
     const f = fresh[r.key];
     staleEl.hidden = !(f && f.stale);
     staleEl.title = f && f.stale ? "Saved in Figma at " + f.edited + ", after its last snapshot" + (f.snapped ? " (" + f.snapped + ")" : "") + ". Run the snapshot plugin in it again." : "";

@@ -10,7 +10,7 @@ import { ctx } from './context.js';
 import { pullRecord, store } from './record.js';
 import { showCleared, state, toast } from './queue.js';
 import { recordScores } from './scores.js';
-import { endProgress, paintFiles, pickedFiles, runProgress } from './measures.js';
+import { endProgress, paintFiles, paintPicks, pickedFiles, runProgress } from './measures.js';
 import { bucketFor, gatherCode, gatherTimeout, runStages, stageById, stagesFor } from '../../../figma-audit/stages.mjs';
 
 // One phrasing of an audit's outcome, used by both of its endings.
@@ -1441,11 +1441,11 @@ async function runAudit(targets) {
 }
 function lock() {
   auditBtn.disabled = true; ctx.running = true; sweepBtn.disabled = true;
-  for (const b of document.querySelectorAll("[data-lib-choice], .file-pick, [name=auditScope]")) b.disabled = true;
+  for (const b of document.querySelectorAll("[data-lib-choice]")) b.disabled = true;
 }
 function unlock() {
   auditBtn.disabled = false; ctx.running = false; sweepBtn.disabled = false;
-  for (const b of document.querySelectorAll("[data-lib-choice], [name=auditScope]")) b.disabled = false;
+  for (const b of document.querySelectorAll("[data-lib-choice]")) b.disabled = false;
   paintFiles();                                   // the file boxes: enabled where the file can run
 }
 
@@ -1466,7 +1466,7 @@ let batching = false;
 let auditDone = false;
 async function runFiles(files, scope) {
   if (batching || auditing) return;
-  if (!files.length) { say("Tick a file to audit in the list above.", "warn"); return; }
+  if (!files.length) { say("No file was ticked, so nothing was audited.", "warn"); return; }
   if (!ctx.switchLib) { say("The page has not finished loading \u2014 try again in a moment.", "warn"); return; }
   batching = true; lock();
   const start = ctx.libKey, done = [];
@@ -1516,7 +1516,16 @@ async function runFiles(files, scope) {
     done.some((l) => /failed/.test(l)) ? "warn" : "ok", { detail: done.join(" \u00b7 ") });
 }
 sweepBtn.addEventListener("click", runSweep);
+// Audit opens its dialog; Start audit runs what was chosen there.
+const auditDialog = document.getElementById("auditDialog");
 auditBtn.addEventListener("click", () => {
-  const scope = (document.querySelector("[name=auditScope]:checked") || {}).value || "full";
+  if (batching || auditing || !auditDialog) return;
+  paintPicks();
+  auditDialog.returnValue = "";
+  auditDialog.showModal();
+});
+if (auditDialog) auditDialog.addEventListener("close", () => {
+  if (auditDialog.returnValue !== "run") return;
+  const scope = (auditDialog.querySelector("[name=auditScope]:checked") || {}).value || "full";
   runFiles(pickedFiles(), scope);
 });

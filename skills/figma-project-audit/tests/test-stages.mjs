@@ -207,9 +207,11 @@ for (const [f, heads] of [["tools/figma-audit/audit-session.mjs", ["exec(port, f
   const files = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/measures.js"), "utf8");
   const css = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/dashboard.css"), "utf8");
   ok("dashboard: one Audit button, no menu that comes and goes", /id="auditBtn"/.test(page) && !/auditMenu|auditAllBtn|auditChangedBtn/.test(page + audit));
-  ok("dashboard: Whole and Changed are radios always in view", (page.match(/type="radio" name="auditScope"/g) || []).length === 2);
+  ok("dashboard: Whole and Changed are two radios", (page.match(/type="radio" name="auditScope"/g) || []).length === 2);
   ok("dashboard: no tab hides the Audit button", !/data-scanned="no"\] \.head-actions/.test(css));
-  ok("dashboard: each file row carries a checkbox, read by pickedFiles", /type = "checkbox"/.test(files) && /export function pickedFiles/.test(files) && /runFiles\(pickedFiles\(\)/.test(audit));
+  ok("dashboard: Audit is the primary button and opens a dialog holding a checkbox per file and the two radios; Start audit runs the ticked files", /button--primary" id="auditBtn"/.test(page) && /<Modal id="auditDialog" title="Audit">[\s\S]*id="auditFiles"[\s\S]*name="auditScope"[\s\S]*value="run"[\s\S]*Start audit/.test(page) && /auditDialog\.showModal\(\)/.test(audit) && /type = "checkbox"/.test(files) && /returnValue !== "run"/.test(audit) && /runFiles\(pickedFiles\(\), scope\)/.test(audit));
+  const head = page.slice(page.indexOf('<ul class="files"'), page.indexOf('<Modal id="auditDialog"'));
+  ok("dashboard: the header holds no file checkbox and no scope radio; its file list is status only", !/name="auditScope"/.test(head) && !/file-pick|li\.append\(dot, pick/.test(files));
   const run = audit.slice(audit.indexOf("async function runFiles"), audit.indexOf("auditBtn.addEventListener"));
   ok("runFiles: a closed components file is skipped and said, a closed tokens or icons file is checked from its snapshot",
      /kind === "components" && !f\.open\) \{ done\.push\(name \+ ": skipped/.test(run) && /api\.auditStored\(f\.key\)/.test(run));

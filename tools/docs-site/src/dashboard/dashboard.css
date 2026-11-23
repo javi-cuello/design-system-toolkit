@@ -47,13 +47,15 @@
      result, the controls, the connection): as one wrapping row they broke into
      a ragged L, a button stranded below its pair. */
   header.top {
-    display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
     gap: var(--space-16) var(--space-32);
     padding-block-end: var(--space-24); border-block-end: var(--stroke-1) solid var(--line);
   }
-  header.top .measured { flex: 1 1 18rem; } /* the figures' narrowest before they wrap under the title */
+  header.top .files { flex: 1 1 26rem; }
   .head-actions { display: grid; justify-items: end; align-content: start; gap: var(--space-8); }
-  .action-row { display: flex; gap: var(--space-8); align-items: center; }
+  /* The file in view, under its tab: one row, Check changes at its end. */
+  .lib-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8) var(--space-16); flex-wrap: wrap; margin-block: var(--space-16); }
+  .lib-bar .measured { margin: 0; flex: 1 1 20rem; }
   /* The status is the flexible part. Left to size itself it widened the whole
      column and wrapped the page title, so it shrinks first and wraps within
      its own box — the buttons never move. */
@@ -61,8 +63,6 @@
      46 characters wide it wrapped into a centred paragraph floating above
      them, which is what a header full of prose looks like. */
   .head-actions .sweep-state { margin: 0; text-align: end; max-inline-size: 34ch; }
-  .audit-scope { display: flex; gap: var(--space-12); border: 0; margin: 0; padding: 0; font-size: var(--text-sm); color: var(--fg-muted); }
-  .audit-scope label { display: inline-flex; gap: var(--space-4); align-items: center; cursor: pointer; }
   .measured {
     display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-8) var(--space-12);
     font-size: var(--text-sm); color: var(--fg-muted);
@@ -205,22 +205,23 @@
      is the project's own settings, so it is there at rest; the dot is the one
      thing the page cannot infer from its record, and is refreshed on a timer. */
   .files {
-    list-style: none; margin: 0; margin-block-start: var(--space-8); padding: 0;
-    /* One row per file, never a wrapped inline flow: read down the dots to
-       see what is open, which is the question the list exists to answer. */
-    display: flex; flex-direction: column; gap: var(--space-4);
+    list-style: none; margin: 0; padding: 0;
+    /* Status only, one cell per file, side by side: read across the dots to
+       see what is open. The choices live in the Audit dialog. */
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: var(--space-8);
     flex-basis: 100%;
   }
   /* A note that does not fit beside its file's name moves under it whole,
      rather than wrapping a word a line in what room is left, and lines up
      with the name: the row is inset by the dot and its gap, and the dot
      hangs in the inset. */
+  /* A cell: the dot and the name on one line, the status under the name.
+     Grouped by space alone, no box (knowledge: visual, Quiet chrome). */
   .file {
-    display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-8); row-gap: 0;
-    padding-inline-start: calc(12px + var(--space-8)); /* the dot's 12px box, below */
+    display: grid; grid-template-columns: 12px 1fr; column-gap: var(--space-8); row-gap: var(--space-2); align-items: center; align-content: start;
     font-size: var(--text-sm); color: var(--fg-soft);
   }
-  .file > .file-dot { margin-inline-start: calc(-12px - var(--space-8)); } /* hangs in the row's inset */
+  .file > .file-note, .file > .file-stale { grid-column: 2; }
   /* Green says "in this run", not "open": a file that is open and not part of
      the run is a fact worth stating quietly, not a success to colour.
      `:not([data-busy])` on every colour rule, because a row that is being
@@ -240,17 +241,14 @@
   .file-dot::before {
     content: ""; inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--fg-soft); /* a status dot, drawn */
   }
-  .file[data-on="true"][data-current="yes"]:not([data-busy]) .file-dot::before { background: var(--good); }
-  .file[data-on="true"][data-current="yes"]:not([data-busy]) .file-note { color: var(--good); }
+  /* green: open in Figma. The head is the same on every tab, so the file in
+     view is not marked here; its tab says which it is. */
+  .file[data-on="true"]:not([data-busy]) .file-dot::before { background: var(--good); }
   .file-what { color: var(--fg-muted); }
-  .file-pick { margin: 0; }
   /* "Snapshot again": the file was saved in Figma after its last snapshot. */
   .file-stale { color: var(--warn); font-weight: 600; }
   .file-stale[hidden] { display: none; }
-  /* The library the buttons act on. Weight rather than a second colour: the
-     colour in this row already means "connected". */
-  .file[data-current="yes"] .file-what { color: var(--fg); font-weight: 600; }
-  .file-note { font-family: var(--font-mono); font-size: var(--text-xs); white-space: nowrap; }
+  .file-note { font-size: var(--text-xs); }
   /* Reading a file: the dot becomes a spinner on that row, and the note says
      the stage and how far through the run it is. */
   .file[data-busy] .file-note { color: var(--fg); }
@@ -338,6 +336,17 @@
   .fix-where { color: var(--fg-muted); }
   .fix-code { margin: 0; padding: var(--space-12); max-block-size: 50svh; overflow: auto; font-family: var(--font-mono); font-size: var(--text-sm); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface); border: var(--stroke-1) solid var(--line); }
   .fix-actions { display: flex; justify-content: flex-end; gap: var(--space-8); }
+  /* The Audit dialog: two groups, each a legend over its choices. */
+  .audit-form { display: grid; gap: var(--space-24); }
+  .audit-form fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-8); }
+  .audit-form legend { padding: 0; margin-block-end: var(--space-8); font-weight: 600; }
+  .audit-form label { display: flex; gap: var(--space-8); align-items: baseline; cursor: pointer; }
+  .audit-files ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-12); }
+  .audit-files li { display: grid; grid-template-columns: auto 1fr; column-gap: var(--space-8); }
+  .audit-files .hint { grid-column: 2; font-size: var(--text-sm); color: var(--fg-muted); }
+  .audit-files .hint .file-stale { margin-inline-start: var(--space-8); }
+  .audit-files input:disabled + span { color: var(--fg-soft); }
+  .audit-form .fix-actions { margin-block-start: var(--space-8); }
   .run-notes li + li { margin-block-start: var(--space-4); }
   td.num { font-family: var(--font-mono); white-space: nowrap; }
   td .kind {
@@ -782,7 +791,7 @@
   }
 
   /* Last, so it outranks the drawer's display rules above by order. */
-  :scope[data-readonly="yes"] :is(.head-actions, .ask, .ask-rail, .verify-btn, .do-row, .do-all, .rule-row) { display: none; }
+  :scope[data-readonly="yes"] :is(.head-actions, #sweepBtn, .ask, .ask-rail, .verify-btn, .do-row, .do-all, .rule-row) { display: none; }
 
 }
 

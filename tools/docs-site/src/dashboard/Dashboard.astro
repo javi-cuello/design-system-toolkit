@@ -62,11 +62,10 @@ const files = dashboardStatic.libraries;
     dash.dataset.ask = available === "0" ? "off" : collapsed ? "collapsed" : "open";
   }
 </script>
+  <!-- The head is the PROJECT's, the same on every tab: its files' status
+       and the one Audit. What belongs to one file (its age, what its last
+       audit read, its Figma link, Check changes) sits under the file tabs. -->
   <header class="top">
-    <div class="measured">
-      <span class="freshness" id="freshness">—</span>
-      <span id="measuredLine">No audit of this file yet.</span>
-      <a class="file-link" id="fileLink" href="#" target="_blank" rel="noopener" hidden>Open in Figma<span class="visually-hidden"> (opens in new tab)</span></a>
       <!-- Every file this project's audit reads, always — its libraries and
            the source library the link stage needs open beside them. It used
            to be one line under the button saying whether the library in view
@@ -75,23 +74,13 @@ const files = dashboardStatic.libraries;
            failed at the stage that needed the second. The list also carries
            each file's progress while a run is talking to it. -->
       <ul class="files" id="fileList" aria-label="Files this project audits"></ul>
-    </div>
     <p class="readonly-note">A read-only copy, as of the last build. Run the dashboard service to audit, fix or rule.</p>
     <div class="head-actions">
+      <!-- ONE Audit, on every tab. It opens the Audit dialog below, where the
+           files and the scope are chosen: a short setup before a run, which
+           is what a modal is for (knowledge: dialogs, Choosing the surface). -->
+      <button class="button button--primary" id="auditBtn" type="button" aria-haspopup="dialog">Audit</button>
       <p class="sweep-state" id="sweepState" role="status" aria-live="polite"></p>
-      <div class="action-row">
-      <button class="button measured-only" id="sweepBtn" type="button">Check changes</button>
-      <!-- ONE Audit: it runs every file ticked in the list above, whole or
-           only what changed since the last audit. Radios, not a menu: the
-           choice is always in view, and the button never changes what it does
-           by tab. -->
-      <fieldset class="audit-scope">
-        <legend class="visually-hidden">What to audit in each ticked file</legend>
-        <label><input type="radio" name="auditScope" value="full" checked> Whole</label>
-        <label><input type="radio" name="auditScope" value="changed"> Changed since the last audit</label>
-      </fieldset>
-      <button class="button" id="auditBtn" type="button">Audit</button>
-      </div>
     </div>
   </header>
 
@@ -133,10 +122,20 @@ const files = dashboardStatic.libraries;
           </ul>
         </nav>
       )}
+      <!-- The file in view: its age, what its last audit read, its Figma link
+           and Check changes, which compares its components with the last audit. -->
+      <div class="lib-bar">
+        <p class="measured">
+          <span class="freshness" id="freshness">—</span>
+          <span id="measuredLine">No audit of this file yet.</span>
+          <a class="file-link" id="fileLink" href="#" target="_blank" rel="noopener" hidden>Open in Figma<span class="visually-hidden"> (opens in new tab)</span></a>
+        </p>
+        <button class="button" id="sweepBtn" type="button">Check changes</button>
+      </div>
       <div class="toolbar">
         <select class="filter filter--select" id="componentFilter" aria-label="Show rows on"></select>
         <select class="filter filter--select" id="ownerFilter" aria-label="Show rows raised by"></select>
-        <div class="toolbar__end"><button class="button button--primary verify-btn" id="verifyBtn" type="button" hidden>Verify done</button></div>
+        <div class="toolbar__end"><button class="button verify-btn" id="verifyBtn" type="button" hidden>Verify done</button></div>
       </div>
       <ul class="kpis kpis--fill" id="queueTiles" aria-label="Findings"></ul>
       <!-- A file with nothing recorded: one empty state in place of the
@@ -195,6 +194,24 @@ const files = dashboardStatic.libraries;
       <p class="empty" id="runsEmpty" hidden>No runs recorded yet.</p>
       <Modal id="runDialog" title="Run">
         <ul class="run-notes" id="runDialogList"></ul>
+      </Modal>
+      <!-- The Audit's choices: which files, and whole or changed (audit.js runFiles). -->
+      <Modal id="auditDialog" title="Audit">
+        <form method="dialog" class="audit-form">
+          <fieldset class="audit-files">
+            <legend>Files</legend>
+            <ul id="auditFiles"></ul>
+          </fieldset>
+          <fieldset class="audit-scope">
+            <legend>What to audit</legend>
+            <label><input type="radio" name="auditScope" value="full" checked> The whole file</label>
+            <label><input type="radio" name="auditScope" value="changed"> Only what changed since the last audit</label>
+          </fieldset>
+          <div class="fix-actions">
+            <button class="button" value="cancel">Cancel</button>
+            <button class="button button--primary" value="run" id="auditStart" autofocus>Start audit</button>
+          </div>
+        </form>
       </Modal>
       <!-- Fix this: the code Claude wrote, shown before it runs in Figma (queue.js approveFix) -->
       <Modal id="fixDialog" title="Run this change in Figma?">
