@@ -1,3 +1,4 @@
+import { ctx } from './context.js';
 // The audit record in memory: read from the service, re-rendered on every
 // change, written through one document at a time.
 import { api } from './api.js';
@@ -20,7 +21,15 @@ export const step = (name, fn) => {
   }
 };
 export function announce() { for (const fn of listeners) step("The dashboard", () => fn(RECORD)); }
-export async function pullRecord() { RECORD = await api.get(); announce(); return RECORD; }
+export async function pullRecord() {
+  // A read sent for one library and answered after the page moved to another
+  // (a slow poll beside the Audit's switch between files) is dropped: kept, it
+  // put the old library's record, and no fingerprints, under the new one.
+  const key = ctx.libKey;
+  const rec = await api.get();
+  if (key !== ctx.libKey) return RECORD;
+  RECORD = rec; announce(); return RECORD;
+}
 // `doc("rows/x")` addresses one entry of the record: read-through on get,
 // write-through on set, and a re-render on every change.
 function docRef(path) {

@@ -173,11 +173,13 @@ import './audit.js';
   if (DASH.dataset.readonly === "yes") return;
   // Which files were saved in Figma after their last snapshot, every five
   // minutes (the service asks Figma no more often than that).
-  poll(async () => {
+  const askFresh = async () => {
     const f = await api.freshness().catch(() => null);
     if (f && f.ok) setFreshness(f.files);
     return Boolean(f);
-  }, 300000);
+  };
+  askFresh();                                   // at once, then on the timer
+  poll(askFresh, 300000);
   // Which files Figma has open, every 5 seconds.
   poll(async () => {
     const now = await api.status().catch(() => null);

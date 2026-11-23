@@ -444,9 +444,12 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", "
 // The project's audit settings merged over the house defaults, and its
 // rulings: the contract's reader, shared with the docs site's read-only copy.
 const require_ = createRequire(import.meta.url);
-let freshAt = 0, freshLast = null;
-async function freshness() {
-  if (freshLast && Date.now() - freshAt < 300000) return freshLast;
+let freshAt = 0, freshLast = null, freshAsking = null;
+function freshness() {
+  if (freshLast && Date.now() - freshAt < 300000) return Promise.resolve(freshLast);
+  return freshAsking || (freshAsking = askFreshness().finally(() => { freshAsking = null; }));
+}
+async function askFreshness() {
   const version = require_("../snapshot/version.cjs");
   const { runs } = require_("../snapshot/deliver.cjs");
   const where = contract.layout(null, LABEL);
@@ -457,7 +460,8 @@ async function freshness() {
     try {
       const edited = await version.lastEdit(r.key, token);
       const snapped = last[r.key] || null;
-      files[r.key] = { edited, snapped, stale: !!(edited && (!snapped || edited > snapped)) };
+      // No delivery here (the snapshot was taken on another machine): unknown, not stale.
+      files[r.key] = { edited, snapped, stale: !!(edited && snapped && Date.parse(edited) > Date.parse(snapped)) };
     } catch (e) { files[r.key] = { error: e.message }; }
   }
   freshAt = Date.now();
@@ -1481,6 +1485,9 @@ server.listen(PORT, "127.0.0.1", () => {
       // each file's own date where the store keeps one (sources[key].at); the last delivery's otherwise
       const M = tokens._meta || {};
       snapshotAt = (only && M.sources && M.sources[only] && M.sources[only].at) || M.snapshotAt || null;
+      // asked for one file: refused before anything is filed, never after
+      if (only && !snapshotAt) throw new Error("no tokens snapshot is stored for this project yet: snapshot the file first");
+      if (only && !records.some((r) => r.key === only)) throw new Error("that file is not one of this project's routed libraries");
       for (const r of records) {
         if (only && r.key !== only) continue;
         const runs = [];

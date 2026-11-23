@@ -57,7 +57,11 @@ let sweeping = false;
 // worse than one, because a reader checks both to discover they agree — and
 // the call sites keep the argument so each stage still declares which of its
 // messages was narration and which is a result.
+// The last thing said with a tone, so a run over several files can report
+// why one stopped after the next file's lines have replaced it.
+let lastSaid = { text: "", tone: null };
 function say(text, tone, working) {
+  if (!working) lastSaid = { text, tone: tone || null };
   if (working) { sweepState.textContent = ""; sweepState.removeAttribute("data-tone"); sweepState.removeAttribute("data-busy"); return; }
   sweepState.textContent = text;
   if (tone) sweepState.dataset.tone = tone; else sweepState.removeAttribute("data-tone");
@@ -181,7 +185,7 @@ async function runSweep() {
   } catch (e) {
     say(trouble(e, "Check"), "warn");
   } finally {
-    sweeping = false; sweepBtn.disabled = false;
+    sweeping = false; sweepBtn.disabled = !!ctx.running;   // a run over several files still holds it
   }
 }
 // ---- audit ----
@@ -1272,6 +1276,7 @@ async function runAudit(targets) {
   const scope = targets || [];
   if (targets && !targets.length) { say("Nothing to audit.", "warn"); return; }
   runSpend = { calls: 0, input: 0, output: 0, usd: 0 };
+  auditDone = false;
   auditing = true;
   // The library may not change under a run, and a sweep may not run beside
   // one: both drive the same plugin, and the audit files against whichever
@@ -1331,6 +1336,7 @@ async function runAudit(targets) {
       // on screen while three more stages were still reading Figma — a
       // number the reader takes as the run's answer, minutes before the run
       // has one. `runOtherStages` shows it beside its own.
+      auditDone = true;
       await runOtherStages(scan, rules0, runId0, {
         title: auditHeadline(0, closed0, scannedN), tone: "ok",
         detail: auditDetail(0, 0, 0, closed0),
@@ -1416,6 +1422,7 @@ async function runAudit(targets) {
     // An audit both files and closes rows, so the queue can change in two
     // directions at once. Say both numbers rather than the net.
     // Held until the other three stages are done — see the note above.
+    auditDone = true;
     await runOtherStages(scan, rules0, runId, {
       title: auditHeadline(added, closed, scannedN, reopened, kept), tone: added || kept ? "warn" : "ok",
       detail: auditDetail(total, kept, added, closed),
@@ -1455,6 +1462,8 @@ function unlock() {
  * page switches to the next exactly as a tab click would, and back at the end.
  */
 let batching = false;
+// Whether runAudit got as far as filing its scan: each early return leaves it false.
+let auditDone = false;
 async function runFiles(files, scope) {
   if (batching || auditing) return;
   if (!files.length) { say("Tick a file to audit in the list above.", "warn"); return; }
@@ -1488,7 +1497,7 @@ async function runFiles(files, scope) {
           if (!targets.length) { done.push(name + ": nothing changed since the last audit"); continue; }
         }
         await runAudit(targets);
-        done.push(name + ": audited live");
+        done.push(auditDone ? name + ": audited live" : name + ": failed \u2014 " + (lastSaid.text || "the audit stopped"));
       } else {
         // No component sets: the components stage reads "does not apply";
         // tokens and icons run on the live file's facts. Changed is whole here.
