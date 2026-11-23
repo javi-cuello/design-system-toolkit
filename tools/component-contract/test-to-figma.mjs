@@ -678,7 +678,7 @@ delete globalThis.figma;
   // in the library's own file a drawing's page is marked as the round trip's, never the library's own page of that name
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
   ok('in the library\'s own file the keys of what other libraries lent are taken from the copies its own component uses, never a drawing\'s',
-    src.includes("await listing('what its own component takes from other libraries'") && src.includes("n.name === P.name && !drawnPage(n)") && src.includes('}, 30000);')
+    src.includes("await listing('what its own component takes from other libraries'") && src.includes("(n.name === P.name || P.name.endsWith('/' + n.name)) && !drawnPage(n)") && src.includes('}, 30000);')
     && src.includes('ownKeys.set(x.key, x); want.delete(x.key);') && src.includes("getStyledTextSegments(['textStyleId'])") && src.includes('if (Date.now() > until) break walk;'));
   ok('a variable at the top of its collection is a variable where the project names it, a literal never',
     (() => { const v = varNamer(['layer-hover (contextual)']); return v('layer-hover (contextual)') && v('Colour/Primary') && !v('#808080') && !v('16px (1rem)') && !varNamer()('layer-hover (contextual)'); })()

@@ -634,8 +634,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // asked for is found or 25 s have gone, its walk included, which runs before any timer could fire
       const until = Date.now() + 25000, done = () => !want.size || Date.now() > until;
       const take = (x) => { if (x && want.has(x.key)) { ownKeys.set(x.key, x); want.delete(x.key); } };
+      // (a set named under its page, Page/Set, is found by its own name)
       const drawnPage = (n) => { while (n && n.type !== 'PAGE') n = n.parent; return !!(n && n.getPluginData('drawings')); };
-      const roots = want.size ? figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).filter((n) => n.name === P.name && !drawnPage(n)) : [];
+      const roots = want.size ? figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).filter((n) => (n.name === P.name || P.name.endsWith('/' + n.name)) && !drawnPage(n)) : [];
       const styleIds = new Set(), varIds = new Set(), insts = [], textFont = new Map();
       const alias = (v) => { if (!v) return; if (Array.isArray(v)) v.forEach(alias); else if (typeof v === 'object') { if (v.type === 'VARIABLE_ALIAS' && v.id) varIds.add(v.id); else Object.values(v).forEach(alias); } };
       walk: for (const r of roots) for (const n of [r, ...r.findAll(() => true)]) {
