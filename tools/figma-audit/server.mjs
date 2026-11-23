@@ -442,6 +442,8 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", "
 
 // The project's audit settings merged over the house defaults, and its
 // rulings: the contract's reader, shared with the docs site's read-only copy.
+// The stored-snapshot checks for the tokens and icons libraries, set by the watch below once it knows the layout.
+let fileStored = null;
 const readContext = async () => contract.auditContext(CONTEXT);
 
 // A `--data` that can never hold a record is a misconfiguration, and it must
@@ -825,6 +827,24 @@ const server = createServer(held(async (req, res) => {
     // the project record's to say: the file's own bindings decide what is unused only where it is its tokens' only user
     // (selfUsedOf: tokens and components, and no other components library); otherwise the unused check is left to the snapshot watch below, which reads every components
     // library. `applies` (liveApplies) is what the page's appliesTo reads for the two stages.
+    // A tokens or icons library's checks, from its stored snapshot, now: the
+    // watch's own filing (fileStored below) for one file, so a file that is not
+    // open in Figma is still audited from what was last stored, and the run
+    // says which it read. A components library is audited live, never here.
+    if (url.pathname === "/audit-stored" && req.method === "POST") {
+      const { fileKey } = JSON.parse(await body(req));
+      if (!fileKey) return json(res, 400, { ok: false, error: "fileKey required" });
+      if (!fileStored) return json(res, 200, { ok: false, error: "this project stores no tokens snapshot yet" });
+      try {
+        const out = await fileStored(fileKey);
+        // nothing read is a refusal, never an empty clean run: an empty full run would close every row
+        if (!out.snapshotAt) return json(res, 200, { ok: false, error: "no tokens snapshot is stored for this project yet: snapshot the file first" });
+        if (!out.filed.length) return json(res, 200, { ok: false, error: "the stored snapshot holds nothing from this file to check: snapshot it first" });
+        return json(res, 200, Object.assign({ ok: true }, out));
+      }
+      catch (e) { return json(res, 200, { ok: false, error: e.message }); }
+    }
+
     if (url.pathname === "/library-checks" && req.method === "POST") {
       const { facts, fileKey } = JSON.parse(await body(req));
       if (!facts || !facts.tokens || !fileKey) return json(res, 400, { ok: false, error: "facts and fileKey required" });
@@ -1406,9 +1426,13 @@ server.listen(PORT, "127.0.0.1", () => {
   const { watch } = await import("node:fs");
   const where = contract.layout(null, LABEL);
   const P = (where && !where.error && where.paths) || {};
-  const fileLibrary = async () => {
+  // `only`: one file's key, for /audit-stored; none, every routed file (the watch).
+  // Answers what it filed per target, and when the snapshot it read was taken.
+  const fileLibrary = async (only = null) => {
+    const filed = [];
+    let snapshotAt = null;
     try {
-      if (!P.tokens || !existsSync(P.tokens)) return;
+      if (!P.tokens || !existsSync(P.tokens)) return { filed, snapshotAt };
       const L = await libraryChecks();
       const { slug } = await import(pathToFileURL(join(HERE, "..", "snapshot", "spec.cjs")).href);
       const tokens = JSON.parse(await readFile(P.tokens, "utf8"));
@@ -1424,7 +1448,11 @@ server.listen(PORT, "127.0.0.1", () => {
         if (spec) specs.push(spec);
       }
       const used = L.namesUsed(specs);
+      // each file's own date where the store keeps one (sources[key].at); the last delivery's otherwise
+      const M = tokens._meta || {};
+      snapshotAt = (only && M.sources && M.sources[only] && M.sources[only].at) || M.snapshotAt || null;
       for (const r of records) {
+        if (only && r.key !== only) continue;
         const runs = [];
         // L.watchTargets: the tokens checks for every library whose stored source owns tokens or styles, any role
         const targets = L.watchTargets(r, tokens);
@@ -1438,11 +1466,14 @@ server.listen(PORT, "127.0.0.1", () => {
               full: true, exhaustive: true, scope, ran, findings });
             await writeData(data, r.key);
             console.log(`${target.padEnd(15)}${LABEL}: ${findings.length} raised, ${out.added} new, ${out.closed} closed for ${r.key}`);
+            filed.push({ target, raised: findings.length, added: out.added, closed: out.closed });
           });
         }
       }
-    } catch (e) { console.error(`library        ${LABEL}: ${e.message}`); }
+    } catch (e) { console.error(`library        ${LABEL}: ${e.message}`); if (only) throw e; }
+    return { filed, snapshotAt };
   };
+  fileStored = fileLibrary;
   if (P.tokens) {
     let t = null;
     const soon = () => { clearTimeout(t); t = setTimeout(fileLibrary, 3000); };

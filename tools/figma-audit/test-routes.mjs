@@ -116,6 +116,9 @@ try {
   ok("…and says which of the two stages apply, for the page's appliesTo", JSON.stringify(lc.json.applies) === JSON.stringify({ tokens: true, icons: true }));
   ok("/library-checks refuses facts read from another file", (await post("/library-checks", { facts, fileKey: "K2" })).json.ok === false);
   ok("/library-checks without facts is a 400", (await post("/library-checks", { fileKey: "K1" })).code === 400);
+  ok("/audit-stored without a fileKey is a 400", (await post("/audit-stored", {})).code === 400);
+  { const st = (await post("/audit-stored", { fileKey: "K1" })).json;
+    ok("/audit-stored on a service with no stored tokens says so, never files nothing as a clean run", st.ok === false && /no tokens snapshot/.test(st.error), JSON.stringify(st)); }
 
   // the record's guards
   const empty = (await ask("GET", "/data")).json;
