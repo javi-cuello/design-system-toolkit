@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { namer, partSeg, copyOf, beforeOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
+import { namer, partSeg, copyOf, markupOrder, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf } from './layers.mjs';
 
@@ -292,22 +292,9 @@ export function partsOf(c, t = HOUSE) {
   return parts;
 }
 
-/* A box's children in the one order every variant draws them: a part a variant adds takes the place that variant gives
-   it among the rest (an icon added before a label, the label's order set after it), not the end. Each variant (and the
-   base) says which of its children comes before which; they are put in an order that keeps every one, the base order
-   breaking ties; where two variants disagree the base order stands, and a CSS order would say the rest. */
-function inOrder(c, list) {
-  const base = [...list].sort((a, b) => (a.e.order ?? 0) - (b.e.order ?? 0));
-  const ids = base.map((p) => p.id), rank = new Map(ids.map((id, i) => [id, i]));
-  const before = beforeOf(c, base);
-  const out = [], done = new Set();
-  while (out.length < ids.length) {
-    const next = ids.find((id) => !done.has(id) && [...before.get(id)].every((x) => done.has(x)));
-    if (!next) return base;
-    done.add(next); out.push(next);
-  }
-  return out.map((id) => base[rank.get(id)]);
-}
+/* A box's children in the one order every variant draws them: to-code's markupOrder, the pass its CSS order is written
+   by where no one order keeps every variant's (an icon added before a label, the label's order set after it). */
+const inOrder = (c, list) => markupOrder(c, list).order;
 
 /* A part's condition as code, over the props' names in code: null where it is always drawn, 'false' where never. */
 function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, lang = JS) {

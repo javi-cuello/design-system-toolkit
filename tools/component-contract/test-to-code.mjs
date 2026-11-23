@@ -199,6 +199,17 @@ ok('a reordering variant writes each child\'s order', /__texts > \.ds-chip__a \{
   const shifted = { ...chip, props: typed.props, anatomy: { ...chip.anatomy, box, 'box/lead': at('graphic', 0) },
     variants: [...chip.variants, { when: { mode: 'armed' }, add: { 'box/tail': at('graphic', 1) } }, { when: { mode: 'typed' }, add: { 'box/extra': at('graphic', 1), 'box/tail': at('graphic', 2) } }] };
   ok('a place that only shifts as parts come and go writes no order', !/order:/.test(toCss(shifted, 'chip', { naming: CLS })) && selfCheck(shifted).length === 0);
+  // three children no two of which any variant puts oppositely, yet no one order keeps every variant's (a before b,
+  // b before c in one, c before a in another): the markup cannot write it, so each child says its place
+  const cycle = { ...chip, props: typed.props, anatomy: { ...chip.anatomy, box, 'box/a': at('graphic', 1), 'box/b': at('graphic', 2) },
+    variants: [...chip.variants, { when: { mode: 'armed' }, remove: ['box/a'], add: { 'box/c': at('graphic', 3) } }, { when: { mode: 'typed' }, remove: ['box/b'], add: { 'box/c': at('graphic', 0) } }] };
+  const cmk = toElement(cycle, 'chip', { naming: ELEMENT, library: {} }), ccss = toCss(cycle, 'chip', { naming: ELEMENT });
+  ok('children no one markup order keeps are each given their place: the browser draws every variant\'s',
+    drawn(cmk, ccss, ['a', 'c'], '[mode="typed"]').join() === 'c,a' && drawn(cmk, ccss, ['b', 'c'], '[mode="armed"]').join() === 'b,c' && drawn(cmk, ccss, ['a', 'b'], null).join() === 'a,b' && selfCheck(cycle).length === 0);
+  // a part of the defaults a variant puts in another box is not in its own box there, at the other box's place
+  const away = { ...chip, props: typed.props, anatomy: { ...chip.anatomy, box, other: { ...box, order: 1 }, 'box/x': at('graphic', 0), 'box/y': at('graphic', 1), 'other/z': { ...at('graphic', 0), parent: 'other' } },
+    variants: [...chip.variants, { when: { mode: 'armed' }, add: { 'box/x': { ...at('graphic', 5), parent: 'other' } } }] };
+  ok('a part of the defaults a variant moves to another box reorders neither box', !/order:/.test(toCss(away, 'chip', { naming: CLS })));
   // a box no auto layout lays out takes no order: CSS order moves nothing there
   const flat = { ...typed, anatomy: { ...typed.anatomy, box: { kind: 'container', parent: 'root', order: 0 } } };
   ok('order is written only where an auto layout lays the child out', !/order:/.test(toCss(flat, 'chip', { naming: CLS })));

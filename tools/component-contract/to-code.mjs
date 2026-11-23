@@ -145,30 +145,47 @@ export function copyOf(c, id) {
   return touched(id) || touched(m[1]) ? null : m[1];
 }
 
-/* The boxes whose children a variant puts in another order: one it sets an order in, or one whose added part two
-   variants (or a variant and the defaults) give different places (a caret added before the words, and after them). */
 /* Which of a box's children comes before which, in the defaults and every variant: for each child (`parts`, each
    { id, e, base }: its id, its entry, whether the defaults draw it), the children some variant draws before it. A part a
-   variant adds under another box is not in this one there. Read by to-markup's inOrder (one markup order keeping every
-   one) and by reordered (a box two variants order oppositely). */
-export function beforeOf(c, parts) {
+   variant adds under another box (a part of the defaults among them) is not in this one there. */
+function beforeOf(c, parts) {
   const before = new Map(parts.map((p) => [p.id, new Set()]));
   for (const v of [{}, ...(c.variants || [])]) {
     const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
-    const here = parts.filter((p) => (p.base && !gone.has(p.id)) || (p.id in add && (add[p.id].parent ?? p.e.parent) === p.e.parent) || (`${p.id}.order` in set && !gone.has(p.id)));
+    const away = (p) => p.id in add && (add[p.id].parent ?? p.e.parent) !== p.e.parent;
+    const here = parts.filter((p) => !away(p) && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id))));
     const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? p.e.order ?? 0;
     for (const a of here) for (const b of here) if (at(a) < at(b)) before.get(b.id).add(a.id);
   }
   return before;
 }
 
+/* A box's children in the one order every variant draws them (to-markup writes them so): a part a variant adds takes
+   the place that variant gives it among the rest, not the end; they are put in an order that keeps every variant's
+   (beforeOf), the defaults' order breaking ties. `placed` is false where no one order keeps them all (two variants
+   disagree, or three or more go round): the defaults' order stands, and a CSS order says the rest (reordered). */
+export function markupOrder(c, list) {
+  const base = [...list].sort((a, b) => (a.e.order ?? 0) - (b.e.order ?? 0));
+  const ids = base.map((p) => p.id), rank = new Map(ids.map((id, i) => [id, i]));
+  const before = beforeOf(c, base);
+  const out = [], done = new Set();
+  while (out.length < ids.length) {
+    const next = ids.find((id) => !done.has(id) && [...before.get(id)].every((x) => done.has(x)));
+    if (!next) return { order: base, placed: false };
+    done.add(next); out.push(next);
+  }
+  return { order: out.map((id) => base[rank.get(id)]), placed: true };
+}
+
+/* The boxes whose children a variant puts in another order: one it sets an order in, or one whose children no one
+   markup order draws as every variant does (markupOrder), so each child says its place. */
 const REORDERED = new WeakMap();
 function reordered(c) {
   if (!REORDERED.has(c)) {
     const ids = (c.variants || []).flatMap((v) => Object.keys(v.set || {}).filter((k) => k.endsWith('.order')).map((k) => k.slice(0, -'.order'.length)));
     const boxes = new Set(ids.map((id) => (c.anatomy[id] || findAdded(c, id) || {}).parent).filter(Boolean));
-    // and a box two variants (or a variant and the defaults) put two of its children in opposite orders in, by the
-    // relation the markup orders them by (to-markup inOrder): a place that only shifts as parts come and go is no reorder
+    // and a box whose children the markup cannot write in one order every variant keeps (markupOrder, the pass to-markup
+    // writes them by): a place that only shifts as parts come and go is no reorder
     const kids = new Map();
     for (const [id, e] of Object.entries(c.anatomy || {})) if (e.parent) (kids.get(e.parent) || kids.set(e.parent, []).get(e.parent)).push({ id, e, base: true });
     for (const v of c.variants || []) for (const id of Object.keys(v.add || {})) {
@@ -177,9 +194,7 @@ function reordered(c) {
       if (e && e.parent && !(kids.get(e.parent) || []).some((p) => p.id === id)) (kids.get(e.parent) || kids.set(e.parent, []).get(e.parent)).push({ id, e, base: false });
     }
     for (const [box, list] of kids) {
-      if (boxes.has(box) || list.length < 2) continue;
-      const before = beforeOf(c, list);
-      if (list.some((a) => [...before.get(a.id)].some((b) => before.get(b).has(a.id)))) boxes.add(box);
+      if (!boxes.has(box) && list.length > 1 && !markupOrder(c, list).placed) boxes.add(box);
     }
     REORDERED.set(c, boxes);
   }
