@@ -1623,13 +1623,22 @@ export function heldTo(index, name, { folder, library, libraryKey, key, keyAt, f
    contract says `literal` alone. Only against such a snapshot are they left out, so the same library is never a
    change. Which it is, the stored figma.json says by its own fields, never the contract's text (which drops a text
    equal to its component's own and has no value for a face with no weight). `comp` is the walk's, its variants whole;
-   with no stored snapshot to ask, nothing is left out. */
+   with no stored snapshot to ask, nothing is left out. The same for each layer's place among all its parent's
+   children (`index`, 0.83.0 on), which derive reads to order two layers two booleans show where they would tie. */
 const SIZED = ['fontSize', 'fontFamily', 'fontStyle'];
 export function walkedAs(comp, stored) {
   if (!stored) return comp;
   const sized = (n) => (n.textStyle === 'literal' && SIZED.some((k) => n[k] != null)) || (n.children || []).some(sized);
-  if ((req('../snapshot/spec.cjs').resolve(stored).variants || []).some(sized)) return comp;
-  return JSON.parse(JSON.stringify(comp), (k, v) => { if (v && v.textStyle === 'literal') for (const f of SIZED) delete v[f]; return v; });
+  const placed = (n) => typeof n.index === 'number' || (n.children || []).some(placed);
+  const trees = req('../snapshot/spec.cjs').resolve(stored).variants || [];
+  const keepSizes = trees.some(sized), keepPlaces = trees.some(placed);
+  if (keepSizes && keepPlaces) return comp;
+  // (a node is a layer by its type: a prop or a link named index is not one)
+  return JSON.parse(JSON.stringify(comp), (k, v) => {
+    if (v && !keepSizes && v.textStyle === 'literal') for (const f of SIZED) delete v[f];
+    if (v && !keepPlaces && typeof v.type === 'string' && typeof v.index === 'number') delete v.index;
+    return v;
+  });
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {

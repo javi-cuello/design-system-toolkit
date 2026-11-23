@@ -650,4 +650,37 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   }
   ok('…and with them it carries its values', older()(spec).anatomy.w.typography === 'literal 12/16 regular Inter');
 }
+// 2026-11-23: a menu item whose top spacer and divider are each shown by a boolean, both hidden by default. Each boolean
+// is walked alone, so each layer stood at the same place among the visible ones, and which comes first was a tie the
+// markup broke by the order the props are listed in: the divider first, where Figma draws the top spacer first.
+// Snapshot 0.83.0 says each layer's place among all its parent's children (`index`); where two booleans' layers would
+// tie, that place orders them. Props listed divider first, so the old tie-break is the wrong order.
+{
+  const { markupOrder, partsOf, childrenOf } = await import('./to-code.mjs');
+  const frame = (name, index, extra = {}) => ({ name, type: 'FRAME', sizing: 'FILL/FIXED', w: 200, h: 8, ...(index == null ? {} : { index }), ...extra });
+  const row = (index) => frame('Content', index, { layout: 'HORIZONTAL', sizing: 'FILL/HUG', h: 32, children: [{ name: 'Label', type: 'TEXT', text: 'Item', textStyle: 'Body/md', sizing: 'HUG/HUG' }] });
+  const item = (name, kids) => ({ name, type: 'COMPONENT', layout: 'VERTICAL', sizing: 'FIXED/HUG', w: 200, h: 40, align: 'MIN/MIN', children: kids });
+  const menu = (placed) => {
+    const at = (i) => (placed ? i : null);
+    return { name: 'Menu item', id: '7:1', props: { Divider: 'BOOLEAN', 'Top spacer': 'BOOLEAN', State: ['Rest'] }, variants: [
+      item('State=Rest', [row(at(2))]),
+      item('State=Rest, Divider=True', [frame('Divider', at(1), { h: 1, fills: ['Border'] }), row(at(2))]),
+      item('State=Rest, Top spacer=True', [frame('Top spacer', at(0)), row(at(2))]),
+    ] };
+  };
+  const firstOf = (c) => markupOrder(c, childrenOf(partsOf(c)).get('root')).order.map((p) => p.id);
+  const placed = derive(menu(true)), unplaced = derive(menu(false));
+  ok('two layers two booleans show, both hidden by default, are written in the order Figma draws them, by each one\'s place among all its parent\'s children',
+    JSON.stringify(firstOf(placed)) === JSON.stringify(['topSpacerTopSpacer', 'dividerDivider', 'content']));
+  const both = expand(placed, { divider: true, topSpacer: true, state: 'rest' });
+  ok('…and both on, the contract draws them so, the content after them',
+    both.topSpacerTopSpacer.order < both.dividerDivider.order && both.dividerDivider.order < both.content.order);
+  ok('…and it still rebuilds every variant it was derived from', selfCheck(menu(true), placed).length === 0);
+  ok('a snapshot from before the place was recorded derives exactly as it did: both at the one place, a tie',
+    unplaced.variants.every((v) => Object.values(v.add || {}).every((e) => e.order === 0)) && JSON.stringify(firstOf(unplaced)) === JSON.stringify(['dividerDivider', 'topSpacerTopSpacer', 'content']));
+  // where nothing would tie (one boolean's layer), the place changes nothing: a re-snapshot moves no contract
+  const one = (placedIt) => { const m = menu(placedIt); m.props = { Divider: 'BOOLEAN', State: ['Rest'] }; m.variants = m.variants.slice(0, 2); return m; };
+  ok('…and where nothing would tie, a snapshot that records the place derives the very contract one before it did',
+    JSON.stringify(derive(one(true))) === JSON.stringify(derive(one(false))));
+}
 console.log(`${n}/${n} passed`);

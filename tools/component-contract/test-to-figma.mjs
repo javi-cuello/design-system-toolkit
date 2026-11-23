@@ -565,6 +565,17 @@ delete globalThis.figma;
   ok('…a variant kept as a delta is read whole, on both sides',
     !refused(two(sizes(), { ...sizes(), fontSize: 18 }), two({}, {})) && refused(two(sizes(), { ...sizes(), fontSize: 20 }), two(sizes(), { ...sizes(), fontSize: 18 })));
   ok('…with no stored snapshot to ask, nothing of the live read is left out', j(walkedAs(one('Top', [text(sizes())]), null)).includes('"fontSize":14'));
+  // 2026-11-23: the live walk says each layer's place among all its parent's children (0.83.0 on), which orders two
+  // layers two booleans show where they would tie; against an older snapshot it is left out, so the same library is no
+  // change, and against one that records it, it is kept
+  const at = (index, x = {}) => ({ name: x.name || 'Spacer', type: 'FRAME', w: 8, h: 8, sizing: 'FILL/FIXED', index, ...x });
+  const menu = (placed) => { const i = (n) => (placed ? n : undefined); return { name: 'Menu', props: { Divider: 'BOOLEAN', 'Top spacer': 'BOOLEAN', State: ['Rest'] }, variants: [
+    { name: 'State=Rest', type: 'COMPONENT', layout: 'VERTICAL', children: [at(i(2), { name: 'Content' })] },
+    { name: 'State=Rest, Divider=True', type: 'COMPONENT', layout: 'VERTICAL', children: [at(i(1), { name: 'Divider' }), at(i(2), { name: 'Content' })] },
+    { name: 'State=Rest, Top spacer=True', type: 'COMPONENT', layout: 'VERTICAL', children: [at(i(0), { name: 'Top spacer' }), at(i(2), { name: 'Content' })] }] }; };
+  ok('the same library read live against a snapshot from before each layer\'s place was recorded is as stored; against one that records it, the place is kept',
+    !refused(menu(true), menu(false)) && !refused(menu(true), menu(true)) && j(walkedAs(menu(true), compact(menu(true)))).includes('"index":1')
+    && j(read(compact(menu(true)))) !== j(read(compact(menu(false)))));
 }
 { // 2026-11-22: with two platforms an index holds one name twice: --patch read the first's figma.json, so it refused
   // an unchanged library and passed a change

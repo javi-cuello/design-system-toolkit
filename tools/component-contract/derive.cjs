@@ -258,7 +258,34 @@ function layout(spec) {
     for (const h of hidden) (hides[flipped] = hides[flipped] || new Map()).set(keyOf(h), h);
     return { tree: t, when: w, list, from: trees.indexOf(base) };
   });
+  untie(out);
   return { trees: out, hides };
+}
+
+/* Two layers two booleans show, both hidden by default, are each walked alone, so each stands at the same place among
+   the visible children of its box, and which comes first is a tie no variant breaks (a menu item's top spacer and
+   divider). Where the snapshot says each layer's place among all its parent's children, hidden ones counted (`index`,
+   0.83.0 on), the boxes where two booleans flipped from one variant add layers at the same place take that place as
+   their children's order in those booleans' trees, so the two come out in the order Figma draws them. Nowhere else, and
+   never without it: a contract no tie touches is the one it was. */
+function untie(trees) {
+  const added = new Map();
+  trees.forEach((t, i) => {
+    if (t.from == null || t.from < 0) return;
+    for (const e of t.list) {
+      if (!e.parent || !e.segs.length || !e.segs.at(-1).includes('#') || e.parent.some((s) => s.includes('#'))) continue;
+      const box = `${t.from}${SEP}${SEP}${keyOf(e.parent)}`;
+      added.set(box, [...(added.get(box) || []), { i, order: e.order, index: e.node.index, parent: e.parent }]);
+    }
+  });
+  for (const xs of added.values()) {
+    const tied = xs.some((a) => xs.some((b) => b.i !== a.i && b.order === a.order && typeof a.index === 'number' && typeof b.index === 'number' && a.index !== b.index));
+    if (!tied) continue;
+    for (const i of new Set(xs.map((x) => x.i))) {
+      const kids = trees[i].list.filter((e) => e.parent && keyOf(e.parent) === keyOf(xs[0].parent));
+      if (kids.every((e) => typeof e.node.index === 'number')) for (const e of kids) e.order = e.node.index;
+    }
+  }
 }
 
 /* An element's id is its address in camel case, `/` between levels:
