@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
 import { selfDrawn, siteFiles, drawnAll, GENERATOR } from './site.mjs';
@@ -90,7 +90,11 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a geometry row is a row of the Figma leg', JSON.stringify(measure(where).legs.figma.tag.rows) === JSON.stringify([geo]));
   // one whose geometry was not compared (read before it was kept, or no stored figma.json) is not measured, never 0
   fs.writeFileSync(path.join(home, 'round-trip', 'tag.roundtrip.json'), JSON.stringify({ rows: [], combinations: 1 }));
-  ok('a reading with no geometry is not measured, and said why', !measure(where).legs.figma.tag.rows && /geometry not compared/.test(measure(where).legs.figma.tag.skipped));
+  // (as a reading taken before fingerprints is: measured with its rows, said stale, so --check holds it as before)
+  const lacking = measure(where).legs.figma.tag;
+  ok('a reading with no geometry is measured with its rows and stale, said why', Array.isArray(lacking.rows) && lacking.rows.length === 0 && /taken before geometry was compared, draw again/.test(lacking.stale), lacking);
+  ok('a reading with no geometry is never the same, whatever its other rows', !isSame(lacking) && isSame({ rows: [] }) && !isSame({ rows: [geo] }) && !isSame({ skipped: 'x' }));
+  ok('its count is its rows, as accepted before geometry was kept', counts({ figma: { tag: lacking } }).figma.tag === 0);
   fs.writeFileSync(path.join(home, 'round-trip', 'tag.roundtrip.json'), JSON.stringify({ rows: [], geometry: [], combinations: 1 }));
   fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf({ ...c, component: 'Old' }) } } }));
   ok('a reading of another contract is stale', /contract changed/.test(measure(where).legs.self.tag.stale));

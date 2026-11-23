@@ -275,13 +275,16 @@ export function measure(where, only = [], now = {}) {
       legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder), { ownSheet: false })), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
-    const st = back && stale('figma', folder, contract);
-    // (a reading whose geometry was not compared, taken before it was kept or with no stored figma.json, is no 0)
-    legs.figma[folder] = !back ? { skipped: 'not drawn and read back (eval.mjs --draw)' } : !back.geometry ? { skipped: 'geometry not compared (read before it was kept, or no stored figma.json): draw it again' }
-      : { rows: [...back.rows, ...back.geometry], combinations: back.combinations, ...(back.cut && { cut: back.cut }), ...(st && { stale: st }) };
+    // a reading whose geometry was not compared (taken before it was kept, or with no stored figma.json) is stale, as one
+    // taken before fingerprints is, and never the same (isSame) by the geometry it lacks
+    const st = back && (!back.geometry ? 'taken before geometry was compared, draw again' : stale('figma', folder, contract));
+    legs.figma[folder] = back ? { rows: [...back.rows, ...(back.geometry || [])], combinations: back.combinations, ...(back.cut && { cut: back.cut }), ...(st && { stale: st }), ...(!back.geometry && { lacks: 'geometry' }) } : { skipped: 'not drawn and read back (eval.mjs --draw)' };
   }
   return { home, legs };
 }
+
+/* A reading the same: measured, no row, and nothing it was not compared on (a Figma reading with no geometry). */
+export const isSame = (x) => !!x.rows && !x.rows.length && !x.lacks;
 
 /* The counts a measure stands at, and what rose or went against the accepted ones. */
 // (what is left to code is held too, as its own leg: a part that comes to be drawn only at a pointer state moves its rows
@@ -369,7 +372,7 @@ function report(label, { legs }, fields, byCause) {
     const m = Object.entries(cs).filter(([, x]) => x.rows), skipped = Object.entries(cs).filter(([, x]) => x.skipped);
     const rows = m.flatMap(([, x]) => x.rows);
     const all = Object.keys(cs).length, old = m.filter(([, x]) => x.stale), nc = m.reduce((a, [, x]) => a + Object.keys(causes(x.rows, x.combinations)).length, 0);
-    console.log(`${label} ${leg}: ${m.filter(([, x]) => !x.rows.length).length} of ${all} the same; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (drawn only at a pointer state, slot samples, or overrides a placed component has no prop for)` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
+    console.log(`${label} ${leg}: ${m.filter(([, x]) => isSame(x)).length} of ${all} the same; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (drawn only at a pointer state, slot samples, or overrides a placed component has no prop for)` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
     for (const [c, x] of m) if (x.cut) console.log(`  ${c}: ${x.cut} combination(s) past the first ${x.combinations} not compared`);
     if (byCause) for (const [c, k, n] of m.flatMap(([c, x]) => Object.entries(causes(x.rows, x.combinations)).map(([k, n]) => [c, k, n])).sort((a, b) => b[2] - a[2])) console.log(`  ${String(n).padStart(4)}  ${c}: ${k}`);
     if (!fields) continue;
@@ -645,7 +648,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const all = opt('--projects');
   if (all && flag('--mechanisms')) {
     // read only: each project's panel, its stored readings measured as the report measures them, grouped across all
-    const legs = (opt('--legs') || 'self').split(','), by = {}, stale = [];
+    const legs = (opt('--legs') || 'self').split(','), by = {}, stale = [], same = [];
     for (const p of all.split(',')) {
       const w = req('../snapshot/projects.cjs').layout(null, p);
       if (w.error) { console.error(w.error); process.exit(2); }
@@ -656,12 +659,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       const old = staleContracts(w.paths.components).filter((f) => panel.includes(f));
       if (old.length) console.log(`warning: ${p}: ${old.length} official contract(s) are not what their specs derive now: run node tools/component-contract/write.cjs ${w.paths.components}`);
       const m = measure(w, panel);
-      for (const l of legs) for (const [c, x] of Object.entries(m.legs[l] || {})) if (x.rows) { by[`${p}:${c}${legs.length > 1 ? ` (${l})` : ''}`] = x.rows; if (x.stale) stale.push(`${p}:${c}`); }
+      for (const l of legs) for (const [c, x] of Object.entries(m.legs[l] || {})) if (x.rows) { by[`${p}:${c}${legs.length > 1 ? ` (${l})` : ''}`] = x.rows; if (x.stale) stale.push(`${p}:${c}`); if (isSame(x)) same.push(`${p}:${c}`); }
     }
     console.log('(readings ranked as stored: a reading whose inputs moved since is not marked here; the report says which)');
     if (stale.length) console.log(`warning: ${stale.length} stale reading(s) ranked with the rest (${stale.slice(0, 3).join(', ')}${stale.length > 3 ? ', …' : ''}): read them again for a true ranking`);
     const all2 = Object.values(by);
-    console.log(`${all2.length} measured, ${all2.filter((r) => !r.length).length} the same, ${all2.reduce((a, r) => a + r.length, 0)} rows`);
+    console.log(`${all2.length} measured, ${same.length} the same, ${all2.reduce((a, r) => a + r.length, 0)} rows`);
     console.log('finishes components  rows  mechanism (finishes: components whose every row is this one)');
     for (const g of mechanisms(by).slice(0, +(opt('--top') || 25))) console.log(`${String(g.finishes).padStart(8)} ${String(g.components).padStart(10)} ${String(g.rows).padStart(5)}  ${g.key}\n            ${g.examples.join('\n            ')}`);
     // most components carry several mechanisms, so a single one finishes few: the components nearest the same, by how
