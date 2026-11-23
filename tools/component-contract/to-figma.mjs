@@ -736,7 +736,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // a text no style names, by its values (rules.mjs typeValue: `literal 14/20 semibold italic IBM Plex Sans`): its
   // family's face for that weight, the first of the face names fonts use for it that loads (a font names its own faces:
   // SemiBold, Semibold, Semi Bold); none that loads is the text's typography not drawn
-  const FACES = { thin: ['Thin', 'Hairline'], extralight: ['ExtraLight', 'Extra Light', 'UltraLight'], light: ['Light'], regular: ['Regular', 'Normal', 'Book', 'Roman'], medium: ['Medium'], semibold: ['SemiBold', 'Semibold', 'Semi Bold', 'DemiBold'], bold: ['Bold'], extrabold: ['ExtraBold', 'Extra Bold', 'UltraBold', 'Heavy'], black: ['Black', 'Heavy'] };
+  const FACES = { thin: ['Thin', 'Hairline'], extralight: ['ExtraLight', 'Extra Light', 'UltraLight'], light: ['Light'], regular: ['Regular', 'Normal', 'Book', 'Roman'], medium: ['Medium'], semibold: ['SemiBold', 'Semibold', 'Semi Bold', 'DemiBold'], bold: ['Bold'], extrabold: ['ExtraBold', 'Extra Bold', 'UltraBold'], black: ['Black', 'Heavy'], extrablack: ['ExtraBlack', 'Extra Black', 'UltraBlack'] };
   const literals = {}, parsed = new Set();
   for (const t of typos) {
     const m = /^literal (\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?) ([a-z]+)( italic)?(?: (.+))?$/.exec(t);
@@ -1080,7 +1080,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         else if (typeof sz === 'number' && flows(n)) { n[axis] = 'FIXED'; n.resize(k === 'width' ? px(sz) : n.width, k === 'height' ? px(sz) : n.height); }
         // an instance at another size than its component's (a 16 icon drawn at 12): resized, its layers following
         else if (typeof sz === 'number' && n.type === 'INSTANCE' && Math.abs(n[k] - sz) > 0.01) n.resize(k === 'width' ? px(sz) : n.width, k === 'height' ? px(sz) : n.height);
-        else if (typeof sz === 'string') { const v = await V(sz); const raw = (K.values || {})[sz]; if (v) n.setBoundVariable(k, v); else if (typeof raw === 'number') n.resize(k === 'width' ? raw : n.width, k === 'height' ? raw : n.height); }
+        else if (typeof sz === 'string') { const v = await V(sz); const raw = (K.values || {})[sz]; if (v) n.setBoundVariable(k, v); else if (typeof raw === 'number') { n.resize(k === 'width' ? raw : n.width, k === 'height' ? raw : n.height); if (n.type === 'TEXT' && e.autoResize) n.textAutoResize = e.autoResize.toUpperCase(); } }
       }
       // placed at a point in its parent (a thumb over its track): absolute in Figma's auto layout, kept at its order
       // among its siblings, which is what it paints over (a spinner under the content it sits behind)
