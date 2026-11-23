@@ -180,7 +180,9 @@ export function leftToCode(contract, mainOf = null, settings = undefined) {
   // a scale constraint the sheet cannot write, its parent having no size there to take a share of (to-code's
   // scaleUnwritten, said unread in the sheet): where it is pinned instead is code's to say
   const unscaled = scaleUnwritten(contract);
-  const unwritten = (at, row) => !!row && row.library === 'scale' && unscaled.has(at);
+  // and a radius the design holds only as mixed: a path's corners, each its own (the snapshot records four for a box's),
+  // which no CSS box's four say and the contract does not hold (css.mjs says it unread)
+  const unwritten = (at, row) => !!row && ((row.library === 'scale' && unscaled.has(at)) || (row.library === 'mixed' && /\.radius$/.test(at)));
   return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || unwritten(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });

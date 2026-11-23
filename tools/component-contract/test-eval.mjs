@@ -204,6 +204,10 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a scale constraint on an axis whose parent has no size to take a share of (it hugs) is code\'s to say; the axis that has one, and a parent sized in every combination, are not',
     left('frame/mark.constraints.vertical', { library: 'scale', drawn: 'min' }) && !left('frame/mark.constraints.horizontal', { library: 'scale', drawn: 'min' })
     && !left('frame/mark.constraints.vertical', { library: 'min', drawn: 'max' }) && !leftToCode(box(12))('frame/mark.constraints.vertical', { library: 'scale', drawn: 'min' })); }
+{ const c = { contract: 1, component: 'Pointer', props: {}, anatomy: { root: { kind: 'container' }, tip: { kind: 'graphic', parent: 'root', width: 15, height: 9, radius: 'mixed' }, box: { kind: 'container', parent: 'root', radius: 4 } }, variants: [] };
+  const left = leftToCode(c);
+  ok('a radius the design holds only as mixed (a path\'s corners, which no box\'s four say) is code\'s to say; a radius it holds is not',
+    left('tip.radius', { library: 'mixed', drawn: null }) && !left('box.radius', { library: 4, drawn: null })); }
 { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'stale-')), r = createRequire(import.meta.url);
   const { compact } = r('../snapshot/spec.cjs'), { derive } = r('./derive.cjs');
   const spec = compact({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'VERTICAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi' }] }] });

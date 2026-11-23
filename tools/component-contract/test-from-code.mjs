@@ -231,6 +231,13 @@ ok('a slot\'s stand-in is one word per prop, which no component draws', slotMark
   const e = zeroTokens({ layout: { direction: 'row' } }, { layout: { padding: { top: 'S/0', end: 'S/0', bottom: 'S/0', start: 'S/4' } } }, value);
   ok('a padding the code leaves unset takes the design\'s zero tokens; a side the design pads stays the code\'s 0', JSON.stringify(e.layout.padding) === '{"top":"S/0","end":"S/0","bottom":"S/0","start":0}');
 }
+{
+  // a token at the top of its collection has no group, so no slash in its name: still a token, by its value
+  const value = (t) => ({ None: 0, 'S/0': 0 })[t] ?? t;
+  const e = zeroTokens({ kind: 'graphic' }, { kind: 'graphic', radius: 'None' }, value);
+  const w = zeroTokens({ kind: 'graphic' }, { kind: 'graphic', radius: 'mixed' }, value);
+  ok('a zero corner the code leaves unset takes the design\'s token though its name has no group; a word that is no token is not taken', e.radius === 'None' && w.radius === undefined);
+}
 // a placed component's flag, as markup that writes every flag as a string carries it
 ok('a flag written "false" is off, and one written "true", bare or empty is on', !carries({ selected: 'false' }, 'selected', true) && carries({ selected: 'false' }, 'selected', false) && carries({ selected: 'true' }, 'selected', true) && carries({ selected: '' }, 'selected', true) && carries({ 'data-selected': 'true' }, 'selected', true) && carries({}, 'selected', false) && !carries({}, 'selected', true));
 ok('an arg by its own attribute, else by a data attribute holding its value, never the walk\'s own marks', carries({ size: 'sm' }, 'size', 'sm') && !carries({ size: 'md' }, 'size', 'sm') && carries({ 'data-hierarchy': 'primary' }, 'variant', 'primary') && !carries({ 'data-figma-id': 'primary' }, 'variant', 'primary'));

@@ -846,7 +846,10 @@ export function asShape(x, fa, hasChildren) {
 const seeThroughIn = (value, t) => { const v = String(value(t) ?? ''); return /rgba?\((?:[^,)]*,){3}\s*0(\.0+)?%?\s*\)$|\/\s*0(\.0+)?%?\s*\)$|^\s*transparent\s*$/i.test(v) || /^#[0-9a-f]{6}00$/i.test(v) || /^#[0-9a-f]{3}0$/i.test(v); };
 
 export function zeroTokens(e, fe, value, { fill = false } = {}) {
-  const val = (t) => (typeof t === 'string' && t.includes('/') ? value(t) : t);
+  // a token by its path, or one at the top of its collection (no group, so no slash: a radius named None) by having a
+  // value, as a word (mixed, hug) has none
+  const token = (t) => typeof t === 'string' && (t.includes('/') || ![undefined, t].includes(value(t)));
+  const val = (t) => (token(t) ? value(t) : t);
   const unbound = (v) => v == null || typeof v === 'number';
   const zeroish = (t) => { const v = val(t); return v === 0 || v === '0'; };
   const at = (o, path) => path.reduce((x, k) => (x == null ? x : x[k]), o);
@@ -859,7 +862,7 @@ export function zeroTokens(e, fe, value, { fill = false } = {}) {
       if (path[1] === 'padding' && !e.layout.padding) e.layout.padding = { top: 0, end: 0, bottom: 0, start: 0 };
       put(e, path, 0); continue;
     }
-    if (typeof want !== 'string' || !want.includes('/') || !unbound(have)) continue;
+    if (!token(want) || !unbound(have)) continue;
     // a padding the code leaves unset is 0 on every side: each side said, not only those the design binds
     if (path[1] === 'padding' && !e.layout.padding) e.layout.padding = { top: 0, end: 0, bottom: 0, start: 0 };
     if (have == null ? zeroish(want) : val(want) === have) put(e, path, want);
