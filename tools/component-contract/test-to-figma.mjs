@@ -150,6 +150,10 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const [r] = roundTrip(design, st([sel]), o).rows, [h] = roundTrip(design, st([sel, { when: { state: 'hover', selected: true }, set: { 't.content': '{p}' } }]), o).rows;
     ok('a row found only where a pointer state sets the words says so; one found where another state sets them (hover and selected) does not, nor any between Figma drawings',
       r && r.pointer === true && r.in === 1 && h && h.in === 2 && h.pointer === undefined && roundTrip(design, st([sel])).rows[0].pointer === undefined);
+    // (where a pointer state and another state that applies there both set the words, focus and selected, the markup holds
+    // them through the other state: a wrong reading there stays a difference)
+    const [fs] = roundTrip(design, st([sel, { when: { state: 'focus', selected: true }, set: { 't.content': '{p}' } }]), o).rows;
+    ok('a row found where a pointer state and another state both set the words is no pointer state\'s', fs && fs.in === 2 && fs.pointer === undefined);
     // (held to a reading, the pointer states are the design's: a reading may force disabled as a pseudo state too)
     const reading = st([{ when: { state: 'disabled' }, set: { 't.content': 'Off' } }], ['hover', 'focus', 'disabled']);
     ok('the pointer states are the given design\'s, never the reading\'s own list', roundTrip(reading, st([]), { ...o, pointerFrom: st([]) }).rows[0].pointer === undefined && roundTrip(reading, st([]), o).rows[0].pointer === true); }

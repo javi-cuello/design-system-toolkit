@@ -331,8 +331,8 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
   let adds = 0; // every row added, a repeat too (diff reads it to tell whether a component differed)
-  // (a row found only where a pointer state's variant, a hover's or a focus's, sets that field says so, `pointer`, where one
-  // side is a browser's reading: what such a variant draws no markup holds, eval's leftToCode)
+  // (a row found only where pointer states' variants, a hover's or a focus's, alone set that field says so, `pointer`, where
+  // one side is a browser's reading: what such a variant draws no markup holds, eval's leftToCode)
   let byPointer = () => false;
   const add = (at, a, b) => { adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0, pointer: true }; r.in++; r.pointer = r.pointer && byPointer(at); rows.set(k, r); };
   const diff = (a, b, at) => {
@@ -388,8 +388,10 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   const applies = (w, c) => Object.entries(w || {}).every(([k, v]) => String(c[k]) === String(v));
   for (const c of combos) {
     const theirs = inTheirs(c);
-    const setters = (library.variants || []).filter((v) => pointerAt(v.when) && applies(v.when, c));
-    byPointer = (at) => setters.some((v) => at in (v.set || {}));
+    // (every variant that sets the field there a pointer state's: where another that applies sets it too, a focus and a
+    // selected both saying Search, the markup holds the words through that one)
+    const atC = (library.variants || []).filter((v) => applies(v.when, c));
+    byPointer = (at) => { const ss = atC.filter((v) => at in (v.set || {})); return ss.length > 0 && ss.every((v) => pointerAt(v.when)); };
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
     const A = expand(library, { ...variantDefaults(library), ...c }), B = expand(drawn, { ...variantDefaults(drawn), ...theirs });
