@@ -658,6 +658,8 @@ delete globalThis.figma;
 {
   // in the library's own file a drawing's page is marked as the round trip's, never the library's own page of that name
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
+  ok('the walk\'s page-qualified name of a drawing on the round trip page is the component\'s own, that exact prefix only',
+    src.includes('if (comp && comp.name === `${pageName}/${p.name}`) comp.name = p.name;'));
   ok('a drawing in the library\'s own file goes on a page of its own, which every reader of the drawing asks for',
     drawingPage('Button', true) === 'Round trip · Button' && drawingPage('Button', false) === 'Button'
     && src.includes('before: BEFORE(pageName, token)') && src.includes('${JSON.stringify(pageName)});')

@@ -1744,6 +1744,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       const walk = fs.readFileSync(path.join(TOOLKIT, 'plugins/design-system-snapshot/code.js'), 'utf8');
       const live = setId && await exec(`const SCOPE = ${JSON.stringify([setId])};\n${walk}\nreturn __headless();`, into, 120000);
       const comp = live && (live.components || []).find((x) => x.id === setId);
+      // the snapshot walk names a set after its page where the two differ (Page/Set); in the library's own file the page
+      // is the round trip's (drawingPage), never the design's, so only that exact prefix is taken off
+      if (comp && comp.name === `${pageName}/${p.name}`) comp.name = p.name;
       if (comp) namedByKey(comp, keyedNames(where.paths.components));
       if (comp) {
         const { compact } = req('../snapshot/spec.cjs');
