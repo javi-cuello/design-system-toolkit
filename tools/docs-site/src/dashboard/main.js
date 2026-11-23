@@ -2,7 +2,7 @@
 import { announce, onRecord, pullRecord, step } from './record.js';
 import { DASH, ctx } from './context.js';
 import { build, componentFromHash, paintVerify, queueStatus, state } from './queue.js';
-import { loadMeasures, paintFiles, renderLibrary, renderQueuePane, renderRuns } from './measures.js';
+import { loadMeasures, paintFiles, renderLibrary, renderQueuePane, renderRuns, setFreshness } from './measures.js';
 import { renderChanged, renderChecks } from './scores.js';
 import { loadContext } from './owners.js';
 import { loadThread, setAsk } from './ask.js';
@@ -11,7 +11,6 @@ import { api, askClaude } from './api.js';
 // beside the named one: when the named import was removed, the bundler
 // dropped the whole module and the served page had no Audit handler (A91).
 import './audit.js';
-import { paintAuditMenu } from './audit.js';
 
 // Bootstrap. One read of the record, then render; a poll picks up changes a
 // session makes to the file while the tab is open.
@@ -46,9 +45,11 @@ import { paintAuditMenu } from './audit.js';
     // Never mid-run: the stages file against `ctx.libKey` as they go.
     if (ctx.running) e.preventDefault();
   });
-  addEventListener("hashchange", async () => {
-    const key = (/[?&]lib=([^&]+)/.exec(location.hash) || [])[1];
-    if (!key || key === ctx.libKey || !libs.some((l) => l.key === key) || ctx.running) return;
+  // The library in view becomes `key`: its record, its queue, its prints. The
+  // Audit's run over several files calls it too (ctx.switchLib), holding the
+  // run lock, so a tab click cannot move it mid-run.
+  ctx.switchLib = async (key) => {
+    if (!key || key === ctx.libKey || !libs.some((l) => l.key === key)) return;
     ctx.libKey = key;
     try { localStorage.setItem("dashLib", ctx.libKey); } catch (e) {}
     markLib();
@@ -58,6 +59,10 @@ import { paintAuditMenu } from './audit.js';
     ctx.lastMetrics = null; ctx.lastRuns = []; ctx.storedPrints = null; ctx.printsLoaded = false;
     paintFiles();                                // the marked row moves with it
     try { await pullRecord(); } catch (e) { queueStatus("Could not read that library's record — " + e.message, "warn"); }
+  };
+  addEventListener("hashchange", () => {
+    if (ctx.running) return;
+    ctx.switchLib((/[?&]lib=([^&]+)/.exec(location.hash) || [])[1]);
   });
 
   try { await pullRecord(); } catch (e) {
@@ -115,7 +120,6 @@ import { paintAuditMenu } from './audit.js';
     // the first look at a library has not seen anything change.
     const df = (fp && !fp.baseline && fp.diff) || {};
     ctx.lastMoved = (df.changed || []).concat(df.added || []);
-    paintAuditMenu();
     renderChanged(fp);
 
     renderRuns(ctx.lastRuns);
@@ -167,6 +171,13 @@ import { paintAuditMenu } from './audit.js';
   paintFiles(st);
   // A read-only copy has no service to ask: nothing to poll.
   if (DASH.dataset.readonly === "yes") return;
+  // Which files were saved in Figma after their last snapshot, every five
+  // minutes (the service asks Figma no more often than that).
+  poll(async () => {
+    const f = await api.freshness().catch(() => null);
+    if (f && f.ok) setFreshness(f.files);
+    return Boolean(f);
+  }, 300000);
   // Which files Figma has open, every 5 seconds.
   poll(async () => {
     const now = await api.status().catch(() => null);

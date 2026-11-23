@@ -1195,6 +1195,9 @@ async function answerNote(r, rules) {
 }
 
 async function verifyTicked(only) {
+  // Never beside an audit: both drive the plugin, and an audit over several
+  // files changes the library in view between them.
+  if (ctx.running) { queueStatus("Wait for the audit to finish, then re-check.", "warn"); return; }
   // `only` is one row's id, from its own button. Everything below is the same
   // path either way — one implementation of "does this still reproduce".
   // From a row's own button, the maintainer has named the row: re-checking

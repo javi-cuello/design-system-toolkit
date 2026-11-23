@@ -10,7 +10,7 @@ import { ctx } from './context.js';
 import { pullRecord, store } from './record.js';
 import { showCleared, state, toast } from './queue.js';
 import { recordScores } from './scores.js';
-import { endProgress, runProgress } from './measures.js';
+import { endProgress, paintFiles, pickedFiles, runProgress } from './measures.js';
 import { bucketFor, gatherCode, gatherTimeout, runStages, stageById, stagesFor } from '../../../figma-audit/stages.mjs';
 
 // One phrasing of an audit's outcome, used by both of its endings.
@@ -167,7 +167,6 @@ async function runSweep() {
       via: "sweep", readFile: result.fileName || null
     });
     ctx.lastMoved = diff ? diff.changed.concat(diff.added) : [];
-    paintAuditMenu();
     if (first) {
       say("Baseline recorded \u2014 " + Object.keys(result.sets).length +
           " sets. From now on this is what changes are measured against.", "ok");
@@ -1242,7 +1241,8 @@ async function otherStages(scan, rules, runId) {
   const stages = (n, word) => n + " stage" + (n === 1 ? " " : "s ") + word;
   say("Audited " + (ctx.libName || (mine && mine.name) || "this library") +
       (failed ? " — " + stages(failed, "failed") : skipped ? " — " + stages(skipped, "skipped") : "") +
-      (others.length ? ". " + others.join(" and ") + " not audited." : ""), tone);
+      // a run over several files says its own account at the end
+      (others.length && !batching ? ". " + others.join(" and ") + " not audited." : ""), tone);
   // Returned, not shown: the caller holds the components stage's result too
   // and decides the order the two go out in.
   // The headline of the LAST thing to happen in a run, so it says the run is
@@ -1272,12 +1272,11 @@ async function runAudit(targets) {
   const scope = targets || [];
   if (targets && !targets.length) { say("Nothing to audit.", "warn"); return; }
   runSpend = { calls: 0, input: 0, output: 0, usd: 0 };
-  auditing = true; auditBtn.disabled = true;
+  auditing = true;
   // The library may not change under a run, and a sweep may not run beside
   // one: both drive the same plugin, and the audit files against whichever
   // library `ctx.libKey` names at the moment each stage writes.
-  ctx.running = true; sweepBtn.disabled = true;
-  for (const b of document.querySelectorAll("[data-lib-choice]")) b.disabled = true;
+  lock();
   say(scope.length ? "Scanning " + plural(scope.length, "set") + "\u2026" : "Scanning the whole library\u2026", null, true);
   // The percentages below are the run's own shape — a scan, a judgement pass,
   // three more stages — not a measurement of time. They are stated as the
@@ -1427,48 +1426,88 @@ async function runAudit(targets) {
   // leaves through here, and a spinner left spinning on a run that stopped is
   // worse than none — it says the page is still working when it is not.
   } finally {
-    auditing = false; auditBtn.disabled = false;
-    ctx.running = false; sweepBtn.disabled = false;
-    for (const b of document.querySelectorAll("[data-lib-choice]")) b.disabled = false;
+    auditing = false;
+    // A run over several files holds the lock until its last file is done.
+    if (!batching) unlock();
     endProgress();
   }
 }
+function lock() {
+  auditBtn.disabled = true; ctx.running = true; sweepBtn.disabled = true;
+  for (const b of document.querySelectorAll("[data-lib-choice], .file-pick, [name=auditScope]")) b.disabled = true;
+}
+function unlock() {
+  auditBtn.disabled = false; ctx.running = false; sweepBtn.disabled = false;
+  for (const b of document.querySelectorAll("[data-lib-choice], [name=auditScope]")) b.disabled = false;
+  paintFiles();                                   // the file boxes: enabled where the file can run
+}
+
+/*
+ * THE Audit: every file ticked in the list, one after another, whole or only
+ * what changed since the last audit. Each file is audited as it can be:
+ *
+ *   a components file, open     the live scan and every stage (runAudit)
+ *   a components file, closed   skipped and said: its checks read the live file
+ *   a tokens or icons file, open    its stages, live (fresh)
+ *   a tokens or icons file, closed  its checks from its last stored snapshot
+ *
+ * The run lock is held from the first file to the last; between files the
+ * page switches to the next exactly as a tab click would, and back at the end.
+ */
+let batching = false;
+async function runFiles(files, scope) {
+  if (batching || auditing) return;
+  if (!files.length) { say("Tick a file to audit in the list above.", "warn"); return; }
+  if (!ctx.switchLib) { say("The page has not finished loading \u2014 try again in a moment.", "warn"); return; }
+  batching = true; lock();
+  const start = ctx.libKey, done = [];
+  try {
+    for (const f of files) {
+      const name = f.label;
+      if (f.kind === "components" && !f.open) { done.push(name + ": skipped \u2014 not open in Figma"); continue; }
+      if (!f.open) {
+        // Read the snapshot the service stores; nothing in Figma is touched.
+        runProgress(f.key, 50, "Checking its snapshot");
+        say("Checking " + name + " from its last snapshot\u2026", null, true);
+        const r = await api.auditStored(f.key).catch((e) => ({ ok: false, error: e.message }));
+        endProgress();
+        done.push(r && r.ok ? name + ": checked from its snapshot of " + String(r.snapshotAt).slice(0, 10) + " \u2014 " +
+                               r.filed.map((x) => x.target + " " + x.raised + " raised, " + x.added + " new, " + x.closed + " closed").join("; ")
+                            : name + ": failed \u2014 " + ((r && r.error) || "the service did not answer"));
+        continue;
+      }
+      await ctx.switchLib(f.key);
+      if (f.kind === "components") {
+        let targets = null;
+        if (scope === "changed" && ctx.storedPrints) {
+          // What moved since the last audit: the sets an earlier Check
+          // changes saw move, and whatever moves on a check made now.
+          const before = ctx.lastMoved.slice();
+          await runSweep();
+          targets = [...new Set(before.concat(ctx.lastMoved))];
+          if (!targets.length) { done.push(name + ": nothing changed since the last audit"); continue; }
+        }
+        await runAudit(targets);
+        done.push(name + ": audited live");
+      } else {
+        // No component sets: the components stage reads "does not apply";
+        // tokens and icons run on the live file's facts. Changed is whole here.
+        try {
+          await runOtherStages({ audited: [], measures: null }, await contextRules(), null, null);
+          done.push(name + ": audited live");
+        } catch (e) { done.push(name + ": failed \u2014 " + e.message); }
+      }
+    }
+  } finally {
+    batching = false;
+    if (start && ctx.libKey !== start) await ctx.switchLib(start).catch(() => {});
+    unlock(); endProgress();
+  }
+  if (files.length > 1 || !files[0].open) toast(done.some((l) => /failed|skipped/.test(l)) ? "Audit finished, with gaps" : "Audit finished",
+    done.some((l) => /failed/.test(l)) ? "warn" : "ok", { detail: done.join(" \u00b7 ") });
+}
 sweepBtn.addEventListener("click", runSweep);
-// After a Check changes that saw sets move, Audit asks: those sets, or the
-// whole library. Removed in 2.9.5 and restored on the maintainer's call in
-// 2.9.6; each run's cost is on History, which is how to tell whether the
-// smaller audit is worth having.
-const auditMenu = document.getElementById("auditMenu");
-const auditChangedBtn = document.getElementById("auditChangedBtn");
-const auditAllBtn = document.getElementById("auditAllBtn");
-export function paintAuditMenu() {
-  // The leading space keeps the button's name two words apart: "Audit
-  // changes 3 sets", not "Audit changes3".
-  const n = ctx.lastMoved.length;
-  document.getElementById("auditChangedCount").textContent = " " + (n ? plural(n, "set") : "nothing moved");
-  auditChangedBtn.disabled = ctx.lastMoved.length === 0;
-}
-// Escape returns focus to the control that opened it; without that a
-// keyboard user is dropped on <body>.
-function closeMenu(refocus) {
-  auditMenu.hidden = true;
-  auditBtn.setAttribute("aria-expanded", "false");
-  if (refocus) auditBtn.focus();
-}
 auditBtn.addEventListener("click", () => {
-  // Nothing moved: the button can only mean the whole library, so it acts.
-  if (!ctx.lastMoved.length) { runAudit(null); return; }
-  paintAuditMenu();
-  const open = auditMenu.hidden;
-  auditMenu.hidden = !open;
-  auditBtn.setAttribute("aria-expanded", String(open));
-  if (open) auditMenu.querySelector("button:not([disabled])").focus();
-});
-auditChangedBtn.addEventListener("click", () => { closeMenu(); runAudit(ctx.lastMoved.slice()); });
-auditAllBtn.addEventListener("click", () => { closeMenu(); runAudit(null); });
-document.addEventListener("click", (e) => {
-  if (!auditMenu.hidden && !auditMenu.contains(e.target) && e.target !== auditBtn) closeMenu();
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !auditMenu.hidden) closeMenu(true);
+  const scope = (document.querySelector("[name=auditScope]:checked") || {}).value || "full";
+  runFiles(pickedFiles(), scope);
 });

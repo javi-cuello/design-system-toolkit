@@ -20,4 +20,6 @@ export const ctx = {
    * button that reads it and the stage that sets it are different modules.
    */
   running: false,
+  // main.js sets it: make `key` the library in view (record, queue, prints).
+  switchLib: null,
 };

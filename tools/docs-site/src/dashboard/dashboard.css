@@ -34,9 +34,10 @@
   :scope[data-readonly="yes"] textarea.note:placeholder-shown { display: none; }
   .readonly-note { display: none; margin: 0; color: var(--fg-muted); font-size: var(--text-sm); }
   :scope[data-readonly="yes"] .readonly-note { display: block; }
-  /* A tokens or icon library: checked from the snapshot, nothing to run. */
-  /* Kept in the layout, so switching files never moves the page under you. */
-  :scope[data-scanned="no"] .head-actions { visibility: hidden; }
+  /* A tokens or icon library has no component fingerprints to check. The
+     Audit stays: it runs the ticked files, whichever tab is in view. Kept in
+     the layout, so switching files never moves the page under you. */
+  :scope[data-scanned="no"] #sweepBtn { visibility: hidden; }
   /* First run: a library recorded, nothing measured. Hide what has no content
      rather than rendering headings above empty space. */
   :scope[data-first-run="yes"] .measured-only,
@@ -60,23 +61,8 @@
      46 characters wide it wrapped into a centred paragraph floating above
      them, which is what a header full of prose looks like. */
   .head-actions .sweep-state { margin: 0; text-align: end; max-inline-size: 34ch; }
-  .audit-wrap { position: relative; }
-  .audit-menu {
-    position: absolute; inset-inline-end: 0; inset-block-start: calc(100% + 6px); z-index: 5; min-inline-size: 190px;
-    /* a menu floats over content: the overlay level (visual.md *Surfaces and elevation levels*) */
-    background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover); border: var(--stroke-1) solid var(--line-overlay); border-radius: var(--radius-8);
-    padding: var(--space-4); display: grid; gap: var(--space-4);
-    box-shadow: var(--shadow-overlay);
-  }
-  .audit-menu button {
-    font: inherit; font-size: var(--text-sm); text-align: start; inline-size: 100%;
-    background: none; border: 0; border-radius: var(--radius-4); color: var(--fg);
-    padding: var(--space-8) var(--space-12); cursor: pointer;
-    display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-12);
-  }
-  @media (hover: hover) { .audit-menu button:hover { background: var(--overlay-hover); } }
-  .audit-menu button[disabled] { color: var(--fg-soft); cursor: default; background: none; }
-  .audit-menu small { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-soft); }
+  .audit-scope { display: flex; gap: var(--space-12); border: 0; margin: 0; padding: 0; font-size: var(--text-sm); color: var(--fg-muted); }
+  .audit-scope label { display: inline-flex; gap: var(--space-4); align-items: center; cursor: pointer; }
   .measured {
     display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-8) var(--space-12);
     font-size: var(--text-sm); color: var(--fg-muted);
@@ -257,6 +243,10 @@
   .file[data-on="true"][data-current="yes"]:not([data-busy]) .file-dot::before { background: var(--good); }
   .file[data-on="true"][data-current="yes"]:not([data-busy]) .file-note { color: var(--good); }
   .file-what { color: var(--fg-muted); }
+  .file-pick { margin: 0; }
+  /* "Snapshot again": the file was saved in Figma after its last snapshot. */
+  .file-stale { color: var(--warn); font-weight: 600; }
+  .file-stale[hidden] { display: none; }
   /* The library the buttons act on. Weight rather than a second colour: the
      colour in this row already means "connected". */
   .file[data-current="yes"] .file-what { color: var(--fg); font-weight: 600; }

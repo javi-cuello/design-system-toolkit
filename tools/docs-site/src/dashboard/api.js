@@ -120,6 +120,14 @@ export const api = {
   // The tokens and icons checks (figma-foundations-audit library.mjs) on the
   // live file's facts, read by the snapshot plugin's facts mode: node code the
   // page cannot run, as the validator's engine is.
+  // A tokens or icons file's checks from its stored snapshot, for a file not open in Figma.
+  async auditStored(fileKey) {
+    if (readOnly()) return refuse();
+    const r = await fetch("/audit-stored", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fileKey }) });
+    return r.json();
+  },
+  // Per file: saved in Figma after its last snapshot (`stale`)?
+  async freshness() { if (readOnly()) return { ok: false }; const r = await fetch("/freshness", { cache: "no-store" }); return r.json(); },
   async libraryChecks(facts) {
     if (readOnly()) return refuse();
     const r = await fetch("/library-checks", { method: "POST", headers: { "content-type": "application/json" },

@@ -81,13 +81,16 @@ const files = dashboardStatic.libraries;
       <p class="sweep-state" id="sweepState" role="status" aria-live="polite"></p>
       <div class="action-row">
       <button class="button measured-only" id="sweepBtn" type="button">Check changes</button>
-      <div class="audit-wrap">
-        <button class="button" id="auditBtn" type="button" aria-expanded="false" aria-controls="auditMenu">Audit</button>
-        <div class="audit-menu" id="auditMenu" role="group" aria-label="Audit scope" hidden>
-          <button type="button" id="auditChangedBtn">Audit changes<small id="auditChangedCount"></small></button>
-          <button type="button" id="auditAllBtn">Audit all</button>
-        </div>
-      </div>
+      <!-- ONE Audit: it runs every file ticked in the list above, whole or
+           only what changed since the last audit. Radios, not a menu: the
+           choice is always in view, and the button never changes what it does
+           by tab. -->
+      <fieldset class="audit-scope">
+        <legend class="visually-hidden">What to audit in each ticked file</legend>
+        <label><input type="radio" name="auditScope" value="full" checked> Whole</label>
+        <label><input type="radio" name="auditScope" value="changed"> Changed since the last audit</label>
+      </fieldset>
+      <button class="button" id="auditBtn" type="button">Audit</button>
       </div>
     </div>
   </header>

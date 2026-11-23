@@ -217,12 +217,28 @@ let lastStatus = null;
 // What a run is doing, and to which file: { key, pct, label }. Null at rest.
 let running = null;
 
+// Which files the Audit runs: the reader's own ticks, once they have touched
+// one; until then every audited file that can run (open, or a tokens or icons
+// file, which falls back to its snapshot).
+const picks = new Map();
+// Per file key, from /freshness: { stale } when Figma saved it after its last snapshot.
+let fresh = {};
+export function setFreshness(files) { fresh = files || {}; paintFiles(); }
+const canRun = (r, open) => r.role === "audited" && (open || r.kind !== "components");
+export function pickedFiles() {
+  const files = (lastStatus && lastStatus.files) || [];
+  return fileRows().filter((r) => {
+    const open = files.some((f) => f.fileKey === r.key);
+    return canRun(r, open) && (picks.has(r.key) ? picks.get(r.key) : true);
+  }).map((r) => ({ key: r.key, kind: r.kind, open: files.some((f) => f.fileKey === r.key), label: r.label }));
+}
 const fileRows = () => {
   const libs = window.DASH_LIBS || [];
   const settings = (window.DASH_CONTEXT && window.DASH_CONTEXT.libraries) || {};
   const rows = libs.map((l) => ({
     key: l.key,
     label: (l.roles || []).includes("components") ? platformLabel(l.platform) : (l.roles || []).includes("tokens") ? "Tokens" : "Icons",
+    kind: (l.roles || []).includes("components") ? "components" : "library",
     name: (settings[l.key] || {}).name || l.name || null,
     role: "audited",
   }));
@@ -267,9 +283,15 @@ export function paintFiles(st) {
       li.className = "file";
       li.dataset.key = r.key;
       const dot = document.createElement("span"); dot.className = "file-dot";
-      const name = document.createElement("span"); name.className = "file-what";
+      // a checkbox, not a switch: it acts only when Audit is pressed (switch.md)
+      const pick = document.createElement("input"); pick.type = "checkbox"; pick.className = "file-pick";
+      pick.id = "pick-" + r.key;
+      pick.addEventListener("change", () => { picks.set(r.key, pick.checked); });
+      const name = document.createElement("label"); name.className = "file-what"; name.htmlFor = pick.id;
       const note = document.createElement("span"); note.className = "file-note";
-      li.append(dot, name, note);
+      const stale = document.createElement("span"); stale.className = "file-stale"; stale.hidden = true;
+      stale.textContent = "\u26a0 Snapshot again";
+      li.append(dot, pick, name, note, stale);
       host.appendChild(li);
     }
     host.dataset.keys = want;
@@ -295,14 +317,19 @@ export function paintFiles(st) {
       // static for its whole duration \u2014 which read as stalled, repeatedly,
       // and was the whole reason a progress figure was asked for.
       ? running.label + " \u00b7 " + Math.round(running.pct) + "% \u00b7 " + running.secs + "s"
-      : !open ? "not open in Figma"
-      // "connected" on three rows read as three files being audited, and the
-      // run checks ONE. A file's part in the run is not the same fact as its
-      // being open, and the list was only ever stating the second.
-      : r.key === ctx.libKey ? "audited by this run"
-      : r.role === "source" ? "read, not audited"
-      : "not in this run";
-    const [, nameEl, noteEl] = li.children;
+      : r.role === "source" ? (open ? "open \u00b7 read for its keys" : "not open \u00b7 read from its snapshot")
+      // What the Audit will read: the live file, its snapshot, or nothing.
+      : open ? "open \u00b7 audited live"
+      : r.kind === "components" ? "not open \u00b7 open the Desktop Bridge in it to audit it"
+      : "not open \u00b7 audits its last snapshot";
+    const [, pickEl, nameEl, noteEl, staleEl] = li.children;
+    const runnable = canRun(r, !!open);
+    pickEl.hidden = r.role !== "audited";
+    pickEl.disabled = !runnable || !!(ctx.running);
+    pickEl.checked = runnable && (picks.has(r.key) ? picks.get(r.key) : true);
+    const f = fresh[r.key];
+    staleEl.hidden = !(f && f.stale);
+    staleEl.title = f && f.stale ? "Saved in Figma at " + f.edited + ", after its last snapshot" + (f.snapped ? " (" + f.snapped + ")" : "") + ". Run the snapshot plugin in it again." : "";
     if (nameEl.textContent !== label) nameEl.textContent = label;
     if (noteEl.textContent !== note) noteEl.textContent = note;
   }
