@@ -82,7 +82,20 @@ function tokenFor(repo, config) {
   try { return require('node:fs').readFileSync(TOKEN_FILE(), 'utf8').trim() || null; } catch { return null; }
 }
 
-module.exports = { released, tokenFor };
+/**
+ * When the file was last saved in Figma: its newest version, autosaves
+ * included (Figma autosaves an edited file within minutes). The audit
+ * dashboard compares it with the file's last snapshot, so a file edited since
+ * is marked "snapshot again". Null for a file with no versions.
+ */
+async function lastEdit(fileKey, token, { timeout = TIMEOUT } = {}) {
+  const v = await get(`/v1/files/${fileKey}/versions?page_size=1`, token, timeout);
+  if (v.status === 404) throw new Error("Not found — a wrong key, or the token's Figma account cannot open the file");
+  if (!v.versions) throw new Error(v.err || v.message || 'no versions');
+  return v.versions[0] ? v.versions[0].created_at : null;
+}
+
+module.exports = { released, tokenFor, lastEdit };
 
 /* `node version.cjs <fileKey> published|named` — for a check that wants the
    live answer (FIGMA_TOKEN in the environment). */

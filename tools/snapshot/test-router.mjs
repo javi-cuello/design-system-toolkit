@@ -1869,3 +1869,19 @@ test('a layer\'s place among its parent\'s children (index) edits no screen and 
     assert.notEqual(moved.lines.find((l) => l.label === 'changed').text, 'none since the last snapshot', 'a change beside it is still one');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('lastEdit reads the newest version, autosaves included, and says why a file cannot be read', async () => {
+  const { createRequire } = await import('node:module');
+  const { lastEdit } = createRequire(import.meta.url)('./version.cjs');
+  const saved = globalThis.fetch;
+  try {
+    let asked = '';
+    globalThis.fetch = async (url) => { asked = String(url); return { json: async () => ({ versions: [{ created_at: '2026-11-23T18:00:00Z', label: null }] }) }; };
+    assert.equal(await lastEdit('K', 't'), '2026-11-23T18:00:00Z');
+    assert.match(asked, /\/v1\/files\/K\/versions\?page_size=1$/, 'one version is enough');
+    globalThis.fetch = async () => ({ json: async () => ({ versions: [] }) });
+    assert.equal(await lastEdit('K', 't'), null, 'no versions: no date, not an error');
+    globalThis.fetch = async () => ({ json: async () => ({ status: 404, err: 'Not found' }) });
+    await assert.rejects(lastEdit('K', 't'), /account cannot open the file/);
+  } finally { globalThis.fetch = saved; }
+});
