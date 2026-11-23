@@ -147,9 +147,9 @@ async function main() {
       if (c.share > worst) { worst = c.share; at = `${v.name}${c.sizes[0].join('x') !== c.sizes[1].join('x') ? ` (library ${c.sizes[0].join('×')}${lib.cut ? ', cut by its set' : ''}, drawn ${c.sizes[1].join('×')})` : ''}`; }
     }
     // beside the measure's rows for it (eval.mjs --draw's reading, the contract's and the geometry's), which this checks
-    let measured = null; try { const r = JSON.parse(fs.readFileSync(path.join(where.projectDir, 'round-trip', `${folder}.roundtrip.json`), 'utf8')); measured = r.rows.length + (r.geometry || []).length; } catch { /* not drawn and read back */ }
+    let measured = null; try { const r = JSON.parse(fs.readFileSync(path.join(where.projectDir, 'round-trip', `${folder}.roundtrip.json`), 'utf8')); if (r.geometry) measured = r.rows.length + r.geometry.length; } catch { /* not drawn and read back */ }
     rows.push([folder, worst, at, measured]);
-    console.log(`${folder}: ${(worst * 100).toFixed(1)}%${at ? ` — worst ${at}` : ''}${sized.length ? `; sized apart: ${sized.length}, e.g. ${sized[0]}` : ''}; ${measured == null ? 'no reading' : `${measured} row(s)`}`);
+    console.log(`${folder}: ${(worst * 100).toFixed(1)}%${at ? ` — worst ${at}` : ''}${sized.length ? `; sized apart: ${sized.length}, e.g. ${sized[0]}` : ''}; ${measured == null ? 'no reading with geometry' : `${measured} row(s)`}`);
   }
   const bad = rows.filter(([, s]) => s == null || s > 0.01);
   console.log(`${label} looks: ${rows.length - bad.length} of ${rows.length} within 1%; images of the rest in ${path.relative(process.cwd(), out)}`);

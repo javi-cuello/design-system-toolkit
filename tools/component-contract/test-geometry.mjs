@@ -2,7 +2,7 @@
 // geometry.mjs: the drawn set's reading held to the library's stored one, per variant and per layer path. A made-up
 // reading with one change seeded per kind gives exactly its row; identical readings give none; a reading is read the
 // same twice; the walk's rounding is no difference, one step past it is.
-import { geometry, TOLERANCE } from './geometry.mjs';
+import { geometry, TOLERANCE, knownOf } from './geometry.mjs';
 import { mechanisms } from './eval.mjs';
 
 let n = 0, failed = 0;
@@ -78,6 +78,21 @@ ok('(e) words are compared exactly', geometry(library, text).length === 1, geome
 // the rows rank as eval's mechanisms() ranks the Figma leg's: by field and each side's shape
 const ranked = mechanisms({ Button: geometry(library, noisy) }).map((g) => g.key).sort();
 ok('rows rank by field in mechanisms()', JSON.stringify(ranked) === JSON.stringify(['element | el:FRAME → none', 'layout | word → word', 'x | num → num']), ranked);
+
+// (review 2026-11-23) the walk leaves a default out (opacity 1, no rotation, no clipping), so a field no library layer
+// sets is recorded nowhere and the absence rule alone hid it: a snapshot taken by the walk's own release counts every field
+const plain = { name: 'Tag', variants: [{ name: 'Tag', type: 'COMPONENT', w: 40, h: 20, children: [{ name: 'Label', type: 'TEXT', w: 30, h: 16 }] }] };
+const odd = copy(plain); Object.assign(odd.variants[0].children[0], { opacity: 0.5, clips: true, absolute: true, rotation: 90 });
+const tokensAt = (v) => ({ _meta: { plugin: v } });
+ok('fields no library layer sets are rows when the snapshot is the walk\'s own release', geometry(plain, odd, { known: knownOf(tokensAt('0.84.0'), { tag: plain }, '0.84.0') }).length === 4, geometry(plain, odd, { known: knownOf(tokensAt('0.84.0'), { tag: plain }, '0.84.0') }));
+ok('an older release\'s snapshot keeps the absence rule', geometry(plain, odd, { known: knownOf(tokensAt('0.83.0'), { tag: plain }, '0.84.0') }).length === 0);
+ok('a snapshot that names no release keeps the absence rule', geometry(plain, odd, { known: knownOf({}, { tag: plain }, '0.84.0') }).length === 0);
+// a single component's boolean flips are named after its raw name, the drawing after the contract's: matched by axes
+const single = { name: '_Badge', variants: [{ name: '_Badge', type: 'COMPONENT', w: 20, h: 20 }, { name: '_Badge, Dot=false', type: 'COMPONENT', w: 16, h: 20 }] };
+const singleDrawn = { name: 'Badge', variants: [{ name: 'Badge', type: 'COMPONENT', w: 20, h: 20 }, { name: 'Badge, Dot=false', type: 'COMPONENT', w: 16, h: 20 }] };
+ok('a single component\'s flipped variants match by their axes, whatever it is named', geometry(single, singleDrawn).length === 0, geometry(single, singleDrawn));
+const singleOff = copy(singleDrawn); singleOff.variants[1].w = 18;
+ok('and are compared', JSON.stringify(geometry(single, singleOff)) === JSON.stringify([{ at: 'Dot=false.w', library: 16, drawn: 18 }]), geometry(single, singleOff));
 
 console.log(failed ? `${failed} of ${n} failed` : `${n}/${n} passed`);
 process.exit(failed ? 1 : 0);

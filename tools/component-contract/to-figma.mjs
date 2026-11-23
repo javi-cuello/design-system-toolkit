@@ -1886,9 +1886,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
         const rt = roundTrip(held, now, { mains: req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract)) });
         // and the reading itself, before derive drops what it does not keep, held to the stored one layer by layer: the
         // geometry part of the Figma leg (geometry.mjs), against the fields the library's snapshot records anywhere
-        const { recordedFields, readSpecs } = req('../snapshot/store.cjs');
-        const known = recordedFields(Object.fromEntries(readSpecs(where.paths.components, { compact: true }).map((x) => [x.folder, x.spec])));
-        const geo = snap && (await import('./geometry.mjs')).geometry(snap, walkedAs(comp, snap), { known });
+        const { geometry, knownOf } = await import('./geometry.mjs');
+        const specs = Object.fromEntries(req('../snapshot/store.cjs').readSpecs(where.paths.components, { compact: true }).map((x) => [x.folder, x.spec]));
+        const geo = snap && geometry(snap, walkedAs(comp, snap), { known: knownOf(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), specs, (walk.match(/const VERSION = '([^']+)'/) || [])[1]) });
         back = rt.rows.length + (geo ? geo.length : 0);
         const rtOut = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`);
         const body = JSON.stringify({ component: p.name, combinations: rt.combinations, ...(rt.invalid && { invalid: rt.invalid }), ...(rt.cut && { cut: rt.cut }), rows: rt.rows, ...(geo && { geometry: geo }) }, null, 2) + '\n';

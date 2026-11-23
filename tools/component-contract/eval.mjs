@@ -276,7 +276,9 @@ export function measure(where, only = [], now = {}) {
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     const st = back && stale('figma', folder, contract);
-    legs.figma[folder] = back ? { rows: [...back.rows, ...(back.geometry || [])], combinations: back.combinations, ...(back.cut && { cut: back.cut }), ...(st && { stale: st }) } : { skipped: 'not drawn and read back (eval.mjs --draw)' };
+    // (a reading whose geometry was not compared, taken before it was kept or with no stored figma.json, is no 0)
+    legs.figma[folder] = !back ? { skipped: 'not drawn and read back (eval.mjs --draw)' } : !back.geometry ? { skipped: 'geometry not compared (read before it was kept, or no stored figma.json): draw it again' }
+      : { rows: [...back.rows, ...back.geometry], combinations: back.combinations, ...(back.cut && { cut: back.cut }), ...(st && { stale: st }) };
   }
   return { home, legs };
 }

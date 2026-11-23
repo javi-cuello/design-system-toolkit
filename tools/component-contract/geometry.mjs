@@ -19,6 +19,7 @@ import { near } from '../parity/schema.mjs';
 
 const req = createRequire(import.meta.url);
 const { resolve, layerPaths } = req('../snapshot/spec.cjs');
+const { knownFor } = req('../snapshot/store.cjs');
 
 /* The walk keeps two decimals (code.js round()): one value read twice can land a step apart across a rounding edge. */
 export const TOLERANCE = 0.01;
@@ -26,7 +27,9 @@ export const TOLERANCE = 0.01;
 const IDS = new Set(['id', 'key', 'instanceOfId', 'instanceOfKey', 'index', 'name', 'children']);
 // (a row's place is read by `/` and `.`: a name holding them keeps one segment)
 const seg = (s) => String(s).replace(/[/.]/g, '_');
-const axes = (name) => String(name).split(',').map((s) => s.trim()).filter(Boolean).sort().join(', ');
+// (a single component's own name leads its flipped variants', `_Badge, Dot=false`, and the drawing's is the contract's:
+// only the axes count)
+const axes = (name) => String(name).split(',').map((s) => s.trim()).filter((s) => s.includes('=')).sort().join(', ');
 
 const same = (a, b, tol) => {
   if (typeof a === 'number' && typeof b === 'number') return near(a, b, tol + 1e-9);
@@ -34,8 +37,13 @@ const same = (a, b, tol) => {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 };
 
+/* The fields to compare, as the store's grade picks them (knownFor): every one where the library's snapshot was taken by
+   the walk's own release, since the walk leaves a default out and a field no library layer sets is recorded nowhere;
+   else only those it records anywhere. tokens: the snapshot's tokens file (its _meta), specs: { folder: spec }. */
+export const knownOf = (tokens, specs, walkVersion) => knownFor({ tokens, specs }, { tokens: { _meta: { plugin: walkVersion } } });
+
 /* library, drawn: specs as figma.json holds them (compact or full). known: the fields the library's snapshot recorded
-   anywhere (store.cjs recordedFields), so one an older plugin never recorded is not a row; null, every field. */
+   anywhere (knownOf), so one an older plugin never recorded is not a row; null, every field. */
 export function geometry(library, drawn, { known = null, tolerance = TOLERANCE } = {}) {
   const rows = [];
   const row = (at, l, d) => rows.push({ at, library: l ?? null, drawn: d ?? null });
@@ -56,7 +64,7 @@ export function geometry(library, drawn, { known = null, tolerance = TOLERANCE }
   const one = lv.length === 1 && dv.length === 1;
   const met = new Set();
   for (const a of lv) {
-    const vk = seg(axes(a.name)), b = one ? dv[0] : byAxes.get(axes(a.name));
+    const vk = seg(axes(a.name) || a.name), b = one ? dv[0] : byAxes.get(axes(a.name));
     if (!b) { row(vk, { kind: 'variant' }, null); continue; }
     met.add(b);
     fields(a, b, vk);
@@ -64,7 +72,7 @@ export function geometry(library, drawn, { known = null, tolerance = TOLERANCE }
     for (const [p, x] of pa) { const y = pb.get(p); if (!y) row(at(vk, p), { kind: x.type }, null); else fields(x, y, at(vk, p)); }
     for (const [p, y] of pb) if (!pa.has(p)) row(at(vk, p), null, { kind: y.type });
   }
-  for (const b of dv) if (!met.has(b)) row(seg(axes(b.name)), null, { kind: 'variant' });
+  for (const b of dv) if (!met.has(b)) row(seg(axes(b.name) || b.name), null, { kind: 'variant' });
   // (an older snapshot never recorded the set's size: nothing to hold the drawing to)
   if (library.set && !same(library.set, drawn.set, tolerance)) row(`${seg(library.name)}.set`, library.set, drawn.set);
   return rows;
