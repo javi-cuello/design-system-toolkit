@@ -898,7 +898,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (words !== null && n.characters !== words && n.fontName !== figma.mixed) { await tried(`font of ${n.name}`, () => figma.loadFontAsync(n.fontName)); n.characters = words; }
     } else if (e.kind === 'graphic' && n.type === 'VECTOR') await paintIf(n, n.strokes.length ? 'strokes' : 'fills', e.background, true);
     else if (e.kind !== 'text') await paintIf(n, 'fills', e.background);
-    if (e.kind !== 'text') await lookOver(n, e);
+    // (a reading from code states what it read, not Figma's defaults: only its stroke's colour, as before)
+    if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
     const flowing = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
     // (a layer inside an instance: never drawn in a wrapper by to-code.mjs)
@@ -1035,8 +1036,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       else if (e.kind === 'graphic' && e.shape === 'ellipse') { n = figma.createEllipse(); if (e.arc) n.arcData = { startingAngle: (e.arc.start * Math.PI) / 180, endingAngle: (e.arc.end * Math.PI) / 180, innerRadius: e.arc.inner || 0 }; }
       else if (e.kind === 'graphic' && e.shape === 'rectangle') n = figma.createRectangle();
       // any other graphic that holds no part (a glyph's path, a line a rotation stands up) is a vector too, never a frame,
-      // which reads back as a container: its box as its path, or a line where it has a length one way only
-      else if (e.kind === 'graphic' && !ids.some((x) => variant.anatomy[x].parent === id)) {
+      // which reads back as a container: its box as its path, or a line where it has a length one way only. A Figma
+      // contract's only, with no icon or corners: a code reading's mark or an icon with no container stays a box
+      else if (e.kind === 'graphic' && !P.fromCode && !e.asset && e.radius == null && !e.full && !ids.some((x) => variant.anatomy[x].parent === id)) {
         const w = px(e.width), h = px(e.height);
         n = figma.createVector(); n.strokes = [];
         n.vectorPaths = [{ windingRule: w && h ? 'NONZERO' : 'NONE', data: w && h ? `M 0 0 L ${w} 0 L ${w} ${h} L 0 ${h} Z` : h ? `M 0 0 L 0 ${h}` : `M 0 0 L ${w || 24} 0` }];
