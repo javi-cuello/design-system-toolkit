@@ -963,6 +963,10 @@ export const SPEC_KEYS = {
   modes: why('elsewhere', 'the variable modes a layer sets (snapshot 0.75.0 on: `5. Responsive type: Mobile`): no parity rule reads them; ../component-contract/derive.cjs carries them into the contract, as the attribute code sets the mode by'),
   index: why('carried', 'a layer\'s place among all its parent\'s children, hidden ones counted (snapshot 0.83.0 on), for the component contract: which of two layers two booleans show comes first; the order drawn is the children\'s'),
   place: why('carried', 'a variant\'s place in its component set (snapshot 0.84.0 on), for the round trip\'s Figma leg, which draws and holds the set\'s arrangement; a page in code has no set to place it in'),
+  outline: why('carried', 'a digest of a vector\'s paths (snapshot 0.85.0 on), for the round trip\'s geometry: a dot drawn back square is a difference; the box is measured by w and h'),
+  paths: why('carried', 'a vector\'s own paths, outside an instance and up to 1000 characters (snapshot 0.86.0 on), for the component contract, which draws them; parity measures the box'),
+  windingRule: why('carried', 'a path\'s fill rule, inside paths'),
+  data: why('carried', 'a path\'s outline in SVG path syntax, inside paths'),
   firstOnTop: why('carried', 'which way an auto-layout stacks its overlapping children, for the component contract; paint order is not a measured property'),
 };
 

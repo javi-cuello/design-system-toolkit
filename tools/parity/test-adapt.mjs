@@ -521,4 +521,7 @@ ok('a runtime layer keeps its box and loses its state-dependent paint', (() => {
   return Object.keys(g).sort().join() === 'height,width';
 })());
 
+// snapshot 0.85.0 and 0.86.0: a vector's outline and paths are declared, so gate 10 holds a new snapshot's vectors
+ok('a vector\'s outline, paths and each path\'s fill rule and data are declared, carried for the component contract', ['outline', 'paths', 'windingRule', 'data'].every((k) => SPEC_KEYS[k] && SPEC_KEYS[k].why && SPEC_KEYS[k].why.because === 'carried'));
+
 console.log(`\n${n} passed`);
