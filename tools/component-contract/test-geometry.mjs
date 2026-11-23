@@ -4,6 +4,7 @@
 // same twice; the walk's rounding is no difference, one step past it is.
 import { geometry, TOLERANCE, knownOf } from './geometry.mjs';
 import { mechanisms } from './eval.mjs';
+import { createRequire } from 'node:module';
 
 let n = 0, failed = 0;
 const ok = (what, cond, got) => { n++; if (!cond) { failed++; console.log(`FAIL ${what}${got === undefined ? '' : `: ${JSON.stringify(got)}`}`); } };
@@ -49,6 +50,12 @@ seeded('the set\'s size', (d) => { d.set = { w: 260, h: 100 }; }, { at: 'Button.
   ok('a set shifted whole, its size the same, is a place row per variant', geometry(library, shifted).map((r) => r.at).join() === 'Size=md, State=rest.place,Size=md, State=hover.place', geometry(library, shifted));
   const lacks = copy(library); lacks.variants.shift();
   ok('a variant the drawing lacks is its row alone, the others\' places unmoved', geometry(library, lacks).map((r) => r.at).join() === 'Size=md, State=rest', geometry(library, lacks)); }
+seeded('a variant only the drawing has', (d) => { d.variants.push({ ...copy(d.variants[0]), name: 'Size=lg, State=rest' }); }, { at: 'Size=lg, State=rest', library: null, drawn: { kind: 'variant' } });
+seeded('a layer only the drawing has', (d) => { d.variants[1].children.push({ name: 'Extra', type: 'FRAME', w: 4, h: 4 }); }, { at: 'Size=md, State=hover/Extra', library: null, drawn: { kind: 'FRAME' } });
+// (a stored spec is compact: its default is a variant too, not counted among its deltas)
+const { compact } = createRequire(import.meta.url)('../snapshot/spec.cjs');
+const grown = copy(library); grown.variants.push({ ...copy(grown.variants[0]), name: 'Size=lg, State=rest' });
+ok('a stored compact spec\'s default is matched; an extra drawn variant is still a row', JSON.stringify(geometry(compact(copy(library)), grown)) === JSON.stringify([{ at: 'Size=lg, State=rest', library: null, drawn: { kind: 'variant' } }]), geometry(compact(copy(library)), grown));
 seeded('a variant the drawing lacks', (d) => { d.variants.pop(); }, { at: 'Size=md, State=hover', library: { kind: 'variant' }, drawn: null });
 
 // a vector's outline (snapshot 0.85.0): a dot drawn back square, at its size, is a row
