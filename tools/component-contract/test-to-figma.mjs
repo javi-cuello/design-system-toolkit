@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { drawingPage, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets } from './to-figma.mjs';
+import { drawingPage, sizingAxes, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets } from './to-figma.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -186,6 +186,11 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
   ok('each axis names its collections, a published variable of each, and its modes by the contract\'s spelling',
     m.theme.map((x) => x.key).join() === 'k1,k2' && m.theme[0].names.dark === 'Dark' && m['5-responsive-type'][0].names.mobile === 'Mobile' && m['5-responsive-type'][0].key === 'k3' && Object.keys(m).length === 2);
 }
+
+// a part turned a quarter is sized on the parent's axes in Figma: its own width by the vertical sizing, as derive reads it
+ok('a part turned a quarter sets its own width by Figma\'s vertical sizing and its height by the horizontal; any other by its own axes',
+  JSON.stringify(sizingAxes({ rotation: 90 })) === '[["width","layoutSizingVertical"],["height","layoutSizingHorizontal"]]' && sizingAxes({ rotation: -90 })[0][1] === 'layoutSizingVertical'
+  && sizingAxes({ rotation: 45 })[0][1] === 'layoutSizingHorizontal' && sizingAxes({})[0][1] === 'layoutSizingHorizontal' && /const sizingAxes = function sizingAxes/.test(pluginCode(chipContract, {})));
 
 // the run's guards, run against a stand-in for Figma's file: its pages, and the plugin data each keeps
 const data = () => { const d = {}; return { getPluginData: (k) => d[k] || '', setPluginData: (k, v) => { d[k] = v; } }; };

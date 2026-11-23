@@ -324,6 +324,21 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     ids([{ id: 'a' }, { id: 'abs', stack: { out: true, z: -1 } }]) === 'abs,a'
     && ids([{ id: 'abs', stack: { out: true } }, { id: 'a', stack: { lifted: true } }]) === 'abs,a' && ids([{ id: 'a', stack: { lifted: true } }, { id: 'abs', stack: { out: true } }]) === 'a,abs');
 }
+// a part turned a quarter sits in a wrapper (to-code turnedParts, [data-turn]): its parent is the wrapper's, and where the
+// wrapper is a box (the part turned) the wrapper is what the parent lays out, its order the wrapper's; where it is none
+// (display: contents) the part is laid out as if the wrapper were not there
+{
+  const { cssOrderOf, turnOf } = await import('./from-code.mjs');
+  const order = new Function(`return ${cssOrderOf.toString()}`)(), turn = new Function(`return ${turnOf.toString()}`)();
+  const style = (n) => n.style || n;
+  const row = { display: 'flex', getAttribute: () => 'layer', hasAttribute: () => false };
+  const box = (display, o) => ({ style: { display, order: o }, parentElement: row, hasAttribute: (a) => a === 'data-turn', getAttribute: () => null });
+  const part = (w, o = '0') => { const n = { style: { display: 'block', order: o }, parentElement: w, hasAttribute: () => false }; w.firstElementChild = n; return n; };
+  const shown = box('block', '4'), gone = box('contents', '0'), on = part(shown), off = part(gone, '5');
+  ok('a turned part is laid out by its wrapper, and an unturned one as if the wrapper were not there: its parent and its order read so',
+    turn(on, style).up === row && turn(on, style).flow === shown && turn(on, style).turned === true && turn(off, style).up === row && turn(off, style).flow === off && turn(off, style).turned === false
+    && turn({ style: {}, parentElement: row, hasAttribute: () => false }, style).up === row && order(on, 'layer', style) === 4 && order(off, 'layer', style) === 5);
+}
 
 // a layer the mapping places inside a placed component takes the design's name there, never the placed component's own
 // name for the element it lands on (Atlassian's date picker: Select's chevron, <ChevronDownIcon>, carries the design's

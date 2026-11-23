@@ -47,6 +47,8 @@ const boxAt = (n) => {
   const near = (axis, size) => (n.visual && n.visual[axis] != null ? n.visual[axis] : n[axis] - (n[size] || 0));
   return { x: n.flip === 'x' ? near('x', 'w') : n.x, y: n.flip === 'y' ? near('y', 'h') : n.y };
 };
+// a turn of a quarter, either way (Figma's degrees, -180 to 180): the one turn whose box the parent lays out with its axes swapped
+const QUARTER = (r) => typeof r === 'number' && Math.abs(Math.abs(r) - 90) < 0.01;
 const TEXT_ALIGN = { LEFT: 'start', CENTER: 'center', RIGHT: 'end', JUSTIFIED: 'justify' };
 
 /* One layer, said without Figma's words. A bound value is its token's name;
@@ -75,7 +77,11 @@ function element(n, parent, known, up = null, axes = []) {
     if (n.firstOnTop) e.layout.firstOnTop = true;
   }
   if (n.sizing) {
-    const [w, h] = String(n.sizing).split('/');
+    // a node turned a quarter keeps its own width and height (n.w, n.h: 169 by 16) while its parent lays out its turned
+    // box (the snapshot's `visual`, 16 by 169), so its sizing words name the parent's axes: each said of its own axis,
+    // the horizontal one of its height and the vertical one of its width (a slider's track turned upright fills its
+    // column down, its own width). Any other turn is said as it stands
+    const [w, h] = (QUARTER(n.rotation) ? String(n.sizing).split('/').reverse() : String(n.sizing).split('/'));
     e.width = sizeFromFigma(w) || (b.w ?? n.w);
     e.height = sizeFromFigma(h) || (b.h ?? n.h);
     // a component that fills its set: the size the set gives it, a canvas fact, as `invalid` is (a row 420 wide)

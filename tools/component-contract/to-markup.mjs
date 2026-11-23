@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
+import { namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf } from './layers.mjs';
 
@@ -372,7 +372,16 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   };
   const busy = props.find((x) => x.busy && x.busy.length);
   const busyCode = busy && busy.busy.map((v) => `${ref(busy.name)} === ${lang.str(v)}`).join(' || ');
+  // a part turned a quarter in some combination (to-code turnedParts) is drawn inside its wrapper, the box its turn is
+  // laid out by, in every combination: where it is not turned so, the sheet makes the wrapper no box (display: contents)
+  const turned = turnedParts(c);
   const node = (part, holds, fill = false) => {
+    const got = drawnNode(part, holds, fill);
+    if (!got || fill || !turned.has(part.id)) return got;
+    const wrap = (x) => (!x || x.comment ? x : x.node && 'when' in x ? { ...x, node: wrap(x.node) } : { tag: control || inline ? 'span' : 'div', attrs: [['data-turn', { lit: partSeg(c, part.id) }]], children: [x] });
+    return Array.isArray(got) ? got.map(wrap) : wrap(got);
+  };
+  const drawnNode = (part, holds, fill = false) => {
     const { id, e } = part;
     // (`fill`: what this component puts in a placed component's slot, drawn as that slot's content)
     if (part.ring || ((part.inside || part.slotted) && !fill)) return null;

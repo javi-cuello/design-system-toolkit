@@ -236,6 +236,13 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   { const held = derive({ name: 'Held', props: {}, variants: [{ name: 'Held', type: 'COMPONENT', layout: 'VERTICAL', children: [
       { name: 'Skel', type: 'INSTANCE', instanceOf: 'Skeleton', w: 40, h: 8, children: [{ name: 'Bar', type: 'RECTANGLE', x: 0, y: 0, w: 40, h: 8, constraints: 'STRETCH/STRETCH', fills: ['C/x'] }] }] }] }).anatomy;
     ok('a layer inside an instance keeps no constraints, as no position: an instance cannot override them (figma-fact: no-nested-position-override)', !!held['skel/bar'] && held['skel/bar'].constraints === undefined); }
+  // a quarter turn: Figma keeps the node's own width and height (169 by 16) and lays out its turned box, 16 by 169, so its
+  // sizing words name the parent's axes (FIXED across a column, FILL down it): said in its own axes, its width fills
+  { const turned = (rotation, sizing) => derive({ name: 'Q', props: {}, variants: [{ name: 'Q', type: 'COMPONENT', layout: 'VERTICAL', sizing: 'FIXED/FIXED', w: 44, h: 354, children: [
+      { name: 'Track', type: 'FRAME', layout: 'HORIZONTAL', w: 169, h: 16, rotation, sizing }] }] }).anatomy.track;
+    const q = turned(90, 'FIXED/FILL'), back = turned(-90, 'FIXED/FILL'), slant = turned(45, 'FIXED/FILL'), flat = turned(0, 'FILL/FIXED');
+    ok('a part turned a quarter says its own width and height, its sizing words moved off the parent\'s axes onto its own; any other turn as it is',
+      q.width === 'fill' && q.height === 16 && q.rotation === 90 && back.width === 'fill' && back.height === 16 && slant.width === 169 && slant.height === 'fill' && flat.width === 'fill' && flat.height === 16); }
   ok('a corner bound to a token is said by it at 0, and an opacity by its token', A1.root.radius === 'R/0' && A1.root.opacity === 'O/half');
   ok('a stroke a side, each bound side by its token and the others by their width, drawn on its centre and taking room', JSON.stringify(A1.box.border.width) === '["S/1",0,"S/1",0]' && A1.box.border.align === 'center' && A1.box.border.inLayout === true);
   ok('a rectangle is one, turned as it is, following its parent as it does, and a weight bound with no stroke painted is no stroke (nothing draws it)', A1['free/ring'].constraints.horizontal === 'stretch' && A1['free/ring'].constraints.vertical === 'center' && A1['free/ring'].shape === 'rectangle' && A1['free/ring'].rotation === 45 && A1['free/ring'].border === undefined);

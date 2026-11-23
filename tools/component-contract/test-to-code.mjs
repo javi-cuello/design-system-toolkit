@@ -131,6 +131,21 @@ const chip = { contract: 1, component: 'Chip',
     { when: { state: 'hover' }, set: { 'root.background': 'C/hover' } }, { when: { disabled: true }, set: { 'root.opacity': 'State/Disabled/opacity' } },
     { when: { selected: true, state: 'hover' }, set: { 'root.background': 'C/on-hover' } }],
   invalid: [{ disabled: true, state: 'hover' }] };
+// a part turned a quarter (a slider's track stood upright): Figma lays out its turned box and keeps its own width and
+// height, so code wraps it in a box that takes its place in the parent's flow, sized on the parent's axes, and draws the
+// part inside at its own size, centred and turned (a transform lays out nothing); unturned, the wrapper is no box at all
+const upright = { contract: 1, component: 'Upright', props: { orientation: { type: 'enum', values: ['horizontal', 'vertical'], default: 'horizontal', figma: 'Orientation' } },
+  anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 200, height: 16 }, track: { kind: 'container', parent: 'root', order: 0, width: 'fill', height: 16, background: 'C/x' } },
+  variants: [{ when: { orientation: 'vertical' }, set: { 'root.layout': { direction: 'column' }, 'root.width': 16, 'root.height': 200, 'track.rotation': 90 } }] };
+{ const t = toCss(upright, 'upright', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  const rule = (sel) => { const i = t.indexOf(`${sel} {`); return i < 0 ? '' : t.slice(i, t.indexOf('}', i)); };
+  const base = rule('.ds-upright > [data-turn="track"]'), wrap = rule('.ds-upright:where([data-orientation="vertical"]) > [data-turn="track"]'), part = rule('.ds-upright:where([data-orientation="vertical"]) > [data-turn="track"] > .ds-upright__track');
+  ok('a part turned a quarter is drawn in a wrapper that takes its place, sized on the parent\'s axes (its own width down a column), the part inside at its own size, centred and turned; unturned the wrapper is no box',
+    /display: contents/.test(base) && /display: block/.test(wrap) && /container-type: size/.test(wrap) && /flex: 1 1 0/.test(wrap) && /inline-size: 1rem/.test(wrap)
+    && /position: absolute/.test(part) && /inline-size: 100cqh/.test(part) && /rotate: -90deg/.test(part) && /translate: -50% -50%/.test(part)
+    && selfCheck(upright).length === 0);
+  const slant = { ...upright, variants: [{ when: { orientation: 'vertical' }, set: { 'track.rotation': 45 } }] };
+  ok('any other turn is turned in place, as before: no wrapper', !/data-turn/.test(toCss(slant, 'upright'))); }
 const css = toCss(chip, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
 ok('every combination the grid draws is rebuilt by the cascade', selfCheck(chip).length === 0);
 ok('a value is an attribute, a state its pseudo-class, disabled the control\'s own or the attribute where there is none (code-standard rule 9)',

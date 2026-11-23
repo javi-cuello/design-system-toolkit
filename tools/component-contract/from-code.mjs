@@ -108,8 +108,20 @@ export function opensPlaced(inside, id, mapped) {
    (`ds-icon-button > button`, its `through`), so the order read is that control's. `style` is getComputedStyle. Runs in
    the page (passed as source); tested by test-from-code.mjs. */
 export function cssOrderOf(n, parent, style) {
-  const s = style(n), box = s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n, o = +style(box).order;
-  return o && parent != null && n.parentElement && n.parentElement.getAttribute('data-contract-id') === parent && /flex|grid/.test(style(n.parentElement).display) ? o : null;
+  // (a part in a turn's wrapper, turnOf: laid out by the wrapper where it is a box, else as if it were not there)
+  const w = n.parentElement && n.parentElement.hasAttribute && n.parentElement.hasAttribute('data-turn') ? n.parentElement : null;
+  const up = w ? w.parentElement : n.parentElement, flow = w && style(w).display !== 'contents' ? w : n;
+  const s = style(flow), box = s.display === 'contents' && flow.firstElementChild ? flow.firstElementChild : flow, o = +style(box).order;
+  return o && parent != null && up && up.getAttribute('data-contract-id') === parent && /flex|grid/.test(style(up).display) ? o : null;
+}
+/* A part turned a quarter is drawn in a wrapper (to-code.mjs turnedParts, `[data-turn]`): its parent is the wrapper's
+   (`up`); where the wrapper is a box, the part is turned and the wrapper is what that parent lays out (`flow`, sized on
+   the parent's axes), the part placed inside it at its own size; where the wrapper is none (display: contents) the part
+   is laid out itself. `style` is getComputedStyle. Runs in the page (passed as source); tested by test-from-code.mjs. */
+export function turnOf(n, style) {
+  const w = n.parentElement && n.parentElement.hasAttribute && n.parentElement.hasAttribute('data-turn') ? n.parentElement : null;
+  const turned = !!w && style(w).display !== 'contents';
+  return { wrap: w, up: w ? w.parentElement : n.parentElement, flow: turned ? w : n, turned };
 }
 
 /* What decides where a part paints among its siblings, as the browser stacks them (CSS 2 Appendix E): `out` where it is
@@ -1413,7 +1425,7 @@ async function governedSource(project, name) {
           for (const x of document.getAnimations()) if (x instanceof CSSTransition) x.finish();
           // and React keeps the elements, with the ids the walk stamped on them for the last read (chip's
           // label read as its own child), so they go, as a reload would take them
-          for (const n of document.querySelectorAll('[data-figma-id], [data-figma-text], [data-contract-id], [data-contract-up]')) for (const k of ['data-figma-id', 'data-figma-text', 'data-contract-id', 'data-contract-up']) n.removeAttribute(k);
+          for (const n of document.querySelectorAll('[data-figma-id], [data-figma-text], [data-contract-id], [data-contract-up], [data-contract-turn]')) for (const k of ['data-figma-id', 'data-figma-text', 'data-contract-id', 'data-contract-up', 'data-contract-turn']) n.removeAttribute(k);
           // and focus goes, as the reload's settle takes it
           if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
           return true;
@@ -1898,7 +1910,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)();
@@ -1920,7 +1932,7 @@ async function main() {
         // where code placed a box over its parent, and, where it sits at its parent's centre on an axis (inset 50% and a
         // translate back, a spinner over a button), that it is centred there, as Figma's constraint says it
         const placed = (n) => {
-          const pr = n.parentElement.getBoundingClientRect(), r = n.getBoundingClientRect();
+          const pr = turnOf(n, getComputedStyle).up.getBoundingClientRect(), r = n.getBoundingClientRect();
           // (a box as wide as its parent fills it on that axis, which says nothing of centring)
           const mid = (a, b, c, d) => Math.abs((a + b / 2) - (c + d / 2)) < 0.75 && Math.abs(b - d) >= 0.75;
           const h = mid(r.left, r.width, pr.left, pr.width), v = mid(r.top, r.height, pr.top, pr.height);
@@ -1935,8 +1947,11 @@ async function main() {
           const [a, b, c, d] = m[1].split(',').map(Number);
           return a * d - b * c < 0 && Math.abs(b) < 1e-6 && Math.abs(c) < 1e-6 ? (a < 0 ? 'x' : 'y') : null;
         };
+        const turnOf = new Function(`return ${turnSrc}`)();
         const cssOrderOf = new Function(`return ${cssOrderSrc}`)(), stackOf = new Function(`return ${stackSrc}`)(), liftsAlone = new Function(`return ${liftsSrc}`)(), placedBy = (n, parent) => { const o = cssOrderOf(n, parent, getComputedStyle), st = parent != null ? stackOf(n, getComputedStyle, liftsAlone) : {}; return { ...(o != null && { cssOrder: o }), ...(Object.keys(st).length && { stack: st }) }; };
         const walk = (n, parent, order, inside = false) => {
+          // a turn's wrapper is no part: what it holds is the part, in its place among its siblings
+          if (n.hasAttribute('data-turn')) { if (n.firstElementChild) walk(n.firstElementChild, parent, order, inside); return; }
           const s = getComputedStyle(n);
           // not drawn: hidden, or a native control MUI keeps for its behaviour at no opacity (a switch's input); a layer
           // the mapping names at no opacity is drawn and see-through (a loading button's label keeps its width)
@@ -1982,8 +1997,11 @@ async function main() {
           // a slot holding only words: its text styles kept aside, for where the design draws a text there
           if (filled && !n.children.length) e.asText = { color: s.color, type: typeOf(n, s), textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign };
           n.setAttribute('data-contract-id', id);
+          // a part turned a quarter: its wrapper, which its parent lays out, read for its sizes on the parent's axes (turnOf)
+          const tn = turnOf(n, getComputedStyle);
+          if (tn.turned) { tn.wrap.setAttribute('data-contract-turn', id); }
           // and its box's parent, for its own declarations read beside its parent's (a size is the two together)
-          const up = (x) => { if (n.parentElement) n.parentElement.setAttribute('data-contract-up', `${n.parentElement.getAttribute('data-contract-up') || ''} ${x}`.trim()); };
+          const up = (x) => { const P = turnOf(n, getComputedStyle).up; if (P) P.setAttribute('data-contract-up', `${P.getAttribute('data-contract-up') || ''} ${x}`.trim()); };
           up(id);
           // another component of the library, drawn inside this one (a chip's avatar): an instance of it, its
           // inside the other component's business; named by the library's own class (MuiAvatar-root)
@@ -1998,7 +2016,7 @@ async function main() {
             // (its opacity as a box's: kept below only where this component's own rule writes it, INSTANCE_CSS)
             out.push({ id, kind: 'instance', parent, order, ...placedBy(n, parent), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(figmaName && { name: figmaName }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
-              ...(s.position === 'absolute' && placed(n)),
+              ...(s.position === 'absolute' && !tn.turned && placed(n)),
               // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
               // (and a control inside it that is its own, not another instance's, saying it is disabled: an icon button
               // whose host wraps the <button> that carries it)
@@ -2042,7 +2060,7 @@ async function main() {
             // a box no flex lays out, or one with nothing to hug, has a size of its own (a switch's thumb, an avatar's image)
             if (kind === 'container' && (!n.children.length || !/flex/.test(s.display))) { e.width = px(s.width); e.height = px(s.height); }
             // placed by code at a point inside its parent (a thumb over its track): where, so a drawing can place it so
-            if (parent != null && s.position === 'absolute') Object.assign(e, placed(n));
+            if (parent != null && s.position === 'absolute' && !tn.turned) Object.assign(e, placed(n));
           }
           // a box's own styling as the contract says it: its layout, fill, corners, stroke, clipping and shadow, read off
           // its computed style (a container's, a text's, a slot's; and a placed instance's own, what it sets over its
@@ -2133,7 +2151,7 @@ async function main() {
         const siblingOrder = new Function(`return ${siblingOrderSrc}`)();
         for (const xs of Object.values(byParent)) siblingOrder(xs).forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -2184,10 +2202,12 @@ async function main() {
       // where no rule sets display, the box's own (a span is inline, a div block): the computed value, which for
       // display is what was written or the element's default, never a measurement
       const unsized = [], pulledBy = {};
-      const shown = await call(L.tab, () => Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => [n.getAttribute('data-contract-id'), [getComputedStyle(n).display, n.parentElement ? getComputedStyle(n.parentElement).display : 'block']])));
+      const shown = await call(L.tab, (src) => { const turnOf = new Function(`return ${src}`)(); return Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const P = turnOf(n, getComputedStyle).up; return [n.getAttribute('data-contract-id'), [getComputedStyle(n).display, P ? getComputedStyle(P).display : 'block']]; })); }, turnOf.toString());
       // where each part sits in its parent, all four edges measured from the parent's box (as Figma measures x and y),
       // for an offset written as a token and for a point placed() never measured
-      const insets = await call(L.tab, (src) => { const { restore } = new Function(`return ${src}`)()(document.documentElement); try { return Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const r = n.getBoundingClientRect(), p = n.parentElement.getBoundingClientRect(), q = (v) => +v.toFixed(2); return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }]; })); } finally { restore(); } }, unturn.toString());
+      const insets = await call(L.tab, ([src, tsrc]) => { const { restore } = new Function(`return ${src}`)()(document.documentElement), turnOf = new Function(`return ${tsrc}`)(); try { return Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const r = n.getBoundingClientRect(), p = turnOf(n, getComputedStyle).up.getBoundingClientRect(), q = (v) => +v.toFixed(2); return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }]; })); } finally { restore(); } }, [unturn.toString(), turnOf.toString()]);
+      // the parts turned a quarter (turnOf): placed by their wrapper, which the parent lays out, never by a place of their own
+      const turnedIds = new Set(await call(L.tab, () => [...document.querySelectorAll('[data-contract-turn]')].map((n) => n.getAttribute('data-contract-turn'))));
       // (a part with no place of its own inside a placed component, unplacedIn: the walk's place for it is left out too)
       const layoutOf = (u) => (u.kind === 'instance' ? (((mainOf(u.component, u.key) || {}).anatomy || {}).root || {}).layout : u.layout);
       for (const e of raw) if (e.parent != null && unplacedIn(raw, e, layoutOf)) { delete e.absolute; if (e.position === 'absolute') delete e.position; }
@@ -2196,7 +2216,7 @@ async function main() {
         // placed out of the flow: its constraints and far offsets as written, through the table; its point as Figma
         // records x and y, where it sits
         // (the root is placed by whatever shows it, never by Figma: its size is read below)
-        if (e.id in shown && e.parent != null) {
+        if (e.id in shown && e.parent != null && !turnedIds.has(e.id)) {
           const pos = {};
           for (const p of PLACE_CSS) pos[p] = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, p, { raw: true, cache: styles });
           const place = placeFromCss(pos);
@@ -2257,11 +2277,15 @@ async function main() {
         // a host that draws no box of its own (display: contents, a placed button's custom element around its <button>,
         // code-standard rule 8): its size is the control's, the box in its parent's flow, as to-code writes it there
         const contents = !loose && shown[e.id][0] === 'contents';
-        const ownSel = boxSelector(e.id, contents ? 'contents' : null);
+        // (turned a quarter: its wrapper is the box its parent lays out, its width the part's own height and its height
+        // the part's own width, as to-code writes it)
+        const turnedHere = turnedIds.has(e.id);
+        const ownSel = turnedHere ? `[data-contract-turn="${e.id}"]` : boxSelector(e.id, contents ? 'contents' : null);
         for (const p of SIZING_CSS) {
           own[p] = loose ? null : await authoredWidth(L.tab, ownSel, p, { raw: true, cache: styles });
           up[p] = await authoredWidth(L.tab, loose ? `[data-contract-id="${e.parent}"]` : `[data-contract-up~="${e.id}"]`, p, { raw: true, cache: styles });
         }
+        if (own.display == null && turnedHere) own.display = 'block';
         if (own.display == null && !loose) own.display = contents ? await call(L.tab, (q) => { const n = document.querySelector(q); return n ? getComputedStyle(n).display : null; }, ownSel) : shown[e.id][0];
         if (up.display == null) up.display = loose ? (shown[e.parent] || [])[0] : shown[e.id][1];
         // the second child in the flow, whose start margin says a gap below 0 (rules.mjs: CSS has none)
@@ -2283,6 +2307,7 @@ async function main() {
         }
         for (const [axis, i] of [['width', 0], ['height', 1]]) {
           const v = sizeFromCss(axis, own, up, { root: e.parent == null }).value;
+          if (turnedHere) { const k = axis === 'width' ? 'height' : 'width', j = 1 - i; e[k] = v === 'hug' || v === 'fill' ? v : lengthOf(v) ?? (e.box ? e.box[j] : e[k]); continue; }
           e[axis] = v === 'hug' || v === 'fill' ? v : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
           // a root sized by the room it is read in (the room's own width, which from-code set): what it renders at, never
           // the room's number, so a max-width, a margin or a min-width of its own still shows

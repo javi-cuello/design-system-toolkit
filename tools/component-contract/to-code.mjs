@@ -539,6 +539,34 @@ function hostOf(a, id) {
 
 /* Every layer any combination records, as chain names it: the base's, else the first variant's that adds it (findAdded). */
 const allOf = (c) => Object.assign({}, ...[...(c.variants || [])].reverse().map((v) => v.add || {}), c.anatomy);
+/* A part turned a quarter, either way, in some combination, in its parent's flow, that this component draws itself (not a
+   placed component's inside, a slot's sample, a numbered copy or a field's text): drawn inside a wrapper, `[data-turn]`.
+   Figma keeps a turned node's own width and height and lays out its turned box (derive.cjs QUARTER: its sizing words
+   said of its own axes); a transform lays out nothing (css-transforms-1 §3), so the wrapper takes the part's place in
+   the flow, on the parent's axes, as a size container (css-contain-3 §4.1), and the part inside is drawn at its own
+   size (cqw, cqh: css-contain-3 §6), centred and turned. Where a combination does not turn it a quarter, or one of its
+   own sizes hugs (a box sized by what it holds cannot be a size container's), the wrapper is display: contents and the
+   part turns in place as before. Read back by from-code.mjs (the wrapper's sizes, the part's own box). */
+export const quarter = (r) => typeof r === 'number' && Math.abs(Math.abs(r) - 90) < 0.01;
+const TURNED = new WeakMap();
+export function turnedParts(c) {
+  if (TURNED.has(c)) return TURNED.get(c);
+  const all = allOf(c), ids = new Set(), out = new Set();
+  for (const a of [c.anatomy || {}, ...(c.variants || []).map((v) => v.add || {})]) for (const [id, e] of Object.entries(a)) if (e && quarter(e.rotation)) ids.add(id);
+  for (const v of c.variants || []) for (const [k, x] of Object.entries(v.set || {})) { const m = /^(.+)\.rotation$/.exec(k); if (m && quarter(x)) ids.add(m[1]); }
+  const placedAt = (id) => [c.anatomy || {}, ...(c.variants || []).map((v) => v.add || {})].some((a) => a[id] && (a[id].position === 'absolute' || a[id].absolute))
+    || (c.variants || []).some((v) => (v.set || {})[`${id}.position`] === 'absolute' || (v.set || {})[`${id}.absolute`]);
+  const entry = entryOf(c);
+  for (const id of ids) {
+    if (id === 'root' || !all[id] || placedAt(id) || copyOf(c, id) || Object.keys(all).some((k) => k !== id && copyOf(c, k) === id)) continue;
+    if (entry && [entry.value, entry.placeholder, entry.input].includes(id)) continue;
+    let held = false;
+    for (let p = all[id].parent; p && all[p]; p = all[p].parent) if (all[p].kind === 'instance' || all[p].kind === 'slot') { held = true; break; }
+    if (!held) out.add(id);
+  }
+  TURNED.set(c, out);
+  return out;
+}
 
 /* What a text bound to a text property of `contract` shows: that property's default (css.mjs `words`, which says its
    white space from it); null for any other layer. */
@@ -681,6 +709,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
   // a box that pulls in any combination says its pull-back in every one (0 where it does not), so a variant back to a
   // gap of 0 or more unsets it rather than keeping the base's
   const pulling = everPulls(c);
+  const turned = turnedParts(c);
   const firstInFlow = (pid) => Object.entries(a).filter(([, x]) => x.parent === pid && !(x.position === 'absolute' || x.absolute)).sort((x, y) => (x[1].order ?? 0) - (y[1].order ?? 0))[0]?.[0];
   // a placed component's insides are its own stylesheet's (code-standard rule 5): this one stops at the instance
   const inside = (id) => { for (let p = a[id].parent; p; p = a[p] && a[p].parent) if (a[p] && (a[p].kind === 'instance' || (a[a[p].parent] || {}).kind === 'slot')) return true; return false; };
@@ -826,6 +855,21 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: (e.kind === 'instance' && !unheld) || slotted ? [] : unheld ? unread.filter((f) => !/^(key|component|with|swappedBy)\b/.test(f)) : unread,
       // (the axes a scale constraint went unwritten on: eval.mjs leftToCode leaves what code draws there to code)
       ...(unshared.length && !slotted && { unshared }) };
+    // a part turned a quarter (turnedParts): its wrapper takes its place in the flow on the parent's axes, its own width
+    // the wrapper's height and its own height the wrapper's width, and the part is drawn inside at its own size, centred
+    // (its turn, css.mjs's rotate, as it is); where this combination does not turn it so, the wrapper is no box
+    if (!slotted && turned.has(id)) {
+      const own = out[id].decls, sized = (v) => v === 'fill' || typeof v === 'number' || (typeof v === 'string' && v !== 'hug');
+      if (quarter(e.rotation) && parent && parent.layout && parent.layout.direction && sized(e.width) && sized(e.height)) {
+        const ctx = { root: false, holds: false, row: (parent.layout || {}).direction !== 'column', wrap: !!parent.layout.wrap, anchors: false, box: null, pull, words: null };
+        const flow = declarations({ width: e.height, height: e.width }, ctx, tokenNames).decls;
+        const length = (v) => declarations({ width: v }, { row: false }, tokenNames).decls.find(([p]) => p === 'inline-size');
+        out[`${id}::turn`] = { decls: new Map([['display', { v: 'block' }], ['position', { v: 'relative' }], ['container-type', { v: 'size' }], ...flow.map(([p, v, note]) => [p, { v, note }]), ...(own.has('order') ? [['order', own.get('order')]] : [])]), unread: [] };
+        for (const p of [...own.keys()]) if (/^(flex|align-self|order|(min-|max-)?(inline|block)-size|margin.*)$/.test(p)) own.delete(p);
+        const w = e.width === 'fill' ? ['100cqh'] : length(e.width).slice(1), h = e.height === 'fill' ? ['100cqw'] : length(e.height).slice(1);
+        for (const [p, v, note] of [['position', 'absolute'], ['inset-inline-start', '50%'], ['inset-block-start', '50%'], ['translate', '-50% -50%'], ['inline-size', ...w], ['block-size', ...h]]) own.set(p, { v, ...(note && { note }) });
+      } else out[`${id}::turn`] = { decls: new Map([['display', { v: 'contents' }]]), unread: [] };
+    }
     if (slotted) { /* the sample's: above */ } else if (empty.length) {
       const only = declarations(Object.fromEntries(empty.map((f) => [f, a[id][f]])), { root: false, holds: false, row: true, anchors: false, box: null, pull: null }, tokenNames);
       out[`${slotted ? `${e.parent}/*` : id}::empty`] = { decls: new Map(only.decls.map(([p, v, note]) => [p, { v, note }])), unread: [] };
@@ -1026,7 +1070,7 @@ export function selfCheck(c, rules, mains, t = HOUSE) {
 
 // a part's state written after its id (`::after`); `::empty`, the part while it holds no element (Figma's empty frame,
 // which keeps its size there: a text alone in it does not count, a limit named in the README)
-const pseudoSel = (p) => (!p ? '' : p === 'empty' ? ':not(:has(*))' : `::${p}`);
+const pseudoSel = (p) => (!p || p === 'turn' ? '' : p === 'empty' ? ':not(:has(*))' : `::${p}`);
 /* A part's selector: the root, then each part on its way down, by child combinators (code-standard rule 5). */
 function chain(c, n, id, rootCond, given = null, library = {}) {
   const mains = given || (() => null);
@@ -1042,8 +1086,11 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
   // the markup is given, never `mains`, a lookup of its own that reads names case-blind and holds none two contracts
   // share; with no library given, none is held, as the markup draws every placed instance then)
   const markOnly = (e) => e.kind === 'instance' && !heldBy(library || {}, e);
-  const seg = (s) => { const e = c.anatomy[s] || findAdded(c, s) || {};
-    return s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + (markOnly(e) ? '' : through(n, e.kind === 'instance' && e.component, heldIn(c, s, mains))); };
+  // (a part drawn in a wrapper, turnedParts, is reached through it; `::turn` is the wrapper itself)
+  const turned = turnedParts(c), wrapper = (s) => `[data-turn="${partSeg(c, s)}"]`;
+  const seg = (s, i) => { const e = c.anatomy[s] || findAdded(c, s) || {};
+    if (pseudo === 'turn' && i === segs.length - 1) return wrapper(s);
+    return (turned.has(s) ? `${wrapper(s)} > ` : '') + (s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + (markOnly(e) ? '' : through(n, e.kind === 'instance' && e.component, heldIn(c, s, mains)))); };
   // a part inside a placed component is that component's own: named as its own sheet names it, under the instance
   const hostAt = segs.findIndex((s) => (c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance');
   const host = hostAt >= 0 && hostAt < segs.length - 1 && segs[hostAt], m = host && (() => { const he = c.anatomy[host] || findAdded(c, host); return mains(he.component, he.key); })();

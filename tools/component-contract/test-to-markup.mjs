@@ -60,6 +60,17 @@ ok('a field drawn with a Placeholder and no Value is a gap for its input', /fron
 const twice = { component: 'Meter', props: { status: { type: 'enum', values: ['idle', 'busy', 'done'], default: 'idle', figma: 'Status' } }, anatomy: { root: { kind: 'container' } }, variants: [{ when: { status: 'busy' }, add: { bar: { kind: 'graphic', parent: 'root' } } }, { when: { status: 'done' }, add: { bar: { kind: 'graphic', parent: 'root' } } }] };
 ok('a part two values draw is drawn at either, the either-or bracketed before the && that draws it', /\{\(\(status === "busy"\) \|\| \(status === "done"\)\) && \(/.test(toReact(twice, 'meter', { naming: CLASS, library: {} })) && /\(\(status === "busy"\) \|\| \(status === "done"\)\) && h\(/.test(toElement(twice, 'meter', { naming: ELEMENT, library: {} })));
 const lead = { component: 'Chip', props: { lead: { type: 'boolean', default: false, figma: 'Lead' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', order: 0, content: 'Chip' } }, variants: [{ when: { lead: true }, add: { mark: { kind: 'graphic', parent: 'root', order: 0 } }, set: { 'label.order': 1 } }] };
+// a part turned a quarter in some combination is drawn inside a wrapper (to-code turnedParts: the box its turn is laid out
+// by), in every combination, so one markup serves both; any other turn is drawn as it stands
+{ const upright = { contract: 1, component: 'Upright', props: { orientation: { type: 'enum', values: ['horizontal', 'vertical'], default: 'horizontal', figma: 'Orientation' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, track: { kind: 'container', parent: 'root', order: 0, width: 'fill', height: 16 }, end: { kind: 'text', parent: 'root', order: 1, content: 'x' } },
+    variants: [{ when: { orientation: 'vertical' }, set: { 'root.layout': { direction: 'column' }, 'track.rotation': -90 } }] };
+  const el = toElement(upright, 'upright', { naming: ELEMENT, library: {} }), react = toReact(upright, 'upright', { naming: CLASS, library: {} });
+  if (process.env.SHOW) console.log(el, react);
+  ok('a part turned a quarter is drawn inside its wrapper, in markup of every kind; a part not turned is not wrapped',
+    /"data-turn": "track"/.test(el) && /data-turn="track"/.test(react) && (el.match(/data-turn/g) || []).length === 1
+    && el.indexOf('"data-turn": "track"') < el.indexOf('"data-part": "track"')
+    && !/data-turn/.test(toElement({ ...upright, variants: [{ when: { orientation: 'vertical' }, set: { 'track.rotation': 30 } }] }, 'upright', { naming: ELEMENT, library: {} }))); }
 ok('a part a variant adds before the rest is drawn there, not after them', /"data-part": "mark"[^]*"data-part": "label"/.test(toElement(lead, 'chip', { naming: ELEMENT, library: {} })));
 const pill = { component: 'Pill', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon'] }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon'] } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/plus', swappedBy: 'icon20' } }, variants: [{ when: { size: 'xs' }, set: { 'icon.swappedBy': 'icon16' } }], folder: 'pill' };
 const holder = { component: 'Row', props: {}, anatomy: { root: { kind: 'container' }, pill: { kind: 'instance', parent: 'root', component: 'Pill', with: { 'Icon (20)': 'plus', 'Icon (16)': 'x', Size: 'xs' } } }, variants: [], folder: 'row' };

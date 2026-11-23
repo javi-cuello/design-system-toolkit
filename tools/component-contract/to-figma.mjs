@@ -496,6 +496,14 @@ export function figmaSide(contract) {
   return { ...contract, props, variants, ...(invalid !== undefined && { invalid }) };
 }
 
+/* Which of Figma's sizing properties each of a part's own sizes is set by: its width the horizontal one, its height the
+   vertical; turned a quarter, the other way round, as Figma lays out the turned box and says its sizing on the parent's
+   axes (derive.cjs QUARTER reads them so). Run in the drawing (passed as source). */
+export function sizingAxes(e) {
+  const q = typeof e.rotation === 'number' && Math.abs(Math.abs(e.rotation) - 90) < 0.01;
+  return q ? [['width', 'layoutSizingVertical'], ['height', 'layoutSizingHorizontal']] : [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']];
+}
+
 export function plan(contract, { axisOrder = [] } = {}) {
   contract = figmaSide(contract);
   const props = contract.props;
@@ -809,7 +817,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
     const flowing = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
-    const sizes = [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']].map(([k, axis]) => [axis, SIZE[e[k]]])
+    const sizes = sizingAxes(e).map(([k, axis]) => [axis, SIZE[e[k]]])
       .filter(([axis, want]) => want && axis in n && n[axis] !== want && (want === 'FILL' ? flowing(n.parent) : flowing(n) || n.type === 'TEXT'));
     const resize = n.type === 'TEXT' && e.autoResize && n.textAutoResize !== e.autoResize.toUpperCase();
     // a text's font is loaded only where something about it changes: a library's text is a slow load where one fails
@@ -1007,7 +1015,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // a size said as intent, set once the part has its parent: fill the parent's flow, hug what it holds, a fixed
       // number, or a token's value, bound
       const flows = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
-      for (const [k, axis] of [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']]) {
+      for (const [k, axis] of sizingAxes(e)) {
         const sz = e[k];
         if (sz === 'fill') { if (id !== 'root' && flows(nodes[e.parent]) && !e.absolute && e.position !== 'absolute') n[axis] = SIZE.fill; }
         else if (sz === 'hug') { if (flows(n) || n.type === 'TEXT') n[axis] = SIZE.hug; }
@@ -1211,6 +1219,7 @@ export function pluginCode(contract, keys, { before = '', after = '', failed = '
 const variantValues = ${variantValues.toString()};
 const bareProp = ${bareProp.toString()};
 const keyMatches = ${keyMatches.toString()};
+const sizingAxes = ${sizingAxes.toString()};
 let __res; try { __res = await (${RUNTIME.toString()})(P, ${JSON.stringify(keys)}${before ? ', __page, typeof __given !== \'undefined\' ? __given : [], typeof __started !== \'undefined\' ? __started : globalThis.__drawingStarted' : ''});\n${after}} catch (e) { ${failed} throw e; }\nreturn __res;`;
 }
 
