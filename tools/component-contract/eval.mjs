@@ -277,7 +277,7 @@ export function measure(where, only = [], now = {}) {
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     // a reading whose geometry was not compared (taken before it was kept, or with no stored figma.json) is stale, as one
     // taken before fingerprints is, and never the same (isSame) by the geometry it lacks
-    const st = back && (!back.geometry ? 'taken before geometry was compared, draw again' : stale('figma', folder, contract));
+    const st = back && [!back.geometry && 'taken before geometry was compared, draw again', stale('figma', folder, contract)].filter(Boolean).join('; ');
     legs.figma[folder] = back ? { rows: [...back.rows, ...(back.geometry || [])], combinations: back.combinations, ...(back.cut && { cut: back.cut }), ...(st && { stale: st }), ...(!back.geometry && { lacks: 'geometry' }) } : { skipped: 'not drawn and read back (eval.mjs --draw)' };
   }
   return { home, legs };

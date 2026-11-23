@@ -94,6 +94,8 @@ ok('a component measured since the accept is held until accepted; one that came 
   const lacking = measure(where).legs.figma.tag;
   ok('a reading with no geometry is measured with its rows and stale, said why', Array.isArray(lacking.rows) && lacking.rows.length === 0 && /taken before geometry was compared, draw again/.test(lacking.stale), lacking);
   ok('a reading with no geometry is never the same, whatever its other rows', !isSame(lacking) && isSame({ rows: [] }) && !isSame({ rows: [geo] }) && !isSame({ skipped: 'x' }));
+  fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ figma: { tag: { hash: hashOf(c), kept: true } } }));
+  ok('a reading with no geometry keeps its other stale reason beside it', /taken before geometry was compared, draw again; kept from an earlier drawing/.test(measure(where).legs.figma.tag.stale), measure(where).legs.figma.tag.stale);
   ok('its count is its rows, as accepted before geometry was kept', counts({ figma: { tag: lacking } }).figma.tag === 0);
   fs.writeFileSync(path.join(home, 'round-trip', 'tag.roundtrip.json'), JSON.stringify({ rows: [], geometry: [], combinations: 1 }));
   fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf({ ...c, component: 'Old' }) } } }));
