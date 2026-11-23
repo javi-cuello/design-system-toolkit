@@ -126,7 +126,7 @@ export function entryOf(c) {
    day drawn disabled, a button of another hierarchy) stays a part of its own. */
 const SAME = (e) => JSON.stringify({ ...e, order: undefined, name: undefined, with: undefined, inner: undefined, content: undefined, text: undefined, swappedBy: undefined, figma: undefined });
 /* A part as one variant layer draws it: its entry (`base`), what the layer adds for it, and the fields the layer sets on it. */
-function layerAt(v, id, base) {
+function partAtVariant(v, id, base) {
   const e = { ...(base || {}), ...((v.add || {})[id] || {}) };
   for (const [k, x] of Object.entries(v.set || {})) if (k.startsWith(`${id}.`) && !k.slice(id.length + 1).includes('.')) e[k.slice(id.length + 1)] = x;
   return e;
@@ -141,10 +141,10 @@ export function copyOf(c, id) {
   const lo = Math.min(first.order ?? 0, e.order ?? 0), hi = Math.max(first.order ?? 0, e.order ?? 0);
   // (a part out of the flow between the two, at the defaults or in a variant: the copy may paint over it where the first
   // paints under, so each says its own place by z-index where the box is restacked; a part of its own, never the first's rule)
-  // (each part as the layer draws it, a variant's sets on it too: layerAt, as restacked reads it)
+  // (each part as the layer draws it, a variant's sets on it too: partAtVariant, as restacked reads it)
   const outBetween = (x) => x && x.parent === e.parent && (x.position === 'absolute' || x.absolute) && typeof x.order === 'number' && x.order > lo && x.order < hi;
   const ids = (v) => new Set([...Object.keys(a), ...Object.keys(v.add || {}), ...Object.keys(v.set || {}).map((k) => k.slice(0, k.lastIndexOf('.')))]);
-  if ([{}, ...(c.variants || [])].some((v) => [...ids(v)].some((k) => outBetween(layerAt(v, k, a[k] || findAdded(c, k)))))) return null;
+  if ([{}, ...(c.variants || [])].some((v) => [...ids(v)].some((k) => outBetween(partAtVariant(v, k, a[k] || findAdded(c, k)))))) return null;
   if (reordered(c).has(e.parent)) {
     const family = new RegExp(`^${m[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(_\\d+)?$`);
     const between = (k, o, parent) => parent === e.parent && !family.test(k) && typeof o === 'number' && o > lo && o < hi;
@@ -309,7 +309,7 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
       const dom = new Map(markupOrder(c, list).order.map((p, i) => [p.id, i]));
       for (const v of [{}, ...(c.variants || [])]) {
         const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
-        const asAt = (p) => layerAt(v, p.id, p.e);
+        const asAt = (p) => partAtVariant(v, p.id, p.e);
         const here = list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id))));
         if (!here.some((p) => outOf(asAt(p)))) continue;
         const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? p.e.order ?? 0;
