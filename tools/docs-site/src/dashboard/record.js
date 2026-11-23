@@ -16,7 +16,7 @@ export function onRecord(fn) { listeners.push(fn); }
 export const step = (name, fn) => {
   try { fn(); } catch (e) {
     console.error(name + " failed", e);
-    const el = document.getElementById("measuredLine");
+    const el = document.getElementById("sweepState");   // the head's status line: seen on every view
     if (el) el.textContent = name + " failed to render — " + (e && e.message ? e.message : "unknown");
   }
 };

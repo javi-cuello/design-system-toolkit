@@ -1519,7 +1519,7 @@ sweepBtn.addEventListener("click", runSweep);
 // Audit opens its dialog; Start audit runs what was chosen there.
 const auditDialog = document.getElementById("auditDialog");
 auditBtn.addEventListener("click", () => {
-  if (batching || auditing || !auditDialog) return;
+  if (batching || auditing || sweeping || !auditDialog) return;
   paintPicks();
   auditDialog.returnValue = "";
   auditDialog.showModal();

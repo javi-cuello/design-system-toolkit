@@ -66,7 +66,8 @@ import './audit.js';
   });
 
   try { await pullRecord(); } catch (e) {
-    document.getElementById("measuredLine").textContent =
+    // in the head, which every view and a first run show
+    document.getElementById("sweepState").textContent =
       e && e.code === "bad_copy" ? e.message : "Can't reach the dashboard service — is it running? (" + e.message + ")";
     DASH.dataset.ready = "yes";
     return;
