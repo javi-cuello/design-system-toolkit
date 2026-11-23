@@ -543,6 +543,10 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     ok('an important declaration over a later one; a raw base, its own value; none written, none',
       sideWinner([R(['padding-left', 'var(--a)', true]), lead], 'padding-left') === 'var(--a)' && sideWinner([R(['padding', '4px 8px']), R(['padding-inline', 'var(--s) var(--e)'])], 'padding-right') === 'var(--e)'
       && sideWinner([R(['padding', '4px 8px'])], 'padding-left') === '8px' && sideWinner([R(['color', 'red'])], 'padding-left') === null && sideWinner([chip], 'color') === null);
+    ok('a longhand left empty by a shorthand outside the group (border-left, border) wins as unknown: none, so the reader asks that shorthand next',
+      sideWinner([R(['border-left-width', 'var(--stroke-1)']), R(['border-left', 'var(--stroke-2) solid red'], ['border-left-width', ''], ['border-left-style', ''], ['border-left-color', ''])], 'border-left-width') === null
+      && sideWinner([R(['border-width', 'var(--a)']), R(['border', 'var(--w) solid'], ['border-top-width', ''], ['border-left-width', ''])], 'border-left-width') === null
+      && sideWinner([R(['border', 'var(--w) solid'], ['border-left-width', '']), R(['border-left-width', 'var(--b)'])], 'border-left-width') === 'var(--b)');
   }
   {
     const { shorthandOf, sidePiece, instanceWrites } = await import('./from-code.mjs');

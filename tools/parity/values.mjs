@@ -269,11 +269,15 @@ export function sideWinner(styles, longhand, rtl = false) {
   for (const st of styles || []) for (const p of st.cssProperties || []) {
     if (!group.has(p.name) || p.disabled || p.parsedOk === false || p.value == null) continue;
     const value = String(p.value).replace(/\s*!important\s*$/, '');
-    if (!value.trim()) continue;
-    if (p.important || /!important/.test(p.value)) important = { name: p.name, value }; else normal = { name: p.name, value };
+    // (an empty longhand is a shorthand's in the same rule: one of the group's is read there instead; one outside the
+    // group, border-left or border, wins unknown, and the reader asks that shorthand itself next)
+    const unknown = !value.trim();
+    if (unknown && (st.cssProperties || []).some((q) => group.get(q.name) && String(q.value || '').trim())) continue;
+    const at = unknown ? { unknown } : { name: p.name, value };
+    if (p.important || /!important/.test(p.value)) important = at; else normal = at;
   }
   const w = important || normal;
-  if (!w) return null;
+  if (!w || w.unknown) return null;
   const sh = group.get(w.name);
   return sh ? sidePiece(w.value, w.name, sh.side) : w.value;
 }
