@@ -714,7 +714,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     // the bridge proved fit once the lock is held (figma-audit/probe.mjs), so no other draw is using it and a draw that
     // would fail an hour in is refused in seconds; what it could not check is said
     const { probe, world } = await import('../figma-audit/probe.mjs');
-    const health = await probe(label, into, world(where));
+    // the library's own file draws its components from itself, so no import is asked of the bridge there
+    const { libraryOf } = await import('../parity/project.mjs');
+    const health = await probe(label, into, world(where, libraryOf(label).libKey === into));
     const bad = health.find((h) => !h.ok);
     if (bad) { console.log(`the bridge is not fit to draw (${bad.check}): ${bad.said}`); process.exit(1); }
     for (const h of health.filter((x) => x.skipped)) console.log(`the bridge's ${h.check} check had nothing to check: ${h.said}`);

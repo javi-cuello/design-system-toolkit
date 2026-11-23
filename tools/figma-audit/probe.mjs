@@ -45,6 +45,8 @@ await step('instances', async () => {
 });
 await step('font', async () => { const t0 = Date.now(); await figma.loadFontAsync({ family: 'Inter', style: 'Regular' }); return Date.now() - t0; });
 await step('library', async () => {
+  // the library's own file: the drawing takes its components from the file itself, never by import (to-figma's ownFile)
+  if (typeof OWN !== 'undefined' && OWN) return "not needed: this is the library's own file, whose components the drawing takes from it";
   // the first library component that imports passes: an old library's instance refusing is not the bridge's fault,
   // so up to five are tried, and it fails only when every one did
   let tried = 0, first = null;
@@ -83,7 +85,7 @@ export async function probe(label, fileKey, io) {
   try { await within(io.exec(svc, fileKey, 'return 1', 10000), 12000, 'a trivial call'); say('answers', true, 'a trivial call came back'); } catch (e) { say('answers', false, `mode 1: ${e.message}: the plugin is connected but not answering; close and reopen it in the file`); return out; }
   let r;
   // a timeout here is the stalled library API (mode 3); any other error is the script's or the file's, said as it is
-  try { r = await within(io.exec(svc, fileKey, IN_FILE, 40000), 45000, 'the in-file checks'); } catch (e) { say('library', false, /timed? ?out|no answer|plugin_timeout/i.test(e.message) ? `mode 3: ${e.message}: a font load or a library import hangs; reopen the plugin in this file` : `the in-file checks failed: ${e.message}`); return out; }
+  try { r = await within(io.exec(svc, fileKey, (io.own ? 'const OWN = true;\n' : '') + IN_FILE, 40000), 45000, 'the in-file checks'); } catch (e) { say('library', false, /timed? ?out|no answer|plugin_timeout/i.test(e.message) ? `mode 3: ${e.message}: a font load or a library import hangs; reopen the plugin in this file` : `the in-file checks failed: ${e.message}`); return out; }
   const err = (x) => x && typeof x === 'object' && x.error;
   if (err(r.instances)) { say('instances', false, `mode 5?: reading a layer inside an instance threw (${r.instances.error}): if it says the node does not exist, restart the plugin`); return out; }
   if (!say('instances', r.instances !== 'gone', r.instances === 'gone' ? 'mode 5: a layer inside an instance does not exist by its id: the plugin has degraded; restart it (reloading does not fix it)' : r.instances === 'ok' ? 'a layer inside an instance reads back' : `not checked: ${r.instances}`, r.instances !== 'ok' && r.instances !== 'gone')) return out;
@@ -94,7 +96,8 @@ export async function probe(label, fileKey, io) {
 
 /* The real world for a project: its service, every process of it (a --watch parent and its child alike), the port's
    listeners, its /status, and code run in the file. */
-export const world = (where) => ({
+export const world = (where, own = false) => ({
+  own,
   service: () => serviceFor(where.audit), listeners,
   servicePids: (svc) => { try { return running().filter((x) => x.data && samePath(x.data, svc.data)).map((x) => x.pid); } catch { return []; } },
   status: (svc) => call(svc, '/status'), exec: (svc, f, code, t) => figmaExec(svc, f, code, t),
@@ -116,7 +119,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const { libraryOf } = await import('../parity/project.mjs');
   const file = opt('--file') || ((libraryOf(label).lib || {}).draw || {}).scratch;
   if (!file) { console.error(`${label}: no --file and no draw.scratch in its library settings`); process.exit(2); }
-  const out = await probe(label, file, world(where));
+  const out = await probe(label, file, world(where, libraryOf(label).libKey === file));
   for (const o of out) console.log(`${o.skipped ? 'skip' : o.ok ? 'ok  ' : 'FAIL'} ${o.check.padEnd(10)} ${o.said}`);
   process.exit(out.every((o) => o.ok) ? 0 : 1);
 }

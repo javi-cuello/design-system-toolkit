@@ -6,7 +6,8 @@ const world = (o = {}) => ({
   listeners: () => o.listeners || ['7'],
   servicePids: () => o.servicePids || [],
   status: async () => ({ files: [{ fileKey: o.file || 'F' }] }),
-  exec: async (svc, f, code) => (code === 'return 1' ? (o.hang ? new Promise(() => {}) : 1) : o.inFile instanceof Error ? Promise.reject(o.inFile) : (o.inFile || { instances: 'ok', font: 3, library: 40 })),
+  own: o.own || false,
+  exec: async (svc, f, code) => o.own && code.startsWith('const OWN = true;') ? { instances: 'ok', font: 1, library: "not needed: this is the library's own file, whose components the drawing takes from it" } : (code === 'return 1' ? (o.hang ? new Promise(() => {}) : 1) : o.inFile instanceof Error ? Promise.reject(o.inFile) : (o.inFile || { instances: 'ok', font: 3, library: 40 })),
 });
 const run = async (o) => (await probe('lib', 'F', world(o))).map((x) => `${x.skipped ? 'skip' : x.ok ? 'ok' : 'FAIL'} ${x.check}${x.ok ? '' : `: ${x.said}`}`);
 const last = async (o) => (await run(o)).at(-1);
@@ -25,4 +26,7 @@ const t0 = Date.now();
 assert.match(await last({ hang: true }), /FAIL answers: mode 1: a trivial call: no answer in 12 s/, 'a call that never answers is given up on, never waited for');
 assert.ok(Date.now() - t0 < 13000);
 assert.deepEqual(await run({ inFile: { instances: 'none on this page', font: 2, library: 'no library instance on this page' } }), ['ok service', 'ok port', 'ok connected', 'ok answers', 'skip instances', 'skip library'], 'nothing to check is said as skipped, neither failed nor passed');
-console.log('probe: 13 passed');
+// the library's own file: the bridge is told so, and the import is not asked (a stray other-library instance on the
+// page would otherwise fail a drawing that never imports)
+assert.deepEqual(await run({ own: true, inFile: { instances: 'ok', font: 1, library: { error: 'not published' } } }), ['ok service', 'ok port', 'ok connected', 'ok answers', 'ok instances', 'skip library'], 'in the library\'s own file the import is not asked');
+console.log('probe: 14 passed');
