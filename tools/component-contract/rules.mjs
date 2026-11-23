@@ -173,13 +173,14 @@ export function styleFromCss(own, styles, fieldsOf) {
 
 /* Truncation, as css.mjs writes it the other way: one line cut with an ellipsis (nowrap, overflow hidden,
    text-overflow ellipsis), or a clamp to N lines (-webkit-line-clamp, or line-clamp). Null where the text is not cut. */
-export const LINES_CSS = ['white-space', 'text-overflow', 'overflow', '-webkit-line-clamp', 'line-clamp'];
+// (the inline overflow alone clips an ellipsis too: overflow-x, or overflow-inline, beside the shorthand)
+export const LINES_CSS = ['white-space', 'text-overflow', 'overflow', 'overflow-x', 'overflow-inline', '-webkit-line-clamp', 'line-clamp'];
 export function linesFromCss(own, words = '') {
   const n = parseInt(word(own['-webkit-line-clamp'] ?? own['line-clamp']), 10);
   if (n > 0) return { maxLines: n, truncate: true };
   // (an ellipsis cuts only where the overflow is hidden; under pre only words of one line, as pre cuts each line and
   // shows them all: `words`, the text's)
-  if (word(own['text-overflow']) === 'ellipsis' && (/nowrap/.test(word(own['white-space'])) || (/^pre$/.test(word(own['white-space'])) && !/\n/.test(typeof words === 'string' ? words : ''))) && /hidden|clip/.test(word(own.overflow))) return { maxLines: 1, truncate: true };
+  if (word(own['text-overflow']) === 'ellipsis' && (/nowrap/.test(word(own['white-space'])) || (/^pre$/.test(word(own['white-space'])) && !/\n/.test(typeof words === 'string' ? words : ''))) && ['overflow', 'overflow-x', 'overflow-inline'].some((k) => /hidden|clip/.test(word(own[k])))) return { maxLines: 1, truncate: true };
   return null;
 }
 
