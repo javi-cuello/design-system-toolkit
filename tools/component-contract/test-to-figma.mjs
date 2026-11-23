@@ -711,6 +711,13 @@ delete globalThis.figma;
   ok('a colour style the drawing lost is a row; a reading from code, which has no styles, is not held to one',
     roundTrip(lib, plain).rows.some((r) => r.at === 'root.fillStyle' && r.library === 'Sys/error' && r.drawn === null)
     && !roundTrip(lib, plain, { layoutUnit: true }).rows.length && !roundTrip(lib, lib).rows.length);
+  // an icon's glyph painted with a style is still a colour code says on the instance: folded there with its style, which
+  // a reading from code is not held to, and which a drawing that lost it still differs by
+  const icon = (g) => ({ contract: 1, component: 'I', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icons/check', order: 0 }, 'icon/glyph': { kind: 'graphic', parent: 'icon', order: 0, background: 'C/on', ...g } }, variants: [] });
+  const code = { ...icon({}), anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icons/check', order: 0, background: 'C/on' } } };
+  ok('…a styled glyph folds onto its instance as an unstyled one does; a drawing that lost the style is a row at the instance',
+    !roundTrip(icon({ fillStyle: 'Sys/on' }), code, { layoutUnit: true }).rows.length
+    && JSON.stringify(roundTrip(icon({ fillStyle: 'Sys/on' }), icon({})).rows.map((r) => [r.at, r.library, r.drawn])) === '[["icon.fillStyle","Sys/on",null]]');
   ok('…the styles a plan paints with are among what it needs keys for', JSON.stringify(needs({ variants: [{ anatomy: lib.anatomy }] }).fillStyles) === '["Sys/error"]');
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
   ok('…applied by its key once the layer is painted, taken in the library\'s own file from its styles and the copies its own component uses, looked up where the library uses it',

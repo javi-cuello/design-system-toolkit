@@ -63,8 +63,8 @@ export const sizeToFigma = (w) => (SIZE_ROWS.find((r) => r[0] === w) || [])[1];
 /* A glyph said as its instance (code colours the instance, an svg in currentColor): the instance's one graphic, coloured,
    saying nothing but where it is, its colour and its opacity, inside an instance with no colour of its own (`lone`: it
    is the instance's only layer). to-code writes such a glyph's colour and opacity on the instance; to-figma's comparison
-   folds it there. */
-export const GLYPH_WORDS = new Set(['kind', 'parent', 'name', 'order', 'background', 'opacity']);
+   folds it there, with the colour style it is painted with (a Figma name for that colour, which code does not say). */
+export const GLYPH_WORDS = new Set(['kind', 'parent', 'name', 'order', 'background', 'fillStyle', 'opacity']);
 export const heldGlyph = (holder, glyph, lone) => !!lone && !!holder && !!glyph && glyph.kind === 'graphic' && glyph.background != null && holder.background == null && Object.keys(glyph).every((k) => GLYPH_WORDS.has(k));
 /* Its opacity on the instance: one layer in a group shows at the group's opacity times its own, so the instance's times
    the glyph's, to the three places a reading keeps (from-code: 0.38 by 0.38 is 0.144); the glyph's own where the

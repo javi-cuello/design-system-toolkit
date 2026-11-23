@@ -121,7 +121,7 @@ function glyph(x) {
     // only a colour (and its opacity) moves up: a glyph that also overrides its size, or an instance with a colour of its own, is compared as it is (rules.mjs heldGlyph)
     if (!heldGlyph(e, kid, !!kid)) continue;
     const opacity = heldOpacity(e, kid);
-    out[id] = { ...e, background: kid.background, ...(opacity !== undefined && { opacity }) };
+    out[id] = { ...e, background: kid.background, ...(kid.fillStyle && { fillStyle: kid.fillStyle }), ...(opacity !== undefined && { opacity }) };
     delete out[inside[0]];
   }
   return out;
