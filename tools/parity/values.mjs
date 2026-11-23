@@ -283,11 +283,14 @@ export function sideWinner(styles, longhand, rtl = false, resolve = null) {
   return sh === WIDTH ? borderWidthOf(w.value, resolve) : sh ? sidePiece(w.value, w.name, sh.side) : w.value;
 }
 /* A border shorthand's width part (`var(--w) solid var(--c)`): the part that is a length, or a var whose value, followed
-   through `resolve` (a custom property's name to its value), is one. Null where it writes none. */
+   through `resolve` (a custom property's name to its value), is one, or holds one (a var set to a whole border, or with
+   one as its fallback: varChain follows it to the width's own var). Null where it writes none. */
 const LENGTH = /^(0|-?[\d.]+[a-z%]+|thin|medium|thick|(calc|min|max|clamp)\(.*\))$/i;
 function borderWidthOf(value, resolve = null) {
   const isLength = (v, depth = 0) => {
     const m = /^var\(\s*(--[\w-]+)\s*(?:,([\s\S]*))?\)$/.exec(v.trim());
+    const words = topWords(v);
+    if (words.length > 1) return words.some((x) => isLength(x, depth + 1));
     if (!m) return LENGTH.test(v.trim());
     const set = depth < 8 && resolve ? resolve(m[1]) : null;
     return set != null ? isLength(String(set), depth + 1) : m[2] != null && isLength(m[2], depth + 1);

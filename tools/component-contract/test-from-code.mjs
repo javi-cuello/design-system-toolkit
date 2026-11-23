@@ -557,6 +557,12 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
       && sideWinner([R(['border-inline-start', '1px solid var(--c)'])], 'border-right-width', true, resolve) === '1px'
       && sideWinner([R(['border-left', 'var(--w) solid'], ['border-left-width', '']), R(['border-width', 'var(--a)'])], 'border-left-width', false, resolve) === 'var(--a)'
       && sideWinner([R(['border', 'solid var(--c)'], ['border-left-width', ''])], 'border-left-width', false, resolve) === null);
+    // a var holding a whole border (its value or its fallback) is the width's where its own parts give one: varChain follows it
+    const whole = (n) => ({ '--ds-border': 'var(--stroke-1) solid var(--line)', '--stroke-1': '1px', '--line': 'red', '--bare': 'solid red' })[n] ?? null;
+    ok('a var holding a whole border shorthand, set or as its fallback, is the side\'s width word; one with no width part, none',
+      sideWinner([R(['border', 'var(--ds-border)'], ['border-left-width', ''])], 'border-left-width', false, whole) === 'var(--ds-border)'
+      && sideWinner([R(['border', 'var(--unset, var(--stroke-1) solid var(--line))'], ['border-left-width', ''])], 'border-left-width', false, whole) === 'var(--unset, var(--stroke-1) solid var(--line))'
+      && sideWinner([R(['border', 'var(--bare)'], ['border-left-width', ''])], 'border-left-width', false, whole) === null);
   }
   {
     const { shorthandOf, sidePiece, instanceWrites } = await import('./from-code.mjs');
