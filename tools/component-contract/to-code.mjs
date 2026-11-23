@@ -182,16 +182,17 @@ function controlsOf(c) {
   return CONTROLS.get(c);
 }
 
-/* The selector a prop's value is chosen by, on the root. */
-export function condition(c, n, key, value, t = HOUSE) {
+/* The selector a prop's value is chosen by, on the root. `mains`: the library, where given, so a placed control is
+   reached as the part rules reach it (chain). */
+export function condition(c, n, key, value, t = HOUSE, mains = null) {
   const p = c.props[key] || {};
   const entry = entryOf(c);
   // the input's own state, reached down the anatomy by child combinators (code-standard rules 5 and 62)
-  const control = entry && `${chain(c, n, entry.input, '').slice(n.root.length + 3)}`;
+  const control = entry && `${chain(c, n, entry.input, '', mains).slice(n.root.length + 3)}`;
   // where a state reaches: the box itself, a native control directly in it, a text entry's input, and a placed
   // control the contract names (its Selected layer sets that instance's props: a card's checkbox two boxes down),
   // the control or one inside it; never any control at all, so a card's footer button does not dim the card
-  const placed = controlsOf(c).map((id) => chain(c, n, id, '').slice(n.root.length + 3));
+  const placed = controlsOf(c).map((id) => chain(c, n, id, '', mains).slice(n.root.length + 3));
   // a box that names its control is that control's alone: a button beside it in the box is not it
   const reach = (x) => [...(control || placed.length ? [] : [`:has(> ${x})`]), ...(control ? [`:has(> ${control}${x})`] : []), ...placed.flatMap((k) => [`:has(> ${k}${x})`, `:has(> ${k} ${x})`])];
   const dis = disabledKey(c, t);
@@ -219,7 +220,7 @@ export function condition(c, n, key, value, t = HOUSE) {
   // a box holding a native checkbox or radio, directly or as the control it places, is checked as the control is
   // (code-standard rule 9: the control's own)
   if (p.type === 'boolean' && /^(selected|checked)$/i.test(key)) {
-    const placed = controlsOf(c).map((id) => chain(c, n, id, '').slice(n.root.length + 3));
+    const placed = controlsOf(c).map((id) => chain(c, n, id, '', mains).slice(n.root.length + 3));
     const on = `:is(${[`[${a}]:not([${a}="false"])`, ...(placed.length ? [] : [':has(> :checked)']), ...placed.flatMap((k) => [`:has(> ${k}:checked)`, `:has(> ${k} :checked)`])].join(', ')})`;
     return value ? on : `:not(${on})`;
   }
@@ -886,7 +887,7 @@ export function toCss(c, folder, { naming, layer = 'components', settings = HOUS
   for (const r of rules) {
     // each condition weighs nothing (:where), so rules meet by source order alone, the order selfCheck replays: a
     // condition reaching a control two boxes down would otherwise outweigh an attribute and reorder the cascade
-    const rootCond = Object.entries(r.when).map(([k, v]) => `:where(${condition(c, n, k, v, settings)})`).join('');
+    const rootCond = Object.entries(r.when).map(([k, v]) => `:where(${condition(c, n, k, v, settings, mains)})`).join('');
     for (const [id, decls] of Object.entries(r.parts)) {
       lines.push(`  ${id === 'root' ? n.root + rootCond + through(n, c.component, placedIn(c)) : chain(c, n, id, rootCond, mains)} {`);
       let dimmed = false, undimmed = false;

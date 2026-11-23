@@ -609,6 +609,19 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a placed component is reached through its control only where its own sheet makes its host draw no box',
     !/display: contents/.test(own) && /\[data-part="ghost"\] \{[^}]*order: 1/.test(held) && !/\[data-part="ghost"\] > button/.test(held));
 }
+// a state chosen by a placed control (a tile's Selected sets its pick's props) reaches that control as the part rules
+// do: through its <button> only where the library holds it, never through one a mark of a component it does not hold
+// lacks
+{
+  const EL = { kind: 'element', prefix: 'ds-' };
+  const tile = { contract: 1, component: 'Tile', props: { selected: { type: 'boolean', default: false, axis: true, figma: 'Selected' } },
+    anatomy: { root: { kind: 'container', background: 'C/off' }, pick: { kind: 'instance', parent: 'root', component: 'Pick button', with: { On: false }, order: 0 } },
+    variants: [{ when: { selected: true }, set: { 'pick.with': { On: true }, 'root.background': 'C/on' } }] };
+  const pick = { contract: 1, component: 'Pick button', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const foreign = toCss(tile, 'tile', { naming: EL, mains: () => null }), held = toCss(tile, 'tile', { naming: EL, mains: (x) => (x === 'Pick button' ? pick : null) });
+  ok('a state a placed control chooses reaches it as its part rules do: through its button only where the library holds it',
+    /:has\(> \[data-part="pick"\]:checked\)/.test(foreign) && !/\[data-part="pick"\] > button/.test(foreign) && /:has\(> \[data-part="pick"\] > button:checked\)/.test(held));
+}
 // a part scaled with a parent that is stretched between its own parent's edges takes its share of that parent's size, the
 // grandparent's less both offsets (Carbon's skeleton shimmer, scaled inside a fill stretched over the box)
 {

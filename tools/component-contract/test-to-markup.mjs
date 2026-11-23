@@ -349,7 +349,11 @@ ok('and to-code styles that input and its placeholder by the same selectors: the
   const lib = { 'Save button': { ...save, folder: 'save-button' }, Card: { ...card, folder: 'card' } };
   const m = toParity(card, 'card', { naming: ELEMENT, library: lib, framework: 'web-components' }), out = toElement(card, 'card', { naming: ELEMENT, library: lib });
   ok('a part placing a component the library does not hold is mapped to the mark the markup draws; one it holds through its control',
-    /"data-part": "action"[^)]*"data-icon"/.test(out) && m.layers.Action === 'ds-card > [data-part="action"]' && m.layers.Save === 'ds-card > [data-part="save"] > button'); }
+    /"data-part": "action"[^)]*"data-icon"/.test(out) && m.layers.Action === 'ds-card > [data-part="action"]' && m.layers.Save === 'ds-card > [data-part="save"] > button');
+  // with no library given, the markup draws every placed instance as a mark, so the mapping reaches none through a button
+  const bare = toParity(card, 'card', { naming: ELEMENT, framework: 'web-components' }), bareOut = toElement(card, 'card', { naming: ELEMENT, library: {} });
+  ok('with no library, every placed instance is a mark, in the markup and the mapping alike',
+    /"data-part": "save"[^)]*"data-icon"/.test(bareOut) && bare.layers.Action === 'ds-card > [data-part="action"]' && bare.layers.Save === 'ds-card > [data-part="save"]'); }
 
 /* ── the mapping and the stories ── */
 const parity = toParity(library.Button, 'button', { naming: CLASS, library });
