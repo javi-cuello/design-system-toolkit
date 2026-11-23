@@ -1537,9 +1537,9 @@ export function namedByKey(node, byKey) {
   return node;
 }
 
-const READBACK = async (name, id = null) => {
+const READBACK = async (name, id = null, pageName = name) => {
   await figma.loadAllPagesAsync();
-  const page = figma.root.children.find((p) => p.name === name);
+  const page = figma.root.children.find((p) => p.name === pageName);
   const rec = page && JSON.parse(page.getPluginData('drawings') || '{"by":{}}');
   // a set patched in place is read by its own id, wherever it is
   const drawing = id ? await figma.getNodeByIdAsync(id) : rec && rec.by[name] && await figma.getNodeByIdAsync(rec.by[name]);
@@ -1714,10 +1714,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const axisOrder = (lib.tokens || {}).axisOrder || [];
   const sizeAxis = (lib.tokens || {}).sizeAxis || null;
   const p = plan(c, { axisOrder }), want = needs(p);
+  // the page a drawing goes on: the component's name, or in the library's own file (where a page of that name is
+  // the library's own, which a drawing must never touch) the name marked as the round trip's
+  const pageName = libKey && into === libKey ? `Round trip · ${p.name}` : p.name;
   if (check) {
     // the drawing read back and held to the contract it was drawn from; with the code contract held to
     // Figma's by from-code.mjs, that is all three sides
-    const drawn = await exec(`return (${READBACK.toString()})(${JSON.stringify(p.name)}, ${JSON.stringify(target)});`, into, 60000);
+    const drawn = await exec(`return (${READBACK.toString()})(${JSON.stringify(p.name)}, ${JSON.stringify(target)}, ${JSON.stringify(pageName)});`, into, 60000);
     if (drawn.missing) { console.error(drawn.missing); process.exit(1); }
     const rows = verify(p, drawn);
     const n = (v) => rows.filter((r) => r.verdict === v).length;
@@ -1854,7 +1857,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     // by the variant's name as the plan gives it (Breakpoint=md, State=Initial)
     return Object.fromEntries([...found].map(([when, ids]) => [Object.entries(JSON.parse(when)).map(([k, v]) => `${k}=${v}`).sort().join(', '), ids]));
   })();
-  const code = target ? pluginCode(c, keys, { before: PATCH_BEFORE(target), after: PATCH_AFTER, failed: PATCH_FAILED, axisOrder, sizeAxis, mains: mainsOf, whole: wholeFrom }) : pluginCode(c, keys, { before: BEFORE(p.name, token), after: AFTER(p.name), failed: FAILED, axisOrder, sizeAxis, mains: mainsOf, whole: wholeFrom });
+  const code = target ? pluginCode(c, keys, { before: PATCH_BEFORE(target), after: PATCH_AFTER, failed: PATCH_FAILED, axisOrder, sizeAxis, mains: mainsOf, whole: wholeFrom }) : pluginCode(c, keys, { before: BEFORE(pageName, token), after: AFTER(p.name), failed: FAILED, axisOrder, sizeAxis, mains: mainsOf, whole: wholeFrom });
   // nine minutes for either: a drawing of 300 variants that import their graphics outran two in a background Figma, and a
   // run the runner gives up on goes on in Figma, holding the file; one that times out here may still be changing it
   const res = await exec(code, into, 540000).catch(async (e) => {

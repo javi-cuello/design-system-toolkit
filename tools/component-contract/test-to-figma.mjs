@@ -655,4 +655,11 @@ delete globalThis.figma;
   ok('a placed instance\'s fonts are loaded before it is named, changed or appended', at > 0 && named > at && /const withProps = async \(n, e\) => \{\s*await fontsOf\(n\);/.test(code));
 }
 
+{
+  // in the library's own file a drawing's page is marked as the round trip's, never the library's own page of that name
+  const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
+  ok('a drawing in the library\'s own file goes on a page of its own, which the read back finds',
+    /const pageName = libKey && into === libKey \? `Round trip · \$\{p\.name\}` : p\.name;/.test(src) && src.includes('before: BEFORE(pageName, token)') && src.includes('${JSON.stringify(pageName)});'));
+}
+
 console.log(`${n}/${n} passed`);
