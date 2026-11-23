@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
 import { drawn as toCodeDrawn, toCss } from './to-code.mjs';
-import { judge } from '../parity/external.mjs';
+import { judge, shadowKey } from '../parity/external.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -502,6 +502,22 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   ok('a boolean whose layer the main draws not at the placed props, on or off, is left unread; one it draws there is read from being seen',
     JSON.stringify(shownRead(cb, { State: 'Enabled' }, { 'Error message': false, Label: false })) === '{"Label":false}'
     && JSON.stringify(shownRead(cb, { State: 'Invalid' }, { 'Error message': false })) === '{"Error message":false}');
+  {
+    // two effect styles of one geometry, each recording its colour in one mode: the code names the first, whose
+    // variable draws the second's recorded colour under the modes drawn
+    const fx = (name, color, x = -1) => ({ name, layers: [{ type: 'INNER_SHADOW', x, y: 0, blur: 0, spread: 0, color }] });
+    const effects = [fx('Line one/Right', '#c6c6c6'), fx('Line two/Right', '#e0e0e0')];
+    const read = [{ inset: true, x: -1, y: 0, blur: 0, spread: 0, color: 'rgb(224, 224, 224)' }];
+    ok('a whole shadow is the effect style the code names where it draws that style\'s layers, whatever colour its modes give it',
+      wholeShadowStyle(read, effects[0], effects, shadowKey) === effects[0]);
+    ok('one the code names drawing other layers, or none named, is the style that draws the same, colour and all; none, none',
+      wholeShadowStyle(read, fx('Wide/Right', '#e0e0e0', -2), effects, shadowKey) === effects[1]
+      && wholeShadowStyle(read, null, effects, shadowKey) === effects[1] && wholeShadowStyle([{ ...read[0], x: -3 }], null, effects, shadowKey) === undefined);
+  }
+  ok('an empty box takes the shape the design draws at the combination read: none where a variant takes its rectangle away',
+    asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false, { kind: 'graphic' }).shape === undefined
+    && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false).shape === 'rectangle'
+    && asShape({ kind: 'container' }, null, false, { kind: 'graphic', shape: 'rectangle' }).kind === 'container');
   ok('a full-round empty box where the design draws an ellipse is the ellipse', asShape({ kind: 'container', full: true, radius: 99 }, { kind: 'graphic', shape: 'ellipse' }, false).shape === 'ellipse');
   ok('an empty box where the design draws a line is the line; one holding parts, or under an icon, stays a box', asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, false).kind === 'graphic' && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, true).kind === 'container' && asShape({ kind: 'container' }, { kind: 'graphic', icon: true }, false).kind === 'container');
 }

@@ -850,7 +850,21 @@ export function designSetsColour(design, id, mainOf = () => null) {
    (expand keeps a field no variant sets, so the swapped glyph would carry the base icon's key), else none (undefined). */
 export const swapKeyOf = (design, baseKey, name) => designKeyOf(design, null, name) || (baseKey ? null : undefined);
 
-export function asShape(x, fa, hasChildren) {
+/* The effect style a whole box-shadow is: the one the code names, where it draws the layers read (their offsets, blur,
+   spread and insetness; their colour is the style's variable under the modes drawn, which the style's record holds in
+   one mode only), else the first whose layers draw the same, colour and all. `layers`: the shadow read, as cssShadows
+   gives it; `key`: shadowKey. Tested by test-from-code.mjs. */
+export function wholeShadowStyle(layers, named, effects, key) {
+  const of = (fx) => (fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color }));
+  const bare = (ls) => key(ls.map((l) => ({ ...l, color: '' })));
+  if (named && of(named).length && bare(of(named)) === bare(layers)) return named;
+  return effects.find((fx) => key(of(fx)) === key(layers));
+}
+
+// (`here`: the part as the design draws it at the combination read, where it draws it there: a variant that takes its
+// rectangle away leaves a shape of no kind, as derive reads a vector; `fa`, the design's part, still says whether to ask)
+export function asShape(x, fa, hasChildren, here = null) {
+  if (fa && here) fa = here;
   if (x.kind !== 'container' || !fa || fa.kind !== 'graphic' || hasChildren) return x;
   if (fa.shape === 'ellipse') { if (x.full) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; } }
   else if (!fa.icon && !x.layout) { x.kind = 'graphic'; if (fa.shape) x.shape = fa.shape; delete x.layout; }
@@ -1831,6 +1845,9 @@ async function main() {
       // (or drawn so by an arg: a state the code takes as a prop, focus among its values)
       const focused = /focus/.test(JSON.stringify((L.pseudoOf || {})[args.__state] || '')) || Object.entries(args).some(([k, v]) => typeof v === 'string' && /focus/i.test(v) && !Object.values(props).some((p) => p.emptied !== undefined && p.code === k));
       const room = roomOf(asked);
+      // the design at the combination read, expanded once where a part asks it
+      let here = null;
+      const drawnHere = () => here || (here = figmaContract ? expand(figmaContract, { ...variantDefaults(figmaContract), ...comboOf(asked) }) : {});
       if (room) await call(L.tab, ([sel, container, climb, w]) => {
         let root = document.querySelector(sel); if (!root) return;
         const holder = document.querySelector(container);
@@ -2325,7 +2342,7 @@ async function main() {
           for (const p of css) { const sel = await authoredSelector(L.tab, `[data-contract-id="${id}"]`, p, styles); if (sel && await call(L.tab, writtenByHolder, selectorParts(sel), `[data-contract-id="${id}"]`, '[data-contract-id="root"]')) { mine = true; break; } }
           if (!mine) delete x[f];
         }
-        asShape(x, fa, raw.some((r) => r.parent === id));
+        asShape(x, fa, raw.some((r) => r.parent === id), fa && drawnHere()[id]);
         drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box, layers: !!x.paint };
         delete x.box;
         if (x.layout) {
@@ -2435,7 +2452,7 @@ async function main() {
           // (but a shadow that is all strokes, every layer read as a side's, the code naming no style: a border that looks
           // like a style, an inside bottom stroke as Carbon's `Border bottom` draws it, is the border it was written as)
           const strokesOnly = !named && (x.ringsUsed || []).length && x.ringsUsed.length === cssShadows(x.shadowAll || '').length;
-          const whole = x.shadowAll && !strokesOnly && effects.find((fx) => keyOf(fx) === shadowKey(cssShadows(x.shadowAll)));
+          const whole = x.shadowAll && !strokesOnly && wholeShadowStyle(cssShadows(x.shadowAll), named, effects, shadowKey);
           if (whole || (x.shadowAll && named && (x.ringsUsed || []).length && x.ringsUsed.every(theirs))) { x.shadow = (whole || named).name; if (!x.ownStroke) delete x.border; }
           else if (x.shadow) {
             const hit = named || effects.find((fx) => keyOf(fx) === shadowKey(cssShadows(x.shadow)));
