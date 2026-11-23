@@ -45,6 +45,11 @@ seeded('a variant\'s place in its set', (d) => { d.variants[1].place = { x: 0, y
 seeded('the set\'s size', (d) => { d.set = { w: 260, h: 100 }; }, { at: 'Button.set', library: { w: 300, h: 40 }, drawn: { w: 260, h: 100 } });
 seeded('a variant the drawing lacks', (d) => { d.variants.pop(); }, { at: 'Size=md, State=hover', library: { kind: 'variant' }, drawn: null });
 
+// a vector's outline (snapshot 0.85.0): a dot drawn back square, at its size, is a row
+const dotted0 = copy(library); dotted0.variants[0].children.push({ name: 'Dot', type: 'VECTOR', w: 8, h: 8, x: 4, y: 4, index: 3, outline: 'a1b2c3d4' });
+const squared = copy(dotted0); squared.variants[0].children[3].outline = 'b2c3d4e5';
+ok('(c) a vector\'s outline gives exactly its row', JSON.stringify(geometry(dotted0, squared)) === JSON.stringify([{ at: 'Size=md, State=rest/Dot.outline', library: 'a1b2c3d4', drawn: 'b2c3d4e5' }]), geometry(dotted0, squared));
+
 // rows are counted, not deduped: the same change in both variants is two rows
 const both = copy(library); for (const v of both.variants) v.children[1].x = 44;
 ok('the same change in two variants is two rows', geometry(library, both).length === 2, geometry(library, both));

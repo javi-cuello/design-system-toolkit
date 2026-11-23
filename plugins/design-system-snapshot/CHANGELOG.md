@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.85.0] - 2026-11-23
+### Added
+- **A vector records its outline** (`outline`): a digest of its paths, numbers at the walk's two decimals, the fill rule left out. Only a vector's box was read, so a dot drawn back as a square of the same size read the same, and the round trip's geometry gave it no row while its picture differed by 2%. A digest, since a glyph's paths run to kilobytes; one outline written two ways still reads as two.
+
 ## [0.84.0] - 2026-11-23
 ### Added
 - **A set's arrangement: each variant's place in its set (`place`) and the set's size (`set`).** A drawing knew only each variant's box, so it laid them on a grid of boxes, and what paints outside its box (a tooltip's bubble round a 16 px trigger) overlapped its neighbours and crossed the set's edge. Kept beside the variant's tree, never as its `x` and `y`, which readers add up as a layer's place in its parent.

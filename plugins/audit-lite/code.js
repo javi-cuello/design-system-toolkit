@@ -1439,6 +1439,8 @@ const unescaped = (t) => t.replace(/&(lt|gt|amp|quot|#39);/g, (m, e) => ({ lt: '
 const clean = (v) => (typeof v === 'symbol' ? 'mixed' : v);
 /** @param {unknown} v */
 const round = (v) => (typeof v === 'number' ? +v.toFixed(2) : v);
+/** FNV-1a, eight hex digits: a short, stable name for a long string (a vector's paths). @param {string} s */
+const digest = (s) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; return h.toString(16).padStart(8, '0'); };
 
 /** @type {Record<string, VariableCollection | null>} */
 const colCache = {};
@@ -2050,7 +2052,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.84.0';
+const VERSION = '0.85.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -2242,6 +2244,11 @@ async function walk(n, depth, at, inInstance = false) {
     const a = n.arcData, deg = (r) => Math.round((r * 180) / Math.PI * 100) / 100;
     if (a.innerRadius || Math.abs(a.endingAngle - a.startingAngle - 2 * Math.PI) > 1e-6) o.arc = { start: deg(a.startingAngle), end: deg(a.endingAngle), inner: Math.round(a.innerRadius * 1000) / 1000 };
   }
+  // A vector's outline, as a digest of its paths at the walk's rounding: a dot drawn back as a square of its size read
+  // the same, since only its box was recorded (0.85.0). A digest, not the paths, which run to kilobytes in a glyph; the
+  // fill rule is left out, as a closed path fills under either. One outline written two ways (a box closed twice) still
+  // reads as two.
+  if (n.type === 'VECTOR' && Array.isArray(n.vectorPaths) && n.vectorPaths.length) o.outline = digest(n.vectorPaths.map((p) => String(p.data).replace(/-?\d*\.?\d+(e-?\d+)?/g, (x) => String(round(+x) + 0))).join('|'));
   // A mirror is not a turn. Figma keeps a flip in the matrix and reports it as
   // a rotation (a horizontal mirror reads -180), so a mirrored layer was
   // recorded upside down and its code's scaleX(-1) waived as a difference.

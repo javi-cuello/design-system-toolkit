@@ -99,6 +99,17 @@ const whole = await walk({ ...box("Dot", "ELLIPSE"), arcData: { startingAngle: 0
 const capped = await walk({ ...box("Line", "VECTOR"), strokes: [{ type: "SOLID", visible: true, color: { r: 0, g: 0, b: 0 } }], strokeCap: "ROUND" }, 1);
 ok("an ellipse's arc is kept where it is not whole, in degrees, and a stroke's rounded ends", JSON.stringify(half.arc) === '{"start":0,"end":180,"inner":0.5}' && !("arc" in whole) && capped.strokeCap === "ROUND");
 
+// 0.85.0: a vector's outline was not read, so a dot drawn back as a square of its size compared the same
+{
+  const shape = (data, windingRule = "NONZERO") => walk({ ...box("Dot", "VECTOR"), width: 8, height: 8, vectorPaths: [{ windingRule, data }] }, 1);
+  const circle = await shape("M 8 4 C 8 6.209139029184977 6.209139029184977 8 4 8 C 1.790860970815023 8 0 6.209139029184977 0 4 C 0 1.790860970815023 1.790860970815023 0 4 0 C 6.209139029184977 0 8 1.790860970815023 8 4 Z", "NONE");
+  const square = await shape("M 0 0 L 8 0 L 8 8 L 0 8 L 0 0 Z");
+  ok("a vector records its outline, and a circle's is not a square's", typeof circle.outline === "string" && circle.outline.length === 8 && circle.outline !== square.outline);
+  const again = await shape("M 8 4 C 8 6.209139 6.209139 8 4 8 C 1.790861 8 0 6.209139 0 4 C 0 1.790861 1.790861 0 4 0 C 6.209139 0 8 1.790861 8 4 Z");
+  ok("…read at the walk's rounding, so one outline written to more or fewer places is the same", again.outline === circle.outline);
+  ok("…and a layer that is not a vector records none", !("outline" in (await walk(box("Frame", "FRAME"), 1))));
+}
+
 // 0.61.0: a component is named under its page unless the page is its own, a private one's underscore aside
 const on = (page, name) => componentName({ name, parent: { type: "PAGE", name: page } });
 ok("a component on its own page is its name, a private one too; on another page it is under it",
