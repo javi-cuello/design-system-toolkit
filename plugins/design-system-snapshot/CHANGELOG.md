@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.84.0] - 2026-11-23
+### Added
+- **A set's arrangement: each variant's place in its set (`place`) and the set's size (`set`).** A drawing knew only each variant's box, so it laid them on a grid of boxes, and what paints outside its box (a tooltip's bubble round a 16 px trigger) overlapped its neighbours and crossed the set's edge. Kept beside the variant's tree, never as its `x` and `y`, which readers add up as a layer's place in its parent.
+
 ## [0.83.0] - 2026-11-23
 ### Added
 - **Each walked layer says its place among all its parent's children, hidden ones counted** (`index`). The walk records visible layers only and flips each boolean alone, so two layers two booleans show, both hidden by default, were each recorded at the same place, and which Figma draws first was lost (a menu item's top spacer and divider). None is said inside an instance, whose hidden children Figma does not hand over; every other field is as before.

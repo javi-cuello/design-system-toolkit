@@ -132,6 +132,19 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
   const got = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] });
   ok("a property's own `#` stays in its name; only Figma's id is dropped", JSON.stringify(Object.keys(got[0].props).sort()) === JSON.stringify(["# of lines", "Label"]));
 }
+// 0.84.0: a set's arrangement is the library's: each variant's place in the set and the set's size, so a drawing
+// places its variants where the library does (bubbles painting outside 16 px variants overlapped on a grid of boxes)
+{
+  const v = (name, x, y) => ({ type: "COMPONENT", name, id: "5:" + x, x, y, width: 16, height: 16, children: [], componentPropertyDefinitions: {} });
+  const set = { type: "COMPONENT_SET", name: "Tip", id: "5:0", width: 794, height: 1300, children: [v("Position=Top", 149, 1042), v("Position=Left", 740, 60)],
+    componentPropertyDefinitions: { Position: { type: "VARIANT", defaultValue: "Top", variantOptions: ["Top", "Left"] } } };
+  for (const c of set.children) c.parent = set;
+  const p = { type: "PAGE", name: "Tip", children: [set] }; set.parent = p; p.findAll = (f) => p.children.filter(f);
+  figma.root = { children: [p] };
+  const [got] = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] });
+  ok("each variant's place in its set is recorded, and the set's size", JSON.stringify(got.variants.map((x) => x.place)) === '[{"x":149,"y":1042},{"x":740,"y":60}]' && JSON.stringify(got.set) === '{"w":794,"h":1300}');
+  ok("…beside the variant's own box, never as its x and y (a layer's place in its parent, which readers add up)", !("x" in got.variants[0]) && !("y" in got.variants[0]));
+}
 // 0.73.0: a scratch page's components are trials, not the library; a snapshot took two as components
 {
   const pageOf = (name, comp) => { const p = { type: "PAGE", name, children: [] }; if (comp) { comp.parent = p; p.children.push(comp); } p.findAll = (f) => p.children.filter(f); return p; };
