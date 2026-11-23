@@ -565,6 +565,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // took 8 ms) is given 8 s and one retry; still nothing, it is reported as not bound and the drawing goes on
   // a run whose token is gone (the runner gave up on it, or a newer drawing took the file) stops at its next call to
   // Figma: left going, one crawled through its imports for an hour and held the file
+  // layers.mjs's, written out here: this runs in Figma, where nothing the module imports exists
+  const bareProp = (k) => String(k).replace(/#\d+:\d+$/, '');
+  const keyMatches = (own, key) => !own || !key || own === key;
   const tried = async (what, f) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); for (let i = 0; i < 2; i++) { const r = await Promise.race([f().then((v) => ({ v }), (e) => ({ failed: String(e && e.message || e) })), new Promise((res) => setTimeout(() => res(null), 8000))]); if (r && 'v' in r) return r.v; if (r) { missing.add(`${what} (${r.failed})`); return null; } } missing.add(`${what} (no answer)`); return null; };
   // a main imported once per key, its answer kept: each instance asking again made a key that would not answer cost
   // sixteen seconds per instance, and a side navigation of many items outran the drawing's time

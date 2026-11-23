@@ -635,4 +635,15 @@ delete globalThis.figma;
   ok('a folder named or chosen with no contract there is refused, never a round trip skipped',
     /no contract/.test(heldTo(index, 'Button', { ...o, folder: 'ios-buton', exists: () => false }).refused || ''));
 }
+{
+  // the plugin code runs in Figma, where nothing this module imports exists: a helper it calls is defined inside it
+  // (a drawing stopped on "bareProp is not defined" the first time a placed instance set its props)
+  const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
+  const imported = [...src.matchAll(/^import \{([^}]+)\} from/gm)].flatMap((m) => m[1].split(',').map((x) => x.trim().split(/\s+as\s+/).pop()));
+  const code = pluginCode({ component: 'Chip', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }, {});
+  const free = imported.filter((n) => new RegExp(`(^|[^.\\w])${n}\\(`).test(code) && !new RegExp(`(const|let|function)\\s+${n}\\b`).test(code));
+  ok(`the plugin code calls no helper only this module imports (${free.join(', ') || 'none'})`, !free.length);
+}
+
+
 console.log(`${n}/${n} passed`);
