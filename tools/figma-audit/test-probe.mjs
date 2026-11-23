@@ -29,4 +29,7 @@ assert.deepEqual(await run({ inFile: { instances: 'none on this page', font: 2, 
 // the library's own file: the bridge is told so, and the import is not asked (a stray other-library instance on the
 // page would otherwise fail a drawing that never imports)
 assert.deepEqual(await run({ own: true, inFile: { instances: 'ok', font: 1, library: { error: 'not published' } } }), ['ok service', 'ok port', 'ok connected', 'ok answers', 'ok instances', 'skip library'], 'in the library\'s own file the import is not asked');
-console.log('probe: 14 passed');
+// Figma's plugin parser refuses the text "import (" anywhere in the code, a comment too ("possible import expression
+// rejected"), so the code sent to the file never holds it
+{ const { IN_FILE } = await import('./probe.mjs'); assert.ok(!/\bimport\s*\(/.test(IN_FILE), 'the in-file code holds no text Figma reads as an import'); }
+console.log('probe: 15 passed');

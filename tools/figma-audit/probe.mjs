@@ -45,7 +45,7 @@ await step('instances', async () => {
 });
 await step('font', async () => { const t0 = Date.now(); await figma.loadFontAsync({ family: 'Inter', style: 'Regular' }); return Date.now() - t0; });
 await step('library', async () => {
-  // the library's own file: the drawing takes its components from the file itself, never by import (to-figma's ownFile)
+  // the library's own file: the drawing takes its components from the file itself, never asked of a library: to-figma's ownFile
   if (typeof OWN !== 'undefined' && OWN) return "not needed: this is the library's own file, whose components the drawing takes from it";
   // the first library component that imports passes: an old library's instance refusing is not the bridge's fault,
   // so up to five are tried, and it fails only when every one did
