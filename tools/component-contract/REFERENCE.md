@@ -52,7 +52,11 @@ What Figma and CSS can each say for a component, one row per capability (family,
 
 ### `looks.mjs`
 
-The Figma leg by eye: `node tools/component-contract/looks.mjs --project <label> [components…]` renders each component drawn into the project's scratch file beside the library's own (its published component imported by key, else the library file itself when the bridge has it open) and prints the share of pixels that differ per component, worst variant named; images of each differing variant (library, drawn, difference) go to the project's `round-trip/looks/`. It sees what a contract does not hold.
+The Figma leg by eye: `node tools/component-contract/looks.mjs --project <label> [components…]` renders each component drawn into the project's scratch file beside the library's own (its published component imported by key, else the library file itself when the bridge has it open) and prints the share of pixels that differ per component, worst variant named; images of each differing variant (library, drawn, difference) go to the project's `round-trip/looks/`. It sees what a contract does not hold. Each line ends with the rows the component's reading holds (the contract's and the geometry's), and a component visibly different with none is named: a gap in the measure, the cross-check on `geometry.mjs`.
+
+### `geometry.mjs`
+
+The Figma leg's geometry: `to-figma.mjs --verify` keeps the snapshot walk's reading of the drawn set and holds it to the library's stored `figma.json` per variant (matched by sorted axis values) and per layer path (spec.cjs `layerPaths`), every field but ids, keys and `index`, before derive drops what the contract does not keep. Rows `{ at, library, drawn }` go to `<component>.roundtrip.json` as `geometry`, and eval counts them with the leg's rows, never deduped. A number is the same within 0.01, the walk's rounding step, by parity's `near`; a field the library's snapshot records nowhere (an older plugin: `place` and `set` before 0.84.0) is left out, as the store's notes leave it out. What a layer paints past its box is not read by the walk, so not compared.
 
 ### `figma-facts.json`
 

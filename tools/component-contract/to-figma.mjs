@@ -1884,12 +1884,18 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
         // the library's components by name, as eval.mjs compares with them: the same rules on every leg
         const { contracts } = await import('./official.mjs');
         const rt = roundTrip(held, now, { mains: req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract)) });
-        back = rt.rows.length;
+        // and the reading itself, before derive drops what it does not keep, held to the stored one layer by layer: the
+        // geometry part of the Figma leg (geometry.mjs), against the fields the library's snapshot records anywhere
+        const { recordedFields, readSpecs } = req('../snapshot/store.cjs');
+        const known = recordedFields(Object.fromEntries(readSpecs(where.paths.components, { compact: true }).map((x) => [x.folder, x.spec])));
+        const geo = snap && (await import('./geometry.mjs')).geometry(snap, walkedAs(comp, snap), { known });
+        back = rt.rows.length + (geo ? geo.length : 0);
         const rtOut = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`);
-        const body = JSON.stringify({ component: p.name, combinations: rt.combinations, ...(rt.invalid && { invalid: rt.invalid }), ...(rt.cut && { cut: rt.cut }), rows: rt.rows }, null, 2) + '\n';
+        const body = JSON.stringify({ component: p.name, combinations: rt.combinations, ...(rt.invalid && { invalid: rt.invalid }), ...(rt.cut && { cut: rt.cut }), rows: rt.rows, ...(geo && { geometry: geo }) }, null, 2) + '\n';
         if (!fs.existsSync(rtOut) || fs.readFileSync(rtOut, 'utf8') !== body) fs.writeFileSync(rtOut, body);
-        console.log(`${p.name} as drawn, against the library's own: ${back ? `${back} difference(s)` : 'the same'} over ${rt.combinations} combination(s) — ${path.relative(process.cwd(), rtOut)}`);
+        console.log(`${p.name} as drawn, against the library's own: ${rt.rows.length ? `${rt.rows.length} difference(s)` : 'the same'} over ${rt.combinations} combination(s), ${!geo ? 'geometry not compared (no stored figma.json)' : geo.length ? `${geo.length} geometry row(s)` : 'geometry the same'} — ${path.relative(process.cwd(), rtOut)}`);
         for (const r of rt.rows.slice(0, 12)) console.log(`  ${r.at}: library ${JSON.stringify(r.library)}, drawn ${JSON.stringify(r.drawn)} (${r.in}/${rt.combinations})`);
+        for (const r of (geo || []).slice(0, 12)) console.log(`  geometry ${r.at}: library ${JSON.stringify(r.library)}, drawn ${JSON.stringify(r.drawn)}`);
       } else { back = 1; const stale = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`); if (fs.existsSync(stale)) fs.unlinkSync(stale); console.log(`${p.name}: not found drawn in ${into}, so it could not be held to the library's own: failed`); }
     }
     // not bound is a failure too: a drawing is held to its contract, and a value it could not bind is not held

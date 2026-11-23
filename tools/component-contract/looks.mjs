@@ -7,7 +7,8 @@
  *
  *   node tools/component-contract/looks.mjs --project <label> [components…] [--out <dir>]
  *
- * Prints, per component, the share of pixels that differ in its worst variant, and writes each differing variant's
+ * Prints, per component, the share of pixels that differ in its worst variant beside the rows its reading holds, and
+ * names any visibly different with none (a gap in the measure); writes each differing variant's
  * library, drawn and difference images to --out (default: the project's round-trip folder, looks/). The library's
  * component is its published one: a change not yet published shows as a difference.
  */
@@ -145,12 +146,16 @@ async function main() {
       if (!lib.cut && c.sizes[0].some((x, i) => Math.abs(x - c.sizes[1][i]) > 2)) sized.push(`${v.name} (library ${c.sizes[0].join('×')}, drawn ${c.sizes[1].join('×')})`);
       if (c.share > worst) { worst = c.share; at = `${v.name}${c.sizes[0].join('x') !== c.sizes[1].join('x') ? ` (library ${c.sizes[0].join('×')}${lib.cut ? ', cut by its set' : ''}, drawn ${c.sizes[1].join('×')})` : ''}`; }
     }
-    rows.push([folder, worst, at]);
-    console.log(`${folder}: ${(worst * 100).toFixed(1)}%${at ? ` — worst ${at}` : ''}${sized.length ? `; sized apart: ${sized.length}, e.g. ${sized[0]}` : ''}`);
+    // beside the measure's rows for it (eval.mjs --draw's reading, the contract's and the geometry's), which this checks
+    let measured = null; try { const r = JSON.parse(fs.readFileSync(path.join(where.projectDir, 'round-trip', `${folder}.roundtrip.json`), 'utf8')); measured = r.rows.length + (r.geometry || []).length; } catch { /* not drawn and read back */ }
+    rows.push([folder, worst, at, measured]);
+    console.log(`${folder}: ${(worst * 100).toFixed(1)}%${at ? ` — worst ${at}` : ''}${sized.length ? `; sized apart: ${sized.length}, e.g. ${sized[0]}` : ''}; ${measured == null ? 'no reading' : `${measured} row(s)`}`);
   }
   const bad = rows.filter(([, s]) => s == null || s > 0.01);
   console.log(`${label} looks: ${rows.length - bad.length} of ${rows.length} within 1%; images of the rest in ${path.relative(process.cwd(), out)}`);
   for (const [f, s, why] of rows) if (s == null) console.log(`  ${f}: not compared — ${why}`);
+  const unseen = rows.filter(([, s, , m]) => s > 0.01 && m === 0).map(([f]) => f);
+  if (unseen.length) console.log(`visibly different with no row (a gap in the measure): ${unseen.join(', ')}`);
 }
 
 if (process.argv[1] && import.meta.url === `file://${(() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()}`) await main();

@@ -84,6 +84,11 @@ ok('a component measured since the accept is held until accepted; one that came 
   fs.writeFileSync(path.join(home, 'round-trip', 'tag.roundtrip.json'), JSON.stringify({ rows: [], combinations: 1 }));
   m = measure(where);
   ok('a reading of today\'s contract is current; one kept from an earlier drawing is stale', !m.legs.self.tag.stale && /kept from an earlier drawing/.test(m.legs.figma.tag.stale));
+  // the Figma leg's geometry rows are its rows too: a drawing the contract compare calls the same is not, with one
+  const geo = { at: 'Size=md/Label.x', library: 36, drawn: 44 };
+  fs.writeFileSync(path.join(home, 'round-trip', 'tag.roundtrip.json'), JSON.stringify({ rows: [], geometry: [geo], combinations: 1 }));
+  ok('a geometry row is a row of the Figma leg', JSON.stringify(measure(where).legs.figma.tag.rows) === JSON.stringify([geo]));
+  fs.writeFileSync(path.join(home, 'round-trip', 'tag.roundtrip.json'), JSON.stringify({ rows: [], combinations: 1 }));
   fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf({ ...c, component: 'Old' }) } } }));
   ok('a reading of another contract is stale', /contract changed/.test(measure(where).legs.self.tag.stale));
   // the second trip is held to the first, not to the contract: a change there is the translation not settling

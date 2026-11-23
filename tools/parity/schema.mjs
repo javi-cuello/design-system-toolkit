@@ -57,7 +57,7 @@ export const snapBorder = (v) => {
   if (!Number.isFinite(x) || (u && u !== 'px') || x <= 0 || Number.isInteger(x)) return v;
   return `${x < 1 ? 1 : Math.floor(x)}px`;
 };
-const near = (e, a, tol = 0) => {
+export const near = (e, a, tol = 0) => {
   if (Array.isArray(e)) return Array.isArray(a) && e.length <= a.length && e.every((v, i) => near(v, a[i], tol));
   if (typeof e === 'string' && e === a) return true;
   const [x, u] = split(e), [y, w] = split(a);

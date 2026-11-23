@@ -9,7 +9,8 @@
  *   self     the contract from-code read off the toolkit's own rendering of the contract (from-code --self: to-markup's
  *            web component and to-code's sheet, no project code; <home>/round-trip/self/from-code/<component>.json,
  *            written by --self). What differs here is the toolkit's loss; what differs only in browser is the project's
- *   figma    the contract read back from to-figma's drawing of it by the snapshot's walk and derive
+ *   figma    the contract read back from to-figma's drawing of it by the snapshot's walk and derive, and that walk's
+ *            reading held to the stored figma.json layer by layer (its `geometry` rows, geometry.mjs)
  *            (<home>/round-trip/<component>.roundtrip.json, written by --draw)
  *
  * and the differing rows are counted per component and per field. The counts accepted are stored
@@ -275,7 +276,7 @@ export function measure(where, only = [], now = {}) {
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     const st = back && stale('figma', folder, contract);
-    legs.figma[folder] = back ? { rows: back.rows, combinations: back.combinations, ...(back.cut && { cut: back.cut }), ...(st && { stale: st }) } : { skipped: 'not drawn and read back (eval.mjs --draw)' };
+    legs.figma[folder] = back ? { rows: [...back.rows, ...(back.geometry || [])], combinations: back.combinations, ...(back.cut && { cut: back.cut }), ...(st && { stale: st }) } : { skipped: 'not drawn and read back (eval.mjs --draw)' };
   }
   return { home, legs };
 }
