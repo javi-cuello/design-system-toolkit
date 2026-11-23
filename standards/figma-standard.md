@@ -10,7 +10,7 @@ Cite a rule as `figma-standard rule N`.
 
 ## Components and variants
 
-1. **Axis order**: `Size → Appearance → Feedback/… → Disabled → State`, above every other property, where Figma pins variant axes. The emphasis axis (`Primary`, `Secondary`…) is `Appearance`, in code `appearance`: never `Variant`, since every axis is a Figma variant, nor `Type`, HTML's own on a button, nor `Role` or `Style`, which name tokens and styles. `State` always last; `Disabled` a VARIANT False/True immediately before it. A True/False axis lists its default first, so the panel opens on what a designer gets; a validation axis takes rule 57's order.
+1. **Axis order**: `Size → Appearance → Feedback/… → Disabled → State`, above every other property, where Figma pins variant axes. The axis that sets how a component looks (a button's `Primary`, `Secondary`…, a card's `Elevated`, `Outlined`) is `Appearance`, in code `appearance`: never `Variant`, since every axis is a Figma variant, nor `Type`, HTML's own on a button, nor `Role` or `Style`, which name tokens and styles. `State` always last; `Disabled` a VARIANT False/True immediately before it. A True/False axis lists its default first, so the panel opens on what a designer gets; a validation axis takes rule 57's order.
 
    *Why:* one canon keeps property panels predictable across projects. `Appearance` is Atlassian's and Fluent's prop, the one name free of all four clashes (maintainer, 2026-11-23).
 

@@ -45,8 +45,8 @@ A button does something here: submits, saves, opens a dialog, toggles, deletes. 
 **Build**
 - [required] One button component; the four roles are one attribute on the wrapper, `appearance="primary|secondary|tertiary|ghost"`, mapped once to the project's Figma axis ([figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes); code-standard rules 9 and 10).
   ```css
-  ds-button[variant="primary"] > :is(button, a) { background: var(--color-action-primary-bg); }
-  ds-button[variant="ghost"] > :is(button, a) { background: transparent; }
+  ds-button[appearance="primary"] > :is(button, a) { background: var(--color-action-primary-bg); }
+  ds-button[appearance="ghost"] > :is(button, a) { background: transparent; }
   ```
 - [required] Every colour, border and radius per variant is a token, never a literal (code-standard rule 22; [tokens: *Three tiers*](../../code/tokens.md#three-tiers)).
 - [required] Rest, hover, press and focus are `:hover`, `:active` and `:focus-visible` on the native control, never attributes (code-standard rule 9); the ring is [accessibility: *Visible focus*](../../code/accessibility.md#visible-focus).

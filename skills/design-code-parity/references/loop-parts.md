@@ -159,7 +159,7 @@ The same project ran for a week with `Inter` resolving to Helvetica on the devel
 
 Each component has a story beside its code. For parity it states three things:
 
-1. Which Figma variant each combination of the component's controls is: `Size=lg, Variant=Primary` is `size="lg" variant="primary"`.
+1. Which Figma variant each combination of the component's controls is: `Size=lg, Appearance=Primary` is `size="lg" appearance="primary"`.
 2. Which rendered element plays each Figma layer: `Content` is the component root's inner box, `Label` the span inside it.
 3. Which element takes the states.
 

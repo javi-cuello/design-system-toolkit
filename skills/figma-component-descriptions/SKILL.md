@@ -5,7 +5,7 @@ description: Write and apply high-quality descriptions to Figma design system co
 
 # Figma Component Descriptions
 
-**Version 1.23.0** — history in CHANGELOG.md.
+**Version 1.23.1** — history in CHANGELOG.md.
 
 This skill writes the descriptions of the components in a Figma library and applies them through the Figma bridge. A public component gets the full structured form. A private part gets a compact form of one or two sentences. Scripts read the file, generate the Behaviour and Composition lists, write the text and check it. Use it to document, fill in, audit or review component descriptions; auditing how a component is built is `figma-components-audit`'s job.
 

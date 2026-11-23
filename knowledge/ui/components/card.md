@@ -222,10 +222,10 @@ A card is a container for a few related pieces of content about one subject: an 
 - [required] Forced colours: a card keeps an edge without its shadow (above).
 
 **Build**
-- [required] The surface is a `variant` attribute, each value reading tokens for fill, border and shadow (code-standard rules 9 and 22; [tokens: *Three tiers*](../../code/tokens.md#three-tiers)).
+- [required] The surface is an `appearance` attribute (figma-standard rule 1), each value reading tokens for fill, border and shadow (code-standard rules 9 and 22; [tokens: *Three tiers*](../../code/tokens.md#three-tiers)).
   ```css
   ds-card { border: var(--card-border, 1px solid var(--colour-border-neutral-subtle)); }
-  ds-card[variant="elevated"] { box-shadow: var(--shadow-resting); }
+  ds-card[appearance="elevated"] { box-shadow: var(--shadow-resting); }
   ```
 - [moderate] A shadowed card keeps a border, so forced colours still draw an edge ([CSS Color Adjust 1](https://www.w3.org/TR/css-color-adjust-1/#forced-colors-properties); Primer pairs border and shadow).
 - [required] Padding is an attribute over spacing tokens; a caller's change goes through a custom property (code-standard rules 22 and 38; [tokens: *Spacing tokens*](../../code/tokens.md#spacing-tokens)).
@@ -349,7 +349,7 @@ A card is a container for a few related pieces of content about one subject: an 
 
   | Figma | Code |
   |---|---|
-  | `Variant` (surface) | `variant`; Fluent `appearance`; SDS `variant` |
+  | `Appearance` (surface) | `appearance`, as Fluent; SDS `variant` |
   | `Direction` | `direction`; Fluent `orientation` |
   | `Size` | `padding` in Primer, `density` in Spectrum, `size` in Fluent |
   | `Heading`, `Body` | the heading and body children |

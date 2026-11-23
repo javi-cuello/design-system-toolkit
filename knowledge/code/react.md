@@ -7,7 +7,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 ## Props named for meaning
 
 **What good looks like**
-- [strong] Each prop says what it means to the reader of the call site (`variant="danger"`, `size="sm"`), never how it is drawn (`red`, `bigPadding`).
+- [strong] Each prop says what it means to the reader of the call site (`appearance="danger"`, `size="sm"`), never how it is drawn (`red`, `bigPadding`).
 - [required] No prop reuses the name of an HTML or ARIA attribute for something else; a design axis called Role is `variant`.
 - [moderate] A choice of a few values is a string union; a yes-or-no is a boolean that defaults to `false`; every optional prop has a default in the signature.
 
@@ -20,7 +20,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - [weak] **Two booleans that cannot both be true are one union.** `primary` and `danger` as booleans allow `<Button primary danger>`; `variant` cannot.
 
 **Cases**
-- The contract has an axis `Role` with values Primary, Secondary → `variant: 'primary' | 'secondary'` (code-standard rule 9).
+- The contract has an axis `Appearance` with values Primary, Secondary → `appearance: 'primary' | 'secondary'` (code-standard rule 9).
 - A prop `size` on a text field means the drawn height, and `<input size>` already means a width in characters → name it for the contract's meaning (`density`, or `size` kept off the native element) and never spread it onto the `input`.
 - `color="#d00"` on a button → a `variant` or `tone` from the contract; a raw colour is a token's job.
 - `isPrimary`, `isSecondary`, `isDanger` → one `variant` union.
@@ -321,7 +321,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
   export default meta;
   type Story = StoryObj<typeof meta>;
 
-  export const Primary = { args: { variant: 'primary' } } satisfies Story;
+  export const Primary = { args: { appearance: 'primary' } } satisfies Story;
   export const Disabled = { args: { disabled: true } } satisfies Story;
   ```
 - [strong] **Types from the framework's package.** `Meta` and `StoryObj` are imported from the Storybook framework the project installs (`@storybook/react-vite`, `@storybook/nextjs-vite`), not the renderer's `@storybook/react`, which a project on a framework package does not depend on: `tsc` cannot resolve it (found generating 63 components into a Next.js project, 2026-10-30; [Storybook TypeScript](https://storybook.js.org/docs/writing-stories/typescript)).

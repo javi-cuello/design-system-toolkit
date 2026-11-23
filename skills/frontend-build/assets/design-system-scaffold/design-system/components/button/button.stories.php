@@ -6,12 +6,12 @@
 return [
     'title' => 'Button',
     'tier'  => 'Native interactive',
-    'about' => 'A custom element carrying the variant, wrapping a real <button> or <a>. '
+    'about' => 'A custom element carrying the appearance, wrapping a real <button> or <a>. '
              . 'The browser owns activation, focus, disabled and form submission.',
     'api' => [
         'label'    => 'the text',
         'size'     => 'lg · md · sm',
-        'variant'  => 'primary · secondary',
+        'appearance' => 'primary · secondary',
         'href'     => 'renders an <a>; without it, a <button>',
         'disabled' => 'true renders a disabled <button> or an <a> without href',
         'type'     => 'submit · button  (when it is a button)',
@@ -20,7 +20,7 @@ return [
     'controls' => [
         'label'    => ['type' => 'text',    'default' => 'Book a call'],
         'size'     => ['type' => 'select',  'options' => ['lg', 'md', 'sm'], 'default' => 'md'],
-        'variant'  => ['type' => 'select',  'options' => ['primary', 'secondary'], 'default' => 'primary'],
+        'appearance' => ['type' => 'select',  'options' => ['primary', 'secondary'], 'default' => 'primary'],
         'disabled' => ['type' => 'boolean', 'default' => false],
     ],
 ];

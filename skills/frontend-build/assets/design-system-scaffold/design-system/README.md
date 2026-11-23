@@ -32,15 +32,15 @@ element, so these work with scripting off. Nothing registers them.
 
 **2 · Native interactive — a custom element wrapping the real control.**
 Button, link, checkbox, radio, select, input, textarea. The wrapper carries
-the variant; the native element inside carries the behaviour, the semantics
+the appearance; the native element inside carries the behaviour, the semantics
 and the accessibility.
 
 ```html
 <!-- yes: the browser owns disabled, focus, activation, form submission -->
-<__PREFIX__-button variant="primary"><button disabled>Save</button></__PREFIX__-button>
+<__PREFIX__-button appearance="primary"><button disabled>Save</button></__PREFIX__-button>
 
 <!-- no: now JavaScript has to reimplement a button, badly -->
-<__PREFIX__-button variant="primary" disabled>Save</__PREFIX__-button>
+<__PREFIX__-button appearance="primary" disabled>Save</__PREFIX__-button>
 ```
 
 **3 · Behaviour-heavy — an actual Web Component with `customElements.define`.**
@@ -60,7 +60,7 @@ A design's variant axes become attributes, with two exceptions:
   element, reading `--__PREFIX__-dim` before the token, which a dimming
   parent sets to 1 for what it holds (see `_button.sass`).
 
-An axis a library named `Role` cannot keep its name: it becomes `variant`, because
+An axis a library named `Role` cannot keep its name: it becomes `appearance` (figma-standard rule 1), because
 `role` is ARIA's attribute and `role="primary"` would tell a screen reader
 the button has a role called primary.
 

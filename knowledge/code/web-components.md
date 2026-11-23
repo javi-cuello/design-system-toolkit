@@ -370,7 +370,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
 - [moderate] **CSF3 with lit-html.** A story is an object with `args` and, for web components, a `render` that returns a lit-html template; CSF3 also gives a default render from the meta's `component` ([Storybook: writing stories](https://storybook.js.org/docs/writing-stories?renderer=web-components), [Storybook: CSF](https://storybook.js.org/docs/api/csf?renderer=web-components)).
   ```js
   import { html } from 'lit';
-  export default { component: 'ds-button', args: { variant: 'primary', label: 'Save' } };
+  export default { component: 'ds-button', args: { appearance: 'primary', label: 'Save' } };
   export const Primary = {
     render: ({ variant, label, disabled }) =>
       html`<ds-button variant=${variant}><button ?disabled=${disabled}>${label}</button></ds-button>`,

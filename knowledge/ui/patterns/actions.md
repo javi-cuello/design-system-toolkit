@@ -28,7 +28,7 @@ How an interface offers things to do, across its controls: button or link, how d
 
 **Build**
 - [required] `<a href>` for a destination, `<button type="button">` for an action here, `<button type="submit">` in a form; the element table, `type` always and the stretched-link card are [HTML semantics: *Links and buttons*](../../code/html-semantics.md#links-and-buttons).
-- [required] One component draws both looks: the native element inside carries the behaviour, the wrapper the variant, `<ds-button variant="primary"><a href="/start">Start now</a></ds-button>` (code-standard rules 8 and 9).
+- [required] One component draws both looks: the native element inside carries the behaviour, the wrapper the variant, `<ds-button appearance="primary"><a href="/start">Start now</a></ds-button>` (code-standard rules 8 and 9).
 - [required] A link in a set that marks the current place takes `aria-current` (code-standard rule 64); a button that opens a dialog gets its no-script path from `popovertarget` (code-standard rule 20).
 - [required] A link that opens a new tab says so in its name, or in a visually hidden span ([accessibility: *Hidden content*](../../code/accessibility.md#hidden-content)).
 - [required] A script that takes over a link's click leaves modified clicks to the browser (code-standard rule 21; [accessibility: *Keyboard access and modified clicks*](../../code/accessibility.md#keyboard-access-and-modified-clicks)).
@@ -66,7 +66,7 @@ How an interface offers things to do, across its controls: button or link, how d
 - [required] 1.4.1: the danger is in the words. 4.1.3 Status Messages: "deleted, undo" is announced without focus (a [code candidate](../../code/candidates.md)). Focus after a row disappears is code-standard rule 14.
 
 **Build**
-- [required] Danger is a variant value on the same component, `variant="danger"` (or a `tone` axis when the design crosses danger with emphasis), drawn from danger tokens (code-standard rules 9 and 22).
+- [required] Danger is a variant value on the same component, `appearance="danger"` (or a `tone` axis when the design crosses danger with emphasis), drawn from danger tokens (code-standard rules 9 and 22).
 - [required] The label names action and object in text; an icon beside it is `aria-hidden` (code-standard rule 18).
 - [required] Undo: after the delete, write "Comment deleted" into a `role="status"` region present from load, with the Undo button next to it ([accessibility: *Live regions and status messages*](../../code/accessibility.md#live-regions-and-status-messages)).
 - [required] When the deleted row held focus, focus moves to the next row or the list heading, never `body` (code-standard rule 14; [accessibility: *Focus management*](../../code/accessibility.md#focus-management)).

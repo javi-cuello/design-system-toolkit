@@ -380,7 +380,7 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 - [required] Hierarchy carried by colour alone fails [1.4.1](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html) for a reader who cannot see the hue; a secondary button needs a visible boundary at 3:1 ([1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)) or a label that makes it a button.
 
 **Build**
-- [required] Button rank is a variant attribute on the button component (`variant="primary"`), never a class or a page override (code-standard rules 9 and 38; [figma handoff: variants to attributes](../../code/figma-handoff.md#variants-to-attributes)).
+- [required] Button rank is a variant attribute on the button component (`appearance="primary"`), never a class or a page override (code-standard rules 9 and 38; [figma handoff: variants to attributes](../../code/figma-handoff.md#variants-to-attributes)).
 - [weak] Accent colour comes only from the action role tokens ([tokens: three tiers](../../code/tokens.md#three-tiers)).
 
 **Check**

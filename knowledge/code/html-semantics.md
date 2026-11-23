@@ -655,7 +655,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 - [strong] **Autonomous, not customised built-ins.** MDN: Safari "does not plan to support" customised built-in elements (`is="…"`) ([MDN, using custom elements](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements)); wrap the native element instead.
 - [required] **No semantics of its own.** An undefined or script-free custom element is a generic inline box with no role. It never takes a role to impersonate a native control; a `<ds-button>` holds a `<button>` (code-standard rule 8).
   ```html
-  <ds-button variant="primary" size="md"><button type="submit">Save</button></ds-button>
+  <ds-button appearance="primary" size="md"><button type="submit">Save</button></ds-button>
   ```
 - [required] **Content goes in slots** in the template language (code-standard rule 13); a registered element is written only for behaviour HTML lacks (code-standard rule 8), and its script is written once (code-standard rule 36).
 - [required] **Display.** An unknown element is inline by default, so the host's stylesheet sets its `display` (CSS).

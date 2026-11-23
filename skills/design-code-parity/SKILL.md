@@ -5,7 +5,7 @@ description: "Set up and run the loop that keeps a coded design system measurabl
 
 # Design–code parity
 
-**Version 1.71.0** — history in CHANGELOG.md.
+**Version 1.71.1** — history in CHANGELOG.md.
 
 This skill sets up and runs the loop that keeps a coded design system measurably equal to its Figma source. A script copies the design out of Figma, and another measures the rendered code against that copy. A check then goes red naming the component, the variant, the layer and the property, with both values. Use it when a project wants design-to-code parity, a snapshot pipeline or a drift check in CI, or when a parity report is red. Comparison mode runs the same measurement as a report with nothing blocking.
 

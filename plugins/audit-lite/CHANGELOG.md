@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.7] - 2026-11-23
+### Changed
+- **The house emphasis axis is `Appearance`** (figma-standard 2.33.0): the axis-order check places it after `Size`, where it placed `Role`.
+
 ## [0.14.6] - 2026-11-23
 ### Changed
 - **Carries the stage list's `gather.timeout`** and the shared `gatherTimeout`/`stageById` readers; Audit lite runs inside Figma and waits on nothing, so no behaviour changes.
