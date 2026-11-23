@@ -845,10 +845,13 @@ export function asShape(x, fa, hasChildren) {
 // a token whose value paints nothing (rgba(…, 0), rgb(… / 0), #rrggbb00, transparent): the browser reads no fill there
 const seeThroughIn = (value, t) => { const v = String(value(t) ?? ''); return /rgba?\((?:[^,)]*,){3}\s*0(\.0+)?%?\s*\)$|\/\s*0(\.0+)?%?\s*\)$|^\s*transparent\s*$/i.test(v) || /^#[0-9a-f]{6}00$/i.test(v) || /^#[0-9a-f]{3}0$/i.test(v); };
 
+/* Whether a name is a token: by its path, or, at the top of its collection (no group, so no slash: a radius named None),
+   by having a value, as a word (mixed, hug) has none. `value` a token's value by its name (the name itself, or
+   undefined, where it is none). One test for every reader here. */
+const isToken = (t, value) => typeof t === 'string' && (t.includes('/') || ![undefined, t].includes(value(t)));
+
 export function zeroTokens(e, fe, value, { fill = false } = {}) {
-  // a token by its path, or one at the top of its collection (no group, so no slash: a radius named None) by having a
-  // value, as a word (mixed, hug) has none
-  const token = (t) => typeof t === 'string' && (t.includes('/') || ![undefined, t].includes(value(t)));
+  const token = (t) => isToken(t, value);
   const val = (t) => (token(t) ? value(t) : t);
   const unbound = (v) => v == null || typeof v === 'number';
   const zeroish = (t) => { const v = val(t); return v === 0 || v === '0'; };
@@ -870,7 +873,7 @@ export function zeroTokens(e, fe, value, { fill = false } = {}) {
   // inside a placed component (`fill`), a fill its component binds to a see-through token (a ghost button's rest) the
   // browser reads as none: that token. (Not on this component's own parts, whose design may draw no fill at some props,
   // a drop area's while dragging: the compare rows say those)
-  if (fill && e.background == null && typeof fe.background === 'string' && fe.background.includes('/') && seeThroughIn(value, fe.background)) e.background = fe.background;
+  if (fill && e.background == null && token(fe.background) && seeThroughIn(value, fe.background)) e.background = fe.background;
   return e;
 }
 
@@ -881,7 +884,7 @@ export function zeroTokens(e, fe, value, { fill = false } = {}) {
    design's there and no other: each layout the contract writes takes what its combinations want, and a combination
    that wants otherwise than the rest of its layout's gets a layer of its own. `code` is changed in place. */
 export function stackLikeDesign(code, design, value) {
-  const val = (t) => (typeof t === 'string' && t.includes('/') ? value(t) : t);
+  const val = (t) => (isToken(t, value) ? value(t) : t);
   // (no more combinations than derive draws, 4096: past that the layouts are left as written, said by the rows)
   const axes = Object.entries(design.props || {}).filter(([, q]) => q.type === 'enum' || q.type === 'boolean').map(([k, q]) => [k, q.type === 'enum' ? q.values : [true, false]]);
   if (axes.reduce((n, [, vs]) => n * vs.length, 1) > 4096) return code;
@@ -2906,7 +2909,7 @@ async function main() {
       fromCode.component = figmaContract.component;
       // a value the code draws as the design does, written raw or left unset (a 0 padding, no radius), takes the
       // design's token for it: the drawing binds what the design binds. The compare above keeps what the code wrote
-      const val = (t) => (typeof t === 'string' && t.includes('/') ? L.value(t) : t);
+      const val = (t) => (isToken(t, L.value) ? L.value(t) : t);
       const unbound = (v) => v == null || typeof v === 'number';
       const zeroish = (t) => { const v = val(t); return v === 0 || v === '0'; };
       // opacity aside: unset is 1, and its tokens hold percentages (taken below, where the code writes one)

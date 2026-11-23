@@ -238,6 +238,15 @@ ok('a slot\'s stand-in is one word per prop, which no component draws', slotMark
   const w = zeroTokens({ kind: 'graphic' }, { kind: 'graphic', radius: 'mixed' }, value);
   ok('a zero corner the code leaves unset takes the design\'s token though its name has no group; a word that is no token is not taken', e.radius === 'None' && w.radius === undefined);
 }
+{
+  // one test of what a token is, for every reader of one: a see-through fill and a gap named with no group
+  const value = (t) => ({ Clear: 'rgba(0, 0, 0, 0)', Roomy: '8px' })[t] ?? t;
+  const e = zeroTokens({ kind: 'instance' }, { kind: 'instance', background: 'Clear' }, value, { fill: true });
+  const design = { props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, firstOnTop: true } } }, variants: [] };
+  const code = { props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 'Roomy' } } }, variants: [] };
+  stackLikeDesign(code, design, value);
+  ok('a see-through fill and a gap bound to tokens with no group are tokens as a slashed one is', e.background === 'Clear' && code.anatomy.root.layout.firstOnTop === true);
+}
 // a placed component's flag, as markup that writes every flag as a string carries it
 ok('a flag written "false" is off, and one written "true", bare or empty is on', !carries({ selected: 'false' }, 'selected', true) && carries({ selected: 'false' }, 'selected', false) && carries({ selected: 'true' }, 'selected', true) && carries({ selected: '' }, 'selected', true) && carries({ 'data-selected': 'true' }, 'selected', true) && carries({}, 'selected', false) && !carries({}, 'selected', true));
 ok('an arg by its own attribute, else by a data attribute holding its value, never the walk\'s own marks', carries({ size: 'sm' }, 'size', 'sm') && !carries({ size: 'md' }, 'size', 'sm') && carries({ 'data-hierarchy': 'primary' }, 'variant', 'primary') && !carries({ 'data-figma-id': 'primary' }, 'variant', 'primary'));
