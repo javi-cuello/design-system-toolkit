@@ -1109,6 +1109,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         // a line's length is its path's, and it has no width to give
         // (a box that fills one way still takes its length the other: the fill is set with the parent's layout)
         } else if ((px(e.width) || px(e.height)) && n.type !== 'VECTOR') n.resize(px(e.width) || n.width, px(e.height) || px(e.width) || n.height);
+        // a vector drawn with its own paths at a size that is not theirs (a variant's larger dot): sized to it, which
+        // scales its paths
+        else if (n.type === 'VECTOR' && e.paths && px(e.width) > 0 && px(e.height) > 0 && (Math.abs(px(e.width) - n.width) > 0.01 || Math.abs(px(e.height) - n.height) > 0.01)) n.resize(px(e.width), px(e.height));
         n.fills = e.background ? await paints(e.background, id === 'root' ? 'root' : (e.name || id.slice(id.lastIndexOf('/') + 1))) : [];
         styleFill(n, e, e.background);
         // one radius, or one per corner in Figma's order: top left, top right, bottom right, bottom left
@@ -1191,7 +1194,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       const w = c.horizontal === 'stretch' && at.end != null ? up.width - at.x - at.end : typeof e.width === 'number' ? e.width : n.width;
       const h = c.vertical === 'stretch' && at.bottom != null ? up.height - at.y - at.bottom : typeof e.height === 'number' ? e.height : n.height;
       // (resize sets a text's resizing to fixed: said again after, as where it is first sized)
-      if ('resize' in n && n.type !== 'VECTOR' && (Math.abs(w - n.width) > 0.01 || Math.abs(h - n.height) > 0.01)) { n.resize(px(w), px(h)); if (n.type === 'TEXT' && e.autoResize) n.textAutoResize = e.autoResize.toUpperCase(); }
+      // (a vector with its own paths too, which the resize scales; a line or a box drawn as a path keeps its path)
+      if ('resize' in n && (n.type !== 'VECTOR' || (e.paths && w > 0 && h > 0)) && (Math.abs(w - n.width) > 0.01 || Math.abs(h - n.height) > 0.01)) { n.resize(px(w), px(h)); if (n.type === 'TEXT' && e.autoResize) n.textAutoResize = e.autoResize.toUpperCase(); }
       // a line unturned that stretches along its length: its path that long (a divider across its box, drawn 1 px long
       // and read back 159 px short of its end)
       else if (n.type === 'VECTOR' && !e.rotation && (e.height === 0 || e.width === 0)) {

@@ -699,7 +699,10 @@ delete globalThis.figma;
   ok('a graphic with paths of its own is drawn with them, a dot round as given and not its box, whatever its corners or size; one with parts is not',
     plan({ contract: 1, component: 'dot', props: {}, anatomy: { root: { kind: 'container' }, dot: { kind: 'graphic', parent: 'root', width: 8, height: 8, paths: [{ windingRule: 'NONE', data: 'M 8 4 C 8 6.21 6.21 8 4 8 Z' }] } }, variants: [] }, {}).variants[0].anatomy.dot.paths[0].data === 'M 8 4 C 8 6.21 6.21 8 4 8 Z'
     && src.includes("else if (e.kind === 'graphic' && e.paths && !ids.some((x) => variant.anatomy[x].parent === id)) { n = figma.createVector(); n.strokes = []; n.vectorPaths = e.paths; }")
-    && src.indexOf('n.vectorPaths = e.paths;') < src.indexOf("else if (e.kind === 'graphic' && (e.width === 0 || e.height === 0))"));
+    && src.indexOf('n.vectorPaths = e.paths;') < src.indexOf("else if (e.kind === 'graphic' && (e.width === 0 || e.height === 0))")
+    // (sized to its part, which scales its paths, where the part's size is not theirs: in the flow and placed out of it)
+    && src.includes("else if (n.type === 'VECTOR' && e.paths && px(e.width) > 0 && px(e.height) > 0 && (Math.abs(px(e.width) - n.width) > 0.01 || Math.abs(px(e.height) - n.height) > 0.01)) n.resize(px(e.width), px(e.height));")
+    && src.includes("if ('resize' in n && (n.type !== 'VECTOR' || (e.paths && w > 0 && h > 0)) && (Math.abs(w - n.width) > 0.01"));
   ok('a placed instance takes its own fill, stroke, corners, shadow and clipping, and a layer inside one its stroke\'s weights and place, never its colour alone; neither from a contract read from code',
     src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e, e.background); await lookOver(n, e); }")
     && src.includes("if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);") && src.includes("await lookOver(n, e); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")

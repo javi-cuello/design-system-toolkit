@@ -2,7 +2,7 @@
  * The Figma leg's geometry: the drawn set as the snapshot's walk reads it, held to the library's stored figma.json,
  * per variant and per layer path. The contract compare sees only what derive keeps; a layer moved, doubled, resized or
  * laid out the other way, a variant out of its place and a set of another size are what it drops, so a drawing that
- * looked broken came out "the same" (2026-11-23). Rows are `{ at, library, drawn }`, eval's mechanisms() ranks them:
+ * looked broken came out "the same" (2026-11-23). Rows are `{ at, library, drawn, why? }` (why: a known reason, such as a vector past the walk's cap drawn as its box), eval's mechanisms() ranks them:
  *
  *   <variant>.<field>             a variant's own field (its size, layout, place in the set)
  *   <variant>/<layer>/….<field>   a layer's field, the path as spec.cjs's layerPaths names it, `/` between layers
@@ -49,14 +49,15 @@ export const knownOf = (tokens, specs, walkVersion) => knownFor({ tokens, specs 
    anywhere (knownOf), so one an older plugin never recorded is not a row; null, every field. */
 export function geometry(library, drawn, { known = null, tolerance = TOLERANCE } = {}) {
   const rows = [];
-  const row = (at, l, d) => rows.push({ at, library: l ?? null, drawn: d ?? null });
-  const fields = (x, y, at) => {
+  const row = (at, l, d, why) => rows.push({ at, library: l ?? null, drawn: d ?? null, ...(why && { why }) });
+  // (a loose vector the walk recorded an outline for and no paths, past its cap: the drawing had only its box to draw)
+  const fields = (x, y, at, loose = false) => {
     for (const k of new Set([...Object.keys(x), ...Object.keys(y)])) {
       if (IDS.has(k) || (known && !known.has(k) && x[k] === undefined)) continue;
       if (k === 'bindings') {
         const bx = x.bindings || {}, by = y.bindings || {};
         for (const b of new Set([...Object.keys(bx), ...Object.keys(by)])) if (!(known && !known.has(`bindings.${b}`) && bx[b] === undefined) && !same(bx[b], by[b], tolerance)) row(`${at}.bindings.${b}`, bx[b], by[b]);
-      } else if (!same(x[k], y[k], tolerance)) row(`${at}.${k}`, x[k], y[k]);
+      } else if (!same(x[k], y[k], tolerance)) row(`${at}.${k}`, x[k], y[k], k === 'outline' && loose && x.type === 'VECTOR' && x.outline && !x.paths ? 'paths past the walk\'s cap: drawn as its box' : undefined);
     }
   };
   const paths = (v) => { const m = new Map(); layerPaths(v, (node, p) => { m.set(p, node); }); return m; };
@@ -72,7 +73,9 @@ export function geometry(library, drawn, { known = null, tolerance = TOLERANCE }
     met.add(b);
     fields(a, b, vk);
     const pa = paths(a), pb = paths(b);
-    for (const [p, x] of pa) { const y = pb.get(p); if (!y) row(at(vk, p), { kind: x.type }, null); else fields(x, y, at(vk, p)); }
+    // (a layer inside an instance is its component's drawing: no paths recorded there, by design)
+    const loose = (p) => !p.split(' > ').slice(0, -1).some((_, i, s) => (pa.get(s.slice(0, i + 1).join(' > ')) || {}).type === 'INSTANCE');
+    for (const [p, x] of pa) { const y = pb.get(p); if (!y) row(at(vk, p), { kind: x.type }, null); else fields(x, y, at(vk, p), loose(p)); }
     for (const [p, y] of pb) if (!pa.has(p)) row(at(vk, p), null, { kind: y.type });
   }
   for (const b of dv) if (!met.has(b)) row(seg(axes(b.name) || b.name), null, { kind: 'variant' });

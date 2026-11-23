@@ -46,9 +46,18 @@ seeded('the set\'s size', (d) => { d.set = { w: 260, h: 100 }; }, { at: 'Button.
 seeded('a variant the drawing lacks', (d) => { d.variants.pop(); }, { at: 'Size=md, State=hover', library: { kind: 'variant' }, drawn: null });
 
 // a vector's outline (snapshot 0.85.0): a dot drawn back square, at its size, is a row
-const dotted0 = copy(library); dotted0.variants[0].children.push({ name: 'Dot', type: 'VECTOR', w: 8, h: 8, x: 4, y: 4, index: 3, outline: 'a1b2c3d4' });
-const squared = copy(dotted0); squared.variants[0].children[3].outline = 'b2c3d4e5';
-ok('(c) a vector\'s outline gives exactly its row', JSON.stringify(geometry(dotted0, squared)) === JSON.stringify([{ at: 'Size=md, State=rest/Dot.outline', library: 'a1b2c3d4', drawn: 'b2c3d4e5' }]), geometry(dotted0, squared));
+const round = [{ windingRule: 'NONE', data: 'M 8 4 C 8 6.21 6.21 8 4 8 Z' }], box = [{ windingRule: 'NONZERO', data: 'M 0 0 L 8 0 L 8 8 L 0 8 Z' }];
+const dotted0 = copy(library); dotted0.variants[0].children.push({ name: 'Dot', type: 'VECTOR', w: 8, h: 8, x: 4, y: 4, index: 3, outline: 'a1b2c3d4', paths: round });
+const squared = copy(dotted0); Object.assign(squared.variants[0].children[3], { outline: 'b2c3d4e5', paths: box });
+ok('(c) a vector\'s outline gives exactly its rows, the digest and the paths', JSON.stringify(geometry(dotted0, squared)) === JSON.stringify([{ at: 'Size=md, State=rest/Dot.outline', library: 'a1b2c3d4', drawn: 'b2c3d4e5' }, { at: 'Size=md, State=rest/Dot.paths', library: round, drawn: box }]), geometry(dotted0, squared));
+
+// a loose vector the library recorded an outline for and no paths (past the walk's cap) is drawn as its box: its row says so
+const capped = copy(dotted0), cappedDrawn = copy(squared); delete capped.variants[0].children[3].paths; delete cappedDrawn.variants[0].children[3].paths;
+ok('a vector past the walk\'s cap says why its outline differs', geometry(capped, cappedDrawn)[0].why === 'paths past the walk\'s cap: drawn as its box', geometry(capped, cappedDrawn));
+ok('…one whose paths were recorded gives no reason: the outline drawn is a difference', geometry(dotted0, squared).every((r) => !('why' in r)), geometry(dotted0, squared));
+const placedDot = copy(capped); placedDot.variants[0].children[3] = { name: 'Badge', type: 'INSTANCE', w: 8, h: 8, x: 4, y: 4, index: 3, children: [capped.variants[0].children[3]] };
+const placedDrawn = copy(placedDot); placedDrawn.variants[0].children[3].children[0].outline = 'b2c3d4e5';
+ok('…nor one inside an instance, whose paths the walk never records', geometry(placedDot, placedDrawn).length === 1 && !('why' in geometry(placedDot, placedDrawn)[0]), geometry(placedDot, placedDrawn));
 
 // rows are counted, not deduped: the same change in both variants is two rows
 const both = copy(library); for (const v of both.variants) v.children[1].x = 44;
