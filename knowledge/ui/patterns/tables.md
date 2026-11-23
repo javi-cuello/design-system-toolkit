@@ -483,6 +483,39 @@ No source gives a boolean-column count for tables themselves: NN/g, Primer, Carb
 
 **Sources.** Carbon publishes five sizes, Primer and MUI X three densities, and Datawrapper ties row height to row count; Cloudscape ships two.
 
+## Cell and header text
+
+What body cells and header cells are set in, read from 14 systems' source on 23 Nov 2026.
+
+**What good looks like**
+- [strong] **Body cells in the body style, 14px, weight 400.** Carbon `body-compact-01` 14/18 ([Carbon data table](https://github.com/carbon-design-system/carbon/tree/main/packages/styles/scss/components/data-table)), MUI `body2` 14 ([MUI TableCell](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/TableCell/TableCell.js)), Spectrum, Ant, Chakra, Radix, shadcn, Cloudscape and Fluent all use 14px; Primer 12, Polaris and Lightning 13, GOV.UK 19.
+- [strong] **Header cells the cells' size, heavier.** Most keep the header at the cells' size and raise the weight: 600 in Carbon (`heading-compact-01`), Primer and Ant; bold in Spectrum, Radix, Cloudscape, Lightning and GOV.UK; 500 in MUI, Chakra and shadcn. Fluent and Polaris's DataTable keep it regular. No system published why.
+- [moderate] **The cell is one step below a 16px field, the same step as a 14px one.** MUI and Material 3 set fields at 16 and cells at 14; systems with 14px fields set cells at 14 too.
+
+**How**
+- [strong] **Density changes padding, not type.** Carbon's rows from 24 to 64px all hold 14/18 text; Primer's three densities all hold 12px; MUI's small and medium change only padding. Fluent's extra-small row (24px at 12px text) and Chakra's and Radix's large tables (16px) are the exceptions ([*Density and row height*](#density-and-row-height)).
+- [weak] **A smaller, muted header.** Primer (12px, muted), Atlassian (12 against 14) and Polaris's IndexTable (12 against 13) set the header smaller than the cells; it separates the header by size instead of weight, and is the minority.
+- [weak] **Smaller cells on a phone, only for data-heavy tables.** GOV.UK: "Tables with lots of data benefit from a smaller font size on small screens", 16/20 against 19/25 ([GOV.UK table](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/components/table/_index.scss)).
+- [required] Numbers in cells: [*Alignment and figures*](#alignment-and-figures).
+
+**Cases**
+- A header in the cells' style at 400 → the header row reads as the first data row; raise it to 600 or set it smaller and muted, not both.
+- A compact table that drops its text to 12px → shrink the padding only; type stays the body step.
+- An input inside a cell at 16px beside 14px cells → use the cell's body step for the inline field, keeping 16px only where a phone could focus it.
+
+**Accessibility**
+- [required] 1.3.1: the header is a `th`, never a bold `td`; weight alone carries no structure ([*Captions, header cells and scope*](#captions-header-cells-and-scope)).
+- [required] 1.4.3: header text at 4.5:1 even when muted.
+
+**Build**
+- [required] `td` takes the body text style and `th` the header style, each a token (code-standard rule 54); density tokens change cell padding only.
+
+**Check**
+- *Script:* could assert all `td` in a table share one computed `font-size`, every `th` differs from them in weight or size, and a muted `th` meets 4.5:1.
+- *Judgement:* is the header row unmistakable without colour?
+
+**Sources:** the same 14 systems' table source, read 23 Nov 2026; GOV.UK's table mixin for the phone step.
+
 ## Sticky header and first column
 
 **Use when / don't use**
