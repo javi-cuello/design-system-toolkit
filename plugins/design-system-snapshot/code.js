@@ -854,7 +854,6 @@ async function walk(n, depth) {
     let host = n.parent;
     while (host && host.type !== 'INSTANCE') host = host.parent;
     if (!host && n.parent && 'children' in n.parent) o.index = n.parent.children.findIndex((c) => c === n || (n.id != null && c.id === n.id));
-
     // What a reader sees turned, which is not the layer's rotation: Figma
     // turns an image fill inside its frame with its own transform, and a
     // layer rotated 180 around a fill rotated 180 shows the asset upright.
