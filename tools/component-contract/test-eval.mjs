@@ -344,4 +344,12 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
   assert.match(g[0].examples[0], /^a:x: icon\.absolute\.x -2 \| 10$/); n++;
 }
 
+
+// a name the library lacks refuses the run, unless the panel lists it; thirty names passed as one word drew nothing and ended 0
+{ const { unknownNames } = await import('./eval.mjs');
+  const one = unknownNames(['button checkbox'], ['button', 'checkbox']);
+  ok('names run together as one word refuse the run', one.refused.length === 1 && one.said.length === 0);
+  const gone = unknownNames(['button', 'old'], ['button'], ['button', 'old']);
+  ok('a panel name the library dropped is said, not refused', gone.refused.length === 0 && gone.said.length === 1);
+  ok('names the library has pass', unknownNames(['button'], ['button']).refused.length === 0); }
 console.log(`${n} passed`);

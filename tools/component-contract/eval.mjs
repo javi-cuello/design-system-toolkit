@@ -227,6 +227,13 @@ export function staleContracts(dir) {
 /* Every leg for one project: { home, legs: { browser, self, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }.
    `now` is what a self reading is read from today ({ inputs: selfInputs, reader: readerCode, chrome: chromeMajor }); a
    field left out is not checked. */
+// The names a run was given that the library lacks: one a panel lists is said (a panel shrinks out loud), one typed
+// refuses the run. Pure, for its test.
+export function unknownNames(names, folders, panel = []) {
+  const have = new Set(folders), missing = names.filter((x) => !have.has(x));
+  return { said: missing.filter((c) => panel.includes(c)).map((c) => `panel: ${c} is not in the library now`), refused: missing.filter((c) => !panel.includes(c)) };
+}
+
 export function measure(where, only = [], now = {}) {
   const home = where.projectDir;
   const readings = path.join(home, 'parity', 'from-code');
@@ -698,10 +705,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const p = readPanel(where.projectDir);
     if (!p) { console.error(`no panel at ${panelFile(where.projectDir)}: make one with --make-panel 30`); process.exit(2); }
     argv.push(...p.filter((c) => !argv.includes(c)));
-    // a panel shrinks only out loud: a component it names that the library no longer has is said
-    const have = new Set(contracts(where).map(({ folder }) => folder));
-    for (const c of argv.filter((x) => !have.has(x))) console.log(p.includes(c) ? `panel: ${c} is not in the library now` : `${c}: no such component`);
   }
+  // a panel shrinks only out loud; a name typed that the library has not refuses, since a run that matched nothing
+  // drew and measured nothing and still ended 0 (2026-11-23: thirty names passed as one word)
+  { const { said, refused } = unknownNames(argv, contracts(where).map(({ folder }) => folder), panel ? readPanel(where.projectDir) : []);
+    for (const line of said) console.log(line);
+    if (refused.length) { console.error(`no such component: ${refused.join(', ')} (one folder name per argument)`); process.exit(2); } }
   // the official contracts as today's derive.cjs writes them: one written by an older derive (a change to it since, the
   // store not rewritten) holds the design side to yesterday's rules while the reading takes today's, so the long legs
   // refuse, and the short ones say so
