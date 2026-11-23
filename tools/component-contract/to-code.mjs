@@ -129,9 +129,18 @@ export function copyOf(c, id) {
   const a = c.anatomy, m = /^(.*)_\d+$/.exec(id);
   const first = m && a[m[1]], e = a[id];
   if (!first || !e || first.kind !== 'instance' || e.kind !== 'instance' || first.parent !== e.parent || first.component !== e.component || SAME(first) !== SAME(e)) return null;
-  // (in a box a variant reorders, each child says its own place: a copy is a part of its own there, or one shared rule
-  // would give every copy the first's place)
-  if (reordered(c).has(e.parent)) return null;
+  // (in a box a variant reorders, each child says its place, and a copy says the first's: where another child stands
+  // between the two, at the defaults or in a variant, the copy is a part of its own there, or it would be drawn beside
+  // the first; copies side by side keep the one rule, tied at one place in the order they are written)
+  if (reordered(c).has(e.parent)) {
+    const lo = Math.min(first.order ?? 0, e.order ?? 0), hi = Math.max(first.order ?? 0, e.order ?? 0), family = new RegExp(`^${m[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(_\\d+)?$`);
+    const between = (k, o, parent) => parent === e.parent && !family.test(k) && typeof o === 'number' && o > lo && o < hi;
+    if (Object.entries(a).some(([k, x]) => between(k, x.order, x.parent))) return null;
+    for (const v of c.variants || []) {
+      if (Object.entries(v.add || {}).some(([k, x]) => between(k, x.order, x.parent))) return null;
+      if (Object.entries(v.set || {}).some(([k, o]) => k.endsWith('.order') && between(k.slice(0, -'.order'.length), o, (a[k.slice(0, -'.order'.length)] || findAdded(c, k.slice(0, -'.order'.length)) || {}).parent))) return null;
+    }
+  }
   const touched = (k) => (c.variants || []).some((v) => (v.remove || []).includes(k) || k in (v.add || {}) || Object.keys(v.set || {}).some((x) => x.startsWith(`${k}.`)));
   return touched(id) || touched(m[1]) ? null : m[1];
 }

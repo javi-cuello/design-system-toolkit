@@ -205,6 +205,10 @@ ok('a reordering variant writes each child\'s order', /__texts > \.ds-chip__a \{
   const lmk = toElement(list, 'chip', { naming: ELEMENT, library: {} }), lcss = toCss(list, 'chip', { naming: ELEMENT });
   ok('copies in a reordered box each keep their own place between the siblings that part them',
     drawn(lmk, lcss, ['item', 'sep', 'item-2', 'badge', 'note'], '[mode="typed"]').join() === 'item,sep,item-2,note,badge' && selfCheck(list).length === 0);
+  // side by side they stay one part, a list of any length: tied at the first's place, in the order they are written
+  const rows = { ...list, anatomy: { ...list.anatomy, 'box/sep': at('graphic', 2), 'box/item_2': tagAt(1) } };
+  const rmk = toElement(rows, 'chip', { naming: ELEMENT, library: {} });
+  ok('copies side by side in a reordered box keep the first\'s one rule', !rmk.includes('"data-part": "item-2"') && (rmk.match(/"data-part": "item"/g) || []).length === 2 && selfCheck(rows).length === 0);
   // a text entry in a reordered box: the input stands where its value text does, not at 0 before the parts ahead of it
   const entry = { ...field, props: { ...field.props, mode: typed.props.mode },
     anatomy: { ...field.anatomy, 'field/lead': { kind: 'graphic', parent: 'field', order: 0, width: 1, height: 1 }, 'field/prefix': { kind: 'text', parent: 'field', order: 1, content: '$' },
