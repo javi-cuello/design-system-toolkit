@@ -877,12 +877,12 @@ export function toGallery(c, { library = {} } = {}) {
 
 /* The element the markup draws a part as, by the selector the sheet styles it by (to-code's): a focus ring the ringed
    element, a field's two texts its input, a numbered copy its place among its own (`:nth-child(2 of …)`). */
-export function partSelector(c, n, id, part = partsOf(c).get(id)) {
+export function partSelector(c, n, id, part = partsOf(c).get(id), mains = null) {
   const entry = entryOf(c), first = copyOf(c, id);
   if (id === 'root' || (part && part.ring)) return selectorOf(c, n, 'root');
-  if (entry && (id === entry.value || id === entry.placeholder)) return selectorOf(c, n, entry.input);
-  if (!first) return selectorOf(c, n, id);
-  const s = selectorOf(c, n, first), seg = n.part(partSeg(c, first)), i = s.lastIndexOf(seg) + seg.length;
+  if (entry && (id === entry.value || id === entry.placeholder)) return selectorOf(c, n, entry.input, mains);
+  if (!first) return selectorOf(c, n, id, mains);
+  const s = selectorOf(c, n, first, mains), seg = n.part(partSeg(c, first)), i = s.lastIndexOf(seg) + seg.length;
   return `${s.slice(0, i)}:nth-child(${Number(/_(\d+)$/.exec(id)[1])} of ${seg})${s.slice(i)}`;
 }
 
@@ -935,7 +935,7 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     const at = nested ? nested : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
       : x.slotted ? { skip: 'a sample of what a caller puts in the slot' }
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
-      : partSelector(c, n, x.id, x);
+      : partSelector(c, n, x.id, x, mains);
     layers[pathOf(x.id)] = at;
     // each part's selector by its id too (not in the mapping written): a stored path may be two parts never drawn
     // together, where the self leg needs each one's own (from-code swapPartsOf)

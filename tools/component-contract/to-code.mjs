@@ -810,7 +810,8 @@ export function selfCheck(c, rules, mains, t = HOUSE) {
 // which keeps its size there: a text alone in it does not count, a limit named in the README)
 const pseudoSel = (p) => (!p ? '' : p === 'empty' ? ':not(:has(*))' : `::${p}`);
 /* A part's selector: the root, then each part on its way down, by child combinators (code-standard rule 5). */
-function chain(c, n, id, rootCond, mains = () => null) {
+function chain(c, n, id, rootCond, given = null) {
+  const mains = given || (() => null);
   const [own, pseudo = ''] = id.split('::');
   const entry = entryOf(c);
   const segs = [];
@@ -818,7 +819,11 @@ function chain(c, n, id, rootCond, mains = () => null) {
   if (entry && own === entry.input) { segs.push('input'); at = entry.box; }
   if (own.endsWith('/*')) { segs.push('*'); at = own.slice(0, -2); }
   for (; at && at !== 'root'; at = (c.anatomy[at] || findAdded(c, at) || {}).parent) segs.unshift(at);
-  const seg = (s) => (s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + through(n, ((c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance' && (c.anatomy[s] || findAdded(c, s)).component), heldIn(c, s, mains)));
+  // (an instance of a component the library does not hold, where the library is given, is drawn as a mark, to-markup's
+  // data-icon: no control inside it to reach, whatever its name says)
+  const markOnly = (e) => !!given && e.kind === 'instance' && !given(e.component, e.key);
+  const seg = (s) => { const e = c.anatomy[s] || findAdded(c, s) || {};
+    return s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + (markOnly(e) ? '' : through(n, e.kind === 'instance' && e.component, heldIn(c, s, mains))); };
   // a part inside a placed component is that component's own: named as its own sheet names it, under the instance
   const hostAt = segs.findIndex((s) => (c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance');
   const host = hostAt >= 0 && hostAt < segs.length - 1 && segs[hostAt], m = host && (() => { const he = c.anatomy[host] || findAdded(c, host); return mains(he.component, he.key); })();
@@ -844,7 +849,7 @@ function chain(c, n, id, rootCond, mains = () => null) {
 // the selector the sheet styles a part by, at no condition: what the markup's parity mapping names it by
 /* A part inside a placed component this library holds, by that component's own names under the instance; else null. */
 export const nestedSelector = (c, n, id, mains) => (hostIn(c, id, mains) ? chain(c, n, id, '', mains) : null);
-export const selectorOf = (c, n, id) => (id === 'root' ? n.root + through(n, c.component, placedIn(c)) : chain(c, n, id, ''));
+export const selectorOf = (c, n, id, mains = null) => (id === 'root' ? n.root + through(n, c.component, placedIn(c)) : chain(c, n, id, '', mains));
 const findAdded = (c, id) => (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
 // a part's name in a selector: its id's last part, the whole id where two parts would share it
 export function partSeg(c, id) {

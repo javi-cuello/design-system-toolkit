@@ -340,6 +340,17 @@ ok('and to-code styles that input and its placeholder by the same selectors: the
   ok('the mapping reads them under that slot', toParity(bar, 'bar', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers['Menu > List > Item'] === 'ds-bar > [data-part="menu"] > [data-part="list"] > [data-part="item"]');
 }
 
+// an instance of a component the library does not hold, though its name says button, is drawn as a mark: the mapping
+// reads that mark, never a <button> inside it the markup does not draw; one the library holds is reached through its
+// control, as its own sheet draws it
+{ const save = { contract: 1, component: 'Save button', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const card = { contract: 1, component: 'Card', props: {}, anatomy: { root: { kind: 'container' },
+    action: { kind: 'instance', parent: 'root', component: 'Reply button', order: 0 }, save: { kind: 'instance', parent: 'root', component: 'Save button', order: 1 } }, variants: [] };
+  const lib = { 'Save button': { ...save, folder: 'save-button' }, Card: { ...card, folder: 'card' } };
+  const m = toParity(card, 'card', { naming: ELEMENT, library: lib, framework: 'web-components' }), out = toElement(card, 'card', { naming: ELEMENT, library: lib });
+  ok('a part placing a component the library does not hold is mapped to the mark the markup draws; one it holds through its control',
+    /"data-part": "action"[^)]*"data-icon"/.test(out) && m.layers.Action === 'ds-card > [data-part="action"]' && m.layers.Save === 'ds-card > [data-part="save"] > button'); }
+
 /* ── the mapping and the stories ── */
 const parity = toParity(library.Button, 'button', { naming: CLASS, library });
 const every = Object.entries(library.Button.props).filter(([, p]) => p.type === 'enum' || p.axis || (p.shows || []).length || p.role === 'interaction');
