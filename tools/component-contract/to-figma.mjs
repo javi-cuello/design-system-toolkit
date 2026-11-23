@@ -565,9 +565,6 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // took 8 ms) is given 8 s and one retry; still nothing, it is reported as not bound and the drawing goes on
   // a run whose token is gone (the runner gave up on it, or a newer drawing took the file) stops at its next call to
   // Figma: left going, one crawled through its imports for an hour and held the file
-  // layers.mjs's, written out here: this runs in Figma, where nothing the module imports exists
-  const bareProp = (k) => String(k).replace(/#\d+:\d+$/, '');
-  const keyMatches = (own, key) => !own || !key || own === key;
   const tried = async (what, f) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); for (let i = 0; i < 2; i++) { const r = await Promise.race([f().then((v) => ({ v }), (e) => ({ failed: String(e && e.message || e) })), new Promise((res) => setTimeout(() => res(null), 8000))]); if (r && 'v' in r) return r.v; if (r) { missing.add(`${what} (${r.failed})`); return null; } } missing.add(`${what} (no answer)`); return null; };
   // a main imported once per key, its answer kept: each instance asking again made a key that would not answer cost
   // sixteen seconds per instance, and a side navigation of many items outran the drawing's time
@@ -1195,6 +1192,8 @@ export function pluginCode(contract, keys, { before = '', after = '', failed = '
   // before (the update's live read, the audit), leaves Figma skipping them
   return `figma.skipInvisibleInstanceChildren = false;\n${before}const P = ${JSON.stringify(packed)}; for (const v of P.variants) for (const id in v.anatomy) v.anatomy[id] = P.elements[v.anatomy[id]];\nconst parseColour = ${parseColour.toString()};
 const variantValues = ${variantValues.toString()};
+const bareProp = ${bareProp.toString()};
+const keyMatches = ${keyMatches.toString()};
 let __res; try { __res = await (${RUNTIME.toString()})(P, ${JSON.stringify(keys)}${before ? ', __page, typeof __given !== \'undefined\' ? __given : [], typeof __started !== \'undefined\' ? __started : globalThis.__drawingStarted' : ''});\n${after}} catch (e) { ${failed} throw e; }\nreturn __res;`;
 }
 

@@ -636,13 +636,15 @@ delete globalThis.figma;
     /no contract/.test(heldTo(index, 'Button', { ...o, folder: 'ios-buton', exists: () => false }).refused || ''));
 }
 {
-  // the plugin code runs in Figma, where nothing this module imports exists: a helper it calls is defined inside it
+  // the plugin code runs in Figma, where nothing this module imports exists: every imported helper it names (the
+  // drawing's and an update's, RUNTIME and PATCH_*) is written out at the script's top level, where all of them see it
   // (a drawing stopped on "bareProp is not defined" the first time a placed instance set its props)
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
   const imported = [...src.matchAll(/^import \{([^}]+)\} from/gm)].flatMap((m) => m[1].split(',').map((x) => x.trim().split(/\s+as\s+/).pop()));
-  const code = pluginCode({ component: 'Chip', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }, {});
-  const free = imported.filter((n) => new RegExp(`(^|[^.\\w])${n}\\(`).test(code) && !new RegExp(`(const|let|function)\\s+${n}\\b`).test(code));
-  ok(`the plugin code calls no helper only this module imports (${free.join(', ') || 'none'})`, !free.length);
+  const code = pluginCode({ component: 'Chip', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }, {}, { before: PATCH_BEFORE('1:2'), after: PATCH_AFTER, failed: PATCH_FAILED });
+  const named = imported.filter((n) => new RegExp(`(^|[^.\\w])${n}\\b`).test(code.replace(/^const \w+ = .*$/gm, '')));
+  const free = named.filter((n) => !new RegExp(`^const ${n} = `, 'm').test(code));
+  ok(`the plugin code names no helper only this module imports (${free.join(', ') || 'none'}; written out: ${named.join(', ')})`, named.includes('bareProp') && !free.length);
 }
 
 
