@@ -749,7 +749,7 @@ export const INSTANCE_CSS = {
   layout: ['justify-content', 'align-items', 'flex-direction', 'gap', 'row-gap', 'column-gap', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'padding'],
   radius: ['border-top-left-radius', 'border-radius'], full: ['border-top-left-radius', 'border-radius'], cornerShape: ['corner-top-left-shape', 'corner-shape'],
   border: ['border-top-width', 'border-top-color', 'border-top', 'border', 'border-width', 'border-color', 'box-shadow'],
-  shadow: ['box-shadow'], shadowAll: ['box-shadow'], ringsUsed: ['box-shadow'], overflow: ['overflow'],
+  shadow: ['box-shadow'], shadowAll: ['box-shadow'], ringsUsed: ['box-shadow'], overflow: ['overflow'], opacity: ['opacity'],
 };
 
 /* The selectors of a list, each as written and as its compounds in order (`.a > .b:where([x="1 2"]) .c` → .a,
@@ -1960,7 +1960,8 @@ async function main() {
           if (other && !n.hasAttribute('data-figma-id')) { seen[counted]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id]; }
           if (other) {
             n.setAttribute('data-contract-id', id); up(id);
-            out.push({ id, kind: 'instance', parent, order, ...placedBy(n, parent), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(figmaName && { name: figmaName }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
+            // (its opacity as a box's: kept below only where this component's own rule writes it, INSTANCE_CSS)
+            out.push({ id, kind: 'instance', parent, order, ...placedBy(n, parent), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(figmaName && { name: figmaName }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
               ...(s.position === 'absolute' && placed(n)),
               // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
