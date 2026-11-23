@@ -214,7 +214,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - [required] An icon drawn inside a text input cannot go there: `input`'s content model is nothing ([WHATWG `input`](https://html.spec.whatwg.org/multipage/input.html#the-input-element)). Wrap the input, position the icon in the wrapper, and turn its space into the input's inline padding; record it as a deviation with a parity waiver keyed to the ruling.
 
 **Cases**
-- A button set has `Role=Primary|Secondary` → `variant`; `role="primary"` would tell a screen reader the button has an ARIA role called primary.
+- A button set has `Role=Primary|Secondary` → `appearance`; `role="primary"` would tell a screen reader the button has an ARIA role called primary.
 - A select and a combobox are variants of one set because they look alike → two components; they differ in kind (code-standard rule 8).
 - A card's `Has image` boolean → render the image part only when there is an image (code-standard rule 12), not when the attribute says so.
 - A tab item has `Selected=True` → `aria-selected="true"` set by the tabs' script, styled on `[aria-selected=true]`; a `selected` attribute would let a template claim it.

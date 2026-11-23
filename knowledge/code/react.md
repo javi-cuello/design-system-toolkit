@@ -8,22 +8,22 @@ How a design-system component is written in React 19 and TypeScript so that it b
 
 **What good looks like**
 - [strong] Each prop says what it means to the reader of the call site (`appearance="danger"`, `size="sm"`), never how it is drawn (`red`, `bigPadding`).
-- [required] No prop reuses the name of an HTML or ARIA attribute for something else; a design axis called Role is `variant`.
+- [required] No prop reuses the name of an HTML or ARIA attribute for something else; the look axis is `appearance`, in Figma `Appearance` (figma-standard rule 1).
 - [moderate] A choice of a few values is a string union; a yes-or-no is a boolean that defaults to `false`; every optional prop has a default in the signature.
 
 **How**
 - [strong] **One name per meaning across the library.** Shipped systems differ on the word but each uses one: Primer `variant` (`default`, `primary`, `danger`, `invisible`, `link`) ([Primer Button](https://primer.style/product/components/button/)), Fluent `appearance` ([Fluent Button types](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-button/library/src/components/Button/Button.types.ts)), Atlassian `appearance` ([Atlassian Button](https://atlassian.design/components/button/code)), Carbon `kind` ([Carbon Button source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Button/Button.tsx)). Take the word from the design contract and keep it.
 - [required] **Never shadow a native attribute.** A component's props are spread onto a native element (see the next section), so a prop named `role`, `type`, `size`, `title`, `hidden` or `disabled` that means something else either reaches the DOM or blocks the real one. Atlassian's Button drops `style`, `disabled` and `role` from its native props for this reason and adds `isDisabled` instead ([Atlassian Button](https://atlassian.design/components/button/code)). code-standard rule 9 renames a colliding axis.
 - [contested] **Booleans.** Name them as the state that is true (`loading`, `selected`, `fullWidth`), default `false`, so `<Button loading>` reads as English and an absent prop is the common case. React Aria and Atlassian prefix with `is` (`isDisabled`, `isPending`, `isLoading`) ([React Aria Button](https://react-aria.adobe.com/Button)); Primer, Fluent and MUI do not. Where the native attribute exists (`disabled`, `required`, `checked`), use the native name and pass it through: that is code-standard rule 9's "disabled is the control's own".
-- [moderate] **Enums as string unions.** `variant?: 'primary' | 'secondary' | 'danger'`. The TypeScript handbook: literal unions express "functions that only accept a certain set of known values" ([Everyday types, literal types](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#literal-types)), and "you may not need an enum when an object with `as const` could suffice" ([Enums, objects vs enums](https://www.typescriptlang.org/docs/handbook/enums.html#objects-vs-enums)). A union needs no import at the call site and reads the same in a story's args.
-- [weak] **Defaults in the destructuring**, `{ variant = 'primary', size = 'md' }`, matching the contract's defaults, so the type, the docs table and the render agree.
-- [weak] **Two booleans that cannot both be true are one union.** `primary` and `danger` as booleans allow `<Button primary danger>`; `variant` cannot.
+- [moderate] **Enums as string unions.** `appearance?: 'primary' | 'secondary' | 'danger'`. The TypeScript handbook: literal unions express "functions that only accept a certain set of known values" ([Everyday types, literal types](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#literal-types)), and "you may not need an enum when an object with `as const` could suffice" ([Enums, objects vs enums](https://www.typescriptlang.org/docs/handbook/enums.html#objects-vs-enums)). A union needs no import at the call site and reads the same in a story's args.
+- [weak] **Defaults in the destructuring**, `{ appearance = 'primary', size = 'md' }`, matching the contract's defaults, so the type, the docs table and the render agree.
+- [weak] **Two booleans that cannot both be true are one union.** `primary` and `danger` as booleans allow `<Button primary danger>`; `appearance` cannot.
 
 **Cases**
 - The contract has an axis `Appearance` with values Primary, Secondary → `appearance: 'primary' | 'secondary'` (code-standard rule 9).
 - A prop `size` on a text field means the drawn height, and `<input size>` already means a width in characters → name it for the contract's meaning (`density`, or `size` kept off the native element) and never spread it onto the `input`.
-- `color="#d00"` on a button → a `variant` or `tone` from the contract; a raw colour is a token's job.
-- `isPrimary`, `isSecondary`, `isDanger` → one `variant` union.
+- `color="#d00"` on a button → an `appearance` or `tone` from the contract; a raw colour is a token's job.
+- `isPrimary`, `isSecondary`, `isDanger` → one `appearance` union.
 
 **Accessibility**
 - [required] A prop that shadows `role`, `disabled` or an `aria-*` name can remove what assistive technology reads; keeping native names native keeps 4.1.2 Name, Role, Value intact.
@@ -43,11 +43,11 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - [strong] `ref` reaches the native element, as a plain prop.
 
 **How**
-- [moderate] **Type from the element.** `type ButtonProps = ComponentPropsWithRef<'button'> & { variant?: … }`. `@types/react` says of `ComponentProps`: "It's usually better to use `ComponentPropsWithRef` or `ComponentPropsWithoutRef` instead of this type, as they let you be explicit about whether or not to include the `ref` prop" ([@types/react](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts)). In React 19 the ref is a prop, so take the `WithRef` form; `WithoutRef` is the forwardRef-era type. Use `Omit<…, 'x'>` for any native prop the component replaces.
+- [moderate] **Type from the element.** `type ButtonProps = ComponentPropsWithRef<'button'> & { appearance?: … }`. `@types/react` says of `ComponentProps`: "It's usually better to use `ComponentPropsWithRef` or `ComponentPropsWithoutRef` instead of this type, as they let you be explicit about whether or not to include the `ref` prop" ([@types/react](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts)). In React 19 the ref is a prop, so take the `WithRef` form; `WithoutRef` is the forwardRef-era type. Use `Omit<…, 'x'>` for any native prop the component replaces.
 - [weak] **Spread the rest last but merge.** Destructure what the component reads, spread the rest on the root, and put the merged values after the spread so they cannot be lost:
   ```tsx
-  export function Button({ variant = 'primary', className, type = 'button', ref, ...rest }: ButtonProps) {
-    return <button {...rest} ref={ref} type={type} data-variant={variant} className={cx('ds-button', className)} />;
+  export function Button({ appearance = 'primary', className, type = 'button', ref, ...rest }: ButtonProps) {
+    return <button {...rest} ref={ref} type={type} data-appearance={appearance} className={cx('ds-button', className)} />;
   }
   ```
 - [strong] **`ref` as a prop.** "Starting in React 19, you can now access `ref` as a prop for function components … New function components will no longer need `forwardRef` … In future versions we will deprecate and remove `forwardRef`" ([React 19, ref as a prop](https://react.dev/blog/2024/12/05/react-19#ref-as-a-prop)); "`forwardRef` will be deprecated in a future release" ([forwardRef](https://react.dev/reference/react/forwardRef)). A ref callback may return a cleanup, and "returning anything else from a `ref` callback will now be rejected by TypeScript" ([React 19, cleanup functions for refs](https://react.dev/blog/2024/12/05/react-19#cleanup-functions-for-refs)).
@@ -216,7 +216,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 ## Styling hooks and the stylesheet
 
 **What good looks like**
-- [required] A variant is an attribute on the root (`data-variant="danger"`) and a state is a pseudo-class or the native attribute; the stylesheet selects on those (code-standard rule 9).
+- [required] A variant axis is an attribute on the root (`data-appearance="danger"`) and a state is a pseudo-class or the native attribute; the stylesheet selects on those (code-standard rule 9).
 - [contested] The component's own class names are stable and documented; the caller's class is added, never required.
 - [required] No variant is drawn with inline `style`; `style` stays the caller's (code-standard rule 9).
 - [moderate] The stylesheet arrives in a way the bundler cannot drop and the server can order.

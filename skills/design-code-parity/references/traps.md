@@ -40,7 +40,7 @@ Map what you need from an instance knowing most variants will report it `absent`
 
 Instance props compare as attributes under Figma's names. Take a code attribute named away from its Figma prop (`tint` for `Colour`). It measures fine in its own story, since nothing there compares the wrapper as an instance. It surfaces only when a screen holds the component.
 
-Name attributes as Figma names the prop. Declare a translation only for a real collision (`Role` → `variant`, because `role` is ARIA's), in one place the comparison owns.
+Name attributes as Figma names the prop. Declare a translation only for a real collision (`Role` → `appearance`, because `role` is ARIA's), in one place the comparison owns.
 
 ### A state the map cannot reach passes as the rest state
 

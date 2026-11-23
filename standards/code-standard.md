@@ -1,6 +1,6 @@
 # Code standard — front-end defaults for any project that ships HTML, CSS and JavaScript
 
-**Version 1.36.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
+**Version 1.37.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
 
 **Scope.** How the code of a site or app is structured: markup, styles, the scripts that enhance them, and how a design-system component is implemented. Project-agnostic by construction — it names no framework, no CMS, no file layout. It governs no directory of this repo; like `figma-standard.md` it holds cross-project defaults that a project applies.
 
@@ -80,7 +80,7 @@
 
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the independent review of the change that touches it (the closing pass, `bin/closing`).
 
-9. **A variant axis is an attribute; a state is a pseudo-class; disabled is the control's own.** Figma's variant axes map to attributes on the component's root (the custom element, or under class naming the native element), with two exceptions that are not negotiable: `State` (rest/hover/focus/press) is `:hover`, `:focus-visible`, `:active`, because an attribute would let a template claim a state the control is not in; `Disabled` is the native `disabled`, which the browser keeps out of the tab order and out of form submission, or `aria-disabled`, which leaves the control focusable so it can explain itself. An axis whose name collides with an HTML or ARIA attribute is renamed (`Role` → `variant`, because `role` is ARIA's).
+9. **A variant axis is an attribute; a state is a pseudo-class; disabled is the control's own.** Figma's variant axes map to attributes on the component's root (the custom element, or under class naming the native element), with two exceptions that are not negotiable: `State` (rest/hover/focus/press) is `:hover`, `:focus-visible`, `:active`, because an attribute would let a template claim a state the control is not in; `Disabled` is the native `disabled`, which the browser keeps out of the tab order and out of form submission, or `aria-disabled`, which leaves the control focusable so it can explain itself. An axis whose name collides with an HTML or ARIA attribute is renamed (`Role` → `appearance`, because `role` is ARIA's; figma-standard rule 1 names the axis `Appearance` in Figma too).
 
    *Why:* the template must not be able to lie about what the control is doing.
 

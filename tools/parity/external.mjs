@@ -454,7 +454,7 @@ export function joinProp(name, p, api, fw = {}) {
 
 /* The design's props against the code's, as the map joins them. Each prop
    gets the findings a person rules on:
-   - `renamed`: the code calls the prop something else (role → variant)
+   - `renamed`: the code calls the prop something else (role → appearance)
    - `value-renamed`: a value the map has to translate (success → positive)
    - `missing`: a design value the code does not offer
    - `default`: the code starts from another value

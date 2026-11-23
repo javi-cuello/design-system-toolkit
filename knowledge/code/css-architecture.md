@@ -212,7 +212,7 @@ ds-card {
 
 **How**
 - [required] **Custom elements and attributes.** `<ds-button appearance="primary"><button>` names the component and its variant with no class at all; a custom element needs a hyphen and needs no script to be styled (code-standard rule 8).
-- [required] **Rename collisions.** A Figma axis called `Role` becomes `variant`, because `role` is ARIA's (code-standard rule 9); `align` or `width` on a custom element triggers the browser's presentational hints (code-standard rule 10).
+- [required] **Rename collisions.** A Figma axis called `Role` becomes `appearance`, because `role` is ARIA's (code-standard rule 9); `align` or `width` on a custom element triggers the browser's presentational hints (code-standard rule 10).
 - [required] **A class convention is a stated choice.** A project that names by class (`.ds-block`, `.ds-block__part`) records it in its context document as a ruling. The rules still hold under it: one block per file naming only its own parts (code-standard rule 5), state as a pseudo-class (code-standard rule 9), hooks as attributes (code-standard rule 6). The *own parts* gate reads either shape (`styles` in `snapshot.config.json` says which).
 - [required] **Utility classes:** the two code-standard rule 6 allows, and no others ([Utilities](#utilities)).
 

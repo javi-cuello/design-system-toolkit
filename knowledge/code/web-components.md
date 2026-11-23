@@ -372,11 +372,11 @@ Which components get a script at all is code-standard rule 8; this page is for t
   import { html } from 'lit';
   export default { component: 'ds-button', args: { appearance: 'primary', label: 'Save' } };
   export const Primary = {
-    render: ({ variant, label, disabled }) =>
-      html`<ds-button variant=${variant}><button ?disabled=${disabled}>${label}</button></ds-button>`,
+    render: ({ appearance, label, disabled }) =>
+      html`<ds-button appearance=${appearance}><button ?disabled=${disabled}>${label}</button></ds-button>`,
   };
   ```
-- [moderate] **Why lit-html and not a string.** Lit parses the template before any value is interpolated, so a value is text or an attribute value, never markup; `?attr=` adds or removes a boolean and `.prop=` sets a property ([Lit: expressions](https://lit.dev/docs/templates/expressions/)). A story that builds `\`<ds-button variant="${args.variant}">\`` has the same fault as the element that does it. Without lit-html, build the node with `document.createElement` and `setAttribute`.
+- [moderate] **Why lit-html and not a string.** Lit parses the template before any value is interpolated, so a value is text or an attribute value, never markup; `?attr=` adds or removes a boolean and `.prop=` sets a property ([Lit: expressions](https://lit.dev/docs/templates/expressions/)). A story that builds `\`<ds-button appearance="${args.appearance}">\`` has the same fault as the element that does it. Without lit-html, build the node with `document.createElement` and `setAttribute`.
 - [moderate] **Controls from the manifest.** Storybook infers web-component `argTypes` from `custom-elements.json` ([Storybook: ArgTypes](https://storybook.js.org/docs/api/arg-types?renderer=web-components)), through `setCustomElementsManifest` in `.storybook/preview`.
 - [weak] **Story ids are parity's input.** The parity loop maps each variant and layer to a story and selector; see the `design-code-parity` skill.
 

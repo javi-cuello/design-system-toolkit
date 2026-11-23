@@ -664,7 +664,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 **Cases**
 - `<ds-button disabled>` → the `disabled` is on a box that is not a control; it goes on the inner `button` (code-standard rule 9).
 - A container takes `align="center"` → every descendant's text centres from the presentational hint; rename it (code-standard rule 10's evidence).
-- A design-system `Role` axis written as `role="primary"` → a screen reader is told of an ARIA role called "primary"; rename to `variant` (code-standard rule 9).
+- A design-system `Role` axis written as `role="primary"` → a screen reader is told of an ARIA role called "primary"; rename to `appearance` (code-standard rule 9).
 - A tabs component is a registered web component with shadow DOM because "components should be web components" → tabs need script, so a registered element can be right, but check first that links with `aria-current` (navigation tabs) do not already do the job.
 
 **Accessibility**

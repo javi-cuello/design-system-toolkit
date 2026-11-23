@@ -115,11 +115,11 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
     out.splice(out.indexOf(x), 1);
   }
   for (const x of icons.values()) { const bare = x.key.replace(/\d+$/, ''); if (x.figmas && bare && !out.some((y) => y.name === bare)) x.name = bare; }
-  // Role is variant (appearance, where variant is taken): its hook stays the attribute the sheet keys on
+  // Role is appearance (figma-standard rule 1; variant, where appearance is taken): its hook stays the attribute the sheet keys on
   const names = new Set(out.map((x) => x.name));
   // a rename never lands on a name another prop has (type beside typeOption)
   const free = (n, i = 2) => (names.has(n) ? (names.has(n + i) ? free(n, i + 1) : n + i) : n);
-  for (const x of out) if (TAKEN.has(x.name) || lang.taken.has(x.name)) { x.renamed = x.name; x.name = x.name === 'role' && !names.has('variant') ? 'variant' : x.name === 'role' && !names.has('appearance') ? 'appearance' : free(`${x.name}Option`); names.add(x.name); }
+  for (const x of out) if (TAKEN.has(x.name) || lang.taken.has(x.name)) { x.renamed = x.name; x.name = x.name === 'role' && !names.has('appearance') ? 'appearance' : x.name === 'role' && !names.has('variant') ? 'variant' : free(`${x.name}Option`); names.add(x.name); }
   return out;
 }
 /* A combination that is a pointer state (a hover, a focus; partsOf's own test): what is drawn there no markup holds. */

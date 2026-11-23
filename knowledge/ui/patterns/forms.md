@@ -381,7 +381,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - [required] Enter in a field presses the form's first submit button in tree order, so the primary comes first in the DOM (HTML).
 - [required] Never `disabled` on load; disabled, where truly needed, is the control's own (code-standard rule 9, code-standard rule 62).
 - [weak] A second click while the request runs is ignored by a flag on the form, and the button shows progress ([loading buttons](../components/button.md#loading-buttons); [HTML semantics: *Form errors and validation*](../../code/html-semantics.md#form-errors-and-validation)).
-- [required] The warning style is a variant attribute on the wrapper (`variant="danger"`), never a class (code-standard rule 9).
+- [required] The warning style is an appearance attribute on the wrapper (`appearance="danger"`), never a class (code-standard rule 9).
 
 **Check**
 - *Script:* could check that each form has exactly one primary submit, that no submit is `disabled` on load, that its text is not "Submit", "OK" or "Next" on a question page, and that a second click within the request sends one request.

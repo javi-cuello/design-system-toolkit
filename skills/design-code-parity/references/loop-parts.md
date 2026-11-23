@@ -186,4 +186,4 @@ Figma's variant axes become attributes. The mapping encodes two exceptions rathe
 - **State** (`Rest / Hover / Focus / Press`) is a pseudo-class. An attribute lets a template claim a state the control is not in.
 - **Disabled** is the control's own `disabled`, so the browser keeps it out of the tab order.
 
-An axis whose name collides with a platform attribute is renamed in code, and the story carries the rename. For example, `Role` becomes `variant`, because `role="primary"` is a lie to a screen reader.
+An axis whose name collides with a platform attribute is renamed in code, and the story carries the rename. For example, `Role` becomes `appearance`, because `role="primary"` is a lie to a screen reader.

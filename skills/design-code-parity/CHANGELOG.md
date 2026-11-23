@@ -1,6 +1,6 @@
 # Changelog — design-code-parity
 
-- 1.71.1 (2026-11-23): the story example names the axis `Appearance`, code `appearance`, as figma-standard 2.33.0 rule 1 does; no rule changed.
+- 1.71.1 (2026-11-23): the story example and the rename trap name the axis `Appearance`, code `appearance` (a `Role` axis becomes `appearance`), as figma-standard 2.33.0 rule 1 and code-standard 1.37.0 rule 9 do; no rule changed.
 - 1.71.0 (2026-11-21): SKILL.md meets skill-standard §A clause I: a lead, numbered workflow steps and gates table stay; parts 1–6, running, comparison mode, pixels, habits and traps move to eleven references/ files; no rule changed.
 - 1.70.3 (2026-11-20): the mapping format and *Fast by default* are cited in `tools/parity/REFERENCE.md`, where the README rewrite moved them; no rule changed.
 - 1.70.2 (2026-11-16): the story example names the axis `Variant`, as figma-standard 2.24.0 rule 1 does; no rule changed.
