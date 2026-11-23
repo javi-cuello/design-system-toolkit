@@ -39,6 +39,7 @@ import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMat
 import { parseColour } from '../parity/values.mjs';
 import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
+import { turnedParts } from './to-code.mjs';
 
 import { realpathSync } from 'node:fs';
 const req = createRequire(import.meta.url);
@@ -499,9 +500,10 @@ export function figmaSide(contract) {
 /* Which of Figma's sizing properties each of a part's own sizes is set by: its width the horizontal one, its height the
    vertical; turned a quarter, the other way round, as Figma lays out the turned box and says its sizing on the parent's
    axes (derive.cjs QUARTER reads them so). Run in the drawing (passed as source). */
-export function sizingAxes(e) {
-  // (as derive swaps them: in the flow, no axis hugging; placed out of it, a fill is not drawn, and a number sizes its own axis)
-  const q = typeof e.rotation === 'number' && Math.abs(Math.abs(e.rotation) - 90) < 0.01 && e.width !== 'hug' && e.height !== 'hug' && !e.absolute && e.position !== 'absolute';
+export function sizingAxes(e, turned) {
+  // (as derive swaps them: a part code draws in a wrapper (to-code turnedParts, `turned`), in the flow, no axis hugging;
+  // placed out of it, a fill is not drawn, and a number sizes its own axis)
+  const q = turned && typeof e.rotation === 'number' && Math.abs(Math.abs(e.rotation) - 90) < 0.01 && e.width !== 'hug' && e.height !== 'hug' && !e.absolute && e.position !== 'absolute';
   return q ? [['width', 'layoutSizingVertical'], ['height', 'layoutSizingHorizontal']] : [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']];
 }
 
@@ -818,7 +820,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
     const flowing = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
-    const sizes = sizingAxes(e).map(([k, axis]) => [axis, SIZE[e[k]]])
+    // (a layer inside an instance: never drawn in a wrapper, to-code turnedParts)
+    const sizes = sizingAxes(e, false).map(([k, axis]) => [axis, SIZE[e[k]]])
       .filter(([axis, want]) => want && axis in n && n[axis] !== want && (want === 'FILL' ? flowing(n.parent) : flowing(n) || n.type === 'TEXT'));
     const resize = n.type === 'TEXT' && e.autoResize && n.textAutoResize !== e.autoResize.toUpperCase();
     // a text's font is loaded only where something about it changes: a library's text is a slow load where one fails
@@ -1016,7 +1019,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // a size said as intent, set once the part has its parent: fill the parent's flow, hug what it holds, a fixed
       // number, or a token's value, bound
       const flows = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
-      for (const [k, axis] of sizingAxes(e)) {
+      for (const [k, axis] of sizingAxes(e, P.turned.includes(id))) {
         const sz = e[k];
         if (sz === 'fill') { if (id !== 'root' && flows(nodes[e.parent]) && !e.absolute && e.position !== 'absolute') n[axis] = SIZE.fill; }
         else if (sz === 'hug') { if (flows(n) || n.type === 'TEXT') n[axis] = SIZE.hug; }
@@ -1213,7 +1216,7 @@ export function pluginCode(contract, keys, { before = '', after = '', failed = '
   const norm = (n) => String(n).split(',').map((x) => x.trim()).sort().join(', ');
   const ref = (e) => { const j = JSON.stringify(e); if (!at.has(j)) { at.set(j, table.length); table.push(e); } return at.get(j); };
   // the size axis by the library's settings' name (sizeAxis), carried to the drawing; none named, no variant is picked by size
-  const packed = { ...p, sizeAxis, elements: table, variants: p.variants.map((v) => ({ name: v.name, cell: v.cell, ...(whole && whole[norm(v.name)] ? { whole: whole[norm(v.name)] } : mains && { whole: keptWhole(v.anatomy, mains) }), anatomy: Object.fromEntries(Object.entries(v.anatomy).map(([id, e]) => [id, ref(e)])) })) };
+  const packed = { ...p, sizeAxis, turned: [...turnedParts(contract)], elements: table, variants: p.variants.map((v) => ({ name: v.name, cell: v.cell, ...(whole && whole[norm(v.name)] ? { whole: whole[norm(v.name)] } : mains && { whole: keptWhole(v.anatomy, mains) }), anatomy: Object.fromEntries(Object.entries(v.anatomy).map(([id, e]) => [id, ref(e)])) })) };
   // a layer hidden inside an instance is one to draw and match too: the snapshot's walk, run in the same plugin
   // before (the update's live read, the audit), leaves Figma skipping them
   return `figma.skipInvisibleInstanceChildren = false;\n${before}const P = ${JSON.stringify(packed)}; for (const v of P.variants) for (const id in v.anatomy) v.anatomy[id] = P.elements[v.anatomy[id]];\nconst parseColour = ${parseColour.toString()};

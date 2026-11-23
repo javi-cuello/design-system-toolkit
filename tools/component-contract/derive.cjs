@@ -55,7 +55,7 @@ const TEXT_ALIGN = { LEFT: 'start', CENTER: 'center', RIGHT: 'end', JUSTIFIED: '
    an unbound one is the number Figma drew. Position (x, y) and the size a
    hug or fill resolves to are drawing, not intent, and are left to the
    snapshot. */
-function element(n, parent, known, up = null, axes = []) {
+function element(n, parent, known, up = null, axes = [], turned = false) {
   const b = n.bindings || {};
   const e = { kind: KIND[n.type] || 'graphic' };
   if (parent) e.parent = parent;
@@ -81,9 +81,10 @@ function element(n, parent, known, up = null, axes = []) {
     // box (the snapshot's `visual`, 16 by 169), so its sizing words name the parent's axes: each said of its own axis,
     // the horizontal one of its height and the vertical one of its width (a slider's track turned upright fills its
     // column down, its own width). Any other turn is said as it stands
-    // (only where code lays it out by its turned box, to-code turnedParts: in its parent's auto layout, not placed out of
-    // the flow, neither axis hugging, a size container cannot hug; anywhere else it turns in place and keeps Figma's order)
-    const flows = up && (up.layout === 'HORIZONTAL' || up.layout === 'VERTICAL') && !n.absolute && !/HUG/.test(String(n.sizing));
+    // (only where code lays it out by its turned box: a part to-code draws in a wrapper (turnedParts, `turned`, found on
+    // the contract derived without the swap), here in its parent's auto layout, neither axis hugging, a size container
+    // cannot hug; anywhere else it turns in place and keeps Figma's order)
+    const flows = turned && up && (up.layout === 'HORIZONTAL' || up.layout === 'VERTICAL') && !n.absolute && !/HUG/.test(String(n.sizing));
     const [w, h] = (QUARTER(n.rotation) && flows ? String(n.sizing).split('/').reverse() : String(n.sizing).split('/'));
     e.width = sizeFromFigma(w) || (b.w ?? n.w);
     e.height = sizeFromFigma(h) || (b.h ?? n.h);
@@ -362,13 +363,13 @@ function partConditions(rows, props) {
   return out;
 }
 
-function flatten(list, characters = new Map(), known = [], axes = []) {
+function flatten(list, characters = new Map(), known = [], axes = [], turned = null) {
   const out = {};
   const nodeAt = new Map(list.map((x) => [keyOf(x.segs), x.node]));
   for (const { node, segs, parent, order } of list) {
     // in a box no auto layout places (nor an instance, whose own layers it are), a part is at its point in it
     const up = parent == null ? null : nodeAt.get(keyOf(parent));
-    const e = element(node, parent == null ? null : idOf(parent), known, up, axes);
+    const e = element(node, parent == null ? null : idOf(parent), known, up, axes, !!turned && turned.has(idOf(segs)));
     const inInstance = segs.slice(0, -1).some((_, i) => (nodeAt.get(keyOf(segs.slice(0, i + 1))) || {}).type === 'INSTANCE');
     if (up && !up.layout && !inInstance && !e.absolute && node.x != null) e.absolute = boxAt(node);
     // and inside an instance, a layer its component places in a frame keeps no constraints either: like its position, an
@@ -479,8 +480,8 @@ function read(stored) {
 }
 
 /* Each walked tree's flat anatomy, as derive() layers them and selfCheck() holds the contract to them. */
-function anatomies(trees, characters, known, L, mains = null, found = null, axes = [], figmaProps = {}) {
-  const flat = trees.map((t) => ({ when: t.when, anatomy: flatten(t.list, characters, known, axes) }));
+function anatomies(trees, characters, known, L, mains = null, found = null, axes = [], figmaProps = {}, turned = null) {
+  const flat = trees.map((t) => ({ when: t.when, anatomy: flatten(t.list, characters, known, axes, turned) }));
   // a boolean only shows and hides: a layer its flipped tree shares with the variant it was flipped from is that
   // variant's, but for its place (a flip is walked from a detached instance, whose sizes are its own: a root 420 wide)
   trees.forEach((t, i) => {
@@ -852,12 +853,20 @@ function mainsFrom(specs, known = [], optionsOf = () => ({})) {
 
 /* `known` is every stored component name, so an instance of `Table - Cell / Fill`
    resolves to that set and not to `Table - Cell` (graph.cjs nameOf). */
-function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, pointerStates = HOUSE.pointerStates || [], mains = null, found = null, modeAxes = [] } = {}) {
+function derive(stored, known = [], options = {}) {
+  // a part turned a quarter is said in its own axes only where code draws it in a wrapper (to-code.mjs turnedParts, one
+  // rule for the contract, the code and the drawing): found on the contract said without the swap, then said again
+  const first = deriveWith(stored, known, options, null);
+  const turned = turnedOf(first);
+  return turned.size ? deriveWith(stored, known, options, turned) : first;
+}
+const turnedOf = (contract) => require('./to-code.mjs').turnedParts(contract);
+function deriveWith(stored, known, { stateAxis = HOUSE.stateAxis || null, pointerStates = HOUSE.pointerStates || [], mains = null, found = null, modeAxes = [] } = {}, turned = null) {
   const pointer = new Set(pointerStates.map(kebab));
   const { spec, trees, hides, characters } = read(stored);
   const figmaProps = spec.props || {};
   const L = spec.links || {};
-  const flat = anatomies(trees, characters, known, L, mains, found, modeAxes, figmaProps);
+  const flat = anatomies(trees, characters, known, L, mains, found, modeAxes, figmaProps, turned);
   const addresses = new Map();
   for (const t of trees) for (const e of t.list) addresses.set(keyOf(e.segs), e.segs);
   const base = flat[0];
@@ -970,7 +979,7 @@ function selfCheck(stored, contract, known = [], options = {}) {
   contract = contract || derive(stored, known, options);
   const { spec, trees, characters } = read(stored);
   const figmaProps = spec.props || {};
-  const flat = anatomies(trees, characters, known, spec.links || {}, options.mains || null, null, options.modeAxes || [], figmaProps);
+  const flat = anatomies(trees, characters, known, spec.links || {}, options.mains || null, null, options.modeAxes || [], figmaProps, turnedOf(contract));
   const bad = [];
   for (const [i, t] of trees.entries()) {
     const when = Object.fromEntries(Object.entries(t.when).filter(([p]) => p in figmaProps).map(([p, v]) => [propId(figmaProps, p), valueFor(figmaProps, p, v)]));

@@ -189,8 +189,10 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
 
 // a part turned a quarter is sized on the parent's axes in Figma: its own width by the vertical sizing, as derive reads it
 ok('a part turned a quarter sets its own width by Figma\'s vertical sizing and its height by the horizontal; any other by its own axes',
-  JSON.stringify(sizingAxes({ rotation: 90 })) === '[["width","layoutSizingVertical"],["height","layoutSizingHorizontal"]]' && sizingAxes({ rotation: -90 })[0][1] === 'layoutSizingVertical'
-  && sizingAxes({ rotation: 45 })[0][1] === 'layoutSizingHorizontal' && sizingAxes({})[0][1] === 'layoutSizingHorizontal' && /const sizingAxes = function sizingAxes/.test(pluginCode(chipContract, {})));
+  JSON.stringify(sizingAxes({ rotation: 90 }, true)) === '[["width","layoutSizingVertical"],["height","layoutSizingHorizontal"]]' && sizingAxes({ rotation: -90 }, true)[0][1] === 'layoutSizingVertical'
+  && sizingAxes({ rotation: 45 }, true)[0][1] === 'layoutSizingHorizontal' && sizingAxes({}, true)[0][1] === 'layoutSizingHorizontal' && /const sizingAxes = function sizingAxes/.test(pluginCode(chipContract, {}))
+  // (only a part code draws in a wrapper, to-code turnedParts, carried to the drawing as P.turned)
+  && sizingAxes({ rotation: 90 }, false)[0][1] === 'layoutSizingHorizontal' && /"turned":\[\]/.test(pluginCode(chipContract, {})));
 
 // the run's guards, run against a stand-in for Figma's file: its pages, and the plugin data each keeps
 const data = () => { const d = {}; return { getPluginData: (k) => d[k] || '', setPluginData: (k, v) => { d[k] = v; } }; };

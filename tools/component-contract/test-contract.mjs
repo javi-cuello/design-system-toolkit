@@ -248,7 +248,18 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     const placed = derive({ name: 'Q', props: {}, variants: [{ name: 'Q', type: 'COMPONENT', layout: 'VERTICAL', w: 44, h: 354, children: [{ name: 'Track', type: 'FRAME', layout: 'HORIZONTAL', w: 169, h: 16, rotation: 90, sizing: 'FIXED/FILL', absolute: true, x: 0, y: 0 }] }] }).anatomy.track;
     const hugs = turned(90, 'HUG/FILL'), free = derive({ name: 'Q', props: {}, variants: [{ name: 'Q', type: 'COMPONENT', w: 44, h: 354, children: [{ name: 'Track', type: 'FRAME', w: 169, h: 16, rotation: 90, sizing: 'FIXED/FILL' }] }] }).anatomy.track;
     ok('a quarter turn placed out of the flow, in a frame with no auto layout, or hugging, keeps its sizing words as Figma lists them',
-      placed.width === 169 && placed.height === 'fill' && hugs.width === 'hug' && hugs.height === 'fill' && free.width === 169 && free.height === 'fill'); }
+      placed.width === 169 && placed.height === 'fill' && hugs.width === 'hug' && hugs.height === 'fill' && free.width === 169 && free.height === 'fill');
+    // (one rule with to-code: where code draws no wrapper (placed out of the flow in another variant, inside a placed
+    // instance) the words stay Figma's in every variant, and the contract checks against its own variants)
+    const track = (extra) => ({ name: 'Track', type: 'FRAME', layout: 'HORIZONTAL', w: 169, h: 16, rotation: 90, sizing: 'FIXED/FILL', ...extra });
+    const two = { name: 'Q', props: { State: ['A', 'B'] }, variants: [
+      { name: 'State=A', type: 'COMPONENT', layout: 'VERTICAL', w: 44, h: 354, children: [track({})] },
+      { name: 'State=B', type: 'COMPONENT', layout: 'VERTICAL', w: 44, h: 354, children: [track({ absolute: true, x: 0, y: 0 })] }] };
+    const twoC = derive(two);
+    const inside = derive({ name: 'Q', props: {}, variants: [{ name: 'Q', type: 'COMPONENT', layout: 'VERTICAL', w: 44, h: 354, children: [
+      { name: 'Bar', type: 'INSTANCE', instanceOf: 'Bar', layout: 'VERTICAL', w: 44, h: 354, children: [track({})] }] }] }).anatomy['bar/track'];
+    ok('a quarter turn code draws no wrapper for (out of the flow in another variant, inside a placed instance) keeps Figma\'s words in every variant',
+      twoC.anatomy.track.width === 169 && twoC.anatomy.track.height === 'fill' && selfCheck(two, twoC).length === 0 && inside && inside.width === 169 && inside.height === 'fill'); }
   ok('a corner bound to a token is said by it at 0, and an opacity by its token', A1.root.radius === 'R/0' && A1.root.opacity === 'O/half');
   ok('a stroke a side, each bound side by its token and the others by their width, drawn on its centre and taking room', JSON.stringify(A1.box.border.width) === '["S/1",0,"S/1",0]' && A1.box.border.align === 'center' && A1.box.border.inLayout === true);
   ok('a rectangle is one, turned as it is, following its parent as it does, and a weight bound with no stroke painted is no stroke (nothing draws it)', A1['free/ring'].constraints.horizontal === 'stretch' && A1['free/ring'].constraints.vertical === 'center' && A1['free/ring'].shape === 'rectangle' && A1['free/ring'].rotation === 45 && A1['free/ring'].border === undefined);
