@@ -520,6 +520,16 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
       && wholeShadowStyle(read, null, effects, shadowKey, modes) === effects[1] && wholeShadowStyle([{ ...read[0], x: -3 }], null, effects, shadowKey, modes) === undefined);
   }
   {
+    const { paddingOf, paddingCss } = await import('./from-code.mjs');
+    // a box rendered right to left (dir="rtl"): its start is its right edge, as the design's start is the reading edge
+    const px = (v) => parseFloat(v) || 0, box = { paddingTop: '2px', paddingRight: '12px', paddingBottom: '6px', paddingLeft: '4px' };
+    ok('a box\'s padding start and end follow its direction: right to left, the start is the right',
+      JSON.stringify(paddingOf({ ...box, direction: 'rtl' }, px)) === '{"top":2,"end":4,"bottom":6,"start":12}'
+      && JSON.stringify(paddingOf({ ...box, direction: 'ltr' }, px)) === '{"top":2,"end":12,"bottom":6,"start":4}');
+    ok('and the property each side\'s token is read from with it',
+      paddingCss(true).start === 'padding-right' && paddingCss(true).end === 'padding-left' && paddingCss(false).start === 'padding-left' && paddingCss(false).top === 'padding-top');
+  }
+  {
     const { shorthandOf, sidePiece, instanceWrites } = await import('./from-code.mjs');
     // a longhand written inside a shorthand with a var() (Chrome reports it empty), or under its logical name (Chrome
     // reports the physical one not at all): where its value is written

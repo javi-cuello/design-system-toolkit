@@ -907,6 +907,15 @@ export function sidePiece(value, prop, side) {
    draw the same, colour and all. A named style drawn in a colour none of its modes give (a custom property of the
    code's own over it) is matched by value, so the difference shows. `layers`: the shadow read, as cssShadows gives it;
    `key`: shadowKey. Tested by test-from-code.mjs. */
+/* A box's padding as the contract's sides, from its computed style: start and end by its direction (right to left, the
+   start is the right edge), as the design's start is the reading edge; `px` reads a length. Self-contained: run in the
+   page (from-code's walk). With paddingCss, the property each side's token is read from. Tested by test-from-code.mjs. */
+export function paddingOf(s, px) {
+  const rtl = s.direction === 'rtl';
+  return { top: px(s.paddingTop), end: px(rtl ? s.paddingLeft : s.paddingRight), bottom: px(s.paddingBottom), start: px(rtl ? s.paddingRight : s.paddingLeft) };
+}
+export const paddingCss = (rtl) => ({ top: 'padding-top', end: rtl ? 'padding-left' : 'padding-right', bottom: 'padding-bottom', start: rtl ? 'padding-right' : 'padding-left' });
+
 export function wholeShadowStyle(layers, named, effects, key, coloursOf = (l) => [l.color]) {
   const of = (fx) => (fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color, ...(l.bound && { bound: l.bound }) }));
   if (named) {
@@ -1926,10 +1935,10 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
-        const sideStrokes = new Function(`return ${sidesSrc}`)();
+        const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)();
         // a colour that paints nothing: fully transparent, whatever its channels
         const clear = (c) => /rgba\(.*,\s*0\)$|transparent/.test(c);
         let root = document.querySelector(sel); if (!root) return null;
@@ -2080,8 +2089,9 @@ async function main() {
               const A = { 'flex-start': 'start', 'flow-start': 'start', start: 'start', normal: 'start', center: 'center', 'flex-end': 'end', 'flow-end': 'end', end: 'end', 'space-between': 'space-between', stretch: 'stretch' };
               e.layout = { direction: /column/.test(s.flexDirection) ? 'column' : 'row', gap: s.gap === 'normal' ? 0 : px(s.gap), align: A[s.justifyContent] || s.justifyContent, crossAlign: A[s.alignItems] || s.alignItems };
             }
-            const pad = { top: px(s.paddingTop), end: px(s.paddingRight), bottom: px(s.paddingBottom), start: px(s.paddingLeft) };
-            if (Object.values(pad).some(Boolean)) (e.layout = e.layout || {}).padding = pad;
+            // (start and end by its direction: right to left, the start is the right, paddingOf)
+            const pad = paddingOf(s, px);
+            if (Object.values(pad).some(Boolean)) { (e.layout = e.layout || {}).padding = pad; if (s.direction === 'rtl') e.rtl = true; }
             if (!clear(s.backgroundColor)) e.background = s.backgroundColor;
             // its background's layers above the colour (a gradient, a colour laid over another): read back as Figma's fills below
             if (s.backgroundImage && s.backgroundImage !== 'none') { const r = n.getBoundingClientRect(); e.paint = { image: s.backgroundImage, size: s.backgroundSize, repeat: s.backgroundRepeat, w: r.width, h: r.height }; }
@@ -2158,7 +2168,7 @@ async function main() {
         // placed by CSS order before the markup's (a variant that reverses its parts, to-code's `order`), ties as written
         for (const xs of Object.values(byParent)) xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).forEach(([e], i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -2377,7 +2387,6 @@ async function main() {
         for (const p of ['border-top-left-radius', 'border-radius']) if ((await authoredVars(L.tab, `[data-contract-id="${id}"]`, after ? `${p}::after` : p, styles)).length) return fullest();
         return null;
       };
-      const SIDE = { top: 'padding-top', end: 'padding-right', bottom: 'padding-bottom', start: 'padding-left' };
       for (const e of raw) {
         const { id, under: u, ...x } = e;
         under = u;
@@ -2435,8 +2444,9 @@ async function main() {
           // a gap below 0 was written as the second child's pull back: its token is there
           const pulled = pulledBy[id];
           if ('gap' in x.layout) x.layout.gap = pulled ? await tok('space', x.layout.gap, `${id}.gap`, pulled.props, pulled.from) : await tok('space', x.layout.gap, `${id}.gap`, ['row-gap', 'column-gap', 'gap']);
-          if (x.layout.padding) for (const k of Object.keys(x.layout.padding)) x.layout.padding[k] = await tok('space', x.layout.padding[k], `${id}.padding`, [SIDE[k]]);
+          if (x.layout.padding) for (const k of Object.keys(x.layout.padding)) x.layout.padding[k] = await tok('space', x.layout.padding[k], `${id}.padding`, [paddingCss(x.rtl)[k]]);
         }
+        delete x.rtl;
         // its fills bottom up (rules.mjs fillsFromCss): the colour, then each layer over it, every colour named by its token
         if (x.paint) {
           const { fills, unread: lost } = fillsFromCss(x.background, x.paint.image, { w: x.paint.w, h: x.paint.h }, (c) => !c, { size: x.paint.size, repeat: x.paint.repeat });
