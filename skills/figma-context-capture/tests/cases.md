@@ -86,7 +86,7 @@ Assert: (a) writes/updates `<project home>/design-system-context.md` (the projec
 Walked live: 2026-08-08 — a Claude Code capture run with a working folder.
 
 ## C4 · House defaults are offered, not assumed
-Fixture: discovered Button axis order `Role → Size`.
+Fixture: discovered Button axis order `Appearance → Size`.
 Assert: output asks with the house default named ("canon default is Size-first — apply here?"), and records the maintainer's answer as the project ruling.
 
 Walked live: 2026-08-08 — two live component sets ordering `State` before `Disabled`, with two conforming sets as control.

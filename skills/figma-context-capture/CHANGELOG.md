@@ -1,5 +1,6 @@
 # Changelog — figma-context-capture
 
+- 2.16.1 (2026-11-23): the template's rule 1 override example names the look axis `Appearance` (figma-standard 2.33.0); case C4's fixture too. Template only.
 - 2.16.0 (2026-11-21): meets skill-standard §A clause I; assembly and closing moved to references/assembly.md, the project's other documents to references/project-documents.md.
 - 2.15.3 (2026-11-19): the template cites the tracked metric at figma-components-audit, since figma-standard rule 17 retired into it. Template only.
 - 2.15.2 (2026-11-15): an icon library is routed with the `icons` role, not `components`; a project's setup gave its icon file `components` and the docs site folded its icons into Foundations. Case C19.

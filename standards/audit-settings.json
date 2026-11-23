@@ -162,6 +162,11 @@
           "variant"
         ],
         "role": [
+          "appearance",
+          "variant"
+        ],
+        "hierarchy": [
+          "appearance",
           "variant"
         ],
         "validation": [

@@ -193,7 +193,7 @@ departs from a preference is filed as one, not as a defect.
 **Overrides** — one line per override, in exactly this form, because the command in toolkit-standard §C clause C reads it to compute each rule's cross-project coverage:
 
 ```
-- **Overrides:** figma-standard rule 1 — this project orders Role before Size.
+- **Overrides:** figma-standard rule 1 — this project orders Appearance before Size.
 ```
 
 Silence means agreement: the toolkit's standards apply wherever this document is silent, so a rule not listed here counts as holding on this project. List an override here **and** as a dated §6 ruling — this line is what a script reads, the ruling is where the reasoning lives.

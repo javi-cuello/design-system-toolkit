@@ -115,7 +115,7 @@ After any route succeeds, **persist the keys to the target's plugin data**, so t
 | `_Title` | COMPONENT | `Title text` TEXT, `Label` BOOL, `Label text` TEXT |
 | `Preview - Effects` | COMPONENT | prop `Content slot` |
 | `Effect item` | COMPONENT | ELLIPSE `Swatch` + `Label text` TEXT |
-| `Pill` | COMPONENT_SET | `Role` variant, `Label text` TEXT |
+| `Pill` | COMPONENT_SET | `Appearance` variant, `Label text` TEXT |
 
 Safe to ignore: Colour ramp, Colour matrix, Table - Progress status, Table - Properties, Status badge, Thumbnail, Header, Block, Column, List, Level *.
 

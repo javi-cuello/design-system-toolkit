@@ -1,5 +1,6 @@
 # Changelog — figma-doc-generator
 
+- 1.26.1 (2026-11-23): discovery's example `Pill` carries an `Appearance` variant, the house name since figma-standard 2.33.0. References only.
 - 1.26.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I; Steps 0–4 detail moves to four new references (discovery, colour-and-units, structure, generation).
 - 1.25.1 (2026-11-19): `wrongWord` finds the shared namespace over the names deep enough to carry a role, so one short name beside them (`Elevation`) no longer makes the type and property read as roles.
 - 1.25.0 (2026-11-19): `describe-coverage.mjs` lists a description naming a sibling role and not its own (`wrongWord`); over three projects' snapshots, 28 listed, 24 of them real copies. D49 gains six assertions.

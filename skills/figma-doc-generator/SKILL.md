@@ -5,7 +5,7 @@ description: Auto-generate or regenerate documentation pages that mirror a Figma
 
 # Figma Documentation Generator
 
-**Version 1.26.0** — history in CHANGELOG.md.
+**Version 1.26.1** — history in CHANGELOG.md.
 
 This skill writes documentation pages that mirror a Figma library: a page per variable collection, a Shadows page and text-style pages. Every name, count and value comes from the source file at run time. Only the frame chrome (padding, corner radius, spacing) is the skill's own fixed design, and verification asserts it on purpose.
 
