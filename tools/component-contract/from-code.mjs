@@ -42,7 +42,8 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
-import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop } from '../parity/values.mjs';
+import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop, shorthandOf, sidePiece } from '../parity/values.mjs';
+export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
 import { inWordsOf } from './to-figma.mjs';
@@ -850,63 +851,6 @@ export function designSetsColour(design, id, mainOf = () => null) {
    (expand keeps a field no variant sets, so the swapped glyph would carry the base icon's key), else none (undefined). */
 export const swapKeyOf = (design, baseKey, name) => designKeyOf(design, null, name) || (baseKey ? null : undefined);
 
-/* Where a physical longhand's value is written when Chrome cannot report it: { prop, side }, the shorthand whose values
-   hold it and its place there (top, right, bottom, left; a corner's from the top left; a gap's row then column), as a
-   longhand written in a shorthand with a var() is reported empty; with `logical`, { longhand, prop, side }, the logical
-   longhand and shorthand that write it by the element's direction (`rtl`), as a logical one is not reported under the
-   physical name at all (a corner's logical longhand has no shorthand: prop null). Else null. Tested by test-from-code.mjs. */
-const SIDES = ['top', 'right', 'bottom', 'left'];
-const CORNERS = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
-export function shorthandOf(longhand, { logical = false, rtl = false } = {}) {
-  let m;
-  // a physical side as a logical axis and edge (block start or end, inline start or end by direction)
-  const axis = (side) => (side === 'top' || side === 'bottom' ? ['block', side === 'top' ? 0 : 1] : ['inline', (side === 'left') !== rtl ? 0 : 1]);
-  const edge = (i) => (i ? 'end' : 'start');
-  if ((m = /^(padding|margin)-(top|right|bottom|left)$/.exec(longhand))) {
-    if (!logical) return { prop: m[1], side: SIDES.indexOf(m[2]) };
-    const [a, i] = axis(m[2]);
-    return { longhand: `${m[1]}-${a}-${edge(i)}`, prop: `${m[1]}-${a}`, side: i };
-  }
-  if (SIDES.includes(longhand)) {
-    if (!logical) return { prop: 'inset', side: SIDES.indexOf(longhand) };
-    const [a, i] = axis(longhand);
-    return { longhand: `inset-${a}-${edge(i)}`, prop: `inset-${a}`, side: i };
-  }
-  if ((m = /^border-(top|right|bottom|left)-width$/.exec(longhand))) {
-    if (!logical) return { prop: 'border-width', side: SIDES.indexOf(m[1]) };
-    const [a, i] = axis(m[1]);
-    return { longhand: `border-${a}-${edge(i)}-width`, prop: `border-${a}-width`, side: i };
-  }
-  if ((m = /^border-(top|bottom)-(left|right)-radius$/.exec(longhand))) {
-    if (!logical) return { prop: 'border-radius', side: CORNERS.indexOf(`${m[1]}-${m[2]}`) };
-    return { longhand: `border-${edge(axis(m[1])[1])}-${edge(axis(m[2])[1])}-radius`, prop: null };
-  }
-  if (!logical && (longhand === 'row-gap' || longhand === 'column-gap')) return { prop: 'gap', side: longhand === 'row-gap' ? 0 : 1 };
-  return null;
-}
-/* One side's own value in a shorthand's, its values expanded as CSS does: one to four, or one or two for a logical
-   axis's and a gap's; a corner's radii are those before a `/` outside any function. Null where it writes none. */
-export function sidePiece(value, prop, side) {
-  const words = []; let depth = 0, cur = '';
-  for (const ch of String(value ?? '')) {
-    if (ch === '(') depth++;
-    if (ch === ')') depth--;
-    if (!depth && ch === '/' && prop === 'border-radius') break;
-    if (/\s/.test(ch) && !depth) { if (cur) words.push(cur); cur = ''; } else cur += ch;
-  }
-  if (cur) words.push(cur);
-  if (!words.length) return null;
-  const two = prop === 'gap' || /-(block|inline)(-width)?$/.test(prop);
-  const sides = two ? [words[0], words[1] ?? words[0]] : [words[0], words[1] ?? words[0], words[2] ?? words[0], words[3] ?? words[1] ?? words[0]];
-  return sides[side] ?? null;
-}
-
-/* The effect style a whole box-shadow is: the one the code names, where it draws the layers read (their offsets, blur,
-   spread and insetness) in colours its layers' variables take in some mode (the style's record holds one mode's only:
-   `coloursOf(layer)`, every colour a style layer can take, its own where it binds none), else the first whose layers
-   draw the same, colour and all. A named style drawn in a colour none of its modes give (a custom property of the
-   code's own over it) is matched by value, so the difference shows. `layers`: the shadow read, as cssShadows gives it;
-   `key`: shadowKey. Tested by test-from-code.mjs. */
 /* A box's padding as the contract's sides, from its computed style: start and end by its direction (right to left, the
    start is the right edge), as the design's start is the reading edge; `px` reads a length. Self-contained: run in the
    page (from-code's walk). With paddingCss, the property each side's token is read from. Tested by test-from-code.mjs. */
@@ -916,6 +860,12 @@ export function paddingOf(s, px) {
 }
 export const paddingCss = (rtl) => ({ top: 'padding-top', end: rtl ? 'padding-left' : 'padding-right', bottom: 'padding-bottom', start: rtl ? 'padding-right' : 'padding-left' });
 
+/* The effect style a whole box-shadow is: the one the code names, where it draws the layers read (their offsets, blur,
+   spread and insetness) in colours its layers' variables take in some mode (the style's record holds one mode's only:
+   `coloursOf(layer)`, every colour a style layer can take, its own where it binds none), else the first whose layers
+   draw the same, colour and all. A named style drawn in a colour none of its modes give (a custom property of the
+   code's own over it) is matched by value, so the difference shows. `layers`: the shadow read, as cssShadows gives it;
+   `key`: shadowKey. Tested by test-from-code.mjs. */
 export function wholeShadowStyle(layers, named, effects, key, coloursOf = (l) => [l.color]) {
   const of = (fx) => (fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color, ...(l.bound && { bound: l.bound }) }));
   if (named) {
@@ -1726,7 +1676,7 @@ async function main() {
   if (!label || !name) { console.error('usage: from-code.mjs --project <label> <component> [--rebuild] [--code-only | --self | --second]'); process.exit(2); }
   // a run by hand, or a loop of them, holds the measuring lock; one eval.mjs started already holds it (tools/shared/lock.mjs)
   await (await import('../shared/lock.mjs')).hold(`from-code.mjs ${process.argv.slice(2).join(' ')}`);
-  const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, valueVars, authoredSelector, compareProps, invisibleBorder, cssShadows, shadowKey, fetchLevels } = await import('../parity/external.mjs');
+  const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, authoredSideVars, authoredSelector, compareProps, invisibleBorder, cssShadows, shadowKey, fetchLevels } = await import('../parity/external.mjs');
   const { call } = await import('../shared/cdp.mjs');
   let L;
   try { L = await openSource(label, name, { rebuild, codeOnly, self, second }); } catch (e) { if (!e.usage) throw e; console.error(e.message); process.exit(2); }
@@ -2348,28 +2298,11 @@ async function main() {
         // var() there; `box-shadow:width`, `box-shadow:colour`: that part of the inset stroke a border is drawn with, as written). Only a
         // token one of a property's vars names settles it: a guess by value there (a reset's var that holds another value)
         // leaves the next property to say
-        // (a physical longhand Chrome cannot report, shorthandOf: written in a shorthand with a var(), reported empty, its side
-        // of the shorthand; written under its logical name, not reported, the logical longhand, or its side of the logical
-        // shorthand by the element's direction. Each side's value followed as authoredVars follows a property's)
-        const sideOf = async (at, prop, side) => { const piece = sidePiece(await authoredValue(L.tab, at, prop, styles), prop, side); return piece ? valueVars(L.tab, at, piece, styles) : []; };
-        const varsOf = async (at, p) => {
-          const vs = await authoredVars(L.tab, at, p, styles), sh = shorthandOf(p);
-          if (vs.length || !sh) return vs;
-          const own = await authoredValue(L.tab, at, p, styles);
-          if (own === '') return sideOf(at, sh.prop, sh.side);
-          if (own != null) return vs;
-          // (the direction asked only where some logical longhand of it is written at all)
-          const ways = [shorthandOf(p, { logical: true }), shorthandOf(p, { logical: true, rtl: true })];
-          const written = [];
-          for (const w of ways) if (w && (await authoredValue(L.tab, at, w.longhand, styles)) != null) written.push(w);
-          if (!written.length) return vs;
-          const rtl = await call(L.tab, ([q]) => { const n = document.querySelector(q); return !!n && getComputedStyle(n).direction === 'rtl'; }, [at]);
-          const lg = ways[rtl ? 1 : 0];
-          if (!lg) return vs;
-          const direct = await authoredVars(L.tab, at, lg.longhand, styles);
-          if (direct.length || !lg.prop || (await authoredValue(L.tab, at, lg.longhand, styles)) !== '') return direct;
-          return sideOf(at, lg.prop, lg.side);
-        };
+        // (a side's token from whichever of its longhands and shorthands wins, physical and logical by the element's
+        // direction: external.mjs authoredSideVars, values.mjs sideWinner; the direction asked once per element)
+        const dirs = new Map();
+        const rtlOf = async (at) => { if (!dirs.has(at)) dirs.set(at, await call(L.tab, ([q]) => { const n = document.querySelector(q); return !!n && getComputedStyle(n).direction === 'rtl'; }, [at])); return dirs.get(at); };
+        const varsOf = async (at, p) => (shorthandOf(p) ? authoredSideVars(L.tab, at, p, await rtlOf(at), styles) : authoredVars(L.tab, at, p, styles));
         for (const p of css) { const [prop, part] = p.split(':'), at = el.startsWith('[') ? el : `[data-contract-id="${el}"]`; const rawOf = part === 'base' ? await authoredValue(L.tab, at, prop, styles) : null; const vars = part === 'base' ? (() => { const ls = splitTop(String(rawOf || '')), m = ls.length && /^\s*var\(\s*(--[\w-]+)/.exec(ls[ls.length - 1]); return m ? [m[1]] : []; })() : part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles), { outside: /-out$/.test(part) }) || {})[part.replace(/-out$/, '')] || []) : await varsOf(at, p); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
         // (the toolkit's own rendering names every token it draws with, var() for var(): a value it wrote raw is the design's
         // raw value, never a token guessed by value, which a project's compiled code may need)

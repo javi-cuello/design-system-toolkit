@@ -530,6 +530,21 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
       paddingCss(true).start === 'padding-right' && paddingCss(true).end === 'padding-left' && paddingCss(false).start === 'padding-left' && paddingCss(false).top === 'padding-top');
   }
   {
+    const { sideWinner } = await import('../parity/values.mjs');
+    // one side's cascade group, its rules lowest precedence first as Chrome lists them (a longhand a shorthand with a
+    // var() writes listed empty beside it): whichever of the physical longhand, its shorthand, the logical longhand and
+    // the logical shorthand wins is the side's value
+    const R = (...ds) => ({ cssProperties: ds.map(([name, value, important]) => ({ name, value, ...(important && { important }) })) });
+    const chip = R(['padding', 'var(--space-1) var(--space-3)'], ['padding-top', ''], ['padding-right', ''], ['padding-bottom', ''], ['padding-left', '']);
+    const lead = R(['padding-inline-start', 'var(--space-2)']);
+    ok('a side is read from whichever of its longhands and shorthands wins: a later logical longhand over an earlier shorthand',
+      sideWinner([chip, lead], 'padding-left') === 'var(--space-2)' && sideWinner([chip, lead], 'padding-right') === 'var(--space-3)'
+      && sideWinner([chip, lead], 'padding-right', true) === 'var(--space-2)' && sideWinner([lead, chip], 'padding-left') === 'var(--space-3)');
+    ok('an important declaration over a later one; a raw base, its own value; none written, none',
+      sideWinner([R(['padding-left', 'var(--a)', true]), lead], 'padding-left') === 'var(--a)' && sideWinner([R(['padding', '4px 8px']), R(['padding-inline', 'var(--s) var(--e)'])], 'padding-right') === 'var(--e)'
+      && sideWinner([R(['padding', '4px 8px'])], 'padding-left') === '8px' && sideWinner([R(['color', 'red'])], 'padding-left') === null && sideWinner([chip], 'color') === null);
+  }
+  {
     const { shorthandOf, sidePiece, instanceWrites } = await import('./from-code.mjs');
     // a longhand written inside a shorthand with a var() (Chrome reports it empty), or under its logical name (Chrome
     // reports the physical one not at all): where its value is written

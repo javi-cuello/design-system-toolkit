@@ -204,3 +204,76 @@ export function figmaWeight(style) {
   const key = style.replace(/[\s_-]+/g, '').toLowerCase();
   return Object.hasOwn(WEIGHTS, key) ? WEIGHTS[key] : undefined;
 }
+
+/* Where a physical longhand's value is written when Chrome cannot report it: { prop, side }, the shorthand whose values
+   hold it and its place there (top, right, bottom, left; a corner's from the top left; a gap's row then column), as a
+   longhand written in a shorthand with a var() is reported empty; with `logical`, { longhand, prop, side }, the logical
+   longhand and shorthand that write it by the element's direction (`rtl`), as a logical one is not reported under the
+   physical name at all (a corner's logical longhand has no shorthand: prop null). Else null. Tested by test-from-code.mjs. */
+const SIDES = ['top', 'right', 'bottom', 'left'];
+const CORNERS = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
+export function shorthandOf(longhand, { logical = false, rtl = false } = {}) {
+  let m;
+  // a physical side as a logical axis and edge (block start or end, inline start or end by direction)
+  const axis = (side) => (side === 'top' || side === 'bottom' ? ['block', side === 'top' ? 0 : 1] : ['inline', (side === 'left') !== rtl ? 0 : 1]);
+  const edge = (i) => (i ? 'end' : 'start');
+  if ((m = /^(padding|margin)-(top|right|bottom|left)$/.exec(longhand))) {
+    if (!logical) return { prop: m[1], side: SIDES.indexOf(m[2]) };
+    const [a, i] = axis(m[2]);
+    return { longhand: `${m[1]}-${a}-${edge(i)}`, prop: `${m[1]}-${a}`, side: i };
+  }
+  if (SIDES.includes(longhand)) {
+    if (!logical) return { prop: 'inset', side: SIDES.indexOf(longhand) };
+    const [a, i] = axis(longhand);
+    return { longhand: `inset-${a}-${edge(i)}`, prop: `inset-${a}`, side: i };
+  }
+  if ((m = /^border-(top|right|bottom|left)-width$/.exec(longhand))) {
+    if (!logical) return { prop: 'border-width', side: SIDES.indexOf(m[1]) };
+    const [a, i] = axis(m[1]);
+    return { longhand: `border-${a}-${edge(i)}-width`, prop: `border-${a}-width`, side: i };
+  }
+  if ((m = /^border-(top|bottom)-(left|right)-radius$/.exec(longhand))) {
+    if (!logical) return { prop: 'border-radius', side: CORNERS.indexOf(`${m[1]}-${m[2]}`) };
+    return { longhand: `border-${edge(axis(m[1])[1])}-${edge(axis(m[2])[1])}-radius`, prop: null };
+  }
+  if (!logical && (longhand === 'row-gap' || longhand === 'column-gap')) return { prop: 'gap', side: longhand === 'row-gap' ? 0 : 1 };
+  return null;
+}
+/* One side's own value in a shorthand's, its values expanded as CSS does: one to four, or one or two for a logical
+   axis's and a gap's; a corner's radii are those before a `/` outside any function. Null where it writes none. */
+export function sidePiece(value, prop, side) {
+  const words = []; let depth = 0, cur = '';
+  for (const ch of String(value ?? '')) {
+    if (ch === '(') depth++;
+    if (ch === ')') depth--;
+    if (!depth && ch === '/' && prop === 'border-radius') break;
+    if (/\s/.test(ch) && !depth) { if (cur) words.push(cur); cur = ''; } else cur += ch;
+  }
+  if (cur) words.push(cur);
+  if (!words.length) return null;
+  const two = prop === 'gap' || /-(block|inline)(-width)?$/.test(prop);
+  const sides = two ? [words[0], words[1] ?? words[0]] : [words[0], words[1] ?? words[0], words[2] ?? words[0], words[3] ?? words[1] ?? words[0]];
+  return sides[side] ?? null;
+}
+
+/* One side's value as the cascade gives it (`styles`: an element's matched rules, lowest precedence first, as Chrome
+   lists them): whichever of the physical longhand, its shorthand, and the logical longhand and shorthand of the
+   element's direction (`rtl`) wins, by importance and then order, as winning() does, read for that side; a longhand
+   Chrome lists empty (one a shorthand with a var() writes, listed beside it) is that shorthand's, never a winner of its
+   own. Null where none is written, or for a property with no sides. */
+export function sideWinner(styles, longhand, rtl = false) {
+  const ph = shorthandOf(longhand), lg = shorthandOf(longhand, { logical: true, rtl });
+  if (!ph) return null;
+  const group = new Map([[longhand, null], [ph.prop, ph], ...(lg ? [[lg.longhand, null]] : []), ...(lg && lg.prop ? [[lg.prop, lg]] : [])]);
+  let normal = null, important = null;
+  for (const st of styles || []) for (const p of st.cssProperties || []) {
+    if (!group.has(p.name) || p.disabled || p.parsedOk === false || p.value == null) continue;
+    const value = String(p.value).replace(/\s*!important\s*$/, '');
+    if (!value.trim()) continue;
+    if (p.important || /!important/.test(p.value)) important = { name: p.name, value }; else normal = { name: p.name, value };
+  }
+  const w = important || normal;
+  if (!w) return null;
+  const sh = group.get(w.name);
+  return sh ? sidePiece(w.value, w.name, sh.side) : w.value;
+}

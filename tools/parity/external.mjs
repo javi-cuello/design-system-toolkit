@@ -39,7 +39,7 @@ import { fileURLToPath } from 'node:url';
 import { collect, pairElements, selectorFor, rootPattern } from './pair.mjs';
 import { displayName } from '../shared/names.js';
 import { writeReport } from '../shared/output.mjs';
-import { parseColour, figmaWeight, insetStroke, splitTop } from './values.mjs';
+import { parseColour, figmaWeight, insetStroke, splitTop, sideWinner } from './values.mjs';
 import { probeSource } from './probe.mjs';
 import { pseudoClasses } from '../component-contract/to-code.mjs';
 
@@ -949,11 +949,13 @@ export async function authoredVars(tab, selector, property, cache = null, opts =
   return levels ? varChain(levels, name, opts) : [];
 }
 
-/* The custom properties a value given on the element was written with (one side of a shorthand), followed as
+/* The custom properties one side of an element's box was written with (padding-left, top, a corner's radius): its
+   value as the side's cascade group gives it (values.mjs sideWinner, by the element's direction `rtl`), followed as
    authoredVars follows a property's. */
-export async function valueVars(tab, selector, value, cache = null) {
+export async function authoredSideVars(tab, selector, longhand, rtl = false, cache = null) {
   const levels = await matchedLevels(tab, selector, cache);
-  return levels ? varChain(levels, null, { value }) : [];
+  const piece = levels && sideWinner(levels[0] || [], longhand, rtl);
+  return piece ? varChain(levels, null, { value: piece }) : [];
 }
 
 /* The custom properties a value lists as whole layers of its own (a box-shadow that adds a ring to an effect token:
