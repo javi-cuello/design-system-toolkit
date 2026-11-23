@@ -616,25 +616,29 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     // component uses. Its own set only, never a drawing of it (on a page the drawings record)
     await listing('what its own component takes from other libraries', async () => {
       const want = new Set([K.styles, K.icons, K.vars, K.effects, K.sets, ...Object.values(K.variants || {})].flatMap((m) => Object.values(m || {})).concat(K.iconContainer || []).filter((k) => k && !ownKeys.has(k)));
-      if (!want.size) return [];
+      // each found copy kept as it comes (a scan cut short keeps what it found), and the scan stops once every key
+      // asked for is found or 25 s have gone, its walk included, which runs before any timer could fire
+      const until = Date.now() + 25000, done = () => !want.size || Date.now() > until;
+      const take = (x) => { if (x && want.has(x.key)) { ownKeys.set(x.key, x); want.delete(x.key); } };
       const drawnPage = (n) => { while (n && n.type !== 'PAGE') n = n.parent; return !!(n && n.getPluginData('drawings')); };
-      const roots = figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).filter((n) => n.name === P.name && !drawnPage(n));
-      const found = [], styleIds = new Set(), varIds = new Set(), insts = [];
+      const roots = want.size ? figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).filter((n) => n.name === P.name && !drawnPage(n)) : [];
+      const styleIds = new Set(), varIds = new Set(), insts = [];
       const alias = (v) => { if (!v) return; if (Array.isArray(v)) v.forEach(alias); else if (typeof v === 'object') { if (v.type === 'VARIABLE_ALIAS' && v.id) varIds.add(v.id); else Object.values(v).forEach(alias); } };
-      for (const r of roots) for (const n of [r, ...r.findAll(() => true)]) {
+      walk: for (const r of roots) for (const n of [r, ...r.findAll(() => true)]) {
+        if (Date.now() > until) break walk;
         try {
-          if (typeof n.textStyleId === 'string' && n.textStyleId) styleIds.add(n.textStyleId);
+          if (n.type === 'TEXT') { if (typeof n.textStyleId === 'string') { if (n.textStyleId) styleIds.add(n.textStyleId); } else for (const seg of n.getStyledTextSegments(['textStyleId'])) if (seg.textStyleId) styleIds.add(seg.textStyleId); }
           if (typeof n.effectStyleId === 'string' && n.effectStyleId) styleIds.add(n.effectStyleId);
           alias(n.boundVariables);
           for (const paint of [].concat(Array.isArray(n.fills) ? n.fills : [], Array.isArray(n.strokes) ? n.strokes : [])) alias(paint.boundVariables);
           if (n.type === 'INSTANCE') insts.push(n);
         } catch { /* a layer inside another library's instance can need Figma's servers to read: skipped */ }
       }
-      const settle = (xs) => Promise.all(xs.map((f) => f().catch(() => null)));
-      found.push(...await settle([...styleIds].map((id) => () => figma.getStyleByIdAsync(id))));
-      found.push(...await settle([...varIds].map((id) => () => figma.variables.getVariableByIdAsync(id))));
-      for (const m of await settle(insts.map((n) => () => n.getMainComponentAsync()))) if (m) found.push(m, m.parent && m.parent.type === 'COMPONENT_SET' ? m.parent : null);
-      return found.filter((x) => x && want.has(x.key));
+      const settle = async (xs, get) => { for (let k = 0; k < xs.length && !done(); k += 100) { figma.root.setPluginData('to-figma-beat', String(Date.now())); for (const x of await Promise.all(xs.slice(k, k + 100).map((v) => get(v).catch(() => null)))) for (const y of [].concat(x || [])) take(y); } };
+      await settle([...styleIds], (id) => figma.getStyleByIdAsync(id));
+      await settle([...varIds], (id) => figma.variables.getVariableByIdAsync(id));
+      await settle(insts, async (n) => { const m = await n.getMainComponentAsync(); return m ? [m, m.parent && m.parent.type === 'COMPONENT_SET' ? m.parent : null] : null; });
+      return [];
     }, 30000);
   }
   const lib = K.vars || {};
