@@ -451,8 +451,9 @@ delete globalThis.figma;
   ok('a host kept whole in one variant is kept whole in every combination: nothing filled in it',
     roundTrip(one, bare, { mains }).rows.filter((r) => r.at === 'i/head' && r.drawn == null).reduce((t, r) => t + r.in, 0) === 2);
   // the reading keeps a host whole in every combination once the design does in any. Where a combination lists nothing
-  // inside it (closed: it draws its component as is, no override, so no layer hidden) the reading's parts there are that
-  // component's own, no difference; where the design hides dot (open, box kept equal to Item's), a dot drawn there is one
+  // inside it (closed) the reading's parts there are that component's own, no difference (box); but not a layer the
+  // design hides in another (dot, at open): one listing nothing may hide it by visibility alone, which the snapshot
+  // never records, so a dot drawn at closed stays a difference too, as it is at open
   const pane = { component: 'Pane', props: {}, anatomy: { root: { kind: 'container' }, box: { kind: 'container', parent: 'root', order: 0 }, 'box/dot': { kind: 'graphic', parent: 'box', order: 0, width: 4 } }, variants: [] };
   const paneOf = (n) => (n === 'Pane' ? pane : null);
   const holder = (insides, props = {}) => ({ contract: 1, component: 'Holder', props, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Pane', order: 0 }, ...insides }, variants: [] });
@@ -460,7 +461,15 @@ delete globalThis.figma;
   const plain = { ...holder({}, openP), variants: [{ when: { open: true }, add: { 'i/box': { kind: 'container', parent: 'i', order: 0 } } }] };
   const readWhole = holder({ 'i/box': { kind: 'container', parent: 'i', order: 0 }, 'i/box/dot': { kind: 'graphic', parent: 'i/box', order: 0, width: 4 } }, openP);
   ok('a part the reading keeps in a host a combination lists nothing inside is its component\'s own; still a difference where the combination hides it',
-    JSON.stringify(roundTrip(plain, readWhole, { mains: paneOf }).rows.map((r) => [r.at, r.library, r.in])) === '[["i/box/dot",null,1]]');
+    JSON.stringify(roundTrip(plain, readWhole, { mains: paneOf }).rows.map((r) => [r.at, r.library, r.in])) === '[["i/box/dot",null,2]]');
+  // the reviewer's shape: open hides dot by visibility alone (lists nothing, as closed does), big lists box (Pane's own) beside the
+  // hidden dot; code drawing dot at open is a difference, never filled away
+  const bigP = { open: openP.open, big: { type: 'boolean', default: false, axis: true, figma: 'Big' } };
+  const vis = { ...holder({}, bigP), variants: [{ when: { big: true }, add: { 'i/box': { kind: 'container', parent: 'i', order: 0 } } }] };
+  const dotAtOpen = { ...holder({}, bigP), variants: [{ when: { open: true }, add: { 'i/box': { kind: 'container', parent: 'i', order: 0 }, 'i/box/dot': { kind: 'graphic', parent: 'i/box', order: 0, width: 4 } } },
+    { when: { big: true }, add: { 'i/box': { kind: 'container', parent: 'i', order: 0 } } }] };
+  ok('a layer the design hides in one combination is never filled where another lists nothing: drawn there it stays a difference',
+    roundTrip(vis, dotAtOpen, { mains: paneOf }).rows.filter((r) => r.at === 'i/box/dot' && r.library == null).reduce((t, r) => t + r.in, 0) === 2);
   // a combination that hides a layer and lists only overrides beside it (open: box at 10 where Pane's is 8, dot hidden)
   // reads like one that left equal parts out; it lists insides, so nothing is filled there, and the hidden dot drawn
   // stays a difference (here in every combination: the others list insides too)

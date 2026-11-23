@@ -374,6 +374,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   // past the limit the rest are not compared, and said: a cut that is not said reads as the same
   const cut = Math.max(0, combos.length - limit); combos = combos.slice(0, limit);
   const whole = wholeHosts(library, mains), inTheirs = inWordsOf(library, drawn);
+  // what each combination lists inside a host kept whole: a layer one of them leaves out is one the design hides there
+  const listed = new Map([...whole].map((h) => [h, combos.map((c) => Object.keys(expand(library, { ...variantDefaults(library), ...c })).filter((k) => k.startsWith(`${h}/`))).filter((ks) => ks.length).map((ks) => new Set(ks))]));
+  const hidden = (h, k) => (listed.get(h) || []).some((ks) => !ks.has(k));
   for (const c of combos) {
     const theirs = inTheirs(c);
     // the named equivalences, each the same on both sides
@@ -386,11 +389,14 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // contract keeps no difference between a layer hidden and one left out as its component's (beside overrides only,
     // the two read alike), so nothing is filled there and a part drawn there stays a difference. The design left the
     // parts of the first out as its component's, so a part the drawing keeps there is held to that component's own, as
-    // the other way round below
+    // the other way round below. Not a layer another combination hides: a combination listing nothing may hide it too, by
+    // visibility alone, and the snapshot never says so (the plugin walks an instance's insides only for an override other
+    // than visibility, design-system-snapshot code.js): one listing nothing and one hiding every layer it hides read
+    // alike, so a layer the design is seen to hide is never filled, and drawn there it stays a difference
     const here = new Set();
     if (mains) req('./derive.cjs').ownInsides(JSON.parse(JSON.stringify(A)), mains, { found: here });
     const loose = [...whole].filter((h) => !here.has(h));
-    const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`))));
+    const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k))));
     const a = same(loose.length ? ownInPlaced(theirsIn, A, mains, here) : A), b = same(ownInPlaced(A, B, mains, whole));
     diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
