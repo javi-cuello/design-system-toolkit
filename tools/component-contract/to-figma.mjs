@@ -207,6 +207,22 @@ function words(x) {
   return out;
 }
 
+/* A text's own words equal to the default of a string prop that sets that layer, said as that prop, on each side by its
+   own props: the two cannot be told apart where it matters, as to-markup writes the prop there (textOf's `gives`: a choice
+   between the same words is none) and a reading at the defaults sees the same words either way (from-code boundText binds
+   them to the prop). The first such prop, as boundText takes the first. Only where one side is a browser's reading
+   (roundTrip's `layoutUnit`): a drawing read back from Figma says whether the layer is bound, and a binding it lost is a
+   difference. Tested by test-to-figma.mjs. */
+function bound(x, props) {
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) {
+    if (!e || e.kind !== 'text' || typeof e.content !== 'string' || /^\{.*\}$/.test(e.content)) continue;
+    const k = Object.keys(props || {}).find((k) => props[k].type === 'string' && (props[k].sets || []).includes(id) && props[k].default === e.content);
+    if (k) out[id] = { ...e, content: `{${k}}` };
+  }
+  return out;
+}
+
 /* An icon's size, said two ways: Figma takes the variant of its set at that size (with Size "20"), code sets the width
    (20). Compared as the size: a `Size` that is the instance's own width and height goes, so the width says it. */
 function iconSize(x) {
@@ -330,7 +346,10 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
   let adds = 0; // every row added, a repeat too (diff reads it to tell whether a component differed)
-  const add = (at, a, b) => { adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0 }; r.in++; rows.set(k, r); };
+  // (a row found only at pointer states, a hover's or a focus's, says so, `pointer`, where one side is a browser's reading:
+  // what is drawn there no markup holds, eval's leftToCode)
+  let atPointer = false;
+  const add = (at, a, b) => { adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0, pointer: true }; r.in++; r.pointer = r.pointer && atPointer; rows.set(k, r); };
   const diff = (a, b, at) => {
     if (JSON.stringify(a) === JSON.stringify(b)) return;
     // a placed instance's key is which component it is, compared only where both sides hold one (a reading from code
@@ -377,8 +396,10 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   // what each combination lists inside a host kept whole: a layer one of them leaves out is one the design hides there
   const listed = new Map([...whole].map((h) => [h, combos.map((c) => Object.keys(expand(library, { ...variantDefaults(library), ...c })).filter((k) => k.startsWith(`${h}/`))).filter((ks) => ks.length).map((ks) => new Set(ks))]));
   const hidden = (h, k) => (listed.get(h) || []).some((ks) => !ks.has(k));
+  const pointerAt = (c) => Object.entries(c).some(([k, v]) => (library.props[k] || {}).role === 'interaction' && ((library.props[k] || {}).pointer || []).includes(v));
   for (const c of combos) {
     const theirs = inTheirs(c);
+    atPointer = pointerAt(c);
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
     const A = expand(library, { ...variantDefaults(library), ...c }), B = expand(drawn, { ...variantDefaults(drawn), ...theirs });
@@ -397,13 +418,15 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     if (mains) req('./derive.cjs').ownInsides(JSON.parse(JSON.stringify(A)), mains, { found: here });
     const loose = [...whole].filter((h) => !here.has(h));
     const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k))));
-    const a = same(loose.length ? ownInPlaced(theirsIn, A, mains, here) : A), b = same(ownInPlaced(A, B, mains, whole));
+    const said = (x, props) => (layoutUnit ? bound(x, props) : x);
+    const a = said(same(loose.length ? ownInPlaced(theirsIn, A, mains, here) : A), library.props), b = said(same(ownInPlaced(A, B, mains, whole)), drawn.props);
     diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
+  atPointer = false;
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));
   if (library.component !== drawn.component) add('name', library.component, drawn.component);
-  return { combinations: combos.length, ...(invalid && { invalid }), ...(cut && { cut }), rows: [...rows.values()] };
+  return { combinations: combos.length, ...(invalid && { invalid }), ...(cut && { cut }), rows: [...rows.values()].map(({ pointer, ...r }) => (pointer && layoutUnit ? { ...r, pointer } : r)) };
 }
 
 /* A gap Figma does not draw: with space-between it spaces the children itself, its stored item spacing unused (css.mjs

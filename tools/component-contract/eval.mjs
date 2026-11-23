@@ -136,14 +136,15 @@ export function leftToCode(contract, mainOf = null, settings = undefined, { ownS
   const ids = [...parts.values()].filter((p) => (p.pointerOnly && !p.ring) || (p.slotted && !(parts.get(p.slotted) || {}).inside) || (mainOf && !!unexposed(contract, p.id, mainOf))).map((p) => p.id);
   // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them
   // (per text, the words its pointer states draw: a row is theirs only where the design side holds one of them, as rows
-  // merge every combination under one place)
+  // merge every combination under one place; and only where no other state sets them, or the row was found at pointer
+  // states alone (roundTrip's `pointer`: a search's query, typed at focus and when filled, read wrong only at focus)
   const only = new Map(), words = new Map();
   for (const v of contract.variants || []) for (const [k, w] of Object.entries(v.set || {})) if (k.endsWith('.content')) {
     const p = pointerWords(contract, v.when);
     only.set(k, (only.get(k) ?? true) && p);
     if (p) words.set(k, [...(words.get(k) || []), w]);
   }
-  const said = (at, row) => only.get(at) && row && (words.get(at) || []).includes(row.library);
+  const said = (at, row) => !!row && (only.get(at) || row.pointer === true) && (words.get(at) || []).includes(row.library);
   const over = new Map(mainOf ? [...parts.values()].map((p) => [p.id, unexposed(contract, p.id, mainOf)]).filter(([, w]) => w) : []);
   // (of such an override, only what markup would pass: the part itself, its kind, component, words and props; its
   // styles the sheet reaches, and a name the reading gives it is the reader's)
