@@ -51,7 +51,7 @@
     gap: var(--space-16) var(--space-32);
     padding-block-end: var(--space-24); border-block-end: var(--stroke-1) solid var(--line);
   }
-  header.top .files { flex: 1 1 26rem; }
+  header.top .files { flex: 1 1 26rem; } /* two file cells wide before the Audit button wraps under them */
   .head-actions { display: grid; justify-items: end; align-content: start; gap: var(--space-8); }
   /* The file in view, under its tab: one row, Check changes at its end. */
   .lib-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8) var(--space-16); flex-wrap: wrap; margin-block: var(--space-16); }
@@ -218,7 +218,7 @@
   /* A cell: the dot and the name on one line, the status under the name.
      Grouped by space alone, no box (knowledge: visual, Quiet chrome). */
   .file {
-    display: grid; grid-template-columns: 12px 1fr; column-gap: var(--space-8); row-gap: var(--space-2); align-items: center; align-content: start;
+    display: grid; grid-template-columns: 12px 1fr; column-gap: var(--space-8); row-gap: var(--space-2); align-items: center; align-content: start; /* 12px: the dot's box, below */
     font-size: var(--text-sm); color: var(--fg-soft);
   }
   .file > .file-note, .file > .file-stale { grid-column: 2; }
