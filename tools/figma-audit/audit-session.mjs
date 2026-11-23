@@ -88,9 +88,9 @@ if (!where || !where.doc) die(contract.notFound(project));
 const ctx = contract.auditContext(where.doc);
 if (!ctx.ok) die(ctx.errors.join('\n'));
 // Every routed library file: the audit settings name the components libraries;
-// a tokens or icons file has none of its own, and its stages need none (they
-// read the file's facts), so it runs with no settings and the stages that
-// need one say they do not apply.
+// a tokens or icons file has none of its own, so it runs with the house
+// defaults the context gives it (`files`), and the stages that need a
+// project setting say they do not apply.
 const routed = contract.auditRecords(where).filter((r) => !ctx.libraries[r.key]);
 const others = ctx.files || {};
 const nameOf = (r) => r.name || `the ${(r.roles || []).join(' and ')} library`;
