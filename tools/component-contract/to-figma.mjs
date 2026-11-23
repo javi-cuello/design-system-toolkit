@@ -645,9 +645,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       walk: for (const r of roots) for (const n of [r, ...r.findAll(() => true)]) {
         if (Date.now() > until) break walk;
         try {
-          if (n.type === 'TEXT') { if (typeof n.textStyleId === 'string') { if (n.textStyleId) { styleIds.add(n.textStyleId); if (typeof n.fontName !== 'symbol' && !textFont.has(n.textStyleId)) textFont.set(n.textStyleId, n.fontName); } } else for (const seg of n.getStyledTextSegments(['textStyleId'])) if (seg.textStyleId) styleIds.add(seg.textStyleId); }
-          if (typeof n.effectStyleId === 'string' && n.effectStyleId) styleIds.add(n.effectStyleId);
-          if (typeof n.fillStyleId === 'string' && n.fillStyleId) styleIds.add(n.fillStyleId);
+          for (const id of styleIdsOf(n)) styleIds.add(id);
+          if (n.type === 'TEXT' && typeof n.textStyleId === 'string' && n.textStyleId && typeof n.fontName !== 'symbol' && !textFont.has(n.textStyleId)) textFont.set(n.textStyleId, n.fontName);
           alias(n.boundVariables);
           for (const paint of [].concat(Array.isArray(n.fills) ? n.fills : [], Array.isArray(n.strokes) ? n.strokes : [])) alias(paint.boundVariables);
           if (n.type === 'INSTANCE') insts.push(n);
@@ -861,7 +860,14 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // read it as an override (set there by hand), and one left unset reads back as no override, so as the part gone
   // a layer's colour style, as the library paints it: set once the layer is painted (the style's paints are the colour
   // already drawn), all at once at the end with the text styles; one whose key was not found is said, not dropped
-  const styleFill = (n, e) => { if (!e.fillStyle || !('fillStyleId' in n)) return; const key = K.fillStyles && K.fillStyles[e.fillStyle], st = key && fillStyles[key]; if (!st) missing.add(`colour style ${e.fillStyle}`); else if (n.fillStyleId !== st.id) toFill.push([n, st, e.fillStyle]); };
+  const styleFill = (n, e, paint) => {
+    if (!e.fillStyle || !('fillStyleId' in n)) return;
+    const rec = K.fillStyleColours && K.fillStyleColours[e.fillStyle];
+    // (an image by its kind alone, as the style records it; a part that holds no colour of its own takes the style alone,
+    // derive's: a paint its layer shows at no opacity)
+    const said = [].concat(paint ?? []).map((q) => (typeof q === 'string' && /^IMAGE/.test(q) ? 'IMAGE' : q));
+    if (rec && said.length && JSON.stringify(rec) !== JSON.stringify(said)) { missing.add(`colour style ${e.fillStyle} (it no longer matches its colour: the colour drawn)`); return; }
+    const key = K.fillStyles && K.fillStyles[e.fillStyle], st = key && fillStyles[key]; if (!st) missing.add(`colour style ${e.fillStyle}`); else if (n.fillStyleId !== st.id) toFill.push([n, st, e.fillStyle]); };
   const paintIf = async (n, field, token, force = false) => { if (typeof token !== 'string' || !(field in n)) return; const v = await V(token); if (v && boundTo(n[field]) === v.id) { if (!force) return; n[field] = [{ type: 'SOLID', color: { r: 1, g: 0, b: 1 } }]; } n[field] = [await solid(token)]; };
   // an instance's own layout where the design overrides it there (a pill's content centred in one block): its
   // alignment, gap and padding, on the auto layout its component gives it
@@ -908,7 +914,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (words !== null && n.characters !== words && n.fontName !== figma.mixed) { await tried(`font of ${n.name}`, () => figma.loadFontAsync(n.fontName)); n.characters = words; }
     } else if (e.kind === 'graphic' && n.type === 'VECTOR') await paintIf(n, n.strokes.length ? 'strokes' : 'fills', e.background, true);
     else if (e.kind !== 'text') await paintIf(n, 'fills', e.background);
-    styleFill(n, e);
+    styleFill(n, e, e.kind === 'text' ? e.color : e.background);
     // (a reading from code states what it read, not Figma's defaults: only its stroke's colour, as before)
     if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
@@ -979,7 +985,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         n.characters = e.text || (typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) ? e.content : 'Text');
         if (e.textAlign) n.textAlignHorizontal = { center: 'CENTER', end: 'RIGHT', justify: 'JUSTIFIED' }[e.textAlign] || 'LEFT';
         if (e.color) n.fills = await paints(e.color);
-        styleFill(n, e);
+        styleFill(n, e, e.color);
         // how the box follows the words and where they sit; spacing and case where no style gives them
         if (e.autoResize) n.textAutoResize = e.autoResize.toUpperCase();
         // a length it is given: its box at that size, the resizing said again after (resize sets it to fixed)
@@ -1068,7 +1074,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (P.fromCode && e.kind === 'instance' && typeof e.background === 'string' && n.type === 'INSTANCE' && !(Array.isArray(n.fills) && n.fills.some((f) => f.visible !== false && (f.opacity ?? 1) > 0))) recolour(n, await solid(e.background));
       // a Figma contract's placed instance: its own fill, stroke, corners, shadow and clipping, where the design overrides
       // them (derive keeps on an instance only what differs from its component: ownStyling)
-      if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e); await lookOver(n, e); }
+      if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e, e.background); await lookOver(n, e); }
       if (e.rotation) n.rotation = e.rotation;
       // a placed instance's own bounds (a dialog's modal at most 556 wide): a frame drawn here takes them with its layout
       if (n.type === 'INSTANCE') for (const f of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (e[f] != null) await num(n, f, e[f]);
@@ -1102,7 +1108,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         // (a box that fills one way still takes its length the other: the fill is set with the parent's layout)
         } else if ((px(e.width) || px(e.height)) && n.type !== 'VECTOR') n.resize(px(e.width) || n.width, px(e.height) || px(e.width) || n.height);
         n.fills = e.background ? await paints(e.background, id === 'root' ? 'root' : (e.name || id.slice(id.lastIndexOf('/') + 1))) : [];
-        styleFill(n, e);
+        styleFill(n, e, e.background);
         // one radius, or one per corner in Figma's order: top left, top right, bottom right, bottom left
         // an ellipse has no corners: a radius a variant kept from a rectangle is not drawn
         if (e.radius != null && 'topLeftRadius' in n) for (const [i, f] of ['topLeftRadius', 'topRightRadius', 'bottomRightRadius', 'bottomLeftRadius'].entries()) await num(n, f, Array.isArray(e.radius) ? e.radius[i] : e.radius);
@@ -1340,6 +1346,7 @@ export function pluginCode(contract, keys, { before = '', after = '', failed = '
   return `figma.skipInvisibleInstanceChildren = false;\n${before}const P = ${JSON.stringify(packed)}; for (const v of P.variants) for (const id in v.anatomy) v.anatomy[id] = P.elements[v.anatomy[id]];\nconst parseColour = ${parseColour.toString()};
 const variantValues = ${variantValues.toString()};
 const bareProp = ${bareProp.toString()};
+const styleIdsOf = ${styleIdsOf.toString()};
 const keyMatches = ${keyMatches.toString()};
 const sizingAxes = ${sizingAxes.toString()};
 let __res; try { __res = await (${RUNTIME.toString()})(P, ${JSON.stringify(keys)}${before ? ', __page, typeof __given !== \'undefined\' ? __given : [], typeof __started !== \'undefined\' ? __started : globalThis.__drawingStarted' : ''});\n${after}} catch (e) { ${failed} throw e; }\nreturn __res;`;
@@ -1349,6 +1356,29 @@ let __res; try { __res = await (${RUNTIME.toString()})(P, ${JSON.stringify(keys)
 /* A value names a variable where it has a group (Colour/Primary) or is one of the project's variables by name (a
    library whose variables sit at the top of their collection: "layer-hover (contextual)"); anything else is a literal. */
 export const varNamer = (names = []) => { const known = new Set(names); return (t) => typeof t === 'string' && (t.includes('/') || known.has(t)); };
+
+/* The styles a layer uses, any kind of layer: its text style, effect, fill and stroke styles, a text's per run where
+   they are mixed. One reading for both walks that look for them, the drawing's own-file scan (RUNTIME) and the library
+   lookup (LOOKUP), written into each one's plugin code. */
+export const styleIdsOf = (n) => {
+  const out = [];
+  for (const f of ['textStyleId', 'effectStyleId', 'fillStyleId', 'strokeStyleId']) {
+    if (!(f in n) || (f === 'textStyleId' && n.type !== 'TEXT')) continue;
+    if (typeof n[f] === 'string') { if (n[f]) out.push(n[f]); }
+    else if (n.type === 'TEXT' && (f === 'textStyleId' || f === 'fillStyleId')) for (const seg of n.getStyledTextSegments([f])) if (seg[f]) out.push(seg[f]);
+  }
+  return out;
+};
+
+/* Each colour style's colour as the snapshot records it, in the contract's words: its paints, a colour clear in every
+   mode left out (derive leaves a fill that paints nothing out, the style kept alone). The drawing sets a style only where
+   this equals the part's colour: one edited since is drawn as its colour and said, never the style's old colour. */
+export function styleColours(tokenFile, names) {
+  const clear = (c) => { const x = parseColour(String(c)); return !!x && x[3] < 0.5 / 255; };
+  const modes = (n) => { const vs = Object.values((tokenFile && tokenFile.collections) || {}).flatMap((col) => Object.values(col.values || {}).filter((m) => m && Object.hasOwn(m, n)).map((m) => m[n])); return vs.length ? vs : [n]; };
+  return Object.fromEntries(((tokenFile && tokenFile.paintStyles) || []).filter((x) => names.includes(x.name))
+    .map((x) => [x.name, (x.paints || []).map((q) => (q.type === 'SOLID' ? q.color : q.type === 'IMAGE' ? 'IMAGE' : q)).filter((c) => !(typeof c === 'string' && modes(c).every(clear)))]));
+}
 
 export function needs(p, isVar = varNamer()) {
   const els = p.variants.flatMap((v) => Object.values(v.anatomy));
@@ -1390,13 +1420,16 @@ const LOOKUP = async (want) => {
   // a colour style's key: the file's own by name, then one lent by another library where a layer here paints with it
   if (want.fillStyles && want.fillStyles.length) {
     for (const ps of await figma.getLocalPaintStylesAsync()) if (want.fillStyles.includes(ps.name) && !fillStyles[ps.name]) fillStyles[ps.name] = ps.key;
+    // (every layer of the file, any kind, read as the drawing reads a layer's styles: styleIdsOf)
     const seen = new Set();
-    for (const n of want.fillStyles.some((x) => !fillStyles[x]) ? figma.root.findAllWithCriteria({ types: ['COMPONENT', 'FRAME', 'TEXT', 'INSTANCE', 'VECTOR', 'RECTANGLE', 'ELLIPSE'] }) : []) {
-      if (typeof n.fillStyleId !== 'string' || !n.fillStyleId || seen.has(n.fillStyleId)) continue;
-      seen.add(n.fillStyleId);
-      const st = await figma.getStyleByIdAsync(n.fillStyleId);
-      if (st && want.fillStyles.includes(st.name) && !fillStyles[st.name]) fillStyles[st.name] = st.key;
-      if (want.fillStyles.every((x) => fillStyles[x])) break;
+    walk: for (const n of want.fillStyles.some((x) => !fillStyles[x]) ? figma.root.findAll(() => true) : []) {
+      for (const id of styleIdsOf(n)) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const st = await figma.getStyleByIdAsync(id);
+        if (st && st.type === 'PAINT' && want.fillStyles.includes(st.name) && !fillStyles[st.name]) fillStyles[st.name] = st.key;
+        if (want.fillStyles.every((x) => fillStyles[x])) break walk;
+      }
     }
   }
   // a swap's value no instance in the snapshot carries the key of (a toggle's sun, set by its prop alone): its set
@@ -1934,9 +1967,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // an image fill is the library's asset, not the contract's: the library's own component of this name, by its key, so
   // the drawing paints each image layer with the picture the library's layer of the same name holds
   if (JSON.stringify(c).includes('"IMAGE:')) { const byKey = keyedNames(where.paths.components); keys.image = Object.keys(byKey).find((k) => byKey[k] === c.component) || null; }
-  // a colour style's key from the snapshot where it records one; the rest looked up where the library uses them
-  keys.fillStyles = Object.fromEntries((JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')).paintStyles || []).filter((x) => x.key && want.fillStyles.includes(x.name)).map((x) => [x.name, x.key]));
-  const missing = { styles: want.styles.filter((n) => !keys.styles[n]), fillStyles: want.fillStyles.filter((n) => !keys.fillStyles[n]), icons: want.icons, container: (map.draw && map.draw.iconContainer) || null, vars: want.vars, components: want.components };
+  // a colour style's key, looked up where the library uses it (the snapshot records none); its colour from the snapshot
+  keys.fillStyles = {};
+  keys.fillStyleColours = styleColours(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), want.fillStyles);
+  const missing = { styles: want.styles.filter((n) => !keys.styles[n]), fillStyles: want.fillStyles, icons: want.icons, container: (map.draw && map.draw.iconContainer) || null, vars: want.vars, components: want.components };
   const tl = Date.now();
   // a variable's key from the snapshot (plugin 0.52.0 on); else looked up in the library file below
   keys.vars = {};
@@ -1957,7 +1991,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const notOpen = [];
   if (libKey) {
     // the rest where the library uses them, in the library file itself, which must be open with the Desktop Bridge
-    const found = await exec(`return (${LOOKUP.toString()})(${JSON.stringify(missing)});`, libKey, 60000).catch((e) => { notOpen.push(`the library file (${libKey}) is not open with the Desktop Bridge, so only what the snapshot names was found: ${e.message.split('\n')[0]}`); return null; });
+    const found = await exec(`const styleIdsOf = ${styleIdsOf.toString()};\nreturn (${LOOKUP.toString()})(${JSON.stringify(missing)});`, libKey, 60000).catch((e) => { notOpen.push(`the library file (${libKey}) is not open with the Desktop Bridge, so only what the snapshot names was found: ${e.message.split('\n')[0]}`); return null; });
     if (found) { Object.assign(keys.styles, found.styles); Object.assign(keys.fillStyles, found.fillStyles || {}); keys.icons = found.icons; keys.iconContainer = found.iconContainer; Object.assign(keys.vars, found.vars); keys.sets = found.sets; for (const [n, k] of Object.entries(found.swaps || {})) keys.variants[n] ||= { [n]: k }; }
   }
   // a variable the library hides from publishing cannot be imported here: its name, said with why it is not bound

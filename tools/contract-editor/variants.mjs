@@ -90,6 +90,14 @@ function writesTo(contract, values, key) {
  * is taken out instead, and a layer left saying nothing goes.
  */
 export function setField(contract, values, id, field, value) {
+  // a colour edited lets go of the colour style the part was painted with there (to-figma would draw the style's
+  // colour, the sheet the edit's): the style is cleared at these values, as an edit of its own
+  if ((field === 'background' || field === 'color') && !same(value, (expand(contract, values)[id] || {})[field]) && (expand(contract, values)[id] || {}).fillStyle) {
+    return setField({ ...contract, variants: setFieldOnly(contract, values, id, field, value) }, values, id, 'fillStyle', null);
+  }
+  return setFieldOnly(contract, values, id, field, value);
+}
+function setFieldOnly(contract, values, id, field, value) {
   const off = offDefault(contract, values);
   const vs = ((contract && contract.variants) || []).map((v) => ({ ...v, ...(v.set ? { set: { ...v.set } } : {}) }));
   const c = { ...contract, variants: vs };

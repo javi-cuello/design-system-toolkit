@@ -47,7 +47,7 @@ export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
 import { inWordsOf } from './to-figma.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -857,8 +857,8 @@ export function designKeyOf(design, fe, name) {
    makes here: eval.mjs leaves those insides to code (inForeign), so its colour sets nothing, but for its lone glyph straight
    under it, whose colour roundTrip compares as the instance's (to-figma glyph). Where the library holds the
    component, the snapshot keeps only what differs from it inside, so a colour there is the design's. */
-// (a glyph's own words, as to-figma's glyph() moves its colour up only when it says nothing else)
-const PLACE = new Set(['kind', 'parent', 'name', 'order', 'background']);
+// (a glyph's own words, as to-figma's glyph() moves its colour up only when it says nothing else: rules.mjs GLYPH_WORDS)
+const PLACE = GLYPH_WORDS;
 export function designSetsColour(design, id, mainOf = () => null) {
   const all = Object.assign({}, ...[...(design.variants || [])].reverse().map((v) => v.add || {}), design.anatomy || {});
   const foreign = (el) => (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key);

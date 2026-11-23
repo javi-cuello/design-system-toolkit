@@ -136,4 +136,13 @@ const kd = keyDiff({ a: 1, b: { x: 1, y: 2 }, c: 3 }, { b: { y: 2, x: 1 }, c: 4,
 ok('a change by key: added, removed, and changed by value whatever its keys\' order', JSON.stringify(kd) === '{"added":["d"],"removed":["a"],"changed":["c"]}');
 ok('and nothing on either side is nothing changed', JSON.stringify(keyDiff(undefined, null)) === '{"added":[],"removed":[],"changed":[]}');
 
+// 2026-11-23 (review): a colour edited in a variant lets go of the colour style it was painted with, which would
+// otherwise draw the old colour in Figma while the sheet writes the new one
+{
+  const styled = { ...chip, anatomy: { ...chip.anatomy, root: { ...chip.anatomy.root, fillStyle: 'Sys/rest' } } };
+  const v2 = setField(styled, { state: 'focus' }, 'root', 'background', 'C/edited');
+  const at = expand({ ...styled, variants: v2 }, { state: 'focus' }).root;
+  ok('a colour edited in a variant clears its style there, and only there', at.background === 'C/edited' && !at.fillStyle && expand({ ...styled, variants: v2 }, {}).root.fillStyle === 'Sys/rest');
+}
+
 console.log(`\n${n} ok`);

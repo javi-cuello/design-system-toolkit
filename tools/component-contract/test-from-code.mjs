@@ -30,7 +30,9 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   ok('a foreign icon\'s lone glyph straight under it keeps its colour, and a variant\'s set of it, as the design\'s',
     designSetsColour(lone, 'icon', byComponentName([])) === true
     && designSetsColour({ anatomy: { ...lone.anatomy, 'icon/icon': { kind: 'graphic', parent: 'icon' } }, variants: lone.variants }, 'icon', byComponentName([])) === true
-    && designSetsColour({ anatomy: { ...lone.anatomy, 'icon/icon': { ...lone.anatomy['icon/icon'], width: 12 } }, variants: [] }, 'icon', byComponentName([])) === false); }
+    && designSetsColour({ anatomy: { ...lone.anatomy, 'icon/icon': { ...lone.anatomy['icon/icon'], width: 12 } }, variants: [] }, 'icon', byComponentName([])) === false);
+  // 2026-11-23 (review): a glyph painted with a colour style is still a lone glyph (rules.mjs GLYPH_WORDS, one source)
+  ok('…and one painted with a colour style, as to-figma folds it', designSetsColour({ anatomy: { ...lone.anatomy, 'icon/icon': { ...lone.anatomy['icon/icon'], fillStyle: 'Sys/medium' } }, variants: [] }, 'icon', byComponentName([])) === true); }
 
 const table = [['Color/Background/Neutral/secondary', '#eeeeee'], ['Color/Background/Neutral/secondary-translucent', 'rgb(22 22 22 / 0.073)'],
   ['Color/Icon/Feedback/Danger/primary', '#5e0007'], ['Color/Icon/Supportive/Red/primary', '#5e0007'], ['Color/Text/Feedback/Danger/primary', '#5e0007'],

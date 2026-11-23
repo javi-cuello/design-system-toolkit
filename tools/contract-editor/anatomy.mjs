@@ -146,6 +146,8 @@ export function toAnatomy(parts, drafts) {
     // a box's paint: a container's, and a shape's, which is a box drawn in place
     if (holds(p.kind) || p.kind === 'graphic') {
       put('background');
+      // (a colour edited lets go of the colour style it was painted with: to-figma would draw the style's colour)
+      if (raw && changed('background')) delete e.fillStyle;
       // an ellipse has no corners: kept on the part, so Rectangle again brings them back, never written
       if (p.shape === 'ellipse') set(e, 'radius', null); else put('radius');
       const border = { ...(e.border || {}) };
@@ -157,6 +159,7 @@ export function toAnatomy(parts, drafts) {
       put('typography');
       put('textAlign');
       put('color');
+      if (raw && changed('color')) delete e.fillStyle;
       // words from a prop are always its current key, so a rename follows; fixed words follow the editor once changed
       const k = p.textProp && keyOf(p.textProp);
       if (k) { e.content = `{${k}}`; link(p.textProp, 'sets', id[p.uid]); } else if (changed('text') || changed('textProp')) set(e, 'content', p.text);
@@ -164,7 +167,7 @@ export function toAnatomy(parts, drafts) {
     if (p.kind === 'instance') {
       put('component');
       const glyph = glyphOf(p.inner);
-      if (changed('color')) { if (glyph) p.inner[glyph] = { ...p.inner[glyph], background: p.color || undefined }; else set(e, 'color', p.color); }
+      if (changed('color')) { if (glyph) { const { fillStyle: _, ...g } = p.inner[glyph]; p.inner[glyph] = { ...g, background: p.color || undefined }; } else set(e, 'color', p.color); }
       if (changed('with')) set(e, 'with', p.with && Object.keys(p.with).length ? { ...p.with } : null);
       if (p.swapProp && keyOf(p.swapProp)) link(p.swapProp, 'swaps', id[p.uid]);
     }

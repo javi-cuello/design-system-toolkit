@@ -424,4 +424,12 @@ ok('an opacity set in the editor is written, on a part read from a contract and 
   assert.equal(anatomy.label.opacity, 0.5);
 });
 
+ok('a colour edited on a part lets go of the colour style it was painted with; one left alone keeps it (2026-11-23)', () => {
+  const read = fromAnatomy({ root: { kind: 'container', background: 'C/a', fillStyle: 'Sys/a' }, t: { kind: 'text', parent: 'root', order: 0, content: 'Hi', color: 'C/t', fillStyle: 'Sys/t' } }, [], {});
+  assert.equal(toAnatomy(read, []).anatomy.root.fillStyle, 'Sys/a', 'kept where the colour is not edited');
+  read[0].background = 'C/b'; read[1].color = 'C/u';
+  const { anatomy } = toAnatomy(read, []);
+  assert.deepEqual([anatomy.root.background, anatomy.root.fillStyle, anatomy.t.color, anatomy.t.fillStyle], ['C/b', undefined, 'C/u', undefined]);
+});
+
 console.log(`${n} passed`);

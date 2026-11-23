@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets } from './to-figma.mjs';
+import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf } from './to-figma.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -679,7 +679,7 @@ delete globalThis.figma;
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
   ok('in the library\'s own file the keys of what other libraries lent are taken from the copies its own component uses, never a drawing\'s',
     src.includes("await listing('what its own component takes from other libraries'") && src.includes("(n.name === P.name || P.name.endsWith('/' + n.name)) && !drawnPage(n)") && src.includes('}, 30000);')
-    && src.includes('ownKeys.set(x.key, x); want.delete(x.key);') && src.includes("getStyledTextSegments(['textStyleId'])") && src.includes('if (Date.now() > until) break walk;'));
+    && src.includes('ownKeys.set(x.key, x); want.delete(x.key);') && src.includes('for (const id of styleIdsOf(n)) styleIds.add(id);') && src.includes('if (Date.now() > until) break walk;'));
   ok('a variable at the top of its collection is a variable where the project names it, a literal never',
     (() => { const v = varNamer(['layer-hover (contextual)']); return v('layer-hover (contextual)') && v('Colour/Primary') && !v('#808080') && !v('16px (1rem)') && !varNamer()('layer-hover (contextual)'); })()
     && needs({ variants: [{ anatomy: { root: { background: 'layer-hover (contextual)' } } }] }, varNamer(['layer-hover (contextual)'])).vars.includes('layer-hover (contextual)')
@@ -692,7 +692,7 @@ delete globalThis.figma;
     src.includes("else if (e.kind === 'graphic' && !P.fromCode && !e.asset && e.radius == null && !e.full && !ids.some((x) => variant.anatomy[x].parent === id)) {") && (src.match(/n = figma\.createVector\(\); n\.strokes = \[\];/g) || []).length === 2
     && src.includes("const along = e.height === 0 ? (c.horizontal === 'stretch' && at.end != null ? w : null)"));
   ok('a placed instance takes its own fill, stroke, corners, shadow and clipping, and a layer inside one its stroke\'s weights and place, never its colour alone; neither from a contract read from code',
-    src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e); await lookOver(n, e); }")
+    src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e, e.background); await lookOver(n, e); }")
     && src.includes("if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);") && src.includes("await lookOver(n, e); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")
     && src.includes("for (const [i, f] of fields.entries()) if (!(await sameNum(n, f, side(i)))) await num(n, f, side(i));"));
   ok('the walk\'s page-qualified name of a drawing on the round trip page is the component\'s own, that exact prefix only',
@@ -722,7 +722,21 @@ delete globalThis.figma;
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
   ok('…applied by its key once the layer is painted, taken in the library\'s own file from its styles and the copies its own component uses, looked up where the library uses it',
     src.includes('n.setFillStyleIdAsync(st.id)') && src.includes("await listing(\"this file's colour styles\", () => figma.getLocalPaintStylesAsync());")
-    && src.includes("if (typeof n.fillStyleId === 'string' && n.fillStyleId) styleIds.add(n.fillStyleId);") && src.includes('fillStyles[ps.name] = ps.key'));
+    && src.includes('for (const id of styleIdsOf(n)) styleIds.add(id);') && src.includes('fillStyles[ps.name] = ps.key'));
+  // review: the style and the colour are two sources: a style is set only where its recorded colour is the part's
+  const tf = { collections: { C: { modes: ['L', 'D'], values: { L: { 'C/clear': 'rgb(255 255 255 / 0)', 'C/half': 'rgb(0 0 0 / 0)' }, D: { 'C/clear': 'rgb(0 0 0 / 0)', 'C/half': 'rgb(0 0 0 / 0.5)' } } } },
+    paintStyles: [{ name: 'S/a', paints: [{ type: 'SOLID', color: 'C/a' }] }, { name: 'S/clear', paints: [{ type: 'SOLID', color: 'C/clear' }] }, { name: 'S/half', paints: [{ type: 'SOLID', color: 'C/half' }] }, { name: 'S/other', paints: [] }, { name: 'S/img', paints: [{ type: 'SOLID', color: 'C/a' }, { type: 'IMAGE' }] }] };
+  ok('…each style\'s colour as recorded, a colour clear in every mode left out as derive leaves it out',
+    JSON.stringify(styleColours(tf, ['S/a', 'S/clear', 'S/half', 'S/img'])) === '{"S/a":["C/a"],"S/clear":[],"S/half":["C/half"],"S/img":["C/a","IMAGE"]}');
+  ok('…and the drawing sets one only where that colour is the part\'s, else draws the colour and says so; its key looked up, never claimed from the snapshot',
+    src.includes("if (rec && said.length && JSON.stringify(rec) !== JSON.stringify(said)) { missing.add(`colour style ${e.fillStyle} (it no longer matches its colour: the colour drawn)`); return; }")
+    && src.includes('keys.fillStyleColours = styleColours(') && !/paintStyles \|\| \[\]\)\.filter\(\(x\) => x\.key/.test(src));
+  // review: one walk finds the styles a layer uses, in the drawing's own-file scan and in the library lookup alike
+  const fake = (n) => ({ type: 'FRAME', fillStyleId: '', effectStyleId: '', ...n });
+  ok('…one reading of the styles a layer uses, any layer kind, for both walks',
+    JSON.stringify(styleIdsOf(fake({ type: 'STAR', fillStyleId: 'f', effectStyleId: 'e' }))) === '["e","f"]'
+    && JSON.stringify(styleIdsOf({ type: 'TEXT', textStyleId: 't', fillStyleId: Symbol('mixed'), getStyledTextSegments: (f) => (f[0] === 'fillStyleId' ? [{ fillStyleId: 'f1' }, { fillStyleId: '' }] : []) })) === '["t","f1"]'
+    && src.includes('const styleIdsOf = ${styleIdsOf.toString()};') && (src.match(/styleIdsOf\(n\)/g) || []).length === 2);
   ok('…and a patch carries a layer\'s colour style over with its fills', src.includes("if ('fillStyleId' in from && from.fillStyleId !== to.fillStyleId && typeof from.fillStyleId === 'string') { await to.setFillStyleIdAsync(from.fillStyleId); n++; }"));
 }
 
