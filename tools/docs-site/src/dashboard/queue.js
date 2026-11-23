@@ -537,7 +537,6 @@ export function build() {
             '<div class="row-top">' +
               '<span class="rid" id="rid-' + esc(id) + '"></span>' +
               '<span class="sev ' + esc(r.sev || "rule") + '">' + esc(SEV_LABEL[r.sev] || "Review") + '</span>' +
-              '<span class="owner-tag" data-owner-tag title="Raised by the ' + esc(ownerLabel(r.owner || OWNER, r.target)) + ' audit, the only one that closes it">' + esc(ownerLabel(r.owner || OWNER, r.target)) + '</span>' +
               (r.visible ? '<span class="visible-flag">User-visible</span>' : '') +
               (LANDS[r.lands] ? '<span class="lands-tag" data-lands="' + esc(r.lands) + '" title="' + esc(LANDS[r.lands].why) + '">' + esc(LANDS[r.lands].label) + '</span>' : '') +
               '<a class="where" id="where-' + esc(id) + '" target="_blank" rel="noopener">' + esc(r.where || id) + '<span class="visually-hidden"> (opens in new tab)</span></a>' +
@@ -549,20 +548,22 @@ export function build() {
                 : cell(COLUMNS[bucket][0], problem(r)) + (advice(r.rec).length ? cell(COLUMNS[bucket][1], advice(r.rec)) : '')) +
               (r.failedWhy ? '<p class="row-failed">Last attempt failed \u2014 ' + esc(said(r.failedWhy, r.target)) + '</p>' : '') +
             '</div>' +
-            '<div class="note-wrap">' +
-              '<label class="note-label" id="nlabel-' + esc(id) + '" for="note-' + esc(id) + '">Note for Claude</label>' +
-              '<textarea class="note" id="note-' + esc(id) + '" rows="1" aria-labelledby="nlabel-' + esc(id) + ' noteOn ' + row_ + '" placeholder="A ruling, or what you did"></textarea>' +
-              // The buttons that come and go (Fix all, Verify, Ask) and the
-              // row's stamp come after the ones always there, so ticking a row
-              // never moves those.
-              '<div class="row-actions">' +
+            // The buttons that come and go (Fix all, Verify, Ask) and the
+            // row's stamp come after the ones always there, so ticking a row
+            // never moves those. The note opens on demand, under them, and
+            // stays open once it holds text.
+            '<div class="row-actions">' +
                 (bucket === "b1" ? '<button class="button do-row" type="button" data-do="' + esc(id) + '" ' + about("do-" + esc(id)) + '>Fix this</button>' : '') +
                 '<button class="button rule-row" type="button" data-rule="' + esc(id) + '" ' + about("rule-" + esc(id)) + '>Record as ruling</button>' +
+                '<button class="link-button note-toggle" type="button" data-note-toggle aria-expanded="false" aria-controls="nwrap-' + esc(id) + '" ' + about("ntoggle-" + esc(id)) + '>Add a note</button>' +
                 (bucket === "b1" ? '<button class="button do-all" type="button" data-doall="' + esc(id) + '" ' + about("doall-" + esc(id)) + ' hidden></button>' : '') +
                 '<button class="button verify-row" type="button" data-verify="' + esc(id) + '" ' + about("verify-" + esc(id)) + ' hidden>Verify</button>' +
                 '<button class="button ask-row" type="button" data-ask-row="' + esc(n) + '" ' + about("askrow-" + esc(id)) + ' hidden>Ask about this row</button>' +
                 '<span class="stamp" data-state="pending" id="stamp-' + esc(id) + '" hidden></span>' +
-              '</div>' +
+            '</div>' +
+            '<div class="note-wrap" id="nwrap-' + esc(id) + '" hidden>' +
+              '<label class="note-label" id="nlabel-' + esc(id) + '" for="note-' + esc(id) + '">Note for Claude</label>' +
+              '<textarea class="note" id="note-' + esc(id) + '" rows="1" aria-labelledby="nlabel-' + esc(id) + ' noteOn ' + row_ + '" placeholder="A ruling, or what you did"></textarea>' +
             '</div>' +
           '</div>';
 
@@ -599,6 +600,13 @@ export function build() {
           timers[id] = setTimeout(() => save(id), 700);
         });
         note.addEventListener("blur", () => paintAll());
+        const noteBtn = row.querySelector("[data-note-toggle]");
+        noteBtn.addEventListener("click", () => {
+          const wrap = document.getElementById("nwrap-" + id);
+          wrap.dataset.open = wrap.hidden ? "yes" : "";
+          paint(id);
+          if (!wrap.hidden) { autosize(note); note.focus(); }
+        });
         const askBtn = row.querySelector("[data-ask-row]");
         if (askBtn) askBtn.addEventListener("click", () => {
           // Open the drawer first. The composer lives inside `.ask-inner`,
@@ -718,6 +726,14 @@ function paint(id) {
   tick.disabled = readOnly;
   const note = document.getElementById("note-" + id);
   note.readOnly = readOnly;
+  // The note shows once it holds text or was opened; a read-only copy offers no empty one.
+  const wrap = document.getElementById("nwrap-" + id);
+  const filled = !!(s.note || "").trim() || (document.activeElement === note && !!note.value.trim());
+  wrap.hidden = !(filled || (wrap.dataset.open === "yes" && !readOnly));
+  const noteBtn = row.querySelector("[data-note-toggle]");
+  noteBtn.hidden = filled || readOnly;
+  noteBtn.setAttribute("aria-expanded", String(!wrap.hidden));
+  noteBtn.firstChild.textContent = wrap.hidden ? "Add a note" : "Hide the note";
   if (document.activeElement !== note && note.value !== (s.note || "")) {
     note.value = s.note || "";
     autosize(note);                     // a note arriving from the store sizes itself too
