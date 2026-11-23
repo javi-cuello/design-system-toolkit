@@ -108,6 +108,12 @@ ok("an ellipse's arc is kept where it is not whole, in degrees, and a stroke's r
   const again = await shape("M 8 4 C 8 6.209139 6.209139 8 4 8 C 1.790861 8 0 6.209139 0 4 C 0 1.790861 1.790861 0 4 0 C 6.209139 0 8 1.790861 8 4 Z");
   ok("…read at the walk's rounding, so one outline written to more or fewer places is the same", again.outline === circle.outline);
   ok("…and a layer that is not a vector records none", !("outline" in (await walk(box("Frame", "FRAME"), 1))));
+  // 0.86.0: the paths themselves, so a drawing can draw the dot it was given, not its box
+  ok("a vector records its paths at the walk's rounding, with their fill rule", JSON.stringify(circle.paths) === JSON.stringify([{ windingRule: "NONE", data: "M 8 4 C 8 6.21 6.21 8 4 8 C 1.79 8 0 6.21 0 4 C 0 1.79 1.79 0 4 0 C 6.21 0 8 1.79 8 4 Z" }]));
+  const inside = await walk({ ...box("Dot", "VECTOR"), vectorPaths: [{ windingRule: "NONZERO", data: "M 0 0 L 8 0 L 8 8 Z" }] }, 2, undefined, true);
+  ok("…but not inside an instance, whose drawing is its component's", !("paths" in inside) && typeof inside.outline === "string");
+  const glyph = await walk({ ...box("Glyph", "VECTOR"), vectorPaths: [{ windingRule: "NONZERO", data: "M 0 0" + " L 1.25 2.5".repeat(400) + " Z" }] }, 1);
+  ok("…nor past the cap: a glyph's kilobytes keep only their outline", !("paths" in glyph) && typeof glyph.outline === "string");
 }
 
 // 0.61.0: a component is named under its page unless the page is its own, a private one's underscore aside

@@ -139,6 +139,8 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
   if (n.type === 'ELLIPSE') e.shape = 'ellipse';
   // part of a circle or a ring, in degrees (snapshot 0.62.0 on): a progress indicator at 50% is half of one
   if (n.arc) e.arc = { ...n.arc };
+  // a vector's own outline (snapshot 0.86.0 on), Figma's paths, so a drawing draws the dot and not its box
+  if (n.paths) e.paths = n.paths.map((p) => ({ ...p }));
   if (n.type === 'RECTANGLE') e.shape = 'rectangle';
   if (n.rotation) e.rotation = n.rotation;
   // a mirror, as the snapshot takes it out of the matrix (x: horizontal, y: vertical)
@@ -705,7 +707,9 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     if (whole.has(id)) { inherit(); continue; }
     if (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk))) { if (found) found.add(id); inherit(); continue; }
     const own = (k) => {
-      const mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+      // (a vector's paths are its component's: the walk records none inside an instance, snapshot 0.86.0, so a placed
+      // layer is held to its part without them where it states none)
+      const mk = match[k.slice(id.length + 1)], x0 = mk && M[mk], x = x0 && x0.paths && !anatomy[k].paths ? (({ paths: _, ...r }) => r)(x0) : x0;
       // (a key is no look, but two that differ are two components: a swap to another library's Icon of one name)
       if (!x || !keyMatches(anatomy[k].key, x.key)) return false;
       // (a layer of an instance nested in this one has its position-less constraints left out at that instance's own

@@ -1,4 +1,4 @@
-// Design system snapshot — v0.84.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.86.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -133,6 +133,8 @@ const unescaped = (t) => t.replace(/&(lt|gt|amp|quot|#39);/g, (m, e) => ({ lt: '
 const clean = (v) => (typeof v === 'symbol' ? 'mixed' : v);
 /** @param {unknown} v */
 const round = (v) => (typeof v === 'number' ? +v.toFixed(2) : v);
+// the most characters of path data a vector's `paths` keep: a dot or a chevron, never a glyph's kilobytes
+const PATHS_CAP = 1000;
 /** FNV-1a, eight hex digits: a short, stable name for a long string (a vector's paths). @param {string} s */
 const digest = (s) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; return h.toString(16).padStart(8, '0'); };
 
@@ -746,7 +748,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.85.0';
+const VERSION = '0.86.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -942,7 +944,14 @@ async function walk(n, depth, at, inInstance = false) {
   // the same, since only its box was recorded (0.85.0). A digest, not the paths, which run to kilobytes in a glyph; the
   // fill rule is left out, as a closed path fills under either. One outline written two ways (a box closed twice) still
   // reads as two.
-  if (n.type === 'VECTOR' && Array.isArray(n.vectorPaths) && n.vectorPaths.length) o.outline = digest(n.vectorPaths.map((p) => String(p.data).replace(/-?\d*\.?\d+(e-?\d+)?/g, (x) => String(round(+x) + 0))).join('|'));
+  // The paths themselves too, Figma's own vectorPaths at the walk's rounding, so a drawing draws the dot it was given and
+  // not its box (0.86.0). Not inside an instance, whose drawing is its component's, and not past PATHS_CAP characters (a
+  // glyph's kilobytes): there only the outline is kept, and a drawing has its box to draw.
+  if (n.type === 'VECTOR' && Array.isArray(n.vectorPaths) && n.vectorPaths.length) {
+    const paths = n.vectorPaths.map((p) => ({ windingRule: p.windingRule, data: String(p.data).replace(/-?\d*\.?\d+(e-?\d+)?/g, (x) => String(round(+x) + 0)) }));
+    o.outline = digest(paths.map((p) => p.data).join('|'));
+    if (!inInstance && paths.reduce((s, p) => s + p.data.length, 0) <= PATHS_CAP) o.paths = paths;
+  }
   // A mirror is not a turn. Figma keeps a flip in the matrix and reports it as
   // a rotation (a horizontal mirror reads -180), so a mirrored layer was
   // recorded upside down and its code's scaleX(-1) waived as a difference.

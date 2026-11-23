@@ -227,7 +227,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     variants: [{ name: 'Panel', type: 'COMPONENT', layout: 'VERTICAL', sizing: 'FIXED/HUG', w: 320, opacity: 0.5, bindings: { radius: 'R/0', opacity: 'O/half' }, children: [
       { name: 'Box', type: 'FRAME', layout: 'HORIZONTAL', firstOnTop: true, wrap: true, gap: 4, crossGap: 8, bindings: { crossGap: 'S/8', strokeWeight: ['S/1', null, 'S/1', null] }, strokes: ['C/line'], strokeSides: [1, 0, 1, 0], strokeAlign: 'CENTER', strokesInLayout: true, children: [
         { name: 'Option', type: 'FRAME', x: 0, y: 0 }, { name: 'Option', type: 'FRAME', x: 0, y: 0 }] },
-      { name: 'Free', type: 'FRAME', children: [{ name: 'Dot', type: 'ELLIPSE', x: 6, y: 4, arc: { start: 0, end: 180, inner: 0 } }, { name: 'Line', type: 'VECTOR', x: 0, y: 20, strokes: ['C/line'], strokeCap: 'ROUND' }, { name: 'Ring', type: 'RECTANGLE', x: 0, y: 0, rotation: 45, constraints: 'STRETCH/CENTER', bindings: { strokeWeight: ['S/1', 'S/1', 'S/1', 'S/1'] } }] },
+      { name: 'Free', type: 'FRAME', children: [{ name: 'Dot', type: 'ELLIPSE', x: 6, y: 4, arc: { start: 0, end: 180, inner: 0 } }, { name: 'Line', type: 'VECTOR', x: 0, y: 20, strokes: ['C/line'], strokeCap: 'ROUND', outline: '0a1b2c3d', paths: [{ windingRule: 'NONE', data: 'M 0 0 L 8 0' }] }, { name: 'Ring', type: 'RECTANGLE', x: 0, y: 0, rotation: 45, constraints: 'STRETCH/CENTER', bindings: { strokeWeight: ['S/1', 'S/1', 'S/1', 'S/1'] } }] },
       { name: 'Items', type: 'SLOT', layout: 'VERTICAL' },
       { name: 'Words', type: 'TEXT', text: 'Hi', textAutoResize: 'HEIGHT', textAlignVertical: 'CENTER', letterSpacing: '2%', textCase: 'UPPER' }] }] });
   const A1 = one.anatomy;
@@ -276,6 +276,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const centred = derive({ name: 'Toggle', id: '1:1', props: {}, variants: [{ name: 'Toggle', type: 'COMPONENT', w: 40, h: 40, children: [
     { name: 'Icon', type: 'RECTANGLE', x: 8.3, y: 7.75, w: 24, h: 24, sizing: 'FIXED/FIXED', absolute: true, constraints: 'CENTER/CENTER' }] }] }).anatomy;
   ok('a part centred in its parent is its offsets from both edges, and keeps its size', JSON.stringify(centred.icon.absolute) === '{"x":8.3,"y":7.75,"end":7.7,"bottom":8.25}' && centred.icon.width === 24 && centred.icon.height === 24);
+  ok('a vector keeps its paths, Figma\'s own, and not their digest', JSON.stringify(A1['free/line'].paths) === '[{"windingRule":"NONE","data":"M 0 0 L 8 0"}]' && !('outline' in A1['free/line']));
   ok('part of a circle keeps its arc, and a line its rounded ends', JSON.stringify(A1['free/dot'].arc) === '{"start":0,"end":180,"inner":0}' && A1['free/line'].border.cap === 'round');
   ok('wrapped rows keep the gap between them, and a box stacked first on top says so', A1.box.layout.firstOnTop === true && A1.box.layout.wrap === true && A1.box.layout.crossGap === 'S/8');
   ok('a repeat takes its name from its id; a part in a box no layout places is at its point there', !A1['box/option_2'].name && JSON.stringify(A1['free/dot'].absolute) === '{"x":6,"y":4}' && !A1['box/option'].absolute);
@@ -415,6 +416,11 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const spin = { contract: 1, component: 'Spin', props: {}, anatomy: { root: { kind: 'container' }, arc: { kind: 'graphic', parent: 'root', width: 16, height: 16, background: 'I/strong', shape: 'ellipse', arc: { start: 270, end: 0, inner: 0.75 } } }, variants: [] };
   const spun = (end) => { const x = { root: { kind: 'container' }, s: { kind: 'instance', parent: 'root', component: 'Spin' }, 's/arc': { kind: 'graphic', parent: 's', width: 16, height: 16, background: 'I/strong', shape: 'ellipse', arc: { start: 270, end, inner: 0.75 } } }; ownInsides(x, (c) => (c === 'Spin' ? spin : null)); return !!x['s/arc']; };
   ok('an arc ended at 360 is the one its component ends at 0: no override; a different sweep is one', !spun(360) && !spun(0) && spun(90));
+  // a vector's paths are recorded on its component only (the walk records none inside an instance): a placed dot that
+  // records none is its component's, no override; one that differs otherwise still is
+  const dotC = { contract: 1, component: 'Dot', props: {}, anatomy: { root: { kind: 'container' }, v: { kind: 'graphic', parent: 'root', width: 8, height: 8, background: 'C/red', paths: [{ windingRule: 'NONE', data: 'M 8 4 C 8 6.21 6.21 8 4 8 Z' }] } }, variants: [] };
+  const dotted = (bg) => { const x = { root: { kind: 'container' }, d: { kind: 'instance', parent: 'root', component: 'Dot' }, 'd/v': { kind: 'graphic', parent: 'd', width: 8, height: 8, background: bg } }; ownInsides(x, (c) => (c === 'Dot' ? dotC : null)); return !!x['d/v']; };
+  ok('a placed vector with no paths recorded is its component\'s: no override; another colour is one', !dotted('C/red') && dotted('C/blue'));
   const { asPlaced } = require('./derive.cjs');
   const P = asPlaced({ root: { kind: 'container' }, 'content/icon': { kind: 'container', parent: 'root' }, 'content/showIconIcon': { kind: 'container', parent: 'root', name: 'Icon' }, 'content/showIconIcon/glyph': { kind: 'graphic', parent: 'content/showIconIcon' } }).M;
   const Q = asPlaced({ root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/showIconIcon': { kind: 'container', parent: 'content', name: 'Icon' }, 'content/showIconIcon/v': { kind: 'graphic', parent: 'content/showIconIcon' } });

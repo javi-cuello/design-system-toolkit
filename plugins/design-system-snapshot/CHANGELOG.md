@@ -1,6 +1,13 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.86.0] - 2026-11-23
+### Added
+- **A vector records its paths** (`paths`: Figma's own `vectorPaths`, numbers at two decimals), so a drawing draws the dot it was given and not its box. Not inside an instance, whose drawing is its component's, and not past 1000 characters of path data (a glyph): there only `outline` is kept, and a drawing still draws the box.
+
+### Fixed
+- The file's first line names the release again (0.85.0 left it at 0.84.0).
+
 ## [0.85.0] - 2026-11-23
 ### Added
 - **A vector records its outline** (`outline`): a digest of its paths, numbers at the walk's two decimals, the fill rule left out. Only a vector's box was read, so a dot drawn back as a square of the same size read the same, and the round trip's geometry gave it no row while its picture differed by 2%. A digest, since a glyph's paths run to kilobytes; one outline written two ways still reads as two.

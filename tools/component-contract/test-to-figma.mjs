@@ -689,8 +689,12 @@ delete globalThis.figma;
   ok('a text no style names is drawn in its values\' face, size and line height; a placed text keeps its resizing',
     src.includes("const FACES = { thin:") && src.includes("n.fontName = lit.fontName; n.fontSize = lit.size;") && src.includes("n.resize(px(w), px(h)); if (n.type === 'TEXT' && e.autoResize) n.textAutoResize"));
   ok('a Figma contract\'s graphic with no shape, parts, icon or corners is a vector, never a frame (one read from code stays a frame); no vector keeps Figma\'s own stroke; a line a stretch sizes is drawn that long',
-    src.includes("else if (e.kind === 'graphic' && !P.fromCode && !e.asset && e.radius == null && !e.full && !ids.some((x) => variant.anatomy[x].parent === id)) {") && (src.match(/n = figma\.createVector\(\); n\.strokes = \[\];/g) || []).length === 2
+    src.includes("else if (e.kind === 'graphic' && !P.fromCode && !e.asset && e.radius == null && !e.full && !ids.some((x) => variant.anatomy[x].parent === id)) {") && (src.match(/n = figma\.createVector\(\); n\.strokes = \[\];/g) || []).length === 3
     && src.includes("const along = e.height === 0 ? (c.horizontal === 'stretch' && at.end != null ? w : null)"));
+  ok('a graphic with paths of its own is drawn with them, a dot round as given and not its box, whatever its corners or size; one with parts is not',
+    plan({ contract: 1, component: 'dot', props: {}, anatomy: { root: { kind: 'container' }, dot: { kind: 'graphic', parent: 'root', width: 8, height: 8, paths: [{ windingRule: 'NONE', data: 'M 8 4 C 8 6.21 6.21 8 4 8 Z' }] } }, variants: [] }, {}).variants[0].anatomy.dot.paths[0].data === 'M 8 4 C 8 6.21 6.21 8 4 8 Z'
+    && src.includes("else if (e.kind === 'graphic' && e.paths && !ids.some((x) => variant.anatomy[x].parent === id)) { n = figma.createVector(); n.strokes = []; n.vectorPaths = e.paths; }")
+    && src.indexOf('n.vectorPaths = e.paths;') < src.indexOf("else if (e.kind === 'graphic' && (e.width === 0 || e.height === 0))"));
   ok('a placed instance takes its own fill, stroke, corners, shadow and clipping, and a layer inside one its stroke\'s weights and place, never its colour alone; neither from a contract read from code',
     src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e, e.background); await lookOver(n, e); }")
     && src.includes("if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);") && src.includes("await lookOver(n, e); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")

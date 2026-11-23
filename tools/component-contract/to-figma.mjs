@@ -1047,6 +1047,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // a slot: Figma's own, its property made with it and named after it; the variants' slots of one name are one property
       // a slot with no property of this component's (one inside an instance drawn as a stand-in) is a frame
       } else if (e.kind === 'slot' && (P.slots || []).some((sl) => sl.figma === e.name)) { n = nodes.root.createSlot(); n.fills = []; }
+      // a vector with its own outline (derive's paths, snapshot 0.86.0 on) is drawn with it, never its box: a dot stays round
+      else if (e.kind === 'graphic' && e.paths && !ids.some((x) => variant.anatomy[x].parent === id)) { n = figma.createVector(); n.strokes = []; n.vectorPaths = e.paths; }
       // a shape no icon names: a line (no width or no height, a divider) is Figma's vector, an ellipse its ellipse
       // (a vector is made with a black stroke of its own: taken off, so only the contract's border strokes it; a line a
       // stretch sizes is given its length once placed)
