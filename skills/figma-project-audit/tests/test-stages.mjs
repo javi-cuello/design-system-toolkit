@@ -182,9 +182,19 @@ let threw = false; try { gatherTimeout({ id: "x", gather: {} }); } catch { threw
 ok("gatherTimeout: a stage with no timeout is refused, never given a default", threw);
 let named = ""; try { stageById({}, "components"); } catch (e) { named = e.message; }
 ok("stageById: finds a stage by id, and an old service's missing list is said, not a crash", stageById(registry, "components") === comps && /restart/.test(named));
-for (const f of ["tools/figma-audit/audit-session.mjs", "tools/docs-site/src/dashboard/audit.js", "tools/docs-site/src/dashboard/queue.js"]) {
+// Every call a runner sends to Figma for a stage waits by the list: its arguments name gatherTimeout (or `wait`, read
+// from it). One that drops the argument falls back to the bridge's 30s and times out on a large library unseen.
+const callsIn = (src, head) => { const out = []; let i = 0;
+  while ((i = src.indexOf(head, i)) !== -1) { let d = 0, j = i + head.indexOf("(");
+    for (; j < src.length; j++) { if (src[j] === "(") d++; else if (src[j] === ")" && --d === 0) break; }
+    out.push(src.slice(i, j + 1)); i = j; }
+  return out; };
+// queue.js's fix plan writes a few layers, not a walk: the bridge's default holds it
+const FIX = /^bridge\.exec\(plan\.code\)$/;
+for (const [f, heads] of [["tools/figma-audit/audit-session.mjs", ["exec(port, fileKey,"]], ["tools/docs-site/src/dashboard/audit.js", ["bridge.exec(", "api.exec("]], ["tools/docs-site/src/dashboard/queue.js", ["bridge.exec(", "api.exec("]]]) {
   const src = readFileSync(join(ROOT, f), "utf8");
-  ok(`${f}: waits on no stage with a number of its own`, !/\b(120000|180000|240000|300000|600000)\b/.test(src));
+  const bare = heads.flatMap((h) => callsIn(src, h)).filter((c) => !FIX.test(c) && !/gatherTimeout\(|, wait[,)]/.test(c));
+  ok(`${f}: every call to Figma waits as its stage says`, !bare.length, bare.map((c) => c.slice(0, 80)).join("\n"));
 }
 
 console.log(n + "/" + n + " passed");

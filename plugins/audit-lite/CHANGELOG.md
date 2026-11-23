@@ -3,7 +3,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
 ## [0.14.6] - 2026-11-23
 ### Changed
-- **Carries the stage list's `gather.timeout`** and the shared `gatherTimeout`/`stageOf` readers; Audit lite runs inside Figma and waits on nothing, so no behaviour changes.
+- **Carries the stage list's `gather.timeout`** and the shared `gatherTimeout`/`stageById` readers; Audit lite runs inside Figma and waits on nothing, so no behaviour changes.
 
 ## [0.14.5] - 2026-11-23
 ### Changed

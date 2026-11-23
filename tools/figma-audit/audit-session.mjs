@@ -120,12 +120,13 @@ const readLibrary = (stage) => library || (library = (async () => {
 })());
 // Whether the file has components at all (stages.json `applies`, the fact Audit lite reads the same way), asked once.
 let hasComponents = null;
-const componentSets = () => hasComponents || (hasComponents = exec(port, fileKey,
-  "await figma.loadAllPagesAsync(); return figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).length > 0;").then((r) => r === true));
+// It loads every page, so it waits as long as the stage it decides.
+const componentSets = (stage) => hasComponents || (hasComponents = exec(port, fileKey,
+  "await figma.loadAllPagesAsync(); return figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).length > 0;", gatherTimeout(stage)).then((r) => r === true));
 // The facts appliesTo reads for a stage: only the one its `applies` names, read when that stage comes up.
 const factsFor = async (stage) => {
   const fact = (stage.applies || {}).fact;
-  if (fact === 'componentSets') return { componentSets: await componentSets() };
+  if (fact === 'componentSets') return { componentSets: await componentSets(stage) };
   if (fact === 'tokens' || fact === 'icons') return (await readLibrary(stage)).applies;
   return {};
 };

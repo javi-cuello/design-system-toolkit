@@ -118,7 +118,7 @@ async function runSweep() {
   sweeping = true; sweepBtn.disabled = true;
   say("Looking for the Figma bridge\u2026");
   try {
-    const { sweep } = await api.scripts();
+    const { sweep, stages } = await api.scripts();
     if (!sweep) { say("The dashboard service did not return its sweep script.", "warn"); return; }
 
     say("Reading the library\u2026");
@@ -126,7 +126,9 @@ async function runSweep() {
     // walk different sets and "nothing moved" stops meaning anything.
     const rulesS = await contextRules();
     const result = await bridge.exec(
-      "const TOKENS = " + JSON.stringify(rulesS.tokens) + ";\n" + sweep);
+      "const TOKENS = " + JSON.stringify(rulesS.tokens) + ";\n" + sweep,
+      // it walks every set, as the components scan does, so it waits as long
+      gatherTimeout(stageById(stages, "components")));
     if (!result || !result.sets) { say("The bridge answered, but not with a fingerprint set.", "warn"); return; }
 
     // `bridge.exec` names the library, but the guard stays: without it a read
@@ -1173,8 +1175,7 @@ async function otherStages(scan, rules, runId) {
       } catch (e) { tell(stage, stageEnd(parityLabel, e)); }
     },
   };
-  // A service started before the registry sends no list: said once, as what to do, never a quiet shorter run.
-  if (!sc.stages) { lines.push("Audit: failed \u2014 the dashboard service is older than this page and sent no list of stages, so only the components stage ran. Restart the service (install.sh reloads it) and audit again."); brief.push("restart the service"); }
+  // A service started before the registry sends no list: runAudit's stageById already refused the run and said to restart it.
   // The facts appliesTo reads for a stage: only the one its `applies` names, read when that stage comes up.
   const factsFor = async (stage) => {
     const fact = (stage.applies || {}).fact;

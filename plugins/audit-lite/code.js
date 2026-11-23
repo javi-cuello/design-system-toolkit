@@ -865,14 +865,6 @@ function stagesFor(registry, runner) {
   return ((registry && registry.stages) || []).filter((s) => (s.runners || []).includes(runner));
 }
 
-/**
- * The text that runs a stage's gather script: each `shadow` global declared
- * undefined (a plugin's own `__html__` would otherwise wake the snapshot
- * plugin's UI), then each constant, then the script, then the return of its
- * `call` unless the script already ends in it (the service serves the
- * snapshot plugin with `return __headless();` appended). `values` gives the
- * constants a list-form `set` leaves to the runner, from the settings.
- */
 // How long a runner waits for a stage's call in Figma: the stage's own `gather.timeout` (stages.json), the one
 // place it is said. The 30s and 240s the runners hard-coded each timed out on one 143-set library's scan (2026-11-23).
 function gatherTimeout(stage) {
@@ -888,6 +880,14 @@ function stageById(registry, id) {
   return stage;
 }
 
+/**
+ * The text that runs a stage's gather script: each `shadow` global declared
+ * undefined (a plugin's own `__html__` would otherwise wake the snapshot
+ * plugin's UI), then each constant, then the script, then the return of its
+ * `call` unless the script already ends in it (the service serves the
+ * snapshot plugin with `return __headless();` appended). `values` gives the
+ * constants a list-form `set` leaves to the runner, from the settings.
+ */
 function gatherCode(stage, script, values = {}) {
   const g = stage.gather || {};
   const set = Array.isArray(g.set) ? Object.fromEntries(g.set.filter((k) => k in values).map((k) => [k, values[k]])) : Object.assign({}, g.set || {}, values);
