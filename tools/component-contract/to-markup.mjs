@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { namer, partSeg, copyOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
+import { namer, partSeg, copyOf, beforeOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf } from './layers.mjs';
 
@@ -299,13 +299,7 @@ export function partsOf(c, t = HOUSE) {
 function inOrder(c, list) {
   const base = [...list].sort((a, b) => (a.e.order ?? 0) - (b.e.order ?? 0));
   const ids = base.map((p) => p.id), rank = new Map(ids.map((id, i) => [id, i]));
-  const before = new Map(ids.map((id) => [id, new Set()]));
-  for (const v of [{}, ...(c.variants || [])]) {
-    const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
-    const here = base.filter((p) => (p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id)));
-    const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? p.e.order ?? 0;
-    for (const a of here) for (const b of here) if (at(a) < at(b)) before.get(b.id).add(a.id);
-  }
+  const before = beforeOf(c, base);
   const out = [], done = new Set();
   while (out.length < ids.length) {
     const next = ids.find((id) => !done.has(id) && [...before.get(id)].every((x) => done.has(x)));

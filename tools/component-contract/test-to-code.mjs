@@ -194,13 +194,18 @@ ok('a reordering variant writes each child\'s order', /__texts > \.ds-chip__a \{
   const moved = { ...chip, props: typed.props, anatomy: { ...chip.anatomy, box, other: { ...box, order: 1 }, 'box/a': tip('box', 0), 'other/b': tip('other', 0), 'other/c': tip('other', 1) },
     variants: [...chip.variants, { when: { mode: 'armed' }, add: { tip: tip('box', 1) } }, { when: { mode: 'typed' }, add: { tip: tip('other', 2) } }] };
   ok('places are compared within one box: a part two variants add under different boxes at one place there reorders neither', !/order:/.test(toCss(moved, 'chip', { naming: CLS })));
+  // a part whose place only shifts as others come and go (a tail after the lead, then after an extra too) is never
+  // before what it was after: the box keeps the markup's order, no child says one
+  const shifted = { ...chip, props: typed.props, anatomy: { ...chip.anatomy, box, 'box/lead': at('graphic', 0) },
+    variants: [...chip.variants, { when: { mode: 'armed' }, add: { 'box/tail': at('graphic', 1) } }, { when: { mode: 'typed' }, add: { 'box/extra': at('graphic', 1), 'box/tail': at('graphic', 2) } }] };
+  ok('a place that only shifts as parts come and go writes no order', !/order:/.test(toCss(shifted, 'chip', { naming: CLS })) && selfCheck(shifted).length === 0);
   // a box no auto layout lays out takes no order: CSS order moves nothing there
   const flat = { ...typed, anatomy: { ...typed.anatomy, box: { kind: 'container', parent: 'root', order: 0 } } };
   ok('order is written only where an auto layout lays the child out', !/order:/.test(toCss(flat, 'chip', { naming: CLS })));
   // numbered copies of one placed component in a reordered box, a sibling between them: each says its own place
   const tagAt = (n) => ({ kind: 'instance', parent: 'box', order: n, component: 'Tag', key: 't1' });
   const list = { ...chip, props: typed.props, anatomy: { ...chip.anatomy, box, 'box/item': tagAt(0), 'box/sep': at('graphic', 1), 'box/item_2': tagAt(2) },
-    variants: [...chip.variants, { when: { mode: 'armed' }, add: { 'box/badge': at('graphic', 3) } }, { when: { mode: 'typed' }, add: { 'box/note': at('graphic', 3), 'box/badge': at('graphic', 4) } }] };
+    variants: [...chip.variants, { when: { mode: 'armed' }, add: { 'box/badge': at('graphic', 3), 'box/note': at('graphic', 4) } }, { when: { mode: 'typed' }, add: { 'box/note': at('graphic', 3), 'box/badge': at('graphic', 4) } }] };
   const lmk = toElement(list, 'chip', { naming: ELEMENT, library: {} }), lcss = toCss(list, 'chip', { naming: ELEMENT });
   ok('copies in a reordered box each keep their own place between the siblings that part them',
     drawn(lmk, lcss, ['item', 'sep', 'item-2', 'badge', 'note'], '[mode="typed"]').join() === 'item,sep,item-2,note,badge' && selfCheck(list).length === 0);
