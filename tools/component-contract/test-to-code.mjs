@@ -165,6 +165,16 @@ const rev = { ...chip, props: { ...chip.props, reversed: { type: 'boolean', defa
   variants: [...chip.variants, { when: { reversed: true }, set: { 'texts/a.order': 1, 'texts/b.order': 0 } }] };
 const rcss2 = toCss(rev, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
 ok('a reordering variant writes each child\'s order', /__texts > \.ds-chip__a \{[^}]*order: 0;/.test(rcss2) && /:where\(\[data-reversed\]:not\(\[data-reversed="false"\]\)\) > \.ds-chip__texts > \.ds-chip__a \{\s*order: 1;/.test(rcss2) && selfCheck(rev).length === 0);
+// two variants that each add a box's children, in different orders (a caret before the words, then after them): each
+// child says its place there too, so the order follows the props, not the one the markup writes them in
+{ const box = { kind: 'container', parent: 'root', order: 0, layout: { direction: 'row' } };
+const caretAt = (n) => ({ kind: 'graphic', parent: 'box', order: n, width: 1, height: 16 }), wordsAt = (n) => ({ kind: 'text', parent: 'box', order: n, content: 'Find' });
+const typed = { ...chip, props: { ...chip.props, mode: { type: 'enum', values: ['idle', 'armed', 'typed'], default: 'idle' } },
+  variants: [...chip.variants, { when: { mode: 'armed' }, add: { box, 'box/caret': caretAt(0), 'box/words': wordsAt(1) } }, { when: { mode: 'typed' }, add: { box, 'box/words': wordsAt(0), 'box/caret': caretAt(1) } }] };
+const tcss = toCss(typed, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+ok('two variants adding a box\'s children in other orders write each child\'s order',
+  /:where\(\[data-mode="armed"\]\) > \.ds-chip__box > \.ds-chip__caret \{[^}]*order: 0;/.test(tcss) && /:where\(\[data-mode="typed"\]\) > \.ds-chip__box > \.ds-chip__caret \{[^}]*order: 1;/.test(tcss)
+  && /:where\(\[data-mode="typed"\]\) > \.ds-chip__box > \.ds-chip__words \{[^}]*order: 0;/.test(tcss)); }
 // a placed control the Selected layer names is the one the state reaches, at its depth; another control is not
 const card = { ...chip, anatomy: { ...chip.anatomy, top: { kind: 'container', parent: 'root', order: 1, layout: { direction: 'row' } }, 'top/check': { kind: 'instance', parent: 'top', order: 0, component: 'Checkbox', with: { Selected: 'False' } }, foot: { kind: 'instance', parent: 'root', order: 2, component: 'Button' } },
   variants: [...chip.variants, { when: { selected: true }, set: { 'top/check.with': { Selected: 'True' } } }] };

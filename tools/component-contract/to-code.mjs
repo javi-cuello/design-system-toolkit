@@ -133,11 +133,15 @@ export function copyOf(c, id) {
   return touched(id) || touched(m[1]) ? null : m[1];
 }
 
-/* The boxes whose children a variant puts in another order. */
+/* The boxes whose children a variant puts in another order: one it sets an order in, or one whose added part two
+   variants (or a variant and the defaults) give different places (a caret added before the words, and after them). */
 const REORDERED = new WeakMap();
 function reordered(c) {
   if (!REORDERED.has(c)) {
     const ids = (c.variants || []).flatMap((v) => Object.keys(v.set || {}).filter((k) => k.endsWith('.order')).map((k) => k.slice(0, -'.order'.length)));
+    const places = new Map();
+    for (const v of c.variants || []) for (const [id, e] of Object.entries(v.add || {})) if (typeof e.order === 'number') places.set(id, (places.get(id) || new Set([(c.anatomy[id] || {}).order].filter((o) => typeof o === 'number'))).add(e.order));
+    for (const [id, at] of places) if (at.size > 1) ids.push(id);
     REORDERED.set(c, new Set(ids.map((id) => (c.anatomy[id] || findAdded(c, id) || {}).parent).filter(Boolean)));
   }
   return REORDERED.get(c);
