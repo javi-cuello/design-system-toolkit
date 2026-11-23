@@ -850,6 +850,30 @@ export function designSetsColour(design, id, mainOf = () => null) {
    (expand keeps a field no variant sets, so the swapped glyph would carry the base icon's key), else none (undefined). */
 export const swapKeyOf = (design, baseKey, name) => designKeyOf(design, null, name) || (baseKey ? null : undefined);
 
+/* A longhand a shorthand's sides write: { prop, side }, the side its place in the shorthand's values (top, right,
+   bottom, left; a corner's from the top left; a gap's row then column), else null. Chrome reports a longhand written in a
+   shorthand with a var() empty, so its var() is read from the shorthand (sideVars). Tested by test-from-code.mjs. */
+const SIDES = ['top', 'right', 'bottom', 'left'];
+export function shorthandOf(longhand) {
+  let m;
+  if ((m = /^(padding|margin)-(top|right|bottom|left)$/.exec(longhand))) return { prop: m[1], side: SIDES.indexOf(m[2]) };
+  if (SIDES.includes(longhand)) return { prop: 'inset', side: SIDES.indexOf(longhand) };
+  if ((m = /^border-(top|right|bottom|left)-width$/.exec(longhand))) return { prop: 'border-width', side: SIDES.indexOf(m[1]) };
+  if ((m = /^border-(top-left|top-right|bottom-right|bottom-left)-radius$/.exec(longhand))) return { prop: 'border-radius', side: ['top-left', 'top-right', 'bottom-right', 'bottom-left'].indexOf(m[1]) };
+  if (longhand === 'row-gap' || longhand === 'column-gap') return { prop: 'gap', side: longhand === 'row-gap' ? 0 : 1 };
+  return null;
+}
+/* The var()s one side of a shorthand's value writes (fallbacks' too, in order), its values expanded as CSS does: one to
+   four (a gap's one or two; a corner's before any `/`). */
+export function sideVars(value, prop, side) {
+  const words = []; let depth = 0, cur = '';
+  for (const ch of String(value || '').split('/')[0]) { if (ch === '(') depth++; if (ch === ')') depth--; if (/\s/.test(ch) && !depth) { if (cur) words.push(cur); cur = ''; } else cur += ch; }
+  if (cur) words.push(cur);
+  if (!words.length) return [];
+  const four = prop === 'gap' ? [words[0], words[1] ?? words[0]] : [words[0], words[1] ?? words[0], words[2] ?? words[0], words[3] ?? words[1] ?? words[0]];
+  return [...String(four[side] || '').matchAll(/var\(\s*(--[\w-]+)/g)].map((x) => x[1]);
+}
+
 /* The effect style a whole box-shadow is: the one the code names, where it draws the layers read (their offsets, blur,
    spread and insetness; their colour is the style's variable under the modes drawn, which the style's record holds in
    one mode only), else the first whose layers draw the same, colour and all. `layers`: the shadow read, as cssShadows
@@ -2275,7 +2299,13 @@ async function main() {
         // var() there; `box-shadow:width`, `box-shadow:colour`: that part of the inset stroke a border is drawn with, as written). Only a
         // token one of a property's vars names settles it: a guess by value there (a reset's var that holds another value)
         // leaves the next property to say
-        for (const p of css) { const [prop, part] = p.split(':'), at = el.startsWith('[') ? el : `[data-contract-id="${el}"]`; const rawOf = part === 'base' ? await authoredValue(L.tab, at, prop, styles) : null; const vars = part === 'base' ? (() => { const ls = splitTop(String(rawOf || '')), m = ls.length && /^\s*var\(\s*(--[\w-]+)/.exec(ls[ls.length - 1]); return m ? [m[1]] : []; })() : part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles), { outside: /-out$/.test(part) }) || {})[part.replace(/-out$/, '')] || []) : await authoredVars(L.tab, at, p, styles); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
+        // (a longhand written in a shorthand with a var(), which Chrome reports empty: its side of the shorthand, sideVars)
+        const varsOf = async (at, p) => {
+          const vs = await authoredVars(L.tab, at, p, styles), sh = shorthandOf(p);
+          if (vs.length || !sh || (await authoredValue(L.tab, at, p, styles)) !== '') return vs;
+          return sideVars(await authoredValue(L.tab, at, sh.prop, styles), sh.prop, sh.side);
+        };
+        for (const p of css) { const [prop, part] = p.split(':'), at = el.startsWith('[') ? el : `[data-contract-id="${el}"]`; const rawOf = part === 'base' ? await authoredValue(L.tab, at, prop, styles) : null; const vars = part === 'base' ? (() => { const ls = splitTop(String(rawOf || '')), m = ls.length && /^\s*var\(\s*(--[\w-]+)/.exec(ls[ls.length - 1]); return m ? [m[1]] : []; })() : part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles), { outside: /-out$/.test(part) }) || {})[part.replace(/-out$/, '')] || []) : await varsOf(at, p); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
         // (the toolkit's own rendering names every token it draws with, var() for var(): a value it wrote raw is the design's
         // raw value, never a token guessed by value, which a project's compiled code may need)
         // (unless nothing was offered to name a var by: a focus ring's corner, which to-code writes as a calc() of one)

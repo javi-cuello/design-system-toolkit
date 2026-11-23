@@ -514,6 +514,17 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
       wholeShadowStyle(read, fx('Wide/Right', '#e0e0e0', -2), effects, shadowKey) === effects[1]
       && wholeShadowStyle(read, null, effects, shadowKey) === effects[1] && wholeShadowStyle([{ ...read[0], x: -3 }], null, effects, shadowKey) === undefined);
   }
+  {
+    const { shorthandOf, sideVars } = await import('./from-code.mjs');
+    // a longhand written inside a shorthand with a var() (Chrome reports it empty): its side of the shorthand's 1 to 4 values
+    ok('a side\'s longhand names its shorthand and side; one with none, none',
+      JSON.stringify(shorthandOf('padding-bottom')) === '{"prop":"padding","side":2}' && shorthandOf('border-top-left-radius').prop === 'border-radius'
+      && shorthandOf('column-gap').side === 1 && shorthandOf('top').prop === 'inset' && shorthandOf('border-left-width').side === 3 && shorthandOf('color') === null);
+    ok('a side of a shorthand is the var()s its own value writes, by the one to four values the shorthand takes, fallbacks too',
+      JSON.stringify(sideVars('0 0 var(--space-8) 0', 'padding', 2)) === '["--space-8"]' && JSON.stringify(sideVars('var(--a) var(--b, var(--c))', 'padding', 3)) === '["--b","--c"]'
+      && JSON.stringify(sideVars('var(--a)', 'margin', 1)) === '["--a"]' && JSON.stringify(sideVars('var(--a) 0 var(--b)', 'padding', 3)) === '[]'
+      && JSON.stringify(sideVars('var(--r) 0 / 2px', 'border-radius', 2)) === '["--r"]' && JSON.stringify(sideVars('var(--g)', 'gap', 1)) === '["--g"]' && JSON.stringify(sideVars('', 'padding', 0)) === '[]');
+  }
   ok('an empty box takes the shape the design draws at the combination read: none where a variant takes its rectangle away',
     asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false, { kind: 'graphic' }).shape === undefined
     && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false).shape === 'rectangle'
