@@ -450,6 +450,12 @@ delete globalThis.figma;
   const bare = { ...host({}), props: one.props };
   ok('a host kept whole in one variant is kept whole in every combination: nothing filled in it',
     roundTrip(one, bare, { mains }).rows.filter((r) => r.at === 'i/head' && r.drawn == null).reduce((t, r) => t + r.in, 0) === 2);
+  // the reading keeps that host whole in every combination, so where the design hides nothing in it (closed: its box
+  // left to Item, as derive leaves a part equal to its component's) the reading's box is Item's own, no difference; where
+  // the design hides dot (open), a dot drawn there still is one
+  const read = { ...host({ 'i/head': one.anatomy['i/head'], 'i/box': { kind: 'container', parent: 'i', order: 1 }, 'i/box/dot': { kind: 'graphic', parent: 'i/box', order: 0, width: 4 } }), props: one.props };
+  ok('a part the reading keeps in a host the design keeps whole elsewhere is its component\'s own where the design hides nothing there; still a difference where it hides it',
+    JSON.stringify(roundTrip(one, read, { mains }).rows.map((r) => [r.at, r.library, r.in])) === '[["i/box/dot",null,1]]');
   // an inner instance placed at props other than its defaults (Item places its Head small): a part inside it that no
   // outer instance holds is that inner component's own at those props
   const head3 = { component: 'Head', props: { size: { type: 'enum', values: ['large', 'small'], default: 'large', figmaValues: ['Large', 'Small'], figma: 'Size' } },
