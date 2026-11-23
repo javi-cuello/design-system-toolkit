@@ -547,6 +547,16 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
       sideWinner([R(['border-left-width', 'var(--stroke-1)']), R(['border-left', 'var(--stroke-2) solid red'], ['border-left-width', ''], ['border-left-style', ''], ['border-left-color', ''])], 'border-left-width') === null
       && sideWinner([R(['border-width', 'var(--a)']), R(['border', 'var(--w) solid'], ['border-top-width', ''], ['border-left-width', ''])], 'border-left-width') === null
       && sideWinner([R(['border', 'var(--w) solid'], ['border-left-width', '']), R(['border-left-width', 'var(--b)'])], 'border-left-width') === 'var(--b)');
+    // a border shorthand that wins gives the side its width: the part that is a length, or a var whose value is one
+    const len = { '--w': '2px', '--c': 'red', '--x': 'var(--w)' }, resolve = (n) => len[n] ?? null;
+    ok('a side\'s width is the width part of the border shorthand that wins: a later border over an earlier border-width, a later border-left in the same rule',
+      sideWinner([R(['border-width', 'var(--a)']), R(['border', 'var(--w) solid red'], ['border-top-width', ''], ['border-left-width', ''])], 'border-left-width', false, resolve) === 'var(--w)'
+      && sideWinner([R(['border-width', 'var(--a)'], ['border-left', 'var(--w) solid'], ['border-left-width', ''])], 'border-left-width', false, resolve) === 'var(--w)'
+      && sideWinner([R(['border-left', 'solid var(--c) var(--x)'], ['border-left-width', ''])], 'border-left-width', false, resolve) === 'var(--x)'
+      && sideWinner([R(['border-inline-start', '1px solid var(--c)'])], 'border-left-width', false, resolve) === '1px'
+      && sideWinner([R(['border-inline-start', '1px solid var(--c)'])], 'border-right-width', true, resolve) === '1px'
+      && sideWinner([R(['border-left', 'var(--w) solid'], ['border-left-width', '']), R(['border-width', 'var(--a)'])], 'border-left-width', false, resolve) === 'var(--a)'
+      && sideWinner([R(['border', 'solid var(--c)'], ['border-left-width', ''])], 'border-left-width', false, resolve) === null);
   }
   {
     const { shorthandOf, sidePiece, instanceWrites } = await import('./from-code.mjs');

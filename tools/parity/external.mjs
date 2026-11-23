@@ -954,7 +954,7 @@ export async function authoredVars(tab, selector, property, cache = null, opts =
    authoredVars follows a property's. */
 export async function authoredSideVars(tab, selector, longhand, rtl = false, cache = null) {
   const levels = await matchedLevels(tab, selector, cache);
-  const piece = levels && sideWinner(levels[0] || [], longhand, rtl);
+  const piece = levels && sideWinner(levels[0] || [], longhand, rtl, (name) => firstSet(levels, name));
   return piece ? varChain(levels, null, { value: piece }) : [];
 }
 
@@ -974,7 +974,6 @@ export const wholeVars = (raw) => (raw ? splitTop(raw).map((p) => /^\s*var\(\s*(
 /* varChain, with nothing opened: `levels` are the styles of the element and
    then of each ancestor, each listed lowest precedence first. Tested by test-external.mjs. */
 export function varChain(levels, property, { leading = false, value } = {}) {
-  const first = (name) => { for (const styles of levels) { const v = winning(styles, name, { raw: true }); if (v != null) return v; } return null; };
   const names = [];
   // every var() a value writes, in order (a shorthand's `var(--stroke-1) solid var(--stroke-neutral-soft)` writes two),
   // each followed to where it is set; an unset one draws its fallback (`var(--ds-ring, var(--focus-width) solid
@@ -990,7 +989,7 @@ export function varChain(levels, property, { leading = false, value } = {}) {
       const inner = v.slice(at + 4, end), m = /^\s*(--[\w-]+)\s*(?:,([\s\S]*))?$/.exec(inner);
       if (m && !names.includes(m[1])) {
         names.push(m[1]);
-        const set = first(m[1]);
+        const set = firstSet(levels, m[1]);
         if (set != null) walk(set, depth + 1); else if (!leading) walk(m[2], depth + 1);
       }
       at = leading ? -1 : v.indexOf('var(', end);
@@ -1000,6 +999,9 @@ export function varChain(levels, property, { leading = false, value } = {}) {
   walk(value !== undefined ? value : winning(levels[0] || [], property, { raw: true }), 0);
   return names;
 }
+
+// a custom property's value where it is set, the element's own styles first, then each ancestor's (as it inherits)
+const firstSet = (levels, name) => { for (const styles of levels) { const v = winning(styles, name, { raw: true }); if (v != null) return v; } return null; };
 
 /* The winning declaration of a property among styles listed lowest precedence
    first (as Chrome lists matched rules, inline last): the last !important, else

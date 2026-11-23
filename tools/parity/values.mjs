@@ -242,14 +242,7 @@ export function shorthandOf(longhand, { logical = false, rtl = false } = {}) {
 /* One side's own value in a shorthand's, its values expanded as CSS does: one to four, or one or two for a logical
    axis's and a gap's; a corner's radii are those before a `/` outside any function. Null where it writes none. */
 export function sidePiece(value, prop, side) {
-  const words = []; let depth = 0, cur = '';
-  for (const ch of String(value ?? '')) {
-    if (ch === '(') depth++;
-    if (ch === ')') depth--;
-    if (!depth && ch === '/' && prop === 'border-radius') break;
-    if (/\s/.test(ch) && !depth) { if (cur) words.push(cur); cur = ''; } else cur += ch;
-  }
-  if (cur) words.push(cur);
+  const words = topWords(value, prop === 'border-radius');
   if (!words.length) return null;
   const two = prop === 'gap' || /-(block|inline)(-width)?$/.test(prop);
   const sides = two ? [words[0], words[1] ?? words[0]] : [words[0], words[1] ?? words[0], words[2] ?? words[0], words[3] ?? words[1] ?? words[0]];
@@ -260,17 +253,25 @@ export function sidePiece(value, prop, side) {
    lists them): whichever of the physical longhand, its shorthand, and the logical longhand and shorthand of the
    element's direction (`rtl`) wins, by importance and then order, as winning() does, read for that side; a longhand
    Chrome lists empty (one a shorthand with a var() writes, listed beside it) is that shorthand's, never a winner of its
-   own. Null where none is written, or for a property with no sides. */
-export function sideWinner(styles, longhand, rtl = false) {
+   own. A border width's group holds its side's and axis's border shorthands too, whose width part is read (`resolve`:
+   a custom property's name to its value, borderWidthOf). Null where none is written, or for a property with no sides. */
+const WIDTH = Symbol('border width');
+export function sideWinner(styles, longhand, rtl = false, resolve = null) {
   const ph = shorthandOf(longhand), lg = shorthandOf(longhand, { logical: true, rtl });
   if (!ph) return null;
   const group = new Map([[longhand, null], [ph.prop, ph], ...(lg ? [[lg.longhand, null]] : []), ...(lg && lg.prop ? [[lg.prop, lg]] : [])]);
+  // a side's border width is also written by the border shorthands of its side and axis (border-left, border,
+  // border-inline-start, border-inline): those give their width part (borderWidthOf)
+  if (/^border-\w+-width$/.test(longhand)) {
+    for (const n of [longhand.replace(/-width$/, ''), 'border']) group.set(n, WIDTH);
+    if (lg) for (const n of [lg.longhand.replace(/-width$/, ''), lg.prop.replace(/-width$/, '')]) group.set(n, WIDTH);
+  }
   let normal = null, important = null;
   for (const st of styles || []) for (const p of st.cssProperties || []) {
     if (!group.has(p.name) || p.disabled || p.parsedOk === false || p.value == null) continue;
     const value = String(p.value).replace(/\s*!important\s*$/, '');
     // (an empty longhand is a shorthand's in the same rule: one of the group's is read there instead; one outside the
-    // group, border-left or border, wins unknown, and the reader asks that shorthand itself next)
+    // group wins unknown, and the reader asks that shorthand itself next)
     const unknown = !value.trim();
     if (unknown && (st.cssProperties || []).some((q) => group.get(q.name) && String(q.value || '').trim())) continue;
     const at = unknown ? { unknown } : { name: p.name, value };
@@ -279,5 +280,29 @@ export function sideWinner(styles, longhand, rtl = false) {
   const w = important || normal;
   if (!w || w.unknown) return null;
   const sh = group.get(w.name);
-  return sh ? sidePiece(w.value, w.name, sh.side) : w.value;
+  return sh === WIDTH ? borderWidthOf(w.value, resolve) : sh ? sidePiece(w.value, w.name, sh.side) : w.value;
+}
+/* A border shorthand's width part (`var(--w) solid var(--c)`): the part that is a length, or a var whose value, followed
+   through `resolve` (a custom property's name to its value), is one. Null where it writes none. */
+const LENGTH = /^(0|-?[\d.]+[a-z%]+|thin|medium|thick|(calc|min|max|clamp)\(.*\))$/i;
+function borderWidthOf(value, resolve = null) {
+  const isLength = (v, depth = 0) => {
+    const m = /^var\(\s*(--[\w-]+)\s*(?:,([\s\S]*))?\)$/.exec(v.trim());
+    if (!m) return LENGTH.test(v.trim());
+    const set = depth < 8 && resolve ? resolve(m[1]) : null;
+    return set != null ? isLength(String(set), depth + 1) : m[2] != null && isLength(m[2], depth + 1);
+  };
+  return topWords(value).find((v) => isLength(v)) ?? null;
+}
+// a value's words, split at spaces outside any function (`toSlash`: up to its first `/` outside one, a corner's radii)
+function topWords(value, toSlash = false) {
+  const words = []; let depth = 0, cur = '';
+  for (const ch of String(value ?? '')) {
+    if (ch === '(') depth++;
+    if (ch === ')') depth--;
+    if (!depth && ch === '/' && toSlash) break;
+    if (/\s/.test(ch) && !depth) { if (cur) words.push(cur); cur = ''; } else cur += ch;
+  }
+  if (cur) words.push(cur);
+  return words;
 }
