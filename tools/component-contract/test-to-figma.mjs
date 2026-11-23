@@ -648,4 +648,11 @@ delete globalThis.figma;
 }
 
 
+{
+  // a placed instance's fonts are loaded before it is changed or appended (Figma refuses an unloaded font there)
+  const code = pluginCode({ component: 'Chip', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }, {});
+  const at = code.indexOf("if (n.type === 'INSTANCE') await fontsOf(n);"), named = code.indexOf('n.name = e.name', at);
+  ok('a placed instance\'s fonts are loaded before it is named, changed or appended', at > 0 && named > at && /const withProps = async \(n, e\) => \{\s*await fontsOf\(n\);/.test(code));
+}
+
 console.log(`${n}/${n} passed`);

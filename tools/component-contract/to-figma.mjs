@@ -695,7 +695,18 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // an icon's colour: its strokes where it is drawn in strokes, else its fills
   // an instance's own props as the contract sets them (a feedback message's Danger, a label's words), by Figma's names;
   // a swap is said by the part inside it, which swapTo draws
+  // every font a placed instance's words use, loaded before it is changed or appended: Figma refuses either over a
+  // font not loaded ("in appendChild: unloaded font"), which a library's own components in its own file meet first
+  const fontsLoaded = new Set();
+  const fontsOf = async (n) => {
+    const texts = n.type === 'TEXT' ? [n] : n.findAllWithCriteria ? n.findAllWithCriteria({ types: ['TEXT'] }) : [];
+    for (const t of texts) {
+      const names = t.fontName === figma.mixed ? (t.characters ? t.getRangeAllFontNames(0, t.characters.length) : []) : [t.fontName];
+      for (const f of names) { const k = JSON.stringify(f); if (fontsLoaded.has(k)) continue; fontsLoaded.add(k); await tried(`font ${f.family} ${f.style}`, () => figma.loadFontAsync(f)); }
+    }
+  };
   const withProps = async (n, e) => {
+    await fontsOf(n);
     const defs = n.componentProperties;
     for (const [k, v] of Object.entries(e.with || {})) {
       const key = Object.keys(defs).find((x) => bareProp(x) === k);
@@ -921,6 +932,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       else if (e.kind === 'graphic' && e.shape === 'ellipse') { n = figma.createEllipse(); if (e.arc) n.arcData = { startingAngle: (e.arc.start * Math.PI) / 180, endingAngle: (e.arc.end * Math.PI) / 180, innerRadius: e.arc.inner || 0 }; }
       else if (e.kind === 'graphic' && e.shape === 'rectangle') n = figma.createRectangle();
       else { n = figma.createFrame(); n.fills = []; }
+      if (n.type === 'INSTANCE') await fontsOf(n);
       if (id !== 'root') n.name = e.name;
       if (e.opacity != null) await num(n, 'opacity', e.opacity);
       if (e.blend) n.blendMode = e.blend.toUpperCase();
