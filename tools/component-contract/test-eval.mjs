@@ -167,10 +167,10 @@ ok('a component measured since the accept is held until accepted; one that came 
     inDeep('menu/items/item/box') && !inDeep('menu/items/item/box.layout') && inDeep('menu/items/item/box/avatar'));
   ok('words only a pointer state changes are left to code where the design holds them; a wrong rest text and another field stay differences',
     leftToCode(typed)('field/text.content', { library: 'Search' }) && !leftToCode(typed)('field/text.content', { library: '{p}' }) && !leftToCode(typed)('field.width') && !leftToCode(c)('field/text.content', { library: 'Search' }));
-  // (words a pointer state and another state both set, a search's query at focus and when filled: a row found only at
-  // the pointer states is still the markup's gap; one found at the other state too is a difference)
+  // (words a pointer state and another state both set, a search's query at focus and when filled: a row found only where
+  // a pointer state sets them (roundTrip's `pointer`) is still the markup's gap; one found at the other state too is a difference)
   const shared = { ...typed, props: { state: { ...c.props.state, values: ['rest', 'focus', 'filled'] } }, variants: [...typed.variants, { when: { state: 'filled' }, set: { 'field/text.content': 'Search' } }] };
-  ok('words a pointer state sets, where another state sets them too, are left to code only in a row found at pointer states alone',
+  ok('words a pointer state sets, where another state sets them too, are left to code only in a row found where a pointer state sets them',
     leftToCode(shared)('field/text.content', { library: 'Search', pointer: true }) && !leftToCode(shared)('field/text.content', { library: 'Search' }) && !leftToCode(shared)('field/text.content', { library: '{p}', pointer: true }));
   ok('the rows left to code are counted, as a leg of their own, so a rise there is said', worse(counts({ self: { a: { rows: [], left: [{}, {}] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).some((w) => /self left a: 1 → 2/.test(w))
     && !worse(counts({ self: { a: { rows: [], left: [] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).length); }

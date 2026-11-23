@@ -136,8 +136,9 @@ export function leftToCode(contract, mainOf = null, settings = undefined, { ownS
   const ids = [...parts.values()].filter((p) => (p.pointerOnly && !p.ring) || (p.slotted && !(parts.get(p.slotted) || {}).inside) || (mainOf && !!unexposed(contract, p.id, mainOf))).map((p) => p.id);
   // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them
   // (per text, the words its pointer states draw: a row is theirs only where the design side holds one of them, as rows
-  // merge every combination under one place; and only where no other state sets them, or the row was found at pointer
-  // states alone (roundTrip's `pointer`: a search's query, typed at focus and when filled, read wrong only at focus)
+  // merge every combination under one place; and only where no other state sets them, or where a pointer state's variant
+  // sets them at every combination the row was found in (roundTrip's `pointer`: a search's query, typed at focus and when
+  // filled, read wrong only at focus)
   const only = new Map(), words = new Map();
   for (const v of contract.variants || []) for (const [k, w] of Object.entries(v.set || {})) if (k.endsWith('.content')) {
     const p = pointerWords(contract, v.when);
@@ -236,7 +237,7 @@ export function measure(where, only = [], now = {}) {
     else {
       // held to the first reading as it stands: one taken again since the second trip went round is stale
       // only the combinations the library draws (a reading carries no invalid list of its own)
-      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true }), t = (taken.second || {})[folder];
+      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
       legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder), { ownSheet: false })), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };

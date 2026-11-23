@@ -130,22 +130,29 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const m = (a, b, o = { layoutUnit: true }) => roundTrip(box(a), box(b), o).rows.length;
     ok('a size within a browser\'s layout unit of the design\'s is the same size where a browser read it; one further is not, nor between Figma\'s own', m(8.65, 8.64) === 0 && m(8.65, 8.62) === 1 && m(8.65, 8.64, {}) === 1 && m('hug', 8.64) === 1); }
   ok('and the round trip compares no combination of it', roundTrip(two, two).combinations === 2);
-  { // a text's own words equal to the default of a string prop that sets that layer are that prop's, on either side: to-markup
-    // writes the prop there (textOf's `gives`), and a reading at the defaults sees the same words (from-code boundText)
-    const tx = (when, w, p = {}) => ({ contract: 1, component: 'F', props: { style: { type: 'enum', values: ['a', 'b'], default: 'a', figma: 'Style' }, label: { type: 'string', default: 'Label', figma: 'Label', sets: ['label'], ...p } },
-      anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: '{label}' }, note: { kind: 'text', parent: 'root', content: 'Label' } }, variants: when ? [{ when, set: { 'label.content': w } }] : [] });
-    const rows = (a, b, o = { layoutUnit: true }) => roundTrip(a, b, o).rows.map((r) => `${r.at} ${r.library} ${r.drawn}`);
-    ok('a literal equal to the default of the prop that sets that text is that prop; other words, another prop\'s layer, or a default that differs stay differences',
-      rows(tx({ style: 'b' }, 'Label'), tx(null)).length === 0 && rows(tx(null), tx({ style: 'b' }, 'Label')).length === 0
-      && rows(tx({ style: 'b' }, 'Other'), tx(null)).join() === 'label.content Other {label}'
-      && rows(tx({ style: 'b' }, 'Label', { default: 'Name' }), tx(null, null, { default: 'Name' })).join() === 'label.content Label {label}'
-      && rows(tx(null), { ...tx(null), anatomy: { ...tx(null).anatomy, note: { kind: 'text', parent: 'root', content: '{label}' } } }).join() === 'note.content Label {label}');
-    ok('between two Figma drawings, which say whether a layer is bound, a binding lost stays a difference', rows(tx({ style: 'b' }, 'Label'), tx(null), {}).join() === 'label.content Label {label}');
-    const st = (focusWords) => ({ contract: 1, component: 'S', props: { state: { type: 'enum', values: ['rest', 'focus', 'filled'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' }, q: { type: 'string', default: 'Typing', figma: 'Q', sets: ['t'] }, h: { type: 'string', default: 'Hint', figma: 'H', sets: ['t'] } },
-      anatomy: { root: { kind: 'container' }, t: { kind: 'text', parent: 'root', content: '{h}' } }, variants: [{ when: { state: 'filled' }, set: { 't.content': '{q}' } }, ...(focusWords ? [{ when: { state: 'focus' }, set: { 't.content': focusWords } }] : [])] });
-    const o = { layoutUnit: true }, [r] = roundTrip(st('{q}'), st(null), o).rows, both = roundTrip(st('{q}'), { ...st(null), variants: [] }, o).rows;
-    ok('a row found only at pointer states says so where a browser read one side; one found at another combination too does not, nor any between Figma drawings',
-      r && r.pointer === true && r.in === 1 && both.length === 1 && both[0].in === 2 && both[0].pointer === undefined && roundTrip(st('{q}'), st(null)).rows[0].pointer === undefined); }
+  { // a text's own words where the design binds none are a difference from a reading bound to a prop, even where they are
+    // that prop's default: Figma's layer there ignores the prop, code's follows it, and a reading at the defaults cannot
+    // tell the two apart, so neither side is folded into the other
+    const tx = (when, w) => ({ contract: 1, component: 'F', props: { style: { type: 'enum', values: ['a', 'b'], default: 'a', figma: 'Style' }, label: { type: 'string', default: 'Label', figma: 'Label', sets: ['label'] } },
+      anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: '{label}' } }, variants: when ? [{ when, set: { 'label.content': w } }] : [] });
+    const read = (w) => ({ contract: 1, component: 'F', code: { from: 'code' }, props: { style: { type: 'enum', values: ['a', 'b'], default: 'a', code: 'style', figma: 'Style' }, label: { type: 'string', code: 'label', figma: 'Label' } },
+      anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: w } }, variants: [] });
+    const rows = (a, b) => roundTrip(a, b, { layoutUnit: true }).rows.map((r) => `${r.at} ${r.library} ${r.drawn}`);
+    ok('a literal the design holds stays a difference from a reading bound to the prop whose default it equals; read as the same literal, it is the same',
+      rows(tx({ style: 'b' }, 'Label'), read('{label}')).join() === 'label.content Label {label}' && rows(tx(null), read('Label')).join() === 'label.content {label} Label'
+      && rows({ ...tx(null), anatomy: { ...tx(null).anatomy, label: { kind: 'text', parent: 'root', content: 'Label' } } }, read('Label')).length === 0); }
+  { // a row is a pointer state's (`pointer`) only where, at every combination it was found in, a variant of a pointer state
+    // sets that field there: a search's query typed at focus and when filled, read wrong only at focus
+    const st = (variants, pointer = ['hover', 'focus']) => ({ contract: 1, component: 'S', props: { state: { type: 'enum', values: ['rest', 'hover', 'focus', 'disabled'], default: 'rest', role: 'interaction', pointer, figma: 'State' }, selected: { type: 'boolean', default: false, figma: 'Selected' }, p: { type: 'string', default: 'Hint', figma: 'P', sets: ['t'] } },
+      anatomy: { root: { kind: 'container' }, t: { kind: 'text', parent: 'root', content: '{p}' } }, variants });
+    const design = st([{ when: { state: 'focus' }, set: { 't.content': 'Search' } }, { when: { selected: true }, set: { 't.content': 'Search' } }]);
+    const o = { layoutUnit: true }, sel = { when: { selected: true }, set: { 't.content': 'Search' } };
+    const [r] = roundTrip(design, st([sel]), o).rows, [h] = roundTrip(design, st([sel, { when: { state: 'hover', selected: true }, set: { 't.content': '{p}' } }]), o).rows;
+    ok('a row found only where a pointer state sets the words says so; one found where another state sets them (hover and selected) does not, nor any between Figma drawings',
+      r && r.pointer === true && r.in === 1 && h && h.in === 2 && h.pointer === undefined && roundTrip(design, st([sel])).rows[0].pointer === undefined);
+    // (held to a reading, the pointer states are the design's: a reading may force disabled as a pseudo state too)
+    const reading = st([{ when: { state: 'disabled' }, set: { 't.content': 'Off' } }], ['hover', 'focus', 'disabled']);
+    ok('the pointer states are the given design\'s, never the reading\'s own list', roundTrip(reading, st([]), { ...o, pointerFrom: st([]) }).rows[0].pointer === undefined && roundTrip(reading, st([]), o).rows[0].pointer === true); }
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());
   { // a placed instance's key is compared only where both sides hold one: a reading from code holds none
     const placed = (key) => ({ ...two, anatomy: { ...two.anatomy, i: { kind: 'instance', parent: 'root', component: 'Button', ...(key && { key }) } } });
