@@ -33,7 +33,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
-import { expand, variantDefaults, kebab, camel, keyMatches, placedOf as heldBy } from './layers.mjs';
+import { expand, variantDefaults, kebab, camel, placedOf as heldBy } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
 import { negative, heldOpacity, heldGlyph } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
@@ -853,6 +853,7 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
 /* A part inside a placed component this library holds, by that component's own names under the instance; else null. */
 export const nestedSelector = (c, n, id, mains, library = {}) => (hostIn(c, id, mains) ? chain(c, n, id, '', mains, library) : null);
 export const selectorOf = (c, n, id, mains = null, library = {}) => (id === 'root' ? n.root + through(n, c.component, placedIn(c)) : chain(c, n, id, '', mains, library));
+export const heldOf = (library) => (name, key = null) => heldBy(library, { component: name, key });
 const findAdded = (c, id) => (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
 // a part's name in a selector: its id's last part, the whole id where two parts would share it
 export function partSeg(c, id) {
@@ -862,8 +863,12 @@ export function partSeg(c, id) {
 }
 
 /* The stylesheet. */
-export function toCss(c, folder, { naming, layer = 'components', settings = HOUSE, mains, library = {} } = {}) {
+export function toCss(c, folder, { naming, layer = 'components', settings = HOUSE, mains: given, library } = {}) {
   const n = namer(folder, naming);
+  // every question of a placed instance (held or a mark, what it draws inside, its own parts' names) is asked of the one
+  // library the markup is given, as the markup asks it (layers.mjs placedOf); `mains` only where no library is given
+  const mains = library ? heldOf(library) : given;
+  library ||= {};
   const { rules, unread } = rulesOf(c, mains, settings);
   const lines = [`/* ${BANNER} */`];
   const keys = [...new Set(rules.flatMap((r) => Object.keys(r.when)))];
@@ -946,34 +951,19 @@ if (isMain) {
   const { of } = officials(where);
   // each sheet under its library's settings (its state names, its disabled axis), the house's where none
   const settingsOf = require('../snapshot/projects.cjs').librarySettingsFor(dir);
-  // the library's components by name, for what a placed one draws inside (its insides are its own contract's): within
-  // the folder's own library, grouped as derive groups them (two libraries in one store may share a name), a name two
-  // hold (in any case) none; a store no project registers, or a draft of no known library, looks across the store
-  const lib = require('../snapshot/projects.cjs').storeLibraries(dir);
-  const fileOf = (d) => (lib ? lib.fileOf(d) : undefined);
-  const byName = new Map(), byKey = new Map(), add = (k, x) => byName.set(k, byName.has(k) ? null : x);
-  // (and the store as to-markup's own run gives it to the markup, by name, in folder order: which placed components the
-  // sheet takes as held, and which as marks, is the markup's question of the same library, chain's)
+  // the store by name, in folder order, as to-markup's own run gives it to the markup: every question of a placed
+  // instance the sheet asks is the markup's own, of the same library (toCss)
   const library = {};
   for (const d of fs.existsSync(dir) ? fs.readdirSync(dir).sort() : []) {
-    try {
-      const x = of(JSON.parse(fs.readFileSync(path.join(dir, d, 'contract.json'), 'utf8'))), n = String(x.component).toLowerCase();
-      x.folder ||= d;
-      library[x.component] = x;
-      add(`${fileOf(d)}\0${n}`, x);
-      add(`*\0${n}`, x);
-      if (x.figma && x.figma.key) byKey.set(x.figma.key, x);
-    } catch { /* not a component */ }
+    try { const x = of(JSON.parse(fs.readFileSync(path.join(dir, d, 'contract.json'), 'utf8'))); x.folder ||= d; library[x.component] = x; } catch { /* not a component */ }
   }
-  // by the instance's key where the store holds it; else by name, never one the key says it is not (layers.mjs keyMatches)
-  const mainsFor = (f) => (name, key = null) => (key && byKey.get(key)) || [byName.get(`${!lib || (draft && fileOf(f) == null) ? '*' : fileOf(f)}\0${String(name).toLowerCase()}`) || null].filter((x) => x && keyMatches(x.figma && x.figma.key, key))[0] || null;
+  const mains = heldOf(library);
   for (const f of folders) {
     const c = draft || of(JSON.parse(fs.readFileSync(path.join(dir, f, 'contract.json'), 'utf8')));
-    const mains = mainsFor(f);
     const { rules } = rulesOf(c, mains, settingsOf(f));
     const off = selfCheck(c, rules, mains, settingsOf(f));
     if (off.length) { broken++; console.error(`to-code: ${f}: ${off.length} declaration(s) the stylesheet does not rebuild, first ${JSON.stringify(off[0])}`); }
-    const css = toCss(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f), mains, library });
+    const css = toCss(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f), library });
     files.set(`${f}.css`, draft ? css.replace(BANNER, DRAFT) : css);
   }
   // a write replaces only what it wrote (code-standard rule 58): its own files, known by the banner

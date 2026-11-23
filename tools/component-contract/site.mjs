@@ -28,10 +28,10 @@ export const ELEMENT = { kind: 'element', prefix: 'ds-' };
    (`settings`, the house's where none). The one source: the site's files are written from it (siteFiles), the self
    source maps from it (from-code), and the inputs hash is taken of it (eval.mjs selfInputs), so a reading's hash moves
    with what is written. Tested by test-eval.mjs. */
-export function selfDrawn(c, { library, mains, settings, naming = ELEMENT }) {
+export function selfDrawn(c, { library, settings, naming = ELEMENT }) {
   const mapping = selfMapping(c, { library, settings, naming });
   // (and each part's selector by id, which the mapping does not write: what a holder's reading finds it by, so in the hash)
-  return { markup: toElement(c, c.folder, { naming, library, settings }), sheet: toCss(c, c.folder, { naming, mains, settings, library }), mapping, parts: mapping.byId };
+  return { markup: toElement(c, c.folder, { naming, library, settings }), sheet: toCss(c, c.folder, { naming, settings, library }), mapping, parts: mapping.byId };
 }
 
 /* Its parity mapping alone, for a reader that needs no more (from-code's self source): selfDrawn's. */
@@ -79,7 +79,7 @@ export const GENERATOR = (() => { try {
   return h.digest('hex');
 } catch { return null; } })();
 export function drawnAll(library, { settingsOf = () => undefined, naming = ELEMENT, only = null, dir = process.env.TOOLKIT_SELF_DRAWN_CACHE === '0' ? null : DRAWN_CACHE } = {}) {
-  const mains = byComponentName(Object.values(library)), byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
+  const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
   const out = {};
   // (`only`: the folders drawn, each still against the whole library, as a placed name resolves in it)
   for (const c of Object.values(library).filter((x) => !only || only.has(x.folder))) {
@@ -87,7 +87,7 @@ export function drawnAll(library, { settingsOf = () => undefined, naming = ELEME
     const key = () => createHash('sha1').update([GENERATOR, JSON.stringify(settings ?? null), JSON.stringify(naming), ...[...closureOf(library, [c.folder])].sort().map((f) => `${f}\0${JSON.stringify(byFolder[f])}`)].join('\0')).digest('hex');
     const file = dir && GENERATOR && path.join(dir, `${key()}.json`);
     if (file) { try { out[c.folder] = JSON.parse(fs.readFileSync(file, 'utf8')); continue; } catch { /* not kept yet */ } }
-    out[c.folder] = selfDrawn(c, { library, mains, settings, naming });
+    out[c.folder] = selfDrawn(c, { library, settings, naming });
     if (file) { try { fs.mkdirSync(dir, { recursive: true }); const tmp = `${file}.${process.pid}`; fs.writeFileSync(tmp, JSON.stringify(out[c.folder])); fs.renameSync(tmp, file); } catch { /* drawn again next time */ } }
   }
   return out;

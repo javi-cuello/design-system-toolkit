@@ -369,6 +369,17 @@ ok('and to-code styles that input and its placeholder by the same selectors: the
   };
   ok('two contracts of one name: the markup and the sheet agree whether it is held', agree([close('Close button', 'a'), close('Close button', 'b'), card]));
   ok('two names one only in case: the markup and the sheet agree whether it is held', agree([close('Close Button', 'a'), close('Close button', 'b'), card])); }
+// and every question after it: a part inside a placed component the library holds, overridden there, is styled by the
+// selector the mapping names it by, the placed component's own part under the instance, never a holder id of its own
+{ const { drawnAll } = await import('./site.mjs');
+  const close = (name, k) => ({ contract: 1, component: name, folder: name.toLowerCase().replace(/ /g, '-') + k, figma: { key: k }, props: {},
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, label: { kind: 'text', parent: 'root', order: 0, content: 'x', color: 'A' } }, variants: [] });
+  const card = { contract: 1, component: 'Card', folder: 'card', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 4 } },
+    close: { kind: 'instance', parent: 'root', component: 'Close button', order: 0 }, 'close/label': { kind: 'text', parent: 'close', order: 0, content: 'x', color: 'B' } }, variants: [] };
+  const library = { 'Close Button': close('Close Button', 'a'), 'Close button': close('Close button', 'b'), Card: card };
+  const d = drawnAll(library, { dir: null }).card, sel = d.parts['close/label'];
+  ok('a part overridden inside a held placed component: the sheet styles it by the selector the mapping names it by',
+    !!sel && d.sheet.includes(`${sel} {`), JSON.stringify({ sel, parts: d.parts, sheet: d.sheet })); }
 
 /* ── the mapping and the stories ── */
 const parity = toParity(library.Button, 'button', { naming: CLASS, library });
