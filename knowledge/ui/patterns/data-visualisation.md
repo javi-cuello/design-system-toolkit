@@ -1,6 +1,6 @@
 # Data visualisation: choosing, drawing and reading charts
 
-How an interface turns figures into a chart that says one thing clearly, to everyone: choosing the form by the data's job, or no chart at all; keeping it simple; colour by job; stacked bars, line charts with few points, calendar heatmaps, sparklines and small multiples; axes and labels; hover and focus; narrow screens; accessibility in depth (Chartability, long descriptions and tables, colour-vision deficiency, contrast, keyboard and screen-reader access, touch targets, reduced motion, zoom and reflow, cognitive load); and empty or sparse data. It serves design-standard's principles *honest*, *clear words, clear hierarchy* and *for everyone, in any context*. Formatting the numbers a chart shows, KPI tiles and provenance captions are [data](data.md); how a dashboard composes several charts is [dashboards](../profiles/dashboards.md).
+How an interface turns figures into a chart that says one thing clearly, to everyone: choosing the form by the data's job, or no chart at all; keeping it simple; colour by job; stacked bars, line charts with few points, calendar heatmaps, sparklines and small multiples; axes and labels; how a pie or donut is built in Figma and maps to chart libraries; hover and focus; narrow screens; accessibility in depth (Chartability, long descriptions and tables, colour-vision deficiency, contrast, keyboard and screen-reader access, touch targets, reduced motion, zoom and reflow, cognitive load); and empty or sparse data. It serves design-standard's principles *honest*, *clear words, clear hierarchy* and *for everyone, in any context*. Formatting the numbers a chart shows, KPI tiles and provenance captions are [data](data.md); how a dashboard composes several charts is [dashboards](../profiles/dashboards.md).
 
 ## Choosing a chart by its job
 
@@ -696,3 +696,83 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - *Judgement*: is the reader comparing trends (multiples) or values at a moment (one chart)?
 
 **Sources.** Tufte (opened) for sparklines; the Analysis Function, ONS and Datawrapper for small multiples. They differ on independent scales: the Analysis Function forbids, Datawrapper discourages; the toolkit shares the scale and names any exception.
+
+## In Figma
+
+How a pie or donut, its legend and its centre label are drawn in a Figma library. Other chart forms follow when work needs them. Which charts may be a pie at all is [choosing a chart by its job](#choosing-a-chart-by-its-job); a legend only where direct labels will not fit is [simplicity](#simplicity).
+
+**Layers**
+- [required] A slice is an ellipse with `arcData`: `startingAngle`, `endingAngle` and `innerRadius`, the "sweep and ratio handles used in our UI to create arcs and donuts"; an `innerRadius` above 0 makes the donut ([Figma ArcData](https://developers.figma.com/docs/plugins/api/ArcData/), [Figma EllipseNode](https://developers.figma.com/docs/plugins/api/EllipseNode/), [plugin typings](https://unpkg.com/@figma/plugin-typings/plugin-api.d.ts)).
+- [required] A slice's angle cannot follow data. `arcData` is not among the fields a variable binds ([Figma VariableBindableNodeField](https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/)), and a component property is only `BOOLEAN`, `TEXT`, `INSTANCE_SWAP`, `VARIANT` or `SLOT` ([Figma ComponentPropertyType](https://developers.figma.com/docs/plugins/api/ComponentPropertyType/)). A pie in Figma is a drawn sample, its angles set by hand or by a plugin.
+- [required] A bar can follow data where a slice cannot: `width` and `height` are bindable fields (same source), so a bar's length binds a number variable.
+- [weak] The parts that recur are components and the plot is not: the legend item (its mark and label), the centre label, and the card around the chart. MUI draws the legend mark as one component, `ChartsLabelMark`, and a custom mark "affects not only the legend but also other places where the label mark is shown, such as tooltips" ([MUI legend](https://github.com/mui/mui-x/blob/master/docs/data/charts/legend/legend.md), [MUI ChartsLabelMark.tsx](https://github.com/mui/mui-x/blob/master/packages/x-charts/src/ChartsLabel/ChartsLabelMark.tsx)).
+- [required] Layers are named for their role, the same in every variant: `Slice`, `Legend`, `Legend item`, `Mark`, `Label`, `Centre label` (figma-standard rule 10); the legend and its items are auto layout (figma-standard rule 33).
+
+**Properties**
+- [moderate] The centre label holds a value and a caption as two text properties, `Value` and `Label`; a text layer's `characters` also binds a string variable (Figma VariableBindableNodeField). Carbon's donut takes `donut.center.number` and `donut.center.label`, drawn as a number with the label under it ([Carbon Charts charts.ts](https://github.com/carbon-design-system/carbon-charts/blob/master/packages/core/src/interfaces/charts.ts), [Carbon Charts donut.ts](https://github.com/carbon-design-system/carbon-charts/blob/master/packages/core/src/components/graphs/donut.ts)); MUI's demo draws one line of text ([MUI PieChartWithCenterLabel.tsx](https://github.com/mui/mui-x/blob/master/docs/data/charts/pie-demo/PieChartWithCenterLabel.tsx)). Property names follow the project's code (figma-standard rule 21).
+- [strong] The legend has a `Direction` of `Horizontal` or `Vertical`: MUI's `direction`, Recharts' `layout` and Carbon's `orientation` each take those two values ([MUI legend](https://github.com/mui/mui-x/blob/master/docs/data/charts/legend/legend.md), [Recharts Legend.tsx](https://github.com/recharts/recharts/blob/main/src/component/Legend.tsx), [Carbon Charts components.ts](https://github.com/carbon-design-system/carbon-charts/blob/master/packages/core/src/interfaces/components.ts)).
+- [moderate] The legend item has a `Mark` axis for its shape: MUI's `labelMarkType` is `square` by default, or `circle`, `line` or `line+mark` (MUI ChartsLabelMark.tsx); Recharts' `iconType` offers `circle`, `square`, `rect`, `line` and others ([Recharts types.ts](https://github.com/recharts/recharts/blob/main/src/util/types.ts)). A set draws the shapes the project's code renders (figma-standard rule 51).
+- [required] A `Show legend` boolean reveals the legend, with any property that fills it directly below (figma-standard rule 5); code hides it with MUI's `hideLegend` or Carbon's `legend.enabled` (MUI legend, Carbon Charts components.ts).
+
+**Variants and states**
+- [moderate] A legend item has an inactive state where the code toggles series: Carbon's legend is `clickable` by default, and MUI's toggles with `toggleVisibilityOnClick` ([Carbon Charts configuration.ts](https://github.com/carbon-design-system/carbon-charts/blob/master/packages/core/src/configuration.ts), MUI legend). The toggle is an aid, never the only way to isolate a series ([hover and focus detail](#hover-and-focus-detail)).
+- [moderate] The chart's card draws a loading frame and a no-data frame: MUI shows overlays when `loading` is set and when there is no data, its text from the `loading` and `noData` locale keys ([MUI styling](https://github.com/mui/mui-x/blob/master/docs/data/charts/styling/styling.md)); Carbon's donut removes its centre content when the data is empty (Carbon Charts donut.ts). What the no-data frame says is [empty and sparse data](#empty-and-sparse-data).
+
+**Tokens**
+- [required] Each slice's fill binds a colour variable from the categorical palette, in its order ([colour by job](#colour-by-job)); a paint's colour binds through `setBoundVariableForPaint` (plugin typings). Every fill, stroke and gap binds a semantic token, never a primitive (figma-standard rules 24 and 29); a data-visualisation collection bound directly is the project's stated exception, as in *Colour by job*.
+- [required] The centre label and legend labels take text-role tokens, never a slice colour (figma-standard rule 28; WCAG 1.4.3, as in [contrast of marks and text](#contrast-of-marks-and-text)).
+
+**Build**
+- [required] The code takes from the Figma sample its parts, tokens and spacing, never its angles: slice angles come from the data through the chart's scale (code-standard rule 57), and the sample's values are placeholders.
+
+**Check**
+- *Script*: figma-components-audit runs the rules cited above on the legend item, the centre label and the card; a slice fill not bound to a variable is a finding.
+- *Judgement*: does the sample show the most slices the project allows, five at most, with the legend at its longest label?
+
+**Sources.** Figma's plugin API reference and typings for arcs and binding; MUI X Charts, Carbon Charts and Recharts source and docs as linked.
+
+## Alignment with code
+
+How the Figma parts above map to chart libraries' props. MUI X Charts is the reference; Carbon Charts and Recharts are the counter-examples where they differ.
+
+**Structure**
+- [strong] A donut is a pie with an inner radius, in every library read: MUI's `innerRadius` "greater than 0" ([MUI pie](https://github.com/mui/mui-x/blob/master/docs/data/charts/pie/pie.md)), Recharts' `Pie` `innerRadius` ([Recharts Pie.tsx](https://github.com/recharts/recharts/blob/main/src/polar/Pie.tsx)), and Carbon's donut built on its pie options (Carbon Charts configuration.ts). One Figma set covers both, the inner radius drawn per sample.
+- [strong] The legend is part of the chart component in all three: MUI's `slotProps.legend`, Recharts' `<Legend>` child, Carbon's `legend` options (sources above). In Figma it sits inside the chart's frame, not beside it.
+- [contested] **The centre label.** Carbon ships it: `donut.center`, whose number defaults to the sum of the displayed values (Carbon Charts donut.ts). Recharts places a `<Label position="center">` inside the `Pie` at the pie's centre ([Recharts Label.tsx](https://github.com/recharts/recharts/blob/main/src/component/Label.tsx)). MUI has no prop: its demo draws a `PieCenterLabel` from `useDrawingArea` (MUI PieChartWithCenterLabel.tsx). The Figma `Centre label` maps to a prop, a child or a project component, by library.
+- [contested] **The title.** MUI's `title` and `desc` are the chart's accessible label and description only, never drawn ([MUI PieChart.tsx](https://github.com/mui/mui-x/blob/master/packages/x-charts/src/PieChart/PieChart.tsx)); Carbon renders its `title` as visible text ([Carbon Charts title.ts](https://github.com/carbon-design-system/carbon-charts/blob/master/packages/core/src/components/essentials/title.ts)). On MUI the visible title, summary and any "More info" link belong to the card around the chart, which is also where [cognitive load](#cognitive-load) puts the summary.
+
+**Mapping**
+- [moderate] Each Figma part maps to one prop, recorded once (code-standard rule 9; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)); MUI's names, from its pie and legend docs and the sources above:
+
+  | Figma | MUI X Charts |
+  |---|---|
+  | `Slice` | a `data` item `{ id, value, label, color }` |
+  | slice fill | `colors` palette on the chart, or the item's `color` |
+  | `arcData.innerRadius` | `innerRadius` on the series |
+  | outer size, gap, rounding | `outerRadius`, `paddingAngle`, `cornerRadius` |
+  | `arcData` start and end | `startAngle`, `endAngle`, in degrees |
+  | a label on a slice | `arcLabel`, hidden under `arcLabelMinAngle` |
+  | `Show legend=False` | `hideLegend` |
+  | `Direction` | `slotProps.legend.direction` |
+  | legend placement | `slotProps.legend.position` `{ vertical, horizontal }` |
+  | `Mark` | `labelMarkType` |
+  | `Centre label` | a project component in the chart's children |
+
+**States**
+- [moderate] Keyboard navigation is on by default in MUI's charts, off with `disableKeyboardNavigation` ([MUI accessibility](https://github.com/mui/mui-x/blob/master/docs/data/charts/accessibility/accessibility.md)); a focused slice is a frame the Figma sample draws ([keyboard and screen-reader access to points](#keyboard-and-screen-reader-access-to-points)).
+- [weak] MUI sizes a highlighted or faded arc through the series' `highlighted` and `faded` options (MUI pie); a sample draws the highlighted slice only where the project's code sets one.
+- [moderate] Loading and no data are props or overlays in code (MUI `loading`, Carbon's empty-data branch), so the card's frames in [In Figma](#in-figma) map to them.
+
+**Differences**
+- [required] The Figma pie's angles are drawn and the code's are computed, so no parity check compares them; parity compares the legend, the centre label and the card (design-code-parity).
+- [contested] **Where the legend sits by default.** MUI places a horizontal legend "above the chart" (MUI legend), but its `PieChart` sets `direction` to `vertical`, which its wrapper puts at the end, beside the pie (MUI PieChart.tsx, [MUI ChartsWrapper.tsx](https://github.com/mui/mui-x/blob/master/packages/x-charts/src/ChartsWrapper/ChartsWrapper.tsx)); Carbon at the bottom, in code and in its guidance ([Carbon legends](https://carbondesignsystem.com/data-visualization/legends/), Carbon Charts configuration.ts); Recharts' older `verticalAlign` defaults to `bottom` (Recharts Legend.tsx). The project's sample draws its code's placement.
+- [moderate] **Legend order.** Recharts sorts legend items by label unless `itemSorter` is `null` (Recharts Legend.tsx), and Carbon takes an explicit `order` (Carbon Charts components.ts); a legend sorted apart from the slices breaks the pinned order in [colour by job](#colour-by-job).
+
+**Build**
+- [required] The chart is the library's component inside the project's card: title, summary, the chart, source and table, in that order ([cognitive load](#cognitive-load)); slice colours come from the palette tokens, not per chart (code-standard rule 22).
+
+**Check**
+- *Script*: the component contract lists the legend item's and centre label's properties beside the code's props; a Figma property with no prop, and no line under *Differences*, is a finding (design-code-parity).
+- *Judgement*: on the project's library, is the centre label a prop, a child or a component of the project's own, and does the Figma set name which?
+
+**Sources.** MUI X Charts docs and source, Carbon Charts source and Carbon's legend guidance, and Recharts source, as linked.
