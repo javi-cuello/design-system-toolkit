@@ -524,7 +524,7 @@
   /* What's wrong, then the fix muted under it: one block, no headings shown
      (they stay for screen readers) and no rule between (knowledge: visual, Quiet chrome). */
   .pair { margin-block-start: var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
-  .pair > .cell { min-inline-size: 0; overflow-wrap: anywhere; padding-inline-end: 0; }
+  .pair > .cell { position: relative; min-inline-size: 0; overflow-wrap: anywhere; padding-inline-end: 0; }
   .cell-label {
     position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
   }

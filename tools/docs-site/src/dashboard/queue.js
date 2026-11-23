@@ -99,7 +99,12 @@ async function recordRuling(id) {
   const r = state[id];
   if (!r) return;
   const text = (r.note || "").trim();
-  if (!text) return queueStatus("Write the ruling in the note first \u2014 that is what gets recorded.", "warn");
+  if (!text) {
+    // The note is closed until asked for: open it where the ruling is written.
+    const wrap = document.getElementById("nwrap-" + id);
+    if (wrap) { wrap.dataset.open = "yes"; paint(id); const n = document.getElementById("note-" + id); if (n) { autosize(n); n.focus(); } }
+    return queueStatus("Write the ruling in the note first \u2014 that is what gets recorded.", "warn");
+  }
   try {
     // The ruling goes to the context document's rulings log, the one place a
     // preference lives. It used to go into a copy in this record that the
@@ -603,7 +608,8 @@ export function build() {
         const noteBtn = row.querySelector("[data-note-toggle]");
         noteBtn.addEventListener("click", () => {
           const wrap = document.getElementById("nwrap-" + id);
-          wrap.dataset.open = wrap.hidden ? "yes" : "";
+          // A note holding text stays open; its button only takes you there.
+          if (!(state[id].note || "").trim()) wrap.dataset.open = wrap.hidden ? "yes" : "";
           paint(id);
           if (!wrap.hidden) { autosize(note); note.focus(); }
         });
@@ -642,6 +648,11 @@ export function build() {
           doBtn.disabled = false; doBtn.textContent = "Fix this";
           paintDoAll();
         });
+        // A rebuilt row keeps an opened note open, and is painted before
+        // focus returns: a hidden note cannot take focus.
+        const oldWrap = old && old.querySelector(".note-wrap");
+        if (oldWrap && oldWrap.dataset.open) document.getElementById("nwrap-" + id).dataset.open = oldWrap.dataset.open;
+        if (focusKey) paint(id);
         const back = focusKey && row.querySelector(focusKey);
         if (back) back.focus({ preventScroll: true });
       }
@@ -731,9 +742,10 @@ function paint(id) {
   const filled = !!(s.note || "").trim() || (document.activeElement === note && !!note.value.trim());
   wrap.hidden = !(filled || (wrap.dataset.open === "yes" && !readOnly));
   const noteBtn = row.querySelector("[data-note-toggle]");
-  noteBtn.hidden = filled || readOnly;
+  // Never hidden while usable: hiding it as the note blurs would drop focus.
+  noteBtn.hidden = readOnly;
   noteBtn.setAttribute("aria-expanded", String(!wrap.hidden));
-  noteBtn.firstChild.textContent = wrap.hidden ? "Add a note" : "Hide the note";
+  noteBtn.firstChild.textContent = wrap.hidden ? "Add a note" : filled ? "Edit the note" : "Hide the note";
   if (document.activeElement !== note && note.value !== (s.note || "")) {
     note.value = s.note || "";
     autosize(note);                     // a note arriving from the store sizes itself too
