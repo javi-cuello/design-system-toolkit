@@ -207,6 +207,13 @@ ok('a component measured since the accept is held until accepted; one that came 
     && !leftToCode(box(12))('frame/mark.constraints.vertical', row));
   ok('a row held to a reading rather than the contract the sheet was written from (the second leg) is never left by the share',
     !leftToCode(box('hug', false), null, undefined, { ownSheet: false })('frame/mark.constraints.vertical', row)); }
+{ // two layers that together make the share writable at their combination: the sheet's own rule for that combination writes it
+  const c = { contract: 1, component: 'Badge', props: { size: { type: 'enum', values: ['s', 'l'], default: 's' }, tone: { type: 'enum', values: ['a', 'b'], default: 'a' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, frame: { kind: 'container', parent: 'root', layout: { direction: 'row' }, width: 12, height: 'hug' },
+      'frame/mark': { kind: 'graphic', parent: 'frame', width: 12, height: 12, position: 'absolute', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } } },
+    variants: [{ when: { size: 'l' }, set: { 'frame.height': 20, 'frame/mark.height': 'hug' } }, { when: { tone: 'b' }, set: { 'frame/mark.height': 8 } }] };
+  ok('a share the sheet writes only at a combination of two layers (its own rule there) keeps the row a difference',
+    !leftToCode(c)('frame/mark.constraints.vertical', { library: 'scale', drawn: 'min' })); }
 { // a part the sheet does not write itself (one inside a placed component, which its own sheet places) is never judged by its share
   const c = { contract: 1, component: 'Host', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, chip: { kind: 'instance', parent: 'root', component: 'Chip', height: 'hug', width: 12 },
     'chip/mark': { kind: 'graphic', parent: 'chip', width: 12, height: 12, position: 'absolute', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } } }, variants: [] };

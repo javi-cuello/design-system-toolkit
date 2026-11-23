@@ -726,14 +726,16 @@ export function rulesOf(c, mains, t = HOUSE) {
   const dflt = variantDefaults(c);
   const layers = [{ when: {} }, ...(c.variants || []).filter((v) => !v.combination), ...(c.variants || []).filter((v) => v.combination)]
     .map((v, i) => ({ v, i })).sort((x, y) => Object.keys(x.v.when || {}).length - Object.keys(y.v.when || {}).length || x.i - y.i).map((x) => x.v);
-  const rules = [], unread = new Map();
+  // (unshared: the parts each axis's scale constraint went unwritten on at some layer, sharesNeverWritten's)
+  const rules = [], unread = new Map(), unshared = new Map();
   for (const v of layers) {
     const when = v.combination ? { ...v.when } : Object.fromEntries(Object.entries(v.when || {}).filter(([k, x]) => x !== dflt[k] || v.combination));
     const full = { ...dflt, ...when };
     const now = drawn(c, full, mains, t);
     const parts = {};
-    for (const [id, { decls, unread: u }] of Object.entries(now)) {
+    for (const [id, { decls, unread: u, unshared: x }] of Object.entries(now)) {
       for (const f of u) { if (!unread.has(f)) unread.set(f, new Set()); unread.get(f).add(id); }
+      for (const axis of x || []) { if (!unshared.has(axis)) unshared.set(axis, new Set()); unshared.get(axis).add(id); }
       const given = cascade(rules, full, id);
       const own = new Map();
       for (const [p, d] of decls) if (d.given ? given.has(p) && given.get(p).v !== d.v : !given.has(p) || given.get(p).v !== d.v) own.set(p, d);
@@ -757,7 +759,7 @@ export function rulesOf(c, mains, t = HOUSE) {
     for (const o of miss) (parts[o.part] ||= new Map()).set(o.property, { v: o.want ?? 'unset', ...(o.knob && { knob: o.knob }) });
     rules.push({ when, weight: Object.keys(when).length, parts });
   }
-  return { rules, unread };
+  return { rules, unread, unshared };
 }
 const groupBy = (list, f) => list.reduce((m, x) => m.set(f(x), [...(m.get(f(x)) || []), x]), new Map());
 
@@ -769,36 +771,19 @@ export function combinations(c) {
   return keys.reduce((acc, k) => acc.flatMap((m) => values(k).map((v) => ({ ...m, [k]: v }))), [{}]).filter((m) => !invalid(m));
 }
 
-/* The scale constraints the sheet never writes: `<id>.constraints.<axis>` where drawn() leaves the share unwritten
-   (css.mjs shareable fails) at the defaults and at every layer's own combination that changes the part or a size it
-   depends on, and writes it at none. Where the share is in the sheet at any of them the cascade can carry it to other
-   combinations, so the place stays out. What code draws at a share never written is code's (eval.mjs leftToCode). */
+/* The scale constraints the sheet never writes: `<id>.constraints.<axis>` where some layer drew the part with its share
+   unwritten (css.mjs shareable fails: declarations() returns the axis as unshared) and no rule the sheet holds, a
+   layer's or a combination's own (selfCheck's), declares a share for that part on that axis: a percentage offset or
+   size. Read from rulesOf itself, so it cannot drift from what is written. What code draws there is code's (eval.mjs
+   leftToCode). */
 export function sharesNeverWritten(c, mains = NO_MAINS, t = HOUSE) {
   const out = new Set();
   if (!JSON.stringify(c).includes('"scale"')) return out;
-  const vs = c.variants || [], records = (id) => [c.anatomy?.[id], ...vs.map((v) => (v.add || {})[id])].filter(Boolean);
-  const scales = (id) => records(id).some((e) => e.constraints && Object.values(e.constraints).includes('scale')) || vs.some((v) => Object.values((v.set || {})[`${id}.constraints`] || {}).includes('scale'));
-  const ids = [...new Set([...Object.keys(c.anatomy || {}), ...vs.flatMap((v) => Object.keys(v.add || {}))])].filter(scales);
-  const invalid = (w) => (c.invalid || []).some((x) => Object.entries(x).every(([k, v]) => String(w[k]) === String(v)));
-  const at = new Map(), drawnAt = (when) => { const k = JSON.stringify(when); if (!at.has(k)) at.set(k, drawn(c, when, mains, t)); return at.get(k); };
-  for (const id of ids) {
-    const chain = new Set();
-    for (let todo = [id]; todo.length;) { const x = todo.pop(); if (chain.has(x)) continue; chain.add(x); for (const e of records(x)) if (e.parent) todo.push(e.parent); for (const v of vs) { const p = (v.set || {})[`${x}.parent`]; if (p) todo.push(p); } }
-    // (a box above it only by what its size depends on)
-    const sized = (k) => { const x = k.slice(0, k.indexOf('.')), f = k.slice(x.length + 1); return x === id || (chain.has(x) && /^(width|height|absolute|constraints|parent)(\.|$)/.test(f)); };
-    const touches = (v) => [...Object.keys(v.add || {}), ...(v.remove || [])].some((x) => chain.has(x)) || Object.keys(v.set || {}).some(sized);
-    const whens = [variantDefaults(c), ...vs.filter(touches).map((v) => ({ ...variantDefaults(c), ...(v.when || {}) }))].filter((w) => !invalid(w));
-    for (const axis of ['horizontal', 'vertical']) {
-      let unwritten = false, written = false;
-      for (const w of whens) {
-        const e = expand(c, w)[id];
-        if (!e || !e.constraints || e.constraints[axis] !== 'scale' || !(e.position === 'absolute' || e.absolute)) continue;
-        const r = drawnAt(w)[id];
-        if (!r) continue;
-        if ((r.unshared || []).includes(axis)) unwritten = true; else written = true;
-      }
-      if (unwritten && !written) out.add(`${id}.constraints.${axis}`);
-    }
+  const { rules, unshared } = rulesOf(c, mains, t);
+  const PROPS = { horizontal: ['inset-inline-start', 'inline-size'], vertical: ['inset-block-start', 'block-size'] };
+  for (const [axis, ids] of unshared) for (const id of ids) {
+    const shared = rules.some((r) => r.parts[id] && PROPS[axis].some((p) => /%\s*$/.test(String((r.parts[id].get(p) || {}).v || ''))));
+    if (!shared) out.add(`${id}.constraints.${axis}`);
   }
   return out;
 }
