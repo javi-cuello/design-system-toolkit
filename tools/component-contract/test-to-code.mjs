@@ -239,6 +239,39 @@ ok('a reordering variant writes each child\'s order', /__texts > \.ds-chip__a \{
       { when: { mode: 'typed' }, add: { 'field/err': { kind: 'graphic', parent: 'field', order: 4, width: 1, height: 1 }, 'field/hint': { kind: 'graphic', parent: 'field', order: 5, width: 1, height: 1 } } }] };
   const ecss = toCss(entry, 'search', { naming: CLS });
   ok('a text entry\'s input in a reordered box takes its value text\'s place', /\.ds-search__field > \.ds-search__input \{[^}]*order: 2;/.test(ecss) && /__prefix \{[^}]*order: 1;/.test(ecss) && selfCheck(entry).length === 0); }
+// a part out of the flow paints where the browser stacks it, never where a CSS order would put it (CSS Flexbox 4.1): the
+// markup writes it in the design's order, and where that is not over every child in the flow, or variants put two such
+// parts in other orders, each child of the box says its place by z-index, the box isolated so nothing outside it interleaves
+{ const { siblingOrder } = await import('./rules.mjs');
+  // what the browser paints in a box at one condition: each part's markup place, and the position, order and z-index the
+  // sheet gives it there (the defaults' rule, then the condition's), stacked as rules.mjs reads them
+  const paints = (markup, css, kids, cond) => {
+    const last = (k, prop) => { let o = null; for (const m of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) { const sel = m[1].trim(), v = new RegExp(`(?:^|\\s)${prop}: ([^;]+);`).exec(m[2]);
+      if (!v || !sel.endsWith(`[data-part="${k}"]`) || (sel.includes(':where(') && !(cond && sel.includes(cond)))) continue; o = v[1]; } return o; };
+    const at = (k) => markup.indexOf(`"data-part": "${k}"`);
+    const xs = kids.filter((k) => at(k) >= 0).sort((x, y) => at(x) - at(y)).map((k) => { const pos = last(k, 'position'), out = pos === 'absolute', z = last(k, 'z-index');
+      return { id: k, cssOrder: out ? 0 : +(last(k, 'order') || 0), stack: { ...(out && { out: true }), ...(pos === 'relative' && { lifted: true }), ...(z != null && { z: +z }) } }; });
+    return siblingOrder(xs).map((e) => e.id).join();
+  };
+  const flowAt = (n) => ({ kind: 'graphic', parent: 'root', order: n, width: 8, height: 8 });
+  const absAt = (n) => ({ kind: 'graphic', parent: 'root', order: n, position: 'absolute', absolute: { x: 0, y: 0 }, width: 4, height: 4 });
+  const pin = { contract: 1, component: 'Pin', props: { swapped: { type: 'boolean', default: false, axis: true } }, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, a: flowAt(0), x: absAt(1), y: absAt(2), b: flowAt(3) },
+    variants: [{ when: { swapped: true }, set: { 'x.order': 2, 'y.order': 1 } }] };
+  const css = toCss(pin, 'pin', { naming: ELEMENT }), mk = toElement(pin, 'pin', { naming: ELEMENT, library: {} });
+  ok('a part out of the flow says no CSS order: it moves nothing there', !/\[data-part="[xy]"\] \{[^}]*order:/.test(css));
+  ok('two parts out of the flow between two in it, which a variant swaps: the browser paints each variant in the design\'s order',
+    paints(mk, css, ['a', 'x', 'y', 'b'], null) === 'a,x,y,b' && paints(mk, css, ['a', 'x', 'y', 'b'], '[swapped]') === 'a,y,x,b' && selfCheck(pin).length === 0);
+  ok('the box whose children say a z-index is isolated, so they stack within it', /ds-pin \{[^}]*isolation: isolate;/.test(css));
+  // over every child in the flow, in the markup's order: the browser paints it so with nothing said
+  const over = { ...pin, anatomy: { ...pin.anatomy, x: absAt(2), y: absAt(3), b: flowAt(1) }, variants: [] };
+  const ocss = toCss(over, 'pin', { naming: ELEMENT });
+  ok('parts out of the flow already over the flow, in markup order, say no z-index', !/z-index|isolation/.test(ocss) && paints(toElement(over, 'pin', { naming: ELEMENT, library: {} }), ocss, ['a', 'x', 'y', 'b'], null) === 'a,b,x,y');
+  // a child in the flow that holds a part of its own out of it is positioned (its containing block), so it paints over
+  // a part out of the flow written before it: under it in the design, that is said too
+  const held = { ...over, anatomy: { ...over.anatomy, 'b/dot': { kind: 'graphic', parent: 'b', order: 0, position: 'absolute', absolute: { x: 0, y: 0 }, width: 2, height: 2 }, x: absAt(0), a: flowAt(1), b: { ...flowAt(2), kind: 'container' } } };
+  const hcss = toCss(held, 'pin', { naming: ELEMENT });
+  ok('a part under a positioned child in the flow is drawn under it', paints(toElement(held, 'pin', { naming: ELEMENT, library: {} }), hcss, ['a', 'x', 'y', 'b'], null) === 'x,a,b,y' && selfCheck(held).length === 0);
+}
 // a placed control the Selected layer names is the one the state reaches, at its depth; another control is not
 const card = { ...chip, anatomy: { ...chip.anatomy, top: { kind: 'container', parent: 'root', order: 1, layout: { direction: 'row' } }, 'top/check': { kind: 'instance', parent: 'top', order: 0, component: 'Checkbox', with: { Selected: 'False' } }, foot: { kind: 'instance', parent: 'root', order: 2, component: 'Button' } },
   variants: [...chip.variants, { when: { selected: true }, set: { 'top/check.with': { Selected: 'True' } } }] };

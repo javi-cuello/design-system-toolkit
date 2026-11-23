@@ -35,7 +35,7 @@ import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel, placedOf as heldBy } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
-import { negative, heldOpacity, heldGlyph } from './rules.mjs';
+import { negative, heldOpacity, heldGlyph, siblingOrder } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
 import { cssName } from '../tokens/names.mjs';
@@ -263,6 +263,39 @@ function reordered(c) {
     REORDERED.set(c, boxes);
   }
   return REORDERED.get(c);
+}
+
+/* The boxes whose children the browser would paint in another order than the design's, as from-code reads it
+   (rules.mjs siblingOrder): a part out of the flow paints over the box's unpositioned children and in markup order
+   among the positioned (a child in the flow holding a part of its own out of it is positioned: css.mjs `anchors`),
+   whatever CSS order says (CSS Flexbox 4.1). Where some variant's design order is not that, each child of the box says
+   its place by z-index (drawn), the box isolated. Compared per variant, as beforeOf; a ring the markup holds no element
+   for, and a box inside a placed component or a slot, aside. */
+const RESTACKED = new WeakMap();
+function restacked(c, t = HOUSE) {
+  if (!RESTACKED.has(c)) {
+    const boxes = new Set(), parts = partsOf(c, t), kids = childrenOf(parts);
+    const outOf = (e) => e.position === 'absolute' || !!e.absolute;
+    for (const [box, list] of kids) {
+      const B = parts.get(box);
+      if (B && (B.inside || B.slotted || B.e.kind === 'instance' || B.e.kind === 'slot')) continue;
+      const dom = new Map(markupOrder(c, list).order.map((p, i) => [p.id, i]));
+      for (const v of [{}, ...(c.variants || [])]) {
+        const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
+        const asAt = (p) => { const e = { ...p.e, ...(add[p.id] || {}) }; for (const f of ['position', 'absolute', 'parent']) if (`${p.id}.${f}` in set) e[f] = set[`${p.id}.${f}`]; return e; };
+        const here = list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id))));
+        if (!here.some((p) => outOf(asAt(p)))) continue;
+        const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? p.e.order ?? 0;
+        // (positioned in the flow: it holds a part out of the flow here, not a ring)
+        const anchors = (p) => (kids.get(p.id) || []).some((q) => !q.ring && ((q.base && !gone.has(q.id)) || q.id in add) && (asAt(q).parent || 'root') === p.id && outOf(asAt(q)));
+        const xs = [...here].sort((x, y) => dom.get(x.id) - dom.get(y.id)).map((p) => { const out = outOf(asAt(p)); return { id: p.id, cssOrder: out ? 0 : at(p), stack: { ...(out && { out: true }), ...(!out && p.e.kind !== 'instance' && anchors(p) && { lifted: true }) } }; });
+        const want = [...here].sort((x, y) => at(x) - at(y) || dom.get(x.id) - dom.get(y.id)).map((p) => p.id).join();
+        if (siblingOrder(xs).map((e) => e.id).join() !== want) { boxes.add(box); break; }
+      }
+    }
+    RESTACKED.set(c, boxes);
+  }
+  return RESTACKED.get(c);
 }
 
 /* The native control a component is, by its name: a button's parts are held in a <button>. The contract names no
@@ -744,8 +777,12 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     }
     if (sample) kept.push(['inline-size', '100%']);
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
-    // (only where an auto layout lays it out: in a box with none order places nothing; an absolute child keeps its order, which its stacking is read back by)
-    if (parent && parent.layout && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
+    // (only where an auto layout lays it out, and never on a part out of the flow: order moves neither, CSS Flexbox 4.1)
+    if (parent && parent.layout && reordered(c).has(e.parent) && typeof e.order === 'number' && !(e.position === 'absolute' || e.absolute)) kept.push(['order', String(e.order)]);
+    // where the browser would paint the box's children in another order than the design (restacked), each says its place
+    // by z-index, one over its order (above the box's unpositioned children, which take none); the box is isolated, below
+    if (e.parent && restacked(c, t).has(e.parent) && !slotted) kept.push(['z-index', String((e.order ?? 0) + 1)]);
+    if (restacked(c, t).has(id)) kept.push(['isolation', 'isolate']);
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: (e.kind === 'instance' && !unheld) || slotted ? [] : unheld ? unread.filter((f) => !/^(key|component|with|swappedBy)\b/.test(f)) : unread,
       // (the axes a scale constraint went unwritten on: eval.mjs leftToCode leaves what code draws there to code)
       ...(unshared.length && !slotted && { unshared }) };
@@ -808,6 +845,8 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     // (in a box a variant reorders, the input stands where its value text does, or the placeholder where that is drawn)
     const own = value || placeholder, P = a[entry.box];
     if (out[entry.input] && own && P && P.layout && reordered(c).has(entry.box) && typeof own.order === 'number') out[entry.input].decls.set('order', { v: String(own.order) });
+    // (and its place by z-index where the box's children say theirs so)
+    if (out[entry.input] && own && restacked(c, t).has(entry.box)) out[entry.input].decls.set('z-index', { v: String((own.order ?? 0) + 1) });
     put(`${entry.input}::placeholder`, placeholder, (p) => p === 'color' || /^(font|line-height|letter-spacing|text-)/.test(p));
   }
   return out;
