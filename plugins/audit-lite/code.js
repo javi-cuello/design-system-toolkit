@@ -2123,8 +2123,8 @@ async function componentNotesOf(n) {
   return got.length ? got : null;
 }
 
-/** @param {SceneNode} n @param {number} depth @returns {Promise<Record<string, unknown>>} */
-async function walk(n, depth) {
+/** @param {SceneNode} n @param {number} depth @param {number} [at] its place among all its parent's children, none inside an instance @param {boolean} [inInstance] @returns {Promise<Record<string, unknown>>} */
+async function walk(n, depth, at, inInstance = false) {
   /** @type {Record<string, unknown>} */
   const o = { name: n.name, type: n.type, w: round(n.width), h: round(n.height) };
   // where the layer sits in its parent: alignment inside a box is what a
@@ -2139,12 +2139,11 @@ async function walk(n, depth) {
   // derive it. absoluteBoundingBox is Figma's own answer for that box.
   if (depth > 0) {
     o.x = round(n.x); o.y = round(n.y);
-    // Its place among all its parent's children, hidden ones counted (0.83.0): two layers two booleans show, both
-    // hidden by default, are each walked alone at the same visible place, and only this says which comes first. None
-    // inside an instance, whose hidden children Figma does not hand over (skipInvisibleInstanceChildren).
-    let host = n.parent;
-    while (host && host.type !== 'INSTANCE') host = host.parent;
-    if (!host && n.parent && 'children' in n.parent) o.index = n.parent.children.findIndex((c) => c === n || (n.id != null && c.id === n.id));
+    // Its place among all its parent's children, hidden ones counted (0.83.0), handed down by the parent's loop: two
+    // layers two booleans show, both hidden by default, are each walked alone at the same visible place, and only this
+    // says which comes first. None inside an instance, whose hidden children Figma does not hand over
+    // (skipInvisibleInstanceChildren).
+    if (typeof at === 'number') o.index = at;
     // What a reader sees turned, which is not the layer's rotation: Figma
     // turns an image fill inside its frame with its own transform, and a
     // layer rotated 180 around a fill rotated 180 shows the asset upright.
@@ -2371,7 +2370,7 @@ async function walk(n, depth) {
     if ((overrides.length || walkWhole) && depth < 12) {
       o.overrides = overrides.map((ov) => ov.overriddenFields.join(',')).slice(0, 8);
       const kids = [];
-      for (const c of n.children) if (c.visible !== false) kids.push(await walk(c, depth + 1));
+      for (const c of n.children) if (c.visible !== false) kids.push(await walk(c, depth + 1, undefined, true));
       o.children = kids;
     }
     return o;
@@ -2379,7 +2378,7 @@ async function walk(n, depth) {
   if (unrecordedSeen.length < 200) unrecordedSeen.push(...unrecorded(n, o));
   if ('children' in n && depth < 12) {
     const kids = [];
-    for (const c of n.children) if (c.visible !== false) kids.push(await walk(c, depth + 1));
+    for (const [i, c] of n.children.entries()) if (c.visible !== false) kids.push(await walk(c, depth + 1, inInstance ? undefined : i, inInstance));
     o.children = kids;
   }
   return o;

@@ -1843,3 +1843,29 @@ test('a moved projects root whose context document still names a repo outside it
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// 2026-11-23: snapshot 0.83.0 says each layer's place among all its parent's children (`index`). The first snapshot to
+// carry it, and a hidden layer added later, move it with nothing drawn changed: no screen is edited, the release a
+// screens file is pinned to does not move, and no component is counted changed (its file is still rewritten).
+test('a layer\'s place among its parent\'s children (index) edits no screen and changes no component', async () => {
+  const { createRequire } = await import('node:module');
+  const store = createRequire(import.meta.url)('./store.cjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'index-'));
+  try {
+    const P = { ...store.paths(dir), screens: path.join(dir, 'screens'), index: path.join(dir, 'index.json'), logs: null };
+    const tree = (index) => ({ name: '<S> 1-1 - List', type: 'FRAME', w: 100, children: [{ name: 'Row', type: 'FRAME', w: 100, h: 10, x: 0, y: 0, ...(index == null ? {} : { index }) }] });
+    const post = (index) => store.writeScreens({ _meta: { fileId: 'A' }, screens: [{ section: 'S', page: 'P', frame: '<S> 1-1 - List', id: '1:1', devStatus: { type: 'READY_FOR_DEV' }, tree: tree(index) }] }, P);
+    post();
+    const at = JSON.parse(fs.readFileSync(P.index, 'utf8')).screens.A;
+    const r = post(2);
+    assert.equal(r.lines.find((l) => l.label === 'changed').text, 'none since the last snapshot', JSON.stringify(r.lines));
+    assert.deepEqual(JSON.parse(fs.readFileSync(P.index, 'utf8')).screens.A.hash, at.hash, 'the pinned release does not move');
+    const chip = (index) => ({ name: 'Chip', id: '1:1', page: 'A', props: { Size: ['sm'] }, variants: [{ name: 'Size=sm', type: 'COMPONENT', w: 10, h: 10, children: [{ name: 'Label', type: 'TEXT', text: 'x', w: 5, h: 5, ...(index == null ? {} : { index }) }] }] });
+    store.writeLibrary(lib('L', { components: [chip()] }), P);
+    const w = store.writeLibrary(lib('L', { components: [chip(1)] }), P);
+    assert.equal(w.lines.find((l) => l.label === 'components').text, 'none changed', JSON.stringify(w.lines));
+    assert.ok(fs.readFileSync(path.join(P.components, 'chip', 'figma.json'), 'utf8').includes('"index"'), 'the file is still written with it');
+    const moved = store.writeScreens({ _meta: { fileId: 'A' }, screens: [{ section: 'S', page: 'P', frame: '<S> 1-1 - List', id: '1:1', devStatus: { type: 'READY_FOR_DEV' }, tree: { ...tree(3), children: [{ ...tree(3).children[0], w: 90, fills: ['Red'] }] } }] }, P);
+    assert.notEqual(moved.lines.find((l) => l.label === 'changed').text, 'none since the last snapshot', 'a change beside it is still one');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

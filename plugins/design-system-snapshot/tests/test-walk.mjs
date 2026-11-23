@@ -52,18 +52,19 @@ ok("a path the walk did not reach marks nothing", markSlots({ name: "x", type: "
 {
   const kids = [box("Top spacer", "FRAME", [], false), box("Divider", "FRAME"), box("Hidden", "FRAME", [], false), box("Content", "FRAME")];
   const item = box("Item", "FRAME", kids);
-  for (const k of kids) k.parent = item;
   const walked = await walk(item, 0);
   ok("a walked child says its place among all its parent's children, hidden ones counted",
     JSON.stringify(walked.children.map((c) => [c.name, c.index])) === JSON.stringify([["Divider", 1], ["Content", 3]]));
   ok("…and the root, which has no parent walked, says none", !("index" in walked));
   ok("…every other field as before: the children are still the visible ones, in order", walked.children.length === 2 && walked.children[0].x === 0);
   // Figma hands an instance's children without the hidden ones (skipInvisibleInstanceChildren), so a place counted
-  // there would be a visible place said as a whole one: none is said inside an instance
-  const inner = box("Glyph", "FRAME");
-  const host = box("Icon", "INSTANCE", [inner]);
-  inner.parent = host; host.parent = item;
-  ok("…and none is said inside an instance, whose hidden children Figma may not hand over", !("index" in await walk(inner, 2)));
+  // there would be a visible place said as a whole one: none is said inside an instance, at any depth
+  const host = { ...box("Icon", "INSTANCE", [box("Hidden", "FRAME", [], false), box("Frame", "FRAME", [box("Glyph", "FRAME")])]),
+    getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }] };
+  const held = await walk(box("Row", "FRAME", [box("Gap", "FRAME", [], false), host]), 0);
+  const icon = held.children[0];
+  ok("…and none is said inside an instance, whose hidden children Figma may not hand over, the instance itself placed",
+    icon.index === 1 && icon.children.length === 1 && !("index" in icon.children[0]) && !("index" in icon.children[0].children[0]));
 }
 
 // Round 4: the release is stamped on every payload, so the store can tell a

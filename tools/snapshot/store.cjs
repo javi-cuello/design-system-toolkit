@@ -1125,7 +1125,8 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
     const was = readJson(file, null);
     if (was) specsBefore[s] = was;
     specsAfter[s] = spec;
-    if (writeIfChanged(file, text(spec))) changed.push(was ? s : `${s} (new)`);
+    // (still written, but not counted changed where only each layer's place among its parent's children moved)
+    if (writeIfChanged(file, text(spec)) && (!was || unplacedJson(was) !== unplacedJson(spec))) changed.push(was ? s : `${s} (new)`);
     // the contract, derived beside it on every snapshot (tools/component-contract); one
     // that cannot be derived is named and never costs the snapshot
     // one that cannot be derived leaves no old contract behind to be read as current
@@ -1329,7 +1330,8 @@ function screenChanges(oldTree, newTree) {
     const was = o.get(p);
     if (!was) continue;
     for (const k of new Set([...Object.keys(was), ...Object.keys(node)])) {
-      if (k === 'children' || k === 'id' || JSON.stringify(was[k]) === JSON.stringify(node[k])) continue;
+      // (nor a layer's place among all its parent's children, `index`: every layer added before it moves it, a hidden one too)
+      if (k === 'children' || k === 'id' || k === 'index' || JSON.stringify(was[k]) === JSON.stringify(node[k])) continue;
       if (content.has(k)) { moved++; continue; }
       lines.push(`~ ${p} ${k}: ${short(was[k])} → ${short(node[k])}`);
     }
@@ -1437,7 +1439,8 @@ function writeScreens(p, P, { now = new Date(), version, states = [], ids: route
   owned[fileId] = [...new Set([...written, ...gone])].sort();
   // The release this snapshot is pinned to, and when it last moved, per file.
   const meta = ((index.screens ||= {})[fileId] ||= {});
-  const hash = hashOf(JSON.stringify(ready.map((s) => [s.page, s.frame, s.tree])));
+  // (each layer's place among its parent's children left out, as screenChanges leaves it: it moves the release with nothing drawn changed)
+  const hash = hashOf(JSON.stringify(ready.map((s) => [s.page, s.frame, s.tree]), (k, v) => (k === 'index' && typeof v === 'number' ? undefined : v)));
   Object.assign(meta, { file: p._meta.file || null, snapshotAt: meta.hash === hash ? meta.snapshotAt : now.toISOString(), hash, version: version || null });
   writeIfChanged(P.index, text(index));
 
