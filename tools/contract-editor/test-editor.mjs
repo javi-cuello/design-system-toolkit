@@ -643,7 +643,7 @@ try {
     ok('four corners alike are one radius again', (await json()).anatomy.content.radius === tl);
     await js(`${insp('[data-each="Corners"]')}.click()`);
     await js(`${insp('[data-pad="tl,tr,br,bl"]')}.click()`);
-    ok('an option under its group\'s heading drops the group\'s name', await js(`(() => { const o = document.querySelector('.ce-picker__pop:popover-open [role=group] [role=option]'); return !!o && o.dataset.value.endsWith('/' + o.querySelector('.ce-picker__name').textContent); })()`));
+    ok('an option under its group\'s heading drops the group\'s name', await js(`(() => { const os = [...document.querySelectorAll('.ce-picker__pop:popover-open [role=group] [role=option]')]; return os.some((o) => { const n = o.querySelector('.ce-picker__name').textContent; return n !== o.dataset.value && o.dataset.value.endsWith('/' + n); }); })()`));
     await key('Escape');
   }
   await js(`${insp('[data-choice="along-start"]')}.click()`);
