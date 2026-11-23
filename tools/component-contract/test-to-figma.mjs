@@ -356,6 +356,13 @@ delete globalThis.figma;
       roundTrip(within({ Icon: 'x' }, { kind: 'graphic' }), within(null, { kind: 'graphic' }), m(inert)).rows.length === 0
       && roundTrip(holder({ Icon: 'x' }), holder(null), m(driven)).rows.length === 1
       && roundTrip(within({ Icon: 'x' }, { kind: 'instance', component: 'Icon/x' }), within(null, { kind: 'instance', component: 'Icon/x' }), m(inert)).rows.length === 1); }
+  { const pair = { component: 'Button', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' }, icon: { type: 'instance', figma: 'Icon', swaps: ['a', 'b'] }, iconOn: { type: 'instance', figma: 'Icon (on)', swaps: ['a', 'b'] } },
+      anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Icon/full' }, b: { kind: 'instance', parent: 'root', component: 'Icon/line' } }, variants: [] };
+    const m = { mains: (n) => (n === 'Button' ? pair : null) };
+    ok('a swap tied to several layers is at its default where it names the icon any of them draws; another icon is stated',
+      roundTrip(holder({ Icon: 'line', 'Icon (on)': 'full' }), holder(null), m).rows.length === 0 && roundTrip(holder({ Icon: 'star' }), holder(null), m).rows.length === 1
+      // (but a layer said to be its own is the one it drives: the other's icon is stated)
+      && roundTrip(holder({ Icon: 'full' }), holder(null), { mains: (n) => (n === 'Button' ? { ...pair, anatomy: { ...pair.anatomy, b: { ...pair.anatomy.b, swappedBy: 'icon' } } } : null) }).rows.length === 1); }
   const sized = { component: 'Button', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon: { type: 'instance', figma: 'Icon', swaps: ['i'] } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/house' } }, variants: [{ when: { size: 'xs' }, set: { 'i.component': 'Icon/star' } }] };
   ok('a swap is held to the icon drawn at the instance\'s own props: house at xs, where xs draws star, is stated', roundTrip(holder({ Size: 'xs', Icon: 'house' }), holder({ Size: 'xs' }), { mains: (n) => (n === 'Button' ? sized : null) }).rows.length === 1);
   const twoSwaps = { component: 'Button', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['i'] }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['i'] } },

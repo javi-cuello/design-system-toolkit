@@ -299,15 +299,20 @@ function atDefault(x, mains) {
       // a swap at the icon its component draws there (Icon (16): house where the part is Icon/house) is its default too
       if (q && q.type === 'instance' && q.default === undefined) {
         // the icon the main draws there at the instance's own props; a part those props hide, the one any variant draws
-        const part = (q.swaps || [])[0], M = part && req('./derive.cjs').atProps(main, e.with), at = part && (M[part] || {}).component;
+        const part = (q.swaps || [])[0], M = part && req('./derive.cjs').atProps(main, e.with);
         const key = Object.keys(main.props).find((kk) => main.props[kk] === q);
         // a swap that drives no layer draws nothing, whatever it names: an override on nothing, which no code can say
         if (swapsNothing(q, key)) return false;
         // a swap another prop drives the layer for at these props (Icon (20) on a button drawn at xs, whose icon Icon (16)
         // swaps) draws nothing: Figma keeps its override, which no code can say
         if (part && M[part] && M[part].swappedBy && M[part].swappedBy !== key) return false;
-        const drawn = at || (part && ([main.anatomy || {}, ...(main.variants || []).map((v) => v.add || {})].map((a) => a[part]).find((y) => y && y.component) || {}).component);
-        return !drawn || (low(drawn) !== low(v) && !low(drawn).endsWith(`/${low(v)}`));
+        const drawnAt = (sp) => (M[sp] || {}).component || ([main.anatomy || {}, ...(main.variants || []).map((w) => w.add || {})].map((a) => a[sp]).find((y) => y && y.component) || {}).component;
+        // (a swap the design ties to several layers, none of them said to be its alone: the icon any of them draws there,
+        // as which layer it drives at these props is the design's own tie, no value code reads back)
+        // (a layer said to be its own at these props is the one it drives)
+        const mine = (q.swaps || []).filter((sp) => M[sp] && M[sp].swappedBy === key);
+        const drawn = (mine.length ? mine : [part, ...(q.swaps || []).slice(1).filter((sp) => !(M[sp] && M[sp].swappedBy && M[sp].swappedBy !== key))]).filter(Boolean).map(drawnAt).filter(Boolean);
+        return !drawn.length || !drawn.some((d) => low(d) === low(v) || low(d).endsWith(`/${low(v)}`));
       }
       if (!q || q.default === undefined) return true;
       const words = [q.default, (q.figmaValues || [])[(q.values || []).indexOf(q.default)]].filter((w) => w !== undefined).map(low);
