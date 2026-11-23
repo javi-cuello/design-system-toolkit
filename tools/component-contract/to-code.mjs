@@ -33,7 +33,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
-import { expand, variantDefaults, kebab, camel, keyMatches } from './layers.mjs';
+import { expand, variantDefaults, kebab, camel, keyMatches, placedOf as heldBy } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
 import { negative, heldOpacity, heldGlyph } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
@@ -182,17 +182,17 @@ function controlsOf(c) {
   return CONTROLS.get(c);
 }
 
-/* The selector a prop's value is chosen by, on the root. `mains`: the library, where given, so a placed control is
-   reached as the part rules reach it (chain). */
-export function condition(c, n, key, value, t = HOUSE, mains = null) {
+/* The selector a prop's value is chosen by, on the root. `mains` and `library` as chain takes them, so a placed control
+   is reached as the part rules reach it. */
+export function condition(c, n, key, value, t = HOUSE, mains = null, library = {}) {
   const p = c.props[key] || {};
   const entry = entryOf(c);
   // the input's own state, reached down the anatomy by child combinators (code-standard rules 5 and 62)
-  const control = entry && `${chain(c, n, entry.input, '', mains).slice(n.root.length + 3)}`;
+  const control = entry && `${chain(c, n, entry.input, '', mains, library).slice(n.root.length + 3)}`;
   // where a state reaches: the box itself, a native control directly in it, a text entry's input, and a placed
   // control the contract names (its Selected layer sets that instance's props: a card's checkbox two boxes down),
   // the control or one inside it; never any control at all, so a card's footer button does not dim the card
-  const placed = controlsOf(c).map((id) => chain(c, n, id, '', mains).slice(n.root.length + 3));
+  const placed = controlsOf(c).map((id) => chain(c, n, id, '', mains, library).slice(n.root.length + 3));
   // a box that names its control is that control's alone: a button beside it in the box is not it
   const reach = (x) => [...(control || placed.length ? [] : [`:has(> ${x})`]), ...(control ? [`:has(> ${control}${x})`] : []), ...placed.flatMap((k) => [`:has(> ${k}${x})`, `:has(> ${k} ${x})`])];
   const dis = disabledKey(c, t);
@@ -220,7 +220,7 @@ export function condition(c, n, key, value, t = HOUSE, mains = null) {
   // a box holding a native checkbox or radio, directly or as the control it places, is checked as the control is
   // (code-standard rule 9: the control's own)
   if (p.type === 'boolean' && /^(selected|checked)$/i.test(key)) {
-    const placed = controlsOf(c).map((id) => chain(c, n, id, '', mains).slice(n.root.length + 3));
+    const placed = controlsOf(c).map((id) => chain(c, n, id, '', mains, library).slice(n.root.length + 3));
     const on = `:is(${[`[${a}]:not([${a}="false"])`, ...(placed.length ? [] : [':has(> :checked)']), ...placed.flatMap((k) => [`:has(> ${k}:checked)`, `:has(> ${k} :checked)`])].join(', ')})`;
     return value ? on : `:not(${on})`;
   }
@@ -811,7 +811,7 @@ export function selfCheck(c, rules, mains, t = HOUSE) {
 // which keeps its size there: a text alone in it does not count, a limit named in the README)
 const pseudoSel = (p) => (!p ? '' : p === 'empty' ? ':not(:has(*))' : `::${p}`);
 /* A part's selector: the root, then each part on its way down, by child combinators (code-standard rule 5). */
-function chain(c, n, id, rootCond, given = null) {
+function chain(c, n, id, rootCond, given = null, library = {}) {
   const mains = given || (() => null);
   const [own, pseudo = ''] = id.split('::');
   const entry = entryOf(c);
@@ -820,9 +820,11 @@ function chain(c, n, id, rootCond, given = null) {
   if (entry && own === entry.input) { segs.push('input'); at = entry.box; }
   if (own.endsWith('/*')) { segs.push('*'); at = own.slice(0, -2); }
   for (; at && at !== 'root'; at = (c.anatomy[at] || findAdded(c, at) || {}).parent) segs.unshift(at);
-  // (an instance of a component the library does not hold, where the library is given, is drawn as a mark, to-markup's
-  // data-icon: no control inside it to reach, whatever its name says)
-  const markOnly = (e) => !!given && e.kind === 'instance' && !given(e.component, e.key);
+  // (an instance of a component the library does not hold is drawn as a mark, to-markup's data-icon: no control inside
+  // it to reach, whatever its name says. Held or not is the markup's own question, layers.mjs placedOf of the library
+  // the markup is given, never `mains`, a lookup of its own that reads names case-blind and holds none two contracts
+  // share; with no library given, none is held, as the markup draws every placed instance then)
+  const markOnly = (e) => e.kind === 'instance' && !heldBy(library || {}, e);
   const seg = (s) => { const e = c.anatomy[s] || findAdded(c, s) || {};
     return s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + (markOnly(e) ? '' : through(n, e.kind === 'instance' && e.component, heldIn(c, s, mains))); };
   // a part inside a placed component is that component's own: named as its own sheet names it, under the instance
@@ -849,8 +851,8 @@ function chain(c, n, id, rootCond, given = null) {
 }
 // the selector the sheet styles a part by, at no condition: what the markup's parity mapping names it by
 /* A part inside a placed component this library holds, by that component's own names under the instance; else null. */
-export const nestedSelector = (c, n, id, mains) => (hostIn(c, id, mains) ? chain(c, n, id, '', mains) : null);
-export const selectorOf = (c, n, id, mains = null) => (id === 'root' ? n.root + through(n, c.component, placedIn(c)) : chain(c, n, id, '', mains));
+export const nestedSelector = (c, n, id, mains, library = {}) => (hostIn(c, id, mains) ? chain(c, n, id, '', mains, library) : null);
+export const selectorOf = (c, n, id, mains = null, library = {}) => (id === 'root' ? n.root + through(n, c.component, placedIn(c)) : chain(c, n, id, '', mains, library));
 const findAdded = (c, id) => (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
 // a part's name in a selector: its id's last part, the whole id where two parts would share it
 export function partSeg(c, id) {
@@ -860,7 +862,7 @@ export function partSeg(c, id) {
 }
 
 /* The stylesheet. */
-export function toCss(c, folder, { naming, layer = 'components', settings = HOUSE, mains } = {}) {
+export function toCss(c, folder, { naming, layer = 'components', settings = HOUSE, mains, library = {} } = {}) {
   const n = namer(folder, naming);
   const { rules, unread } = rulesOf(c, mains, settings);
   const lines = [`/* ${BANNER} */`];
@@ -874,7 +876,7 @@ export function toCss(c, folder, { naming, layer = 'components', settings = HOUS
   });
   if (hooks.length) lines.push(`/* Chosen by: ${said(hooks.join('; '))}. */`);
   const parts = [...new Set(rules.flatMap((r) => Object.keys(r.parts)))].filter((id) => id.split('::')[0] !== 'root');
-  const nested = (id) => chain(c, n, id, '', mains).split(' > ').pop();
+  const nested = (id) => chain(c, n, id, '', mains, library).split(' > ').pop();
   const named = (id) => (hostIn(c, id, mains) ? `${nested(id)} (the placed component's own part)` : id.endsWith('/*') ? `${n.part(partSeg(c, id.slice(0, -2)))} > * (any child)` : entryOf(c) && id.startsWith(entryOf(c).input) ? `${n.part('input')} (an <input>; ${entryOf(c).placeholder} is its ::placeholder)` : n.part(partSeg(c, id)));
   if (parts.length) lines.push(`/* Parts: ${said([...new Set(parts.map((id) => id.split('::')[0]))].map((id) => `${id} ${named(id)}`).join(', '))}. */`);
   if (unread.size) lines.push(`/* Not written, as CSS cannot say it: ${said([...unread].map(([f, ids]) => `${f} on ${[...ids].join(', ')}`).join('; '))}. */`);
@@ -887,9 +889,9 @@ export function toCss(c, folder, { naming, layer = 'components', settings = HOUS
   for (const r of rules) {
     // each condition weighs nothing (:where), so rules meet by source order alone, the order selfCheck replays: a
     // condition reaching a control two boxes down would otherwise outweigh an attribute and reorder the cascade
-    const rootCond = Object.entries(r.when).map(([k, v]) => `:where(${condition(c, n, k, v, settings, mains)})`).join('');
+    const rootCond = Object.entries(r.when).map(([k, v]) => `:where(${condition(c, n, k, v, settings, mains, library)})`).join('');
     for (const [id, decls] of Object.entries(r.parts)) {
-      lines.push(`  ${id === 'root' ? n.root + rootCond + through(n, c.component, placedIn(c)) : chain(c, n, id, rootCond, mains)} {`);
+      lines.push(`  ${id === 'root' ? n.root + rootCond + through(n, c.component, placedIn(c)) : chain(c, n, id, rootCond, mains, library)} {`);
       let dimmed = false, undimmed = false;
       for (const [p, { v, note, knob: k }] of decls) {
         const dims = id === 'root' && p === 'opacity' && dis && r.when[dis] === true && v !== 'unset';
@@ -950,10 +952,14 @@ if (isMain) {
   const lib = require('../snapshot/projects.cjs').storeLibraries(dir);
   const fileOf = (d) => (lib ? lib.fileOf(d) : undefined);
   const byName = new Map(), byKey = new Map(), add = (k, x) => byName.set(k, byName.has(k) ? null : x);
-  for (const d of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
+  // (and the store as to-markup's own run gives it to the markup, by name, in folder order: which placed components the
+  // sheet takes as held, and which as marks, is the markup's question of the same library, chain's)
+  const library = {};
+  for (const d of fs.existsSync(dir) ? fs.readdirSync(dir).sort() : []) {
     try {
       const x = of(JSON.parse(fs.readFileSync(path.join(dir, d, 'contract.json'), 'utf8'))), n = String(x.component).toLowerCase();
       x.folder ||= d;
+      library[x.component] = x;
       add(`${fileOf(d)}\0${n}`, x);
       add(`*\0${n}`, x);
       if (x.figma && x.figma.key) byKey.set(x.figma.key, x);
@@ -967,7 +973,7 @@ if (isMain) {
     const { rules } = rulesOf(c, mains, settingsOf(f));
     const off = selfCheck(c, rules, mains, settingsOf(f));
     if (off.length) { broken++; console.error(`to-code: ${f}: ${off.length} declaration(s) the stylesheet does not rebuild, first ${JSON.stringify(off[0])}`); }
-    const css = toCss(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f), mains });
+    const css = toCss(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f), mains, library });
     files.set(`${f}.css`, draft ? css.replace(BANNER, DRAFT) : css);
   }
   // a write replaces only what it wrote (code-standard rule 58): its own files, known by the banner

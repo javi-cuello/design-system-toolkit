@@ -354,6 +354,21 @@ ok('and to-code styles that input and its placeholder by the same selectors: the
   const bare = toParity(card, 'card', { naming: ELEMENT, framework: 'web-components' }), bareOut = toElement(card, 'card', { naming: ELEMENT, library: {} });
   ok('with no library, every placed instance is a mark, in the markup and the mapping alike',
     /"data-part": "save"[^)]*"data-icon"/.test(bareOut) && bare.layers.Action === 'ds-card > [data-part="action"]' && bare.layers.Save === 'ds-card > [data-part="save"]'); }
+// whether a placed component is held is one question, asked of the library the markup is given, by the markup and the
+// sheet alike: never the sheet's own lookup, which is case-blind and holds no name two contracts share. Two contracts of
+// one name (the library keeps one) and two names that differ only in case each read the same on both sides
+{ const { byComponentName } = (await import('node:module')).createRequire(import.meta.url)('./derive.cjs');
+  const close = (name, k) => ({ contract: 1, component: name, figma: { key: k }, props: {}, anatomy: { root: { kind: 'container' } }, variants: [] });
+  const card = { contract: 1, component: 'Card', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 4 } },
+    close: { kind: 'instance', parent: 'root', component: 'Close button', order: 0, width: 24 } }, variants: [] };
+  const agree = (all) => {
+    const library = Object.fromEntries(all.map((x) => [x.component, { ...x, folder: x.component.toLowerCase().replace(/ /g, '-') }]));
+    const markup = toElement(card, 'card', { naming: ELEMENT, library }), sheet = toCss(card, 'card', { naming: ELEMENT, mains: byComponentName(all), library });
+    const mark = /"data-part": "close"[^)]*"data-icon"/.test(markup), button = /\[data-part="close"\] > button/.test(sheet);
+    return /\[data-part="close"\]/.test(sheet) && mark === !button;
+  };
+  ok('two contracts of one name: the markup and the sheet agree whether it is held', agree([close('Close button', 'a'), close('Close button', 'b'), card]));
+  ok('two names one only in case: the markup and the sheet agree whether it is held', agree([close('Close Button', 'a'), close('Close button', 'b'), card])); }
 
 /* ── the mapping and the stories ── */
 const parity = toParity(library.Button, 'button', { naming: CLASS, library });
@@ -549,14 +564,14 @@ else {
         for (const part of all.values()) {
           // what a pointer state adds or takes away is the stylesheet's or a gap; a field's two texts are its one input
           if (part.id === 'root' || part.inside || part.ring || part.slotted || part.pointerOnly || (pointer && part.pointerGone) || (entry && (part.id === entry.value || part.id === entry.placeholder))) continue;
-          const got = await tab.evaluate(`!!document.querySelector(${JSON.stringify(partSelector(c, nm, part.id, part))})`);
+          const got = await tab.evaluate(`!!document.querySelector(${JSON.stringify(partSelector(c, nm, part.id, part, library))})`);
           parts++;
           if (there.has(part.id) !== got) wrong.push(`${c.component} at ${JSON.stringify(m)}: ${part.id} ${got ? 'drawn where the contract draws none' : 'missing'}`);
         }
         for (const [id, { decls }] of Object.entries(drawn(c, full))) {
           const part = all.get(id.split('::')[0]);
           if (id.includes('/*') || id.includes('::') || (part && (part.inside || part.slotted || part.pointerOnly || part.ring || (pointer && part.pointerGone)))) continue;
-          const said = await tab.evaluate(`(${compare})(${JSON.stringify(partSelector(c, nm, id, part))}, ${JSON.stringify([...decls].map(([p, d]) => [p, d.v]))})`);
+          const said = await tab.evaluate(`(${compare})(${JSON.stringify(partSelector(c, nm, id, part, library))}, ${JSON.stringify([...decls].map(([p, d]) => [p, d.v]))})`);
           styled++;
           if (said.length) wrong.push(`${c.component} at ${JSON.stringify(m)}: ${id}: ${said.join('; ')}`);
         }

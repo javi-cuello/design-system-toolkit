@@ -877,12 +877,12 @@ export function toGallery(c, { library = {} } = {}) {
 
 /* The element the markup draws a part as, by the selector the sheet styles it by (to-code's): a focus ring the ringed
    element, a field's two texts its input, a numbered copy its place among its own (`:nth-child(2 of …)`). */
-export function partSelector(c, n, id, part = partsOf(c).get(id), mains = null) {
-  const entry = entryOf(c), first = copyOf(c, id);
+export function partSelector(c, n, id, part = partsOf(c).get(id), library = {}) {
+  const entry = entryOf(c), first = copyOf(c, id), mains = (name, key = null) => placedOf(library, { component: name, key });
   if (id === 'root' || (part && part.ring)) return selectorOf(c, n, 'root');
-  if (entry && (id === entry.value || id === entry.placeholder)) return selectorOf(c, n, entry.input, mains);
-  if (!first) return selectorOf(c, n, id, mains);
-  const s = selectorOf(c, n, first, mains), seg = n.part(partSeg(c, first)), i = s.lastIndexOf(seg) + seg.length;
+  if (entry && (id === entry.value || id === entry.placeholder)) return selectorOf(c, n, entry.input, mains, library);
+  if (!first) return selectorOf(c, n, id, mains, library);
+  const s = selectorOf(c, n, first, mains, library), seg = n.part(partSeg(c, first)), i = s.lastIndexOf(seg) + seg.length;
   return `${s.slice(0, i)}:nth-child(${Number(/_(\d+)$/.exec(id)[1])} of ${seg})${s.slice(i)}`;
 }
 
@@ -923,7 +923,7 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     for (let up = id; up; up = (parts.get(up) || {}).e?.parent) {
       const e = (parts.get(up) || {}).e || {}, p = (parts.get(e.parent) || {}).e || {};
       chainUp.unshift(up);
-      if (p.kind === 'slot') { const s = nestedSelector(c, n, e.parent, mains); if (!s) return null; if (chainUp.slice(0, -1).some((k) => ((parts.get(k) || {}).e || {}).kind === 'instance')) return null; return [s, ...chainUp.map((k) => n.part(partSeg(c, copyOf(c, k) || k)))].join(' > '); }
+      if (p.kind === 'slot') { const s = nestedSelector(c, n, e.parent, mains, library); if (!s) return null; if (chainUp.slice(0, -1).some((k) => ((parts.get(k) || {}).e || {}).kind === 'instance')) return null; return [s, ...chainUp.map((k) => n.part(partSeg(c, copyOf(c, k) || k)))].join(' > '); }
     }
     return null;
   };
@@ -931,11 +931,11 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     if (x.id === 'root') continue;
     // a part the contract keeps inside a placed component is an override there: read where the sheet writes it
     // and what it puts in a placed component's slot (a menu's items), by its own hook under that slot
-    const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains));
+    const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains, library));
     const at = nested ? nested : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
       : x.slotted ? { skip: 'a sample of what a caller puts in the slot' }
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
-      : partSelector(c, n, x.id, x, mains);
+      : partSelector(c, n, x.id, x, library);
     layers[pathOf(x.id)] = at;
     // each part's selector by its id too (not in the mapping written): a stored path may be two parts never drawn
     // together, where the self leg needs each one's own (from-code swapPartsOf)

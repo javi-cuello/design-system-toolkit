@@ -618,9 +618,11 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     anatomy: { root: { kind: 'container', background: 'C/off' }, pick: { kind: 'instance', parent: 'root', component: 'Pick button', with: { On: false }, order: 0 } },
     variants: [{ when: { selected: true }, set: { 'pick.with': { On: true }, 'root.background': 'C/on' } }] };
   const pick = { contract: 1, component: 'Pick button', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
-  const foreign = toCss(tile, 'tile', { naming: EL, mains: () => null }), held = toCss(tile, 'tile', { naming: EL, mains: (x) => (x === 'Pick button' ? pick : null) });
+  const foreign = toCss(tile, 'tile', { naming: EL, mains: () => null }), held = toCss(tile, 'tile', { naming: EL, mains: (x) => (x === 'Pick button' ? pick : null), library: { 'Pick button': pick } });
   ok('a state a placed control chooses reaches it as its part rules do: through its button only where the library holds it',
     /:has\(> \[data-part="pick"\]:checked\)/.test(foreign) && !/\[data-part="pick"\] > button/.test(foreign) && /:has\(> \[data-part="pick"\] > button:checked\)/.test(held));
+  // with no library given, the sheet holds no placed component, as the markup draws each as a mark then
+  ok('with no library given, no placed control is reached through a button', !/> button/.test(toCss(tile, 'tile', { naming: EL })));
 }
 // a part scaled with a parent that is stretched between its own parent's edges takes its share of that parent's size, the
 // grandparent's less both offsets (Carbon's skeleton shimmer, scaled inside a fill stretched over the box)
