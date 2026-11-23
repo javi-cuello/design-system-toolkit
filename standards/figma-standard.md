@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.31.2** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.32.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -10,13 +10,13 @@ Cite a rule as `figma-standard rule N`.
 
 ## Components and variants
 
-1. **Axis order**: props/booleans first, then `Size → Variant → Feedback/… → Disabled → State`. `State` always last; `Disabled` a VARIANT False/True immediately before it. A True/False axis lists its default first, so the panel opens on what a designer gets; a validation axis takes rule 57's order.
+1. **Axis order**: `Size → Variant → Feedback/… → Disabled → State`, above every other property, where Figma pins variant axes. `State` always last; `Disabled` a VARIANT False/True immediately before it. A True/False axis lists its default first, so the panel opens on what a designer gets; a validation axis takes rule 57's order.
 
    *Why:* one canon keeps property panels predictable across projects.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "schema|axis-order|state"; `skills/figma-components-audit/scanner/audit.js` "schema|axis-order|disabled"; `skills/figma-components-audit/scanner/audit.js` "schema|bool-default|"; `skills/figma-components-audit/scanner/audit.js` "schema|order|" — State last, Disabled before it, a True/False axis's default first, and each axis's options against the recorded order.
 
-   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — props before variants, and the order of the axes before Disabled, which no script compares.
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — the order of the axes before Disabled, which no script compares.
 
 2. **Sparse grids**: omit semantically impossible combinations — Disabled pairs only with Rest (with Focus too where the code keeps the disabled control focusable, `aria-disabled`, since it then takes focus and shows the ring), and a selection cannot contradict itself. Sparseness on a *content* axis is a gap unless ruled.
 
@@ -58,7 +58,7 @@ Cite a rule as `figma-standard rule N`.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — an open state drawn as a State value, which no scanner rule names yet.
 
-5. **A property that fills a layer sits immediately below the property that reveals it.** Where a BOOLEAN toggles a layer's visibility and another property supplies that same layer's content — a TEXT property for its characters, an INSTANCE_SWAP for its main component — the two are adjacent in the properties panel, revealer first. This refines rule 1's "props/booleans first" clause, which fixes where the props block sits and says nothing about order inside it.
+5. **A property that fills a layer sits immediately below the property that reveals it.** Where a BOOLEAN toggles a layer's visibility and another property supplies that same layer's content — a TEXT property for its characters, an INSTANCE_SWAP for its main component — the two are adjacent in the properties panel, revealer first. Below the variant axes every other property follows its layer, top to bottom; one with no layer of its own leads. Exposed nested instances are outside the rule: Figma places them by layer position and offers no way to reorder them ([Figma forum](https://forum.figma.com/t/change-the-order-of-exposed-nested-instances/30997)).
 
     *Why:* the two are one control in two halves, and only adjacency says so: nothing in `componentPropertyDefinitions` records that one governs the other. Split apart, a consumer who switches the boolean on hunts for the field that fills what appeared.
 

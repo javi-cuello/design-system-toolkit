@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.32.0 (2026-11-23): rule 1 drops "props/booleans first", which Figma cannot show: variant axes sit above every other property type ([Figma help](https://help.figma.com/hc/en-us/articles/5579474826519-Explore-component-properties)). Rule 5 orders the rest by layer, top to bottom.
 - 2.31.2 (2026-11-21): rule 47's *Reviewed:* points at oklch-color-scale-system's references/contrast.md, where `solidForeground` now lives. No rule changes.
 - 2.31.1 (2026-11-19): whole-file trim to under 75,000 bytes (84,819 → 74,610), every rule under 3,000 characters; rule 55's KB links fold into one. No rule changes.
 - 2.31.0 (2026-11-19): rules split out: 56 (Figma and code alike, from 21), 57 (`Open` and `Validation`, from 21 and 1), 58 (Loading, from 4), 59 (Direction axis, from 50), 60 (brand override, from 49).
