@@ -294,12 +294,16 @@ const RANK = { patch: 1, minor: 2, major: 3 };
 const VALUE_ROWS = 200;
 const higher = (a, b) => ((RANK[a] || 0) >= (RANK[b] || 0) ? a : b);
 const jsonOf = (x) => JSON.stringify(x === undefined ? null : x);
+// The fields a plugin release began recording that change nothing drawn by arriving: a vector's outline (0.85.0) and
+// paths (0.86.0). Only these, never every field an older snapshot lacks: a library's first rotation is a change.
+const SINCE = ['outline', 'paths'];
+// (those of SINCE a stored spec records on none of its layers: from before that release)
+const unrecordedIn = (x) => { const seen = new Set(); try { for (const v of resolve(x).variants || []) { for (const k of SINCE) if (v[k] !== undefined) seen.add(k); layerPaths(v, (n) => { for (const k of SINCE) if (n[k] !== undefined) seen.add(k); }); } } catch { return []; } return SINCE.filter((k) => !seen.has(k)); };
 // A spec as JSON with each layer's place among all its parent's children (`index`, 0.83.0) left out: every layer added
-// before one moves it, a hidden one too, and it is how a reader orders layers, never a change of its own. With `known`
-// (knownFor), a layer's field the stored snapshot's release recorded nowhere is left out too: the first snapshot to
-// record a vector's outline (0.85.0) and paths (0.86.0) changes nothing drawn.
-const unplacedJson = (x, known = ALL) => {
-  const strip = (n) => { const { index: _i, children, ...rest } = n; for (const k of Object.keys(rest)) if (!known.has(k)) delete rest[k]; return children ? { ...rest, children: children.map(strip) } : rest; };
+// before one moves it, a hidden one too, and it is how a reader orders layers, never a change of its own. And `drop`,
+// the fields of SINCE the stored spec never recorded (unrecordedIn): their first arrival is no change.
+const unplacedJson = (x, drop = []) => {
+  const strip = (n) => { const { index: _i, children, ...rest } = n; for (const k of drop) delete rest[k]; return children ? { ...rest, children: children.map(strip) } : rest; };
   try { const r = resolve(x); return jsonOf({ ...x, default: null, variants: (r.variants || []).map(strip) }); } catch { return jsonOf(x); }
 };
 const listOf = (xs, n = 6) => `${xs.slice(0, n).join(', ')}${xs.length > n ? ` +${xs.length - n}` : ''}`;
@@ -708,7 +712,7 @@ function diff(before, after) {
       components.renamed.push({ from: x.name, to: y.name, id: x.id || x.key || null, folder: to, ...(fields.length && { fields, notes }) });
       continue;
     }
-    if (jsonOf(x) === jsonOf(y) || unplacedJson(x, known) === unplacedJson(y, known)) continue;
+    if (jsonOf(x) === jsonOf(y) || unplacedJson(x, unrecordedIn(x)) === unplacedJson(y, unrecordedIn(x))) continue;
     components.changed.push(to);
     components.fields[to] = specFields(x, y);
     components.detail[to] = specNotes(x, y, known, names);
@@ -1128,9 +1132,9 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
     if (was) specsBefore[s] = was;
     specsAfter[s] = spec;
     // (still written, but not counted changed where only each layer's place among its parent's children moved, or a
-    // field the stored one's release did not record arrived)
-    const recorded = was && knownFor({ tokens: tokensBefore, specs: { [s]: was } }, { tokens: p.tokens });
-    if (writeIfChanged(file, text(spec)) && (!was || unplacedJson(was, recorded) !== unplacedJson(spec, recorded))) changed.push(was ? s : `${s} (new)`);
+    // field of SINCE the stored one never recorded arrived)
+    const drop = was ? unrecordedIn(was) : [];
+    if (writeIfChanged(file, text(spec)) && (!was || unplacedJson(was, drop) !== unplacedJson(spec, drop))) changed.push(was ? s : `${s} (new)`);
     // the contract, derived beside it on every snapshot (tools/component-contract); one
     // that cannot be derived is named and never costs the snapshot
     // one that cannot be derived leaves no old contract behind to be read as current
@@ -1326,7 +1330,7 @@ function screenChanges(oldTree, newTree) {
   const o = walk(oldTree), n = walk(newTree);
   // a field a plugin release began recording (a vector's outline, 0.85.0, and paths, 0.86.0), on a frame stored before
   // it: arriving is no edit; once recorded, a new value is one
-  const SINCE = ['outline', 'paths'], before = new Set(SINCE.filter((k) => [...o.values()].some((x) => x[k] !== undefined)));
+  const before = new Set(SINCE.filter((k) => [...o.values()].some((x) => x[k] !== undefined)));
   const arrived = (k, was) => SINCE.includes(k) && !before.has(k) && was[k] === undefined;
   const content = new Set(['x', 'y', 'w', 'h', 'text', 'visual']);
   const short = (v) => { const t = v === undefined ? '—' : JSON.stringify(v); return t.length > 60 ? t.slice(0, 57) + '…' : t; };

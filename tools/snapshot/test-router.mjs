@@ -1240,12 +1240,14 @@ test('a changed component says which fields moved: description, bindings and a r
   const plain = { name: 'Size=sm', type: 'COMPONENT', w: 1, h: 1, children: [{ name: 'A', type: 'FRAME' }] };
   const withEffects = { name: 'Size=sm', type: 'COMPONENT', w: 1, h: 1, children: [{ name: 'A', type: 'FRAME', effects: ['DROP_SHADOW'] }] };
   const r3 = store.diff({ tokens: t(), specs: { button: mk({ variants: [plain] }) } }, { tokens: t(), specs: { button: mk({ variants: [withEffects] }) } }).components;
-  // (2026-11-23: nor counted changed, as the grade says nothing moved: "changed" with no note was a component every
-  // snapshot after a release named for nothing a reader could find; a vector's outline, 0.85.0, did it to every vector)
-  assert.deepEqual(r3.detail.button, undefined, 'a field arriving with a newer plugin is not listed as a change');
-  assert.deepEqual(r3.changed, [], 'nor counted changed');
-  const moved = { name: 'Size=sm', type: 'COMPONENT', w: 2, h: 1, children: [{ name: 'A', type: 'FRAME', effects: ['DROP_SHADOW'] }] };
-  assert.deepEqual(store.diff({ tokens: t(), specs: { button: mk({ variants: [plain] }) } }, { tokens: t(), specs: { button: mk({ variants: [moved] }) } }).components.changed, ['button'], 'one beside a real change still counts');
+  assert.deepEqual(r3.detail.button, [], 'a field arriving with a newer plugin is not listed as a change');
+  assert.deepEqual(r3.changed, ['button'], 'but the component still counts as changed');
+  // (2026-11-23: only a vector's outline and paths, the fields 0.85.0 and 0.86.0 began recording, arrive uncounted: a
+  // library's first rotation across a release is counted changed, as the same edit within one release is)
+  const turned = (rotation) => ({ name: 'Size=sm', type: 'COMPONENT', w: 1, h: 1, children: [{ name: 'A', type: 'FRAME', ...(rotation ? { rotation } : {}) }] });
+  const plugged = (plugin) => ({ ...t(), _meta: { ...(t()._meta || {}), plugin } });
+  assert.deepEqual(store.diff({ tokens: plugged('0.84.0'), specs: { dot: mk({ variants: [turned()] }) } }, { tokens: plugged('0.86.0'), specs: { dot: mk({ variants: [turned(45)] }) } }).components.changed, ['dot'], 'a first rotation across a release is a change');
+  assert.deepEqual(store.diff({ tokens: plugged('0.86.0'), specs: { dot: mk({ variants: [turned()] }) } }, { tokens: plugged('0.86.0'), specs: { dot: mk({ variants: [turned(45)] }) } }).components.changed, ['dot'], 'as within one release');
   // …and the grade says nothing moved either: it said "its values moved" with no note to show which
   const g3 = store.grade({ tokens: t(), specs: { button: mk({ variants: [plain] }) } }, { tokens: t(), specs: { button: mk({ variants: [withEffects] }) } });
   assert.deepEqual(g3.changes, [], 'a field arriving with a newer plugin is not graded as a change');
