@@ -245,12 +245,12 @@ delete globalThis.figma;
 }
 
 {
-  // a drawing made inside the library's own file, which is not published: every key is first looked for among the
-  // file's own components, sets, styles and variables, and asked of the team library only when the file has none
+  // a drawing made inside the library's own file, which is not published: every import by key is asked of the file's
+  // own components, sets, styles and variables first, listed only when the runner says the file is the library's
   const code = pluginCode({ component: 'Chip', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }, {});
-  const imports = [...code.matchAll(/figma\.(?:variables\.)?import\w+ByKeyAsync\(/g)].length;
-  const owned = [...code.matchAll(/own\([^,]+, \(\) => (?:new Promise\([^]*?)?figma\.(?:variables\.)?import\w+ByKeyAsync\(/g)].length;
-  ok('every import by key is asked of the open file first', imports > 0 && code.includes('getLocalVariablesAsync') && code.includes("findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] })") && owned >= imports - 1);
+  const at = [...code.matchAll(/figma\.(?:variables\.)?import\w+ByKeyAsync\(/g)].map((m) => m.index);
+  const unowned = at.filter((i) => !/own\([^\n]*$/.test(code.slice(Math.max(0, i - 160), i)));
+  ok('every import by key is asked of the open file first, and the file is listed only when it is the library', at.length > 0 && !unowned.length && /if \(K\.ownFile\) \{/.test(code) && code.includes('getLocalVariablesAsync'));
 }
 
 {

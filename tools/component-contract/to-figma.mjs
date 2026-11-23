@@ -553,19 +553,11 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // a main imported once per key, its answer kept: each instance asking again made a key that would not answer cost
   // sixteen seconds per instance, and a side navigation of many items outran the drawing's time
   const mains = new Map();
-  // a key the open file holds itself (a drawing made inside the library's own file, which need not be published)
-  // is taken from the file, not asked of the team library: an import by key answers only a published key. The
-  // file's own components, sets, styles and variables are listed once, by key, the first time one is asked for
-  let ownKeys = null;
-  const ownByKey = () => ownKeys || (ownKeys = (async () => {
-    const m = new Map();
-    await figma.loadAllPagesAsync();
-    for (const n of figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] })) if (n.key) m.set(n.key, n);
-    for (const st of [...await figma.getLocalTextStylesAsync(), ...await figma.getLocalEffectStylesAsync()]) m.set(st.key, st);
-    for (const v of await figma.variables.getLocalVariablesAsync()) m.set(v.key, v);
-    return m;
-  })());
-  const own = (key, f) => ownByKey().then((m) => m.get(key) || f());
+  // a drawing made inside the library's own file, which need not be published (K.ownFile, said by the runner when
+  // the scratch file is the library file): a key the file holds is taken from the file, as an import by key answers
+  // only a published one. Filled below, one kind at a time and each under `tried`, before any import is asked
+  const ownKeys = new Map();
+  const own = (key, f) => (ownKeys.has(key) ? Promise.resolve(ownKeys.get(key)) : f());
   // a key is a set's or a component's: both asked at once, the first that answers taken (asked one after the other, a
   // set import given a component's key was seen never to answer, neither resolving nor failing, and held the drawing)
   const either = (key) => own(key, () => new Promise((ok, no) => { let failed = 0; for (const f of [() => figma.importComponentSetByKeyAsync(key), () => figma.importComponentByKeyAsync(key)]) f().then(ok, () => { if (++failed === 2) no(new Error('neither a set nor a component by that key')); }); }));
@@ -575,6 +567,15 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // hundreds of calls one after another took minutes
   // variables by the keys the runner looked up in the library file (listing a library's variables from
   // here hung for a minute at a time)
+  if (K.ownFile) {
+    // each kind on its own, so one listing that stalls or fails (listing a library's variables has hung) costs only
+    // its own keys, which are then imported as before
+    const keep = (xs) => { for (const x of xs || []) if (x && x.key) ownKeys.set(x.key, x); };
+    await tried("this file's components", async () => keep(figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] })));
+    await tried("this file's text styles", async () => keep(await figma.getLocalTextStylesAsync()));
+    await tried("this file's effect styles", async () => keep(await figma.getLocalEffectStylesAsync()));
+    await tried("this file's variables", async () => keep(await figma.variables.getLocalVariablesAsync()));
+  }
   const lib = K.vars || {};
   const els = P.variants.flatMap((v) => Object.values(v.anatomy));
   const names = new Set();
@@ -1739,6 +1740,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // each component's variants as the snapshot met them (an instance's `instanceOfKey`): no library file needs to be open
   keys.variants = variantKeys(where.paths.components, want.components, want.swaps);
   missing.swaps = (want.swaps || []).filter((t) => !Object.keys(keys.variants).some((n) => n === t || n.endsWith('/' + t)));
+  // the scratch file is the library's own file: what it holds is taken from it (RUNTIME's ownKeys), published or not
+  keys.ownFile = !!libKey && into === libKey;
   const notOpen = [];
   if (libKey) {
     // the rest where the library uses them, in the library file itself, which must be open with the Desktop Bridge
