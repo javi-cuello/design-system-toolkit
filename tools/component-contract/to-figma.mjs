@@ -1768,8 +1768,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // the house's axis order, as that library's settings derive it (figma-standard rule 1)
   const axisOrder = (lib.tokens || {}).axisOrder || [];
   const sizeAxis = (lib.tokens || {}).sizeAxis || null;
-  // every variable the project's tokens name, so one at the top of its collection is a variable too
-  const isVar = varNamer(Object.values(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')).collections || {}).flatMap((col) => Object.keys(col.keys || {})));
+  // every variable the project's tokens name (by key, or by value where a snapshot older than 0.52 kept no keys), so
+  // one at the top of its collection is a variable too
+  const isVar = varNamer(Object.values(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')).collections || {}).flatMap((col) => [...Object.keys(col.keys || {}), ...Object.values(col.values || {}).flatMap((m) => Object.keys(m || {}))]));
   const p = plan(c, { axisOrder }), want = needs(p, isVar);
   const pageName = drawingPage(p.name, !!libKey && into === libKey);
   if (check) {

@@ -671,7 +671,7 @@ delete globalThis.figma;
   ok('a variable at the top of its collection is a variable where the project names it, a literal never',
     (() => { const v = varNamer(['layer-hover (contextual)']); return v('layer-hover (contextual)') && v('Colour/Primary') && !v('#808080') && !v('16px (1rem)') && !varNamer()('layer-hover (contextual)'); })()
     && needs({ variants: [{ anatomy: { root: { background: 'layer-hover (contextual)' } } }] }, varNamer(['layer-hover (contextual)'])).vars.includes('layer-hover (contextual)')
-    && src.includes("n in lib)) return null;") && src.includes("(K.vars && t in K.vars))) names.add(t);"));
+    && src.includes("n in lib)) return null;") && src.includes('Object.values(col.values || {}).flatMap((m) => Object.keys(m || {}))') && src.includes("(K.vars && t in K.vars))) names.add(t);"));
   ok('a lent text style whose copy withholds its font is drawn in the font of a text that uses it',
     src.includes("typeof st.fontName === 'symbol' ? lentFont.get(st.key)") && src.includes('fonts[JSON.stringify(fontOf(st))]'));
   ok('the walk\'s page-qualified name of a drawing on the round trip page is the component\'s own, that exact prefix only',
