@@ -501,7 +501,7 @@ export function figmaSide(contract) {
    vertical; turned a quarter, the other way round, as Figma lays out the turned box and says its sizing on the parent's
    axes (derive.cjs QUARTER reads them so). Run in the drawing (passed as source). */
 export function sizingAxes(e, turned) {
-  // (as derive swaps them: a part code draws in a wrapper (to-code turnedParts, `turned`), in the flow, no axis hugging;
+  // (as derive swaps them: a part code draws in a wrapper (to-code.mjs, `turned`: P.turned), in the flow, no axis hugging;
   // placed out of it, a fill is not drawn, and a number sizes its own axis)
   const q = turned && typeof e.rotation === 'number' && Math.abs(Math.abs(e.rotation) - 90) < 0.01 && e.width !== 'hug' && e.height !== 'hug' && !e.absolute && e.position !== 'absolute';
   return q ? [['width', 'layoutSizingVertical'], ['height', 'layoutSizingHorizontal']] : [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']];
@@ -820,7 +820,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
     const flowing = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
-    // (a layer inside an instance: never drawn in a wrapper, to-code turnedParts)
+    // (a layer inside an instance: never drawn in a wrapper by to-code.mjs)
     const sizes = sizingAxes(e, false).map(([k, axis]) => [axis, SIZE[e[k]]])
       .filter(([axis, want]) => want && axis in n && n[axis] !== want && (want === 'FILL' ? flowing(n.parent) : flowing(n) || n.type === 'TEXT'));
     const resize = n.type === 'TEXT' && e.autoResize && n.textAutoResize !== e.autoResize.toUpperCase();

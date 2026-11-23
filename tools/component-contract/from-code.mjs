@@ -130,9 +130,12 @@ export function turnOf(n, style) {
    Flexbox 4.3). Read off the box it renders at, as cssOrderOf. rules.mjs siblingOrder orders by it. Runs in the page
    (passed as source); tested by test-from-code.mjs. */
 export function stackOf(n, style, liftsAlone) {
-  const s = style(n), b = style(s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n);
+  // (a part turned in a wrapper that is a box, as turnOf reads it: the wrapper is what its parent lays out and stacks)
+  const w = n.parentElement && n.parentElement.hasAttribute && n.parentElement.hasAttribute('data-turn') ? n.parentElement : null;
+  const turned = !!w && style(w).display !== 'contents', up = w ? w.parentElement : n.parentElement;
+  const s = style(n), b = style(turned ? w : s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n);
   const out = b.position === 'absolute' || b.position === 'fixed', lifted = !out && liftsAlone((p) => b[p.replace(/-([a-z])/g, (_, x) => x.toUpperCase())]);
-  const laid = !!n.parentElement && /flex|grid/.test(style(n.parentElement).display);
+  const laid = !!up && /flex|grid/.test(style(up).display);
   const z = b.zIndex && b.zIndex !== 'auto' && (out || (!!b.position && b.position !== 'static') || laid) ? +b.zIndex : NaN;
   return { ...(out && { out: true }), ...(lifted && { lifted: true }), ...(Number.isFinite(z) && { z }) };
 }

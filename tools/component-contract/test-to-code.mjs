@@ -157,6 +157,16 @@ const upright = { contract: 1, component: 'Upright', props: { orientation: { typ
       /:hover[^{]*> \[data-turn="track"\] \{\s*display: none;/.test(t2) && selfCheck(hover).length === 0); }
   const slant = { ...upright, variants: [{ when: { orientation: 'vertical' }, set: { 'track.rotation': 45 } }] };
   ok('any other turn is turned in place, as before: no wrapper', !/data-turn/.test(toCss(slant, 'upright'))); }
+// a turned part in a restacked box: its wrapper is what the box lays out and stacks (a size container, its own stacking
+// context: css-contain-3 §3), so its place by z-index is said on the wrapper, beside its order, and not on the part inside
+{ const row = { contract: 1, component: 'Row', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } },
+    badge: { kind: 'graphic', parent: 'root', order: 0, position: 'absolute', absolute: { x: 0, y: 0 }, width: 4, height: 4 },
+    icon: { kind: 'graphic', parent: 'root', order: 1, rotation: 90, width: 16, height: 8 },
+    label: { kind: 'graphic', parent: 'root', order: 2, width: 8, height: 8 } } };
+  const css = toCss(row, 'row', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  const rule = (sel) => { const i = css.indexOf(`${sel} {`); return i < 0 ? '' : css.slice(i, css.indexOf('}', i)); };
+  ok('a turned part in a restacked box says its z-index on its wrapper, not on the part it turns',
+    /z-index: 2;/.test(rule('.ds-row > [data-turn="icon"]')) && !/z-index/.test(rule('.ds-row > [data-turn="icon"] > .ds-row__icon')) && /z-index: 3;/.test(rule('.ds-row__label')) && selfCheck(row).length === 0); }
 const css = toCss(chip, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
 ok('every combination the grid draws is rebuilt by the cascade', selfCheck(chip).length === 0);
 ok('a value is an attribute, a state its pseudo-class, disabled the control\'s own or the attribute where there is none (code-standard rule 9)',

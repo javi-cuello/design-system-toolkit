@@ -310,6 +310,10 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     said(kid({ position: 'absolute' })) === '{"out":true}' && said(kid({ position: 'relative' })) === '{"lifted":true}' && said(kid({})) === '{}'
     && said(kid({ zIndex: '2' })) === '{"z":2}' && said(kid({ position: 'absolute', zIndex: '-1' })) === '{"out":true,"z":-1}'
     && said({ ...kid({ zIndex: '2' }), parentElement: { style: { display: 'block' } } }) === '{}');
+  // (a turned part drawn in a wrapper that is a box: the wrapper is what its parent lays out and stacks, to-code turnedParts)
+  const turnedKid = (wrap) => ({ style: { display: 'block', position: 'absolute', zIndex: 'auto', rotate: '90deg' }, parentElement: { hasAttribute: (a) => a === 'data-turn', style: { display: 'block', position: 'relative', zIndex: '2', ...wrap }, parentElement: { style: { display: 'flex' } } } });
+  ok('a part turned in a wrapper stacks as its wrapper does, in the flow; one whose wrapper draws no box as itself',
+    said(turnedKid({})) === '{"lifted":true,"z":2}' && said(turnedKid({ display: 'contents', position: 'static', zIndex: 'auto' })) === '{"out":true}');
   ok('a host that draws no box stacks as its control does',
     said({ style: { display: 'contents', position: 'static', zIndex: 'auto' }, firstElementChild: { style: { display: 'block', position: 'absolute', zIndex: '3' } }, parentElement: { style: { display: 'flex' } } }) === '{"out":true,"z":3}');
   const ids = (xs) => order(xs).map((e) => e.id).join();

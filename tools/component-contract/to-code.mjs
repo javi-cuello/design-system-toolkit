@@ -317,6 +317,8 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
         const anchors = (p) => (kids.get(p.id) || []).some((q) => !q.ring && ((q.base && !gone.has(q.id)) || q.id in add) && (asAt(q).parent || 'root') === p.id && outOf(asAt(q)));
         const lifted = (p) => {
           if (boxes.has(p.id)) return true;
+          // (a part turned in a wrapper that is a box: the wrapper is the child, positioned (drawn), so it lifts)
+          if (turnedParts(c).has(p.id) && turnBoxed(asAt(p), B ? asAt(B) : c.anatomy[box])) return true;
           const e = asAt(p), m = e.kind === 'instance' && e.component && mains(e.component, e.key);
           // (a placed component this library holds is placed here, its look its own sheet's: what drawn keeps, PLACED)
           const own = lifts(declarations(e, { root: false, holds: holds(e.kind), row: true, anchors: e.kind !== 'instance' && anchors(p), box: null, pull: null }, tokenNames).decls.filter(([k]) => !m || PLACED.test(k)));
@@ -549,6 +551,10 @@ const allOf = (c) => Object.assign({}, ...[...(c.variants || [])].reverse().map(
    part turns in place as before. Read back by from-code.mjs (the wrapper's sizes, the part's own box). */
 export const quarter = (r) => typeof r === 'number' && Math.abs(Math.abs(r) - 90) < 0.01;
 const TURNED = new WeakMap();
+/* Whether a turned part's wrapper is a box where the part is `e` in a parent `up` (drawn writes it so; restacked stacks it
+   as the child): turned a quarter in the parent's auto layout, neither own size hugging. */
+const sizedTurn = (v) => v === 'fill' || typeof v === 'number' || (typeof v === 'string' && v !== 'hug');
+export const turnBoxed = (e, up) => quarter(e.rotation) && !!(up && up.layout && up.layout.direction) && sizedTurn(e.width) && sizedTurn(e.height);
 export function turnedParts(c) {
   if (TURNED.has(c)) return TURNED.get(c);
   const all = allOf(c), ids = new Set(), out = new Set();
@@ -859,16 +865,18 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     // the wrapper's height and its own height the wrapper's width, and the part is drawn inside at its own size, centred
     // (its turn, css.mjs's rotate, as it is); where this combination does not turn it so, the wrapper is no box
     if (!slotted && turned.has(id)) {
-      const own = out[id].decls, sized = (v) => v === 'fill' || typeof v === 'number' || (typeof v === 'string' && v !== 'hug');
-      if (quarter(e.rotation) && parent && parent.layout && parent.layout.direction && sized(e.width) && sized(e.height)) {
+      const own = out[id].decls;
+      if (turnBoxed(e, parent)) {
         const ctx = { root: false, holds: false, row: (parent.layout || {}).direction !== 'column', wrap: !!parent.layout.wrap, anchors: false, box: null, pull, words: null };
         // (its own minimum and maximum too, on the swapped axis: its own width's are the wrapper's height's; said there, so
         // the zero minimum a fill takes is not written over them)
         const swapped = Object.fromEntries([['width', e.height], ['height', e.width], ['minWidth', e.minHeight], ['maxWidth', e.maxHeight], ['minHeight', e.minWidth], ['maxHeight', e.maxWidth]].filter(([, v]) => v !== undefined));
         const flow = declarations(swapped, ctx, tokenNames).decls;
         const length = (v) => declarations({ width: v }, { row: false }, tokenNames).decls.find(([p]) => p === 'inline-size');
-        out[`${id}::turn`] = { decls: new Map([['display', { v: 'block' }], ['position', { v: 'relative' }], ['container-type', { v: 'size' }], ...flow.map(([p, v, note]) => [p, { v, note }]), ...(own.has('order') ? [['order', own.get('order')]] : [])]), unread: [] };
-        for (const p of [...own.keys()]) if (/^(flex|align-self|order|(min-|max-)?(inline|block)-size|margin.*)$/.test(p)) own.delete(p);
+        out[`${id}::turn`] = { decls: new Map([['display', { v: 'block' }], ['position', { v: 'relative' }], ['container-type', { v: 'size' }], ...flow.map(([p, v, note]) => [p, { v, note }]), ...['order', 'z-index'].filter((p) => own.has(p)).map((p) => [p, own.get(p)])]), unread: [] };
+        // (its place among its siblings, order and z-index, is the wrapper's: the wrapper is what the box lays out and, a size
+        // container, its own stacking context (css-contain-3 §3), what it stacks)
+        for (const p of [...own.keys()]) if (/^(flex|align-self|order|z-index|(min-|max-)?(inline|block)-size|margin.*)$/.test(p)) own.delete(p);
         const w = e.width === 'fill' ? ['100cqh'] : length(e.width).slice(1), h = e.height === 'fill' ? ['100cqw'] : length(e.height).slice(1);
         for (const [p, v, note] of [['position', 'absolute'], ['inset-inline-start', '50%'], ['inset-block-start', '50%'], ['translate', '-50% -50%'], ['inline-size', ...w], ['block-size', ...h]]) own.set(p, { v, ...(note && { note }) });
       } else out[`${id}::turn`] = { decls: new Map([['display', { v: 'contents' }]]), unread: [] };
