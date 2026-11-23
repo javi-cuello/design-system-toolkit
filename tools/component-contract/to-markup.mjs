@@ -531,6 +531,12 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
         for (let i = given.length - 1; i >= 0; i--) if (given[i][0] === x.name) given.splice(i, 1);
         given.push([x.name, { nodes: items }]);
       }
+      // props only a pointer state gives the instance: one of its own (a definition item drawn hovered), or ones this
+      // component's pointer state alone sets on it (a slider's item active at hover): no markup holds them, so a gap
+      const own = Object.values(placed.props || {}).find((q) => q.role === 'interaction'), low = (v) => String(v).toLowerCase();
+      const ownAt = (w) => !!own && w && w[own.figma] !== undefined && (own.pointer || []).includes(own.values[(own.figmaValues || []).map(low).indexOf(low(w[own.figma]))] ?? w[own.figma]);
+      const byMine = vs.some((v) => pointerWords(c, v.when) && Object.entries(stated(v).w).some(([k, w]) => !same(w, (e.with || {})[k])));
+      if (ownAt(e.with) || [...combos, ...varied].some(({ w }) => ownAt(w)) || byMine) gaps.push(`${partName(id)} is given props only a pointer state draws: the stylesheet's, or frontend-build's to add`);
       for (const x of props.filter((y) => y.pass && y.pass.part === id && y.type !== 'value')) { const i = given.findIndex(([k]) => k === x.pass.to); if (i >= 0) given.splice(i, 1); given.push([x.pass.to, { code: ref(x.name) }]); }
       used.add(placed.component);
       return { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id), own: theirs.map((x) => x.name) };

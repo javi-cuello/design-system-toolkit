@@ -172,6 +172,18 @@ ok('a component measured since the accept is held until accepted; one that came 
   const shared = { ...typed, props: { state: { ...c.props.state, values: ['rest', 'focus', 'filled'] } }, variants: [...typed.variants, { when: { state: 'filled' }, set: { 'field/text.content': 'Search' } }] };
   ok('words a pointer state sets, where another state sets them too, are left to code only in a row found where a pointer state sets them',
     leftToCode(shared)('field/text.content', { library: 'Search', pointer: true }) && !leftToCode(shared)('field/text.content', { library: 'Search' }) && !leftToCode(shared)('field/text.content', { library: '{p}', pointer: true }));
+  // a placed instance's props only a pointer state gives: its own state at a pointer value, or what this one's pointer state
+  // alone sets on it; a prop at rest beside it, or one another state sets too, stays a difference
+  { const link = { component: 'Link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+    const card = (extra = []) => ({ ...c, anatomy: { ...c.anatomy, link: { kind: 'instance', parent: 'root', component: 'Link', with: { On: 'False' } } }, variants: [{ when: { state: 'focus' }, set: { 'link.with': { On: 'True' } } }, ...extra] });
+    const L = (k) => leftToCode(k, (n) => (n === 'Link' ? link : null));
+    ok('a placed instance\'s props only a pointer state gives are left to code; a prop at rest beside them, or one another state sets too, stays a difference',
+      L(card())('link.with', { library: { State: 'Hover' }, drawn: null }) && L(card())('link.with.State', { library: 'Hover', drawn: null })
+      && !L(card())('link.with', { library: { State: 'Hover', On: 'True' }, drawn: null })
+      && L(card())('link.with.On', { library: 'True', drawn: null }) && !L(card())('link.with.On', { library: 'False', drawn: null })
+      && !L({ ...card(), anatomy: { ...card().anatomy, link: { ...card().anatomy.link, with: { On: 'True' } } } })('link.with.On', { library: 'True', drawn: null })
+      && !L(card([{ when: { state: 'rest' }, set: { 'link.with': { On: 'True' } } }]))('link.with.On', { library: 'True', drawn: null })
+      && L(card([{ when: { state: 'rest' }, set: { 'link.with': { On: 'True' } } }]))('link.with', { library: { On: 'True' }, drawn: null, pointer: true })); }
   ok('the rows left to code are counted, as a leg of their own, so a rise there is said', worse(counts({ self: { a: { rows: [], left: [{}, {}] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).some((w) => /self left a: 1 → 2/.test(w))
     && !worse(counts({ self: { a: { rows: [], left: [] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).length); }
 

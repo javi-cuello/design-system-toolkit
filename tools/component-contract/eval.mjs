@@ -140,7 +140,7 @@ export function leftToCode(contract, mainOf = null, settings = undefined, { ownS
   // sets them at every combination the row was found in (roundTrip's `pointer`: a search's query, typed at focus and when
   // filled, read wrong only at focus)
   const only = new Map(), words = new Map();
-  for (const v of contract.variants || []) for (const [k, w] of Object.entries(v.set || {})) if (k.endsWith('.content')) {
+  for (const v of contract.variants || []) for (const [k, w] of Object.entries(v.set || {})) if (k.endsWith('.content') || k.endsWith('.with')) {
     const p = pointerWords(contract, v.when);
     only.set(k, (only.get(k) ?? true) && p);
     if (p) words.set(k, [...(words.get(k) || []), w]);
@@ -189,7 +189,28 @@ export function leftToCode(contract, mainOf = null, settings = undefined, { ownS
   const vs = contract.variants || [];
   const onPath = (el) => { const rs = [contract.anatomy?.[el], ...vs.map((v) => (v.add || {})[el])].filter(Boolean); return rs.length > 0 && rs.every((e) => e.kind === 'graphic' && !e.shape) && !vs.some((v) => [`${el}.kind`, `${el}.shape`].some((k) => k in (v.set || {}))); };
   const unwritten = (at, row) => !!row && ((row.library === 'scale' && unscaled.has(at)) || (row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length))));
-  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || unwritten(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
+  // a placed instance's props only a pointer state gives: one of its own (a definition drawn hovered, its State Hover), or
+  // the props this component's pointer state alone sets on it (a slider's item Active at hover): no markup holds either,
+  // to-markup's gap. Only where every prop the design's side names there is such a one
+  const low = (v) => String(v).toLowerCase();
+  const ownPointer = (el, k, v) => {
+    const m = mainOf && (all[el] || {}).kind === 'instance' && mainOf(all[el].component, all[el].key);
+    const q = m && Object.values(m.props || {}).find((y) => y.role === 'interaction' && low(y.figma || '') === low(k));
+    if (!q) return false;
+    const i = (q.figmaValues || []).map(low).indexOf(low(v));
+    return (q.pointer || []).includes(i >= 0 ? q.values[i] : v);
+  };
+  const pointerWith = (el, field, row) => {
+    if (!row || !/^with(\.|$)/.test(field)) return false;
+    const lib = field === 'with' ? row.library : { [field.slice(5)]: row.library };
+    if (!lib || typeof lib !== 'object' || !Object.keys(lib).length) return false;
+    // (a value the instance holds at rest too is no pointer state's: a rest the reading lost stays a difference)
+    const rest = ((contract.anatomy || {})[el] || {}).with || {};
+    const byMine = (only.get(`${el}.with`) || row.pointer === true) && Object.entries(lib).every(([k, v]) => JSON.stringify(rest[k]) !== JSON.stringify(v))
+      && (words.get(`${el}.with`) || []).some((w) => w && typeof w === 'object' && Object.entries(lib).every(([k, v]) => JSON.stringify(w[k]) === JSON.stringify(v)));
+    return byMine || Object.entries(lib).every(([k, v]) => ownPointer(el, k, v));
+  };
+  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || pointerWith(el, field, row) || unwritten(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 
