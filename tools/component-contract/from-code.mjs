@@ -108,8 +108,7 @@ export function opensPlaced(inside, id, mapped) {
    the page (passed as source); tested by test-from-code.mjs. */
 export function cssOrderOf(n, parent, style) {
   const s = style(n), box = s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n, o = +style(box).order;
-  // (an absolute or fixed box is out of the flow, painted at order 0 whatever its order says: CSS Flexbox 5.4)
-  return o && !/^(absolute|fixed)$/.test(style(box).position) && parent != null && n.parentElement && n.parentElement.getAttribute('data-contract-id') === parent && /flex|grid/.test(style(n.parentElement).display) ? o : null;
+  return o && parent != null && n.parentElement && n.parentElement.getAttribute('data-contract-id') === parent && /flex|grid/.test(style(n.parentElement).display) ? o : null;
 }
 
 /* An element's own words as it draws them, from its text nodes (an element child's words are that child's) and its

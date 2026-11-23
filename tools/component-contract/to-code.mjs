@@ -645,8 +645,8 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     }
     if (sample) kept.push(['inline-size', '100%']);
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
-    // (only where an auto layout lays it out: an absolute child, or one in a box with none, is placed by no order)
-    if (parent && parent.layout && !(e.position === 'absolute' || e.absolute) && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
+    // (only where an auto layout lays it out: in a box with none order places nothing; an absolute child keeps its order, which its stacking is read back by)
+    if (parent && parent.layout && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: (e.kind === 'instance' && !unheld) || slotted ? [] : unheld ? unread.filter((f) => !/^(key|component|with|swappedBy)\b/.test(f)) : unread,
       // (the axes a scale constraint went unwritten on: eval.mjs leftToCode leaves what code draws there to code)
       ...(unshared.length && !slotted && { unshared }) };
@@ -708,7 +708,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     put(entry.input, value, () => true);
     // (in a box a variant reorders, the input stands where its value text does, or the placeholder where that is drawn)
     const own = value || placeholder, P = a[entry.box];
-    if (out[entry.input] && own && P && P.layout && !(own.position === 'absolute' || own.absolute) && reordered(c).has(entry.box) && typeof own.order === 'number') out[entry.input].decls.set('order', { v: String(own.order) });
+    if (out[entry.input] && own && P && P.layout && reordered(c).has(entry.box) && typeof own.order === 'number') out[entry.input].decls.set('order', { v: String(own.order) });
     put(`${entry.input}::placeholder`, placeholder, (p) => p === 'color' || /^(font|line-height|letter-spacing|text-)/.test(p));
   }
   return out;

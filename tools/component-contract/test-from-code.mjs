@@ -289,10 +289,6 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     inPage(host, 'layer', style) === 2 && inPage({ style: { display: 'block', order: '3' }, parentElement: host.parentElement }, 'layer', style) === 3
     && inPage({ style: { display: 'block', order: '3' }, parentElement: { display: 'block', getAttribute: () => 'layer' } }, 'layer', style) === null
     && inPage({ ...host, firstElementChild: { style: { order: '0' } } }, 'layer', style) === null);
-  // an absolutely placed child is out of the flex flow, painted at order 0 whatever its order says (CSS Flexbox §5.4)
-  ok('an absolute or fixed child\'s CSS order is not read: the browser lays out and paints it by none',
-    inPage({ style: { display: 'block', position: 'absolute', order: '3' }, parentElement: host.parentElement }, 'layer', style) === null
-    && inPage({ style: { display: 'block', position: 'fixed', order: '3' }, parentElement: host.parentElement }, 'layer', style) === null);
 }
 
 // a layer the mapping places inside a placed component takes the design's name there, never the placed component's own
