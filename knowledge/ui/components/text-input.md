@@ -55,7 +55,7 @@ What the typed value, the placeholder and the label are set in, read from 14 sys
 - [moderate] **14px on a desktop field of 32 or 40px.** 10 of 14 set the value at 14px there; MUI and Material 3 use 16, Polaris and Lightning 13, GOV.UK 19.
 
 **How**
-- [moderate] **The size follows the field's size, one step per step.** Fluent, Radix, Spectrum, Chakra and Ant scale it: a 24 or 28px field takes 12px, 32 or 40px take 14px, a 40 to 48px large field 16px ([Radix text field](https://github.com/radix-ui/themes/blob/main/packages/radix-ui-themes/src/components/text-field.css), [Spectrum text field](https://github.com/adobe/spectrum-css/blob/main/components/textfield/index.css), [Chakra input](https://github.com/chakra-ui/chakra-ui/blob/main/packages/react/src/theme/recipes/input.ts), [Ant input](https://github.com/ant-design/ant-design/blob/master/components/input/style/token.ts)). Carbon, MUI, Cloudscape and Atlassian keep one size at every height: Carbon is 14px at 32, 40 and 48 alike. Pair it once, with the control height ([visual: *Pair control height and text style once*](../design/visual.md#one-size-scale-per-screen)).
+- [contested] **The size follows the field's size, one step per step.** Fluent, Radix, Spectrum, Chakra and Ant scale it: a 24 or 28px field takes 12px, 32 or 40px take 14px, a 40 to 48px large field 16px ([Radix text field](https://github.com/radix-ui/themes/blob/main/packages/radix-ui-themes/src/components/text-field.css), [Spectrum text field](https://github.com/adobe/spectrum-css/blob/main/components/textfield/index.css), [Chakra input](https://github.com/chakra-ui/chakra-ui/blob/main/packages/react/src/theme/recipes/input.ts), [Ant input](https://github.com/ant-design/ant-design/blob/master/components/input/style/token.ts)). Carbon, MUI, Cloudscape and Atlassian keep one size at every height: Carbon is 14px at 32, 40 and 48 alike. Pick one per product and record it; pair it once, with the control height ([visual: *Pair control height and text style once*](../design/visual.md#one-size-scale-per-screen)).
 - [strong] **At least 16px on a phone.** iOS Safari zooms the page into a focused field whose text is under 16px: WebKit scales by `16 / fontSize`, skipping changes under 10% ([WebKit, WKWebViewIOS.mm](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/API/ios/WKWebViewIOS.mm)). Atlassian ("iOS Safari automatically zooms into form inputs on focus when the font size is less than 16px", [textfield source](https://unpkg.com/@atlaskit/textfield@11.0.0/dist/es2019/text-field.js)), Polaris, shadcn ([maintainer, issue 6823](https://github.com/shadcn-ui/ui/issues/6823)) and Primer CSS ([form-control.scss](https://github.com/primer/css/blob/main/src/forms/form-control.scss)) raise the value to 16px on small or touch screens; Spectrum's mobile scale goes to 17, GOV.UK is 19 everywhere. Carbon closed the request as stale ([issue 2019](https://github.com/carbon-design-system/carbon/issues/2019)).
 - [contested] **How the label differs from the value.** Smaller and regular: Carbon `label-01` 12/16 at 400, Spectrum 12px, Atlassian 12px at bold. Same size and heavier: Primer 14px at 600, Cloudscape 14px at 700, shadcn and Chakra 14px at 500. Same size and weight: MUI, Fluent, GOV.UK, Polaris. Pick one and keep it for every field ([label](label.md)).
 
@@ -69,14 +69,14 @@ What the typed value, the placeholder and the label are set in, read from 14 sys
 - [required] 1.4.3: value text at 4.5:1; the placeholder too, if one is used ([*Placeholder text*](#placeholder-text)).
 
 **Build**
-- [required] The value's text style is a token pair with the control height, set by the size or density mode (code-standard rule 54; [visual: *Density modes*](../design/visual.md#density-modes)); `::placeholder` changes only `color`.
+- [moderate] The value's text style is a token pair with the control height, set by the size mode; a density mode leaves it untouched (code-standard rule 53; [visual: *Density modes*](../design/visual.md#density-modes)), applied whole (code-standard rule 54); `::placeholder` changes only `color`.
 - [moderate] The phone step: `@media (pointer: coarse) and (max-width: 30rem)` or the small breakpoint sets the value to the 16px body style, as Atlassian does.
 
 **Check**
 - *Script:* could assert every `input`, `select` and `textarea` computes `font-size` of at least 16px at a 375px touch viewport, and that `::placeholder` shares the value's size and weight.
 - *Judgement:* does the label read as a label and the value as an answer, at a glance?
 
-**Sources:** the source of Carbon, MUI and Material 3, Fluent 2, Primer, Polaris, Atlassian, Spectrum 2, GOV.UK, Ant Design, Chakra, Radix Themes, shadcn/ui, Cloudscape and Lightning, read 23 Nov 2026; WebKit for the zoom. No system published why the value is body text.
+**Sources:** the source of Carbon, MUI/Material 3 (one origin, counted once), Fluent 2, Primer, Polaris, Atlassian, Spectrum 2, GOV.UK, Ant Design, Chakra, Radix Themes, shadcn/ui, Cloudscape and Lightning, read 23 Nov 2026; WebKit for the zoom. No system published why the value is body text.
 
 ## Prefixes, suffixes and icons
 

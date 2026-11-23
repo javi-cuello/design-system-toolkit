@@ -458,7 +458,7 @@ No source gives a boolean-column count for tables themselves: NN/g, Primer, Carb
 - [required] Padding comes from the spacing scale (*Spacing scale* in [visual](../design/visual.md#spacing-scale-and-proximity); code-standard rule 22 for the code half).
 - [weak] A density setting is a feature someone must ask for; offering five sizes is not.
 - [weak] Match row height to the number of rows: a short table reads better roomy, a long one compact. Datawrapper: "If you show only a few rows, a wide layout is more pleasant to the eye. If your table has a lot of rows, consider a compact layout".
-- [weak] Density is spacing, never type size ([visual: density modes](../design/visual.md#density-modes)). Shrinking the text to fit more columns is a sign the columns need cutting (*What earns a column*), not a denser table.
+- [strong] Density is spacing, never type size: [*Cell and header text*](#cell-and-header-text). Shrinking the text to fit more columns is a sign the columns need cutting (*What earns a column*), not a denser table.
 - [contested] Systems name three densities: Primer's condensed, normal and spacious ([Primer DataTable](https://primer.style/product/components/data-table/)); MUI X's compact, standard and comfortable ([MUI X accessibility](https://mui.com/x/react-data-grid/accessibility/)). Cloudscape ships two, comfortable and compact ([Cloudscape content density](https://cloudscape.design/foundation/visual-foundation/content-density/)).
 
 **Cases**
@@ -488,14 +488,14 @@ No source gives a boolean-column count for tables themselves: NN/g, Primer, Carb
 What body cells and header cells are set in, read from 14 systems' source on 23 Nov 2026.
 
 **What good looks like**
-- [strong] **Body cells in the body style, 14px, weight 400.** Carbon `body-compact-01` 14/18 ([Carbon data table](https://github.com/carbon-design-system/carbon/tree/main/packages/styles/scss/components/data-table)), MUI `body2` 14 ([MUI TableCell](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/TableCell/TableCell.js)), Spectrum, Ant, Chakra, Radix, shadcn, Cloudscape and Fluent all use 14px; Primer 12, Polaris and Lightning 13, GOV.UK 19.
-- [strong] **Header cells the cells' size, heavier.** Most keep the header at the cells' size and raise the weight: 600 in Carbon (`heading-compact-01`), Primer and Ant; bold in Spectrum, Radix, Cloudscape, Lightning and GOV.UK; 500 in MUI, Chakra and shadcn. Fluent and Polaris's DataTable keep it regular. No system published why.
+- [strong] **Body cells in the body style, 14px, weight 400.** Carbon `body-compact-01` 14/18 ([Carbon data table](https://github.com/carbon-design-system/carbon/tree/main/packages/styles/scss/components/data-table)), MUI `body2` 14 ([MUI TableCell](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/TableCell/TableCell.js)), Spectrum, Ant, Chakra, Radix, shadcn, Cloudscape, Fluent and Atlassian all use 14px; Primer 12, Polaris and Lightning 13, GOV.UK 19.
+- [strong] **Header cells the cells' size, heavier.** Most keep the header at the cells' size and raise the weight: 600 in Carbon (`heading-compact-01`), Primer (muted) and Ant; 653 in Atlassian, one step smaller; bold in Spectrum, Radix, Cloudscape, Lightning and GOV.UK; 500 in MUI, Chakra and shadcn. Fluent and Polaris's DataTable keep it regular. No system published why.
 - [moderate] **The cell is one step below a 16px field, the same step as a 14px one.** MUI and Material 3 set fields at 16 and cells at 14; systems with 14px fields set cells at 14 too.
 
 **How**
 - [strong] **Density changes padding, not type.** Carbon's rows from 24 to 64px all hold 14/18 text; Primer's three densities all hold 12px; MUI's small and medium change only padding. Fluent's extra-small row (24px at 12px text) and Chakra's and Radix's large tables (16px) are the exceptions ([*Density and row height*](#density-and-row-height)).
-- [weak] **A smaller, muted header.** Primer (12px, muted), Atlassian (12 against 14) and Polaris's IndexTable (12 against 13) set the header smaller than the cells; it separates the header by size instead of weight, and is the minority.
-- [weak] **Smaller cells on a phone, only for data-heavy tables.** GOV.UK: "Tables with lots of data benefit from a smaller font size on small screens", 16/20 against 19/25 ([GOV.UK table](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/components/table/_index.scss)).
+- [weak] **A smaller header.** Atlassian (12 against 14) and Polaris's IndexTable (12 against 13) set the header smaller than the cells; it separates the header by size instead of weight, and is the minority.
+- [weak] **Smaller cells on a phone, only for data-heavy tables.** GOV.UK: "Tables with lots of data benefit from a smaller font size on small screens", 16/20 against 19/25 ([GOV.UK table](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/components/table/_mixin.scss)).
 - [required] Numbers in cells: [*Alignment and figures*](#alignment-and-figures).
 
 **Cases**
