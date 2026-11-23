@@ -52,7 +52,7 @@ import { fileURLToPath } from 'node:url';
 import { contracts, hashOf } from './official.mjs';
 import { roundTrip } from './to-figma.mjs';
 import { partsOf, unexposed, pointerWords } from './to-markup.mjs';
-import { scaleUnwritten } from './to-code.mjs';
+import { drawn as drawnRules } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { closureOf } from './site.mjs';
@@ -177,12 +177,16 @@ export function leftToCode(contract, mainOf = null, settings = undefined) {
   const inForeign = (el) => el.split('/').some((_, i, s) => i < s.length - 1 && foreign(s.slice(0, i + 1).join('/')));
   // (but its Size: to-markup passes that one, data-icon-size, and from-code reads it back)
   const foreignOwn = (el, field) => foreign(el) && field !== 'with.Size' && /^(with|layout|overflow)(\.|$)/.test(field);
-  // a scale constraint the sheet cannot write, its parent having no size there to take a share of (to-code's
-  // scaleUnwritten, said unread in the sheet): where it is pinned instead is code's to say
-  const unscaled = scaleUnwritten(contract);
-  // and a radius the design holds only as mixed: a path's corners, each its own (the snapshot records four for a box's),
-  // which no CSS box's four say and the contract does not hold (css.mjs says it unread)
-  const unwritten = (at, row) => !!row && ((row.library === 'scale' && unscaled.has(at)) || (row.library === 'mixed' && /\.radius$/.test(at)));
+  // a scale constraint the sheet does not write (css.mjs shareable: no number to take a share of), at every combination
+  // the row is in, as drawn() says it there: where it is pinned instead is code's to say. One combination where the
+  // share is written keeps the row a difference
+  const unshared = new Map(), unsharedAt = (when, el, axis) => { const k = JSON.stringify(when); if (!unshared.has(k)) unshared.set(k, drawnRules(contract, when, mainOf || undefined, settings)); return ((unshared.get(k)[el] || {}).unshared || []).includes(axis); };
+  const unscaled = (at, row) => { const m = /^(.+)\.constraints\.(horizontal|vertical)$/.exec(at); return !!m && Array.isArray(row.whens) && row.whens.length > 0 && row.whens.every((w) => w && unsharedAt(w, m[1], m[2])); };
+  // and a radius the design holds only as mixed on a path (a vector's corners, each its own, which the snapshot records
+  // for no part but a box's four): no CSS box's corners say it and the contract does not hold it (css.mjs says it
+  // unread). A box's mixed (an older snapshot's) stays a difference
+  const onPath = (el) => (all[el] || {}).kind === 'graphic' && !(all[el] || {}).shape;
+  const unwritten = (at, row) => !!row && ((row.library === 'scale' && unscaled(at, row)) || (row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length))));
   return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || unwritten(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
@@ -224,14 +228,14 @@ export function measure(where, only = [], now = {}) {
     else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder))), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder))), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
     else {
       // held to the first reading as it stands: one taken again since the second trip went round is stale
       // only the combinations the library draws (a reading carries no invalid list of its own)
-      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true }), t = (taken.second || {})[folder];
+      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, whens: true }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
       legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder))), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };

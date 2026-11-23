@@ -32,12 +32,14 @@ const UNSAID = [['font-style', 'normal'], ['letter-spacing', 'normal'], ['text-t
 
 const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
 /* Whether a part that scales with its parent can be written as a share of it: the parent's size on that axis, its own
-   offset and its own size, each a number (the parent's above 0). Where not, the sheet says it unread, and what code
-   draws there is code's (eval.mjs leftToCode, through to-code's scaleUnwritten). */
+   offset and its own size, each a number (the parent's above 0). Where not (a parent that hugs or fills, a part with no
+   size or point of its own there), the sheet says it unread and declarations() returns the axis as unshared; what code
+   draws there is code's (eval.mjs leftToCode, through to-code's unsharedAt). */
 export const shareable = (whole, offset, own) => typeof whole === 'number' && whole > 0 && typeof offset === 'number' && typeof own === 'number';
 
 export function declarations(e, { root = false, holds = false, row = true, anchors = false, box = null, pull = null } = {}, names) {
-  const decls = [], unread = [];
+  // (unshared: the axes a scale constraint could not be written on, as a share of the parent: shareable)
+  const decls = [], unread = [], unshared = [];
   const put = (prop, value, note) => { if (value !== undefined && value !== null && !/\bundefined\b/.test(String(value))) decls.push(note ? [prop, value, note] : [prop, value]); };
   // a value as a length: a token by its custom property, a number in rem (or px where it must not scale)
   const len = (v, px = false) => (typeof v === 'string' ? names.token(v) : typeof v === 'number' ? (v === 0 ? '0' : names.number ? names.number(v) : px ? `${+v.toFixed(4)}px` : rem(v)) : undefined);
@@ -206,7 +208,7 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
           put(near, share(o, whole));
           for (let i = decls.length - 1; i >= 0; i--) if (decls[i][0] === size) decls.splice(i, 1);
           put(size, share(own, whole));
-        } else unread.push(`constraints (scale: its parent's ${k} is no number, so no share of it can be written)`);
+        } else { unread.push(`constraints (scale: its parent's ${k}, its own or its offset is no number, so no share of it can be written)`); unshared.push(k === 'width' ? 'horizontal' : 'vertical'); }
       }
       else put(near, off);
     }
@@ -246,7 +248,7 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   if (take('verticalAlign') !== undefined) unread.push('verticalAlign (text set in a taller box)');
 
   for (const k of Object.keys(e)) if (!done.has(k) && !STRUCTURE.has(k)) unread.push(k);
-  return { decls, unread };
+  return { decls, unread, unshared };
 }
 
 /* The kinds that hold parts: a container, and a slot, which Figma draws as a frame holding its default contents. */
