@@ -76,9 +76,9 @@ export function compare(a, b, tolerance = 40, { within = false } = {}) {
    instance of its published component imported by key into the scratch file, else from the library file itself where
    the bridge has it open (a private component, or an import that does not answer). */
 const PNG = "{ format: 'PNG', constraint: { type: 'SCALE', value: 1 } }";
-const DRAWN = (name) => `
+const DRAWN = (name, pageName = name) => `
 await figma.loadAllPagesAsync();
-const page = figma.root.children.find((p) => p.name === ${JSON.stringify(name)});
+const page = figma.root.children.find((p) => p.name === ${JSON.stringify(pageName)});
 const drawn = page && page.children.find((n) => (n.type === 'COMPONENT_SET' || n.type === 'COMPONENT') && n.name === ${JSON.stringify(name)});
 if (!drawn) return { error: 'not drawn in this file' };
 const out = {};
@@ -108,6 +108,9 @@ async function main() {
   const where = req('../snapshot/projects.cjs').layout(null, label);
   const scratch = (fs.readFileSync(where.doc, 'utf8').match(/"draw":\s*\{[^}]*"scratch":\s*"([A-Za-z0-9]+)"/) || [])[1];
   if (!scratch) { console.error(`${label}'s library settings name no scratch file (draw.scratch)`); process.exit(2); }
+  // the drawing's page as to-figma chose it: apart from the library's own page where the scratch file is the library
+  const { drawingPage } = await import('./to-figma.mjs');
+  const own = (await import('../parity/project.mjs')).libraryOf(label).libKey === scratch;
   const dir = where.paths.components;
   const folders = args.length ? args : fs.readdirSync(dir).filter((f) => fs.existsSync(path.join(dir, f, 'figma.json'))).sort();
   const out = outOpt || path.join(path.dirname(where.doc), 'round-trip', 'looks');
@@ -119,7 +122,7 @@ async function main() {
   for (const folder of folders) {
     let spec; try { spec = JSON.parse(fs.readFileSync(path.join(dir, folder, 'figma.json'), 'utf8')); } catch { continue; }
     const run = async (file, code) => { try { return await figmaExec(svc, file, code, 120000); } catch (e) { return { error: String(e.message || e).slice(0, 160) }; } };
-    const drawn = await run(scratch, DRAWN(spec.name));
+    const drawn = await run(scratch, DRAWN(spec.name, drawingPage(spec.name, own)));
     if (!drawn || drawn.error) { rows.push([folder, null, (drawn && drawn.error) || 'no answer']); continue; }
     // an instance of the published component first: a variant exported where it sits in the library's set is cut by
     // the set's frame (an open menu below a dropdown); the library file where the bridge has it open (a private

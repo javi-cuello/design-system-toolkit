@@ -156,6 +156,11 @@ function outer(x) {
 
 /* A dash said two ways: the design's pattern ([2, 2]), and code's dashed outline, whose length CSS does not state (the
    user's ruling, 2026-11-17): compared as dashed or not. */
+// the page a drawing goes on: the component's name, or in the library's own file (where a page of that name is the
+// library's own, which a drawing must never touch) that name marked as the round trip's. Every reader of a drawing asks
+// this, never the bare name
+export const drawingPage = (name, own) => (own ? `Round trip · ${name}` : name);
+
 export function dashes(x) {
   if (!x) return x;
   const out = { ...x };
@@ -1714,9 +1719,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const axisOrder = (lib.tokens || {}).axisOrder || [];
   const sizeAxis = (lib.tokens || {}).sizeAxis || null;
   const p = plan(c, { axisOrder }), want = needs(p);
-  // the page a drawing goes on: the component's name, or in the library's own file (where a page of that name is
-  // the library's own, which a drawing must never touch) the name marked as the round trip's
-  const pageName = libKey && into === libKey ? `Round trip · ${p.name}` : p.name;
+  const pageName = drawingPage(p.name, !!libKey && into === libKey);
   if (check) {
     // the drawing read back and held to the contract it was drawn from; with the code contract held to
     // Figma's by from-code.mjs, that is all three sides
@@ -1737,7 +1740,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const { folder, file: libFile, refused } = target ? {} : heldTo(index, p.name, { folder: libraryFolder, library: libraryFile, libraryKey: lent, key: (c.figma || {}).key, keyAt, fileOf: (k) => path.join(where.paths.components, k, 'contract.json'), exists: fs.existsSync });
     if (refused) { console.error(refused); process.exit(2); }
     if (libFile && fs.existsSync(libFile)) {
-      const setId = await exec(`await figma.loadAllPagesAsync(); const pg = figma.root.children.find((x) => x.name === ${JSON.stringify(p.name)}); const s = pg && pg.children.find((x) => (x.type === 'COMPONENT_SET' || x.type === 'COMPONENT') && x.name === ${JSON.stringify(p.name)}); return s ? s.id : null;`, into, 60000);
+      const setId = await exec(`await figma.loadAllPagesAsync(); const pg = figma.root.children.find((x) => x.name === ${JSON.stringify(pageName)}); const s = pg && pg.children.find((x) => (x.type === 'COMPONENT_SET' || x.type === 'COMPONENT') && x.name === ${JSON.stringify(p.name)}); return s ? s.id : null;`, into, 60000);
       const walk = fs.readFileSync(path.join(TOOLKIT, 'plugins/design-system-snapshot/code.js'), 'utf8');
       const live = setId && await exec(`const SCOPE = ${JSON.stringify([setId])};\n${walk}\nreturn __headless();`, into, 120000);
       const comp = live && (live.components || []).find((x) => x.id === setId);

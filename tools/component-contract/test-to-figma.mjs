@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets } from './to-figma.mjs';
+import { drawingPage, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets } from './to-figma.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -658,8 +658,11 @@ delete globalThis.figma;
 {
   // in the library's own file a drawing's page is marked as the round trip's, never the library's own page of that name
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
-  ok('a drawing in the library\'s own file goes on a page of its own, which the read back finds',
-    /const pageName = libKey && into === libKey \? `Round trip · \$\{p\.name\}` : p\.name;/.test(src) && src.includes('before: BEFORE(pageName, token)') && src.includes('${JSON.stringify(pageName)});'));
+  ok('a drawing in the library\'s own file goes on a page of its own, which every reader of the drawing asks for',
+    drawingPage('Button', true) === 'Round trip · Button' && drawingPage('Button', false) === 'Button'
+    && src.includes('before: BEFORE(pageName, token)') && src.includes('${JSON.stringify(pageName)});')
+    && !/children\.find\(\(x\) => x\.name === \$\{JSON\.stringify\(p\.name\)\}\)/.test(src)
+    && /DRAWN\(spec\.name, drawingPage\(spec\.name, own\)\)/.test(fs.readFileSync(new URL('./looks.mjs', import.meta.url), 'utf8')));
 }
 
 console.log(`${n}/${n} passed`);
