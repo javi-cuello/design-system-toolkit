@@ -192,9 +192,12 @@ const callsIn = (src, head) => { const out = []; let i = 0;
 // queue.js's fix plan writes a few layers, not a walk: the bridge's default holds it
 const FIX = /^bridge\.exec\(plan\.code\)$/;
 for (const [f, heads] of [["tools/figma-audit/audit-session.mjs", ["exec(port, fileKey,"]], ["tools/docs-site/src/dashboard/audit.js", ["bridge.exec(", "api.exec("]], ["tools/docs-site/src/dashboard/queue.js", ["bridge.exec(", "api.exec("]]]) {
-  const src = readFileSync(join(ROOT, f), "utf8");
+  // strings blanked first, so a paren inside one neither ends a call early nor runs it on into the next
+  const raw = readFileSync(join(ROOT, f), "utf8");
+  const src = raw.replace(/"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`/g, '""');
   const bare = heads.flatMap((h) => callsIn(src, h)).filter((c) => !FIX.test(c) && !/gatherTimeout\(|, wait[,)]/.test(c));
   ok(`${f}: every call to Figma waits as its stage says`, !bare.length, bare.map((c) => c.slice(0, 80)).join("\n"));
+  ok(`${f}: a \`wait\` it passes is read from the list`, !/, wait[,)]/.test(src) || /const wait = gatherTimeout\(/.test(src));
 }
 
 console.log(n + "/" + n + " passed");

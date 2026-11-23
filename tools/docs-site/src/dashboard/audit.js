@@ -1175,7 +1175,8 @@ async function otherStages(scan, rules, runId) {
       } catch (e) { tell(stage, stageEnd(parityLabel, e)); }
     },
   };
-  // A service started before the registry sends no list: runAudit's stageById already refused the run and said to restart it.
+  // runAudit's stageById refuses a run from a service with no list; one swapped mid-run can still send none here: said, never a quiet stop.
+  if (!sc.stages) { lines.push("Audit: stopped after the components stage \u2014 the dashboard service sent no list of stages. Restart the service (install.sh reloads it) and audit again."); brief.push("restart the service"); }
   // The facts appliesTo reads for a stage: only the one its `applies` names, read when that stage comes up.
   const factsFor = async (stage) => {
     const fact = (stage.applies || {}).fact;
