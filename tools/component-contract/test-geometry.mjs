@@ -54,6 +54,9 @@ ok('(c) a vector\'s outline gives exactly its rows, the digest and the paths', J
 // a loose vector the library recorded an outline for and no paths (past the walk's cap) is drawn as its box: its row says so
 const capped = copy(dotted0), cappedDrawn = copy(squared); delete capped.variants[0].children[3].paths; delete cappedDrawn.variants[0].children[3].paths;
 ok('a vector past the walk\'s cap says why its outline differs', geometry(capped, cappedDrawn)[0].why === 'paths past the walk\'s cap: drawn as its box', geometry(capped, cappedDrawn));
+// the drawn walk records the box it drew as paths: that row is the same known cause, so it says why too
+const cappedBox = copy(capped); cappedBox.variants[0].children[3] = { ...cappedDrawn.variants[0].children[3], paths: [{ windingRule: 'NONZERO', data: 'M 0 0 L 8 0 L 8 8 L 0 8 Z' }] };
+ok('…and so does its paths row, the box the drawing walked', geometry(capped, cappedBox).length > 0 && geometry(capped, cappedBox).every((r) => r.why === 'paths past the walk\'s cap: drawn as its box'), geometry(capped, cappedBox));
 ok('…one whose paths were recorded gives no reason: the outline drawn is a difference', geometry(dotted0, squared).every((r) => !('why' in r)), geometry(dotted0, squared));
 const placedDot = copy(capped); placedDot.variants[0].children[3] = { name: 'Badge', type: 'INSTANCE', w: 8, h: 8, x: 4, y: 4, index: 3, children: [capped.variants[0].children[3]] };
 const placedDrawn = copy(placedDot); placedDrawn.variants[0].children[3].children[0].outline = 'b2c3d4e5';

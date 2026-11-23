@@ -57,7 +57,7 @@ export function geometry(library, drawn, { known = null, tolerance = TOLERANCE }
       if (k === 'bindings') {
         const bx = x.bindings || {}, by = y.bindings || {};
         for (const b of new Set([...Object.keys(bx), ...Object.keys(by)])) if (!(known && !known.has(`bindings.${b}`) && bx[b] === undefined) && !same(bx[b], by[b], tolerance)) row(`${at}.bindings.${b}`, bx[b], by[b]);
-      } else if (!same(x[k], y[k], tolerance)) row(`${at}.${k}`, x[k], y[k], k === 'outline' && loose && x.type === 'VECTOR' && x.outline && !x.paths ? 'paths past the walk\'s cap: drawn as its box' : undefined);
+      } else if (!same(x[k], y[k], tolerance)) row(`${at}.${k}`, x[k], y[k], (k === 'outline' || k === 'paths') && loose && x.type === 'VECTOR' && x.outline && !x.paths ? 'paths past the walk\'s cap: drawn as its box' : undefined);
     }
   };
   const paths = (v) => { const m = new Map(); layerPaths(v, (node, p) => { m.set(p, node); }); return m; };
