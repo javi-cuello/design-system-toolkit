@@ -581,7 +581,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // took 8 ms) is given 8 s and one retry; still nothing, it is reported as not bound and the drawing goes on
   // a run whose token is gone (the runner gave up on it, or a newer drawing took the file) stops at its next call to
   // Figma: left going, one crawled through its imports for an hour and held the file
-  const tried = async (what, f) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); for (let i = 0; i < 2; i++) { const r = await Promise.race([f().then((v) => ({ v }), (e) => ({ failed: String(e && e.message || e) })), new Promise((res) => setTimeout(() => res(null), 8000))]); if (r && 'v' in r) return r.v; if (r) { missing.add(`${what} (${r.failed})`); return null; } } missing.add(`${what} (no answer)`); return null; };
+  const tried = async (what, f) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); for (let i = 0; i < 2; i++) { const r = await Promise.race([Promise.resolve().then(f).then((v) => ({ v }), (e) => ({ failed: String(e && e.message || e) })), new Promise((res) => setTimeout(() => res(null), 8000))]); if (r && 'v' in r) return r.v; if (r) { missing.add(`${what} (${r.failed})`); return null; } } missing.add(`${what} (no answer)`); return null; };
   // a main imported once per key, its answer kept: each instance asking again made a key that would not answer cost
   // sixteen seconds per instance, and a side navigation of many items outran the drawing's time
   const mains = new Map();
@@ -589,6 +589,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // the scratch file is the library file): a key the file holds is taken from the file, as an import by key answers
   // only a published one. Filled below, one kind at a time and each under `tried`, before any import is asked
   const ownKeys = new Map();
+  // a lent text style's copy can withhold its font (a symbol where the font is) until its library answers: the font
+  // of a text that uses it, by the style's key
+  const lentFont = new Map(), fontOf = (st) => (typeof st.fontName === 'symbol' ? lentFont.get(st.key) || null : st.fontName);
   const own = (key, f) => (ownKeys.has(key) ? Promise.resolve(ownKeys.get(key)) : f());
   // a key is a set's or a component's: both asked at once, the first that answers taken (asked one after the other, a
   // set import given a component's key was seen never to answer, neither resolving nor failing, and held the drawing)
@@ -622,12 +625,12 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       const take = (x) => { if (x && want.has(x.key)) { ownKeys.set(x.key, x); want.delete(x.key); } };
       const drawnPage = (n) => { while (n && n.type !== 'PAGE') n = n.parent; return !!(n && n.getPluginData('drawings')); };
       const roots = want.size ? figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).filter((n) => n.name === P.name && !drawnPage(n)) : [];
-      const styleIds = new Set(), varIds = new Set(), insts = [];
+      const styleIds = new Set(), varIds = new Set(), insts = [], textFont = new Map();
       const alias = (v) => { if (!v) return; if (Array.isArray(v)) v.forEach(alias); else if (typeof v === 'object') { if (v.type === 'VARIABLE_ALIAS' && v.id) varIds.add(v.id); else Object.values(v).forEach(alias); } };
       walk: for (const r of roots) for (const n of [r, ...r.findAll(() => true)]) {
         if (Date.now() > until) break walk;
         try {
-          if (n.type === 'TEXT') { if (typeof n.textStyleId === 'string') { if (n.textStyleId) styleIds.add(n.textStyleId); } else for (const seg of n.getStyledTextSegments(['textStyleId'])) if (seg.textStyleId) styleIds.add(seg.textStyleId); }
+          if (n.type === 'TEXT') { if (typeof n.textStyleId === 'string') { if (n.textStyleId) { styleIds.add(n.textStyleId); if (typeof n.fontName !== 'symbol' && !textFont.has(n.textStyleId)) textFont.set(n.textStyleId, n.fontName); } } else for (const seg of n.getStyledTextSegments(['textStyleId'])) if (seg.textStyleId) styleIds.add(seg.textStyleId); }
           if (typeof n.effectStyleId === 'string' && n.effectStyleId) styleIds.add(n.effectStyleId);
           alias(n.boundVariables);
           for (const paint of [].concat(Array.isArray(n.fills) ? n.fills : [], Array.isArray(n.strokes) ? n.strokes : [])) alias(paint.boundVariables);
@@ -635,7 +638,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         } catch { /* a layer inside another library's instance can need Figma's servers to read: skipped */ }
       }
       const settle = async (xs, get) => { for (let k = 0; k < xs.length && !done(); k += 100) { figma.root.setPluginData('to-figma-beat', String(Date.now())); for (const x of await Promise.all(xs.slice(k, k + 100).map((v) => get(v).catch(() => null)))) for (const y of [].concat(x || [])) take(y); } };
-      await settle([...styleIds], (id) => figma.getStyleByIdAsync(id));
+      await settle([...styleIds], async (id) => { const st = await figma.getStyleByIdAsync(id); if (st && typeof st.fontName === 'symbol' && textFont.has(id)) lentFont.set(st.key, textFont.get(id)); return st; });
       await settle([...varIds], (id) => figma.variables.getVariableByIdAsync(id));
       await settle(insts, async (n) => { const m = await n.getMainComponentAsync(); return m ? [m, m.parent && m.parent.type === 'COMPONENT_SET' ? m.parent : null] : null; });
       return [];
@@ -644,7 +647,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   const lib = K.vars || {};
   const els = P.variants.flatMap((v) => Object.values(v.anatomy));
   const names = new Set();
-  for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (typeof t === 'string' && t.includes('/')) names.add(t);
+  for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (typeof t === 'string' && (t.includes('/') || (K.vars && t in K.vars))) names.add(t);
   const vars = {};
   // side by side, then once more one at a time for any that went unanswered side by side
   const imp = (n) => own(lib[n], () => figma.variables.importVariableByKeyAsync(lib[n]));
@@ -659,7 +662,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     // (one that failed outright is that variable's, not the library's silence)
     silent = vars[n] ? 0 : missing.has(`${n} (no answer)`) ? silent + 1 : 0;
   }
-  const V = async (n) => { if (typeof n !== 'string' || !n.includes('/')) return null; if (!vars[n]) missing.add(n); return vars[n] || null; };
+  const V = async (n) => { if (typeof n !== 'string' || !(n.includes('/') || n in lib)) return null; if (!vars[n]) missing.add(n); return vars[n] || null; };
   // a layer's variable modes, set on every collection of its axis (K.modes: { axis: [{ collection, key, names }] },
   // `key` one variable of that collection, imported to reach it; `names` its modes by the contract's spelling)
   const cols = {};
@@ -729,7 +732,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     ...Object.entries(K.sets || {}).filter(([name]) => !/^[_.]/.test(name)).map(async ([name, key]) => { sets[name] = await tried(name, () => own(key, () => figma.importComponentSetByKeyAsync(key))); }),
     ...Object.entries(K.effects || {}).map(async ([name, key]) => { effects[name] = await tried(name, () => own(key, () => figma.importStyleByKeyAsync(key))); }),
   ]);
-  await Promise.all(Object.values(styles).filter(Boolean).map(async (st) => { fonts[JSON.stringify(st.fontName)] = await tried(`font of ${st.name}`, () => figma.loadFontAsync(st.fontName)) !== null; }));
+  await Promise.all(Object.values(styles).filter(Boolean).map(async (st) => { const f = fontOf(st); fonts[JSON.stringify(f)] = !!f && await tried(`font of ${st.name}`, () => figma.loadFontAsync(f)) !== null; }));
   // a text's style is applied at the end, all at once (it is the one call per layer left)
   const toStyle = [];
   // a part centred on its parent, once text styles have given every box its final size
@@ -908,7 +911,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         n = figma.createText(); nodes[e.parent].appendChild(n);
         const key = K.styles && K.styles[e.typography];
         const st = key && styles[key];
-        if (st && fonts[JSON.stringify(st.fontName)]) toStyle.push([n, st, e.typography]); else missing.add(e.typography);
+        if (st && fonts[JSON.stringify(fontOf(st))]) toStyle.push([n, st, e.typography]); else missing.add(e.typography);
         // the prop's sample where a prop sets it, else the words code drew (a required mark's *)
         n.characters = e.text || (typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) ? e.content : 'Text');
         if (e.textAlign) n.textAlignHorizontal = { center: 'CENTER', end: 'RIGHT', justify: 'JUSTIFIED' }[e.textAlign] || 'LEFT';
@@ -1258,10 +1261,14 @@ let __res; try { __res = await (${RUNTIME.toString()})(P, ${JSON.stringify(keys)
 }
 
 /* The names a plan needs keys for: its text styles and icons. */
-export function needs(p) {
+/* A value names a variable where it has a group (Colour/Primary) or is one of the project's variables by name (a
+   library whose variables sit at the top of their collection: "layer-hover (contextual)"); anything else is a literal. */
+export const varNamer = (names = []) => { const known = new Set(names); return (t) => typeof t === 'string' && (t.includes('/') || known.has(t)); };
+
+export function needs(p, isVar = varNamer()) {
   const els = p.variants.flatMap((v) => Object.values(v.anatomy));
   const vars = new Set();
-  for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (typeof t === 'string' && t.includes('/')) vars.add(t);
+  for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (isVar(t)) vars.add(t);
   return { styles: [...new Set(els.map((e) => e.typography).filter(Boolean))], icons: [...new Set(els.map((e) => e.asset).filter(Boolean))], vars: [...vars], components: [...new Set(els.filter((e) => e.kind === 'instance' && e.component).map((e) => e.component))], swaps: [...new Set(els.flatMap((e) => Object.values(e.with || {})).filter((v) => typeof v === 'string'))], effects: [...new Set(els.map((e) => e.shadow).filter((x) => x && !/\(/.test(x)))] };
 }
 
@@ -1629,7 +1636,7 @@ const READBACK = async (name, id = null, pageName = name) => {
 /* The drawing against the contract it was drawn from, value by value: each
    variant's layers, by name, against what the plan says they carry. The
    third side of contract (Figma's), contract (code's) and drawing. */
-export function verify(p, drawn) {
+export function verify(p, drawn, isVar = varNamer()) {
   // a variant's name, its values in one order: a library may order its axes otherwise
   const byValues = (n) => String(n).split(', ').sort().join(', ');
   const rows = [];
@@ -1649,7 +1656,7 @@ export function verify(p, drawn) {
       const layer = d.layers[id === 'root' ? '(root)' : e.name];
       if (!layer) { rows.push({ variant: v.name, what: e.name, verdict: 'not drawn' }); continue; }
       const checks = [];
-      const tok = (t) => (typeof t === 'string' && t.includes('/') ? t : null);
+      const tok = (t) => (isVar(t) ? t : null);
       if (e.kind === 'text') checks.push(['text style', e.typography, layer.textStyle], ['colour', e.color, layer.fill]);
       if (e.kind === 'graphic') checks.push(['colour', e.background, layer.inner || layer.fill]);
       if (e.kind === 'instance') checks.push(['component', e.component, layer.instanceOf]);
@@ -1761,14 +1768,16 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // the house's axis order, as that library's settings derive it (figma-standard rule 1)
   const axisOrder = (lib.tokens || {}).axisOrder || [];
   const sizeAxis = (lib.tokens || {}).sizeAxis || null;
-  const p = plan(c, { axisOrder }), want = needs(p);
+  // every variable the project's tokens name, so one at the top of its collection is a variable too
+  const isVar = varNamer(Object.values(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')).collections || {}).flatMap((col) => Object.keys(col.keys || {})));
+  const p = plan(c, { axisOrder }), want = needs(p, isVar);
   const pageName = drawingPage(p.name, !!libKey && into === libKey);
   if (check) {
     // the drawing read back and held to the contract it was drawn from; with the code contract held to
     // Figma's by from-code.mjs, that is all three sides
     const drawn = await exec(`return (${READBACK.toString()})(${JSON.stringify(p.name)}, ${JSON.stringify(target)}, ${JSON.stringify(pageName)});`, into, 60000);
     if (drawn.missing) { console.error(drawn.missing); process.exit(1); }
-    const rows = verify(p, drawn);
+    const rows = verify(p, drawn, isVar);
     const n = (v) => rows.filter((r) => r.verdict === v).length;
     const out = path.join(path.dirname(report), `${path.basename(report, '.json')}.drawn.json`);
     const wrote = writeDrawn(out, rows);

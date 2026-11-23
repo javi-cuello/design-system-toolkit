@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { drawingPage, sizingAxes, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets } from './to-figma.mjs';
+import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets } from './to-figma.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -668,6 +668,12 @@ delete globalThis.figma;
   ok('in the library\'s own file the keys of what other libraries lent are taken from the copies its own component uses, never a drawing\'s',
     src.includes("await listing('what its own component takes from other libraries'") && src.includes("n.name === P.name && !drawnPage(n)") && src.includes('}, 30000);')
     && src.includes('ownKeys.set(x.key, x); want.delete(x.key);') && src.includes("getStyledTextSegments(['textStyleId'])") && src.includes('if (Date.now() > until) break walk;'));
+  ok('a variable at the top of its collection is a variable where the project names it, a literal never',
+    (() => { const v = varNamer(['layer-hover (contextual)']); return v('layer-hover (contextual)') && v('Colour/Primary') && !v('#808080') && !v('16px (1rem)') && !varNamer()('layer-hover (contextual)'); })()
+    && needs({ variants: [{ anatomy: { root: { background: 'layer-hover (contextual)' } } }] }, varNamer(['layer-hover (contextual)'])).vars.includes('layer-hover (contextual)')
+    && src.includes("n in lib)) return null;") && src.includes("(K.vars && t in K.vars))) names.add(t);"));
+  ok('a lent text style whose copy withholds its font is drawn in the font of a text that uses it',
+    src.includes("typeof st.fontName === 'symbol' ? lentFont.get(st.key)") && src.includes('fonts[JSON.stringify(fontOf(st))]'));
   ok('the walk\'s page-qualified name of a drawing on the round trip page is the component\'s own, that exact prefix only',
     src.includes('if (comp && comp.name === `${pageName}/${p.name}`) comp.name = p.name;'));
   ok('a drawing in the library\'s own file goes on a page of its own, which every reader of the drawing asks for',
