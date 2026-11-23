@@ -469,9 +469,12 @@ function ranked(x, other) {
 }
 
 // a boolean's own layer is named for the prop that shows it in its id (derive.cjs idOf: Show icon's Icon is
-// showIconIcon): the layer is the name after it, else reading it back names it twice (showIconShowIconIcon)
-const ownId = (id, e) => {
-  if (!e.shownBy) return id;
+// showIconIcon): the layer is the name after it, else reading it back names it twice (showIconShowIconIcon). Only a
+// boolean off by default (`off`, its Figma names): derive's alignFlip names a layer for its prop only where the flip adds
+// it, and a layer one on by default shows is in the base already, read back by its own name (a button's Icon spacer,
+// under Icon, on by default, was drawn Spacer and read back as spacer, not iconSpacer)
+const ownId = (id, e, off = null) => {
+  if (!e.shownBy || (off && !off.has(e.shownBy))) return id;
   const segs = id.split('/'), last = segs.at(-1), pre = camel(e.shownBy);
   // at a word's edge only (showIconIcon, not showMore under Show)
   return last.startsWith(pre) && /^[A-Z]/.test(last.slice(pre.length)) ? [...segs.slice(0, -1), last[pre.length].toLowerCase() + last.slice(pre.length + 1)].join('/') : id;
@@ -546,6 +549,7 @@ export function plan(contract, { axisOrder = [] } = {}) {
   // (a remove that also asks another boolean is off is one a Figma boolean cannot say: not counted)
   const axisKeys = new Set(axes.map((a) => a.key));
   const hides = (key, id) => (contract.variants || []).some((v) => v.when && v.when[key] === false && Object.keys(v.when).every((k) => k === key || axisKeys.has(k)) && (v.remove || []).includes(id));
+  const offByDefault = new Set(booleans.filter((b) => !b.default).map((b) => b.figma));
   const variants = grid.map((w) => {
     const on = Object.fromEntries(booleans.map((b) => [b.key, true]));
     const anatomy = expand(contract, { ...w, ...on });
@@ -560,7 +564,7 @@ export function plan(contract, { axisOrder = [] } = {}) {
     for (const e of Object.values(anatomy)) if (e.kind === 'graphic' && !e.asset && swap) e.asset = swap.default;
     for (const [id, e] of Object.entries(anatomy)) if (e.kind === 'instance') { const by = e.swappedBy ? swaps.filter((x) => x.key === e.swappedBy) : swaps.filter((x) => x.parts.includes(id)); if (by.length) anatomy[id] = { ...e, swapProps: by.map((x) => x.figma) }; }
     for (const e of Object.values(anatomy)) if (e.kind === 'text') { const t = text.find((x) => e.content === `{${x.key}}`); if (t) e.text = t.figma; }
-    return { name: axes.map((a) => `${a.figma}=${show(a, w[a.key])}`).join(', '), cell: cellOf(w), anatomy: Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, { ...e, name: slotName(e, contract.props || {}) ?? e.name ?? partName(ownId(id, e)) }])) };
+    return { name: axes.map((a) => `${a.figma}=${show(a, w[a.key])}`).join(', '), cell: cellOf(w), anatomy: Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, { ...e, name: slotName(e, contract.props || {}) ?? e.name ?? partName(ownId(id, e, offByDefault)) }])) };
   });
   const slots = Object.values(contract.props || {}).filter((p) => p.type === 'slot' && p.figma).map((p) => ({ figma: p.figma, settings: p.settings || null, description: p.description || '', preferred: p.preferred || [] }));
   return { name: /^[a-z][A-Za-z0-9-]*$/.test(contract.component) ? sentence(contract.component) : contract.component, slots, axes: axes.map((a) => a.figma), booleans: booleans.map((b) => ({ figma: b.figma, default: b.default })), swaps: swaps.map((x) => ({ figma: x.figma })), text: text.map((t) => ({ figma: t.figma, default: t.default })), notDrawn: Object.keys(props).filter((k) => gone(k).length).map((k) => (whole(k) ? `${props[k].figma || k} (it takes the whole component away)` : `${props[k].figma || k}=${gone(k).join(', ')} (takes the whole component away)`)), order: Object.values(props).map((p) => p.figma).filter(Boolean), fromCode: (contract.code || {}).from === 'code', align: ALIGN_DATA.toFigma, size: Object.fromEntries(SIZE_ROWS), rows: Math.max(rowKeys.length, 1), cols: last ? last.values.length : 1, variants };

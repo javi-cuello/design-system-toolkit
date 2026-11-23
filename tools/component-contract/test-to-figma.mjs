@@ -47,9 +47,13 @@ ok('a prop that takes the whole component away is not drawn: Figma cannot hide a
 const hidden = plan({ contract: 1, component: 'toast', props: { state: { type: 'enum', values: ['rest', 'hover', 'hidden'], default: 'rest', figma: 'State' } },
   anatomy: { root: { kind: 'container' } }, variants: [{ when: { state: 'hidden' }, remove: ['root'] }] }, {});
 ok('an enum keeps its axis and drops only the value that takes the component away', hidden.axes.includes('State') && hidden.variants.length === 2 && hidden.variants.every((v) => !/hidden/.test(v.name)) && hidden.notDrawn[0] === 'State=hidden (takes the whole component away)');
-const named = plan({ contract: 1, component: 'tag', props: { showIcon: { type: 'boolean', default: true, figma: 'Show icon', shows: ['showIconIcon', 'showMore'] } },
+const named = plan({ contract: 1, component: 'tag', props: { showIcon: { type: 'boolean', default: false, figma: 'Show icon', shows: ['showIconIcon', 'showMore'] } },
   anatomy: { root: { kind: 'container' }, showIconIcon: { kind: 'container', parent: 'root' }, showMore: { kind: 'container', parent: 'root' } }, variants: [] }, {});
 ok('a shown layer drops its boolean\'s prefix at a word\'s edge only', named.variants[0].anatomy.showIconIcon.name === 'Icon' && named.variants[0].anatomy.showMore.name !== 'More');
+// one a boolean on by default shows is in the variant read back already, so read back by its own name: it keeps it whole
+const spaced = plan({ contract: 1, component: 'button', props: { icon: { type: 'boolean', default: true, figma: 'Icon', shows: ['content/iconSpacer'] }, gap: { type: 'boolean', default: false, figma: 'Gap', shows: ['content/gapSpacer'] } },
+  anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/iconSpacer': { kind: 'graphic', parent: 'content' }, 'content/gapSpacer': { kind: 'graphic', parent: 'content' } }, variants: [] }, {});
+ok('a layer a boolean on by default shows keeps its prefix; one off by default drops it', spaced.variants[0].anatomy['content/iconSpacer'].name === 'Icon spacer' && spaced.variants[0].anatomy['content/gapSpacer'].name === 'Spacer');
 // the properties are made in the contract's order, which Figma's panel keeps: Show icon, the Icon it reveals, then Label
 const chipContract = { contract: 1, component: 'chip', props: { showIcon: { type: 'boolean', default: false, figma: 'Show icon', shows: ['icon'] }, icon: { type: 'instance', figma: 'Icon', swaps: ['icon'] }, label: { type: 'string', default: 'Label', figma: 'Label' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figma: 'State' } },
   anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/check' } }, variants: [] };
