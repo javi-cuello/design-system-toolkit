@@ -134,6 +134,14 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const m = (a, b, o = { layoutUnit: true }) => roundTrip(box(a), box(b), o).rows.length;
     ok('a size within a browser\'s layout unit of the design\'s is the same size where a browser read it; one further is not, nor between Figma\'s own', m(8.65, 8.64) === 0 && m(8.65, 8.62) === 1 && m(8.65, 8.64, {}) === 1 && m('hug', 8.64) === 1); }
   ok('and the round trip compares no combination of it', roundTrip(two, two).combinations === 2);
+  { // Figma's own floors: a 0 the plugin API cannot resize to (it draws 0.01), and a text the library's snapshot recorded
+    // no values for; the text not where one side is a browser's reading (a 0.01 there is within its layout unit anyway)
+    const box = (h, t) => ({ contract: 1, component: 'P', props: {}, anatomy: { root: { kind: 'container' }, rail: { kind: 'container', parent: 'root', width: 'fill', height: h }, label: { kind: 'text', parent: 'root', typography: t } }, variants: [] });
+    const r = (a, b, o = {}) => roundTrip(a, b, o).rows.map((x) => x.at).join();
+    ok('a size the library holds at 0 is the same as Figma\'s least, 0.01, on Figma\'s side; a bare literal text is any literal drawn there',
+      r(box(0, 'literal'), box(0.01, 'literal 12/0 regular Inter')) === '' && r(box(0, 'literal'), box(0.02, 'literal')) === 'rail.height'
+      && r(box(0, 'literal'), box(0.01, 'literal 12/0 regular Inter'), { layoutUnit: true }) === 'label.typography'
+      && r(box(0, 'Body/01'), box(0, 'literal 12/0 regular Inter')) === 'label.typography' && r(box(0, 'literal 14/20 regular Inter'), box(0, 'literal')) === 'label.typography'); }
   { // a text's own words where the design binds none are a difference from a reading bound to a prop, even where they are
     // that prop's default: Figma's layer there ignores the prop, code's follows it, and a reading at the defaults cannot
     // tell the two apart, so neither side is folded into the other
@@ -680,6 +688,9 @@ delete globalThis.figma;
     src.includes("typeof st.fontName === 'symbol' ? lentFont.get(st.key)") && src.includes('fonts[JSON.stringify(fontOf(st))]'));
   ok('a text no style names is drawn in its values\' face, size and line height; a placed text keeps its resizing',
     src.includes("const FACES = { thin:") && src.includes("n.fontName = lit.fontName; n.fontSize = lit.size;") && src.includes("n.resize(px(w), px(h)); if (n.type === 'TEXT' && e.autoResize) n.textAutoResize"));
+  ok('a graphic with no shape and no parts is a vector, never a frame; no vector keeps Figma\'s own stroke; a line a stretch sizes is drawn that long',
+    src.includes("else if (e.kind === 'graphic' && !ids.some((x) => variant.anatomy[x].parent === id)) {") && (src.match(/n = figma\.createVector\(\); n\.strokes = \[\];/g) || []).length === 2
+    && src.includes("const along = e.height === 0 ? (c.horizontal === 'stretch' && at.end != null ? w : null)"));
   ok('the walk\'s page-qualified name of a drawing on the round trip page is the component\'s own, that exact prefix only',
     src.includes('if (comp && comp.name === `${pageName}/${p.name}`) comp.name = p.name;'));
   ok('a drawing in the library\'s own file goes on a page of its own, which every reader of the drawing asks for',

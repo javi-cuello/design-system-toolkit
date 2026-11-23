@@ -37,7 +37,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
-import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph } from './rules.mjs';
+import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, looksLikeValue } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 import { turnedParts } from './to-code.mjs';
 
@@ -372,6 +372,13 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // (the room about a centred part sums two such places: within two units)
     // (and so is an element's size the browser lays out: a mark drawn 8.65 wide is 553/64 px, read 8.64)
     if (layoutUnit && /(\.absolute\.(x|y|end|bottom|xFromCentre|yFromCentre|xRoom|yRoom)|^[^.]+\.(width|height))$/.test(at) && typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= (/Room$/.test(at) ? 2 : 1) / 64 + 0.005) return;
+    // a size the library holds at 0 is drawn at 0.01, the least the plugin API resizes to (@figma/plugin-typings
+    // plugin-api.d.ts, LayoutMixin.resize: "Must be >= 0.01"): the same, on Figma's side only (a browser lays out a 0)
+    if (!layoutUnit && /^[^.]+\.(width|height)$/.test(at) && a === 0 && b === 0.01) return;
+    // a text the library's snapshot read no single face or size for (its face mixed, or not recorded) says `literal` alone,
+    // no style and nothing more: a drawing of it in any values, with no style either, says all it can be held to (Figma's
+    // side only: code that read a browser's default there is the very difference the snapshot records sizes to catch)
+    if (!layoutUnit && /^[^.]+\.typography$/.test(at) && a === 'literal' && looksLikeValue(b)) return;
     const bool = (v) => (typeof v === 'boolean' ? v : typeof v === 'string' && /^(true|false)$/i.test(v) ? v.toLowerCase() === 'true' : undefined);
     if (/\.with\.[^.]+$/.test(at) && bool(a) !== undefined && bool(a) === bool(b)) return;
     if (/(^|\.)component$/.test(at) && typeof a === 'string' && typeof b === 'string' && !b.includes('/') && a.split('/').pop() === b) return;
@@ -1002,9 +1009,18 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // a slot with no property of this component's (one inside an instance drawn as a stand-in) is a frame
       } else if (e.kind === 'slot' && (P.slots || []).some((sl) => sl.figma === e.name)) { n = nodes.root.createSlot(); n.fills = []; }
       // a shape no icon names: a line (no width or no height, a divider) is Figma's vector, an ellipse its ellipse
-      else if (e.kind === 'graphic' && (e.width === 0 || e.height === 0)) { const len = px(e.width === 0 ? e.height : e.width) || 1; n = figma.createVector(); n.vectorPaths = [{ windingRule: 'NONE', data: e.width === 0 ? `M 0 0 L 0 ${len}` : `M 0 0 L ${len} 0` }]; }
+      // (a vector is made with a black stroke of its own: taken off, so only the contract's border strokes it; a line a
+      // stretch sizes is given its length once placed)
+      else if (e.kind === 'graphic' && (e.width === 0 || e.height === 0)) { const len = px(e.width === 0 ? e.height : e.width) || 1; n = figma.createVector(); n.strokes = []; n.vectorPaths = [{ windingRule: 'NONE', data: e.width === 0 ? `M 0 0 L 0 ${len}` : `M 0 0 L ${len} 0` }]; }
       else if (e.kind === 'graphic' && e.shape === 'ellipse') { n = figma.createEllipse(); if (e.arc) n.arcData = { startingAngle: (e.arc.start * Math.PI) / 180, endingAngle: (e.arc.end * Math.PI) / 180, innerRadius: e.arc.inner || 0 }; }
       else if (e.kind === 'graphic' && e.shape === 'rectangle') n = figma.createRectangle();
+      // any other graphic that holds no part (a glyph's path, a line a rotation stands up) is a vector too, never a frame,
+      // which reads back as a container: its box as its path, or a line where it has a length one way only
+      else if (e.kind === 'graphic' && !ids.some((x) => variant.anatomy[x].parent === id)) {
+        const w = px(e.width), h = px(e.height);
+        n = figma.createVector(); n.strokes = [];
+        n.vectorPaths = [{ windingRule: w && h ? 'NONZERO' : 'NONE', data: w && h ? `M 0 0 L ${w} 0 L ${w} ${h} L 0 ${h} Z` : h ? `M 0 0 L 0 ${h}` : `M 0 0 L ${w || 24} 0` }];
+      }
       else { n = figma.createFrame(); n.fills = []; }
       if (n.type === 'INSTANCE') await fontsOf(n);
       if (id !== 'root') n.name = e.name;
@@ -1051,7 +1067,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         n.fills = e.background ? await paints(e.background, id === 'root' ? 'root' : (e.name || id.slice(id.lastIndexOf('/') + 1))) : [];
         // one radius, or one per corner in Figma's order: top left, top right, bottom right, bottom left
         // an ellipse has no corners: a radius a variant kept from a rectangle is not drawn
-        if (e.radius != null && n.type !== 'ELLIPSE') for (const [i, f] of ['topLeftRadius', 'topRightRadius', 'bottomRightRadius', 'bottomLeftRadius'].entries()) await num(n, f, Array.isArray(e.radius) ? e.radius[i] : e.radius);
+        if (e.radius != null && 'topLeftRadius' in n) for (const [i, f] of ['topLeftRadius', 'topRightRadius', 'bottomRightRadius', 'bottomLeftRadius'].entries()) await num(n, f, Array.isArray(e.radius) ? e.radius[i] : e.radius);
         if (e.border) {
           n.strokes = e.border.color ? await paints(e.border.color) : [];
           // where the contract says (a divider's on its centre), else inside; taking room in the layout only where it says
@@ -1130,6 +1146,12 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       const h = c.vertical === 'stretch' && at.bottom != null ? up.height - at.y - at.bottom : typeof e.height === 'number' ? e.height : n.height;
       // (resize sets a text's resizing to fixed: said again after, as where it is first sized)
       if ('resize' in n && n.type !== 'VECTOR' && (Math.abs(w - n.width) > 0.01 || Math.abs(h - n.height) > 0.01)) { n.resize(px(w), px(h)); if (n.type === 'TEXT' && e.autoResize) n.textAutoResize = e.autoResize.toUpperCase(); }
+      // a line unturned that stretches along its length: its path that long (a divider across its box, drawn 1 px long
+      // and read back 159 px short of its end)
+      else if (n.type === 'VECTOR' && !e.rotation && (e.height === 0 || e.width === 0)) {
+        const along = e.height === 0 ? (c.horizontal === 'stretch' && at.end != null ? w : null) : (c.vertical === 'stretch' && at.bottom != null ? h : null);
+        if (along > 0) n.vectorPaths = [{ windingRule: 'NONE', data: e.height === 0 ? `M 0 0 L ${along} 0` : `M 0 0 L 0 ${along}` }];
+      }
       // pinned to its parent's end or bottom: from there; centred, as code read it (centred within 0.75 px): at the centre;
       // a Figma contract's centred layer where it sat, as its centre constraint keeps it
       at_(n, e);
