@@ -424,6 +424,9 @@ export function elementOfLayer(q, id, kind, rootRe, others) {
    of its own (display: contents, a placed component's custom element around its control), that control, which to-code
    writes the part's sizing and pull back on. */
 export const boxSelector = (id, display) => (display === 'contents' ? `[data-contract-id="${id}"] > :first-child` : `[data-contract-id="${id}"]`);
+/* The box a part's parent lays out: a part turned a quarter, its wrapper (turnOf, marked data-contract-turn), where to-code
+   writes its flow (its size on the parent's axes, its pull back); else its own box (boxSelector). */
+export const flowSelector = (id, turned, display) => (turned.has(id) ? `[data-contract-turn="${id}"]` : boxSelector(id, display));
 
 export function cornerOf(css, w, h) {
   const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -2186,7 +2189,12 @@ async function main() {
       const mark = new Set(raw.filter((e) => e.mark).map((e) => e.id)); for (const e of raw) delete e.mark;
       // (a placed instance's too, on the box in its parent's flow: a host that draws none, display: contents, through its control)
       const boxOf = async (e) => { const q = `[data-contract-id="${e.id}"]`; return e.kind === 'instance' && await call(L.tab, (s) => { const n = document.querySelector(s); return !!n && getComputedStyle(n).display === 'contents' && !!n.firstElementChild; }, q) ? `${q} > :first-child` : q; };
-      for (const e of raw) if (['container', 'slot', 'text', 'instance'].includes(e.kind) || mark.has(e.id)) { const q = await boxOf(e); for (const [css, field] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
+      // the parts turned a quarter (turnOf): laid out by their wrapper, which the parent lays out, never by a place of their
+      // own; their minimum and maximum are the wrapper's, on the swapped axis (to-code writes them so)
+      const turnedIds = new Set(await call(L.tab, () => [...document.querySelectorAll('[data-contract-turn]')].map((n) => n.getAttribute('data-contract-turn'))));
+      const SWAP = { minWidth: 'minHeight', minHeight: 'minWidth', maxWidth: 'maxHeight', maxHeight: 'maxWidth' };
+      for (const e of raw) if (['container', 'slot', 'text', 'instance'].includes(e.kind) || mark.has(e.id)) { const turnedHere = turnedIds.has(e.id), q = turnedHere ? flowSelector(e.id, turnedIds) : await boxOf(e); for (const [css, side] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
+        const field = turnedHere ? SWAP[side] : side;
         const w = await authoredWidth(L.tab, q, css, { raw: true, cache: styles });
         // (one written as a token, var(): the length it computes to, which the tokens below name back as that token)
         const own = lengthOf(w), v = own ?? (/^\s*var\(/.test(w || '') ? lengthOf(await call(L.tab, ([q, prop]) => { const n = document.querySelector(q); return n ? getComputedStyle(n).getPropertyValue(prop) : null; }, [q, css])) : null);
@@ -2206,8 +2214,6 @@ async function main() {
       // where each part sits in its parent, all four edges measured from the parent's box (as Figma measures x and y),
       // for an offset written as a token and for a point placed() never measured
       const insets = await call(L.tab, ([src, tsrc]) => { const { restore } = new Function(`return ${src}`)()(document.documentElement), turnOf = new Function(`return ${tsrc}`)(); try { return Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const r = n.getBoundingClientRect(), p = turnOf(n, getComputedStyle).up.getBoundingClientRect(), q = (v) => +v.toFixed(2); return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }]; })); } finally { restore(); } }, [unturn.toString(), turnOf.toString()]);
-      // the parts turned a quarter (turnOf): placed by their wrapper, which the parent lays out, never by a place of their own
-      const turnedIds = new Set(await call(L.tab, () => [...document.querySelectorAll('[data-contract-turn]')].map((n) => n.getAttribute('data-contract-turn'))));
       // (a part with no place of its own inside a placed component, unplacedIn: the walk's place for it is left out too)
       const layoutOf = (u) => (u.kind === 'instance' ? (((mainOf(u.component, u.key) || {}).anatomy || {}).root || {}).layout : u.layout);
       for (const e of raw) if (e.parent != null && unplacedIn(raw, e, layoutOf)) { delete e.absolute; if (e.position === 'absolute') delete e.position; }
@@ -2291,7 +2297,7 @@ async function main() {
         // the second child in the flow, whose start margin says a gap below 0 (rules.mjs: CSS has none)
         const second = e.layout && raw.filter((x) => x.parent === e.id && x.id in shown && x.position !== 'absolute' && !x.absolute).sort((x, y) => x.order - y.order)[1];
         // (on the box in the flow: a placed component's host that draws none hands it to its control, as to-code writes it)
-        const nextSel = second && boxSelector(second.id, shown[second.id][0]);
+        const nextSel = second && flowSelector(second.id, turnedIds, shown[second.id][0]);
         const next = second ? Object.fromEntries(await Promise.all(['margin-inline-start', 'margin-block-start', 'margin-left', 'margin-top'].map(async (p) => [p, await authoredWidth(L.tab, nextSel, p, { raw: true, cache: styles })]))) : null;
         const lay = e.layout && layoutFromCss(own, next);
         if (lay) {

@@ -242,7 +242,13 @@ ok('combinations too many to list are said to be unlisted, never left to read as
       { name: 'Track', type: 'FRAME', layout: 'HORIZONTAL', w: 169, h: 16, rotation, sizing }] }] }).anatomy.track;
     const q = turned(90, 'FIXED/FILL'), back = turned(-90, 'FIXED/FILL'), slant = turned(45, 'FIXED/FILL'), flat = turned(0, 'FILL/FIXED');
     ok('a part turned a quarter says its own width and height, its sizing words moved off the parent\'s axes onto its own; any other turn as it is',
-      q.width === 'fill' && q.height === 16 && q.rotation === 90 && back.width === 'fill' && back.height === 16 && slant.width === 169 && slant.height === 'fill' && flat.width === 'fill' && flat.height === 16); }
+      q.width === 'fill' && q.height === 16 && q.rotation === 90 && back.width === 'fill' && back.height === 16 && slant.width === 169 && slant.height === 'fill' && flat.width === 'fill' && flat.height === 16);
+    // (only where code lays it out by a wrapper, to-code turnedParts: in its parent's auto layout, no own axis hugging; a
+    // part placed out of the flow, or one that hugs, turns in place and keeps its words as Figma lists them)
+    const placed = derive({ name: 'Q', props: {}, variants: [{ name: 'Q', type: 'COMPONENT', layout: 'VERTICAL', w: 44, h: 354, children: [{ name: 'Track', type: 'FRAME', layout: 'HORIZONTAL', w: 169, h: 16, rotation: 90, sizing: 'FIXED/FILL', absolute: true, x: 0, y: 0 }] }] }).anatomy.track;
+    const hugs = turned(90, 'HUG/FILL'), free = derive({ name: 'Q', props: {}, variants: [{ name: 'Q', type: 'COMPONENT', w: 44, h: 354, children: [{ name: 'Track', type: 'FRAME', w: 169, h: 16, rotation: 90, sizing: 'FIXED/FILL' }] }] }).anatomy.track;
+    ok('a quarter turn placed out of the flow, in a frame with no auto layout, or hugging, keeps its sizing words as Figma lists them',
+      placed.width === 169 && placed.height === 'fill' && hugs.width === 'hug' && hugs.height === 'fill' && free.width === 169 && free.height === 'fill'); }
   ok('a corner bound to a token is said by it at 0, and an opacity by its token', A1.root.radius === 'R/0' && A1.root.opacity === 'O/half');
   ok('a stroke a side, each bound side by its token and the others by their width, drawn on its centre and taking room', JSON.stringify(A1.box.border.width) === '["S/1",0,"S/1",0]' && A1.box.border.align === 'center' && A1.box.border.inLayout === true);
   ok('a rectangle is one, turned as it is, following its parent as it does, and a weight bound with no stroke painted is no stroke (nothing draws it)', A1['free/ring'].constraints.horizontal === 'stretch' && A1['free/ring'].constraints.vertical === 'center' && A1['free/ring'].shape === 'rectangle' && A1['free/ring'].rotation === 45 && A1['free/ring'].border === undefined);

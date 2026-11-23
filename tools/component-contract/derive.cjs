@@ -81,7 +81,10 @@ function element(n, parent, known, up = null, axes = []) {
     // box (the snapshot's `visual`, 16 by 169), so its sizing words name the parent's axes: each said of its own axis,
     // the horizontal one of its height and the vertical one of its width (a slider's track turned upright fills its
     // column down, its own width). Any other turn is said as it stands
-    const [w, h] = (QUARTER(n.rotation) ? String(n.sizing).split('/').reverse() : String(n.sizing).split('/'));
+    // (only where code lays it out by its turned box, to-code turnedParts: in its parent's auto layout, not placed out of
+    // the flow, neither axis hugging, a size container cannot hug; anywhere else it turns in place and keeps Figma's order)
+    const flows = up && (up.layout === 'HORIZONTAL' || up.layout === 'VERTICAL') && !n.absolute && !/HUG/.test(String(n.sizing));
+    const [w, h] = (QUARTER(n.rotation) && flows ? String(n.sizing).split('/').reverse() : String(n.sizing).split('/'));
     e.width = sizeFromFigma(w) || (b.w ?? n.w);
     e.height = sizeFromFigma(h) || (b.h ?? n.h);
     // a component that fills its set: the size the set gives it, a canvas fact, as `invalid` is (a row 420 wide)

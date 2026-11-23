@@ -500,7 +500,8 @@ export function figmaSide(contract) {
    vertical; turned a quarter, the other way round, as Figma lays out the turned box and says its sizing on the parent's
    axes (derive.cjs QUARTER reads them so). Run in the drawing (passed as source). */
 export function sizingAxes(e) {
-  const q = typeof e.rotation === 'number' && Math.abs(Math.abs(e.rotation) - 90) < 0.01;
+  // (as derive swaps them: in the flow, no axis hugging; placed out of it, a fill is not drawn, and a number sizes its own axis)
+  const q = typeof e.rotation === 'number' && Math.abs(Math.abs(e.rotation) - 90) < 0.01 && e.width !== 'hug' && e.height !== 'hug' && !e.absolute && e.position !== 'absolute';
   return q ? [['width', 'layoutSizingVertical'], ['height', 'layoutSizingHorizontal']] : [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']];
 }
 

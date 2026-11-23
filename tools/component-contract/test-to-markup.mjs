@@ -66,7 +66,6 @@ const lead = { component: 'Chip', props: { lead: { type: 'boolean', default: fal
     anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, track: { kind: 'container', parent: 'root', order: 0, width: 'fill', height: 16 }, end: { kind: 'text', parent: 'root', order: 1, content: 'x' } },
     variants: [{ when: { orientation: 'vertical' }, set: { 'root.layout': { direction: 'column' }, 'track.rotation': -90 } }] };
   const el = toElement(upright, 'upright', { naming: ELEMENT, library: {} }), react = toReact(upright, 'upright', { naming: CLASS, library: {} });
-  if (process.env.SHOW) console.log(el, react);
   ok('a part turned a quarter is drawn inside its wrapper, in markup of every kind; a part not turned is not wrapped',
     /"data-turn": "track"/.test(el) && /data-turn="track"/.test(react) && (el.match(/data-turn/g) || []).length === 1
     && el.indexOf('"data-turn": "track"') < el.indexOf('"data-part": "track"')

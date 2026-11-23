@@ -862,7 +862,10 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       const own = out[id].decls, sized = (v) => v === 'fill' || typeof v === 'number' || (typeof v === 'string' && v !== 'hug');
       if (quarter(e.rotation) && parent && parent.layout && parent.layout.direction && sized(e.width) && sized(e.height)) {
         const ctx = { root: false, holds: false, row: (parent.layout || {}).direction !== 'column', wrap: !!parent.layout.wrap, anchors: false, box: null, pull, words: null };
-        const flow = declarations({ width: e.height, height: e.width }, ctx, tokenNames).decls;
+        // (its own minimum and maximum too, on the swapped axis: its own width's are the wrapper's height's; said there, so
+        // the zero minimum a fill takes is not written over them)
+        const swapped = Object.fromEntries([['width', e.height], ['height', e.width], ['minWidth', e.minHeight], ['maxWidth', e.maxHeight], ['minHeight', e.minWidth], ['maxHeight', e.maxWidth]].filter(([, v]) => v !== undefined));
+        const flow = declarations(swapped, ctx, tokenNames).decls;
         const length = (v) => declarations({ width: v }, { row: false }, tokenNames).decls.find(([p]) => p === 'inline-size');
         out[`${id}::turn`] = { decls: new Map([['display', { v: 'block' }], ['position', { v: 'relative' }], ['container-type', { v: 'size' }], ...flow.map(([p, v, note]) => [p, { v, note }]), ...(own.has('order') ? [['order', own.get('order')]] : [])]), unread: [] };
         for (const p of [...own.keys()]) if (/^(flex|align-self|order|(min-|max-)?(inline|block)-size|margin.*)$/.test(p)) own.delete(p);
@@ -952,6 +955,9 @@ function cascade(rules, full, id) {
 /* The contract's rules: the defaults, then each variant layer, each saying only what it changes. */
 // the parts a pointer state takes away at this combination (outermost only): drawn with the state at its default, gone
 // at this one
+// a part hidden at a pointer state, and, where it is drawn in a turn's wrapper (turnedParts), the wrapper too, so no box
+// keeps its room and its share of the gap
+const withTurns = (c, ids) => { const T = turnedParts(c); return ids.flatMap((id) => (T.has(id) ? [id, `${id}::turn`] : [id])); };
 function pointerGone(c, full, dflt, mains, t = HOUSE) {
   const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
   if (!pk || full[pk] === dflt[pk] || !(c.props[pk].pointer || []).includes(full[pk])) return [];
@@ -1007,7 +1013,7 @@ export function rulesOf(c, mains, t = HOUSE) {
     }
     // a part a pointer state takes away (a field's chevron at focus, where another stands): the markup holds it at every
     // state, so the sheet hides it there (to-markup names it pointerGone); the outermost part gone, its insides with it
-    for (const id of pointerGone(c, full, dflt, mains, t)) if ((cascade(rules, full, id).get('display') || {}).v !== 'none') (parts[id] ||= new Map()).set('display', { v: 'none' });
+    for (const id of withTurns(c, pointerGone(c, full, dflt, mains, t))) if ((cascade(rules, full, id).get('display') || {}).v !== 'none') (parts[id] ||= new Map()).set('display', { v: 'none' });
     // (one a pointer state puts in, held by the markup beyond where the contract draws it, is hidden by selfCheck's rules
     // alone, each naming its whole combination: a hide on a layer would reach combinations that draw it, and showing it
     // again there would take a display this sheet cannot know, a placed component's own)
@@ -1063,7 +1069,7 @@ export function selfCheck(c, rules, mains, t = HOUSE) {
       for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset') out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
     }
     // and a part a pointer state takes away stays hidden there, whatever a rule of the same weight gives it
-    for (const id of [...pointerGone(c, full, dflt, mains, t), ...pointerShown(c, full, t)]) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v }); }
+    for (const id of withTurns(c, [...pointerGone(c, full, dflt, mains, t), ...pointerShown(c, full, t)])) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v }); }
   }
   return out;
 }

@@ -144,6 +144,17 @@ const upright = { contract: 1, component: 'Upright', props: { orientation: { typ
     /display: contents/.test(base) && /display: block/.test(wrap) && /container-type: size/.test(wrap) && /flex: 1 1 0/.test(wrap) && /inline-size: 1rem/.test(wrap)
     && /position: absolute/.test(part) && /inline-size: 100cqh/.test(part) && /rotate: -90deg/.test(part) && /translate: -50% -50%/.test(part)
     && selfCheck(upright).length === 0);
+  // its own minimum goes to the wrapper on the swapped axis (its own width, down the column), where the zero minimum a fill
+  // takes (bc39d74c) does not overwrite it; and a pointer state that takes the part away takes its wrapper too
+  { const least = toCss({ ...upright, anatomy: { ...upright.anatomy, track: { ...upright.anatomy.track, minWidth: 100 } } }, 'upright', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+    const i = least.indexOf('.ds-upright:where([data-orientation="vertical"]) > [data-turn="track"] {'), w = least.slice(i, least.indexOf('}', i));
+    ok('a turned part\'s own minimum is its wrapper\'s on the swapped axis, never written over by the zero minimum',
+      /min-block-size: 6.25rem/.test(w) && !/min-block-size: 0;/.test(w) && selfCheck({ ...upright, anatomy: { ...upright.anatomy, track: { ...upright.anatomy.track, minWidth: 100 } } }).length === 0); }
+  { const hover = { ...upright, props: { ...upright.props, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] } },
+      variants: [...upright.variants, { when: { state: 'hover' }, remove: ['track'] }] };
+    const t2 = toCss(hover, 'upright', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+    ok('a pointer state that takes a turned part away hides its wrapper too, so no box keeps its room',
+      /:hover[^{]*> \[data-turn="track"\] \{\s*display: none;/.test(t2) && selfCheck(hover).length === 0); }
   const slant = { ...upright, variants: [{ when: { orientation: 'vertical' }, set: { 'track.rotation': 45 } }] };
   ok('any other turn is turned in place, as before: no wrapper', !/data-turn/.test(toCss(slant, 'upright'))); }
 const css = toCss(chip, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });

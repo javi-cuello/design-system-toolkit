@@ -340,6 +340,12 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     && turn({ style: {}, parentElement: row, hasAttribute: () => false }, style).up === row && order(on, 'layer', style) === 4 && order(off, 'layer', style) === 5);
 }
 
+// the box a gap below 0 is pulled back on is the one the parent lays out: a turned part's wrapper, where to-code writes it
+{ const { flowSelector } = await import('./from-code.mjs');
+  ok('the second child\'s pull back is read on its wrapper where it is turned, else on its own box',
+    flowSelector('track', new Set(['track']), 'block') === '[data-contract-turn="track"]' && flowSelector('icon', new Set(['track']), 'block') === '[data-contract-id="icon"]'
+    && flowSelector('end', new Set(), 'contents') === '[data-contract-id="end"] > :first-child'); }
+
 // a layer the mapping places inside a placed component takes the design's name there, never the placed component's own
 // name for the element it lands on (Atlassian's date picker: Select's chevron, <ChevronDownIcon>, carries the design's
 // <SelectClearIcon>; read under Select's name, the second trip's mapping named a layer the design has not)
