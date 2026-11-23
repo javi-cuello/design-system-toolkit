@@ -47,7 +47,7 @@ export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
 import { inWordsOf } from './to-figma.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -113,15 +113,15 @@ export function cssOrderOf(n, parent, style) {
 }
 
 /* What decides where a part paints among its siblings, as the browser stacks them (CSS 2 Appendix E): `out` where it is
-   out of the flow (absolute or fixed: CSS order moves it nowhere, CSS Flexbox 4.1), `lifted` where it is positioned in
-   the flow (relative or sticky), and `z`, its z-index where one applies (a positioned box, or a flex or grid item: CSS
+   out of the flow (absolute or fixed: CSS order moves it nowhere, CSS Flexbox 4.1), `lifted` where it paints with
+   the positioned in the flow (rules.mjs liftsAlone, passed in: positioned, or a stacking context of its own), and `z`, its z-index where one applies (a positioned box, or a flex or grid item: CSS
    Flexbox 4.3). Read off the box it renders at, as cssOrderOf. rules.mjs siblingOrder orders by it. Runs in the page
    (passed as source); tested by test-from-code.mjs. */
-export function stackOf(n, style) {
+export function stackOf(n, style, liftsAlone) {
   const s = style(n), b = style(s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n);
-  const out = b.position === 'absolute' || b.position === 'fixed', lifted = !out && !!b.position && b.position !== 'static';
+  const out = b.position === 'absolute' || b.position === 'fixed', lifted = !out && liftsAlone((p) => b[p.replace(/-([a-z])/g, (_, x) => x.toUpperCase())]);
   const laid = !!n.parentElement && /flex|grid/.test(style(n.parentElement).display);
-  const z = b.zIndex && b.zIndex !== 'auto' && (out || lifted || laid) ? +b.zIndex : NaN;
+  const z = b.zIndex && b.zIndex !== 'auto' && (out || (!!b.position && b.position !== 'static') || laid) ? +b.zIndex : NaN;
   return { ...(out && { out: true }), ...(lifted && { lifted: true }), ...(Number.isFinite(z) && { z }) };
 }
 
@@ -1898,7 +1898,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)();
@@ -1935,7 +1935,7 @@ async function main() {
           const [a, b, c, d] = m[1].split(',').map(Number);
           return a * d - b * c < 0 && Math.abs(b) < 1e-6 && Math.abs(c) < 1e-6 ? (a < 0 ? 'x' : 'y') : null;
         };
-        const cssOrderOf = new Function(`return ${cssOrderSrc}`)(), stackOf = new Function(`return ${stackSrc}`)(), placedBy = (n, parent) => { const o = cssOrderOf(n, parent, getComputedStyle), st = parent != null ? stackOf(n, getComputedStyle) : {}; return { ...(o != null && { cssOrder: o }), ...(Object.keys(st).length && { stack: st }) }; };
+        const cssOrderOf = new Function(`return ${cssOrderSrc}`)(), stackOf = new Function(`return ${stackSrc}`)(), liftsAlone = new Function(`return ${liftsSrc}`)(), placedBy = (n, parent) => { const o = cssOrderOf(n, parent, getComputedStyle), st = parent != null ? stackOf(n, getComputedStyle, liftsAlone) : {}; return { ...(o != null && { cssOrder: o }), ...(Object.keys(st).length && { stack: st }) }; };
         const walk = (n, parent, order, inside = false) => {
           const s = getComputedStyle(n);
           // not drawn: hidden, or a native control MUI keeps for its behaviour at no opacity (a switch's input); a layer
@@ -2133,7 +2133,7 @@ async function main() {
         const siblingOrder = new Function(`return ${siblingOrderSrc}`)();
         for (const xs of Object.values(byParent)) siblingOrder(xs).forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)

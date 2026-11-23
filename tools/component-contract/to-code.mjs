@@ -35,7 +35,7 @@ import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel, placedOf as heldBy } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
-import { negative, heldOpacity, heldGlyph, siblingOrder } from './rules.mjs';
+import { negative, heldOpacity, heldGlyph, siblingOrder, liftsAlone } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
 import { cssName } from '../tokens/names.mjs';
@@ -132,8 +132,13 @@ export function copyOf(c, id) {
   // (in a box a variant reorders, each child says its place, and a copy says the first's: where another child stands
   // between the two, at the defaults or in a variant, the copy is a part of its own there, or it would be drawn beside
   // the first; copies side by side keep the one rule, tied at one place in the order they are written)
+  const lo = Math.min(first.order ?? 0, e.order ?? 0), hi = Math.max(first.order ?? 0, e.order ?? 0);
+  // (a part out of the flow between the two, at the defaults or in a variant: the copy may paint over it where the first
+  // paints under, so each says its own place by z-index where the box is restacked; a part of its own, never the first's rule)
+  const outBetween = (x) => x && x.parent === e.parent && (x.position === 'absolute' || x.absolute) && typeof x.order === 'number' && x.order > lo && x.order < hi;
+  if (Object.values(a).some(outBetween) || (c.variants || []).some((v) => Object.values(v.add || {}).some(outBetween))) return null;
   if (reordered(c).has(e.parent)) {
-    const lo = Math.min(first.order ?? 0, e.order ?? 0), hi = Math.max(first.order ?? 0, e.order ?? 0), family = new RegExp(`^${m[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(_\\d+)?$`);
+    const family = new RegExp(`^${m[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(_\\d+)?$`);
     const between = (k, o, parent) => parent === e.parent && !family.test(k) && typeof o === 'number' && o > lo && o < hi;
     if (Object.entries(a).some(([k, x]) => between(k, x.order, x.parent))) return null;
     for (const v of c.variants || []) {
@@ -267,35 +272,53 @@ function reordered(c) {
 
 /* The boxes whose children the browser would paint in another order than the design's, as from-code reads it
    (rules.mjs siblingOrder): a part out of the flow paints over the box's unpositioned children and in markup order
-   among the positioned (a child in the flow holding a part of its own out of it is positioned: css.mjs `anchors`),
-   whatever CSS order says (CSS Flexbox 4.1). Where some variant's design order is not that, each child of the box says
-   its place by z-index (drawn), the box isolated. Compared per variant, as beforeOf; a ring the markup holds no element
-   for, and a box inside a placed component or a slot, aside. */
+   among the positioned, whatever CSS order says (CSS Flexbox 4.1). A child in the flow paints with the positioned where
+   the declarations drawn writes on it say so, by the reader's own rule (rules.mjs liftsAlone): positioned (holding a part
+   of its own out of the flow: css.mjs `anchors`; a placed component whose own root does), see-through, transformed,
+   isolated (a box restacked itself: so found until no more are). Where some variant's design order is not that, each
+   child of the box says its place by z-index (drawn), the box isolated. Compared per variant, as beforeOf; a ring the
+   markup holds no element for, and a box inside a placed component or a slot, aside. `mains` as drawn's. */
 const RESTACKED = new WeakMap();
-function restacked(c, t = HOUSE) {
-  if (!RESTACKED.has(c)) {
+function restacked(c, t = HOUSE, mains = NO_MAINS) {
+  if (!RESTACKED.has(c)) RESTACKED.set(c, new Map());
+  const memo = RESTACKED.get(c);
+  if (!memo.has(mains)) {
     const boxes = new Set(), parts = partsOf(c, t), kids = childrenOf(parts);
     const outOf = (e) => e.position === 'absolute' || !!e.absolute;
+    const said = (decls) => { const d = new Map(decls); return (k) => d.get(k); };
+    for (let grew = true; grew;) {
+    grew = false;
     for (const [box, list] of kids) {
       const B = parts.get(box);
-      if (B && (B.inside || B.slotted || B.e.kind === 'instance' || B.e.kind === 'slot')) continue;
+      if (boxes.has(box) || (B && (B.inside || B.slotted || B.e.kind === 'instance' || B.e.kind === 'slot'))) continue;
       const dom = new Map(markupOrder(c, list).order.map((p, i) => [p.id, i]));
       for (const v of [{}, ...(c.variants || [])]) {
         const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
-        const asAt = (p) => { const e = { ...p.e, ...(add[p.id] || {}) }; for (const f of ['position', 'absolute', 'parent']) if (`${p.id}.${f}` in set) e[f] = set[`${p.id}.${f}`]; return e; };
+        const asAt = (p) => { const e = { ...p.e, ...(add[p.id] || {}) }; for (const [k, x] of Object.entries(set)) if (k.startsWith(`${p.id}.`) && !k.slice(p.id.length + 1).includes('.')) e[k.slice(p.id.length + 1)] = x; return e; };
         const here = list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id))));
         if (!here.some((p) => outOf(asAt(p)))) continue;
         const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? p.e.order ?? 0;
-        // (positioned in the flow: it holds a part out of the flow here, not a ring)
+        // (it holds a part out of the flow here, not a ring: positioned, its containing block)
         const anchors = (p) => (kids.get(p.id) || []).some((q) => !q.ring && ((q.base && !gone.has(q.id)) || q.id in add) && (asAt(q).parent || 'root') === p.id && outOf(asAt(q)));
-        const xs = [...here].sort((x, y) => dom.get(x.id) - dom.get(y.id)).map((p) => { const out = outOf(asAt(p)); return { id: p.id, cssOrder: out ? 0 : at(p), stack: { ...(out && { out: true }), ...(!out && p.e.kind !== 'instance' && anchors(p) && { lifted: true }) } }; });
+        const lifted = (p) => {
+          if (boxes.has(p.id)) return true;
+          const e = asAt(p), m = e.kind === 'instance' && e.component && mains(e.component, e.key);
+          // (a placed component this library holds is placed here, its look its own sheet's: what drawn keeps, PLACED)
+          const own = declarations(e, { root: false, holds: holds(e.kind), row: true, anchors: e.kind !== 'instance' && anchors(p), box: null, pull: null }, tokenNames).decls.filter(([k]) => !m || PLACED.test(k));
+          if (liftsAlone(said(own))) return true;
+          if (!m) return false;
+          const R = (m.anatomy || {}).root || {}, rootAnchors = Object.values(m.anatomy || {}).some((x) => x.parent === 'root' && outOf(x));
+          return liftsAlone(said(declarations(R, { root: true, holds: holds(R.kind), row: true, anchors: rootAnchors, box: null, pull: null }, tokenNames).decls));
+        };
+        const xs = [...here].sort((x, y) => dom.get(x.id) - dom.get(y.id)).map((p) => { const out = outOf(asAt(p)); return { id: p.id, cssOrder: out ? 0 : at(p), stack: { ...(out && { out: true }), ...(!out && lifted(p) && { lifted: true }) } }; });
         const want = [...here].sort((x, y) => at(x) - at(y) || dom.get(x.id) - dom.get(y.id)).map((p) => p.id).join();
-        if (siblingOrder(xs).map((e) => e.id).join() !== want) { boxes.add(box); break; }
+        if (siblingOrder(xs).map((e) => e.id).join() !== want) { boxes.add(box); grew = true; break; }
       }
     }
-    RESTACKED.set(c, boxes);
+    }
+    memo.set(mains, boxes);
   }
-  return RESTACKED.get(c);
+  return memo.get(mains);
 }
 
 /* The native control a component is, by its name: a button's parts are held in a <button>. The contract names no
@@ -781,8 +804,8 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     if (parent && parent.layout && reordered(c).has(e.parent) && typeof e.order === 'number' && !(e.position === 'absolute' || e.absolute)) kept.push(['order', String(e.order)]);
     // where the browser would paint the box's children in another order than the design (restacked), each says its place
     // by z-index, one over its order (above the box's unpositioned children, which take none); the box is isolated, below
-    if (e.parent && restacked(c, t).has(e.parent) && !slotted) kept.push(['z-index', String((e.order ?? 0) + 1)]);
-    if (restacked(c, t).has(id)) kept.push(['isolation', 'isolate']);
+    if (e.parent && restacked(c, t, mains).has(e.parent) && !slotted) kept.push(['z-index', String((e.order ?? 0) + 1)]);
+    if (restacked(c, t, mains).has(id)) kept.push(['isolation', 'isolate']);
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: (e.kind === 'instance' && !unheld) || slotted ? [] : unheld ? unread.filter((f) => !/^(key|component|with|swappedBy)\b/.test(f)) : unread,
       // (the axes a scale constraint went unwritten on: eval.mjs leftToCode leaves what code draws there to code)
       ...(unshared.length && !slotted && { unshared }) };
@@ -846,7 +869,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     const own = value || placeholder, P = a[entry.box];
     if (out[entry.input] && own && P && P.layout && reordered(c).has(entry.box) && typeof own.order === 'number') out[entry.input].decls.set('order', { v: String(own.order) });
     // (and its place by z-index where the box's children say theirs so)
-    if (out[entry.input] && own && restacked(c, t).has(entry.box)) out[entry.input].decls.set('z-index', { v: String((own.order ?? 0) + 1) });
+    if (out[entry.input] && own && restacked(c, t, mains).has(entry.box)) out[entry.input].decls.set('z-index', { v: String((own.order ?? 0) + 1) });
     put(`${entry.input}::placeholder`, placeholder, (p) => p === 'color' || /^(font|line-height|letter-spacing|text-)/.test(p));
   }
   return out;

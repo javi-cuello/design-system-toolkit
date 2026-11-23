@@ -466,3 +466,18 @@ export function siblingOrder(xs) {
   flow.forEach((f, k) => { res.push(f, ...outs.filter((o) => slot.get(o) === k)); });
   return res.map((x) => x.e);
 }
+
+/* Whether a box in the flow paints with the positioned ones (siblingOrder's `lifted`), in markup order, with no z-index of
+   its own: positioned (relative, sticky), or a stacking context of its own (CSS 2 Appendix E; css-color 4 on opacity;
+   css-transforms 1 and 2 on transform, translate, rotate, scale; filter-effects on filter and backdrop-filter;
+   compositing on isolation and mix-blend-mode; css-will-change). `get` gives a property's value by its CSS name: a
+   computed style's (from-code stackOf) or the declarations to-code writes (restacked), one rule for both. Runs in the
+   page as well (passed as source). */
+export function liftsAlone(get) {
+  const v = (p) => String(get(p) ?? '').trim();
+  const said = (p, none) => { const x = v(p); return x !== '' && !none.includes(x) && !/^(initial|unset|inherit|revert|revert-layer)$/.test(x); };
+  const o = v('opacity');
+  return /^(relative|sticky)$/.test(v('position')) || (said('opacity', []) && !(Number.isFinite(+o) && +o >= 1))
+    || ['transform', 'translate', 'rotate', 'scale', 'filter', 'backdrop-filter'].some((p) => said(p, ['none'])) || said('isolation', ['auto']) || said('mix-blend-mode', ['normal'])
+    || /\b(opacity|transform|translate|rotate|scale|filter|isolation|mix-blend-mode|position)\b/.test(v('will-change'));
+}

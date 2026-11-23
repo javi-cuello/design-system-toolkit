@@ -295,11 +295,17 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
 // flex or grid item (CSS Flexbox 4.1, 4.3), and an absolute child paints over the box's unpositioned children, in markup
 // order among the positioned, a z-index over all (CSS 2 Appendix E); the children in the flow keep their laid-out order
 {
-  const { stackOf } = await import('./from-code.mjs'), { siblingOrder } = await import('./rules.mjs');
-  const stack = new Function(`return ${stackOf.toString()}`)(), order = new Function(`return ${siblingOrder.toString()}`)();
+  const { stackOf } = await import('./from-code.mjs'), { siblingOrder, liftsAlone } = await import('./rules.mjs');
+  const stack = new Function(`return ${stackOf.toString()}`)(), order = new Function(`return ${siblingOrder.toString()}`)(), lifts = new Function(`return ${liftsAlone.toString()}`)();
   const style = (n) => n.style || n;
   const kid = (st) => ({ style: { display: 'block', position: 'static', zIndex: 'auto', ...st }, parentElement: { style: { display: 'flex' } } });
-  const said = (n) => JSON.stringify(stack(n, style));
+  const said = (n) => JSON.stringify(stack(n, style, lifts));
+  // (an unpositioned child that makes a stacking context of its own paints with the positioned, in markup order: CSS 2
+  // Appendix E, css-color's note on opacity, css-transforms)
+  ok('a child in the flow that stacks alone (see-through, transformed, filtered, isolated, blended) is lifted; one at its defaults is not',
+    ['opacity: 0.5', 'transform: matrix(1, 0, 0, 1, 2, 0)', 'rotate: 45deg', 'translate: 2px', 'scale: -1 1', 'filter: blur(2px)', 'isolation: isolate', 'mixBlendMode: multiply', 'willChange: transform']
+      .every((d) => { const [k, v] = d.split(': '); return said(kid({ [k]: v })) === '{"lifted":true}'; })
+    && said(kid({ opacity: '1', transform: 'none', rotate: 'none', filter: 'none', isolation: 'auto', mixBlendMode: 'normal', willChange: 'auto' })) === '{}');
   ok('what stacks a child: out of the flow, positioned in it, a z-index where it applies (positioned, or a flex item), none on a block\'s child',
     said(kid({ position: 'absolute' })) === '{"out":true}' && said(kid({ position: 'relative' })) === '{"lifted":true}' && said(kid({})) === '{}'
     && said(kid({ zIndex: '2' })) === '{"z":2}' && said(kid({ position: 'absolute', zIndex: '-1' })) === '{"out":true,"z":-1}'

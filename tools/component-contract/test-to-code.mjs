@@ -271,6 +271,20 @@ ok('a reordering variant writes each child\'s order', /__texts > \.ds-chip__a \{
   const held = { ...over, anatomy: { ...over.anatomy, 'b/dot': { kind: 'graphic', parent: 'b', order: 0, position: 'absolute', absolute: { x: 0, y: 0 }, width: 2, height: 2 }, x: absAt(0), a: flowAt(1), b: { ...flowAt(2), kind: 'container' } } };
   const hcss = toCss(held, 'pin', { naming: ELEMENT });
   ok('a part under a positioned child in the flow is drawn under it', paints(toElement(held, 'pin', { naming: ELEMENT, library: {} }), hcss, ['a', 'x', 'y', 'b'], null) === 'x,a,b,y' && selfCheck(held).length === 0);
+  // copies of one placed component with a part out of the flow between them: the copy is a part of its own, or it
+  // would take its first's z-index and paint beside it, under the part between
+  const tagAt = (n) => ({ kind: 'instance', parent: 'root', order: n, component: 'Tag', key: 't1' });
+  const copies = { ...pin, props: {}, anatomy: { root: pin.anatomy.root, item: tagAt(0), x: absAt(1), item_2: tagAt(2) }, variants: [] };
+  const kmk = toElement(copies, 'pin', { naming: ELEMENT, library: {} }), kcss = toCss(copies, 'pin', { naming: ELEMENT });
+  ok('a copy with a part out of the flow between it and its first is a part of its own, painted over that part',
+    kmk.includes('"data-part": "item-2"') && paints(kmk, kcss, ['item', 'x', 'item-2'], null) === 'item,x,item-2' && selfCheck(copies).length === 0);
+  // a child in the flow that the browser paints with the positioned (see-through, or a placed component whose own root
+  // holds a part out of the flow, so is positioned) already paints over a part written before it: nothing to say
+  const seen = { ...pin, props: {}, anatomy: { root: pin.anatomy.root, b: flowAt(0), x: absAt(1), a: { ...flowAt(2), opacity: 0.5 } }, variants: [] };
+  ok('a see-through child after a part out of the flow already paints over it: no z-index', !/z-index|isolation/.test(toCss(seen, 'pin', { naming: ELEMENT })));
+  const badge = { contract: 1, component: 'Badge', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, dot: { ...absAt(0), parent: 'root' } }, variants: [] };
+  const placed = { ...seen, anatomy: { ...seen.anatomy, a: { kind: 'instance', parent: 'root', order: 2, component: 'Badge', key: 'b1' } } };
+  ok('so does a placed component whose own root holds a part out of the flow', !/z-index|isolation/.test(toCss(placed, 'pin', { naming: ELEMENT, mains: (n) => (n === 'Badge' ? { ...badge, folder: 'badge' } : null) })));
 }
 // a placed control the Selected layer names is the one the state reaches, at its depth; another control is not
 const card = { ...chip, anatomy: { ...chip.anatomy, top: { kind: 'container', parent: 'root', order: 1, layout: { direction: 'row' } }, 'top/check': { kind: 'instance', parent: 'top', order: 0, component: 'Checkbox', with: { Selected: 'False' } }, foot: { kind: 'instance', parent: 'root', order: 2, component: 'Button' } },
