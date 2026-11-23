@@ -116,7 +116,7 @@ Then open `http://localhost:9231/audits/`. Each project's instance runs on its o
 | Move | What it does |
 |---|---|
 | **Check changes** | The fingerprint sweep. |
-| **Audit** | After a Check changes that saw sets move, it asks: *Audit changes* over those sets, or *Audit all*. Otherwise it audits the whole library. It files findings as rows. Then it runs the foundations audit, the validator for the recorded code target and the link check, each filing its own rows. |
+| **Audit** | One button for every file ticked in the file list, with *Whole* or *Changed since the last audit* beside it. *Changed* audits the sets a Check changes saw move plus any that move on a check it makes then; a file with nothing moved is skipped and said. It files findings as rows. Then it runs the foundations audit, the validator for the recorded code target and the link check, each filing its own rows. |
 | **Do it** | Bucket 1: writes and applies the fix, then re-scans and stamps itself. |
 | **Verify ticked** | Re-checks everything ticked. |
 

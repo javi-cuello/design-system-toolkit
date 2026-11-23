@@ -42,7 +42,7 @@ export function renderLibrary(lib) {
     // A file with no rows has not been in a snapshot yet.
     const has = Object.keys(state).length > 0;
     document.getElementById("measuredLine").textContent = has && window.DASH_SNAPSHOT
-      ? "Checked from the snapshot, with no audit to run."
+      ? "Checked from its snapshot when not open in Figma; tick it and press Audit to check it now."
       : "No snapshot of this file yet: it is checked from the first one stored.";
   } else {
     // Rows with no run behind them were filed from the snapshot's change log

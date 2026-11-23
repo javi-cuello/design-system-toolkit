@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.54.0 (2026-11-23): references/record.md: the dashboard's Audit is one button over the ticked files, Whole or Changed; the *Audit changes* / *Audit all* menu is gone. Case A92 superseded by figma-project-audit O8.
 - 2.53.0 (2026-11-21): references conventions-universal.md, scanner-checks.md and judgment-protocol.md rewritten to skill-standard §A clause I: contents lists, tables for traps, rule ids and exceptions, dated stories dropped; every rule id, threshold and section number kept; no rule changed.
 - 2.52.0 (2026-11-21): SKILL.md rewritten to skill-standard §A clause I: lead, numbered steps, reference moved to six new references/ files, dated stories dropped, "record" for "tracker"; no rule changed.
 - 2.51.3 (2026-11-21): the description drops a word, back under the 1024-character limit 2.51.2 crossed; no rule changed.

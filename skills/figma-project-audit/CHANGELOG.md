@@ -1,5 +1,6 @@
 # Changelog — figma-project-audit
 
+- 1.9.0 (2026-11-23): the dashboard's one *Audit* runs the ticked files, whole or changed; a closed tokens or icons file is checked from its snapshot. Case O8.
 - 1.8.0 (2026-11-23): `stages.json`: each Figma stage carries `gather.timeout`, read by every runner through `stages.mjs` `gatherTimeout`. Case O7.
 - 1.7.4 (2026-11-22): `stages.json`: the four descriptions Audit lite shows are a few words each; the window read as too verbose. No stage or rule changed. Case O7.
 - 1.7.3 (2026-11-22): the list of stages moves to `scripts/stages.json`. A tool that reads it (the figma-audit service) then takes only this skill's `scripts/` through `bin/get`, not the whole skill, so getting figma-foundations-audit no longer installs this one. No rule changed.

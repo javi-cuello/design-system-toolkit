@@ -5,7 +5,7 @@ description: Run a project's whole Figma audit by sequencing the stand-alone aud
 
 # Figma Project Audit
 
-**Version 1.8.0** — history in CHANGELOG.md.
+**Version 1.9.0** — history in CHANGELOG.md.
 
 This skill runs a project's whole Figma audit by sequencing the stand-alone audit skills into one audit record. Each of those skills owns one subject: the components, the file as a whole, the code target, the token links. This skill runs them in the one order that keeps their results consistent, so the dashboard shows the whole library. Use it to audit everything, check the whole library, update the dashboard, or run some audits together.
 
@@ -50,7 +50,7 @@ Ownership is the record contract in `tools/figma-audit/REFERENCE.md`. Settings a
 2. **Run each stage in the list's order** by naming its owner skill, where it applies to this library.
    - A stage applies by a fact of the file, such as an icon page, or by a setting that must be set.
    - A stage that does not apply is named in the report, with why.
-   - Where the dashboard is running, its *Audit all* runs the whole list in one press.
+   - Where the dashboard is running, its one *Audit* runs the whole list on every file ticked in its file list, whole or only what changed since the last audit. A components file must be open in Figma; a tokens or icons file is read live when open and from its last snapshot when not, and one saved since its snapshot is marked *Snapshot again*.
 3. **Report** the open breaking changes first, then one line per stage.
    - First line: how many breaking changes are open, by name (*Breaking changes are not a stage*).
    - Each stage line: what ran, what it found, what it closed.

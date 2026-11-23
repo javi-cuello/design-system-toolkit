@@ -200,4 +200,21 @@ for (const [f, heads] of [["tools/figma-audit/audit-session.mjs", ["exec(port, f
   ok(`${f}: a \`wait\` it passes is read from the list`, !/, wait[,)]/.test(src) || /const wait = gatherTimeout\(/.test(src));
 }
 
+// O8: the dashboard has ONE Audit, over the files ticked in its list
+{
+  const page = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/Dashboard.astro"), "utf8");
+  const audit = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/audit.js"), "utf8");
+  const files = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/measures.js"), "utf8");
+  const css = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/dashboard.css"), "utf8");
+  ok("dashboard: one Audit button, no menu that comes and goes", /id="auditBtn"/.test(page) && !/auditMenu|auditAllBtn|auditChangedBtn/.test(page + audit));
+  ok("dashboard: Whole and Changed are radios always in view", (page.match(/type="radio" name="auditScope"/g) || []).length === 2);
+  ok("dashboard: no tab hides the Audit button", !/data-scanned="no"\] \.head-actions/.test(css));
+  ok("dashboard: each file row carries a checkbox, read by pickedFiles", /type = "checkbox"/.test(files) && /export function pickedFiles/.test(files) && /runFiles\(pickedFiles\(\)/.test(audit));
+  const run = audit.slice(audit.indexOf("async function runFiles"), audit.indexOf("auditBtn.addEventListener"));
+  ok("runFiles: a closed components file is skipped and said, a closed tokens or icons file is checked from its snapshot",
+     /kind === "components" && !f\.open\) \{ done\.push\(name \+ ": skipped/.test(run) && /api\.auditStored\(f\.key\)/.test(run));
+  ok("runFiles: an open file is switched to, then audited live", /await ctx\.switchLib\(f\.key\)/.test(run) && /await runAudit\(targets\)/.test(run) && /await runOtherStages\(/.test(run));
+  ok("runFiles: the lock is held for the whole run and released once, in finally", /batching = true; lock\(\)/.test(run) && /finally \{[\s\S]*unlock\(\)/.test(run) && /if \(!batching\) unlock\(\)/.test(audit));
+}
+
 console.log(n + "/" + n + " passed");

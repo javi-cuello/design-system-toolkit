@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.52.0)
+# Eval cases — figma-components-audit (v2.54.0)
+
+**Reviewed against v2.54.0 on 2026-11-23** — references/record.md: the Audit is one button over the ticked files, Whole or Changed; A92's menu assertion is superseded by figma-project-audit O8 (executed there, `tests/test-stages.mjs`), its run trigger and cost unchanged.
 
 **Walked: 2026-11-21 for 2.52.0** — prose only: SKILL.md rewritten to skill-standard §A clause I, its reference sections moved to references/ (architecture, scan-and-probes, knowledge-pages, fix-queue, record, scoring). Each section of the old SKILL.md traced to its new home, so the cases' behaviours stay stated; wording kept where a case quotes it (A3's closing block); `node tests/test-audit.mjs` 142 of 142, `test-probes.mjs` 56 of 56, `test-sweep.mjs` 10 of 10.
 
