@@ -45,6 +45,27 @@ ok("…and put back on the walked tree", tree.children[1].children[0].type === "
 ok("…leaving every other layer as walked", tree.children[0].type === "FRAME" && tree.children[1].type === "FRAME" && tree.children[1].children[0].children[0].type === "FRAME");
 ok("a path the walk did not reach marks nothing", markSlots({ name: "x", type: "FRAME" }, [[3, 1]]).type === "FRAME");
 
+// 2026-11-23: two layers two booleans show, both hidden by default, were each
+// walked alone, at the same place among the visible children, so which comes
+// first was lost (a menu item's top spacer and divider). Each walked child
+// says its place among all its parent's children, hidden ones counted.
+{
+  const kids = [box("Top spacer", "FRAME", [], false), box("Divider", "FRAME"), box("Hidden", "FRAME", [], false), box("Content", "FRAME")];
+  const item = box("Item", "FRAME", kids);
+  for (const k of kids) k.parent = item;
+  const walked = await walk(item, 0);
+  ok("a walked child says its place among all its parent's children, hidden ones counted",
+    JSON.stringify(walked.children.map((c) => [c.name, c.index])) === JSON.stringify([["Divider", 1], ["Content", 3]]));
+  ok("…and the root, which has no parent walked, says none", !("index" in walked));
+  ok("…every other field as before: the children are still the visible ones, in order", walked.children.length === 2 && walked.children[0].x === 0);
+  // Figma hands an instance's children without the hidden ones (skipInvisibleInstanceChildren), so a place counted
+  // there would be a visible place said as a whole one: none is said inside an instance
+  const inner = box("Glyph", "FRAME");
+  const host = box("Icon", "INSTANCE", [inner]);
+  inner.parent = host; host.parent = item;
+  ok("…and none is said inside an instance, whose hidden children Figma may not hand over", !("index" in await walk(inner, 2)));
+}
+
 // Round 4: the release is stamped on every payload, so the store can tell a
 // field the plugin began to record from one a library began to use.
 const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"));

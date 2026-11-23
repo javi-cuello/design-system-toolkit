@@ -1,4 +1,4 @@
-// Design system snapshot — v0.82.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.83.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -744,7 +744,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.82.0';
+const VERSION = '0.83.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -848,6 +848,13 @@ async function walk(n, depth) {
   // derive it. absoluteBoundingBox is Figma's own answer for that box.
   if (depth > 0) {
     o.x = round(n.x); o.y = round(n.y);
+    // Its place among all its parent's children, hidden ones counted (0.83.0): two layers two booleans show, both
+    // hidden by default, are each walked alone at the same visible place, and only this says which comes first. None
+    // inside an instance, whose hidden children Figma does not hand over (skipInvisibleInstanceChildren).
+    let host = n.parent;
+    while (host && host.type !== 'INSTANCE') host = host.parent;
+    if (!host && n.parent && 'children' in n.parent) o.index = n.parent.children.findIndex((c) => c === n || (n.id != null && c.id === n.id));
+
     // What a reader sees turned, which is not the layer's rotation: Figma
     // turns an image fill inside its frame with its own transform, and a
     // layer rotated 180 around a fill rotated 180 shows the asset upright.

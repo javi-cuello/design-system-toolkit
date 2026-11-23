@@ -294,6 +294,12 @@ const RANK = { patch: 1, minor: 2, major: 3 };
 const VALUE_ROWS = 200;
 const higher = (a, b) => ((RANK[a] || 0) >= (RANK[b] || 0) ? a : b);
 const jsonOf = (x) => JSON.stringify(x === undefined ? null : x);
+// A spec as JSON with each layer's place among all its parent's children (`index`, 0.83.0) left out: every layer added
+// before one moves it, a hidden one too, and it is how a reader orders layers, never a change of its own.
+const unplacedJson = (x) => {
+  const strip = (n) => { const { index: _i, children, ...rest } = n; return children ? { ...rest, children: children.map(strip) } : rest; };
+  try { const r = resolve(x); return jsonOf({ ...x, default: null, variants: (r.variants || []).map(strip) }); } catch { return jsonOf(x); }
+};
 const listOf = (xs, n = 6) => `${xs.slice(0, n).join(', ')}${xs.length > n ? ` +${xs.length - n}` : ''}`;
 // Two slash paths that differ in exactly one segment: that segment's pair, or
 // null. A rename respells one part of a name; two names that share a value and
@@ -700,7 +706,7 @@ function diff(before, after) {
       components.renamed.push({ from: x.name, to: y.name, id: x.id || x.key || null, folder: to, ...(fields.length && { fields, notes }) });
       continue;
     }
-    if (jsonOf(x) === jsonOf(y)) continue;
+    if (jsonOf(x) === jsonOf(y) || unplacedJson(x) === unplacedJson(y)) continue;
     components.changed.push(to);
     components.fields[to] = specFields(x, y);
     components.detail[to] = specNotes(x, y, known, names);
@@ -739,8 +745,9 @@ function specNotes(a, b, known = recordedFields({ a }), names = [a && a.name, b 
   // change on it, rather than deriving the pairing again from the wording.
   const note = (what, before, after, items, rule) => out.push({ what, before: before === undefined ? '' : String(before), after: after === undefined ? '' : String(after), ...(rule ? { rule } : {}), ...(items && items.length ? { items } : {}) });
   const list = (xs) => xs.join(', ');
-  // Node ids and stamps are how the store finds things, not what a designer changed.
-  const IDS = new Set(['id', 'key', 'instanceOfId', 'instanceOfKey']);
+  // Node ids and stamps are how the store finds things, not what a designer changed; nor a layer's place among all its
+  // parent's children (`index`, 0.83.0), which every layer added before it moves, a hidden one too.
+  const IDS = new Set(['id', 'key', 'instanceOfId', 'instanceOfKey', 'index']);
   const marked = !deprecated(a) && deprecated(b);
   if ((a.name || '') !== (b.name || '')) note('Name', a.name, b.name, null, marked ? 'component-deprecated' : 'component-renamed');
   if ((a.page || '') !== (b.page || '')) note('Page', a.page, b.page, null, marked ? 'component-deprecated' : 'docs');
@@ -885,7 +892,7 @@ function specFields(a, b, ignore = [], known = null) {
   for (const [name, va] of A) {
     const vb = B.get(name); if (!vb) continue;
     // `known` (the grade's): a field the old snapshot never recorded is left out on both sides
-    const drop = (o) => { const c = { ...o }; for (const k of ignore) delete c[k]; if (known) for (const k of Object.keys(c)) if (k !== 'children' && k !== 'bindings' && !known.has(k)) delete c[k]; if (known && c.bindings) c.bindings = Object.fromEntries(Object.entries(c.bindings).filter(([k]) => known.has(`bindings.${k}`))); return c; };
+    const drop = (o) => { const c = { ...o }; delete c.index; for (const k of ignore) delete c[k]; if (known) for (const k of Object.keys(c)) if (k !== 'children' && k !== 'bindings' && !known.has(k)) delete c[k]; if (known && c.bindings) c.bindings = Object.fromEntries(Object.entries(c.bindings).filter(([k]) => known.has(`bindings.${k}`))); return c; };
     const walk = (tree) => { const paths = [], binds = {}, rest = {}; layerPaths(tree, (n, p) => { paths.push(p); const { children, bindings, ...other } = drop(n); binds[p] = j(bindings); rest[p] = j(other); }); return { paths: paths.sort(), binds, rest }; };
     const wa = walk(va), wb = walk(vb);
     if (j(wa.paths) !== j(wb.paths)) layers = true;

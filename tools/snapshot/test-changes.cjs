@@ -348,3 +348,19 @@ test('a text\'s own face is named in a designer\'s words', () => {
   const also = JSON.stringify(store.diff(beside('UPPER', 'UNDERLINE', 4), beside('LOWER', 'STRIKETHROUGH', 8)).components.detail.chip);
   assert.ok(!/textCase|textDecoration|paragraphSpacing/.test(also) && also.includes('text case'), also);
 });
+
+// 2026-11-23: snapshot 0.83.0 says each layer's place among all its parent's children, hidden ones counted (`index`),
+// for the contract. A layer added before it moves every later one's, and a hidden one added moves them with nothing
+// drawn changed: the place is how a reader orders layers, never a change of its own, as the detector read before it.
+test('a layer\'s place among its parent\'s children (index) is no change of its own', () => {
+  const of = (kids) => ({ tokens: { ...TOKENS, _meta: { ...TOKENS._meta, plugin: '0.83.0' } }, specs: { chip: require('./spec.cjs').compact({ name: 'Chip', id: '1:1', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 40, h: 20, children: kids }] }) } });
+  const label = (index) => ({ name: 'Label', type: 'TEXT', text: 'Hi', textStyle: 'literal', index });
+  const before = of([label(0)]), after = of([label(2)]);
+  const g = store.grade(before, after), d = store.diff(before, after);
+  assert.deepStrictEqual(rules({ grade: g }).filter((r) => r.startsWith('values-changed')), [], JSON.stringify(g.changes));
+  assert.ok(!JSON.stringify(d.components.detail.chip || []).includes('index'), JSON.stringify(d.components.detail.chip));
+  assert.ok(!d.components.changed.includes('chip'), JSON.stringify(d.components));
+  // …and a value beside it still is
+  const moved = store.grade(of([label(0)]), of([{ ...label(2), text: 'Ho' }]));
+  assert.ok(rules({ grade: moved }).includes('values-changed:chip'), JSON.stringify(moved.changes));
+});

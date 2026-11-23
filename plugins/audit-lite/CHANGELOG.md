@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.5] - 2026-11-23
+### Changed
+- **Carries the snapshot plugin's walk at 0.83.0**: each walked layer says its place among all its parent's children, hidden ones counted. No check reads it yet.
+
 ## [0.14.4] - 2026-11-22
 ### Changed
 - **Carries the snapshot plugin's walk at 0.82.0**: a text with no style records its size and face. No check reads them yet.

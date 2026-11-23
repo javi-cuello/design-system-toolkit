@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.83.0] - 2026-11-23
+### Added
+- **Each walked layer says its place among all its parent's children, hidden ones counted** (`index`). The walk records visible layers only and flips each boolean alone, so two layers two booleans show, both hidden by default, were each recorded at the same place, and which Figma draws first was lost (a menu item's top spacer and divider). None is said inside an instance, whose hidden children Figma does not hand over; every other field is as before.
+
 ## [0.82.0] - 2026-11-22
 ### Added
 - **A text with no style records its size and face** (`fontSize`, `fontFamily`, `fontStyle`). A style names them; a text without one said neither, so the contract could not hold them and code drew its browser's 16px where 12px was drawn. A text of several styles records none, as before.
