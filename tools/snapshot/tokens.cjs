@@ -17,7 +17,7 @@ function valueOf(snapshot, name, mode) {
     const modes = entry.modes || [];
     const m = modes.find((x) => x.toLowerCase() === want) || modes[0];
     const vals = (entry.values || {})[m] || {};
-    if (name in vals) return vals[name];
+    if (Object.hasOwn(vals, name)) return vals[name];
   }
   return undefined;
 }
