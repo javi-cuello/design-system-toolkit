@@ -605,11 +605,37 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     const keep = (xs) => { for (const x of xs || []) if (x && x.key) ownKeys.set(x.key, x); };
     // not under `tried`: a listing that stalls or fails is no token unbound (its keys are imported as before), so it
     // never reaches `missing`, which refuses a patch; the beat is kept and a given-up drawing still stops
-    const listing = async (what, f) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); keep(await Promise.race([Promise.resolve().then(f).catch(() => null), new Promise((r) => setTimeout(() => r(null), 8000))])); };
+    const listing = async (what, f, ms = 8000) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); keep(await Promise.race([Promise.resolve().then(f).catch(() => null), new Promise((r) => setTimeout(() => r(null), ms))])); };
     await listing("this file's components", () => figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] }));
     await listing("this file's text styles", () => figma.getLocalTextStylesAsync());
     await listing("this file's effect styles", () => figma.getLocalEffectStylesAsync());
     await listing("this file's variables", () => figma.variables.getLocalVariablesAsync());
+    // what the library's own component takes from other libraries (a text style, an icon, a colour published
+    // elsewhere): the file holds a copy of each, which an import by key may never reach (a copy of a community file
+    // reaches none of the libraries it was made with), so the keys asked for are taken from the copies its own
+    // component uses. Its own set only, never a drawing of it (on a page the drawings record)
+    await listing('what its own component takes from other libraries', async () => {
+      const want = new Set([K.styles, K.icons, K.vars, K.effects, K.sets, ...Object.values(K.variants || {})].flatMap((m) => Object.values(m || {})).concat(K.iconContainer || []).filter((k) => k && !ownKeys.has(k)));
+      if (!want.size) return [];
+      const drawnPage = (n) => { while (n && n.type !== 'PAGE') n = n.parent; return !!(n && n.getPluginData('drawings')); };
+      const roots = figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).filter((n) => n.name === P.name && !drawnPage(n));
+      const found = [], styleIds = new Set(), varIds = new Set(), insts = [];
+      const alias = (v) => { if (!v) return; if (Array.isArray(v)) v.forEach(alias); else if (typeof v === 'object') { if (v.type === 'VARIABLE_ALIAS' && v.id) varIds.add(v.id); else Object.values(v).forEach(alias); } };
+      for (const r of roots) for (const n of [r, ...r.findAll(() => true)]) {
+        try {
+          if (typeof n.textStyleId === 'string' && n.textStyleId) styleIds.add(n.textStyleId);
+          if (typeof n.effectStyleId === 'string' && n.effectStyleId) styleIds.add(n.effectStyleId);
+          alias(n.boundVariables);
+          for (const paint of [].concat(Array.isArray(n.fills) ? n.fills : [], Array.isArray(n.strokes) ? n.strokes : [])) alias(paint.boundVariables);
+          if (n.type === 'INSTANCE') insts.push(n);
+        } catch { /* a layer inside another library's instance can need Figma's servers to read: skipped */ }
+      }
+      const settle = (xs) => Promise.all(xs.map((f) => f().catch(() => null)));
+      found.push(...await settle([...styleIds].map((id) => () => figma.getStyleByIdAsync(id))));
+      found.push(...await settle([...varIds].map((id) => () => figma.variables.getVariableByIdAsync(id))));
+      for (const m of await settle(insts.map((n) => () => n.getMainComponentAsync()))) if (m) found.push(m, m.parent && m.parent.type === 'COMPONENT_SET' ? m.parent : null);
+      return found.filter((x) => x && want.has(x.key));
+    }, 30000);
   }
   const lib = K.vars || {};
   const els = P.variants.flatMap((v) => Object.values(v.anatomy));
