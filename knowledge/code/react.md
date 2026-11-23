@@ -229,8 +229,8 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - [required] **React 19 stylesheets.** A `<link rel="stylesheet" precedence="…">` rendered in a component is hoisted into `head`, de-duplicated by `href`, and the component suspends while it loads ([link](https://react.dev/reference/react-dom/components/link)). It suits a component used on few routes; a layered design-system sheet (code-standard rule 4) is simpler linked once.
 
 **Cases**
-- `style={{ background: variant === 'danger' ? 'var(--red)' : … }}` → `data-variant` and a rule in the sheet; the caller can no longer override it through a custom property (code-standard rule 38).
-- `className={variant}` → a class like `danger` collides with the application's; `data-variant`.
+- `style={{ background: appearance === 'danger' ? 'var(--red)' : … }}` → `data-appearance` and a rule in the sheet; the caller can no longer override it through a custom property (code-standard rule 38).
+- `className={appearance}` → a class like `danger` collides with the application's; `data-appearance`.
 - A library with `"sideEffects": false` ships, and buttons render unstyled in production only → list the CSS files in `sideEffects`.
 - A `data-disabled` mirrored from `disabled` and styled → style `:disabled`; the mirror can disagree with the control.
 
