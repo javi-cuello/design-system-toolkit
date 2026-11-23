@@ -288,15 +288,23 @@ function atDefault(x, mains) {
     const main = e && e.kind === 'instance' && e.with && mains(e.component, e.key);
     if (!main) continue;
     const byFigma = Object.fromEntries(Object.values(main.props || {}).map((q) => [low(q.figma || ''), q]));
+    // (a swap with no layer it swaps, none swapped by it, at any props; and none drawn inside this instance here, where the
+    // design would say what it swapped in, compared as such)
+    const layers = [main.anatomy || {}, ...(main.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a)).filter(Boolean);
+    const swapsNothing = (q, key) => !(q.swaps || []).length && !layers.some((y) => y.swappedBy === key)
+      && !(main.variants || []).some((v) => Object.entries(v.set || {}).some(([sk, y]) => sk.endsWith('.swappedBy') && y === key))
+      && !Object.entries(x).some(([k, y]) => k.startsWith(`${id}/`) && y && y.kind === 'instance');
     const rest = Object.fromEntries(Object.entries(e.with).filter(([k, v]) => {
       const q = byFigma[low(k)];
       // a swap at the icon its component draws there (Icon (16): house where the part is Icon/house) is its default too
       if (q && q.type === 'instance' && q.default === undefined) {
         // the icon the main draws there at the instance's own props; a part those props hide, the one any variant draws
         const part = (q.swaps || [])[0], M = part && req('./derive.cjs').atProps(main, e.with), at = part && (M[part] || {}).component;
+        const key = Object.keys(main.props).find((kk) => main.props[kk] === q);
+        // a swap that drives no layer draws nothing, whatever it names: an override on nothing, which no code can say
+        if (swapsNothing(q, key)) return false;
         // a swap another prop drives the layer for at these props (Icon (20) on a button drawn at xs, whose icon Icon (16)
         // swaps) draws nothing: Figma keeps its override, which no code can say
-        const key = Object.keys(main.props).find((kk) => main.props[kk] === q);
         if (part && M[part] && M[part].swappedBy && M[part].swappedBy !== key) return false;
         const drawn = at || (part && ([main.anatomy || {}, ...(main.variants || []).map((v) => v.add || {})].map((a) => a[part]).find((y) => y && y.component) || {}).component);
         return !drawn || (low(drawn) !== low(v) && !low(drawn).endsWith(`/${low(v)}`));

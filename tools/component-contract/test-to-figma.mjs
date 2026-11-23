@@ -347,6 +347,15 @@ delete globalThis.figma;
   const tagged = { ...button, props: { ...button.props, label: { type: 'string', default: 'New', figma: 'Label' } } };
   const iconed = { component: 'Button', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['i'] } }, anatomy: { root: { kind: 'container' } }, variants: [{ when: {}, add: { i: { kind: 'instance', parent: 'root', component: 'Icon/house' } } }] };
   ok('a swap at the icon its component draws there is unstated; another icon is stated', roundTrip(holder({ Icon: 'house' }), holder(null), { mains: (n) => (n === 'Button' ? iconed : null) }).rows.length === 0 && roundTrip(holder({ Icon: 'x' }), holder(null), { mains: (n) => (n === 'Button' ? iconed : null) }).rows.length === 1);
+  { const inert = { component: 'Button', props: { icon: { type: 'instance', figma: 'Icon' } }, anatomy: { root: { kind: 'container' }, dot: { kind: 'graphic', parent: 'root' } }, variants: [] };
+    const driven = { component: 'Button', props: { icon: { type: 'instance', figma: 'Icon' } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/house', swappedBy: 'icon' } }, variants: [] };
+    const m = (main) => ({ mains: (n) => (n === 'Button' ? main : null) });
+    // (inside the instance: its own dot, which says nothing of a swap; an icon the design draws there, which does)
+    const within = (w, part) => { const h = holder(w); h.anatomy['action/in'] = { parent: 'action', ...part }; return h; };
+    ok('a swap that drives no layer its component holds draws nothing and is unstated; one a layer names is stated, and so is one where the design draws an instance inside',
+      roundTrip(within({ Icon: 'x' }, { kind: 'graphic' }), within(null, { kind: 'graphic' }), m(inert)).rows.length === 0
+      && roundTrip(holder({ Icon: 'x' }), holder(null), m(driven)).rows.length === 1
+      && roundTrip(within({ Icon: 'x' }, { kind: 'instance', component: 'Icon/x' }), within(null, { kind: 'instance', component: 'Icon/x' }), m(inert)).rows.length === 1); }
   const sized = { component: 'Button', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon: { type: 'instance', figma: 'Icon', swaps: ['i'] } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/house' } }, variants: [{ when: { size: 'xs' }, set: { 'i.component': 'Icon/star' } }] };
   ok('a swap is held to the icon drawn at the instance\'s own props: house at xs, where xs draws star, is stated', roundTrip(holder({ Size: 'xs', Icon: 'house' }), holder({ Size: 'xs' }), { mains: (n) => (n === 'Button' ? sized : null) }).rows.length === 1);
   const twoSwaps = { component: 'Button', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['i'] }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['i'] } },
