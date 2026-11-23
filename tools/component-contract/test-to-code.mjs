@@ -52,6 +52,11 @@ ok('a text at a set width Figma says grows both ways, whose white space is kept,
   const sheet = toCss(panel, 'panel', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Snippet' ? { ...snippet, folder: 'snippet' } : null) });
   ok('a placed component\'s bound text keeps its default\'s white space against an override: its hug-to-fill override says pre-wrap, never unsets it',
     /white-space: pre-wrap/.test(sheet) && !/white-space: (unset|normal|initial)/.test(sheet)); }
+{ const tag = { contract: 1, component: 'Tag', props: { label: { type: 'string', default: 'Label', sets: ['label'] } }, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, label: { kind: 'text', parent: 'root', order: 0, width: 'hug', height: 'hug', content: '{label}' } }, variants: [] };
+  const card = { contract: 1, component: 'Card', props: { code: { type: 'string', default: 'a\n  b', sets: ['inst/label'] } }, anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, inst: { kind: 'instance', parent: 'root', order: 0, component: 'Tag', key: 't1' }, 'inst/label': { kind: 'text', parent: 'inst', order: 0, width: 'hug', height: 'hug', content: '{code}' } }, variants: [] };
+  const sheet = toCss(card, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Tag' ? { ...tag, folder: 'tag' } : null) });
+  ok('a placed part bound to the host\'s own property says its white space from the host\'s default, not the placed component\'s',
+    /white-space: pre;/.test(sheet)); }
 ok('a text with no style writes no style\'s fields (no token defines --literal-*): it is said as unread, as an unstyled effect is',
   (() => { const r = declarations({ kind: 'text', typography: 'literal' }, {}, { token: (n) => `var(--${n})`, textStyle: (n) => [['font-size', `var(--${n}-font-size)`]] }); return !r.decls.length && r.unread.some((u) => /^typography \(a text with no style/.test(u)); })());
 // 2026-11-22: a library names a style by its size (`14/20 Regular`): read as a text's own values it lost its var()

@@ -885,13 +885,15 @@ const el = (...xs) => ({ childNodes: xs.map((x) => (typeof x === 'string' ? { no
     wordsAsDrawn(el('1\n2\n  x'), c) === '1 2 x' && wordsAsDrawn(el('1\n2\n  x'), k) === '1\n2\n  x'
     && wordsAsDrawn(el('1\r\n2'), { whiteSpaceCollapse: 'break-spaces' }) === '1\n2' && wordsAsDrawn(el('a  \n  b c'), { whiteSpaceCollapse: 'preserve-breaks' }) === 'a\nb c');
   ok('the ends are trimmed, so a label a template wraps in line breaks is still its words; collapsed, a node of white space alone is dropped',
-    wordsAsDrawn(el('\n  Save\n'), { whiteSpaceCollapse: 'preserve-breaks' }) === 'Save' && wordsAsDrawn(el('  Save '), c) === 'Save' && wordsAsDrawn(el('a', '\n  ', 'b'), c) === 'ab');
+    wordsAsDrawn(el('\n  Save\n'), { whiteSpaceCollapse: 'preserve-breaks' }) === 'Save' && wordsAsDrawn(el('  Save '), c) === 'Save' && wordsAsDrawn(el(' ', 'a', '\n  '), c) === 'a');
+  ok('a node of white space alone between words is one space, as the browser draws it ({first} {last}); runs across nodes collapse to one',
+    wordsAsDrawn(el('Ada', ' ', 'Lovelace'), c) === 'Ada Lovelace' && wordsAsDrawn(el('a', '\n  ', 'b'), c) === 'a b' && wordsAsDrawn(el('a ', ' b'), c) === 'a b');
   ok('where white space is kept, a node of white space alone is kept: two lines written as three nodes are two lines',
     wordsAsDrawn(el('line1', '\n', 'line2'), k) === 'line1\nline2');
   ok('with no white-space-collapse computed (an older browser), white-space says it: pre and pre-wrap keep, pre-line keeps breaks',
     wordsAsDrawn(el('a\n  b'), { whiteSpace: 'pre' }) === 'a\n  b' && wordsAsDrawn(el('a\n  b'), { whiteSpace: 'pre-wrap' }) === 'a\n  b'
     && wordsAsDrawn(el('a  \n  b'), { whiteSpace: 'pre-line' }) === 'a\nb' && wordsAsDrawn(el('a\n  b'), { whiteSpace: 'normal' }) === 'a b'); }
 ok('kept breaks keep a node of white space alone that holds a newline; an element child\'s words are its own, not this one\'s (a placed instance\'s texts read as the walk reads them)',
-  wordsAsDrawn(el('a', '\n', 'b'), { whiteSpaceCollapse: 'preserve-breaks' }) === 'a\nb' && wordsAsDrawn(el('a', '  ', 'b'), { whiteSpaceCollapse: 'preserve-breaks' }) === 'ab'
+  wordsAsDrawn(el('a', '\n', 'b'), { whiteSpaceCollapse: 'preserve-breaks' }) === 'a\nb' && wordsAsDrawn(el('a', '  ', 'b'), { whiteSpaceCollapse: 'preserve-breaks' }) === 'a b'
   && wordsAsDrawn(el('x\n', {}, '  y'), { whiteSpaceCollapse: 'preserve' }) === 'x\n  y');
 console.log(`${n}/${n} passed`);

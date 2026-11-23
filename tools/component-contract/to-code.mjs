@@ -354,7 +354,7 @@ const wordsOf = (contract, x) => {
 
 /* A layer inside a placed instance against its component's own part at the instance's props: the declarations each
    writes, what differs, and what the component draws that the instance takes away; null where no part matches. */
-function overrideOf(a, host, rel, m, mains, B = a) {
+function overrideOf(a, host, rel, m, mains, B = a, c = null) {
   if (!a[host]) return null;
   // the component as placed (swaps applied, as derive compares it); a layer derive dropped here (equal to the
   // component's) is matched by its name at the defaults (B), and draws as the component does
@@ -363,11 +363,16 @@ function overrideOf(a, host, rel, m, mains, B = a) {
   // override where it keeps one, else the inner component's part; never the inner one's alone, or the middle's rule
   // (painted over the inner's) would stand where this one goes back to the inner's value
   let mid = null;
-  for (let p = a[host] && a[host].parent; p && !mid; p = a[p] && a[p].parent) if (a[p] && a[p].kind === 'instance') { const om = mains(a[p].component, a[p].key); const r2 = `${host.slice(p.length + 1)}/${rel}`; if (om && om.anatomy && om.anatomy[r2]) mid = { e: om.anatomy[r2], up: om.anatomy }; }
+  for (let p = a[host] && a[host].parent; p && !mid; p = a[p] && a[p].parent) if (a[p] && a[p].kind === 'instance') { const om = mains(a[p].component, a[p].key); const r2 = `${host.slice(p.length + 1)}/${rel}`; if (om && om.anatomy && om.anatomy[r2]) mid = { e: om.anatomy[r2], up: om.anatomy, of: om }; }
   const inner = M[placedOf(e ? a : B, host, M)[rel]];
   const own = mid ? { ...inner, ...mid.e } : inner, ownUp = mid ? mid.up : M;
   if (!own || !inner) return null;
-  const ctx = (x, par) => ({ root: false, holds: holds(x.kind), row: !par || (par.layout || {}).direction !== 'column', anchors: false, box: null, pull: null, words: wordsOf(m, x) });
+  // (a bound text's words from the contract whose property it names: the host's for its own layer, the middle
+  // component's where it binds the part, else the placed component's, as for a name the host has no property for; `c`, the host)
+  // (the placed part's own words: what it shows at the instance's props, a literal there, else its binding's default)
+  const lit = (x) => (x && typeof x.content === 'string' && !/^\{.+\}$/.test(x.content) ? x.content : null);
+  const ownWords = lit(own) ?? (mid && mid.e.content !== undefined ? wordsOf(mid.of, own) : wordsOf(m, own)), wordsAt = (x) => (x === own ? ownWords : x === e ? wordsOf(c, e) ?? ownWords : wordsOf(m, x));
+  const ctx = (x, par) => ({ root: false, holds: holds(x.kind), row: !par || (par.layout || {}).direction !== 'column', anchors: false, box: null, pull: null, words: wordsAt(x) });
   // a nested instance is placed, never restyled here: where it sits and how big (PLACED), as any placed instance
   // (and its own styling over its component's root, drawn whole on both sides: an override set on the nested instance itself)
   const styled = (x, par) => (x.kind === 'instance' ? placedDecls(x, ctx(x, par), mains, e && e.kind === 'instance' ? e : x) : declarations(x, ctx(x, par), tokenNames).decls);
@@ -507,11 +512,11 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       // a numbered copy takes its first's class and place (nth-child), and its first's rule styles every copy: an
       // override on one of them is said, not written on all
       if (copyOf(c, host) || Object.keys(a).some((k) => k !== host && copyOf(c, k) === host)) { out[id] = { decls: new Map(), unread: [`an override on ${rel}, inside one of several copies of ${a[host].component}`] }; continue; }
-      const over = overrideOf(a, host, rel, m, mains);
+      const over = overrideOf(a, host, rel, m, mains, a, c);
       if (!over) { out[id] = { decls: new Map(), unread: [`an override on ${rel}, a layer ${a[host].component} has under no such name (renamed in the instance, or gone)`] }; continue; }
       // what differs here, and what differs at the defaults (the base rule writes it, so every combination says it: where
       // it no longer differs, the placed component's own value, not the base's override)
-      const at = B[id] && overrideOf(B, host, rel, m, mains), base = new Set(at ? at.changed.map(([p]) => p) : []);
+      const at = B[id] && overrideOf(B, host, rel, m, mains, B, c), base = new Set(at ? at.changed.map(([p]) => p) : []);
       // what the component declares that the instance does not goes back to what an undeclared property is (unset)
       // (and what the defaults override that neither draws here, a fill the base sets and this combination takes away
       // where the component has none: unset, or the base's override would stand)
@@ -643,7 +648,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     // (where a variant places another component there, the part is that one's own drawing: nothing of the base's
     // override holds, as a part it records there says nothing either, above)
     if (ALL[host].component !== a[host].component) { out[id] = { decls: new Map(), unread: [] }; continue; }
-    const now = overrideOf(a, host, id.slice(host.length + 1), m, mains, ALL);
+    const now = overrideOf(a, host, id.slice(host.length + 1), m, mains, ALL, c);
     if (now) out[id] = { decls: new Map([...now.theirs].map(([p, v]) => [p, { v, given: true }])), unread: [] };
     // (an icon's colour too: back to the one the placed component draws it in, not unset, which would inherit)
     const own = now && ALL[id].kind === 'instance' && placedGlyph({ ...ALL, [host]: a[host] || ALL[host] }, host, id.slice(host.length + 1), m, mains);

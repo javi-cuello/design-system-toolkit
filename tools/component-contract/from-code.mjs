@@ -113,17 +113,17 @@ export function cssOrderOf(n, parent, style) {
 
 /* An element's own words as it draws them, from its text nodes (an element child's words are that child's) and its
    computed style `s`: collapsed, a run of white space is one space (a newline in the source is a space on screen) and a
-   node of white space alone is none; preserved (pre, pre-wrap, break-spaces), the text as written, newlines and runs of
-   spaces kept, as Figma keeps a text's; preserve-breaks keeps its newlines alone (a node of white space alone where it
-   holds one). The ends are trimmed either way (a template's line breaks around a label are not its words).
+   node of white space alone between words is one space; preserved (pre, pre-wrap, break-spaces), the text as written, newlines and runs of
+   spaces kept, as Figma keeps a text's; preserve-breaks keeps its newlines alone. The ends are trimmed either way (a template's line breaks around a label are not its words).
    white-space-collapse where computed, else white-space (an older browser). Runs in the page (passed as source);
    tested by test-from-code.mjs. */
 export function wordsAsDrawn(n, s) {
   const texts = [...n.childNodes].filter((x) => x.nodeType === 3).map((x) => x.textContent);
   const collapse = s.whiteSpaceCollapse || ({ pre: 'preserve', 'pre-wrap': 'preserve', 'break-spaces': 'break-spaces', 'pre-line': 'preserve-breaks' })[s.whiteSpace] || 'collapse';
   const kept = collapse === 'preserve' || collapse === 'break-spaces';
-  const one = (t) => { const x = String(t).replace(/\r\n?/g, '\n'); return kept ? x : collapse === 'preserve-breaks' ? x.replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n') : x.replace(/[ \n\t]+/g, ' '); };
-  return texts.filter((t) => (kept ? String(t).length : collapse === 'preserve-breaks' ? /\S|\n/.test(t) : String(t).replace(/[ \n\t\r]+/g, ''))).map(one).join('').replace(/^[ \n\t]+|[ \n\t]+$/g, '');
+  // (the nodes joined first, as the browser collapses across them: a node of white space alone between words is a space)
+  const x = texts.join('').replace(/\r\n?/g, '\n');
+  return (kept ? x : collapse === 'preserve-breaks' ? x.replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n') : x.replace(/[ \n\t]+/g, ' ')).replace(/^[ \n\t]+|[ \n\t]+$/g, '');
 }
 
 /* Whether `m`, found in the placed instance `n` by its layer's selector `q`, is that instance's own layer, not one of
