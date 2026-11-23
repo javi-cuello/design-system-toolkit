@@ -571,10 +571,13 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     // each kind on its own, so one listing that stalls or fails (listing a library's variables has hung) costs only
     // its own keys, which are then imported as before
     const keep = (xs) => { for (const x of xs || []) if (x && x.key) ownKeys.set(x.key, x); };
-    await tried("this file's components", async () => keep(figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] })));
-    await tried("this file's text styles", async () => keep(await figma.getLocalTextStylesAsync()));
-    await tried("this file's effect styles", async () => keep(await figma.getLocalEffectStylesAsync()));
-    await tried("this file's variables", async () => keep(await figma.variables.getLocalVariablesAsync()));
+    // not under `tried`: a listing that stalls or fails is no token unbound (its keys are imported as before), so it
+    // never reaches `missing`, which refuses a patch; the beat is kept and a given-up drawing still stops
+    const listing = async (what, f) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); keep(await Promise.race([Promise.resolve().then(f).catch(() => null), new Promise((r) => setTimeout(() => r(null), 8000))])); };
+    await listing("this file's components", () => figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] }));
+    await listing("this file's text styles", () => figma.getLocalTextStylesAsync());
+    await listing("this file's effect styles", () => figma.getLocalEffectStylesAsync());
+    await listing("this file's variables", () => figma.variables.getLocalVariablesAsync());
   }
   const lib = K.vars || {};
   const els = P.variants.flatMap((v) => Object.values(v.anatomy));

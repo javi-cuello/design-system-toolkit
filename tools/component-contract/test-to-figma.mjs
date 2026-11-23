@@ -250,6 +250,8 @@ delete globalThis.figma;
   const code = pluginCode({ component: 'Chip', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }, {});
   const at = [...code.matchAll(/figma\.(?:variables\.)?import\w+ByKeyAsync\(/g)].map((m) => m.index);
   const unowned = at.filter((i) => !/own\([^\n]*$/.test(code.slice(Math.max(0, i - 160), i)));
+  const block = code.slice(code.indexOf('if (K.ownFile) {'), code.indexOf('const lib = K.vars'));
+  ok('a listing of the file that stalls or fails is never a token unbound (it is not under tried, so no patch is refused)', block.length > 0 && !block.includes('tried(') && block.includes('setTimeout'));
   ok('every import by key is asked of the open file first, and the file is listed only when it is the library', at.length > 0 && !unowned.length && /if \(K\.ownFile\) \{/.test(code) && code.includes('getLocalVariablesAsync'));
 }
 
