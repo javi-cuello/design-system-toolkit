@@ -45,6 +45,13 @@ ok('a cut text whose words hold a newline: pre-wrap beside a clamp of several li
 { const snippet = { component: 'Snippet', props: { code: { type: 'string', default: 'a\n  b', sets: ['code'] } }, anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, code: { kind: 'text', parent: 'root', order: 0, width: 'hug', height: 'hug', content: '{code}' } }, variants: [] };
   const sheet = toCss(snippet, 'snippet', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
   ok('a text bound to a text property keeps the white space its default holds: pre where it hugs', /white-space: pre;/.test(sheet) && !/nowrap/.test(sheet)); }
+ok('a text at a set width Figma says grows both ways, whose white space is kept, is pre (rules.mjs reads it back as never wrapping)',
+  decl({ kind: 'text', width: 19, autoResize: 'width_and_height', content: 'a  b' }, {})['white-space'] === 'pre');
+{ const snippet = { contract: 1, component: 'Snippet', props: { code: { type: 'string', default: 'a\n  b', sets: ['code'] } }, anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, code: { kind: 'text', parent: 'root', order: 0, width: 'hug', height: 'hug', content: '{code}' } }, variants: [] };
+  const panel = { contract: 1, component: 'Panel', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, snip: { kind: 'instance', parent: 'root', order: 0, component: 'Snippet', key: 's1' }, 'snip/code': { kind: 'text', parent: 'snip', order: 0, width: 'fill', height: 'hug', content: '{code}' } }, variants: [] };
+  const sheet = toCss(panel, 'panel', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Snippet' ? { ...snippet, folder: 'snippet' } : null) });
+  ok('a placed component\'s bound text keeps its default\'s white space against an override: its hug-to-fill override says pre-wrap, never unsets it',
+    /white-space: pre-wrap/.test(sheet) && !/white-space: (unset|normal|initial)/.test(sheet)); }
 ok('a text with no style writes no style\'s fields (no token defines --literal-*): it is said as unread, as an unstyled effect is',
   (() => { const r = declarations({ kind: 'text', typography: 'literal' }, {}, { token: (n) => `var(--${n})`, textStyle: (n) => [['font-size', `var(--${n}-font-size)`]] }); return !r.decls.length && r.unread.some((u) => /^typography \(a text with no style/.test(u)); })());
 // 2026-11-22: a library names a style by its size (`14/20 Regular`): read as a text's own values it lost its var()

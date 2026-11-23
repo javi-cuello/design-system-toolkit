@@ -129,11 +129,12 @@ export function styleFromCss(own, styles, fieldsOf) {
 /* Truncation, as css.mjs writes it the other way: one line cut with an ellipsis (nowrap, overflow hidden,
    text-overflow ellipsis), or a clamp to N lines (-webkit-line-clamp, or line-clamp). Null where the text is not cut. */
 export const LINES_CSS = ['white-space', 'text-overflow', 'overflow', '-webkit-line-clamp', 'line-clamp'];
-export function linesFromCss(own) {
+export function linesFromCss(own, words = '') {
   const n = parseInt(word(own['-webkit-line-clamp'] ?? own['line-clamp']), 10);
   if (n > 0) return { maxLines: n, truncate: true };
-  // (an ellipsis cuts only where the overflow is hidden)
-  if (word(own['text-overflow']) === 'ellipsis' && /nowrap|^pre$/.test(word(own['white-space'])) && /hidden|clip/.test(word(own.overflow))) return { maxLines: 1, truncate: true };
+  // (an ellipsis cuts only where the overflow is hidden; under pre only words of one line, as pre cuts each line and
+  // shows them all: `words`, the text's)
+  if (word(own['text-overflow']) === 'ellipsis' && (/nowrap/.test(word(own['white-space'])) || (/^pre$/.test(word(own['white-space'])) && !/\n/.test(typeof words === 'string' ? words : ''))) && /hidden|clip/.test(word(own.overflow))) return { maxLines: 1, truncate: true };
   return null;
 }
 
@@ -204,10 +205,9 @@ export const textFromCss = (rows, own) => (rows.find((r) => word(own[r[1]]).spli
 // the design states all the same)
 // (written on the text's own element: a loose text, words its parent holds with no element of their own, reads its
 // parent's declarations, and a parent's nowrap says nothing of how this text resizes)
-// (`pre` is that too where the width hugs, as css.mjs writes it for a hugging text whose white space is kept; at a set or
-// filled width a pre text's size is its own. A text at a set width Figma says grows both ways, whose white space is
-// kept, is read by its sizes: a gap)
-export const writtenNowrap = (authored, loose = false, hug = false) => !loose && (/^\s*nowrap\s*$/.test(authored || '') || (hug && /^\s*pre\s*$/.test(authored || '')));
+// (`pre` is that too, as css.mjs writes it for a text whose white space is kept and which grows both ways, at a hugging
+// width or a set one; at a filled width (`fills`) its width is the room's, not its words')
+export const writtenNowrap = (authored, loose = false, fills = false) => !loose && (/^\s*nowrap\s*$/.test(authored || '') || (!fills && /^\s*pre\s*$/.test(authored || '')));
 export function autoResizeOf(width, height, nowrap = false) {
   if (width === 'hug' || nowrap) return 'width_and_height';
   if (height === 'hug') return 'height';

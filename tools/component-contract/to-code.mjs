@@ -345,6 +345,13 @@ function hostOf(a, id) {
 /* Every layer any combination records, as chain names it: the base's, else the first variant's that adds it (findAdded). */
 const allOf = (c) => Object.assign({}, ...[...(c.variants || [])].reverse().map((v) => v.add || {}), c.anatomy);
 
+/* What a text bound to a text property of `contract` shows: that property's default (css.mjs `words`, which says its
+   white space from it); null for any other layer. */
+const wordsOf = (contract, x) => {
+  const b = x && x.kind === 'text' && typeof x.content === 'string' && /^\{(.+)\}$/.exec(x.content), d = b && contract && contract.props && contract.props[b[1]] ? contract.props[b[1]].default : null;
+  return typeof d === 'string' ? d : null;
+};
+
 /* A layer inside a placed instance against its component's own part at the instance's props: the declarations each
    writes, what differs, and what the component draws that the instance takes away; null where no part matches. */
 function overrideOf(a, host, rel, m, mains, B = a) {
@@ -360,7 +367,7 @@ function overrideOf(a, host, rel, m, mains, B = a) {
   const inner = M[placedOf(e ? a : B, host, M)[rel]];
   const own = mid ? { ...inner, ...mid.e } : inner, ownUp = mid ? mid.up : M;
   if (!own || !inner) return null;
-  const ctx = (x, par) => ({ root: false, holds: holds(x.kind), row: !par || (par.layout || {}).direction !== 'column', anchors: false, box: null, pull: null });
+  const ctx = (x, par) => ({ root: false, holds: holds(x.kind), row: !par || (par.layout || {}).direction !== 'column', anchors: false, box: null, pull: null, words: wordsOf(m, x) });
   // a nested instance is placed, never restyled here: where it sits and how big (PLACED), as any placed instance
   // (and its own styling over its component's root, drawn whole on both sides: an override set on the nested instance itself)
   const styled = (x, par) => (x.kind === 'instance' ? placedDecls(x, ctx(x, par), mains, e && e.kind === 'instance' ? e : x) : declarations(x, ctx(x, par), tokenNames).decls);
@@ -390,7 +397,7 @@ function placedDecls(x, ctx, mains, at = x) {
   if (!m && at.component && mains && mains !== NO_MAINS) return all;
   if (!R) return placed;
   const whole = { ...R, ...Object.fromEntries(OWN.filter((f) => x[f] != null).map((f) => [f, x[f]])) };
-  return [...placed, ...declarations(whole, { ...ctx, holds: holds(R.kind) }, tokenNames).decls.filter(([p]) => !PLACED.test(p))];
+  return [...placed, ...declarations(whole, { ...ctx, holds: holds(R.kind), words: wordsOf(m, whole) }, tokenNames).decls.filter(([p]) => !PLACED.test(p))];
 }
 
 /* An instance's own styling against its component's root at its props: what it writes that the root does not (or
@@ -399,7 +406,7 @@ function placedDecls(x, ctx, mains, at = x) {
 function ownOverride(x, ctx, mains) {
   const m = x.component && mains(x.component, x.key), R = m && atProps(m, x.with).root;
   if (!R) return { changed: [], theirs: new Map() };
-  const styled = (y) => new Map(declarations(y, { ...ctx, holds: holds(R.kind) }, tokenNames).decls.filter(([p]) => !PLACED.test(p)));
+  const styled = (y) => new Map(declarations(y, { ...ctx, holds: holds(R.kind), words: wordsOf(m, y) }, tokenNames).decls.filter(([p]) => !PLACED.test(p)));
   const theirs = styled(R), mine = styled({ ...R, ...Object.fromEntries(OWN.filter((f) => x[f] != null).map((f) => [f, x[f]])) });
   return { theirs, changed: [...[...mine].filter(([p, v]) => theirs.get(p) !== v), ...[...theirs.keys()].filter((p) => !mine.has(p)).map((p) => [p, 'unset'])] };
 }
@@ -590,9 +597,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     // (and a combination that drops the sample's mark but keeps its size has the defaults' kept size still: dropped too)
     const empty = [...new Set([...(e.whileEmpty || []), ...(slotted && B[id] ? (B[id].whileEmpty || []).filter((f) => e[f] === B[id][f]) : [])])].filter((f) => e[f] !== undefined);
     if (empty.length) { e = { ...e }; for (const f of empty) delete e[f]; delete e.whileEmpty; }
-    // (a text bound to a text property shows its default: its white space is said from it, css.mjs `words`)
-    const bound = e.kind === 'text' && typeof e.content === 'string' && /^\{(.+)\}$/.exec(e.content), words = bound && c.props && c.props[bound[1]] ? c.props[bound[1]].default : null;
-    const { decls, unread, unshared } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box, pull, words: typeof words === 'string' ? words : null }, tokenNames);
+    const { decls, unread, unshared } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box, pull, words: wordsOf(c, e) }, tokenNames);
     // a placed component is placed here and looks as its own sheet says (code-standard rule 5): where it sits and
     // how big, never its fill, stroke, corners or type, which a prop changes in code
     // (but an instance of a component the store does not hold, an icon of another library: no sheet of its own draws
