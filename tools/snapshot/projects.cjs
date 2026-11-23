@@ -885,7 +885,15 @@ function auditContext(contextDoc, settingsPath = SETTINGS) {
   const language = (settings && typeof settings.language === 'string' && settings.language.trim()) || 'en-GB';
   // An icon library's settings: the icon set its names follow, if any.
   const icons = Object.fromEntries(routed.icons.map((key) => [key, (own[key] || {}).icons || {}]));
-  return { ok: errors.length === 0, file: contextDoc, errors, libraries, icons, rulings: rulingsOf(md), language };
+  // A routed tokens or icons file is audited too (its file structure, its
+  // tokens, its icons), with the house defaults and the project's naming
+  // under it: never with no settings, which skipped every check that reads one.
+  const files = Object.fromEntries(routed.all.filter((key) => !libraries[key]).map((key) => {
+    const lib = own[key] || {};
+    return [key, { name: lib.name || routed.names[key] || null, roles: routed.rolesOf[key],
+                   optionOrder: Object.assign({}, house.optionOrder || {}, lib.optionOrder || {}), tokens: flatSettings(house, lib, naming) }];
+  }));
+  return { ok: errors.length === 0, file: contextDoc, errors, libraries, files, icons, rulings: rulingsOf(md), language };
 }
 
 /*

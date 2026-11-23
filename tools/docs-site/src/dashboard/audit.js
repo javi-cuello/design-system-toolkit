@@ -1336,11 +1336,11 @@ async function runAudit(targets) {
       // on screen while three more stages were still reading Figma — a
       // number the reader takes as the run's answer, minutes before the run
       // has one. `runOtherStages` shows it beside its own.
-      auditDone = true;
       await runOtherStages(scan, rules0, runId0, {
         title: auditHeadline(0, closed0, scannedN), tone: "ok",
         detail: auditDetail(0, 0, 0, closed0),
         linkText: closed0 ? "See the queue \u2192" : null, onLink: closed0 ? showCleared : null });
+      auditDone = true;              // only once every stage finished: runOtherStages rethrows a stage error
       return;
     }
 
@@ -1422,11 +1422,11 @@ async function runAudit(targets) {
     // An audit both files and closes rows, so the queue can change in two
     // directions at once. Say both numbers rather than the net.
     // Held until the other three stages are done — see the note above.
-    auditDone = true;
     await runOtherStages(scan, rules0, runId, {
       title: auditHeadline(added, closed, scannedN, reopened, kept), tone: added || kept ? "warn" : "ok",
       detail: auditDetail(total, kept, added, closed),
       linkText: "See the queue \u2192", onLink: showCleared });
+    auditDone = true;
   } catch (e) {
     say(trouble(e, "Audit"), "warn");
   // `finally`, not the end of the try: every early return and every failure

@@ -92,10 +92,11 @@ if (!ctx.ok) die(ctx.errors.join('\n'));
 // read the file's facts), so it runs with no settings and the stages that
 // need one say they do not apply.
 const routed = contract.auditRecords(where).filter((r) => !ctx.libraries[r.key]);
+const others = ctx.files || {};
 const nameOf = (r) => r.name || `the ${(r.roles || []).join(' and ')} library`;
 const keys = Object.keys(ctx.libraries).concat(routed.map((r) => r.key));
 const fileKey = keyArg || (keys.length === 1 ? keys[0] : null);
-const lib = ctx.libraries[fileKey] || ((r) => r && { name: nameOf(r) })(routed.find((r) => r.key === fileKey));
+const lib = ctx.libraries[fileKey] || ((r) => r && Object.assign({}, others[r.key], { name: nameOf(r) }))(routed.find((r) => r.key === fileKey));
 if (!fileKey || !lib) die(`name the library: ${keys.map((k) => `${k} (${ctx.libraries[k] ? ctx.libraries[k].name : nameOf(routed.find((r) => r.key === k))})`).join(', ')}`);
 const { port } = serviceOf(project);
 const status = await call(port, '/status');

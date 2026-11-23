@@ -44,7 +44,8 @@ export async function contextRules(given) {
   // entry: a broken house-defaults block with a valid project entry used to
   // run the audit without the State and Disabled orders and say nothing.
   if (!c || c.ok === false) throw new Error(((c && c.errors) || []).join("; ") || "the service did not return the project's settings");
-  const lib = c.libraries && ctx.libKey ? c.libraries[ctx.libKey] : null;
+  // a tokens or icons file: the house defaults the service gives it (`files`)
+  const lib = ctx.libKey ? ((c.libraries || {})[ctx.libKey] || (c.files || {})[ctx.libKey]) : null;
   if (!lib) throw new Error("the context document has no audit-settings entry for this library (" + (ctx.libKey || "unknown key") + ")");
   const t = lib.tokens || {};
   // What the judge is told about the library's vocabulary is derived from

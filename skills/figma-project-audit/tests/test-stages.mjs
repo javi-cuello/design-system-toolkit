@@ -216,6 +216,8 @@ for (const [f, heads] of [["tools/figma-audit/audit-session.mjs", ["exec(port, f
   ok("runFiles: an open file is switched to, then audited live", /await ctx\.switchLib\(f\.key\)/.test(run) && /await runAudit\(targets\)/.test(run) && /await runOtherStages\(/.test(run));
   const sess = readFileSync(join(ROOT, "tools/figma-audit/audit-session.mjs"), "utf8");
   ok("bin/audit takes every routed library file, a tokens or icons file with no settings of its own", /contract\.auditRecords\(where\)\.filter\(\(r\) => !ctx\.libraries\[r\.key\]\)/.test(sess) && /ctx\.libraries\[fileKey\] \|\| /.test(sess));
+  const proj = readFileSync(join(ROOT, "tools/snapshot/projects.cjs"), "utf8"), own = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/owners.js"), "utf8");
+  ok("a tokens or icons file is audited with the house defaults, never with no settings", /const files = Object\.fromEntries\(routed\.all\.filter/.test(proj) && /tokens: flatSettings\(house, lib, naming\) \}\]/.test(proj) && /\(c\.files \|\| \{\}\)\[ctx\.libKey\]/.test(own) && /others\[r\.key\]/.test(sess));
   ok("runFiles: the lock is held for the whole run and released once, in finally", /batching = true; lock\(\)/.test(run) && /finally \{[\s\S]*unlock\(\)/.test(run) && /if \(!batching\) unlock\(\)/.test(audit));
 }
 
