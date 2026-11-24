@@ -9,6 +9,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { launch, pageTarget, newPage, attach, navigate, viewport, media, screenshot, call, waitFor, pool, paintReady, findChrome } from './cdp.mjs';
 
+// launch() reaps first: a "toolkit Chrome" whose parent is gone (here a node standing in, orphaned by its shell) is
+// killed and its profile removed before another browser is added. Before the Chrome skip: it needs no Chrome.
+{
+  const dir = mkdtempSync(join(tmpdir(), 'parity-chrome-'));
+  const pid = +spawnSync('sh', ['-c', `node -e "setTimeout(()=>{},60000)" -- --user-data-dir=${dir} >/dev/null 2>&1 & echo $!`], { encoding: 'utf8' }).stdout.trim();
+  const alive = () => { try { process.kill(pid, 0); return true; } catch { return false; } };
+  await new Promise((r) => setTimeout(r, 300));
+  await launch({ chrome: join(tmpdir(), 'no-such-chrome'), timeout: 500 }).catch(() => {});
+  await new Promise((r) => setTimeout(r, 200));
+  const was = alive(); if (was) process.kill(pid, 'SIGKILL');
+  assert.ok(!was && !existsSync(dir), 'launch() reaps an orphaned toolkit Chrome and its profile first');
+  console.log('ok launch() reaps an orphaned toolkit Chrome first');
+}
+
 const CHROME = findChrome();
 if (!existsSync(CHROME)) {
   console.log(`skip: no Chrome at ${CHROME} — set CHROME to run tools/shared/test-cdp.mjs`);

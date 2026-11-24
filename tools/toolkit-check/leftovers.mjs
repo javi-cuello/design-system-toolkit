@@ -13,8 +13,8 @@
  *   leftovers(repo)  bin/check (--warn): what is over a day old and cannot go that way — a worktree or branch with
  *                    unmerged commits or uncommitted files, and every stash — with its age and its session when known
  *   reapChromes()    bin/check, bin/closing and every cdp.mjs launch(): kills the headless Chromes the toolkit started
- *                    and nothing outlived — orphaned, or an hour old with no node parent — with their helpers, and
- *                    removes their profiles. 25 were found on 2026-11-24, up to three days old, at a load of 59.
+ *                    whose parent is gone (ppid 1, or no such pid), at any age, with their helpers, and removes their
+ *                    profiles; one under a living parent is never killed, and bin/closing names it past a day. 25 were found on 2026-11-24, up to three days old, at a load of 59.
  *
  * Nothing dirty, unmerged or stashed is ever removed: it is said, and a person or its session decides.
  */
@@ -158,13 +158,13 @@ export async function leftovers(repo, now = Date.now()) {
 /* The toolkit's headless Chromes: every process whose --user-data-dir is <tmpdir>/parity-chrome-* (cdp.mjs launch()),
    one entry per profile with its helpers and their children. Never another Chrome: the user's has no such profile, and
    another tool's is named otherwise. Crashpad handlers share the user's database and exit with their client: left. */
-const HOUR = 36e5;
-const etime = (t) => { const m = /^(?:(\d+)-)?(?:(\d+):)?(\d+):(\d+)$/.exec(t); return m ? ((((+m[1] || 0) * 24 + (+m[2] || 0)) * 60 + +m[3]) * 60 + +m[4]) * 1000 : 0; };
-const psList = () => { try { return execFileSync('ps', ['-A', '-o', 'pid=,ppid=,etime=,command='], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 }); } catch { return ''; } };
+const HOUR = 36e5, DAY_OLD = 24 * HOUR;
+/* ps's lstart ("Tue Nov 24 10:00:13 2026", local time): a start that stays put, where etime moves every second */
+const psList = () => { try { return execFileSync('ps', ['-A', '-o', 'pid=,ppid=,lstart=,command='], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000, env: { ...process.env, LC_ALL: 'C' } }); } catch { return ''; } };
 const temps = () => [...new Set([os.tmpdir(), real(os.tmpdir())].map((d) => d.replace(/\/+$/, '')))];
-export function toolkitChromes(ps = psList(), tmp = temps()) {
-  const procs = ps.split('\n').map((l) => /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/.exec(l)).filter(Boolean)
-    .map(([, pid, ppid, t, cmd]) => ({ pid: +pid, ppid: +ppid, age: etime(t), cmd }));
+export function toolkitChromes(ps = psList(), tmp = temps(), now = Date.now()) {
+  const procs = ps.split('\n').map((l) => /^\s*(\d+)\s+(\d+)\s+(\w{3} \w{3}\s+\d+ [\d:]{8} \d{4})\s+(.*)$/.exec(l)).filter(Boolean)
+    .map(([, pid, ppid, t, cmd]) => ({ pid: +pid, ppid: +ppid, start: new Date(t.replace(/\s+/g, ' ')).getTime() || now, cmd }));
   const byPid = new Map(procs.map((p) => [p.pid, p]));
   const groups = new Map();
   for (const p of procs) {
@@ -177,29 +177,30 @@ export function toolkitChromes(ps = psList(), tmp = temps()) {
     const pids = new Set(own.map((p) => p.pid));
     for (let grew = true; grew;) { grew = false; for (const p of procs) if (!pids.has(p.pid) && pids.has(p.ppid)) { pids.add(p.pid); grew = true; } }
     // the browser is the one without --type=; with it gone, its oldest helper speaks for it
-    const main = own.find((p) => !/--type=/.test(p.cmd)) || own.reduce((a, b) => (b.age > a.age ? b : a));
+    const main = own.find((p) => !/--type=/.test(p.cmd)) || own.reduce((a, b) => (b.start < a.start ? b : a));
     const parent = main.ppid > 1 ? byPid.get(main.ppid) : null;
-    const nodeParent = !!parent && /(^|\/)node(\s|$)/.test(parent.cmd);
-    const stale = !parent || (main.age > HOUR && !nodeParent);
-    return { dir, main: main.pid, pids: [...pids], age: main.age, parent: parent ? parent.cmd : null, stale };
+    // only a parent gone makes it a leftover: a living one, whatever runs it, is a run someone may still want
+    return { dir, main: main.pid, pids: [...pids], start: main.start, age: now - main.start, ppid: main.ppid, parent: parent ? parent.cmd : null, stale: !parent };
   });
 }
 
-/* Kill each stale one (SIGKILL, the browser first, then its helpers) and remove its profile; returns what went and
+/* Kill each parentless one (SIGKILL, the browser first, then its helpers) and remove its profile; returns what went and
    what stays. Its process group is never signalled: launch() leaves Chrome in its caller's group, a live shell's. */
-export function reapChromes({ ps = psList(), tmp = temps(), kill = (pid) => process.kill(pid, 'SIGKILL') } = {}) {
-  const all = toolkitChromes(ps, tmp);
+export function reapChromes({ ps = psList(), tmp = temps(), now = Date.now(), kill = (pid) => process.kill(pid, 'SIGKILL') } = {}) {
+  const all = toolkitChromes(ps, tmp, now);
   const reaped = [];
   for (const c of all.filter((x) => x.stale)) {
     for (const pid of [c.main, ...c.pids.filter((p) => p !== c.main)]) try { kill(pid); } catch { /* already gone */ }
     try { fs.rmSync(c.dir, { recursive: true, force: true, maxRetries: 3 }); } catch { /* a helper still writing: the OS clears tmp */ }
-    reaped.push(`pid ${c.main} (${Math.floor(c.age / HOUR)}h, ${c.parent ? 'no node parent' : 'orphaned'}) ${path.basename(c.dir)}`);
+    reaped.push(`pid ${c.main} (${Math.floor(c.age / HOUR)}h, orphaned) ${path.basename(c.dir)}`);
   }
   return { reaped, left: all.filter((x) => !x.stale) };
 }
 
-/* The Stop hook's open items: a toolkit Chrome over an hour old that a live run still holds. */
-export const chromeItems = (left) => left.filter((c) => c.age > HOUR).map((c) => `headless Chrome pid ${c.main} running ${Math.floor(c.age / HOUR)}h under ${c.parent.slice(0, 80)}: a run that long is stuck; stop it (kill ${c.main})`);
+/* The Stop hook's open items: a toolkit Chrome a living parent has held over a day. The line is its key
+   (stop-items.mjs), so it holds the parent and the start, never the hours, and asks rather than kills. */
+const stamp = (ms) => { const d = new Date(ms), z = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+export const chromeItems = (left) => left.filter((c) => c.age > DAY_OLD).map((c) => `a toolkit Chrome under pid ${c.ppid} (${c.parent.slice(0, 80)}) has run since ${stamp(c.start)}; check whether that run is still wanted`);
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
   const repo = path.resolve(process.argv.find((a, i) => i > 1 && !a.startsWith('--')) || '.');

@@ -33,6 +33,14 @@ import { rulesOf } from './rules.mjs';
 import { areas } from '../claude-hooks/standards-read.mjs';
 import { sweep, reapChromes, chromeItems } from './leftovers.mjs';
 
+/* Headless Chromes: the reap is said, on stderr in brief mode (the Stop hook reads stdout as open items, and a reap
+   is done, not open); one a living parent has held over a day is an item. */
+export function chromeOutput({ brief, ...opts } = {}) {
+  const { reaped, left } = reapChromes(opts);
+  const note = reaped.length ? [`${brief ? 'toolkit: ' : '  '}reaped ${reaped.length} headless Chrome(s) the toolkit left: ${reaped.join(', ')}`] : [];
+  return { out: brief ? [] : note, err: brief ? note : [], items: chromeItems(left) };
+}
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOLKIT = path.resolve(HERE, '../..');
 const gitRaw = (repo, args) => { try { return execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return ''; } };
@@ -299,9 +307,10 @@ if ((process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); 
     if (name === 'toolkit') for (const l of cadence(repo)) flag(l);
     // headless Chromes the toolkit left go here too; one a live run has held over an hour is said, never silent
     if (name === 'toolkit') {
-      const { reaped, left } = reapChromes();
-      if (reaped.length) console.log(`${BRIEF ? 'toolkit: ' : '  '}reaped ${reaped.length} headless Chrome(s) the toolkit left: ${reaped.join(', ')}`);
-      for (const l of chromeItems(left)) flag(l);
+      const c = chromeOutput({ brief: BRIEF });
+      for (const l of c.out) console.log(l);
+      for (const l of c.err) console.error(l);
+      for (const l of c.items) flag(l);
     }
     if (name === 'toolkit') for (const b of reviewBranches(repo)) flag(`review branch ${b.branch} was held, not merged (${b.commits} commit(s); its last message says why): the next owed bin/review run redoes it, unless a person has committed on it, which keeps it theirs; nothing is owed here unless that reason is yours to fix`);
     // not on the Stop hook's brief pass, which has 20 s and runs every turn: a network call there can cost 5 of them
