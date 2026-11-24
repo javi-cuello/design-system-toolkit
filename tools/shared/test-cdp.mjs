@@ -72,6 +72,12 @@ try {
   const left = orphan.stdout.trim();
   ok('a process that exits without close takes its browser with it', /^http/.test(left) && await fetch(`${left}/json/version`).then(() => false, () => true));
 
+  // close's wait for the browser to go must not keep the process alive after it went: a timer left set cost every reading 5 s
+  const tClose = Date.now();
+  const closer = spawnSync(process.execPath, ['--input-type=module', '-e',
+    `import { launch } from ${JSON.stringify(new URL('./cdp.mjs', import.meta.url).href)}; const b = await launch({ chrome: ${JSON.stringify(CHROME)} }); await b.close();`], { encoding: 'utf8', timeout: 30_000 });
+  ok(`a process that closes its browser exits at once, not after close's 5 s cap (${Date.now() - tClose} ms)`, closer.status === 0 && Date.now() - tClose < 4500);
+
   const page = await within(15_000, pageTarget(CDP), 'pageTarget');
   const tab = await within(10_000, attach(page), 'attach');
   ok('attach opens a session on a settled page target', typeof tab.send === 'function' && tab.dead === null && tab.id === page.id);

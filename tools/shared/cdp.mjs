@@ -86,7 +86,7 @@ export async function launch({ chrome = findChrome(), port = 0, profile, args = 
   process.on('exit', tidy);
   const close = async () => {
     process.off('exit', tidy);
-    if (child.exitCode === null && child.signalCode === null) { child.kill(); await Promise.race([gone, sleep(5000)]); }
+    if (child.exitCode === null && child.signalCode === null) { child.kill(); let cap; await Promise.race([gone, new Promise((r) => { cap = setTimeout(r, 5000); })]); clearTimeout(cap); }
     try { child.kill('SIGKILL'); } catch { /* already gone */ }
     // its helpers can outlive it by a moment and write the profile meanwhile (seen on Linux CI, and on a loaded Mac
     // after a removal had already succeeded: bin/land, 2026-11-23), so it is removed until it is seen gone twice, 100 ms
