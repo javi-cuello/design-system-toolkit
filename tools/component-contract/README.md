@@ -43,7 +43,7 @@ node tools/component-contract/eval.mjs --projects <label,label…> --legs self,s
 node tools/component-contract/eval.mjs --projects <label,label…> --mechanisms --top 25 --near 15
 
 # the spec and the contract held to Figma's own REST API (a token: bin/set-key figma)
-node tools/component-contract/oracle-figma.mjs --project <label>[,<label>…] [--cache <dir>] [--offline] [--out <rows.json>]
+node tools/component-contract/oracle-figma.mjs --project <label>[,<label>…] [--cache <dir>] [--offline] [--out <rows.json>] [--version snapshot|latest] [--interval <s>]
 
 # which contract is official, and a component's properties table
 node tools/component-contract/official.mjs --project <label>

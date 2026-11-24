@@ -998,7 +998,7 @@ async function main(argv) {
   const opt = { projects: [], only: [], version: 'snapshot', interval: 7, top: 5 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--project' || a === '--projects') opt.projects.push(...String(argv[++i] || '').split(',').filter(Boolean));
+    if (a === '--project') opt.projects.push(...String(argv[++i] || '').split(',').filter(Boolean));
     else if (a === '--cache') opt.cache = argv[++i];
     else if (a === '--out') opt.out = argv[++i];
     else if (a === '--version') opt.version = argv[++i];
@@ -1082,4 +1082,4 @@ async function main(argv) {
   return 0;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) main(process.argv.slice(2)).then((c) => process.exit(c), (e) => { console.error(e.stack || e.message); process.exit(1); });
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) main(process.argv.slice(2)).then((c) => process.exit(c), (e) => { console.error(e.stack || e.message); process.exit(1); });
