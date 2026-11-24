@@ -135,5 +135,19 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('asked while stale and busy: it keeps serving the work', r.code === null && r.answer.stale);
   touch(dep, past);
 }
+// the process's start is performance.timeOrigin by default: a file changed just before this process began is not
+// stale, one changed after is (the dashboards check trusts a service's stale:false on this)
+{
+  const { performance } = await import('node:perf_hooks');
+  const t = restartWhenStale([entry], { supervised: false, every: 60000, log: () => {}, exit: () => {} });
+  touch(dep, new Date(performance.timeOrigin - 1000));
+  const earlier = t.now().stale;
+  clearTimeout(t.timer);
+  const t2 = restartWhenStale([entry], { supervised: false, every: 60000, log: () => {}, exit: () => {} });
+  touch(dep, new Date(performance.timeOrigin + 1000));
+  const later = t2.now().stale;
+  clearTimeout(t2.timer); touch(dep, past);
+  ok('by default the start is the process\'s own: a file older than it is not stale, a newer one is', earlier === false && later === true);
+}
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(`${n}/${n} passed`);

@@ -58,6 +58,19 @@ ok('a start time ps did not give is not read as stale', undated.bad.length === 0
   ok('nothing else is a failure', left.length === 4);
 }
 
+// a service too old to have the route answers not_found through the real client: the check fails closed
+{
+  const http = await import('node:http');
+  // it vouches for its checkout (/checkout, which every call asks first) and knows no /restart-when-idle
+  const root = fileURLToPath(new URL('../..', import.meta.url)).replace(/\/$/, '');
+  const srv = http.createServer((q, s) => { s.writeHead(q.url === '/checkout' ? 200 : 404, { 'Content-Type': 'application/json' }); s.end(q.url === '/checkout' ? JSON.stringify({ root, data: '/old/audit' }) : '{"error":"not_found"}'); });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const port = String(srv.address().port);
+  const left = await heal([{ r: { data: '/old/audit', port, started: before }, label: 'old', msg: 'OLD runs the old file' }], { newest, list: () => [], timeout: 50, poll: 5 });
+  srv.close();
+  ok('a service with no restart route answers not_found, and stays a failure', left.length === 1 && /^OLD .*could not be asked.*not_found/.test(left[0]) && !/checkout/.test(left[0]), left[0]);
+}
+
 // running()'s reading of the process list: a figma-audit server.mjs run with --data is a service, of any checkout, known
 // by its --data; which checkout it runs is asked of it (call, below), never guessed from a path
 {
