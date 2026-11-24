@@ -63,7 +63,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 **Cases**
 - A table opens with an internal UUID column → move the human name first, put the ID on the record page or last.
 - "Created", "Updated" and "Owner" separated by four columns → keep related columns adjacent.
-- A per-row "Actions" column with five icons → one overflow menu at the end; a toolbar holds table-wide actions, up to five ([Carbon data table](https://carbondesignsystem.com/components/data-table/usage/)).
+- A per-row "Actions" column with five icons → one overflow menu at the end; a toolbar holds table-wide actions, up to five ([Carbon data table](https://carbondesignsystem.com/components/data-table/usage/)); how row actions show is [*Row actions*](#row-actions).
 - A column that is empty in every row for this view → keep it if the reader would ask where it went, drop it from the design if it never applies here (design-standard rule 5's split, applied to columns).
 
 **Accessibility**
@@ -74,7 +74,6 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [required] Column order is source order: `th` and `td` in the order they are read; no `order`, grid placement or `row-reverse` to rearrange them (code-standard rule 2).
 - [moderate] The identifier is the row header, `th scope="row"` (*Captions, header cells and scope*).
 - [weak] The unit sits in the `th` text ("Size (KB)"); an abbreviated header carries its full form as visually hidden text, since a `title` is not reliably announced ([code accessibility: *Accessible names and descriptions*](../../code/accessibility.md#accessible-names-and-descriptions)).
-- [weak] Row actions are the last cell: one `button` and a menu button ([HTML semantics: *Links and buttons*](../../code/html-semantics.md#links-and-buttons)).
 
 **Check**
 - *Script* could: flag a first column whose values match an ID pattern (UUID, long hex, sequential integer); flag a unit repeated in every cell of a column.
@@ -562,10 +561,9 @@ What body cells and header cells are set in, read from 14 systems' source on 23 
 - [weak] Never stripe with a status colour.
 - [moderate] Choosing: whitespace alone for a few columns and few rows, where alignment already holds the line; light horizontal rules for most data tables; stripes for long tables with many columns. Datawrapper: stripe "If you can't avoid many columns", and stripes are "likely unnecessary or even confusing when your table shows data in only a few columns". NN/g lists "light borders, and zebra striping" as aids to scanning without choosing between them ([NN/g, data tables](https://www.nngroup.com/articles/data-tables/)).
 - [strong] The evidence for stripes is thin: a study of striped and plain tables found "no evidence that zebra striping consistently improves the accuracy or speed of tasks" and none that it hurts; most participants preferred stripes ([Enders, A List Apart](https://alistapart.com/article/zebrastripingdoesithelp/)). Stripes are a preference that costs little, not a fix for a table that is hard to read.
-- [weak] Hover is never the only way to reveal row actions: touch has no hover (Carbon keeps overflow menus visible on touch).
+- [weak] Row actions and hover: [*Row actions*](#row-actions).
 
 **Cases**
-- Row actions that appear only on hover → show them always, subdued, or in an overflow menu that is always visible.
 - A selected row that looks like a hovered row → a stronger fill and the checked box.
 
 **Accessibility**
@@ -575,13 +573,55 @@ What body cells and header cells are set in, read from 14 systems' source on 23 
 **Build**
 - [required] Hover is `tbody tr:hover`; stripes are `tbody tr:nth-child(even)`, switched on by a table attribute (`data-striped`), both from colour tokens (code-standard rule 9, code-standard rule 22).
 - [weak] Selected is `tr:has(:checked)` (or `[aria-selected="true"]` in a grid), a stronger token than hover ([HTML semantics: *Table behaviour*](../../code/html-semantics.md#table-behaviour)).
-- [weak] Row actions are always rendered and visible; never `opacity: 0` or `visibility: hidden` until `:hover` ([code accessibility: *Hidden content*](../../code/accessibility.md#hidden-content)).
 
 **Check**
-- *Script* could: hover a row and assert a computed background change; flag row actions with `opacity: 0` or `visibility: hidden` until hover.
+- *Script* could: hover a row and assert a computed background change.
 - *Judgement*: does striping help this table or only decorate it?
 
 **Sources.** Carbon, Datawrapper, NN/g and Enders's study. Datawrapper and Carbon offer stripes for wide tables; Enders found no measured gain. Stripes only where columns are many follows Datawrapper and Carbon.
+
+## Row actions
+
+How actions on one row show: always, on hover over the content, on hover in a column kept for them, or from a menu; icons or words; how many; and how they live beside a clickable row. Actions on several rows at once are *Selection and bulk actions*.
+
+**What good looks like**
+- [contested] **At rest or on hover.** Shown at rest: Carbon by default ("the overflow menu icons are persistent on each row", [Carbon](https://carbondesignsystem.com/components/data-table/usage/)), Cloudscape ("persist one or two repetitive actions", [Cloudscape](https://cloudscape.design/patterns/general/actions/incontext-actions/)), Primer ([Primer](https://primer.style/product/components/data-table/)), GOV.UK ([summary list](https://design-system.service.gov.uk/components/summary-list/)), Ant ([Ant table](https://ant.design/components/table)). Shown on hover: Polaris ResourceList's shortcut actions ([Polaris](https://github.com/Shopify/polaris/blob/main/polaris.shopify.com/content/components/lists/resource-list.mdx)), Fluent's `TableCellActions` (`opacity: 0` until the row is hovered, unless `visible`, [Fluent source](https://github.com/microsoft/fluentui/tree/master/packages/react-components/react-table/library/src/components)); Carbon offers it as an opt-in (`overflowMenuOnHover`). No system read bans hover reveal outright.
+- [strong] **Few inline, the rest in one menu.** One or two actions stay inline; past that they go into an overflow ("More") menu: Carbon (fewer than three inline, else the overflow menu), Cloudscape ("more than two actions, group them in a button dropdown"), Primer (a menu, with at most one action pulled out beside it), Polaris ("1 or 2 shortcut actions"). Atlassian's dynamic table and PatternFly put them all in one menu ([Atlassian](https://atlassian.design/components/dynamic-table/usage), [PatternFly](https://www.patternfly.org/components/table/design-guidelines)).
+- [strong] **Last column.** Row actions sit in the table's last column: PatternFly ("always… final column"), Primer, Cloudscape (sticky, "to maintain visibility"), GOV.UK, Ant.
+- [contested] **Icons or words.** Icon buttons: Carbon, Primer, Cloudscape (icon or link), Fluent. Text links: GOV.UK ("Change"), Ant, Polaris's shortcut actions.
+- [strong] **Each action names its row.** "Edit component 3", not "Edit": GOV.UK (visually hidden text, "Change name"), Atlassian ("unique" labels per row), Primer ("Download: [row]").
+
+**How**
+- [moderate] A hover-revealed action still shows when its row has focus: Carbon ("on hover and focus"), Fluent (`:focus-within`), Polaris (a `focused` state; the actions are clipped, never `display: none`, [Polaris CSS](https://github.com/Shopify/polaris/blob/main/polaris-react/src/components/ResourceItem/ResourceItem.module.css)).
+- [moderate] On touch, hover-revealed actions show at rest or move elsewhere: Carbon ("persist the overflow menus even if the overflowMenuOnHover prop is enabled"), Polaris ("not shown on small screen devices, so the action must also be accessible in another way"; persistent actions "roll up into an overflow menu on small screens").
+- [contested] **Where a hover reveal sits.** Over the row's content, absolutely positioned at its right: Polaris ResourceItem, Fluent `TableCellActions`. In its own column, kept empty at rest: Carbon's hover overflow menu. Over the content hides what it covers while hovered; a kept column costs its width on every row.
+- [weak] A right-click (context) menu duplicates actions that are also in the visible interface, since it is "hidden by default, so people might not know it's there" ([Apple HIG: context menus](https://developer.apple.com/design/human-interface-guidelines/context-menus)). No web system read documents a context menu on table rows; React Aria exposes `onContextMenu` on rows without guidance ([React Aria Table](https://react-aria.adobe.com/Table)).
+- [moderate] **A clickable row beside its actions.** The row opens its record and the actions do not: Polaris's whole-row stretched link, with the actions stopping the click from reaching it ([ResourceItem](https://github.com/Shopify/polaris/blob/main/polaris-react/src/components/ResourceItem/ResourceItem.tsx)); React Spectrum runs a row's action on click while nothing is selected and toggles selection once something is ([ListView](https://react-spectrum.adobe.com/react-spectrum/ListView.html)). The link itself is on the identifier (*Cell content and empty cells*).
+
+**Cases**
+- Edit, duplicate, archive and delete as four icons on every row → keep the one people use most inline, put the rest in a "More" menu in the last column.
+- Actions that appear only on hover in a list used on tablets → show them at rest, or keep the "More" menu visible (Carbon, Polaris).
+- Hover actions laid over the last cell hide the value people are reading → a kept column, or actions at rest.
+- Twenty "Delete" buttons that all read "Delete" to a screen reader → "Delete Invoice 2041".
+- Archive offered only through right-click → put it in the row's menu too.
+
+**Accessibility**
+- [required] 2.1.1 Keyboard: every row action is reachable without a pointer; a hover reveal also reveals on focus.
+- [required] 1.4.13 Content on Hover or Focus applies when the revealed actions are additional content; "should also be able to be triggered by keyboard focus" ([Understanding 1.4.13](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus.html)).
+- [required] 2.4.6 and 2.5.3: an icon-only action has an accessible name naming the action and its row; a visible word is part of that name.
+- [required] 2.5.8 Target Size (Minimum): see *Density and row height*.
+
+**Build**
+- [weak] The last cell holds the inline `button`s and one menu button ([HTML semantics: *Links and buttons*](../../code/html-semantics.md#links-and-buttons)).
+- [moderate] A hover reveal hides without removing: `opacity: 0` or clipping, shown on `tr:hover` and `tr:focus-within`, so focus can reach it (Fluent, Polaris); `display: none` or `visibility: hidden` takes it out of the tab order ([code accessibility: *Hidden content*](../../code/accessibility.md#hidden-content)).
+- [moderate] In a static table the row's controls are in the tab order (Carbon, [data table accessibility](https://carbondesignsystem.com/components/data-table/accessibility/)); in a `grid` the table is one tab stop, and Enter or F2 moves into a cell's controls, Escape out ([APG grid](https://www.w3.org/WAI/ARIA/apg/patterns/grid/); Paste's data grid ships the same).
+- [weak] An icon button's name is `aria-label` carrying the row ("Download: Report Q3"); Primer also sets `title`.
+
+**Check**
+- *Script* could: flag row actions hidden with `display: none` or `visibility: hidden` until hover; flag icon buttons whose names repeat across rows; flag more than two inline actions beside no menu.
+- *Judgement*: which action do people use most on a row, and is it the inline one?
+
+**Sources.** Carbon, Cloudscape, Primer, PatternFly, Atlassian, GOV.UK and Ant docs; Polaris and Fluent source; React Spectrum and React Aria docs; Apple HIG; W3C APG and Understanding WCAG 2.2. Not read: Material, Spectrum's table guidelines and Fluent 2's usage page (404), SLDS (403). No study of hover-revealed row actions was found.
 
 ## Selection and bulk actions
 
