@@ -152,8 +152,11 @@ ok('the plugin code carries each variant\'s cell', /"cell":\[1,2\]/.test(pluginC
   const stored = { name: 'Flagged', id: '9:1', set: { w: 200, h: 100 }, props: { size: ['sm', 'lg'], isOff: ['true', 'false'] },
     variants: [box('sm', 'false', 20, 20), box('lg', 'false', 100, 20), box('sm', 'true', 20, 60), box('lg', 'true', 100, 60)] };
   const c = derive(stored);
-  ok('a False/True axis keeps the library\'s spelling and order of its options, as an enum does',
+  ok('a False/True axis keeps the library\'s spelling and order of its options where they are not False, True',
     c.props.isOff.axis === true && JSON.stringify(c.props.isOff.figmaValues) === '["true","false"]');
+  const plain = derive({ ...stored, props: { size: ['sm', 'lg'], isOff: ['False', 'True'] }, variants: stored.variants.map((v) => ({ ...v, name: v.name.replace(/=false$/, '=False').replace(/=true$/, '=True') })) });
+  ok('…and none where they are: absence is False, True', plain.props.isOff.axis === true && !('figmaValues' in plain.props.isOff)
+    && plan(plain, {}).variants.some((v) => v.name === 'isOff=True, size=lg'));
   const names = plan(c, {}).variants.map((v) => v.name);
   ok('…and is drawn by it: isOff=false, not isOff=False',
     names.includes('isOff=false, size=sm') && names.includes('isOff=true, size=lg') && !names.some((n) => /=(True|False)\b/.test(n)));

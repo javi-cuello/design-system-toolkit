@@ -36,7 +36,7 @@ const TYPE = { enum: 'VARIANT', boolean: 'BOOLEAN', string: 'TEXT', instance: 'I
 const typeOf = (p) => (p.axis ? 'VARIANT' : TYPE[p.type] || String(p.type).toUpperCase());
 
 // A variant axis's options as Figma spells and orders them (`figmaValues`).
-// A False/True axis derived before derive.cjs kept them has none: its order
+// A False/True axis spelt False, True, or derived before derive.cjs kept them, has none: its order
 // and spelling are read from the stored spec the contract was derived from,
 // in the same snapshot. Without a spec, False then True.
 const optionsOf = (p, spec) => {

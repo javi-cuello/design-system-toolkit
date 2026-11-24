@@ -176,7 +176,7 @@ export function toContract(component, drafts, base = {}, parts = null) {
       p.axis = true;
       // a False/True axis's spelling and order, as derive.cjs keeps it (isDisabled=false)
       const vs = (d.values || []).map((v) => String(v).trim());
-      if (vs.length === 2 && vs.map((v) => v.toLowerCase()).sort().join() === 'false,true') p.figmaValues = vs;
+      if (vs.length === 2 && vs.map((v) => v.toLowerCase()).sort().join() === 'false,true' && vs.join() !== 'False,True') p.figmaValues = vs;
     }
     if (d.type === 'enum' && d.role) { p.role = d.role; p.pointer = (d.pointer || []).map((x) => p.values[d.values.indexOf(x)] ?? kebab(x)).filter((v) => p.values.includes(v)); }
     const only = CODE_ONLY.has(d.type) ? 'code' : d.only;

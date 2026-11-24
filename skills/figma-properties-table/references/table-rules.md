@@ -43,7 +43,7 @@ Properties belonging to nested components are excluded. The contract holds the s
 
 The types are `Variant`, `Boolean`, `Editable string`, `Component swap` and `Slot`.
 
-Options are Figma's, verbatim. An enum's come from its `figmaValues`. A False/True axis's come from its `figmaValues` too, or, in a contract derived before it kept them, from the spec beside the contract.
+Options are Figma's, verbatim. An enum's come from its `figmaValues`. A False/True axis's come from its `figmaValues` where Figma's are not `False`, `True`; else from the spec beside the contract.
 
 Options are never reordered: not to bring the default forward, not to normalise True/False axes, and not to match a sibling component. The order variants sit in on the canvas is a *different* value that sometimes disagrees. Neither is more authoritative, so `audit()` reports a disagreement as a hygiene finding, and it never changes the table.
 
