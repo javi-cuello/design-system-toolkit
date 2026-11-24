@@ -224,6 +224,9 @@ d = tree({ scanner: "push('see figma-standard rule 9');" });
 ok("a scanner writing a standard's rule number into its output is refused", /writes "figma-standard rule 9"/.test(run(d).stdout));
 d = tree({ scanner: "const a = TOK.stateAxis; s.replace(/`([^`]+)`/g, '$1'); // a comment after a regex holding a quote: 🚧" });
 ok("a regex literal holding a quote does not swallow the comment after it", !/literal 🚧/.test(run(d).stdout));
+// two strings each holding a slash on one line read as one regex between them, and quoted what lay there (2026-11-24)
+d = tree({ scanner: "const a = TOK.stateAxis; go(dir + '/checkout'); log(new State('/' + x));" });
+ok("a quoted string holding a slash is never read as a regex", run(d).status === 0);
 d = tree({ scanner: "const a = TOK.stateAxis; viewport(tab, 1280, 900); const id = 'x1280'; wait(12800);", settings: { ...SETTINGS, "audit-defaults": { ...SETTINGS["audit-defaults"], interface: { viewportWidth: 1280 } }, "audit-keys": { ...SETTINGS["audit-keys"], interface: { viewportWidth: "the CSS width a page is measured at" } } } });
 r = run(d);
 ok("a house measuring width written as a number is refused; inside a string or a longer number it is not", /writes the house viewportWidth \(1280\) as a number/.test(r.stdout) && (r.stdout.match(/as a number/g) || []).length === 1);

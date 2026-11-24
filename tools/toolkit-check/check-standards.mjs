@@ -481,7 +481,9 @@ for (const rel of SCANNERS) {
   if (emoji) problems.push(`${rel}: literal ${[...new Set(emoji)].join(" ")} in code; a marker belongs in the settings (or the allowlist, with a reason)`);
   const strings = [...src.matchAll(/(["'`])((?:(?!\1)[^\\]|\\.)*)\1/g)].map((m) => m[2]);
   const quoted = strings.filter((x) => houseValues.has(x));
-  const regexes = [...src.matchAll(/(?<![\w)\]])\/(?![*/])((?:\\.|\[[^\]\n]*\]|[^/\\\n])+)\/[gimsuy]*/g)].map((m) => m[1]);
+  // read left to right with strings as the other choice, so a slash inside a string never opens a regex:
+  // '/checkout'); … new Error('/' read as one regex quoting "Error" (2026-11-24)
+  const regexes = [...src.matchAll(/(["'`])(?:(?!\1)[^\\]|\\.)*\1|(?<![\w)\]])\/(?![*/])((?:\\.|\[[^\]\n]*\]|[^/\\\n])+)\/[gimsuy]*/g)].filter((m) => m[2] !== undefined).map((m) => m[2]);
   for (const body of regexes) for (const w of words) if (new RegExp("(^|[^A-Za-z])" + w + "([^A-Za-z]|$)").test(body)) quoted.push(w);
   // In a longer string a house word is ordinary English ("Text styles") unless it is variant syntax ("State=Rest").
   for (const body of strings.filter((x) => !houseValues.has(x))) for (const w of words) if (new RegExp("(^|[^A-Za-z])" + w + "=").test(body)) quoted.push(w);
