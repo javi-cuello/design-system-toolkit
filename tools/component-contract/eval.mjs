@@ -34,7 +34,9 @@
  * today's (selfInputs: the reader's code, the generator, tokens, settings, the browser, fonts and system), and any
  * reading taken under another Chrome major than the one installed (Chrome 158 read flex-start as flow-start; from-code
  * records it as `chrome`). A reading taken before its inputs or its Chrome were recorded shows as stale until it is read
- * again: the label only, never a count. --twice reads the self leg twice and fails where a reading
+ * again: the label only, never a count. A Figma reading drawn from another stored figma.json, walk VERSION or drawing code than
+ * today's is stale too (figmaInputs). A component is the same on a leg (isSame) only with no row, none left to code, no
+ * combination predicted instead of read (from-code's `unread`, said `N combinations predicted, not read`) and none cut. --twice reads the self leg twice and fails where a reading
  * differs: a measure is trusted only where it repeats. --second goes round the self leg again from what the first came
  * back as (from-code --second, <home>/round-trip/self2/from-code/), and the `second` leg holds that to the first: a row
  * there is the translation not settling, a cause the first leg's count cannot show. --projects runs, per project in turn,
@@ -179,7 +181,24 @@ export function leftToCode(contract, mainOf = null, settings = undefined, { ownS
   const foreign = (el) => !!mainOf && (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key);
   const inForeign = (el) => el.split('/').some((_, i, s) => i < s.length - 1 && foreign(s.slice(0, i + 1).join('/')));
   // (but its Size: to-markup passes that one, data-icon-size, and from-code reads it back)
-  const foreignOwn = (el, field) => foreign(el) && field !== 'with.Size' && /^(with|layout|overflow)(\.|$)/.test(field);
+  // (nor a swap: the prop whose value names the component placed in it, its glyph, which code draws or does not, and
+  // which is measured: excused, a wrong glyph read as the same)
+  const low0 = (v) => String(v).toLowerCase();
+  const placedIn1 = (el) => new Set([...Object.entries(all).filter(([id, e]) => e && e.parent === el && e.kind === 'instance' && e.component).map(([, e]) => low0(e.component)),
+    ...vs.flatMap((v) => Object.entries(v.set || {}).filter(([k, x]) => typeof x === 'string' && k.endsWith('.component') && (all[k.slice(0, -'.component'.length)] || {}).parent === el).map(([, x]) => low0(x)))]);
+  const swapKeys = (el) => {
+    const inside = placedIn1(el), out = new Set();
+    for (const w of [(all[el] || {}).with, ...vs.map((v) => (v.set || {})[`${el}.with`]), ...vs.map((v) => ((v.add || {})[el] || {}).with)]) for (const [k, x] of Object.entries(w && typeof w === 'object' ? w : {})) if (typeof x === 'string' && inside.has(low0(x))) out.add(k);
+    for (const v of vs) for (const [k, x] of Object.entries(v.set || {})) if (k.startsWith(`${el}.with.`) && typeof x === 'string' && inside.has(low0(x))) out.add(k.slice(el.length + 6));
+    return out;
+  };
+  const swapRow = (el, field, row) => {
+    if (field.startsWith('with.')) return swapKeys(el).has(field.slice(5));
+    if (field !== 'with' || !row || !row.library || typeof row.library !== 'object') return false;
+    const drawn = row.drawn && typeof row.drawn === 'object' ? row.drawn : {};
+    return [...swapKeys(el)].some((k) => k in row.library && JSON.stringify(row.library[k]) !== JSON.stringify(drawn[k]));
+  };
+  const foreignOwn = (el, field, row) => foreign(el) && field !== 'with.Size' && /^(with|layout|overflow)(\.|$)/.test(field) && !swapRow(el, field, row);
   // a scale constraint the sheet never writes (to-code's sharesNeverWritten: css.mjs shareable fails wherever drawn()
   // places the part): where it is pinned instead is code's to say. Only where the rows are held to the contract the
   // sheet was written from (`ownSheet`): the second leg's are held to the first reading, in its words
@@ -214,7 +233,7 @@ export function leftToCode(contract, mainOf = null, settings = undefined, { ownS
       && (words.get(`${el}.with`) || []).some((w) => w && typeof w === 'object' && Object.entries(lib).every(([k, v]) => same(w[k], v)));
     return byMine || Object.entries(lib).every(([k, v]) => ownPointer(el, k, v));
   };
-  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || pointerWith(el, field, row) || unwritten(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
+  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || pointerWith(el, field, row) || unwritten(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field, row) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 
@@ -243,7 +262,14 @@ export function measure(where, only = [], now = {}) {
   const legs = { browser: {}, self: {}, second: {}, figma: {} };
   const taken = readTaken(home);
   // a reading of another contract than today's, or one kept when its drawing went unanswered, is stale: measured, said apart
-  const stale = (leg, folder, contract) => { const t = (taken[leg] || {})[folder]; return !t ? 'taken before readings were fingerprinted' : t.kept ? 'kept from an earlier drawing (an import went unanswered)' : t.hash !== hashOf(contract) ? 'its contract changed since' : leg === 'self' ? moved(t, now.inputs && now.inputs[folder]) : null; };
+  const stale = (leg, folder, contract) => { const t = (taken[leg] || {})[folder]; return !t ? 'taken before readings were fingerprinted' : t.kept ? 'kept from an earlier drawing (an import went unanswered)' : t.hash !== hashOf(contract) ? 'its contract changed since' : leg === 'self' ? moved(t, now.inputs && now.inputs[folder]) : leg === 'figma' ? drawnMoved(t.drawnFrom, now.figma && now.figma[folder]) : null; };
+  // a Figma reading drawn from another stored figma.json, walk or drawing code than today's (figmaInputs) is stale too
+  const drawnMoved = (was, today) => {
+    if (!today) return null;
+    if (!was) return 'taken before its spec, walk and code were recorded';
+    const said = [['spec', 'its stored figma.json'], ['walk', 'the walk'], ['code', 'the drawing\'s code']].filter(([k]) => was[k] !== today[k]).map(([, w]) => w);
+    return said.length ? `${said.join(', ')} changed since` : null;
+  };
   // a reading from code taken under another Chrome major, or before its Chrome was recorded, is stale
   const browserMoved = (was) => (!now.chrome ? null : !was ? 'taken before its Chrome was recorded' : was !== now.chrome ? `taken under Chrome ${was}, ${now.chrome} installed now` : null);
   // a self or second reading read from other inputs than today's, or under another Chrome major, is stale too
@@ -251,6 +277,10 @@ export function measure(where, only = [], now = {}) {
       : now.reader && t.reader && t.reader !== now.reader ? 'its inputs changed since, the reader\'s code among them' : 'its inputs changed since'));
   // each component by its name, as the pipeline resolves it, for what an instance of it draws at its defaults
   const mains = req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract));
+  // the combinations a reading left unread and predicted from its layers (from-code's `unread`; one read before it was
+  // kept, its self-check's words): held apart, never measured. Unknown (a self-check that failed): none said
+  const unreadOf = (r) => (typeof r.unread === 'number' ? r.unread : typeof r.selfCheck === 'string' ? +((r.selfCheck.match(/(\d+) of five props or more left unread/) || [])[1] || 0) : undefined);
+  const predicted = (r) => { const p = unreadOf(r); return p === undefined ? {} : { predicted: p }; };
   const selfDir = path.join(drawn, 'self', 'from-code');
   // (what the markup leaves to the code, under the library's settings, the ones the self leg writes under)
   const settingsOf = req('../snapshot/projects.cjs').librarySettingsFor(where.paths.components);
@@ -259,10 +289,10 @@ export function measure(where, only = [], now = {}) {
     const code = read(path.join(readings, `${folder}.json`));
     if (!code || !code.asFigma) legs.browser[folder] = { skipped: 'no reading from code (from-code.mjs has not read it)' };
     // from-code fingerprints a reading from code with the contract it read against (`of`)
-    else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder))), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder))), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
@@ -272,7 +302,7 @@ export function measure(where, only = [], now = {}) {
       const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
-      legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder), { ownSheet: false })), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
+      legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder), { ownSheet: false })), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     // a reading whose geometry was not compared (taken before it was kept, or with no stored figma.json) is stale, as one
@@ -283,8 +313,10 @@ export function measure(where, only = [], now = {}) {
   return { home, legs };
 }
 
-/* A reading the same: measured, no row, and nothing it was not compared on (a Figma reading with no geometry). */
-export const isSame = (x) => !!x.rows && !x.rows.length && !x.lacks;
+/* A reading the same, one definition on every leg: measured, no row, no row left to code (what code is left to say is
+   not shown the same), no combination predicted instead of read, none cut, and nothing it was not compared on (a Figma
+   reading with no geometry). */
+export const isSame = (x) => !!x.rows && !x.rows.length && !x.lacks && !(x.left && x.left.length) && !x.predicted && !x.cut;
 
 /* The counts a measure stands at, and what rose or went against the accepted ones. */
 // (what is left to code is held too, as its own leg: a part that comes to be drawn only at a pointer state moves its rows
@@ -293,7 +325,11 @@ export const counts = (legs) => Object.fromEntries(Object.entries(legs).flatMap(
   const out = [[leg, Object.fromEntries(Object.entries(cs).filter(([, x]) => x.rows).map(([c, x]) => [c, x.rows.length]))]];
   // (every component the leg splits, 0 included: one whose left rows fall to none is measured, not gone)
   const left = Object.entries(cs).filter(([, x]) => x.rows && x.left);
-  return left.length ? [...out, [`${leg} left`, Object.fromEntries(left.map(([c, x]) => [c, x.left.length]))]] : out;
+  if (left.length) out.push([`${leg} left`, Object.fromEntries(left.map(([c, x]) => [c, x.left.length]))]);
+  // (and the combinations predicted, not read: every component that says, 0 included, where any predicts one)
+  const said = Object.entries(cs).filter(([, x]) => x.rows && x.predicted != null);
+  if (said.some(([, x]) => x.predicted)) out.push([`${leg} predicted`, Object.fromEntries(said.map(([c, x]) => [c, x.predicted]))]);
+  return out;
 }));
 export function worse(now, accepted) {
   const out = [];
@@ -367,12 +403,12 @@ export function diff(now, accepted = {}, nowCauses = {}, accCauses = {}) {
   return out;
 }
 
-function report(label, { legs }, fields, byCause) {
+export function report(label, { legs }, fields, byCause) {
   for (const [leg, cs] of Object.entries(legs)) {
     const m = Object.entries(cs).filter(([, x]) => x.rows), skipped = Object.entries(cs).filter(([, x]) => x.skipped);
     const rows = m.flatMap(([, x]) => x.rows);
     const all = Object.keys(cs).length, old = m.filter(([, x]) => x.stale), nc = m.reduce((a, [, x]) => a + Object.keys(causes(x.rows, x.combinations)).length, 0);
-    console.log(`${label} ${leg}: ${m.filter(([, x]) => isSame(x)).length} of ${all} the same; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (drawn only at a pointer state, slot samples, or overrides a placed component has no prop for)` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
+    console.log(`${label} ${leg}: ${m.filter(([, x]) => isSame(x)).length} of ${all} the same; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (drawn only at a pointer state, slot samples, or overrides a placed component has no prop for)` : ''}${m.some(([, x]) => x.predicted) ? `; ${m.reduce((a, [, x]) => a + (x.predicted || 0), 0)} combinations predicted, not read (in ${m.filter(([, x]) => x.predicted).length})` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
     for (const [c, x] of m) if (x.cut) console.log(`  ${c}: ${x.cut} combination(s) past the first ${x.combinations} not compared`);
     if (byCause) for (const [c, k, n] of m.flatMap(([c, x]) => Object.entries(causes(x.rows, x.combinations)).map(([k, n]) => [c, k, n])).sort((a, b) => b[2] - a[2])) console.log(`  ${String(n).padStart(4)}  ${c}: ${k}`);
     if (!fields) continue;
@@ -396,6 +432,8 @@ function draw(where, label, into, only, retry = true) {
   // the components that place it: a modal drawn first placed its dialog as it was before this run
   const unpublished = (c) => /^[_.]/.test(c.component || '');
   const order = contracts(where).sort((a, b) => unpublished(b.contract) - unpublished(a.contract));
+  // what each drawing is drawn from, taken as the run starts: a reading taken from other ones reads stale (measure)
+  const from = figmaInputs(where, only);
   for (const { folder, contract } of order) {
     if (only.length && !only.includes(folder)) continue;
     const file = path.join(dir, `${folder}.json`);
@@ -428,12 +466,25 @@ function draw(where, label, into, only, retry = true) {
     const line = v.out.split('\n').find((l) => /against the library's own/.test(l));
     if (!line) { if (failed(folder, 'not read back', v.out)) return; continue; }
     fails = 0;
-    noteTaken(where.projectDir, 'figma', folder, contract);
+    noteTaken(where.projectDir, 'figma', folder, contract, false, { drawnFrom: from[folder] });
     console.log(line);
   }
   if (retry && unanswered.length) draw(where, label, into, unanswered, false);
 }
 
+
+/* What each Figma reading is drawn from, per component: its stored figma.json (the geometry rows' side, and the
+   arrangement to-figma draws to), the snapshot walk's VERSION (the reading's reader) and the drawing's code (to-figma.mjs
+   and geometry.mjs, with what they import). { folder: { spec, walk, code } }, each a hash or the version. */
+export function figmaInputs(where, only = []) {
+  const sha = (x) => createHash('sha1').update(x).digest('hex');
+  const tools = path.join(HERE, '..'), h = createHash('sha1');
+  for (const f of importClosure([path.join(HERE, 'to-figma.mjs'), path.join(HERE, 'geometry.mjs')])) h.update(path.relative(tools, f)).update('\0').update(fs.readFileSync(f)).update('\0');
+  const code = h.digest('hex');
+  let walk = 'none'; try { walk = (fs.readFileSync(path.join(HERE, '..', '..', 'plugins', 'design-system-snapshot', 'code.js'), 'utf8').match(/const VERSION = '([^']+)'/) || [])[1] || 'none'; } catch { /* no walk: said none */ }
+  const spec = (folder) => { try { return sha(fs.readFileSync(path.join(where.paths.components, folder, 'figma.json'))); } catch { return 'none'; } };
+  return Object.fromEntries(contracts(where).map(({ folder }) => folder).filter((f) => !only.length || only.includes(f)).map((f) => [f, { spec: spec(f), walk, code }]));
+}
 
 /* The reader's own code: every file a self reading runs through (from-code.mjs and what it imports), but to-markup's and
    to-code's, whose output selfInputs hashes instead (each component's markup, sheet, mapping, parts and props, and what every
@@ -495,6 +546,7 @@ const secondKey = (inputs, first) => createHash('sha1').update(`${inputs}\0${fir
    checked by it even where the self leg's inputs cannot be computed (said, then left out). */
 export async function todayOf(label, where, only = [], log = console.log) {
   const today = { chrome: chromeMajor() };
+  try { today.figma = figmaInputs(where, only); } catch (e) { log(`warning: the Figma leg's inputs not checked (${String(e.message).split('\n')[0]}): a reading drawn from other ones is not said stale`); }
   try { Object.assign(today, { inputs: await selfInputs(label, where, only), reader: readerCode() }); } catch (e) { log(`warning: the self leg's inputs not checked (${String(e.message).split('\n')[0]}): a reading taken from other inputs is not said stale`); }
   return today;
 }

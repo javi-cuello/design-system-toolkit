@@ -366,4 +366,73 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
   const gone = unknownNames(['button', 'old'], ['button'], ['button', 'old']);
   ok('a panel name the library dropped is said, not refused', gone.refused.length === 0 && gone.said.length === 1);
   ok('names the library has pass', unknownNames(['button'], ['button']).refused.length === 0); }
+
+// one strict 'the same' on every leg: nothing left to code, nothing predicted instead of read, nothing cut
+ok('a reading with rows left to code, combinations predicted or combinations cut is never the same',
+  isSame({ rows: [] }) && isSame({ rows: [], left: [] }) && !isSame({ rows: [], left: [{ at: 'x' }] }) && !isSame({ rows: [], predicted: 3 }) && !isSame({ rows: [], cut: 2 }));
+
+// combinations of five props or more left unread are predicted, never measured: the reading says how many (`unread`;
+// one taken before it said so, its self-check's words), and the leg holds them apart and counts them
+{ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'eval-'));
+  const comps = path.join(home, 'components', 'tag');
+  fs.mkdirSync(comps, { recursive: true });
+  const c = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  fs.writeFileSync(path.join(comps, 'contract.json'), JSON.stringify(c));
+  const where = { projectDir: home, paths: { components: path.join(home, 'components') } };
+  for (const d of [path.join(home, 'parity', 'from-code'), path.join(home, 'round-trip', 'self', 'from-code'), path.join(home, 'round-trip', 'self2', 'from-code')]) fs.mkdirSync(d, { recursive: true });
+  fs.writeFileSync(path.join(home, 'parity', 'from-code', 'tag.json'), JSON.stringify({ of: hashOf(c), unread: 4, asFigma: c }));
+  fs.writeFileSync(path.join(home, 'round-trip', 'self', 'from-code', 'tag.json'), JSON.stringify({ selfCheck: 'every render rebuilt, 9 combination(s) of four props or more among them: 7 predicted by the layers, 2 kept as layers of their own, each from one read; 713 of five props or more left unread, no three or more of their props building a layer together', asFigma: c }));
+  fs.writeFileSync(path.join(home, 'round-trip', 'self2', 'from-code', 'tag.json'), JSON.stringify({ unread: 0, asFigma: c }));
+  const m = measure(where);
+  ok('a reading that left combinations unread is predicted, not the same; one that read them all is the same',
+    m.legs.browser.tag.predicted === 4 && !isSame(m.legs.browser.tag) && m.legs.self.tag.predicted === 713 && !isSame(m.legs.self.tag) && !m.legs.second.tag.predicted && isSame(m.legs.second.tag));
+  const k = counts(m.legs);
+  ok('the combinations predicted are counted as a leg of their own, so a rise there is said', k['self predicted'].tag === 713 && k['browser predicted'].tag === 4 && !k['second predicted']
+    && worse(k, { ...k, 'self predicted': { tag: 700 } }).some((w) => /self predicted tag: 700 → 713/.test(w)));
+  const said = []; const log = console.log; console.log = (l) => said.push(l);
+  try { (await import('./eval.mjs')).report('lib', m); } finally { console.log = log; }
+  ok('the leg\'s verdict says how many were predicted, not read', said.some((l) => /^lib self: 0 of 1 the same;.*713 combinations predicted, not read/.test(l)), said);
+  fs.rmSync(home, { recursive: true, force: true }); }
+
+// a swap's glyph on a component the library does not hold is never excused: which glyph it draws is measured
+{ const c = { contract: 1, component: 'Note', props: { tone: { type: 'enum', values: ['warn', 'error'], default: 'warn' } },
+    anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon', with: { '<icon>': 'Status warning', size: 'medium' } }, 'icon/statusWarning': { kind: 'instance', parent: 'icon', component: 'Status warning' } },
+    variants: [{ when: { tone: 'error' }, set: { 'icon.with': { '<icon>': 'Status error', size: 'medium' }, 'icon/statusWarning.component': 'Status error' } }] };
+  const left = leftToCode(c, () => null);
+  ok('a foreign instance\'s swap key (its value a component placed in it) stays a difference; its other props are still left',
+    !left('icon.with.<icon>', { library: 'Status warning', drawn: null }) && !left('icon.with.<icon>', { library: 'Status error', drawn: null }) && left('icon.with.size', { library: 'medium', drawn: null })
+    && !left('icon.with', { library: { '<icon>': 'Status warning', size: 'medium' }, drawn: null }) && left('icon.with', { library: { size: 'medium' }, drawn: null })
+    && left('icon.with', { library: { '<icon>': 'Status warning', size: 'medium' }, drawn: { '<icon>': 'Status warning' } })); }
+
+// a Figma reading is held to what it was drawn from: the stored figma.json, the walk's version, and the drawing's code
+{ const { figmaInputs } = await import('./eval.mjs');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'eval-'));
+  const comps = path.join(home, 'components', 'tag');
+  fs.mkdirSync(comps, { recursive: true }); fs.mkdirSync(path.join(home, 'round-trip'), { recursive: true });
+  const c = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  fs.writeFileSync(path.join(comps, 'contract.json'), JSON.stringify(c));
+  fs.writeFileSync(path.join(comps, 'figma.json'), JSON.stringify({ name: 'Tag', w: 10 }));
+  const where = { projectDir: home, paths: { components: path.join(home, 'components') } };
+  const a = figmaInputs(where);
+  fs.writeFileSync(path.join(comps, 'figma.json'), JSON.stringify({ name: 'Tag', w: 12 }));
+  const b = figmaInputs(where);
+  ok('figmaInputs: the spec, the walk\'s version and the code, each its own hash; a spec that moved moves only its own',
+    /^[0-9a-f]{40}$/.test(a.tag.spec) && /^[0-9a-f]{40}$/.test(a.tag.code) && typeof a.tag.walk === 'string' && a.tag.walk.length > 0 && a.tag.spec !== b.tag.spec && a.tag.code === b.tag.code && a.tag.walk === b.tag.walk);
+  fs.writeFileSync(path.join(home, 'round-trip', 'tag.roundtrip.json'), JSON.stringify({ rows: [], geometry: [], combinations: 1 }));
+  const taken = (t) => fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ figma: { tag: { hash: hashOf(c), ...t } } }));
+  taken({ drawnFrom: b.tag });
+  ok('a Figma reading drawn from today\'s spec, walk and code is current', !measure(where, [], { figma: b }).legs.figma.tag.stale);
+  ok('one drawn from another spec, walk or code is stale, said which', /its stored figma\.json changed since/.test(measure(where, [], { figma: a }).legs.figma.tag.stale)
+    && /the walk changed since/.test(measure(where, [], { figma: { tag: { ...b.tag, walk: 'other' } } }).legs.figma.tag.stale)
+    && /the drawing's code changed since/.test(measure(where, [], { figma: { tag: { ...b.tag, code: 'other' } } }).legs.figma.tag.stale));
+  taken({});
+  ok('one drawn before what it was drawn from was recorded is stale once today\'s is known', /before its spec, walk and code were recorded/.test(measure(where, [], { figma: b }).legs.figma.tag.stale) && !measure(where).legs.figma.tag.stale);
+  fs.rmSync(home, { recursive: true, force: true }); }
+
+// the Figma leg is accepted, diffed and checked as every other leg is
+{ const legsNow = { figma: { a: { rows: [{ at: 'x' }], combinations: 1 }, b: { rows: [], combinations: 1 } }, self: { a: { rows: [], combinations: 1 } } };
+  const acc = merged({ self: { z: 1 } }, counts(legsNow), ['a', 'b']);
+  ok('--accept keeps the Figma leg\'s counts beside the others', acc.figma.a === 1 && acc.figma.b === 0 && acc.self.z === 1);
+  ok('--check: a Figma count that rose against its accepted one is said', worse({ figma: { a: 3, b: 0 } }, acc).some((w) => /figma a: 1 → 3/.test(w)));
+  ok('--diff: the Figma leg\'s moves are listed', diff({ figma: { a: 3, b: 0 } }, acc).some((l) => /^figma: 1 → 3/.test(l))); }
 console.log(`${n} passed`);
