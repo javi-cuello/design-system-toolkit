@@ -257,7 +257,8 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
   // (kept white space: pre where the text hugs, still never wrapping; pre-wrap where it wraps)
   else if (kept) put('white-space', e.width === 'hug' || e.autoResize === 'width_and_height' ? 'pre' : 'pre-wrap');
   else if (e.kind === 'text' && (e.width === 'hug' || e.autoResize === 'width_and_height')) put('white-space', 'nowrap');
-  if (take('verticalAlign') !== undefined) unread.push('verticalAlign (text set in a taller box)');
+  // (a text that grows to its words has no room to place them in: nothing is lost there)
+  if (take('verticalAlign') !== undefined && !/^(width_and_height|height)$/.test(e.autoResize || '')) unread.push('verticalAlign (text set in a taller box)');
 
   for (const k of Object.keys(e)) if (!done.has(k) && !STRUCTURE.has(k)) unread.push(k);
   return { decls, unread, unshared };

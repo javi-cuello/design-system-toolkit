@@ -460,17 +460,16 @@ function spread(x) {
   for (const [id, e] of Object.entries(x)) if (e && e.layout && e.layout.align === 'space-between' && 'gap' in e.layout) { const { gap: _, ...l } = e.layout; out[id] = { ...e, layout: l }; }
   return out;
 }
-/* A text's vertical alignment no CSS writes (css.mjs says it unread): where the text's height follows its words, on
-   either side, it shows nowhere, so a browser's reading (`layoutUnit`) takes the design's there, as from-code takes its
-   horizontal one where the width hugs; a box of its own height stays held to it, and Figma's own drawing always. Per
-   combination, so a variant's alignment too. Tested by test-to-figma.mjs. */
+/* A text's vertical alignment no CSS writes: where the design's text grows to its words it shows nowhere, so a
+   browser's reading (`layoutUnit`) takes the design's there, as from-code takes its horizontal one where the width hugs;
+   a design box of its own height stays held to it (a reading that hugs there too: its alignment row beside its height
+   row), and Figma's own drawing always. Per combination, so a variant's alignment too. Tested by test-to-figma.mjs. */
 function unaligned(x, design, layoutUnit) {
   if (!layoutUnit) return x;
-  const grows = (e) => /^(width_and_height|height)$/.test(e.autoResize || '') || e.height == null || e.height === 'hug';
   const out = { ...x };
   for (const [id, e] of Object.entries(x)) {
     const d = design[id];
-    if (e && d && e.kind === 'text' && d.kind === 'text' && d.verticalAlign && e.verticalAlign !== d.verticalAlign && (grows(d) || grows(e))) out[id] = { ...e, verticalAlign: d.verticalAlign };
+    if (e && d && e.kind === 'text' && d.kind === 'text' && d.verticalAlign && e.verticalAlign !== d.verticalAlign && /^(width_and_height|height)$/.test(d.autoResize || '')) out[id] = { ...e, verticalAlign: d.verticalAlign };
   }
   return out;
 }
