@@ -591,4 +591,8 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
     && m.legs.self.tag.assisted['component-name'][0] === 'component' && !isStrict(m.legs.self.tag) && isSame(m.legs.self.tag) && isStrict(m.legs.second.tag));
   fs.rmSync(home, { recursive: true, force: true }); }
 ok('every gap id is met by a fixture', Object.keys(GAPS).every((g) => seenGaps.has(g)), [...Object.keys(GAPS)].filter((g) => !seenGaps.has(g)));
+
+ok('--check: only a strict count absent from accepted.json is spared; a `left` or `predicted` count absent still fails',
+  worse({ self: { a: 0 }, 'self left': { a: 2 }, 'self predicted': { a: 3 } }, { self: { a: 0 } }).length === 2
+  && !unaccepted({ 'self left': { a: 2 } }, { self: { a: 0 } }).length);
 console.log(`${n} passed`);

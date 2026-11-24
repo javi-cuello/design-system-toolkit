@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1077,4 +1077,22 @@ ok('changedPaths: the leaves that differ, a key added or gone among them', JSON.
   ok('a name inside a placed component is borrowed where only the design names it; the markup\'s own is not',
     nameInside('chip', 'chip/label', null, { 'chip/label': 'Label' }) !== nameInside('chip', 'chip/label', null, null)
     && nameInside(null, 'label', 'Own', { label: 'Label' }) === nameInside(null, 'label', 'Own', null)); }
+
+// the room the root is read in is the design's width: a root at that width, or filling it, reads the design's number
+ok('roomTaken: a root at the room\'s width, or a fill whose canvas is the room, took it from the design; another width did not',
+  JSON.stringify(roomTaken({ id: 'root', width: 360 }, 360)) === JSON.stringify(['anatomy.root.width'])
+  && JSON.stringify(roomTaken({ id: 'root', width: 'fill', canvas: { width: 360 } }, 360)) === JSON.stringify(['anatomy.root.canvas.width'])
+  && !roomTaken({ id: 'root', width: 300 }, 360).length && !roomTaken({ id: 'root', width: 360 }, null).length && !roomTaken({ id: 'x', parent: 'root', width: 360 }, 360).length);
+ok('nameBorrowed: a name only the design gives, or a markup name the design drops, is borrowed; the markup\'s own kept is not',
+  nameBorrowed('chip', 'chip/label', null, { 'chip/label': 'Label' }) && nameBorrowed('chip', 'chip/label', 'Own', { 'chip/label': null })
+  && !nameBorrowed(null, 'label', 'Own', { label: 'Label' }) && !nameBorrowed('chip', 'chip/label', null, { 'chip/label': null }));
+{ // (a card kept whole, holding an icon the code colours as the card's main colours its glyph)
+  const mains = byComponentName([{ contract: 1, component: 'Card', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon' }, 'icon/glyph': { kind: 'graphic', parent: 'icon', background: 'C/a' } }, variants: [] }]);
+  const read = () => ({ root: { kind: 'container' }, card: { kind: 'instance', parent: 'root', component: 'Card' }, 'card/icon': { kind: 'instance', parent: 'card', component: 'Icon', background: 'C/a' } });
+  const A = assistsOf(), a = read();
+  colourKept(A, a, mains, { partial: true, whole: new Set(['card']), coloured: new Set(), reading: true });
+  const B = assistsOf(), b = read();
+  colourKept(B, b, mains, { partial: true, whole: new Set(['card']), coloured: null, reading: true });
+  ok('colourKept: a colour the reading drops because the design states none there is tagged; with no design, nothing is',
+    JSON.stringify(Object.keys(A.out())) === JSON.stringify(['design-colour-kept']) && !Object.keys(B.out()).length, A.out()); }
 console.log(`${n}/${n} passed`);

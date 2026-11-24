@@ -248,6 +248,30 @@ export function assistsOf() {
   return { add, take, out };
 }
 
+/* The fields a root read in the design's room (its width, or a fill's canvas) holds at that room's number: the design's,
+   so assisted. `e` a read element, `room` the width it was given (none: nothing). */
+export function roomTaken(e, room) {
+  if (!room || e.parent != null) return [];
+  return [e.width === room && `anatomy.${e.id}.width`, e.canvas && e.canvas.width === room && `anatomy.${e.id}.canvas.width`].filter(Boolean);
+}
+
+/* Whether a layer's name in the reading is the design's rather than the markup's (nameInside with the design's names
+   against without): one only the design gives, or the markup's own the design drops. */
+export function nameBorrowed(inside, id, markup, names) {
+  return (nameInside(inside, id, markup, names) ?? null) !== (nameInside(inside, id, markup, null) ?? null);
+}
+
+/* derive's ownInsides on a reading, tagging what the design's colours decide: a colour on a placed icon kept only where
+   the design states one (`coloured`), so one dropped for its silence is the design's, said under design-colour-kept. */
+export function colourKept(A, anatomy, mains, opts) {
+  const { ownInsides } = req('./derive.cjs');
+  const alone = opts.coloured ? JSON.parse(JSON.stringify(anatomy)) : null;
+  if (alone) ownInsides(alone, mains, { ...opts, coloured: null });
+  ownInsides(anatomy, mains, opts);
+  if (alone) A.add('design-colour-kept', ...changedPaths(alone, JSON.parse(JSON.stringify(anatomy))).map((q) => `anatomy.${q}`));
+  return anatomy;
+}
+
 export function layerNames(ids, design, drawnFrom = null) {
   const c = drawnFrom || design;
   if (!c) return null;
@@ -2013,7 +2037,8 @@ async function main() {
           // (inside a placed component, the design's for the layer the mapping places there: nameInside)
           const figmaName = nameInside(inside, n.getAttribute('data-figma-id'), n.getAttribute('data-figma-name'), designNames);
           // (a name the design gives that the markup does not carry is borrowed: said, so the reading tags it)
-          const nameBorrowed = !!figmaName && figmaName !== nameInside(inside, n.getAttribute('data-figma-id'), n.getAttribute('data-figma-name'), null);
+          // (as nameBorrowed says it, node side: the page gets nameInside's source only)
+          const nameBorrowed = (figmaName ?? null) !== (nameInside(inside, n.getAttribute('data-figma-id'), n.getAttribute('data-figma-name'), null) ?? null);
           // a variable mode it sets, under the attribute the token build writes it as (to-markup writes it so)
           // (the root's, where a custom element hosts the control and carries the root's hooks, its host's: only the host the
           // root's own selector names as its parent (`ds-button > button`), never a wrapper around it, a story's decorator or
@@ -2354,6 +2379,8 @@ async function main() {
           // the outer box filling the room it is given: that room, a canvas fact, as derive records Figma's root fill
           if (e.parent == null && v === 'fill' && e.box) e.canvas = { ...(e.canvas || {}), [axis]: e.box[i] };
         }
+        // (the room is the design's width: a root read at it holds the design's number)
+        A.add('design-room', ...roomTaken(e, room));
         // how a text resizes is its sizes, said as Figma says it (rules.mjs)
         if (e.kind === 'text') {
           await readCut(e, loose);
@@ -2629,7 +2656,7 @@ async function main() {
         const { M } = placedAs(anatomy, hid, hm, mainOf), match = placedMatch(M, inner);
         for (const [rel, e] of Object.entries(inner)) if (match[rel] && M[match[rel]].kind === e.kind) A.take('placed-main-token', { anatomy: { [`${hid}/${rel}`]: e } }, () => zeroTokens(e, M[match[rel]], L.value, { fill: true }));
       }
-      normalForm(anatomy); ownInsides(anatomy, mainOf, { partial: true, whole: wholeIn, coloured: colouredOf, reading: true });
+      normalForm(anatomy); colourKept(A, anatomy, mainOf, { partial: true, whole: wholeIn, coloured: colouredOf, reading: true });
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
       return anatomy;
     };

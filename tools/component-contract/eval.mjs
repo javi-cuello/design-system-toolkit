@@ -379,10 +379,10 @@ export const counts = (legs) => Object.fromEntries(Object.entries(legs).flatMap(
   if (tagged.length) out.push([`${leg} strict`, Object.fromEntries(tagged.map(([c, x]) => [c, strictCount(x)]))]);
   return out;
 }));
-// A count derived from a leg (`<leg> strict`, `<leg> left`, `<leg> predicted`: a space in its name) that accepted.json
-// does not hold at all is new bookkeeping of a leg already accepted, not a rise: unaccepted says it, worse passes it. A
-// base leg absent (a Figma leg drawn since the accept) is still held, each reading newly measured.
-const derivedOnly = (leg, accepted) => leg.includes(' ') && (accepted || {})[leg] === undefined;
+// A strict count (`<leg> strict`) that accepted.json does not hold at all is new bookkeeping of a leg already accepted,
+// not a rise: unaccepted says it, worse passes it. Any other count absent (a base leg, `left`, `predicted`) is still
+// held, each reading newly measured.
+const derivedOnly = (leg, accepted) => / strict$/.test(leg) && (accepted || {})[leg] === undefined;
 export const unaccepted = (now, accepted) => Object.entries(now).filter(([leg, cs]) => derivedOnly(leg, accepted) && Object.keys(cs).length)
   .map(([leg, cs]) => `${leg}: not yet accepted (${Object.keys(cs).length} component${Object.keys(cs).length === 1 ? '' : 's'}): --accept once to hold it`);
 export function worse(now, accepted) {
