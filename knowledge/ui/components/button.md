@@ -10,7 +10,7 @@ A button does something here: submits, saves, opens a dialog, toggles, deletes. 
 - [contested] Icon-only is its own component in MUI, Primer, Atlassian, Spectrum and Radix, and a form of Button in Fluent, Polaris and Ant Design ([Primer IconButton](https://primer.style/product/components/icon-button/), [Fluent migration](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-button/library/docs/MIGRATION.md)). Which a project's Figma draws is *In Figma*, [one component or two](#in-figma).
 
 **Anatomy**
-- [strong] A container holding, in reading order, an optional leading icon, the label, and an optional trailing icon or count; a spinner replaces nothing and takes no width of its own while loading. Primer names these `leadingVisual`, `trailingVisual`, `trailingAction` and `count` ([Primer Button types](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Button/types.ts)); Figma's Simple Design System names them `Icon Start`, `Label`, `Icon End` ([SDS Button.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/button/Button.figma.ts)).
+- [weak] A container holding, in reading order, an optional leading icon, the label, and an optional trailing icon or count; a spinner replaces nothing and takes no width of its own while loading. Primer names these `leadingVisual`, `trailingVisual`, `trailingAction` and `count` ([Primer Button types](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Button/types.ts)).
 - [required] A focus ring, visible on every rank (WCAG 2.4.7; figma-standard rule 39); how it is drawn is [accessibility: *Visible focus*](../../code/accessibility.md#visible-focus).
 - [required] A target of at least 24 by 24 CSS pixels, the bare icon included (figma-standard rule 26; WCAG 2.5.8).
 
@@ -394,13 +394,13 @@ The threshold is [interaction: response times](../design/interaction.md#response
 
 **Layers**
 - [required] Auto layout throughout, never groups; the label hugs vertically and the container hugs or fills, so a longer label grows the button (figma-standard rule 33).
-- [required] Each layer is named for its role in the code's words: `Label`, `Leading icon`, `Trailing icon`, `Spinner`; the same name in every variant, so a consumer's label override survives a variant switch (figma-standard rule 10; Figma's [SDS button](https://github.com/figma/sds/blob/main/src/figma/primitives/button/Button.figma.ts) reads its layers by the code's names).
+- [required] Each layer is named for its role in the code's words: `Label`, `Leading icon`, `Trailing icon`, `Spinner`; the same name in every variant, so a consumer's label override survives a variant switch (figma-standard rule 10).
 - [required] Position is `Leading`/`Trailing`, never `Left`/`Right`, so a mirrored right-to-left button keeps its names true (figma-standard rule 21, and figma-standard rule 50 where the project mirrors; across the kits surveyed in [naming inside Figma components](../../../research/components-and-naming/naming-inside-figma-components.md#swaps-variants-and-sizes), leading and trailing tie with left and right at seven each).
 
 **Properties**
 - [required] `Label` is a text property; each icon is an instance swap named for what it holds and where (`Leading icon`), revealed by a boolean directly above it (`Show leading icon`) (figma-standard rules 5, 21 and 37).
 - [required] The icon-only button exposes a text property or an annotation for its accessible name, and its description says the name is required (figma-standard rule 40).
-- [strong] Property names follow the code's props, so the mapping is one line per prop: SDS maps `Variant`, `Size`, `Label` and its two icons straight onto `variant`, `size` and children, though its own icon names (`Icon Start`, `Has Icon Start`) are ones figma-standard rule 21 does not use ([SDS Button.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/button/Button.figma.ts)); Polaris collapsed seven booleans into the enums `variant` and `tone` so each maps as one axis ([Polaris v12 migration](https://github.com/Shopify/polaris-react/blob/main/polaris.shopify.com/content/version-guides/migrating-from-v11-to-v12.mdx)).
+- [weak] Property names follow the code's props, so the mapping is one line per prop: Polaris collapsed seven booleans into the enums `variant` and `tone` so each maps as one axis ([Polaris v12 migration](https://github.com/Shopify/polaris-react/blob/main/polaris.shopify.com/content/version-guides/migrating-from-v11-to-v12.mdx)).
 
 **Variants and states**
 - [contested] **Icon button: one component or two.** A merge into Button holds up only when every one of these holds; the split-or-fold test (split when the element, role or keyboard behaviour changes) does not decide it, because icon-only changes none of the three ([when to split or merge](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#separate-icon-buttons)).
@@ -428,7 +428,7 @@ The threshold is [interaction: response times](../design/interaction.md#response
 - *Script*: figma-components-audit runs the rules cited above on the set; the snapshot's contract lists every axis and property, so an axis with no code counterpart shows in the parity report.
 - *Judgement*: can a designer reach every state the code can be in, and no state the code cannot?
 
-**Sources.** Figma's Simple Design System, Primer and Polaris for names; the toolkit's research articles [what the State axis models](../../../research/components-and-naming/what-the-state-axis-models.md) and [when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md) (November 2026) for Open and the icon button, with the libraries each read; figma-standard rule 58 for Loading on `State`; Primer's `ActionMenu` and Carbon's `MenuButton` and `ComboButton` Code Connect files for how kits draw Open. Kits split on icon-only merged into Button; that item is contested, and the project decides; figma-standard rule 57 settles Open as a boolean.
+**Sources.** Primer and Polaris for names; the toolkit's research articles [what the State axis models](../../../research/components-and-naming/what-the-state-axis-models.md) and [when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md) (November 2026) for Open and the icon button, with the libraries each read; figma-standard rule 58 for Loading on `State`; Primer's `ActionMenu` and Carbon's `MenuButton` and `ComboButton` Code Connect files for how kits draw Open. Kits split on icon-only merged into Button; that item is contested, and the project decides; figma-standard rule 57 settles Open as a boolean.
 
 ## Alignment with code
 
@@ -477,7 +477,7 @@ The threshold is [interaction: response times](../design/interaction.md#response
 - [required] Disabled is `disabled` on the native control, or `aria-disabled="true"` where it must keep focus (a loading button); never `disabled` on a wrapper ([disabled buttons](#disabled-buttons); code-standard rule 9).
 
 **Props**
-- [strong] `appearance` for the rank (figma-standard rule 1), `size`, `loading`, `disabled`, and the leading and trailing icons as slots or props; the label is the children. Primer (`variant`, `size`, `loading`, `leadingVisual`, `trailingVisual`), MUI (`variant`, `size`, `loading`, `startIcon`, `endIcon`) and SDS (`variant`, `size`, `isDisabled`) share this shape ([Primer Button types](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Button/types.ts), [MUI Button](https://mui.com/material-ui/react-button/), [SDS Button.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/button/Button.figma.ts)).
+- [moderate] `appearance` for the rank (figma-standard rule 1), `size`, `loading`, `disabled`, and the leading and trailing icons as slots or props; the label is the children. Primer (`variant`, `size`, `loading`, `leadingVisual`, `trailingVisual`) and MUI (`variant`, `size`, `loading`, `startIcon`, `endIcon`) share this shape ([Primer Button types](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Button/types.ts), [MUI Button](https://mui.com/material-ui/react-button/)).
 - [strong] Loading is a boolean prop (`loading`, `isLoading` or `isPending`), never `state="loading"` and never a component of its own: MUI, Primer, React Aria, Atlassian, Polaris and Chakra all do this ([loading buttons](#loading-buttons)); Carbon alone hands it to `InlineLoading` ([Carbon inline loading](https://carbondesignsystem.com/components/inline-loading/usage/)).
 - [required] An icon-only button has an accessible name (WCAG 4.1.2; [icon-only buttons](#icon-only-buttons)).
 - [moderate] A separate icon button makes the name a required prop (`aria-label` in Primer, `label` in Atlassian and Carbon); a merged Button can only recommend it, as Polaris's `accessibilityLabel` does, so its docs say so ([Primer IconButton](https://primer.style/product/components/icon-button/)).
@@ -486,4 +486,4 @@ The threshold is [interaction: response times](../design/interaction.md#response
 - *Script*: the parity loop compares each variant's geometry, fills and focus ring with its frame (design-code-parity); the component contract flags a Figma axis with no prop.
 - *Judgement*: does the loading button keep focus, keep its width, and announce the outcome?
 
-**Sources.** Primer, MUI, Figma's SDS, Carbon and the libraries named in the *Loading buttons* section; the toolkit's state-axis research for the mapping table in *Alignment with code*.
+**Sources.** Primer, MUI, Carbon and the libraries named in the *Loading buttons* section; the toolkit's state-axis research for the mapping table in *Alignment with code*.

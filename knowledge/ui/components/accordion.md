@@ -9,7 +9,7 @@ An accordion stacks headed sections whose content the person opens and closes in
 - [weak] A `details` for one section of help that only some people need ([details and summary](#details-and-summary)).
 
 **Anatomy**
-- [strong] A group of items, each a header and a panel; the header is a button inside a heading, holding the title and a chevron at its end. The APG, Figma's Simple Design System (`Title` and the content), MUI (`AccordionSummary` with `expandIcon`, its heading an `h3` by default) and Carbon (`title`) build it so ([APG accordion](https://www.w3.org/WAI/ARIA/apg/patterns/accordion/), [SDS AccordionItem.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/accordion/AccordionItem.figma.ts), [MUI Accordion types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Accordion/Accordion.d.ts), [Carbon AccordionItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Accordion/AccordionItem.tsx)).
+- [strong] A group of items, each a header and a panel; the header is a button inside a heading, holding the title and a chevron at its end. The APG, MUI (`AccordionSummary` with `expandIcon`, its heading an `h3` by default) and Carbon (`title`) build it so ([APG accordion](https://www.w3.org/WAI/ARIA/apg/patterns/accordion/), [MUI Accordion types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Accordion/Accordion.d.ts), [Carbon AccordionItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Accordion/AccordionItem.tsx)).
 - [required] The chevron's side is `Trailing` or `Leading`, never left or right; Carbon's `align` takes `'start' | 'end'` ([Carbon Accordion source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Accordion/Accordion.tsx); figma-standard rule 21).
 - [required] The whole header is the target, at least 24 by 24 CSS pixels, with a focus ring (WCAG 2.5.8 and 2.4.7; figma-standard rules 26 and 39).
 
@@ -102,13 +102,13 @@ An accordion stacks headed sections whose content the person opens and closes in
 ## In Figma
 
 **Layers**
-- [required] `Accordion` holds `Accordion item` parts in an `Items slot`: an item has an Open variant, and per-item text in a nested instance is dropped when it switches (figma-standard rules 9, 21 and 38). The Simple Design System's `Accordion` takes its `Accordion Item` instances as children the same way ([SDS Accordion.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/accordion/Accordion.figma.ts)).
+- [required] `Accordion` holds `Accordion item` parts in an `Items slot`: an item has an Open variant, and per-item text in a nested instance is dropped when it switches (figma-standard rules 9, 21 and 38).
 - [required] Auto layout throughout; the item's layers are named for their role, `Header` holding `Title` and `Chevron`, then `Panel` (figma-standard rules 10 and 33).
 - [required] The `Chevron` sits at the header's trailing end by auto layout. A library that also offers Carbon's start alignment draws the side as a `Chevron position` variant, `Trailing` first, then `Leading`, never `Left` or `Right` (figma-standard rules 1 and 21).
-- [weak] The panel's content is a slot, `Slot`, since a panel holds anything; the Simple Design System's `Content` text property holds text only ([SDS AccordionItem.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/accordion/AccordionItem.figma.ts); figma-standard rule 21).
+- [weak] The panel's content is a slot, `Slot`, since a panel holds anything (figma-standard rule 21).
 
 **Properties**
-- [required] `Title` is a text property, the name SDS gives it and the `title` prop of SDS and Carbon (figma-standard rules 21 and 37).
+- [required] `Title` is a text property, the `title` prop of Carbon (figma-standard rules 21 and 37).
 
 **Variants and states**
 - [strong] On the item, the axes run `Size → Chevron position → Open → Disabled → State`, each where the library draws it; `Open` is a True/False variant, a bare word, `False` first (figma-standard rules 1, 21 and 57); code holds it as a prop beside the states ([*Alignment with code*](#alignment-with-code)).
@@ -126,13 +126,13 @@ An accordion stacks headed sections whose content the person opens and closes in
 - *Script*: figma-components-audit runs the rules cited above on both sets.
 - *Judgement*: does a closed accordion still show the page's structure at a glance?
 
-**Sources.** Figma's Simple Design System for the parts and names; MUI, Carbon and React Aria for Disabled (their open props are in *Alignment with code*); GOV.UK against Disabled. The panel is a slot by figma-standard rule 38.
+**Sources.** MUI, Carbon and React Aria for Disabled (their open props are in *Alignment with code*); GOV.UK against Disabled. The panel is a slot by figma-standard rule 38.
 
 ## Alignment with code
 
 **Structure**
-- [contested] Libraries disagree on the parts. Two components, the header a `title` prop: Carbon's `Accordion` and `AccordionItem` ([Carbon AccordionItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Accordion/AccordionItem.tsx)), and SDS's, the same shape over React Aria ([SDS Accordion.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Accordion/Accordion.tsx)). Compound parts: Radix's `Root`, `Item`, `Header`, `Trigger` and `Content` ([Radix Accordion source](https://github.com/radix-ui/primitives/blob/main/packages/react/accordion/src/accordion.tsx)), React Aria's `DisclosureGroup`, `Disclosure`, a `Heading` holding a `Button slot="trigger"`, and `DisclosurePanel` ([React Aria Disclosure source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Disclosure.tsx)), and MUI's `Accordion`, `AccordionSummary` and `AccordionDetails` ([MUI AccordionSummary types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/AccordionSummary/AccordionSummary.d.ts)).
-- [moderate] The kits draw the two-component form whichever the code takes: SDS's connects `Accordion` and `Accordion Item`, Carbon's `Accordion` and `AccordionItem`, neither drawing the header or the panel as a set of its own ([SDS AccordionItem.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/accordion/AccordionItem.figma.ts), [Carbon AccordionItem.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Accordion/AccordionItem.figma.ts)). `Header` and `Panel` here are layers of the item ([In Figma](#in-figma)), whichever parts the code splits them into.
+- [contested] Libraries disagree on the parts. Two components, the header a `title` prop: Carbon's `Accordion` and `AccordionItem` ([Carbon AccordionItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Accordion/AccordionItem.tsx)). Compound parts: Radix's `Root`, `Item`, `Header`, `Trigger` and `Content` ([Radix Accordion source](https://github.com/radix-ui/primitives/blob/main/packages/react/accordion/src/accordion.tsx)), React Aria's `DisclosureGroup`, `Disclosure`, a `Heading` holding a `Button slot="trigger"`, and `DisclosurePanel` ([React Aria Disclosure source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Disclosure.tsx)), and MUI's `Accordion`, `AccordionSummary` and `AccordionDetails` ([MUI AccordionSummary types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/AccordionSummary/AccordionSummary.d.ts)).
+- [weak] The kits draw the two-component form whichever the code takes: Carbon's connects `Accordion` and `AccordionItem`, drawing neither the header nor the panel as a set of its own ([Carbon AccordionItem.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Accordion/AccordionItem.figma.ts)). `Header` and `Panel` here are layers of the item ([In Figma](#in-figma)), whichever parts the code splits them into.
 - [required] A lone section needs no group: a `details` and its `summary`, whose only attributes are `open` and `name` ([HTML `details`](https://html.spec.whatwg.org/multipage/interactive-elements.html#the-details-element)).
 
 **Mapping**
@@ -151,23 +151,22 @@ An accordion stacks headed sections whose content the person opens and closes in
   | `State=Focus` | `:focus-visible` |
 
 **States**
-- [required] Hover, Press and Focus on the header are set by interaction, never a prop: `:hover`, `:active` and `:focus-visible`, or React Aria's `data-hovered` and `data-focus-visible`, which SDS reads to draw hover and the focus ring on the whole item ([SDS accordion.css](https://github.com/figma/sds/blob/main/src/ui/primitives/Accordion/accordion.css); code-standard rule 9).
+- [required] Hover, Press and Focus on the header are set by interaction, never a prop: `:hover`, `:active` and `:focus-visible`, or React Aria's `data-hovered` and `data-focus-visible` (code-standard rule 9).
 - [required] Open is set by code, and on a `details` by the browser too, which sets and removes `open` when the person toggles it ([HTML `details`](https://html.spec.whatwg.org/multipage/interactive-elements.html#the-details-element)); the prop is MUI's `expanded`, Carbon's `open`, React Aria's `isExpanded` ([React Aria Disclosure](https://react-aria.adobe.com/Disclosure)).
 - [strong] Inside a group, the group can own Open: React Aria's `Disclosure` reads it from the group's `expandedKeys` ([React Aria Disclosure source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Disclosure.tsx)), Radix's `Root` takes the open `value` with `type="single"` or `"multiple"` ([Radix Accordion source](https://github.com/radix-ui/primitives/blob/main/packages/react/accordion/src/accordion.tsx)), and HTML's `name` makes a set of `details` exclusive ([HTML `details`](https://html.spec.whatwg.org/multipage/interactive-elements.html#the-details-element)).
 - [required] A `details` has no disabled state, so `Disabled=True` needs the button build ([HTML `details`](https://html.spec.whatwg.org/multipage/interactive-elements.html#the-details-element); [In code](#in-code)).
 - [weak] Carbon draws an open disabled item closed (its active class needs `isOpen && !disabled`), and ignores `isFlush` with `align="start"` ([Carbon AccordionItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Accordion/AccordionItem.tsx), [Carbon Accordion source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Accordion/Accordion.tsx)), so no frame pairs `Open=True` with `Disabled=True` (figma-standard rule 2).
-- [weak] Code reaches Open with every pointer state, and SDS gives a hovered open item its own background ([SDS accordion.css](https://github.com/figma/sds/blob/main/src/ui/primitives/Accordion/accordion.css)), so `Open=True` pairs with each `State` value. Radix also reaches an open item that cannot close: a single, non-collapsible accordion sets `aria-disabled` on its trigger ([Radix Accordion source](https://github.com/radix-ui/primitives/blob/main/packages/react/accordion/src/accordion.tsx)), drawn as Open.
+- [weak] Code reaches Open with every pointer state, so `Open=True` pairs with each `State` value. Radix also reaches an open item that cannot close: a single, non-collapsible accordion sets `aria-disabled` on its trigger ([Radix Accordion source](https://github.com/radix-ui/primitives/blob/main/packages/react/accordion/src/accordion.tsx)), drawn as Open.
 
 **Differences**
 - [weak] `Size` and `Chevron position` live on the item here, as in Carbon's kit, where code sets them once on the group: Carbon's `Accordion` takes `size`, `align` and `isFlush`, and its Code Connect reads them from the first item ([Carbon Accordion.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Accordion/Accordion.figma.ts)). The parent cannot set the variant of what fills its slot (figma-standard rule 38).
 - [required] The chevron's side is a `chevron-position` attribute, not Carbon's `align`, which code-standard rule 10 bars as a presentational attribute; Carbon's kit names the axis `Alignment` with `Left` (same source), this page `Chevron position` with `Leading` (figma-standard rule 21).
-- [weak] SDS's kit gives the panel a `Content` text property, passed to code as a string `children` ([SDS AccordionItem.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/accordion/AccordionItem.figma.ts)), and SDS's `AccordionItem` takes `isExpanded` and `isDisabled` without passing them on ([SDS Accordion.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Accordion/Accordion.tsx)); the panel here is a slot ([In Figma](#in-figma)), and `Open` and `Disabled` each reach the code.
 
 **Check**
 - *Script*: the component contract lists every Figma axis and property of `Accordion` and `Accordion item` beside the props of the group and the item; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity).
 - *Judgement*: could a developer build every frame from the open state, `disabled` and the browser's states alone, and is there an open item that is hovered and focused?
 
-**Sources.** Carbon, SDS, Radix, React Aria and MUI source and Code Connect files as linked, read for the parts, who owns Open and the combinations code cannot reach; the HTML standard for `details`, its `open` and its `name`.
+**Sources.** Carbon, Radix, React Aria and MUI source and Code Connect files as linked, read for the parts, who owns Open and the combinations code cannot reach; the HTML standard for `details`, its `open` and its `name`.
 
 ## In code
 
@@ -175,7 +174,7 @@ An accordion stacks headed sections whose content the person opens and closes in
 - [required] A `details` and `summary` for one section; for an accordion, each header a `button` with `aria-expanded` inside a heading, and a panel the script hides (code-standard rules 8 and 20; [accordions](#accordions), [details and summary](#details-and-summary)).
 
 **Props**
-- [strong] An item takes its title, its open state, controlled and uncontrolled, and `disabled`: MUI (`expanded`, `defaultExpanded`, `disabled`), Carbon (`open`, `title`, `disabled`), React Aria (`isExpanded`, `defaultExpanded`, `isDisabled`) and SDS (`title`) ([MUI Accordion types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Accordion/Accordion.d.ts), [Carbon AccordionItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Accordion/AccordionItem.tsx), [React Aria Disclosure](https://react-aria.adobe.com/Disclosure)).
+- [strong] An item takes its title, its open state, controlled and uncontrolled, and `disabled`: MUI (`expanded`, `defaultExpanded`, `disabled`), Carbon (`open`, `title`, `disabled`) and React Aria (`isExpanded`, `defaultExpanded`, `isDisabled`) ([MUI Accordion types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Accordion/Accordion.d.ts), [Carbon AccordionItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Accordion/AccordionItem.tsx), [React Aria Disclosure](https://react-aria.adobe.com/Disclosure)).
 - [contested] Whether several may open: React Aria's group defaults `allowsMultipleExpanded` to false ([useDisclosureGroupState source](https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/disclosure/useDisclosureGroupState.ts)); Carbon, NN/g and GOV.UK default to several open ([accordions](#accordions)).
 - [moderate] The heading level is settable, since it must fit the page's outline: MUI's `heading` slot renders an `h3` unless told otherwise; GOV.UK asks for the level to fit ([accordions](#accordions)).
 
@@ -183,4 +182,4 @@ An accordion stacks headed sections whose content the person opens and closes in
 - *Script*: the parity loop compares each item's variants with their frames (design-code-parity); the checks in each section above cover the markup.
 - *Judgement*: with scripts off, does the page read as headed sections?
 
-**Sources.** MUI, Carbon, React Aria and SDS for the props; React Aria against Carbon, NN/g and GOV.UK on several open; the toolkit's *Variants to attributes* for the mapping.
+**Sources.** MUI, Carbon and React Aria for the props; React Aria against Carbon, NN/g and GOV.UK on several open; the toolkit's *Variants to attributes* for the mapping.

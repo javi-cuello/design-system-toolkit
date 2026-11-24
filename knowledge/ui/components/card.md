@@ -146,7 +146,7 @@ A card is a container for a few related pieces of content about one subject: an 
   - *Varying.* NN/g: heights can vary but "typically the width is fixed" ([NN/g, cards](https://www.nngroup.com/articles/cards-component/)). React Spectrum's `CardView` offers a `waterfall` layout beside `grid` ([React Spectrum CardView](https://react-spectrum.adobe.com/CardView)).
 
 **How**
-- [moderate] Columns come from the container's width, and cards stack to one column on a phone. Bootstrap's grid example runs `row-cols-1 row-cols-md-3` ([Bootstrap card](https://getbootstrap.com/docs/5.3/components/card/)). Figma's SDS card: "All cards become vertical on mobile" ([Cards.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/compositions/Cards/Cards.tsx)). Polaris rounds its card only above the `sm` breakpoint (`roundedAbove`), so it runs edge to edge on a phone ([Card.tsx](https://raw.githubusercontent.com/Shopify/polaris-react/main/polaris-react/src/components/Card/Card.tsx)).
+- [moderate] Columns come from the container's width, and cards stack to one column on a phone. Bootstrap's grid example runs `row-cols-1 row-cols-md-3` ([Bootstrap card](https://getbootstrap.com/docs/5.3/components/card/)). Polaris rounds its card only above the `sm` breakpoint (`roundedAbove`), so it runs edge to edge on a phone ([Card.tsx](https://raw.githubusercontent.com/Shopify/polaris-react/main/polaris-react/src/components/Card/Card.tsx)).
 - [weak] An open-ended collection wraps by width with `auto-fill`; a fixed strip takes its columns from its count ([responsive: *Grids that fill their rows*](../../code/responsive.md#grids-that-fill-their-rows)).
 - [weak] The gap between cards is larger than the padding inside them, so each card reads as one unit ([visual: *Spacing scale and proximity*](../design/visual.md#spacing-scale-and-proximity)).
 - [weak] Carbon sets a floor: "The minimum tile height is a 2:1 aspect ratio" ([Carbon tile](https://carbondesignsystem.com/components/tile/usage/)).
@@ -201,7 +201,7 @@ A card is a container for a few related pieces of content about one subject: an 
 ## Surface: border, fill or shadow
 
 **Use when / don't use**
-- [strong] A card separates from its page by one of three means: a border, a fill one step from the page, or a shadow. Material ships outlined, filled and elevated cards ([MDC Android Card](https://github.com/material-components/material-components-android/blob/master/docs/components/Card.md)); Fluent `outline`, `filled`, `filled-alternative` and `subtle` ([Card.types.ts](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-card/library/src/components/Card/Card.types.ts)); SDS `default`, `stroke` and `brand` ([Cards.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/compositions/Cards/Cards.tsx)).
+- [moderate] A card separates from its page by one of three means: a border, a fill one step from the page, or a shadow. Material ships outlined, filled and elevated cards ([MDC Android Card](https://github.com/material-components/material-components-android/blob/master/docs/components/Card.md)); Fluent `outline`, `filled`, `filled-alternative` and `subtle` ([Card.types.ts](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-card/library/src/components/Card/Card.types.ts)).
 - [moderate] Shadows for cards that move or float, not for every card. Atlassian reserves raised cards "for cards that can be moved, such as Jira and Trello cards", and says "To create flat cards, pair with a border" ([Atlassian elevation](https://atlassian.design/foundations/elevation)). Carbon tiles take no shadow: do not "add a drop shadow to tiles" ([Carbon tile](https://carbondesignsystem.com/components/tile/usage/)).
 
 **How**
@@ -234,7 +234,7 @@ A card is a container for a few related pieces of content about one subject: an 
 - *Script* could: render the page in forced colours and flag a card with no visible edge; flag a card padding that is no token.
 - *Judgement*: in dark mode, can you see each card's edge without its shadow?
 
-**Sources.** Material, Fluent and SDS ship the three treatments; Atlassian and Carbon keep resting cards flat, while Primer and Polaris shadow them. The CSS spec settles forced colours.
+**Sources.** Material and Fluent ship the three treatments; Atlassian and Carbon keep resting cards flat, while Primer and Polaris shadow them. The CSS spec settles forced colours.
 
 ## Card semantics: list, region and heading
 
@@ -248,7 +248,7 @@ A card is a container for a few related pieces of content about one subject: an 
   - *No.* Primer: "Do not use heading elements … inside list-item Cards", as they create "redundant and unnecessary structure" ([Primer Card accessibility](https://primer.style/product/components/card/accessibility/)).
 - [moderate] The heading level fits the page outline, not the card's look. Primer's `Card.Heading` defaults to `h3` and takes `h2` to `h6`, without skipping levels; Bootstrap's examples use `h5` styled by class (sources above; [visual: *Typography*](../design/visual.md#typography)).
 - [moderate] No landmark per card in a list. Primer: cards in a list "must not introduce additional landmark regions". Fluent gives every card `role="group"`, which is not a landmark ([useCard.ts](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-card/library/src/components/Card/useCard.ts)).
-- [weak] No card source read renders `article`: Primer renders `div` or `section`, Fluent and SDS a `div`.
+- [weak] No card source read renders `article`: Primer renders `div` or `section`, Fluent a `div`.
 
 **Cases**
 - Twelve project cards each as `<section aria-label>` → twelve landmarks in the landmarks list; a `ul` of `li` instead.
@@ -310,16 +310,15 @@ A card is a container for a few related pieces of content about one subject: an 
 **Layers**
 - [required] Auto layout throughout; the card hugs its content vertically, so a longer title grows it (figma-standard rule 33).
 - [required] Layers named for their role: `Heading`, `Body`, `Media`, `Metadata`, `Actions` (figma-standard rule 10). A part built for the card takes the family's name, as figma-standard rule 9's own example `Card header` does.
-- [moderate] The body is a slot, since card content varies. Carbon's kit has a `Slot` boolean and a `Swap slot` instance ([Tile.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tile/Tile.figma.ts)); SDS passes its `Button Group` as children ([Card.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/compositions/card/Card.figma.ts)). The slot's name follows figma-standard rule 21.
+- [weak] The body is a slot, since card content varies. Carbon's kit has a `Slot` boolean and a `Swap slot` instance ([Tile.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tile/Tile.figma.ts)). The slot's name follows figma-standard rule 21.
 
 **Properties**
-- [required] `Heading` and `Body` are text properties where the card holds them directly (figma-standard rule 37); SDS names them so ([Card.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/compositions/card/Card.figma.ts)).
+- [required] `Heading` and `Body` are text properties where the card holds them directly (figma-standard rule 37).
 - [required] A boolean that reveals a part sits directly above what fills it, and takes `Show` (figma-standard rules 5 and 21). Carbon's kit names them `Title` and `Title text`, `Description` and `Description text` ([Tile.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tile/Tile.figma.ts)); figma-standard rule 21 departs: `Show heading` above `Heading`.
-- [weak] SDS chooses the media with an `Asset Type` enum (`Image`, `Icon`) and an `Icon` swap ([Card.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/compositions/card/Card.figma.ts)).
 
 **Variants and states**
-- [strong] A surface axis, its values the code's. SDS draws `Variant` with `Stroke` for `variant="stroke"`; Fluent's code names it `appearance`; Material ships three card types (*Surface*). The house names it `Appearance`, code `appearance` (figma-standard rule 1), as Fluent's code does.
-- [moderate] A direction axis where the code has one: SDS's `Direction` maps to `direction`, Fluent's code has `orientation` (sources above; figma-standard rule 56).
+- [moderate] A surface axis, its values the code's. Fluent's code names it `appearance`; Material ships three card types (*Surface*). The house names it `Appearance`, code `appearance` (figma-standard rule 1), as Fluent's code does.
+- [weak] A direction axis where the code has one: Fluent's code has `orientation` (source above; figma-standard rule 56).
 - [contested] **One set for every kind, or a set per kind.** Carbon's kit draws one `Tile` with a `Type` axis (`Base`, `Clickable`, `Single-select`, `Multi-select`, `Expandable`) that maps to four code components ([Tile.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tile/Tile.figma.ts)). Fluent and Primer ship one card component whose props add selection or a link, so a kit mirroring them has one set ([Card.types.ts](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-card/library/src/components/Card/Card.types.ts)). figma-standard rule 56 takes the shape that mirrors the project's code.
 - [required] A static card has no `State` axis, since it would hold `Rest` alone (figma-standard rule 35). A clickable card's `State` runs `Rest → Focus → Hover → Press`, with `Disabled` before it (figma-standard rules 1 to 4); Focus shows a ring (figma-standard rule 39).
 - [required] `Selected` is a True/False variant, a bare word (figma-standard rule 21); Carbon's kit has a `Selected` boolean (above).
@@ -335,21 +334,20 @@ A card is a container for a few related pieces of content about one subject: an 
 - *Script*: figma-components-audit runs the rules cited above; the snapshot's contract lists the surface and direction axes beside the code's props.
 - *Judgement*: can a designer place every kind of card the code renders, and no kind it does not?
 
-**Sources.** Figma's SDS and Carbon Code Connect files for names, with Fluent and Material for the axes. Kits split on one set or several; the item is contested and figma-standard rule 56 decides by the code.
+**Sources.** Carbon's Code Connect files for names, with Fluent and Material for the axes. Kits split on one set or several; the item is contested and figma-standard rule 56 decides by the code.
 
 ## Alignment with code
 
 **Structure**
 - [contested] Code splits the card by behaviour, or keeps one component. Carbon ships `Tile`, `ClickableTile`, `SelectableTile` and `ExpandableTile` ([Tile.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tile/Tile.figma.ts)). Fluent ships one `Card` with `selected` and `onClick`, and Primer one `Card` with `Card.Link` and `fullCardHitArea` (sources above).
 - [strong] The parts are subcomponents or slots of one card, never cards of their own: Primer's `Card.Heading`, `Card.Description`, `Card.Metadata`; Fluent's `CardHeader`, `CardPreview`, `CardFooter`; React Spectrum's `CardPreview`, `Content`, `Footer` (sources above).
-- [weak] SDS builds named compositions over one `Card`, such as `PricingCard`, each Code Connected on its own ([SDS card Code Connect](https://github.com/figma/sds/tree/main/src/figma/compositions/card)).
 
 **Mapping**
 - [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rule 9; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
   |---|---|
-  | `Appearance` (surface) | `appearance`, as Fluent; SDS `variant` |
+  | `Appearance` (surface) | `appearance`, as Fluent |
   | `Direction` | `direction`; Fluent `orientation` |
   | `Size` | `padding` in Primer, `density` in Spectrum, `size` in Fluent |
   | `Heading`, `Body` | the heading and body children |
@@ -371,7 +369,7 @@ A card is a container for a few related pieces of content about one subject: an 
 - *Script*: the component contract lists each Figma axis beside the card's attributes; a value in one with no partner in the other is a finding unless *Differences* names it (design-code-parity).
 - *Judgement*: could a developer build every frame from the code's props and the link's states alone?
 
-**Sources.** Carbon's Tile Code Connect, Fluent's Card types, Primer's Card source and SDS's Code Connect files, as linked. They agree the parts belong to one card and differ on splitting kinds.
+**Sources.** Carbon's Tile Code Connect, Fluent's Card types, and Primer's Card source, as linked. They agree the parts belong to one card and differ on splitting kinds.
 
 ## In code
 
@@ -380,7 +378,7 @@ A card is a container for a few related pieces of content about one subject: an 
 - [strong] The card is never the link: the link is the heading's `a`, stretched (*Links and actions on a card*). Primer, Bootstrap and Pickering's pattern all keep the card a plain container.
 
 **Props**
-- [strong] A surface variant, a padding or density step, and a direction where the design flips: Fluent (`appearance`, `size`, `orientation`), Primer (`padding`, `shadow`, `borderRadius`, `as`), SDS (`variant`, `padding`, `direction`), Polaris (`background`, `padding`, `roundedAbove`), as linked above.
+- [strong] A surface variant, a padding or density step, and a direction where the design flips: Fluent (`appearance`, `size`, `orientation`), Primer (`padding`, `shadow`, `borderRadius`, `as`), Polaris (`background`, `padding`, `roundedAbove`), as linked above.
 - [moderate] The heading level is a prop: Primer's `Card.Heading` takes `as` from `h2` to `h6`; Bootstrap leaves the level to the markup (sources above).
 - [weak] Selection is a prop that renders a real control: Fluent's `selected`, `onSelectionChange` and its `checkbox` slot.
 
@@ -388,4 +386,4 @@ A card is a container for a few related pieces of content about one subject: an 
 - *Script*: the parity loop compares each surface variant's border, fill and shadow with its frame (design-code-parity); axe runs `nested-interactive` over pages with cards.
 - *Judgement*: does the card keep one link, one ring, and its heading in the outline?
 
-**Sources.** Fluent, Primer, SDS, Polaris and Bootstrap sources as linked; they agree on a passive container with parts, and differ on whether selection and linking are props or components.
+**Sources.** Fluent, Primer, Polaris and Bootstrap sources as linked; they agree on a passive container with parts, and differ on whether selection and linking are props or components.

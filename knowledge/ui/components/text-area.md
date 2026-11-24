@@ -6,10 +6,10 @@ A text area takes free text longer than one line: a description, a message, a re
 
 **Use when / don't use**
 - [strong] A text area when the answer may run past one line; a short answer is a [text input](text-input.md) ([GOV.UK textarea](https://design-system.service.gov.uk/components/textarea/): "Use the textarea component when you need to let users enter an amount of text that's longer than a single line").
-- [strong] A component of its own, not a mode of the text input: the element changes (`textarea`, not `input`), and so do Enter, which makes a new line, and the height. SDS ships `Textarea` and `TextareaField` ([SDS Textarea.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Textarea/Textarea.tsx)), Primer `Textarea` ([Primer Textarea source](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.tsx)), Carbon `TextArea` ([Carbon TextArea source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/TextArea/TextArea.tsx)) and React Aria `TextArea` ([React Aria TextArea.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/TextArea.tsx)); MUI alone folds it into `TextField` with `multiline` ([MUI TextField types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/TextField/TextField.d.ts)). The split test is the toolkit's research on [when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md).
+- [strong] A component of its own, not a mode of the text input: the element changes (`textarea`, not `input`), and so do Enter, which makes a new line, and the height. Primer ships `Textarea` ([Primer Textarea source](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.tsx)), Carbon `TextArea` ([Carbon TextArea source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/TextArea/TextArea.tsx)) and React Aria `TextArea` ([React Aria TextArea.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/TextArea.tsx)); MUI alone folds it into `TextField` with `multiline` ([MUI TextField types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/TextField/TextField.d.ts)). The split test is the toolkit's research on [when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md).
 
 **Anatomy**
-- [strong] The text input's anatomy without icons or affixes: label, hint, the multi-line field, an optional character count under it, and the error message. SDS names `Label`, `Value`, `Description` and `Error` ([SDS TextareaField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/TextareaField.figma.ts)); Carbon adds `Show count` to `Label text`, `Helper text` and `Error text` ([Carbon TextArea.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextArea/TextArea.figma.ts)).
+- [weak] The text input's anatomy without icons or affixes: label, hint, the multi-line field, an optional character count under it, and the error message. Carbon names `Label text`, `Helper text`, `Error text` and `Show count` ([Carbon TextArea.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextArea/TextArea.figma.ts)).
 - [required] A resize handle at the bottom inline-end corner where the field resizes; the browser renders it, so the frame draws it (figma-standard rule 51).
 - [required] A focus ring on the field (WCAG 2.4.7; figma-standard rule 39) and a border at 3:1 against its surface (WCAG 1.4.11).
 
@@ -20,14 +20,12 @@ A text area takes free text longer than one line: a description, a message, a re
 - [contested] **Fixed rows or auto-grow.** GOV.UK, Carbon and Primer set a fixed `rows` (GOV.UK's template defaults to 5, [GOV.UK textarea template](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/components/textarea/template.njk); Carbon 4; Primer 7, sources above) and let the person resize; MUI's `multiline` grows between `minRows` and `maxRows` through its `TextareaAutosize` ([MUI InputBase types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/InputBase/InputBase.d.ts)).
 
 **How**
-- [weak] **Resize vertically** only: a horizontal resize pushes the column wider. SDS resizes vertically and turns resizing off when disabled ([SDS textarea.css](https://github.com/figma/sds/blob/main/src/ui/primitives/Textarea/textarea.css)); Primer defaults to `both` and takes `resize` as a prop (source above).
 - [moderate] **Auto-grow** starts at its minimum rows and stops at a maximum, then scrolls inside; it never grows past the viewport (MUI's `minRows` and `maxRows`, above; [MDN `field-sizing`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/field-sizing): a textarea grows in height "When a height constraint is then reached, they will then start to show a scrollbar").
 - [weak] **Width** is the column's, capped at a readable measure; the text area is free text ([forms: field widths](../patterns/forms.md#field-widths)).
 
 **Cases**
 - A "Reason for leaving" text area of one row → three or more rows; one row reads as a text input and invites one word.
 - A comment box that grows without limit pushes the submit button off screen → cap it at about ten rows and scroll inside.
-- A text area resizable in both directions breaks the form's column → `resize: vertical`.
 
 **Accessibility**
 - [required] 1.4.4 and 1.4.10: the height is set in rows or `lh`, so it follows the text size, and the field never forces horizontal scrolling at 320 CSS pixels. 2.1.1: the content is reachable by keyboard when it scrolls inside.
@@ -35,11 +33,10 @@ A text area takes free text longer than one line: a description, a message, a re
 
 **Build**
 - [required] A native `textarea` with `rows` for its height, never a fixed pixel `height` (code-standard rules 8 and 54).
-- [weak] `resize: vertical` in the component's stylesheet, `resize: none` under `:disabled`.
 - [moderate] Auto-grow is `field-sizing: content` with a `min-block-size` and `max-block-size` in `lh` units, where the project's browsers support it: MDN marks it "Baseline 2026, Newly available. Since June 2026" (above), so older browsers keep the `rows` height and the field still works. A script measuring `scrollHeight`, as MUI's `TextareaAutosize` does, is the fallback where auto-grow must hold everywhere.
 
 **Check**
-- *Script:* could flag a `textarea` with a fixed pixel `height`, `resize: both` inside a form column, and an auto-grow field with no maximum.
+- *Script:* could flag a `textarea` with a fixed pixel `height` and an auto-grow field with no maximum.
 - *Judgement:* does the height match the answer people are expected to write?
 
 **Sources:** GOV.UK for proportional height; GOV.UK, Carbon, Primer and MUI for fixed and grown heights; MDN for `field-sizing`.
@@ -86,14 +83,14 @@ A text area takes free text longer than one line: a description, a message, a re
 
 **Properties**
 - [required] `Label`, `Value`, `Placeholder`, `Description`, `Count` and `Error message` are text properties; `Show description` and `Show count` sit directly above what they reveal (figma-standard rules 5, 21 and 37).
-- [strong] `Has value` and `Show label` as on the text input: SDS's `Value Type` and `Has Label` ([SDS TextareaField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/TextareaField.figma.ts)), Primer's `text type` and `label?` ([Primer Textarea.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.figma.tsx)), Carbon's `Text filled` and `Show label` ([Carbon TextArea.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextArea/TextArea.figma.ts)).
-- [required] The resize handle is drawn always or never, as the code renders it (figma-standard rule 51), and becomes a property only where the code lets some text areas resize and not others. The property then takes the code prop's shape (figma-standard rule 56): `Show resize handle`, False/True, for SDS's `isResizable` boolean ([SDS Textarea.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Textarea/Textarea.tsx)); one `Resize` axis valued as Primer's `resize` enum, `None`, `Both`, `Horizontal` and `Vertical` ([Primer Textarea.tsx](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.tsx)).
-- [moderate] No kit read draws the resize handle as a property: the SDS, Primer and Carbon Code Connect files read none (sources above).
+- [moderate] `Has value` and `Show label` as on the text input: Primer's `text type` and `label?` ([Primer Textarea.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.figma.tsx)), Carbon's `Text filled` and `Show label` ([Carbon TextArea.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextArea/TextArea.figma.ts)).
+- [required] The resize handle is drawn always or never, as the code renders it (figma-standard rule 51), and becomes a property only where the code lets some text areas resize and not others. The property then takes the code prop's shape (figma-standard rule 56), such as one `Resize` axis valued as Primer's `resize` enum, `None`, `Both`, `Horizontal` and `Vertical` ([Primer Textarea.tsx](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.tsx)).
+- [moderate] No kit read draws the resize handle as a property: the Primer and Carbon Code Connect files read none (sources above).
 
 **Variants and states**
 - [required] The text input's axes and order, `Has value → Validation → Disabled → State` (`Read-only` a `State` value where the code has it), without `Size` unless the code has one; `Disabled` pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 1 to 3; [text input: *In Figma*](text-input.md#in-figma)).
 - [weak] Over the limit is `Validation=Error` with the count in the error style, not a value of its own: Primer turns over-limit into its error status (source above).
-- [weak] No `Size` axis by default: none of SDS, Primer, Carbon or React Aria gives its text area a size prop (sources above); rows set its height in code.
+- [weak] No `Size` axis by default: none of Primer, Carbon or React Aria gives its text area a size prop (sources above); rows set its height in code.
 
 **Tokens**
 - [required] Every fill, stroke, radius, gap and padding binds a semantic variable; text takes text-role tokens (figma-standard rules 24, 28 and 29); the count's error colour is the error text token.
@@ -103,12 +100,12 @@ A text area takes free text longer than one line: a description, a message, a re
 - *Script*: figma-components-audit runs the rules cited above; the contract lists `Has value`, `Validation`, `Disabled`, `Show count` and any `State=Read-only` for the parity report.
 - *Judgement*: does the drawn height match the rows the code sets?
 
-**Sources.** SDS, Primer and Carbon Code Connect files for the kit's properties; the text input page for the shared axes.
+**Sources.** Primer and Carbon Code Connect files for the kit's properties; the text input page for the shared axes.
 
 ## Alignment with code
 
 **Structure**
-- [contested] **Bare control and field**, as on the text input: SDS splits `Textarea` from `TextareaField`; React Aria's `TextField` hosts a `TextArea` child as it hosts an `Input` ([React Aria TextField.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/TextField.tsx)); Primer's `Textarea` goes inside `FormControl`; Carbon's `TextArea` is always the field, bare through `hideLabel`; MUI's is `TextField multiline` (sources above). Every kit read draws one set with a label boolean, so one `Text area` set with `Show label` follows them ([text input: *Alignment with code*](text-input.md#alignment-with-code) for why).
+- [contested] **Bare control and field**, as on the text input: React Aria's `TextField` hosts a `TextArea` child as it hosts an `Input` ([React Aria TextField.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/TextField.tsx)); Primer's `Textarea` goes inside `FormControl`; Carbon's `TextArea` is always the field, bare through `hideLabel`; MUI's is `TextField multiline` (sources above). Every kit read draws one set with a label boolean, so one `Text area` set with `Show label` follows them ([text input: *Alignment with code*](text-input.md#alignment-with-code) for why).
 - [strong] A text area is a separate code component from the text input everywhere but MUI ([Overview](#overview)), so it is a separate Figma set, mirroring the code one to one.
 
 **Mapping**
@@ -117,14 +114,13 @@ A text area takes free text longer than one line: a description, a message, a re
   | Figma | Code |
   |---|---|
   | the field's drawn height | `rows`: GOV.UK `rows`, Carbon `rows`, Primer `rows`, MUI `minRows` and `maxRows` |
-  | `Show resize handle` | SDS `isResizable`; CSS `resize` |
   | `Resize` | Primer `resize` (`none`, `both`, `horizontal`, `vertical`); CSS `resize` |
   | `Show count`, `Count` | Primer `characterLimit`; Carbon `enableCounter` with `maxCount` and `counterMode`; GOV.UK's character count around the textarea |
   | `Validation=Error` over the limit | `aria-invalid="true"` from the over-limit test |
 
 **States**
 - [required] The browser sets hover, focus, `:placeholder-shown`, `:read-only` and `:user-invalid`, as on the text input; nothing native marks a soft limit passed, so the script sets `aria-invalid` and the error style from the count.
-- [required] Code cannot reach Disabled with Error, nor Read-only with Error, through validation ([text input: *Alignment with code*](text-input.md#alignment-with-code)), and SDS drops resizing under disabled (`resize: none` on `[data-disabled]`, [SDS textarea.css](https://github.com/figma/sds/blob/main/src/ui/primitives/Textarea/textarea.css)).
+- [required] Code cannot reach Disabled with Error, nor Read-only with Error, through validation ([text input: *Alignment with code*](text-input.md#alignment-with-code)).
 - [moderate] An auto-grow field's height is a state the browser sets from the content; the set draws its minimum, and the parity loop compares at that height.
 
 **Differences**
@@ -135,7 +131,7 @@ A text area takes free text longer than one line: a description, a message, a re
 - *Script*: the component contract lists the set's axes beside the code's props; a `Show count` with no counter prop, or a drawn height that matches no `rows`, shows in the parity report (design-code-parity).
 - *Judgement*: does the Code Connect file pass `rows` matching the frame?
 
-**Sources.** SDS, React Aria, Primer, Carbon, MUI and GOV.UK source and Code Connect files as linked.
+**Sources.** React Aria, Primer, Carbon, MUI and GOV.UK source and Code Connect files as linked.
 
 ## In code
 
@@ -150,4 +146,4 @@ A text area takes free text longer than one line: a description, a message, a re
 - *Script*: the parity loop compares each variant's field, border and ring with its frame at its default rows (design-code-parity).
 - *Judgement*: is the count announced once per pause, and does the server enforce the limit?
 
-**Sources.** Primer, Carbon, MUI, SDS, React Aria and GOV.UK source as linked; MDN for `field-sizing`.
+**Sources.** Primer, Carbon, MUI, React Aria and GOV.UK source as linked; MDN for `field-sizing`.

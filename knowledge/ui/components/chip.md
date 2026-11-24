@@ -9,8 +9,8 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - [contested] One component or several. MUI ships one `Chip` that turns removable when `onDelete` is set ([Chip types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Chip/Chip.d.ts)); Material Web ships four elements, `md-assist-chip`, `md-filter-chip`, `md-input-chip` and `md-suggestion-chip` ([Material chips](https://github.com/material-components/material-web/blob/main/docs/components/chip.md)); Carbon four tags, `Tag`, `DismissibleTag`, `SelectableTag` and `OperationalTag` ([Carbon tag source](https://github.com/carbon-design-system/carbon/tree/main/packages/react/src/components/Tag)). The toolkit's research finds the element changing between a toggle and a value with a remove button, and only the look changing among the rest ([when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#component-or-value)).
 
 **Anatomy**
-- [strong] A container with a label and, optionally, a leading icon or avatar, a check when selected, or a trailing remove button: MUI (`label`, `icon`, `avatar`, `deleteIcon`), Material Web (icons, and an `avatar` on input chips), Carbon (`renderIcon`, a close button on `DismissibleTag`) and Figma's Simple Design System (`Label` and `Removable` on `Tag`, `Label` and an `Icon` swap on `TagToggle`; [SDS tag files](https://github.com/figma/sds/tree/main/src/figma/primitives/tag)).
-- [moderate] Chips come in a set with a name: Material says chips "should always appear in a set", and SDS's `TagToggleGroup` holds a `Label` and a `TagToggleList`.
+- [strong] A container with a label and, optionally, a leading icon or avatar, a check when selected, or a trailing remove button: MUI (`label`, `icon`, `avatar`, `deleteIcon`), Material Web (icons, and an `avatar` on input chips) and Carbon (`renderIcon`, a close button on `DismissibleTag`).
+- [weak] Chips come in a set with a name: Material says chips "should always appear in a set".
 - [required] The chip, and its remove button where it has one, each show a focus ring and meet the 24-pixel target (figma-standard rules 26 and 39; WCAG 2.5.8).
 
 ## Filter chips
@@ -167,7 +167,7 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 
 **Properties**
 - [required] `Label` is a text property; `Show icon` sits directly above `Icon`, and on an input chip `Show avatar` above `Avatar` (figma-standard rules 5, 21 and 37).
-- [required] `Show remove button` reveals the remove button. SDS names it `Removable` ([SDS Tag.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/tag/Tag.figma.ts)); figma-standard rule 21 writes `Show` for a boolean that reveals a layer.
+- [required] `Show remove button` reveals the remove button; figma-standard rule 21 writes `Show` for a boolean that reveals a layer.
 
 **Variants and states**
 - [weak] Filter chip and input chip are two sets: one is a toggle, the other a value with a button, and one `Type` axis across them would pair states one side cannot have (figma-standard rule 2).
@@ -185,17 +185,17 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - *Script*: figma-components-audit runs the rules cited above; the parity report compares the chip's boxes selected and unselected, which must match in width.
 - *Judgement*: can a designer build every set on the page from the slot without detaching a chip?
 
-**Sources.** MUI, Material Web, Carbon and SDS for the parts and the split; Primer for a focusable input chip.
+**Sources.** MUI, Material Web and Carbon for the parts and the split; Primer for a focusable input chip.
 
 ## Alignment with code
 
 **Structure**
 - [contested] Code splits chips three ways: one component whose element changes by prop (MUI's `Chip` renders a button base when `clickable` or `onDelete` is set, a `div` otherwise; [Chip.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Chip/Chip.js)), one component per job (Carbon's four tags, *Overview*), or a collection with items (React Aria's `TagGroup` holds a `TagList` of `Tag`s, a `grid` with selection and an optional remove button; [useTagGroup](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/tag/useTagGroup.ts), [useTag](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/tag/useTag.ts)).
-- [moderate] Kits do not always mirror their code's split: Carbon's Figma `Tag` carries a `Dismissible` boolean that Code Connect turns into a separate `DismissibleTag` ([Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)), while `SelectableTag` is a set of its own ([SelectableTag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/SelectableTag.figma.ts)); SDS draws `Tag` and `TagToggle` as two sets over two code components ([Tag.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Tag/Tag.tsx), [TagToggle.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/tag/TagToggle.figma.ts)). This page's two sets, filter chip and input chip, split where SDS does: a toggle against a value with a remove button.
-- [moderate] The set is a component where the code holds selection on it: SDS's `TagToggleGroup` wraps a `Label` and a `TagToggleList` ([TagToggleGroup.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/tag/TagToggleGroup.figma.ts)), and React Aria gives each tag its `aria-selected` from the group's selection manager ([useGridListItem](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/gridlist/useGridListItem.ts)). The `Chips slot` mirrors that group ([*In Figma*](#in-figma), Layers).
+- [weak] Kits do not always mirror their code's split: Carbon's Figma `Tag` carries a `Dismissible` boolean that Code Connect turns into a separate `DismissibleTag` ([Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)), while `SelectableTag` is a set of its own ([SelectableTag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/SelectableTag.figma.ts)).
+- [weak] The set is a component where the code holds selection on it: React Aria gives each tag its `aria-selected` from the group's selection manager ([useGridListItem](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/gridlist/useGridListItem.ts)). The `Chips slot` mirrors that group ([*In Figma*](#in-figma), Layers).
 
 **Mapping**
-- [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)). SDS maps `Removable` to an `onRemove` handler and `Label` to children:
+- [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
   |---|---|
@@ -213,18 +213,18 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - [required] Rest, Hover, Press and Focus are set by the browser on the chip's control (the checkbox's label, the toggle `button`, or the remove `button`); no prop sets them, so each needs its frame (code-standard rule 9).
 - [strong] Selected is set by code, in an attribute that differs by library: `aria-pressed` on Carbon's `SelectableTag` ([SelectableTag.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Tag/SelectableTag.tsx)), `aria-selected` on React Aria's grid rows ([useGridListItem](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/gridlist/useGridListItem.ts)), `checked` in this page's checkbox build. MUI's `Chip` has no selected prop at all ([Chip types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Chip/Chip.d.ts)), so a filter chip there switches `variant` by hand.
 - [moderate] A removable chip takes focus itself: React Aria removes a focused tag on Delete or Backspace ([useTag](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/tag/useTag.ts)), and MUI's `Chip` does the same when `onDelete` is set ([Chip.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Chip/Chip.js)). So the input chip draws Focus on the chip as well as the remove button's own states ([*In Figma*](#in-figma), Variants and states).
-- [contested] Whether a removable chip can also be selected: MUI's `Chip` and SDS's removable `Tag` carry no selected state ([Chip types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Chip/Chip.d.ts), [Tag.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Tag/Tag.tsx)), while a React Aria `Tag` can be both, selectable through its group and removable through `onRemove` ([useTagGroup](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/tag/useTagGroup.ts)). This page follows MUI and SDS, so the input set draws no `Selected`.
+- [contested] Whether a removable chip can also be selected: MUI's `Chip` carries no selected state ([Chip types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Chip/Chip.d.ts)), while a React Aria `Tag` can be both, selectable through its group and removable through `onRemove` ([useTagGroup](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/tag/useTagGroup.ts)). This page follows MUI, so the input set draws no `Selected`.
 
 **Differences**
 - [weak] One filter-chip set serves the checkbox build and the `aria-pressed` build; the Mapping row names both, and the project's context document records which its code uses ([*Filter chips*](#filter-chips), Build).
-- [weak] `Show remove button` is a boolean in Figma where code shows the button when a handler is passed (MUI `onDelete`, SDS `onRemove`; [*In code*](#in-code), Props), since Figma has no handler; SDS's `Removable` stands in the same way.
+- [weak] `Show remove button` is a boolean in Figma where code shows the button when a handler is passed (MUI `onDelete`; [*In code*](#in-code), Props), since Figma has no handler.
 - [weak] The chip carries no tone axis, where Carbon's tags map a twelve-hue `Color` to `type` ([Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)): tone is the [badge](badge.md)'s, and a chip's look changes only with its state.
 
 **Check**
 - *Script*: the component contract lists each set's axes beside the chip's props; `Selected` on the input chip, or a selected prop with no frame, is a finding unless *Differences* names it (design-code-parity).
 - *Judgement*: does each Figma set match one element in code, a toggle or a value with a remove button, and could a developer build every frame from the selected attribute and the browser's states?
 
-**Sources.** MUI's Chip source and types, React Aria's useTagGroup, useTag and useGridListItem, Carbon's Tag Code Connect files and SelectableTag source, and SDS's Tag source and Code Connect files, all as linked. They split on one component, several or a collection, and on the selected attribute; they agree that a removable chip takes focus, and split on whether it can also be selected.
+**Sources.** MUI's Chip source and types, React Aria's useTagGroup, useTag and useGridListItem, and Carbon's Tag Code Connect files and SelectableTag source, all as linked. They split on one component, several or a collection, and on the selected attribute; they agree that a removable chip takes focus, and split on whether it can also be selected.
 
 ## In code
 
@@ -233,11 +233,11 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - [contested] What the set is. Material Web makes every chip set a toolbar, one Tab stop with arrows inside; Carbon's `SelectableTag` is a plain `button` with `aria-pressed`, each its own Tab stop ([SelectableTag.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Tag/SelectableTag.tsx)). [*Filter chips*](#filter-chips)' Build sets out both.
 
 **Props**
-- [strong] A label, an icon, a selected state, `disabled`, `size`, and a remove handler for a removable chip: MUI (`label`, `icon`, `avatar`, `onDelete`, `disabled`, `size`), Carbon (`text`, `renderIcon`, `selected`, `onChange`, `disabled`, `size`) and SDS (`Tag`'s `onRemove`, `scheme`, `variant`; `TagToggle`'s `iconStart`).
-- [moderate] Removable is a handler, not a flag: MUI shows the delete icon when `onDelete` is set, and SDS renders its remove button only when `onRemove` is ([Tag.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Tag/Tag.tsx)).
+- [moderate] A label, an icon, a selected state, `disabled`, `size`, and a remove handler for a removable chip: MUI (`label`, `icon`, `avatar`, `onDelete`, `disabled`, `size`) and Carbon (`text`, `renderIcon`, `selected`, `onChange`, `disabled`, `size`).
+- [weak] Removable is a handler, not a flag: MUI shows the delete icon when `onDelete` is set.
 
 **Check**
 - *Script*: the parity loop compares each variant with its frame (design-code-parity); a test could select a chip and assert its box and its neighbours' did not move.
 - *Judgement*: does each chip's element match its job: a toggle that filters, or a value that can be removed?
 
-**Sources.** MUI, Material Web, Carbon and SDS sources as linked; they agree on the parts and split on one component or several, and on whether the set is one Tab stop.
+**Sources.** MUI, Material Web and Carbon sources as linked; they agree on the parts and split on one component or several, and on whether the set is one Tab stop.

@@ -9,7 +9,7 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 - [contested] A switch inside a tab, a toolbar or an inspector is a [segmented control](segmented-control.md), never a second row of tabs ([tabs](#tabs)).
 
 **Anatomy**
-- [strong] A tab list holding the tabs, each a label with an optional leading icon and count, an indicator under the selected tab, and the panel (or, for link tabs, the page) below. MUI's Tab (`label`, `icon`), Primer's (`icon`, `counter`) and Figma's Simple Design System (`Label`) build it so ([MUI Tab types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Tab/Tab.d.ts), [UnderlinePanels source](https://github.com/primer/react/blob/main/packages/react/src/experimental/UnderlinePanels/UnderlinePanels.tsx), [SDS Tab.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/tab/Tab.figma.ts)).
+- [moderate] A tab list holding the tabs, each a label with an optional leading icon and count, an indicator under the selected tab, and the panel (or, for link tabs, the page) below. MUI's Tab (`label`, `icon`) and Primer's (`icon`, `counter`) build it so ([MUI Tab types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Tab/Tab.d.ts), [UnderlinePanels source](https://github.com/primer/react/blob/main/packages/react/src/experimental/UnderlinePanels/UnderlinePanels.tsx)).
 - [required] A focus ring on the focused tab, and each tab a target of at least 24 by 24 CSS pixels (WCAG 2.4.7 and 2.5.8; figma-standard rules 26 and 39).
 
 ## Tabs
@@ -59,7 +59,7 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 
 **Layers**
 - [contested] Link tabs and panel tabs are separate Figma sets, as they are separate components in code ([*In code*](#in-code) weighs the split): `Tabs` and `Tab` for panel tabs, `Link tabs` and `Link tab` for link tabs, drawn alike, so a designer picks the one whose markup the screen needs (figma-standard rule 9).
-- [required] Each kind has two components: the item (`Tab`), and the row (`Tabs`), which holds its tabs in a slot named `Tabs slot`, never as nested instances with text overrides: a tab has a Selected variant, and an override inside a nested instance is dropped when it switches (figma-standard rules 21 and 38). The Simple Design System's `Tabs` takes its `Tab` instances as children the same way ([SDS Tabs.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/tab/Tabs.figma.ts)).
+- [required] Each kind has two components: the item (`Tab`), and the row (`Tabs`), which holds its tabs in a slot named `Tabs slot`, never as nested instances with text overrides: a tab has a Selected variant, and an override inside a nested instance is dropped when it switches (figma-standard rules 21 and 38).
 - [required] Auto layout throughout; the label hugs, the row hugs or fills, and each layer is named for its role: `Label`, `Icon`, the count (named as its property, below), `Indicator` (figma-standard rules 10 and 33).
 - [required] The icon leads the label as `Leading`, never `Left`, so a mirrored row keeps its names true (figma-standard rule 21).
 
@@ -82,13 +82,13 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 - *Script*: figma-components-audit runs the rules cited above on every set.
 - *Judgement*: at the narrowest frame the product draws, does the row scroll on one line, with the selected tab in view?
 
-**Sources.** Figma's Simple Design System for the two components and the slot; Primer and MUI for the item's parts; the toolkit's state-axis research for where Selected lives.
+**Sources.** Primer and MUI for the item's parts; the toolkit's state-axis research for where Selected lives.
 
 ## Alignment with code
 
 **Structure**
-- [strong] Panel tabs are compound in code, a root, a list, the tabs and the panels: Radix's `Root`, `List`, `Trigger` and `Content` ([Radix Tabs source](https://github.com/radix-ui/primitives/blob/main/packages/react/tabs/src/tabs.tsx)), React Aria's `Tabs`, `TabList`, `Tab` and `TabPanel` ([React Aria Tabs source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Tabs.tsx)), which SDS wraps ([SDS Tab.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Tab/Tab.tsx)), and Carbon's `Tabs`, `TabList`, `Tab`, `TabPanels` and `TabPanel` ([Carbon Tabs source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Tabs/Tabs.tsx)). MUI's core ships only `Tabs` and `Tab`, its panels in `@mui/lab` ([MUI Lab TabPanel](https://github.com/mui/material-ui/blob/master/packages/mui-lab/src/TabPanel/TabPanel.tsx)).
-- [strong] Figma mirrors the list and the tab, never the panel: SDS's `Tabs` connects to a `TabList` of its `Tab` children and writes one placeholder `TabPanel` ([SDS Tabs.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/tab/Tabs.figma.ts)), Carbon's says its panels are "not mapped in Figma" ([Carbon Tabs.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Tabs/Tabs.figma.ts)), and Primer's `UnderlinePanels` maps only its tabs ([Primer UnderlinePanels.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/experimental/UnderlinePanels/UnderlinePanels.figma.tsx)). So `Tabs` and `Tab` here are the list and the tab; the panel is the screen's content.
+- [strong] Panel tabs are compound in code, a root, a list, the tabs and the panels: Radix's `Root`, `List`, `Trigger` and `Content` ([Radix Tabs source](https://github.com/radix-ui/primitives/blob/main/packages/react/tabs/src/tabs.tsx)), React Aria's `Tabs`, `TabList`, `Tab` and `TabPanel` ([React Aria Tabs source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Tabs.tsx)), and Carbon's `Tabs`, `TabList`, `Tab`, `TabPanels` and `TabPanel` ([Carbon Tabs source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Tabs/Tabs.tsx)). MUI's core ships only `Tabs` and `Tab`, its panels in `@mui/lab` ([MUI Lab TabPanel](https://github.com/mui/material-ui/blob/master/packages/mui-lab/src/TabPanel/TabPanel.tsx)).
+- [moderate] Figma mirrors the list and the tab, never the panel: Carbon's `Tabs` says its panels are "not mapped in Figma" ([Carbon Tabs.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Tabs/Tabs.figma.ts)), and Primer's `UnderlinePanels` maps only its tabs ([Primer UnderlinePanels.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/experimental/UnderlinePanels/UnderlinePanels.figma.tsx)). So `Tabs` and `Tab` here are the list and the tab; the panel is the screen's content.
 - [moderate] Where code splits a kind of tab into its own component, the kit gives it its own mapping: Primer's link tabs (`UnderlineNav`, `aria-current`) and panel tabs (`UnderlinePanels`) each have one ([Primer UnderlineNav.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/UnderlineNav/UnderlineNav.figma.tsx)), as this page's two kinds do ([In Figma](#in-figma)); Carbon's kit draws an icon-only tab as `Type=Icon only`, which maps to its separate `IconTab` ([Carbon Tab.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Tabs/Tab.figma.ts)).
 
 **Mapping**
@@ -106,15 +106,14 @@ Tabs switch between views of one context without leaving it: a row of labels ove
   | `State=Focus` | `:focus-visible` |
 
 **States**
-- [required] Hover, Press and Focus are set by interaction, never a prop: `:hover`, `:active` and `:focus-visible`, which React Aria, and SDS on it, report as `data-hovered`, `data-pressed` and `data-focus-visible` ([React Aria Tabs source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Tabs.tsx), [SDS tab.css](https://github.com/figma/sds/blob/main/src/ui/primitives/Tab/tab.css); code-standard rule 9).
+- [required] Hover, Press and Focus are set by interaction, never a prop: `:hover`, `:active` and `:focus-visible`, which React Aria reports as `data-hovered`, `data-pressed` and `data-focus-visible` ([React Aria Tabs source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Tabs.tsx); code-standard rule 9).
 - [strong] Selected on a panel tab is set by the row in code: Carbon's `selectedIndex`, MUI's `value` and Radix's `value`, against which each tab sets its own `aria-selected` ([Carbon Tabs source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Tabs/Tabs.tsx), [MUI Tabs source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Tabs/Tabs.js), [Radix Tabs source](https://github.com/radix-ui/primitives/blob/main/packages/react/tabs/src/tabs.tsx)). A link tab carries its own `aria-current`, as Primer maps its `state=selected` ([Primer UnderlineNav.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/UnderlineNav/UnderlineNav.figma.tsx)).
 - [strong] Disabled is a prop on the tab (MUI's and Radix's `disabled`, React Aria's `isDisabled`), rendered as the native `disabled` by Radix and Carbon, so a disabled tab takes no focus or pointer state and no frame pairs it with one (figma-standard rule 2).
 - [strong] Code reaches Selected with Focus every time the row is entered by keyboard: the selected tab is the row's one tab stop, Radix's roving `active` item, MUI's `activeItemId` and Carbon's `tabIndex` of 0 (sources as above). So `Selected=True, State=Focus` is a frame that must exist.
-- [weak] Code also reaches Selected with Hover, and SDS gives it no style of its own (`[data-hovered]:not([data-selected])`, [SDS tab.css](https://github.com/figma/sds/blob/main/src/ui/primitives/Tab/tab.css)); a frame drawn identical to Selected Rest is then flagged by figma-standard rule 31, so either draw the hover or record the sameness under *Differences*.
 
 **Differences**
 - [moderate] Selection lives on each `Tab` here, and on the row in code: a component cannot set the variant of what fills its slot ([In Figma](#in-figma); figma-standard rule 38). The mapping row writes each tab's `aria-selected`, and the row's value is whichever tab the frame draws Selected.
-- [moderate] The indicator is a layer in each tab here; MUI renders one indicator on the row that slides to the selected tab (its `indicator` slot, [MUI Tabs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Tabs/Tabs.d.ts)), and SDS draws it as each tab's bottom border ([SDS tab.css](https://github.com/figma/sds/blob/main/src/ui/primitives/Tab/tab.css)). Either code matches the frame while the indicator sits on the selected tab's edge.
+- [weak] The indicator is a layer in each tab here; MUI renders one indicator on the row that slides to the selected tab (its `indicator` slot, [MUI Tabs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Tabs/Tabs.d.ts)). That code still matches the frame while the indicator sits on the selected tab's edge.
 - [weak] `Size` is on the tab here and on the list in code: Carbon's `size` is a `TabList` prop, and Carbon's own kit draws `Size` on the tab too, its Code Connect reading it from the first nested tab ([Carbon Tabs.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Tabs/Tabs.figma.ts)); a row cannot set the variant of the tabs in its slot (figma-standard rule 38).
 - [required] `Disabled` is a True/False variant before `State` (figma-standard rule 1), where Carbon's kit draws `State=Disabled` and Primer's folds `selected` into its `state` axis ([Carbon Tab.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Tabs/Tab.figma.ts), [Primer UnderlineNav.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/UnderlineNav/UnderlineNav.figma.tsx)); each maps to a boolean or an attribute, never to a state.
 
@@ -122,7 +121,7 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 - *Script*: the component contract lists every Figma axis and property of `Tab` and `Tabs` beside the props of the tab and the list; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity).
 - *Judgement*: does each frame say which tab the row's value selects, and is there a focused selected tab to build the keyboard entry from?
 
-**Sources.** Radix, React Aria, Carbon, MUI, Primer and SDS source and Code Connect files as linked, read for the parts, where selection lives and the tab stop; figma-standard rule 38 for why selection sits on the tab in Figma.
+**Sources.** Radix, React Aria, Carbon, MUI and Primer source and Code Connect files as linked, read for the parts, where selection lives and the tab stop; figma-standard rule 38 for why selection sits on the tab in Figma.
 
 ## In code
 
@@ -131,11 +130,11 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 
 **Props**
 - [strong] The row takes the selected value, the orientation and the activation mode: React Aria's `keyboardActivation`, Carbon's `activation: 'automatic' | 'manual'` and MUI's `selectionFollowsFocus` ([React Aria Tabs](https://react-aria.adobe.com/Tabs), [Carbon Tabs source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Tabs/Tabs.tsx), [MUI Tabs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Tabs/Tabs.d.ts)). Automatic is the default where panels show without delay ([APG tabs](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)).
-- [strong] A tab takes its label, an icon, a count and `disabled`: MUI (`label`, `icon`, `disabled`), Primer (`icon`, `counter`) and SDS (the label as children).
+- [moderate] A tab takes its label, an icon, a count and `disabled`: MUI (`label`, `icon`, `disabled`) and Primer (`icon`, `counter`).
 - [contested] Link tabs and panel tabs as one component or two: Primer ships two; React Aria lets a `Tab` take an `href` inside one `Tabs` ([React Aria Tabs: Links](https://react-aria.adobe.com/Tabs)). Primer and eBay treat link tabs as navigation, a list of links ([tabs](#tabs)).
 
 **Check**
 - *Script*: the parity loop compares each variant with its frame (design-code-parity); tools/ui-check/check.mjs runs design-standard rules 2 and 3 on the row.
 - *Judgement*: after a switch, is focus still on the tab and is the row where it was?
 
-**Sources.** React Aria, Carbon and MUI for the activation prop; Primer, MUI and SDS for the tab's props; Primer and React Aria for the split; the APG for automatic activation.
+**Sources.** React Aria, Carbon and MUI for the activation prop; Primer and MUI for the tab's props; Primer and React Aria for the split; the APG for automatic activation.

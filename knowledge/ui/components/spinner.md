@@ -173,7 +173,6 @@ A spinner is a small turning ring that says work is under way here, now, with no
 
 **Structure**
 - [strong] A component of its own in Primer (`Spinner`), Spectrum (`ProgressCircle`) and Carbon (`Loading`, with `InlineLoading` for the inline form with text and outcome); in MUI it is the indeterminate mode of `CircularProgress`, the same component that draws a determinate ring ([Primer Spinner source](https://github.com/primer/react/blob/main/packages/react/src/Spinner/Spinner.tsx), [Spectrum ProgressCircle source](https://github.com/adobe/react-spectrum/blob/main/packages/@react-spectrum/s2/src/ProgressCircle.tsx), [Carbon Loading source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Loading/Loading.tsx), [MUI CircularProgress source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/CircularProgress/CircularProgress.js)). The Figma set mirrors the project's split.
-- [moderate] Figma's Simple Design System has no spinner component, only an `IconLoader` glyph ([SDS IconLoader](https://github.com/figma/sds/blob/main/src/ui/icons/IconLoader.tsx)); a static icon cannot carry a name, a delay or reduced motion, so a library that needs a spinner builds a component.
 
 **Mapping**
 - [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rule 9; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
@@ -198,7 +197,7 @@ A spinner is a small turning ring that says work is under way here, now, with no
 - *Script*: the component contract lists `Size` and the code's props; a size with no partner and no line under *Differences* is a finding (design-code-parity).
 - *Judgement*: is every frame a size the code has, and does every motion value come from a token?
 
-**Sources.** Primer, Carbon, MUI, Spectrum and SDS source and Code Connect files as linked, read November 2026.
+**Sources.** Primer, Carbon, MUI and Spectrum source and Code Connect files as linked, read November 2026.
 
 ## In code
 

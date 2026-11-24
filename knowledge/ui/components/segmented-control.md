@@ -82,7 +82,7 @@ A segmented control is a row of joined buttons that picks one of two to four sho
 - *Script*: figma-components-audit runs the rules cited above on the segment set; the snapshot's contract lists the axes, so a `Selected` with no code counterpart shows in the parity report.
 - *Judgement*: can a designer draw every segment count from two to four, at every size, without detaching?
 
-**Sources.** Primer's segmented control source for the parts and the icon-only name; MUI, React Aria and Radix for the shape of the group; the toolkit's state-axis research for where Selected lives. Figma's Simple Design System has no segmented control, so no Figma-to-code mapping from it is cited here.
+**Sources.** Primer's segmented control source for the parts and the icon-only name; MUI, React Aria and Radix for the shape of the group; the toolkit's state-axis research for where Selected lives.
 
 ## Alignment with code
 
@@ -122,7 +122,7 @@ A segmented control is a row of joined buttons that picks one of two to four sho
 - *Script*: the component contract lists the control's and the segment's axes beside the group's and segment's props; an axis with no prop, or `Selected` mapped to anything but the group's value, is a finding unless *Differences* names it (design-code-parity).
 - *Judgement*: could a developer build every segment frame from one selected attribute and the browser's states, and does the project record which role its group takes?
 
-**Sources.** Primer's SegmentedControl source and Code Connect file, Carbon's ContentSwitcher and Switch source and Code Connect file, MUI's ToggleButton and ToggleButtonGroup, React Aria's useToggleButtonGroup and Radix's toggle-group, all as linked. They agree on a group of items and split three ways on the selected attribute; Figma's Simple Design System has no segmented control.
+**Sources.** Primer's SegmentedControl source and Code Connect file, Carbon's ContentSwitcher and Switch source and Code Connect file, MUI's ToggleButton and ToggleButtonGroup, React Aria's useToggleButtonGroup and Radix's toggle-group, all as linked. They agree on a group of items and split three ways on the selected attribute.
 
 ## In code
 

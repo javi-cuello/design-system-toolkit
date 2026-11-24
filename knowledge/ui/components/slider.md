@@ -6,10 +6,10 @@ A slider sets a number in a range by moving a thumb along a track: a volume, a z
 
 **Use when / don't use**
 - [weak] An approximate value set by feel, with the result visible at once; where the exact number matters, a number field. The cases are [*Slider*](#slider).
-- [moderate] One component for one thumb and for two, the range a `Range` variant of it (*In Figma*): MUI's `Slider` becomes a range when its `value` is an array ([useSlider](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Slider/useSlider.ts)), and Figma's Simple Design System renders one thumb per value ([SDS Slider.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Slider/Slider.tsx)).
+- [weak] One component for one thumb and for two, the range a `Range` variant of it (*In Figma*): MUI's `Slider` becomes a range when its `value` is an array ([useSlider](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Slider/useSlider.ts)).
 
 **Anatomy**
-- [strong] A label, a track with its filled part, a thumb per value, and the value shown as text. Carbon draws a label, a number input and a track with a handle, plus minimum and maximum value text ([Carbon slider](https://carbondesignsystem.com/components/slider/usage/)); MUI's slots are `rail`, `track`, `thumb`, `mark`, `valueLabel` and `input` ([Slider types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Slider/Slider.d.ts)); SDS composes `Label`, `SliderOutput`, `SliderTrack`, `SliderThumb` and `Description` ([SDS Slider.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Slider/Slider.tsx)).
+- [moderate] A label, a track with its filled part, a thumb per value, and the value shown as text. Carbon draws a label, a number input and a track with a handle, plus minimum and maximum value text ([Carbon slider](https://carbondesignsystem.com/components/slider/usage/)); MUI's slots are `rail`, `track`, `thumb`, `mark`, `valueLabel` and `input` ([Slider types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Slider/Slider.d.ts)).
 - [weak] The label sits above the track, so the hand on the thumb does not hide it (Carbon).
 - [required] The thumb is a target of at least 24 by 24 CSS pixels and shows a focus ring (figma-standard rules 26 and 39; WCAG 2.5.8).
 
@@ -63,11 +63,11 @@ A slider sets a number in a range by moving a thumb along a track: a volume, a z
 - [weak] The filled part's length and the thumb's place are a mechanism, driven by one width or padding; figma-standard rule 29 treats a raw value serving a mechanism as a question to record, not a defect.
 
 **Properties**
-- [required] `Label` and `Value` are text properties; `Show description` sits directly above `Description` (figma-standard rules 5, 21 and 37). SDS names the boolean `Has Description` ([SDS SliderField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/SliderField.figma.ts)); figma-standard rule 21 keeps `Has` for content the component holds and writes `Show` for a boolean that reveals a layer.
+- [required] `Label` and `Value` are text properties; `Show description` sits directly above `Description` (figma-standard rules 5, 21 and 37); figma-standard rule 21 keeps `Has` for content the component holds and writes `Show` for a boolean that reveals a layer.
 - [weak] A range slider is the same component at `Range=True`, never a set of its own and never two sliders laid over each other: it changes the thumbs, their names and the value text, more than one subtree, so it is a variant, not a boolean (figma-standard rule 35).
 
 **Variants and states**
-- [required] Axes run `Size → Range → Validation → Disabled → State`; `Range` is a True/False variant, `False` first; `Validation` lists `None` then `Error`; `State` runs `Rest → Focus → Hover → Press`, drawn on the thumb; Disabled pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 1 to 4, 21, 31 and 57). SDS folds Disabled into `State` (`State=Disabled` maps to `isDisabled`), which figma-standard rule 1 keeps as its own axis.
+- [required] Axes run `Size → Range → Validation → Disabled → State`; `Range` is a True/False variant, `False` first; `Validation` lists `None` then `Error`; `State` runs `Rest → Focus → Hover → Press`, drawn on the thumb; Disabled pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 1 to 4, 21, 31 and 57).
 - [moderate] `Validation=Error` where the value can be invalid: Carbon draws error and warning states for a required slider left empty or a value out of range.
 - [weak] Where no number input shows the value, the Hover, Focus and Press frames show it in a tooltip over the thumb (Carbon).
 
@@ -80,14 +80,14 @@ A slider sets a number in a range by moving a thumb along a track: a volume, a z
 - *Script*: figma-components-audit runs the rules cited above; the thumb's box is measured against figma-standard rule 26.
 - *Judgement*: does every frame show the value, and could a designer draw a range without detaching?
 
-**Sources.** Carbon's slider guidance for the parts, states and tooltip; MUI's types and SDS's source and Code Connect file for the names. SDS maps four Figma properties to props (`State`, `Label`, `Has Description`, `Description`); the rest of the [mapping](#alignment-with-code) applies code-standard rules 9 and 10.
+**Sources.** Carbon's slider guidance for the parts, states and tooltip; MUI's types for the names. The [mapping](#alignment-with-code) applies code-standard rules 9 and 10.
 
 ## Alignment with code
 
 **Structure**
-- [strong] One component holds one value or two, never a separate range component: MUI's `Slider` becomes a range when its value is an array ([useSlider](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Slider/useSlider.ts)), Carbon's `Slider` adds the upper handle when `unstable_valueUpper` is set ([Slider.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Slider/Slider.tsx)), and React Aria and Radix render one thumb per value inside one slider (SDS maps `state.values` to `SliderThumb`, [SDS Slider.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Slider/Slider.tsx); [Radix slider.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/slider/src/slider.tsx)). The `Range` variant mirrors it ([*In Figma*](#in-figma), Properties).
+- [strong] One component holds one value or two, never a separate range component: MUI's `Slider` becomes a range when its value is an array ([useSlider](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Slider/useSlider.ts)), Carbon's `Slider` adds the upper handle when `unstable_valueUpper` is set ([Slider.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Slider/Slider.tsx)), and Radix renders one thumb per value inside one slider ([Radix slider.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/slider/src/slider.tsx)). The `Range` variant mirrors it ([*In Figma*](#in-figma), Properties).
 - [moderate] Where the parts are components, they are parts of the slider, not components a page places alone: React Aria's `SliderTrack`, `SliderThumb` and `SliderOutput` ([Slider.tsx](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria-components/src/Slider.tsx)) and Radix's `Track`, `Range` and `Thumb` ([slider.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/slider/src/slider.tsx)); MUI and Carbon keep them inside one component. The Figma build keeps them as named layers of one set, which both shapes map to.
-- [moderate] Kits depart from their own code on the range: Carbon's Figma draws a separate two-handle component Code Connected to the same `Slider` ([SliderTwoHandles.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Slider/SliderTwoHandles.figma.ts)), whose template writes a `twoHandles` prop the component does not declare (it derives `twoHandles` from `unstable_valueUpper`, [Slider.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Slider/Slider.tsx)); SDS connects one `SliderField` with no range property ([SliderField.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/SliderField.figma.ts)). This page's one set with `Range` follows the code.
+- [weak] A kit can depart from its own code on the range: Carbon's Figma draws a separate two-handle component Code Connected to the same `Slider` ([SliderTwoHandles.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Slider/SliderTwoHandles.figma.ts)), whose template writes a `twoHandles` prop the component does not declare (it derives `twoHandles` from `unstable_valueUpper`, [Slider.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Slider/Slider.tsx)). This page's one set with `Range` follows the code.
 
 **Mapping**
 - [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
@@ -112,7 +112,7 @@ A slider sets a number in a range by moving a thumb along a track: a volume, a z
 - [moderate] Code reaches an invalid slider that is hovered, pressed or focused, so `Validation=Error` draws every `State`: Carbon's two-handle kit draws `Hover + Error`, `Active + Error` and `Focus + Error` and maps each to `invalid` ([SliderTwoHandles.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Slider/SliderTwoHandles.figma.ts)).
 
 **Differences**
-- [weak] `Validation` and `Disabled` are axes of their own where kits fold them into `State`: Carbon's `State` holds Error, Warning, Read-only and Disabled ([Slider.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Slider/Slider.figma.ts)), SDS's holds Disabled ([SliderField.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/SliderField.figma.ts)). Each maps out to its own prop (`invalid`, `disabled`, `isDisabled`), which separate axes mirror (figma-standard rules 1 and 57).
+- [weak] `Validation` and `Disabled` are axes of their own where a kit folds them into `State`: Carbon's `State` holds Error, Warning, Read-only and Disabled ([Slider.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Slider/Slider.figma.ts)). Each maps out to its own prop (`invalid`, `disabled`), which separate axes mirror (figma-standard rules 1 and 57).
 - [weak] Carbon's code also has `readOnly` and `warn` ([Slider.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Slider/Slider.tsx)); this build draws neither, and a project whose code ships them adds the values, or the parity report raises the prop.
 - [weak] The thumb's place and the filled length are fixed in a frame and computed from value, `min` and `max` in code; the width or padding that places them is a mechanism ([*In Figma*](#in-figma), Layers; figma-standard rule 29).
 - [weak] Carbon builds the number input into `Slider` (`hideTextInput` turns it off; [Slider.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Slider/Slider.tsx)); here the number field is the text field component placed beside the slider, as the Build pairs them ([*Slider*](#slider), Build).
@@ -121,21 +121,21 @@ A slider sets a number in a range by moving a thumb along a track: a volume, a z
 - *Script*: the component contract lists `Size`, `Range`, `Validation`, `Disabled` and `State` beside the slider's props; a Figma value with no prop, or a prop such as `readOnly` with no frame, is a finding unless *Differences* names it (design-code-parity).
 - *Judgement*: could a developer build every frame from the value, the validation prop and the browser's states, with one set for one thumb and two?
 
-**Sources.** MUI's useSlider, Carbon's Slider source and Code Connect files, React Aria's Slider, Radix's slider and Figma's SDS Slider and SliderField, all as linked. They agree on one component for one value or two; they split on a native input or a `role="slider"` element under the thumb, and Carbon's and SDS's kits fold validation and disabled into `State` where their code keeps separate props.
+**Sources.** MUI's useSlider, Carbon's Slider source and Code Connect files, React Aria's Slider and Radix's slider, all as linked. They agree on one component for one value or two; they split on a native input or a `role="slider"` element under the thumb, and Carbon's kit folds validation and disabled into `State` where its code keeps separate props.
 
 ## In code
 
 **Element**
 - [required] A native `input type="range"`, labelled, beside a number field where the exact value matters; the markup is [*Slider*](#slider)'s Build (code-standard rule 8).
-- [strong] Libraries that draw their own thumb still keep a native range input under it: MUI "handles value changes reported through the hidden range input" ([useSlider](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Slider/useSlider.ts)), React Aria renders a visually hidden `input` in each thumb ([Slider.tsx](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria-components/src/Slider.tsx)) and gives it `type: 'range'` ([useSliderThumb](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/slider/useSliderThumb.ts)), and SDS inherits it from React Aria.
+- [moderate] Libraries that draw their own thumb still keep a native range input under it: MUI "handles value changes reported through the hidden range input" ([useSlider](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Slider/useSlider.ts)), React Aria renders a visually hidden `input` in each thumb ([Slider.tsx](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria-components/src/Slider.tsx)) and gives it `type: 'range'` ([useSliderThumb](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/slider/useSliderThumb.ts)).
 
 **Props**
 - [strong] `min`, `max`, `step`, the value, a change handler, `disabled` and a way to turn the number into words: MUI (`min`, `max`, `step`, `getAriaValueText`, `disabled`), React Aria (`minValue`, `maxValue`, `step`, `formatOptions`; [useSliderState](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-stately/src/slider/useSliderState.ts)) and the native input (`min`, `max`, `step`, `aria-valuetext`).
 - [strong] Two change events, while dragging and on release, so a filter re-queries once: MUI `onChange` and `onChangeCommitted`, React Aria `onChange` and `onChangeEnd`, the native `input` and `change`.
-- [moderate] A range names each thumb: MUI's `getAriaLabel(index)`, SDS's `thumbLabels`, one label per thumb.
+- [weak] A range names each thumb: MUI's `getAriaLabel(index)`, one label per thumb.
 
 **Check**
 - *Script*: the parity loop compares each variant with its frame (design-code-parity); a test could click the track and assert the value moved, and press Home and End.
 - *Judgement*: is the value always readable, and does a filter wait for release?
 
-**Sources.** MUI, React Aria and SDS sources as linked; they agree on the native input underneath and on two change events.
+**Sources.** MUI and React Aria sources as linked; they agree on the native input underneath and on two change events.

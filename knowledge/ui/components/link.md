@@ -61,7 +61,7 @@ A link takes the person somewhere: another page, a place on this page, a file. T
 - [required] The icon's position is `Trailing`, never `Right` (figma-standard rule 21); where the project mirrors, a new-tab or external glyph records in its description whether it mirrors (figma-standard rule 50).
 
 **Properties**
-- [required] The text is a text property named for what it holds, `Label`; Figma's Simple Design System names it `Text` and maps it to the link's children ([SDS TextLink.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/text/TextLink.figma.ts); figma-standard rules 21 and 37).
+- [required] The text is a text property named for what it holds, `Label` (figma-standard rules 21 and 37).
 - [required] The icon is an instance swap, `Icon`, revealed by `Show icon` directly above it (figma-standard rules 5 and 21).
 
 **Variants and states**
@@ -81,12 +81,12 @@ A link takes the person somewhere: another page, a place on this page, a file. T
 - *Script*: figma-components-audit runs the rules cited above on the set.
 - *Judgement*: does an inline link in the text style still read as a link with the colour taken away?
 
-**Sources.** Figma's Simple Design System for the property name; Primer and Carbon for the inline form; Carbon for visited and size; WCAG's F73 and G183 for links in text; MDN for what `:visited` can change. The inline link as a text style is figma-standard rule 53, from what Figma can place in text.
+**Sources.** Primer and Carbon for the inline form; Carbon for visited and size; WCAG's F73 and G183 for links in text; MDN for what `:visited` can change. The inline link as a text style is figma-standard rule 53, from what Figma can place in text.
 
 ## Alignment with code
 
 **Structure**
-- [strong] One component in code, the inline form a prop of it, never a component of its own: Carbon's `inline`, Primer's `inline`, MUI's `underline` ([Carbon Link source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Link/Link.tsx), [Primer Link source](https://github.com/primer/react/blob/main/packages/react/src/Link/Link.tsx), [MUI Link types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Link/Link.d.ts)); SDS's `Link` is a bare `a` ([SDS Link.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Link/Link.tsx)). Carbon's and Primer's kits draw the inline form inside the one set, as `Type=Inline` and an `inline` boolean ([Carbon Link.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Link/Link.figma.ts), [Primer Link.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Link/Link.figma.tsx)); this page departs (*Differences*).
+- [strong] One component in code, the inline form a prop of it, never a component of its own: Carbon's `inline`, Primer's `inline`, MUI's `underline` ([Carbon Link source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Link/Link.tsx), [Primer Link source](https://github.com/primer/react/blob/main/packages/react/src/Link/Link.tsx), [MUI Link types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Link/Link.d.ts)). Carbon's and Primer's kits draw the inline form inside the one set, as `Type=Inline` and an `inline` boolean ([Carbon Link.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Link/Link.figma.ts), [Primer Link.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Link/Link.figma.tsx)); this page departs (*Differences*).
 - [moderate] The icon is a part of the link, never a component: Carbon takes one trailing `renderIcon`, while Primer's kit has `leadingVisual` and `trailingVisual` that its Code Connect writes as children of `Link`, which has no icon prop (sources as above). So the set nests one icon instance, trailing, as [In Figma](#in-figma) draws it.
 
 **Mapping**
@@ -114,13 +114,13 @@ A link takes the person somewhere: another page, a place on this page, a file. T
 **Differences**
 - [weak] The inline link is a text style here, where code has one component with `inline` and Carbon's and Primer's kits a variant of the one set: Figma cannot place an instance inside a run of text ([In Figma](#in-figma)). The mapping's first row is where the two meet.
 - [required] `Disabled` is a True/False variant before `State` (figma-standard rule 1), where Carbon's kit draws it as `State=Disabled` ([Carbon Link.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Link/Link.figma.ts)); both map to one boolean prop.
-- [required] The text is `Label` (figma-standard rule 21), where SDS names it `Text` and Carbon `Link text`; each maps to the link's children, which have no prop name of their own ([SDS TextLink.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/text/TextLink.figma.ts), [Carbon Link.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Link/Link.figma.ts)).
+- [required] The text is `Label` (figma-standard rule 21), where Carbon names it `Link text`, mapped to the link's children, which have no prop name of their own ([Carbon Link.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Link/Link.figma.ts)).
 
 **Check**
 - *Script*: the component contract lists every Figma axis and property beside the link's props; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity). The inline text style is outside the contract, so its row is read by hand.
 - *Judgement*: could a developer build every frame from `href`, `inline`, `size`, the icon and the browser's states alone, and does every prop have a frame?
 
-**Sources.** Carbon, Primer, MUI, React Aria and SDS source and Code Connect files as linked, read for the split, the icon and the disabled link; MDN for `:visited` and `:any-link`. The inline link as a text style is figma-standard rule 53, from what Figma can place in text.
+**Sources.** Carbon, Primer, MUI and React Aria source and Code Connect files as linked, read for the split, the icon and the disabled link; MDN for `:visited` and `:any-link`. The inline link as a text style is figma-standard rule 53, from what Figma can place in text.
 
 ## In code
 
