@@ -145,7 +145,7 @@ assert.match(git(side, 'branch', '--list', 'main'), /main/, 'and main with it');
     `  500     1 ${DAYS2} /Applications/Google Chrome.app/Contents/MacOS/Google Chrome`,                         // the user's browser
     `  501   500 ${DAYS2} /Applications/Google Chrome.app/Contents/Frameworks/Helpers/Google Chrome Helper --type=renderer`,
     `  600     1 ${HOURS2} ${CH} --user-data-dir=${T}/puppeteer_dev_chrome_profile-x`,                              // another tool's, orphaned
-    `  650     1 ${HOURS2} ${CH} --user-data-dir=/Users/x/parity-chrome-mine`,                                       // a caller's own profile
+    `  650     1 ${HOURS2} ${CH} --user-data-dir=/srv/caller/parity-chrome-mine`,                                       // a caller's own profile
     `  700     1 ${DAYS2} ${CH} --user-data-dir=${prof('orphan')}`,                                                  // ours, orphaned: reaped
     `  701   700 ${DAYS2} ${HELP} --user-data-dir=${prof('orphan')}`,                                                // its helper: reaped
     `  702   701 ${NOW} ${HELP}`,                                                                                    // a helper's child: reaped
