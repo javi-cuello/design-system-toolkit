@@ -24,6 +24,7 @@
  *   node tools/component-contract/eval.mjs --project <label> --causes
  *   node tools/component-contract/eval.mjs --project <label> --diff [--accept]
  *   node tools/component-contract/eval.mjs --project <label> --make-panel 30, then --panel with any of the above
+ *   node tools/component-contract/eval.mjs --project <label> --mutate [--sample N] [--seed S]   the comparer proven: each leg's share of known changes caught, beside the headline (mutate.mjs)
  *   node tools/component-contract/eval.mjs --project <label> --second [components…]
  *   node tools/component-contract/eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]
  *   node tools/component-contract/eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top 25] [--near 15]   the panels' rows by mechanism, across libraries, and the components nearest the same: what to fix first
@@ -871,7 +872,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const makeAt = argv.indexOf('--make-panel'), makePanel = makeAt >= 0 ? argv.splice(makeAt, 2)[1] : null;
   if (makeAt >= 0 && !/^[1-9]\d*$/.test(makePanel || '')) { console.error('--make-panel takes the panel\'s size, a whole number (30)'); process.exit(2); }
   const opts = { changed: flag('--changed'), jobs: Math.max(1, +(opt('--jobs') || 1)) };
-  if (!label) { console.error('usage: eval.mjs --project <label> [--panel] [--fields] [--causes] [--diff] [--check | --accept]\n       eval.mjs --project <label> --make-panel <n>\n       eval.mjs --project <label> --draw <scratch fileKey> [--keep-unchanged] [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]\n       eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]\n       eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top N] [--near N]'); process.exit(2); }
+  // the comparer proven beside the headline (mutate.mjs): a sample's known changes, each leg's share caught
+  const mutate = flag('--mutate') && { sample: +(opt('--sample') || 10), seed: +(opt('--seed') || 1) };
+  if (mutate && !(mutate.sample > 0 && Number.isInteger(mutate.seed))) { console.error('--mutate takes --sample N (a whole number) and --seed S (an integer)'); process.exit(2); }
+  if (!label) { console.error('usage: eval.mjs --project <label> [--panel] [--fields] [--causes] [--diff] [--check | --accept] [--mutate [--sample N] [--seed S]]\n       eval.mjs --project <label> --make-panel <n>\n       eval.mjs --project <label> --draw <scratch fileKey> [--keep-unchanged] [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]\n       eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]\n       eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top N] [--near N]'); process.exit(2); }
   const where = req('../snapshot/projects.cjs').layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
   if (makePanel) {
@@ -925,6 +929,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const today = await todayOf(label, where, panel ? argv : []);
   const m = measure(where, panel ? argv : [], today);
   report(label, m, fields, byCause);
+  if (mutate) { const M = await import('./mutate.mjs'); for (const l of M.lines(label, M.summary(M.runMutations(where, mutate)), mutate)) console.log(l); }
   const file = path.join(m.home, 'round-trip', 'accepted.json');
   const now = counts(m.legs);
   const causesFile = path.join(m.home, 'round-trip', 'accepted-causes.json');
