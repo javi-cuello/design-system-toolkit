@@ -30,13 +30,13 @@ import { partSeg, entryOf } from './to-code.mjs';
 import { propsOf } from './to-markup.mjs';
 import { TOLERANCE } from './geometry.mjs';
 import { near } from '../parity/schema.mjs';
+import { WEIGHTS } from '../parity/values.mjs';
 import { launch, newPage, attach, navigate, call, waitFor, media, forceState, screenshot } from '../shared/cdp.mjs';
 
 const req = createRequire(import.meta.url);
 
 /* ---------- the contract's side ---------- */
 
-const WEIGHTS = { thin: 100, hairline: 100, extralight: 200, ultralight: 200, light: 300, regular: 400, normal: 400, book: 400, roman: 400, medium: 500, semibold: 600, demibold: 600, bold: 700, extrabold: 800, ultrabold: 800, heavy: 800, black: 900 };
 const weightOf = (w) => (typeof w === 'number' ? w : /^\d+$/.test(String(w)) ? +w : WEIGHTS[String(w || '').toLowerCase().replace(/[\s_-]|italic/g, '')] ?? null);
 const SIDES = ['top', 'end', 'bottom', 'start'];
 const COLOUR = /^(#|rgba?\(|hsla?\(|oklch\(|oklab\(|lab\(|lch\(|color\(|transparent$)/i;
