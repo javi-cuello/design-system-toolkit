@@ -611,8 +611,16 @@ else console.log('skip: no stored contracts on this machine');
   const at = (x) => toCss(x, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: mains2 }).split('@layer').slice(1).join('').match(/data-loud[^{]*> \.ds-tag__text \{[^}]*\}/g) || [];
   ok('an override a variant drops where it places another component goes back there, as where it keeps the layer',
     at(swapped).length === 1 && /color: unset;/.test(at(swapped)[0]) && JSON.stringify(at(swapped)) === JSON.stringify(at(kept)) && selfCheck(swapped, rulesOf(swapped, mains2).rules, mains2).length === 0);
+  // an override a variant adds where the defaults have none, which a combination sets back to the component's own value:
+  // that value is written there, never unset, which would undo the component's own (material3's slider, disabled and
+  // large, its active track's corners 0, 2026-11-24)
+  const added = { ...loud, props: { ...loud.props, big: { type: 'boolean', default: false, axis: true, figma: 'Big' } }, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag },
+    variants: [{ when: { loud: true }, add: { 'tag/text': { kind: 'text', parent: 'tag', color: 'C/x', typography: 'Label/sm' } } }, { when: { loud: true, big: true }, set: { 'tag/text.color': 'C/strong' } }] };
+  const ad = toCss(added, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('a combination that sets an added override back to the component\'s value writes that value, never unset',
+    /data-big[^{]*> \.ds-tag__text \{\s*color: var\(--c-strong\);\s*\}/.test(ad) && !/color: unset/.test(ad) && selfCheck(added, rulesOf(added, mains).rules, mains).length === 0);
   // what the component declares that the instance does not is unset
-  const bare = { ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/strong' } } };
+  const bare ={ ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/strong' } } };
   ok('a declaration the instance takes away is unset', /\.ds-tag__text \{[^}]*font[\w-]*: unset;/.test(toCss(bare, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains })));
   // an override inside one of several copies is said, never written on every copy
   const two = { ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': card.anatomy['tag/text'], tag_2: { ...card.anatomy.tag, order: 1 } } };

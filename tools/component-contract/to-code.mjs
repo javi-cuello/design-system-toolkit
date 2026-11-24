@@ -752,7 +752,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       // where the component has none: unset, or the base's override would stand)
       const said = new Set([...over.mine.map(([p]) => p), ...over.removed]);
       // (a value only the defaults' override makes it say, the component's own here, is `given`: said where a rule sets it)
-      const decls = [...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p)).map(([p, v, note]) => [p, v, note, over.theirs.get(p) === v]), ...over.removed.map((p) => [p, 'unset']), ...[...base].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset', undefined, true])];
+      // (every value, the component's own given: a rule before this one that overrides it, the defaults' or a variant's
+      // add, is answered with that value, never left to the cascade's unset, which would undo the component's own)
+      const decls = [...over.mine.map(([p, v, note]) => [p, v, note, over.theirs.get(p) === v]), ...over.removed.map((p) => [p, 'unset']), ...[...base].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset', undefined, true])];
       if (decls.length) out[id] = { decls: new Map(decls.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: [] };
       continue;
     }
