@@ -443,7 +443,7 @@ Whether a field's widths are characters or pixels is [forms: field widths](../ui
 **How**
 - [required] **In Figma a width is a number variable scoped "Width and height"** (`WIDTH_HEIGHT`), one scope for both: no scope offers a width alone ([`VariableScope`](https://developers.figma.com/docs/plugins/api/VariableScope/), [Figma: variable scopes](https://help.figma.com/hc/en-us/articles/15145852043927)). It binds to `width`, `height`, `minWidth`, `maxWidth`, `minHeight` and `maxHeight` ([`VariableBindableNodeField`](https://www.figma.com/plugin-docs/api/VariableBindableNodeField/)).
 - [weak] Primer's build sends `overlay.width.*` to Figma in the `pattern/size` collection, scoped `size`, which its transformer writes as `WIDTH_HEIGHT` ([size.json5](https://raw.githubusercontent.com/primer/primitives/main/src/tokens/functional/size/size.json5), [figmaAttributes.ts](https://raw.githubusercontent.com/primer/primitives/main/src/transformers/figmaAttributes.ts)). It is the only shipped system whose sources show where its widths sit in Figma.
-- [strong] A field's width preset reaches code as a maximum, so the field still shrinks with its column ([forms: field widths](../ui/patterns/forms.md#field-widths)).
+A field's preset reaches code as a maximum: [forms: field widths](../ui/patterns/forms.md#field-widths).
 
 **Cases**
 - A width variable with every scope → offered for gaps and radii; scope it to "Width and height".
