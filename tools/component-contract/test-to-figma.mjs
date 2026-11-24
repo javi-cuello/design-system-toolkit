@@ -708,6 +708,10 @@ delete globalThis.figma;
   const req = createRequire(import.meta.url);
   const { derive } = req('./derive.cjs'), { compact } = req('../snapshot/spec.cjs');
   const { walkedAs } = await import('./to-figma.mjs');
+  const { knownOf } = await import('./geometry.mjs');
+  // (which fields the stored snapshot records, by the store's one version gate: here, a release other than the walk's)
+  // (as stored: through JSON, so a field set undefined is none)
+  const kn = (snap, ...more) => knownOf({}, Object.fromEntries([snap, ...more].map((x, i) => [`c${i}`, compact(JSON.parse(JSON.stringify(x)))])), "9.9.9");
   const j = JSON.stringify;
   const one = (name, children, props = {}) => ({ name, props, variants: [{ name, type: 'COMPONENT', layout: 'VERTICAL', children }] });
   const text = (x) => ({ name: 'L', type: 'TEXT', text: 'Hi', textStyle: 'literal', lineHeight: '20', ...x });
@@ -717,17 +721,17 @@ delete globalThis.figma;
   const host = (x) => one('Host', [{ name: 'I', type: 'INSTANCE', instanceOf: 'Item', overrides: ['fills'], children: [text(x), glyph('#ff0000')] }]);
   const read = (spec, item) => derive(spec, ['Item', 'Host'], { mains: (name) => (name === 'Item' && item ? derive(item) : null) });
   // refused: the live read, as --patch holds it to the snapshot the contract came from, is not that contract
-  const refused = (live, snap, item) => j(read(compact(walkedAs(live, compact(snap))), item)) !== j(read(compact(snap), item));
+  const refused = (live, snap, item) => j(read(compact(walkedAs(live, kn(snap))), item)) !== j(read(compact(snap), item));
   const item = (x) => one('Item', [text(x), glyph('#000000')]);
   ok('1: a host whose only text is its component\'s own, dropped from the contract, read live is the same: no refusal, no row',
-    !refused(host(sizes()), host(sizes()), item(sizes())) && roundTrip(read(host(sizes()), item(sizes())), read(compact(walkedAs(host(sizes()), compact(host(sizes())))), item(sizes()))).rows.length === 0);
+    !refused(host(sizes()), host(sizes()), item(sizes())) && roundTrip(read(host(sizes()), item(sizes())), read(compact(walkedAs(host(sizes()), kn(host(sizes())))), item(sizes()))).rows.length === 0);
   const bold = sizes('Display Bold');
   ok('2: a case added to a text whose face has no weight is still a change, inside an instance and on its own',
     refused(host({ ...bold, textCase: 'UPPER' }), host(bold), item(bold)) && refused(one('Top', [text({ ...bold, textCase: 'UPPER' })]), one('Top', [text(bold)]))
     && !refused(one('Top', [text(bold)]), one('Top', [text(bold)])));
   ok('3: where the snapshot records sizes, a size that changes is seen, whatever stale rules derived beside it',
     refused(one('Top', [text({ ...sizes(), fontSize: 16 })]), one('Top', [text(sizes())]))
-    && j(walkedAs(one('Top', [text(sizes())]), compact(one('Top', [text(sizes())])))).includes('"fontSize":14'));
+    && j(walkedAs(one('Top', [text(sizes())]), kn(one('Top', [text(sizes())])))).includes('"fontSize":14'));
   const said = { letterSpacing: '0.16', textCase: 'UPPER' }, named = { textCase: 'Upper', letterSpacing: '0' };
   ok('4: the same library read live against an older snapshot is as stored, one with a prop named textCase too',
     !refused(one('Top', [text({ ...said, ...sizes() })]), one('Top', [text(said)])) && !refused(one('Top', [text({ ...said, ...sizes() })], named), one('Top', [text(said)], named))
@@ -746,14 +750,29 @@ delete globalThis.figma;
     { name: 'State=Rest, Divider=True', type: 'COMPONENT', layout: 'VERTICAL', children: [at(i(1), { name: 'Divider' }), at(i(2), { name: 'Content' })] },
     { name: 'State=Rest, Top spacer=True', type: 'COMPONENT', layout: 'VERTICAL', children: [at(i(0), { name: 'Top spacer' }), at(i(2), { name: 'Content' })] }] }; };
   ok('the same library read live against a snapshot from before each layer\'s place was recorded is as stored; against one that records it, the place is kept',
-    !refused(menu(true), menu(false)) && !refused(menu(true), menu(true)) && j(walkedAs(menu(true), compact(menu(true)))).includes('"index":1')
+    !refused(menu(true), menu(false)) && !refused(menu(true), menu(true)) && j(walkedAs(menu(true), kn(menu(true)))).includes('"index":1')
     && j(read(compact(menu(true)))) !== j(read(compact(menu(false)))));
   // a vector's outline and paths (0.85.0, 0.86.0): left out against a snapshot that records no outline, kept against one that does
   const dot = (drawn) => one('Dot', [{ name: 'V', type: 'VECTOR', w: 8, h: 8, sizing: 'FIXED/FIXED', ...(drawn ? { outline: 'a1b2c3d4', paths: [{ windingRule: 'NONE', data: 'M 8 4 C 8 6.21 6.21 8 4 8 Z' }] } : {}) }]);
   ok('the same library read live against a snapshot from before a vector\'s outline was recorded is as stored; against one that records it, its paths are kept',
-    !refused(dot(true), dot(false)) && j(walkedAs(dot(true), compact(dot(false)))).indexOf('outline') < 0 && j(walkedAs(dot(true), compact(dot(true)))).includes('"paths"')
-    && roundTrip(read(compact(dot(false))), read(compact(walkedAs(dot(true), compact(dot(false)))))).rows.length === 0);
+    !refused(dot(true), dot(false)) && j(walkedAs(dot(true), kn(dot(false)))).indexOf('outline') < 0 && j(walkedAs(dot(true), kn(dot(true)))).includes('"paths"')
+    && roundTrip(read(compact(dot(false))), read(compact(walkedAs(dot(true), kn(dot(false)))))).rows.length === 0);
+  // (review 2026-11-24) one gate, the store's (knownFor), decides what the live read keeps: by the release that took the
+  // snapshot, and library-wide, never by which fields one component's trees happen to show
+  ok('a snapshot taken by the walk\'s own release keeps every field of the live read, though no stored layer shows one',
+    j(walkedAs(dot(true), knownOf({ _meta: { plugin: '9.9.9' } }, { d: compact(dot(false)) }, '9.9.9'))).includes('"paths"'));
+  ok('an older release\'s snapshot that records sizes on another component keeps a text size added to this one',
+    j(walkedAs(one('Top', [text(sizes())]), kn(one('Top', [{ name: 'Box', type: 'FRAME' }]), one('Other', [text(sizes())])))).includes('"fontSize":14'));
 }
+{ // (review 2026-11-24) the readback was derived under the scratch file's settings (house defaults), the library's contract
+  // under its own: every derive in to-figma takes the component's own library options, keyed by its folder
+  const fsm = await import('node:fs');
+  const src = fsm.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
+  ok('no derive in to-figma is keyed by the file drawn into', !/deriveOptions\(contractRouter\.auditContext\(where\.doc\), into/.test(src));
+  // (review 2026-11-24) a new text's font is the one Figma gives it, asked of Figma, and eval's benign font row is any
+  // font's: no font is named in either
+  const evalSrc = fsm.readFileSync(new URL('./eval.mjs', import.meta.url), 'utf8');
+  ok('no font is named in to-figma or eval', !/['"(]Inter\b/.test(src) && !/['"(]Inter\b/.test(evalSrc)); }
 { // 2026-11-22: with two platforms an index holds one name twice: --patch read the first's figma.json, so it refused
   // an unchanged library and passed a change
   const to = await import('./to-figma.mjs');

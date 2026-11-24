@@ -1,4 +1,4 @@
-// Design system snapshot — v0.87.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.87.1 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -473,9 +473,9 @@ async function paintNames(paints, all = false) {
 // Figma's AUTO line height is the font's ascender + descender rounded to whole
 // pixels. Measuring it needs a font load, which has hung in degraded sandboxes,
 // so the measure is raced against a timeout and falls back to the metric; the
-// source is recorded either way.
-/** @type {Record<string, number>} */
-const METRIC = { Inter: 1.2109375, 'Inter Display': 1.2109375 };
+// source is recorded either way. The metric is the file's own (familyMetric),
+// never a table of fonts named here: one held Inter alone, and every other
+// family fell to 1.2.
 // (`font`: another library's style whose own font reads mixed gives the one its text uses)
 /** @param {TextStyle} s @param {FontName} font @returns {Promise<number | null>} */
 const measureStyle = (s, font) => new Promise((resolve) => {
@@ -499,6 +499,25 @@ const drawnIn = (s) => {
     if (t) return t.height;
   }
   return null;
+};
+
+/* A family's Auto line height as a share of its size, where a style's line can be neither measured nor found drawn: from
+   the largest one-line text with an Auto line height already drawn in that family (the larger, the less its whole-pixel
+   rounding weighs), never the run's own. Null where none is, and 1.2 stands. */
+/** @param {string | undefined} family @returns {number | null} */
+const familyMetric = (family) => {
+  /** @type {TextNode | null} */
+  let best = null;
+  for (const p of figma.root.children) {
+    if (p.name === SCRATCH) continue;
+    for (const t of /** @type {TextNode[]} */ (p.findAllWithCriteria({ types: ['TEXT'] }))) {
+      const f = t.fontName, lh = t.lineHeight;
+      if (typeof f !== 'object' || f.family !== family || typeof lh !== 'object' || lh.unit !== 'AUTO' || typeof t.fontSize !== 'number' || !t.fontSize) continue;
+      if (t.textAutoResize !== 'WIDTH_AND_HEIGHT' || !t.characters || /\n/.test(t.characters) || t.characters.includes(String.fromCharCode(0x2028))) continue;
+      if (!best || t.fontSize > /** @type {number} */ (best.fontSize)) best = t;
+    }
+  }
+  return best ? best.height / /** @type {number} */ (best.fontSize) : null;
 };
 
 /* Every variable the components on `pages` bind, by id: on the component, its layers, and their fills, strokes and effects. */
@@ -633,6 +652,9 @@ async function collectTokens() {
   const at = new Map(figma.root.findAllWithCriteria({ types: ['TEXT'] }).filter((t) => typeof t.textStyleId === 'string' && t.textStyleId && inside(t)).map((t) => [t.textStyleId, t]));
   const textOf = new Map();
   const remote = /** @type {TextStyle[]} */ ((await Promise.all([...at.keys()].map(async (i) => { const s = await figma.getStyleByIdAsync(i); if (s) textOf.set(s, at.get(i)); return s; }))).filter((s) => s && s.remote && !names.has(s.name) && names.add(s.name)));
+  // (each family's metric read once a run, where a style needs it)
+  /** @type {Map<string | undefined, number | null>} */
+  const metrics = new Map();
   for (const s of [...local, ...remote]) {
     // (a remote style whose family is bound to that library's variable says its font is mixed: a text using it says which)
     const node = textOf.get(s), first = node && node.characters.length ? node.getRangeFontName(0, 1) : null;
@@ -644,7 +666,7 @@ async function collectTokens() {
       // the facts mode writes nothing: measuring draws a text on a scratch page, and no audit check reads a line height
       const h = typeof FACTS !== 'undefined' && FACTS ? null : await measureStyle(s, font);
       if (h !== null) { lh = +(h / s.fontSize).toFixed(4); source = 'measured'; }
-      else { lh = +(Math.round(s.fontSize * (METRIC[font.family] || 1.2)) / s.fontSize).toFixed(4); source = 'metric'; }
+      else { if (!metrics.has(font.family)) metrics.set(font.family, familyMetric(font.family)); lh = +(Math.round(s.fontSize * (metrics.get(font.family) || 1.2)) / s.fontSize).toFixed(4); source = 'metric'; }
     } else { lh = perFontSize(s.lineHeight, s.fontSize); source = 'style'; }
     textStyles.push({
       // its key, as each effect's: what another file imports it by (tools/component-contract/to-figma.mjs)
@@ -754,7 +776,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.87.0';
+const VERSION = '0.87.1';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

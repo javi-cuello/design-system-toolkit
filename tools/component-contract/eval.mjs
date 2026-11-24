@@ -453,9 +453,9 @@ function draw(where, label, into, only, retry = true) {
     // reading goes back and the run stops at once
     if (!d.ok && /refused: \S+ is \S+'s scratch file/.test(d.out)) { fs.unlinkSync(file); if (last) fs.writeFileSync(reading, last); console.log(`${folder}: ${d.out.trim().split('\n').pop()}`); process.exitCode = 1; return; }
     if (!d.ok) { fs.unlinkSync(file); if (failed(folder, 'not drawn', d.out)) return; continue; }
-    // a library import (a component, icon, style or variable) unanswered; a font that never loads is the machine's, and
-    // stays a row of the reading
-    if (d.out.split(/, |: |\n/).some((x) => /\(no answer/.test(x) && !/^(font of |Inter \()/.test(x.trim()))) {
+    // a library import (a component, icon, style or variable) unanswered; a font that never loads (to-figma's `font of …`,
+    // whichever font) is the machine's, and stays a row of the reading
+    if (d.out.split(/, |: |\n/).some((x) => /\(no answer/.test(x) && !/^font of /.test(x.trim()))) {
       fs.unlinkSync(file);
       if (last) { fs.writeFileSync(reading, last); noteTaken(where.projectDir, 'figma', folder, contract, true); }
       unanswered.push(folder);

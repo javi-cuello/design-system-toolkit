@@ -10,7 +10,7 @@
  *   <variant>                     a variant only one side has
  *   <set>.set                     the set's size
  *
- * Variants are matched by their sorted axis values (the drawing names axes in the house's order); every difference is
+ * Variants are matched by their sorted axis values (spec.cjs pairVariants; the drawing names axes in the house's order); every difference is
  * its own row, never deduped. A number is the same within TOLERANCE, parity's comparison (schema.mjs near) at the
  * walk's rounding step; everything else exactly. What a layer paints past its box is not read by the walk, so not here.
  */
@@ -18,7 +18,7 @@ import { createRequire } from 'node:module';
 import { near } from '../parity/schema.mjs';
 
 const req = createRequire(import.meta.url);
-const { resolve, layerPaths, boxOnly } = req('../snapshot/spec.cjs');
+const { resolve, layerPaths, boxOnly, variantKey, pairVariants } = req('../snapshot/spec.cjs');
 const { knownFor } = req('../snapshot/store.cjs');
 
 /* The walk keeps two decimals (code.js round()): one value read twice can land a step apart across a rounding edge. */
@@ -30,9 +30,6 @@ const IDS = new Set(['id', 'key', 'instanceOfId', 'instanceOfKey', 'index', 'nam
   'overrides']);
 // (a row's place is read by `/` and `.`: a name holding them keeps one segment)
 const seg = (s) => String(s).replace(/[/.]/g, '_');
-// (a single component's own name leads its flipped variants', `_Badge, Dot=false`, and the drawing's is the contract's:
-// only the axes count)
-const axes = (name) => String(name).split(',').map((s) => s.trim()).filter((s) => s.includes('=')).sort().join(', ');
 
 const same = (a, b, tol) => {
   if (typeof a === 'number' && typeof b === 'number') return near(a, b, tol + 1e-9);
@@ -66,14 +63,11 @@ export function geometry(library, drawn, { known = null, tolerance = TOLERANCE }
   const paths = (v) => { const m = new Map(); layerPaths(v, (node, p) => { m.set(p, node); }); return m; };
   const at = (vk, p) => `${vk}/${p.split(' > ').map(seg).join('/')}`;
   const lv = resolve(library).variants || [], dv = resolve(drawn).variants || [];
-  const byAxes = new Map(dv.map((v) => [axes(v.name), v]));
-  // (a single component, or a set of one, is its one variant whatever each side names it)
-  const one = lv.length === 1 && dv.length === 1;
-  const met = new Set();
-  for (const a of lv) {
-    const vk = seg(axes(a.name) || a.name), b = one ? dv[0] : byAxes.get(axes(a.name));
+  // (by their axes, as every reader pairs them: spec.cjs pairVariants)
+  const { pairs, extra } = pairVariants(lv, dv);
+  for (const [a, b] of pairs) {
+    const vk = seg(variantKey(a.name) || a.name);
     if (!b) { row(vk, { kind: 'variant' }, null); continue; }
-    met.add(b);
     fields(a, b, vk);
     const pa = paths(a), pb = paths(b);
     // (a layer inside an instance is its component's drawing: no paths recorded there, by design)
@@ -81,7 +75,7 @@ export function geometry(library, drawn, { known = null, tolerance = TOLERANCE }
     for (const [p, x] of pa) { const y = pb.get(p); if (!y) row(at(vk, p), { kind: x.type }, null); else fields(x, y, at(vk, p), loose(p)); }
     for (const [p, y] of pb) if (!pa.has(p)) row(at(vk, p), null, { kind: y.type });
   }
-  for (const b of dv) if (!met.has(b)) row(seg(axes(b.name) || b.name), null, { kind: 'variant' });
+  for (const b of extra) row(seg(variantKey(b.name) || b.name), null, { kind: 'variant' });
   // (an older snapshot never recorded the set's size: nothing to hold the drawing to)
   if (library.set && !same(library.set, drawn.set, tolerance)) row(`${seg(library.name)}.set`, library.set, drawn.set);
   return rows;

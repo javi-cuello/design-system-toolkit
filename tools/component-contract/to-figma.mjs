@@ -783,7 +783,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     K.iconContainer ? tried('icon container', () => own(K.iconContainer, () => figma.importComponentSetByKeyAsync(K.iconContainer))) : null,
     ...typos.map(async (t) => { const key = K.styles && K.styles[t]; if (key) styles[key] = await tried(t, () => own(key, () => figma.importStyleByKeyAsync(key))); }),
     ...assets.map(async (a) => { if (K.icons && K.icons[a]) icons[a] = await tried(`icon ${a}`, () => own(K.icons[a], () => figma.importComponentByKeyAsync(K.icons[a]))); }),
-    tried('Inter', () => figma.loadFontAsync({ family: 'Inter', style: 'Regular' })),
+    // the font a new text is made in, as Figma gives it (no font named here): loaded before any text is written
+    tried('font of a new text', () => { const t = figma.createText(), f = t.fontName; t.remove(); return figma.loadFontAsync(f); }),
     // a component Figma never publishes (`_`, `.`) has no key that imports: placed from this file's own page instead
     ...Object.entries(K.sets || {}).filter(([name]) => !/^[_.]/.test(name)).map(async ([name, key]) => { sets[name] = await tried(name, () => own(key, () => figma.importComponentSetByKeyAsync(key))); }),
     ...Object.entries(K.effects || {}).map(async ([name, key]) => { effects[name] = await tried(name, () => own(key, () => figma.importStyleByKeyAsync(key))); }),
@@ -1921,29 +1922,23 @@ export function heldTo(index, name, { folder, library, libraryKey, key, keyAt, f
   return library ? { file: library } : {};
 }
 
-/* The live walk as the stored snapshot recorded a text with no style. The walk records such a text's size and face
-   (0.82.0 on), and derive then says its values, spacing and case; a snapshot from before records none, and its
-   contract says `literal` alone. Only against such a snapshot are they left out, so the same library is never a
-   change. Which it is, the stored figma.json says by its own fields, never the contract's text (which drops a text
-   equal to its component's own and has no value for a face with no weight). `comp` is the walk's, its variants whole;
-   with no stored snapshot to ask, nothing is left out. The same for each layer's place among all its parent's
-   children (`index`, 0.83.0 on), which derive reads to order two layers two booleans show where they would tie; and a
-   vector's outline and paths (`outline` 0.85.0 on, `paths` 0.86.0 on: a snapshot that records an outline records the
-   paths beside it, so the outline says which it is). */
+/* The live walk as the stored snapshot recorded it, so the same library is never a change: a field a later walk began
+   to record is left out of the live read where the stored snapshot does not record it. Which fields it records is the
+   store's one version gate (store.cjs knownFor, as geometry's knownOf asks it): every field where the snapshot was taken
+   by the walk's own release, else those it records anywhere in the library. The fields: a text with no style's size and
+   face (0.82.0 on; derive then says its values, spacing and case), each layer's place among all its parent's children
+   (`index`, 0.83.0 on; derive orders two layers two booleans show by it), a vector's outline and paths (0.85.0, 0.86.0).
+   `comp` is the walk's, its variants whole; `known` null (no stored snapshot to ask) leaves nothing out. */
 const SIZED = ['fontSize', 'fontFamily', 'fontStyle'];
-export function walkedAs(comp, stored) {
-  if (!stored) return comp;
-  const sized = (n) => (n.textStyle === 'literal' && SIZED.some((k) => n[k] != null)) || (n.children || []).some(sized);
-  const placed = (n) => typeof n.index === 'number' || (n.children || []).some(placed);
-  const trees = req('../snapshot/spec.cjs').resolve(stored).variants || [];
-  const outlined = (n) => typeof n.outline === 'string' || (n.children || []).some(outlined);
-  const keepSizes = trees.some(sized), keepPlaces = trees.some(placed), keepOutlines = trees.some(outlined);
-  if (keepSizes && keepPlaces && keepOutlines) return comp;
+export function walkedAs(comp, known) {
+  if (!known) return comp;
+  const keep = (f) => known.has(f);
+  if ([...SIZED, 'index', 'outline', 'paths'].every(keep)) return comp;
   // (a node is a layer by its type: a prop or a link named index is not one)
   return JSON.parse(JSON.stringify(comp), (k, v) => {
-    if (v && !keepSizes && v.textStyle === 'literal') for (const f of SIZED) delete v[f];
-    if (v && !keepPlaces && typeof v.type === 'string' && typeof v.index === 'number') delete v.index;
-    if (v && !keepOutlines && v.type === 'VECTOR') { delete v.outline; delete v.paths; }
+    if (v && v.textStyle === 'literal') for (const f of SIZED) if (!keep(f)) delete v[f];
+    if (v && !keep('index') && typeof v.type === 'string' && typeof v.index === 'number') delete v.index;
+    if (v && v.type === 'VECTOR') for (const f of ['outline', 'paths']) if (!keep(f)) delete v[f];
     return v;
   });
 }
@@ -2029,15 +2024,20 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
         const held = JSON.parse(fs.readFileSync(libFile, 'utf8'));
         // (the snapshot it was derived from, beside the library's contract)
         let snap = null; try { snap = JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, 'figma.json'), 'utf8')); } catch { /* none stored: the walk as read */ }
-        const now = derive(compact(walkedAs(comp, snap)), Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(folder).mains });
+        // what the stored snapshot records, by the store's version gate, read once for both: what the live read keeps, and
+        // which fields the geometry holds it to
+        const { geometry, knownOf } = await import('./geometry.mjs');
+        const specs = Object.fromEntries(req('../snapshot/store.cjs').readSpecs(where.paths.components, { compact: true }).map((x) => [x.folder, x.spec]));
+        const known = snap && knownOf(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), specs, (walk.match(/const VERSION = '([^']+)'/) || [])[1]);
+        // derived under the library's own settings (its stateAxis, pointerStates), as its contract was, never the file
+        // drawn into's
+        const now = derive(compact(walkedAs(comp, known)), Object.values(index).map((x) => x.name), contractRouter.deriveOptionsFor(where.paths.components)(folder));
         // the library's components by name, as eval.mjs compares with them: the same rules on every leg
         const { contracts } = await import('./official.mjs');
         const rt = roundTrip(held, now, { mains: req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract)) });
         // and the reading itself, before derive drops what it does not keep, held to the stored one layer by layer: the
         // geometry part of the Figma leg (geometry.mjs), against the fields the library's snapshot records anywhere
-        const { geometry, knownOf } = await import('./geometry.mjs');
-        const specs = Object.fromEntries(req('../snapshot/store.cjs').readSpecs(where.paths.components, { compact: true }).map((x) => [x.folder, x.spec]));
-        const geo = snap && geometry(snap, walkedAs(comp, snap), { known: knownOf(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), specs, (walk.match(/const VERSION = '([^']+)'/) || [])[1]) });
+        const geo = snap && geometry(snap, walkedAs(comp, known), { known });
         back = rt.rows.length + (geo ? geo.length : 0);
         const rtOut = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`);
         const body = JSON.stringify({ component: p.name, combinations: rt.combinations, ...(rt.invalid && { invalid: rt.invalid }), ...(rt.cut && { cut: rt.cut }), rows: rt.rows, ...(geo && { geometry: geo }) }, null, 2) + '\n';
@@ -2101,9 +2101,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index: only its own name is known */ }
     const at = entryOf(index, comp.name, { file: into, key: comp.key, keyAt }), entry = index[at] || {};
     let snap = null; try { snap = JSON.parse(fs.readFileSync(path.join(where.paths.components, at, 'figma.json'), 'utf8')); } catch { /* none stored: the walk as read */ }
-    const walked = compact(walkedAs(comp, snap)), spec = entry.platform ? { ...walked, platform: entry.platform } : walked;
+    const known = snap && (await import('./geometry.mjs')).knownOf(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), Object.fromEntries(req('../snapshot/store.cjs').readSpecs(where.paths.components, { compact: true }).map((x) => [x.folder, x.spec])), (walk.match(/const VERSION = '([^']+)'/) || [])[1]);
+    const walked = compact(walkedAs(comp, known)), spec = entry.platform ? { ...walked, platform: entry.platform } : walked;
     const base = JSON.parse(fs.readFileSync(baseFile, 'utf8'));
-    const now = derive(spec, [...Object.values(index).map((x) => x.name), comp.name], { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(at).mains });
+    const now = derive(spec, [...Object.values(index).map((x) => x.name), comp.name], contractRouter.deriveOptionsFor(where.paths.components)(at));
     if (process.env.DEBUG) console.error('live', JSON.stringify(now));
     const sorted = (x) => (Array.isArray(x) ? x.map(sorted) : x && typeof x === 'object' ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, sorted(x[k])])) : x);
     if (JSON.stringify(sorted(now)) !== JSON.stringify(sorted(base))) {
@@ -2112,7 +2113,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       const folder = at;
       const read = (f) => { try { return JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, f), 'utf8')); } catch { return null; } };
       const stored = folder && read('figma.json'), kept = folder && read('contract.json');
-      const older = stored && kept && JSON.stringify(sorted(derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(at).mains }))) !== JSON.stringify(sorted(kept));
+      const older = stored && kept && JSON.stringify(sorted(derive(stored, Object.values(index).map((x) => x.name), contractRouter.deriveOptionsFor(where.paths.components)(at)))) !== JSON.stringify(sorted(kept));
       console.error(older ? `refused: ${comp.name}'s snapshot is older than the toolkit's contracts, so it cannot be told whether the library changed; take a snapshot, then open it again and make the change; nothing was changed` : `refused: ${comp.name} has changed in the library since this draft was made; nothing was changed`);
       process.exit(1);
     }
@@ -2144,7 +2145,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     // only for the library's own contract: another (a report from code) names its parts its own way
     if (!stored || !own || JSON.stringify(own) !== JSON.stringify(c)) return null;
     const found = new Map();
-    try { req('./derive.cjs').derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(folder).mains, found }); } catch { return null; }
+    try { req('./derive.cjs').derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptionsFor(where.paths.components)(folder), found }); } catch { return null; }
     // by the variant's name as the plan gives it (Breakpoint=md, State=Initial)
     return Object.fromEntries([...found].map(([when, ids]) => [Object.entries(JSON.parse(when)).map(([k, v]) => `${k}=${v}`).sort().join(', '), ids]));
   })();

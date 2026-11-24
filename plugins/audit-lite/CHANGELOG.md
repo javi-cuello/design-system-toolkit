@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.9] - 2026-11-24
+### Changed
+- **Carries the snapshot plugin's walk at 0.87.1**: a text style's Auto line height, never measured in the facts mode, takes its family's metric from text already drawn in that family, not from a one-font table.
+
 ## [0.14.8] - 2026-11-23
 ### Changed
 - The bundled settings pair a `Role` or `Hierarchy` axis with code's `appearance` before `variant` (standards/audit-settings.json `codeProps.sameJob`).

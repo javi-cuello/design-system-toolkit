@@ -7,7 +7,8 @@
  *
  *   node tools/component-contract/looks.mjs --project <label> [components…] [--out <dir>]
  *
- * Prints, per component, the share of pixels that differ in its worst variant beside the rows its reading holds, and
+ * Prints, per component, the share of the pixels that show that differ (by ΔE) in its worst variant, and the library's
+ * variants the drawing lacks, beside the rows its reading holds, and
  * names any visibly different with none (a gap in the measure); writes each differing variant's
  * library, drawn and difference images to --out (default: the project's round-trip folder, looks/). The library's
  * component is its published one: a change not yet published shows as a difference.
@@ -18,6 +19,7 @@ import zlib from 'node:zlib';
 import { createRequire } from 'node:module';
 
 const req = createRequire(import.meta.url);
+const { pairVariants } = req('../snapshot/spec.cjs');
 
 /* A PNG as Figma exports it (8-bit, RGB or RGBA, not interlaced) to its RGBA pixels. */
 export function decodePng(buf) {
@@ -53,24 +55,43 @@ export function encodePng({ w, h, px }) {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
-/* Two images compared over the larger of their sizes (a pixel only one has differs): the share that differs by more
-   than `tolerance` in any channel (anti-aliasing passes), and an image of where (red over the faded library image). */
-export function compare(a, b, tolerance = 40, { within = false } = {}) {
+/* sRGB (0–255) to CIELAB under D65, for a colour distance an eye reads: equal steps of a channel are not equal steps seen. */
+const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+const lab = ([r, g, b]) => {
+  const [R, G, B] = [r, g, b].map(lin);
+  const f = (t) => (t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116);
+  const x = f((0.4124 * R + 0.3576 * G + 0.1805 * B) / 0.95047), y = f(0.2126 * R + 0.7152 * G + 0.0722 * B), z = f((0.0193 * R + 0.1192 * G + 0.9505 * B) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+};
+/* ΔE*ab (CIE76) between two sRGB colours: 0 the same, 100 black from white. */
+export function deltaE(p, q) { const a = lab(p), b = lab(q); return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]); }
+/* ΔE*ab ≈ 2.3 is a just noticeable difference (Sharma, Digital Color Imaging Handbook, 2003): a pixel apart by more is
+   seen apart. A per-channel tolerance of 40/255 passed a one-step grey token change on text (35 a channel). */
+export const JND = 2.3;
+/* A pixel shows where its alpha passes this: below, on both sides, it is background (a shadow's faint tail one export
+   keeps and the other trims), and neither counted nor compared. */
+const SHOWS = 40;
+
+/* Two images compared over the larger of their sizes (a pixel only one has differs), over the pixels that show on
+   either side, the transparent background left out (a text's pixels are few: a share of the whole image hid a change of
+   its colour): the share that differs by more than `threshold` ΔE as it shows over white or over black (its alpha
+   applied, so a white pixel differs from none), and an image of where (red over the faded library image). */
+export function compare(a, b, { within = false, threshold = JND } = {}) {
   // (`within`: only over the first image's area, where it was cut by a frame around it and shows less than there is)
   const w = within ? a.w : Math.max(a.w, b.w), h = within ? a.h : Math.max(a.h, b.h), px = Buffer.alloc(w * h * 4);
-  let off = 0;
-  // (past an image's edge is nothing: a shadow's faint tail one export keeps and the other trims is no difference, an
-  // area only one draws is)
+  let off = 0, shown = 0;
   const NONE = [0, 0, 0, 0];
   const at = (img, x, y) => (x < img.w && y < img.h ? img.px.subarray((y * img.w + x) * 4, (y * img.w + x) * 4 + 4) : NONE);
+  const over = (p, bg) => [0, 1, 2].map((k) => (p[k] * p[3] + bg * (255 - p[3])) / 255);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const p = at(a, x, y), q = at(b, x, y), o = (y * w + x) * 4;
-    // (by colour as it shows, its alpha applied: two pixels nothing shows of are the same whatever their colour)
-    const differs = Math.abs(p[3] - q[3]) > tolerance || [0, 1, 2].some((k) => Math.abs((p[k] * p[3] - q[k] * q[3]) / 255) > tolerance);
+    const shows = p[3] > SHOWS || q[3] > SHOWS;
+    if (shows) shown++;
+    const differs = shows && Math.max(deltaE(over(p, 255), over(q, 255)), deltaE(over(p, 0), over(q, 0))) > threshold;
     if (differs) { off++; px[o] = 230; px[o + 1] = 30; px[o + 2] = 60; px[o + 3] = 255; }
     else { const g = 255 - Math.round((255 - (p[0] + p[1] + p[2]) / 3) * (p[3] / 255) * 0.3); px[o] = px[o + 1] = px[o + 2] = g; px[o + 3] = 255; }
   }
-  return { share: off / (w * h), sizes: [[a.w, a.h], [b.w, b.h]], diff: { w, h, px } };
+  return { share: shown ? off / shown : 0, sizes: [[a.w, a.h], [b.w, b.h]], diff: { w, h, px } };
 }
 
 /* Each variant exported at 1×: the drawn set's in the scratch file, as an instance, and the library's by the same names, as an
@@ -99,7 +120,6 @@ if (!lib) return { error: 'the library is not open to the bridge, and its compon
 const out = {};
 for (const v of lib.type === 'COMPONENT_SET' ? lib.children : [lib]) { const i = v.createInstance(); i.x = -100000; try { out[v.name] = figma.base64Encode(await i.exportAsync(${PNG})); } finally { i.remove(); } }
 return { variants: out };`;
-const norm = (s) => String(s).split(',').map((x) => x.trim()).sort().join(', ');
 
 async function main() {
   const args = process.argv.slice(2);
@@ -107,6 +127,7 @@ async function main() {
   const label = opt('--project'), outOpt = opt('--out');
   if (!label) { console.error('usage: looks.mjs --project <label> [components…] [--out <dir>]'); process.exit(2); }
   const where = req('../snapshot/projects.cjs').layout(null, label);
+  if (where.error) { console.error(where.error); process.exit(2); }
   const scratch = (fs.readFileSync(where.doc, 'utf8').match(/"draw":\s*\{[^}]*"scratch":\s*"([A-Za-z0-9]+)"/) || [])[1];
   if (!scratch) { console.error(`${label}'s library settings name no scratch file (draw.scratch)`); process.exit(2); }
   // the drawing's page as to-figma chose it: apart from the library's own page where the scratch file is the library
@@ -131,16 +152,20 @@ async function main() {
     let lib = spec.key ? await run(scratch, IMPORTED(spec.key)) : null;
     if ((!lib || lib.error) && where.figmaKey && spec.id) lib = await run(where.figmaKey, FROM_LIBRARY(spec.id));
     if (!lib || lib.error) { rows.push([folder, null, (lib && lib.error) || 'no answer']); continue; }
-    const libBy = Object.fromEntries(Object.entries(lib.variants).map(([n, png]) => [norm(n), png]));
-    const one = Object.keys(lib.variants).length === 1 && Object.keys(drawn.variants).length === 1 ? Object.values(lib.variants)[0] : null;
+    // paired by their axes, as geometry pairs them (spec.cjs pairVariants): a library variant the drawing lacks is a
+    // difference as visible as one drawn wrong
+    const { pairs, extra } = pairVariants(Object.keys(lib.variants), Object.keys(drawn.variants), (n) => n);
+    const missing = pairs.filter(([, d]) => d == null).map(([l]) => l);
     // a size that differs over nothing visible (a frame with no fill drawn larger) shows no pixel apart: said apart
     let worst = 0, at = '';
     const sized = [];
-    for (const [name, png] of Object.entries(drawn.variants)) {
-      const v = { name, drawn: png, library: libBy[norm(name)] || one };
-      if (!v.library) { worst = 1; at = `${name}: no library variant of that name`; continue; }
+    for (const name of extra) { worst = 1; at ||= `${name}: no library variant of that name`; }
+    if (missing.length) { worst = 1; at ||= `${missing[0]}: not drawn`; }
+    for (const [libName, name] of pairs) {
+      if (name == null) continue;
+      const v = { name, drawn: drawn.variants[name], library: lib.variants[libName] };
       // a library set that clips cuts what overflows its variants (an open menu): compared over what it shows
-      const c = compare(decodePng(Buffer.from(v.library, 'base64')), decodePng(Buffer.from(v.drawn, 'base64')), 40, { within: !!lib.cut });
+      const c = compare(decodePng(Buffer.from(v.library, 'base64')), decodePng(Buffer.from(v.drawn, 'base64')), { within: !!lib.cut });
       const slug = `${folder}--${v.name.replace(/[^A-Za-z0-9=]+/g, '-')}`.slice(0, 120);
       if (c.share > 0.01) { fs.writeFileSync(path.join(out, `${slug}.library.png`), Buffer.from(v.library, 'base64')); fs.writeFileSync(path.join(out, `${slug}.drawn.png`), Buffer.from(v.drawn, 'base64')); fs.writeFileSync(path.join(out, `${slug}.diff.png`), encodePng(c.diff)); }
       if (!lib.cut && c.sizes[0].some((x, i) => Math.abs(x - c.sizes[1][i]) > 2)) sized.push(`${v.name} (library ${c.sizes[0].join('×')}, drawn ${c.sizes[1].join('×')})`);
@@ -149,7 +174,7 @@ async function main() {
     // beside the measure's rows for it (eval.mjs --draw's reading, the contract's and the geometry's), which this checks
     let measured = null; try { const r = JSON.parse(fs.readFileSync(path.join(where.projectDir, 'round-trip', `${folder}.roundtrip.json`), 'utf8')); if (r.geometry) measured = r.rows.length + r.geometry.length; } catch { /* not drawn and read back */ }
     rows.push([folder, worst, at, measured]);
-    console.log(`${folder}: ${(worst * 100).toFixed(1)}%${at ? ` — worst ${at}` : ''}${sized.length ? `; sized apart: ${sized.length}, e.g. ${sized[0]}` : ''}; ${measured == null ? 'no reading with geometry' : `${measured} row(s)`}`);
+    console.log(`${folder}: ${(worst * 100).toFixed(1)}%${at ? ` — worst ${at}` : ''}${missing.length ? `; library variants not drawn: ${missing.length}` : ''}${sized.length ? `; sized apart: ${sized.length}, e.g. ${sized[0]}` : ''}; ${measured == null ? 'no reading with geometry' : `${measured} row(s)`}`);
   }
   const bad = rows.filter(([, s]) => s == null || s > 0.01);
   console.log(`${label} looks: ${rows.length - bad.length} of ${rows.length} within 1%; images of the rest in ${path.relative(process.cwd(), out)}`);

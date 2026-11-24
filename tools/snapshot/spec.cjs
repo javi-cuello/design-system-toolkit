@@ -166,4 +166,23 @@ function boxOnly(paths, w, h, tol = 0.01) {
   return false;
 }
 
-module.exports = { compact, resolve, slug, sameShape, layerPaths, repeatOf, boxOnly };
+/*
+ * One way to pair a drawing's variants with the library's, for every reader that holds one to the other (the round
+ * trip's geometry, looks): by their sorted axis values, `Size=md, State=Rest` whichever order each side names its axes
+ * in. A segment with no `=` is no axis: a single component's own name leads its flipped variants' (`_Badge, Dot=false`),
+ * and the drawing names them after the contract's. Two matchers, one by axes and one by every segment, paired the same
+ * drawing two ways (review of 2026-11-24).
+ */
+const variantKey = (name) => String(name).split(',').map((s) => s.trim()).filter((s) => s.includes('=')).sort().join(', ');
+
+/** `{ pairs: [[library, drawn | null]…] in the library's order, extra: [drawn…] the library has none of }`; a single
+ *  component, or a set of one, is its one variant whatever each side names it. `nameOf` reads a variant's name. */
+function pairVariants(library, drawn, nameOf = (v) => v.name) {
+  if (library.length === 1 && drawn.length === 1) return { pairs: [[library[0], drawn[0]]], extra: [] };
+  const byKey = new Map(drawn.map((v) => [variantKey(nameOf(v)), v]));
+  const met = new Set();
+  const pairs = library.map((a) => { const b = byKey.get(variantKey(nameOf(a))) || null; if (b) met.add(b); return [a, b]; });
+  return { pairs, extra: drawn.filter((b) => !met.has(b)) };
+}
+
+module.exports = { compact, resolve, slug, sameShape, layerPaths, repeatOf, boxOnly, variantKey, pairVariants };

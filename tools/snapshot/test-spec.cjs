@@ -111,3 +111,16 @@ test('the store reads a stored spec resolved, as stored on request, and says whi
     assert.throws(() => readSpecs(dir), /broken\/figma\.json does not parse/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('a drawing\'s variants pair with the library\'s by their axes, one matcher for every reader', () => {
+  const { pairVariants, variantKey } = require('./spec.cjs');
+  const v = (name) => ({ name });
+  assert.strictEqual(variantKey('State=Rest, Size=md'), variantKey('Size=md, State=Rest'));
+  // (a single component's own name leads its flipped variants', `_Badge, Dot=false`: only the axes count)
+  assert.strictEqual(variantKey('_Badge, Dot=false'), variantKey('Badge, Dot=false'));
+  const r = pairVariants([v('State=Rest, Size=md'), v('Size=lg, State=Rest'), v('Size=sm, State=Rest')], [v('Size=md, State=Rest'), v('Size=lg, State=Rest'), v('Size=xl, State=Rest')]);
+  assert.deepStrictEqual(r.pairs.map(([a, b]) => [a.name, b && b.name]), [['State=Rest, Size=md', 'Size=md, State=Rest'], ['Size=lg, State=Rest', 'Size=lg, State=Rest'], ['Size=sm, State=Rest', null]]);
+  assert.deepStrictEqual(r.extra.map((x) => x.name), ['Size=xl, State=Rest']);
+  // a single component, or a set of one, is its one variant whatever each side names it
+  assert.deepStrictEqual(pairVariants([v('Tag')], [v('Size=md')]).pairs.map(([a, b]) => [a.name, b.name]), [['Tag', 'Size=md']]);
+});

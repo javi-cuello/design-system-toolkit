@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const src = readFileSync(fileURLToPath(new URL("../code.js", import.meta.url)), "utf8");
 const figma = { variables: { getVariableByIdAsync: async () => null }, getStyleByIdAsync: async () => null };
 const ctx = vm.createContext({ figma, console, setTimeout, clearTimeout });
-const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, unescaped, VERSION } = vm.runInContext(src + "\n;({ walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, unescaped, VERSION })", ctx);
+const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, unescaped, VERSION } = vm.runInContext(src + "\n;({ walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, unescaped, VERSION })", ctx);
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log("ok", name); };
@@ -218,6 +218,12 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
   ok("…and none where nothing is drawn in it", drawnIn({ id: "S:2" }) === null);
   figma.root = { children: [page("Button", [text("S:3", "one" + String.fromCharCode(0x2028) + "two", "WIDTH_AND_HEIGHT", 40)])] };
   ok("…nor where its only text breaks its line with a line separator", drawnIn({ id: "S:3" }) === null);
+  // 0.87.1: where a style's line can be neither measured nor found drawn, its family's Auto line height is read from text
+  // already drawn in that family, the largest; no font's metrics are named in code (review 2026-11-24)
+  const inFamily = (family, size, h, x = {}) => ({ characters: "Ab", textAutoResize: "WIDTH_AND_HEIGHT", fontName: { family, style: "Regular" }, fontSize: size, lineHeight: { unit: "AUTO" }, height: h, ...x });
+  figma.root = { children: [page("Snapshot (temporary)", [inFamily("Sans", 100, 999)]), page("Card", [inFamily("Sans", 12, 15), inFamily("Sans", 48, 58), inFamily("Sans", 64, 99, { lineHeight: { unit: "PIXELS", value: 99 } }), inFamily("Serif", 80, 90)])] };
+  ok("a family's Auto line height is read from the largest one-line text drawn in it with an Auto line height", familyMetric("Sans") === 58 / 48);
+  ok("…and none where nothing is drawn in that family", familyMetric("Mono") === null);
   ok("a description the cloud hands back escaped reads as typed", unescaped("west, &lt;- &amp; &quot;back&quot; &#39;x&#39; -&gt;") === "west, <- & \"back\" 'x' ->" && unescaped("a < b") === "a < b");
 }
 // 0.67.0: a duplicated file keeps its original's id, so the key tells them

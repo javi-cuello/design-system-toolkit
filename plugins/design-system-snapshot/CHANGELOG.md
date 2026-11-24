@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.87.1] - 2026-11-24
+### Fixed
+- **An Auto line height that cannot be measured takes its family's metric from the file**: the largest one-line text already drawn in that family with an Auto line height. A table held one family's metric and gave every other 1.2.
+
 ## [0.87.0] - 2026-11-24
 ### Added
 - **Cancel, while a run reads the file.** It stops the run before the next component, icon set, graphic or frame, removes the temporary page and says "Cancelled". Once the snapshot is sending, it can no longer be taken back, so the button goes.
