@@ -1,10 +1,10 @@
 # Design Systems Review
 
-A curated set of editorial articles on how design systems are built. Each piece answers one focused question with a clear thesis, argued from what shipping systems actually do. This is a magazine, not a store.
+Editorial articles on how design systems are built. Each answers one question with a clear thesis, argued from what shipping systems do. A magazine, not a store.
 
 ## What belongs here
 
-- One article per question. Update the article that already asks it rather than writing a second one.
+- One article per question. Update the article that already asks it.
 - The toolkit knowledge base ([`knowledge/`](../knowledge/README.md)) is not repeated here. Narrow an article to a question the knowledge base cannot answer, or add the finding there instead.
 - Before writing, read the articles on the same or a neighbouring question. Link to a section another article owns rather than retelling it.
 - After writing, correct every article the finding changes, and set its `updated` day. Two articles never say a thing two ways.
@@ -13,7 +13,7 @@ A curated set of editorial articles on how design systems are built. Each piece 
 - No scripts, raw results or experiment data. State their numbers in the prose and keep the files in the toolkit or a scratch folder.
 - An article added or edited goes into `index.html` in the same change, with `built` set to the day. Nothing builds the page, and `bin/check` refuses an article missing from it or out of step with it.
 - Each entry carries `researched`, the day the research was done. Use a month or a span (`2026-08/2026-10`) only where no record holds the day. It also carries `updated`, set again on every edit, and `subtopic` in a topic that lists `subtopics`.
-- The page computes the reading time from the text at 238 words a minute (Brysbaert 2019), so no one types it.
+- The page computes reading time at 238 words a minute (Brysbaert 2019); no one types it.
 - An article reads in 20 minutes or less: 4,760 words, not counting figures and comments. `bin/check` refuses a longer article updated after 2026-11-17. Bring a long one under the limit the next time it is worked on.
 - What does not fit becomes a second article on its own question, or Part 1 and Part 2 of one question. Each part stays under 20 minutes and links to the other. Evidence can also go to the knowledge base, with the article linking to it.
 - Retired pieces go to `_archive/<date>/`, never deleted. [REFERENCE.md](REFERENCE.md#retired-articles) notes some.
@@ -30,7 +30,10 @@ Type, colour, surfaces and the scales everything else is built on.
 - [Naming text styles](foundations/naming-text-styles.md)
 - [Naming text styles: tags, defaults and a second platform](foundations/naming-text-styles-part-2.md) (Part 2)
 - [One type scale for an interface and its articles](foundations/one-type-scale-for-ui-and-content.md)
+- [Fitting a type scale to a ratio](foundations/fitting-an-existing-type-scale-to-a-ratio.md)
+- [Naming a phone mode](foundations/naming-a-phone-mode-on-a-type-token.md)
 - [Space between prose elements](foundations/space-between-prose-elements.md)
+- [Spacing with a text style](foundations/spacing-that-travels-with-a-text-style.md)
 - [Type on a phone](foundations/type-on-a-phone.md)
 
 ### Colour and surfaces
