@@ -180,7 +180,13 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     ok('a text the design grows to its words is not held to a vertical alignment where a browser read it; one of its own height is, a hugging reading too, and a drawing in Figma always',
       r(tv({ autoResize: 'height', verticalAlign: 'center' }), tv({ autoResize: 'height' })) === '' && r(tv({ autoResize: 'none', height: 40 }, { 't.verticalAlign': 'end' }), tv({ height: 'hug' })) === 't.verticalAlign'
       && r(tv({ autoResize: 'none', height: 40, verticalAlign: 'center' }), tv({ autoResize: 'none', height: 40 })) === 't.verticalAlign'
-      && r(tv({ autoResize: 'height', verticalAlign: 'center' }), tv({ autoResize: 'height' }), {}) === 't.verticalAlign'); }
+      && r(tv({ autoResize: 'height', verticalAlign: 'center' }), tv({ autoResize: 'height' }), {}) === 't.verticalAlign');
+    ok('a design text at the top is where a reading that says none places it, of its own height or cut; one with no resizing that hugs or states no height grows',
+      r(tv({ autoResize: 'none', height: 40, verticalAlign: 'center' }, { 't.verticalAlign': 'start' }), tv({ autoResize: 'none', height: 40 })) === 't.verticalAlign'
+      && r(tv({ autoResize: 'truncate', height: 40 }, { 't.verticalAlign': 'start' }), tv({ height: 'hug' })) === ''
+      && r(tv({ autoResize: 'none', height: 40 }, { 't.verticalAlign': 'start' }), tv({ height: 'hug' })) === ''
+      && r(tv({ height: 'hug', verticalAlign: 'center' }), tv({ height: 'hug' })) === '' && r(tv({ verticalAlign: 'end' }), tv({})) === ''
+      && r(tv({ autoResize: 'none', height: 40 }, { 't.verticalAlign': 'start' }), tv({ height: 'hug' }), {}) === 't.verticalAlign'); }
   { // a text's own words where the design binds none are a difference from a reading bound to a prop, even where they are
     // that prop's default: Figma's layer there ignores the prop, code's follows it, and a reading at the defaults cannot
     // tell the two apart, so neither side is folded into the other

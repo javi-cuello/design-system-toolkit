@@ -466,10 +466,13 @@ function spread(x) {
    row), and Figma's own drawing always. Per combination, so a variant's alignment too. Tested by test-to-figma.mjs. */
 function unaligned(x, design, layoutUnit) {
   if (!layoutUnit) return x;
+  // (a text with no resizing said grows where it hugs or states no height; one at the top is where a reading that says
+  // none places it, whatever its box)
+  const grows = (d) => /^(width_and_height|height)$/.test(d.autoResize || '') || (!d.autoResize && (d.height == null || d.height === 'hug'));
   const out = { ...x };
   for (const [id, e] of Object.entries(x)) {
     const d = design[id];
-    if (e && d && e.kind === 'text' && d.kind === 'text' && d.verticalAlign && e.verticalAlign !== d.verticalAlign && /^(width_and_height|height)$/.test(d.autoResize || '')) out[id] = { ...e, verticalAlign: d.verticalAlign };
+    if (e && d && e.kind === 'text' && d.kind === 'text' && d.verticalAlign && e.verticalAlign !== d.verticalAlign && (grows(d) || (d.verticalAlign === 'start' && e.verticalAlign == null))) out[id] = { ...e, verticalAlign: d.verticalAlign };
   }
   return out;
 }
