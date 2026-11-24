@@ -37,7 +37,7 @@ node tools/component-contract/looks.mjs --project <label> [components…] --out 
 node tools/component-contract/eval.mjs --project <label> --fields --causes --diff --panel --check
 node tools/component-contract/eval.mjs --project <label> --accept
 node tools/component-contract/eval.mjs --project <label> --make-panel <n>
-node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> --redraw
+node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> --keep-unchanged
 node tools/component-contract/eval.mjs --project <label> --self --twice --changed --jobs 4 --second
 node tools/component-contract/eval.mjs --projects <label,label…> --legs self,second --jobs 4 --log <file>
 node tools/component-contract/eval.mjs --projects <label,label…> --mechanisms --top 25 --near 15

@@ -19,7 +19,7 @@
  * then a row of the translation table (rules.mjs), then the count drops and is accepted.
  *
  *   node tools/component-contract/eval.mjs --project <label> [--fields] [--check | --accept]
- *   node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> [--redraw] [components…]
+ *   node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> [--keep-unchanged] [components…]
  *   node tools/component-contract/eval.mjs --project <label> --self [--twice] [components…]
  *   node tools/component-contract/eval.mjs --project <label> --causes
  *   node tools/component-contract/eval.mjs --project <label> --diff [--accept]
@@ -53,7 +53,8 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { contracts, hashOf } from './official.mjs';
-import { roundTrip } from './to-figma.mjs';
+import { roundTrip, drawSettings } from './to-figma.mjs';
+import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords } from './to-markup.mjs';
 import { sharesNeverWritten } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
@@ -260,7 +261,7 @@ const drawnMoved = (was, today) => {
   if (!today) return null;
   if (!was) return 'taken before its spec, walk and code were recorded';
   if (was.store === undefined && today.store !== undefined) return 'taken before the stored snapshot was recorded';
-  const said = [['spec', 'its stored figma.json'], ['store', 'the stored snapshot'], ['walk', 'the walk'], ['code', 'the drawing\'s code']].filter(([k]) => was[k] !== today[k]).map(([, w]) => w);
+  const said = [['spec', 'its stored figma.json'], ['store', 'the stored snapshot'], ['walk', 'the walk'], ['code', 'the drawing\'s code'], ['settings', 'the project\'s drawing settings']].filter(([k]) => was[k] !== today[k]).map(([, w]) => w);
   return said.length ? `${said.join(', ')} changed since` : null;
 };
 
@@ -428,11 +429,12 @@ const toFigma = (args) => { try { return { out: execFileSync('node', [path.join(
 
 /* contract → to-figma → the scratch file → the snapshot's walk and derive → contract, per component: to-figma's own
    --verify reads it back and writes <component>.roundtrip.json beside the contract it was given. The library file's keys
-   are looked up once for the run (to-figma --lookup); each step's time is logged and noted (taken.json `times`). A
-   component whose contract and inputs (figmaInputs) are its last drawing's keeps that reading, unless it is stale, lacks
-   geometry, or places a component drawn again in this run; `redraw` draws every one. `run` is to-figma (a fake in the
-   tests). */
-export function draw(where, label, into, only, { retry = true, redraw = false, run = toFigma, looked = null } = {}) {
+   are looked up once for the run (to-figma --lookup); each step's time is logged and noted (taken.json `times`). With
+   `keepUnchanged`, a component whose contract, inputs (figmaInputs) and file drawn into are its last drawing's keeps
+   that reading, unless it is stale, lacks geometry, or places (at any depth) a component drawn again in this run. Opt-in:
+   the library file itself is not keyed (the plugin API gives no version of it), so a change made there since is seen
+   only by drawing again. `run` is to-figma (a fake in the tests). */
+export function draw(where, label, into, only, { retry = true, keepUnchanged = false, run = toFigma, looked = null, settings = drawSettings(libraryOf(label)), runLookup = null } = {}) {
   const dir = path.join(where.projectDir, 'round-trip');
   fs.mkdirSync(dir, { recursive: true });
   let fails = 0;
@@ -446,19 +448,23 @@ export function draw(where, label, into, only, { retry = true, redraw = false, r
   const all = contracts(where);
   const order = [...all].sort((a, b) => unpublished(b.contract) - unpublished(a.contract));
   // what each drawing is drawn from, taken as the run starts: a reading taken from other ones reads stale (measure)
-  const from = figmaInputs(where, only);
+  const from = figmaInputs(where, only, settings);
   const taken = readTaken(where.projectDir).figma || {};
   const lib = Object.fromEntries(all.filter((x) => x.contract).map(({ folder, contract }) => [contract.component, { ...contract, folder }]));
   const reading = (folder) => path.join(dir, `${folder}.roundtrip.json`);
-  const drawnNow = new Set(), todo = [];
-  for (const { folder, contract } of order) {
-    if (only.length && !only.includes(folder)) continue;
+  const asked = order.filter(({ folder }) => !only.length || only.includes(folder));
+  // which are kept, decided for all before any is drawn: one whose own drawing is unchanged, until a component it places
+  // is drawn again, whichever comes first in the order (to a fixed point)
+  const kept = new Set(!keepUnchanged ? [] : asked.filter(({ folder, contract }) => {
     const t = taken[folder];
     let back = null; try { back = JSON.parse(fs.readFileSync(reading(folder), 'utf8')); } catch { /* none */ }
-    const keep = !redraw && t && !t.kept && t.hash === hashOf(contract) && t.drawnFrom && !drawnMoved(t.drawnFrom, from[folder]) && back && back.geometry
-      && ![...closureOf(lib, [folder])].some((f) => f !== folder && drawnNow.has(f));
-    if (keep) { console.log(`${folder}: unchanged since ${t.at || 'its last drawing'}`); continue; }
-    drawnNow.add(folder);
+    return t && !t.kept && t.hash === hashOf(contract) && t.into === into && t.drawnFrom && !drawnMoved(t.drawnFrom, from[folder]) && back && back.geometry;
+  }).map(({ folder }) => folder));
+  const drawn = (f) => asked.some((x) => x.folder === f) && !kept.has(f);
+  for (let moved = true; moved;) { moved = false; for (const f of [...kept]) if ([...closureOf(lib, [f])].some((g) => g !== f && drawn(g))) { kept.delete(f); moved = true; } }
+  const todo = [];
+  for (const { folder, contract } of asked) {
+    if (kept.has(folder)) { console.log(`${folder}: unchanged since ${taken[folder].at || 'its last drawing'}`); continue; }
     todo.push({ folder, contract, file: path.join(dir, `${folder}.json`) });
   }
   for (const { contract, file } of todo) fs.writeFileSync(file, JSON.stringify(contract, null, 2) + '\n');
@@ -467,7 +473,7 @@ export function draw(where, label, into, only, { retry = true, redraw = false, r
   if (!looked && todo.length) {
     const file = path.join(dir, `.looked-${process.pid}.json`), l = run([...todo.map((x) => x.file), '--lookup', file, '--project', label]);
     const said = l.out.trim().split('\n').pop();
-    if (l.ok && fs.existsSync(file)) { looked = lookedHere = file; console.log(said); } else console.log(`keys not looked up once for the run${said ? ` (${said})` : ''}: each drawing looks up its own`);
+    if (l.ok && fs.existsSync(file)) { looked = lookedHere = file; console.log(said); runLookup = +((said.match(/ in ([\d.]+)s$/) || [])[1]) || null; } else console.log(`keys not looked up once for the run${said ? ` (${said})` : ''}: each drawing looks up its own`);
   }
   try {
     for (const { folder, contract, file } of todo) {
@@ -505,11 +511,12 @@ export function draw(where, label, into, only, { retry = true, redraw = false, r
       fails = 0;
       const dt = (drew || '').match(/ in ([\d.]+)s(?: \([^)]*\))?; drawn in ([\d.]+)s/), vt = v.out.match(/timed: readback ([\d.]+)s, geometry ([\d.]+)s/);
       const times = { ...(dt && { lookup: +dt[1], draw: +dt[2] }), ...(vt && { readback: +vt[1], geometry: +vt[2] }) };
-      noteTaken(where.projectDir, 'figma', folder, contract, false, { drawnFrom: from[folder], at: new Date().toISOString(), times });
       console.log(line);
       console.log(`${folder}: ${Object.entries(times).map(([k, x]) => `${k} ${x}s`).join(', ') || 'no times said'}`);
+      // (and the run's one lookup, shared by every drawing in it)
+      noteTaken(where.projectDir, 'figma', folder, contract, false, { drawnFrom: from[folder], into, at: new Date().toISOString(), times: { ...times, ...(runLookup != null && { runLookup }) } });
     }
-    if (retry && unanswered.length) draw(where, label, into, unanswered, { retry: false, redraw: true, run, looked });
+    if (retry && unanswered.length) draw(where, label, into, unanswered, { retry: false, run, looked, settings, runLookup });
   } finally {
     for (const { file } of todo) fs.rmSync(file, { force: true });
     if (lookedHere) fs.rmSync(lookedHere, { force: true });
@@ -520,7 +527,7 @@ export function draw(where, label, into, only, { retry = true, redraw = false, r
 /* What each Figma reading is drawn from, per component: its stored figma.json (the geometry rows' side, and the
    arrangement to-figma draws to), the whole stored snapshot (`store`), the snapshot walk's VERSION (the reading's reader) and the drawing's code (to-figma.mjs
    and geometry.mjs, with what they import). { folder: { spec, store, walk, code } }, each a hash or the version. */
-export function figmaInputs(where, only = []) {
+export function figmaInputs(where, only = [], settings = drawSettings()) {
   const sha = (x) => createHash('sha1').update(x).digest('hex');
   const tools = path.join(HERE, '..'), h = createHash('sha1');
   for (const f of importClosure([path.join(HERE, 'to-figma.mjs'), path.join(HERE, 'geometry.mjs')])) h.update(path.relative(tools, f)).update('\0').update(fs.readFileSync(f)).update('\0');
@@ -535,7 +542,9 @@ export function figmaInputs(where, only = []) {
   let all = []; try { all = fs.readdirSync(where.paths.components).sort(); } catch { /* no store */ }
   for (const f of all) add(f, path.join(where.paths.components, f, 'figma.json'));
   const store = s.digest('hex');
-  return Object.fromEntries(folders.filter((f) => !only.length || only.includes(f)).map((f) => [f, { spec: spec(f), store, walk, code }]));
+  // (and the project's settings the drawing and its read-back take: to-figma's drawSettings)
+  const set = sha(JSON.stringify(settings));
+  return Object.fromEntries(folders.filter((f) => !only.length || only.includes(f)).map((f) => [f, { spec: spec(f), store, walk, code, settings: set }]));
 }
 
 /* The reader's own code: every file a self reading runs through (from-code.mjs and what it imports), but to-markup's and
@@ -598,7 +607,7 @@ const secondKey = (inputs, first) => createHash('sha1').update(`${inputs}\0${fir
    checked by it even where the self leg's inputs cannot be computed (said, then left out). */
 export async function todayOf(label, where, only = [], log = console.log) {
   const today = { chrome: chromeMajor() };
-  try { today.figma = figmaInputs(where, only); } catch (e) { log(`warning: the Figma leg's inputs not checked (${String(e.message).split('\n')[0]}): a reading drawn from other ones is not said stale`); }
+  try { today.figma = figmaInputs(where, only, drawSettings(libraryOf(label))); } catch (e) { log(`warning: the Figma leg's inputs not checked (${String(e.message).split('\n')[0]}): a reading drawn from other ones is not said stale`); }
   try { Object.assign(today, { inputs: await selfInputs(label, where, only), reader: readerCode() }); } catch (e) { log(`warning: the self leg's inputs not checked (${String(e.message).split('\n')[0]}): a reading taken from other inputs is not said stale`); }
   return today;
 }
@@ -790,12 +799,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const say = (l) => (fd == null ? console.log(l) : fs.writeSync(fd, l + '\n'));
     process.exit(await runAll(o.projects, legs, { run: stepRunner(fd), say, jobs }));
   }
-  const label = opt('--project'), into = opt('--draw'), self = flag('--self'), redraw = flag('--redraw');
+  const label = opt('--project'), into = opt('--draw'), self = flag('--self'), keepUnchanged = flag('--keep-unchanged');
   const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), showDiff = flag('--diff'), panel = flag('--panel'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');
   const makeAt = argv.indexOf('--make-panel'), makePanel = makeAt >= 0 ? argv.splice(makeAt, 2)[1] : null;
   if (makeAt >= 0 && !/^[1-9]\d*$/.test(makePanel || '')) { console.error('--make-panel takes the panel\'s size, a whole number (30)'); process.exit(2); }
   const opts = { changed: flag('--changed'), jobs: Math.max(1, +(opt('--jobs') || 1)) };
-  if (!label) { console.error('usage: eval.mjs --project <label> [--panel] [--fields] [--causes] [--diff] [--check | --accept]\n       eval.mjs --project <label> --make-panel <n>\n       eval.mjs --project <label> --draw <scratch fileKey> [--redraw] [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]\n       eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]\n       eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top N] [--near N]'); process.exit(2); }
+  if (!label) { console.error('usage: eval.mjs --project <label> [--panel] [--fields] [--causes] [--diff] [--check | --accept]\n       eval.mjs --project <label> --make-panel <n>\n       eval.mjs --project <label> --draw <scratch fileKey> [--keep-unchanged] [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]\n       eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]\n       eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top N] [--near N]'); process.exit(2); }
   const where = req('../snapshot/projects.cjs').layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
   if (makePanel) {
@@ -840,7 +849,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     if (bad) { console.log(`the bridge is not fit to draw (${bad.check}): ${bad.said}`); process.exit(1); }
     for (const h of health.filter((x) => x.skipped)) console.log(`the bridge's ${h.check} check had nothing to check: ${h.said}`);
   }
-  if (into) { draw(where, label, into, argv, { redraw }); process.exit(); }
+  if (into) { draw(where, label, into, argv, { keepUnchanged }); process.exit(); }
   if (self && second) { console.error('--self and --second are two runs: the first, then the second'); process.exit(2); }
   if (self && twice) { process.exit(await readTwice(where, label, argv, { jobs: opts.jobs })); }
   if (self) { await readSelf(where, label, argv, false, opts); process.exit(); }

@@ -962,7 +962,7 @@ delete globalThis.figma;
     { type: 'TEXT', textStyleId: 's2', fillStyleId: 'p2', getStyledTextSegments: () => [] },
     { type: 'INSTANCE', mc: main('Icon/x', 'kx2') }, { type: 'INSTANCE', mc: main('Icon/y', 'ky') },
     { type: 'COMPONENT_SET', name: 'Icons/sun', key: 'kSun' }, { type: 'COMPONENT_SET', name: 'Icon container', key: 'kCont' },
-    { type: 'TEXT', textStyleId: 's3', fillStyleId: '', getStyledTextSegments: () => [] }, { type: 'COMPONENT_SET', name: 'Button', key: 'kButton2' },
+    { type: 'TEXT', textStyleId: 's3', fillStyleId: '', getStyledTextSegments: () => [] }, { type: 'COMPONENT_SET', name: 'Button', key: 'kButton2' }, { type: 'COMPONENT_SET', name: 'Late', key: 'kLate' },
   ].map((x) => ({ ...x, getMainComponentAsync: async () => x.mc || null }));
   const saved = globalThis.figma;
   globalThis.figma = { loadAllPagesAsync: async () => {}, getStyleByIdAsync: async (id) => styles[id] || null, getLocalPaintStylesAsync: async () => [{ name: 'Brand/blue', key: 'kBlue' }],
@@ -971,17 +971,20 @@ delete globalThis.figma;
   try {
     for (const container of ['Icon container', null]) {
       const wants = [
-        { styles: ['Body'], fillStyles: ['Brand/red'], icons: ['Icon/x'], container, vars: ['Colour/a'], components: ['Button'], swaps: ['sun'] },
+        { styles: ['Body'], fillStyles: ['Brand/red'], icons: ['Icon/x'], container, vars: ['Colour/a'], components: ['Button', 'Late'], swaps: ['sun'] },
         { styles: ['Label', 'Body'], fillStyles: ['Brand/blue', 'Brand/red'], icons: ['Icon/y', 'Icon/x'], container, vars: ['Colour/b'], components: [], swaps: [] },
         { styles: [], fillStyles: [], icons: [], container, vars: [], components: [], swaps: [] },
         { styles: ['Missing'], fillStyles: ['Gone'], icons: ['Icon/z'], container, vars: ['Colour/c'], components: ['Nope'], swaps: ['moon'] },
       ];
       const once = await LOOKUP(lookupWants(wants));
       for (const [i, w] of wants.entries()) {
-        const own = await LOOKUP(w), shared = keptFor(once, w);
+        const { at: _, ...own } = await LOOKUP(w), shared = keptFor(once, w);
         ok(`the run's one lookup gives component ${i} exactly its own lookup's keys (container ${container ? 'named' : 'none'})`, isDeepStrictEqual(shared, own), { own, shared });
         ok(`…so its plugin code, which carries the keys whole, is the same (component ${i})`, pluginCode(contract, own) === pluginCode(contract, shared));
       }
+      // component 0's own walk stops at the icon container (its style and icon found by then) where one is named, so a
+      // set after it, which the run's walk reaches for another component's sake, is not handed to it
+      ok(`a set past a component's own stopping point is not handed over (container ${container ? 'named' : 'none'})`, once.sets.Late === 'kLate' && (container ? !('Late' in keptFor(once, wants[0]).sets) : keptFor(once, wants[0]).sets.Late === 'kLate'));
       ok('the one lookup finds each name at its first layer, as each component\'s own did', once.styles.Body === 'kBody1' && once.icons['Icon/x'] === 'kx1' && once.fillStyles['Brand/red'] === 'kRed1' && once.sets.Button === 'kButton1' && once.vars['Colour/a'] === 'kva');
       ok('a component wanting what the run did not look up is not given the run\'s keys', !covers(lookupWants(wants.slice(0, 2)), wants[3]) && covers(lookupWants(wants), wants[1]));
     }

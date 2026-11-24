@@ -1530,25 +1530,40 @@ export const LOOKUP = async (want) => {
   }
   // a swap's value no instance in the snapshot carries the key of (a toggle's sun, set by its prop alone): its set
   if (want.swaps && want.swaps.length) for (const n of figma.root.findAllWithCriteria({ types: ['COMPONENT_SET'] })) if (want.swaps.some((t) => n.name === t || n.name.endsWith('/' + t)) && !swaps[n.name]) swaps[n.name] = n.key;
+  // (where in this walk each was found, so a run's one walk hands a component only what its own walk, which stops
+  // sooner, would have reached: keptFor)
+  const at = { styles: {}, icons: {}, sets: {} };
+  let i = -1;
   for (const n of figma.root.findAllWithCriteria({ types: ['TEXT', 'INSTANCE', 'COMPONENT_SET'] })) {
-    if (n.type === 'COMPONENT_SET' && n.name === want.container && !container) container = n.key;
-    if ((n.type === 'COMPONENT_SET') && (want.components || []).includes(n.name) && !sets[n.name]) sets[n.name] = n.key;
-    if (n.type === 'TEXT' && typeof n.textStyleId === 'string' && n.textStyleId) { const st = await figma.getStyleByIdAsync(n.textStyleId); if (st && want.styles.includes(st.name) && !styles[st.name]) styles[st.name] = st.key; }
-    if (n.type === 'INSTANCE' && want.icons.length) { const mc = await n.getMainComponentAsync(); if (mc && want.icons.includes(mc.name) && !icons[mc.name]) icons[mc.name] = mc.key; }
+    i++;
+    if (n.type === 'COMPONENT_SET' && n.name === want.container && !container) { container = n.key; at.container = i; }
+    if ((n.type === 'COMPONENT_SET') && (want.components || []).includes(n.name) && !sets[n.name]) { sets[n.name] = n.key; at.sets[n.name] = i; }
+    if (n.type === 'TEXT' && typeof n.textStyleId === 'string' && n.textStyleId) { const st = await figma.getStyleByIdAsync(n.textStyleId); if (st && want.styles.includes(st.name) && !styles[st.name]) { styles[st.name] = st.key; at.styles[st.name] = i; } }
+    if (n.type === 'INSTANCE' && want.icons.length) { const mc = await n.getMainComponentAsync(); if (mc && want.icons.includes(mc.name) && !icons[mc.name]) { icons[mc.name] = mc.key; at.icons[mc.name] = i; } }
     if (container && Object.keys(styles).length === want.styles.length && Object.keys(icons).length === want.icons.length) break;
   }
-  return { styles, icons, iconContainer: container, vars, sets, swaps, fillStyles };
+  return { styles, icons, iconContainer: container, vars, sets, swaps, fillStyles, at };
 };
 
 const LISTS = ['styles', 'fillStyles', 'icons', 'vars', 'components', 'swaps'];
+/* What a drawing takes from the project's settings (libraryOf's): the library file, its Icon container, the mode its
+   code is compared in (code.parity's first tier), and its axis order and size axis; and the state axis and pointer
+   states its read-back is derived under (deriveOptions). A Figma reading is keyed on them (eval.mjs figmaInputs). */
+export const drawSettings = ({ libKey = null, lib = {} } = {}) => ({ libKey: libKey || null, iconContainer: ((lib || {}).draw || {}).iconContainer || null,
+  mode: ((((lib || {}).code || {}).parity || {}).tiers || [])[0] || null, axisOrder: ((lib || {}).tokens || {}).axisOrder || [], sizeAxis: ((lib || {}).tokens || {}).sizeAxis || null,
+  stateAxis: ((lib || {}).tokens || {}).stateAxis || null, pointerStates: ((lib || {}).tokens || {}).pointerStates || null });
 /* A run's wants, every component's in one: each list's names once; the icon container is the library's, one for all. */
 export const lookupWants = (wants) => ({ ...Object.fromEntries(LISTS.map((k) => [k, [...new Set(wants.flatMap((w) => w[k] || []))]])), container: (wants.find((w) => w.container) || {}).container || null });
 /* Whether a run's lookup was made for everything this component wants. */
 export const covers = (run, want) => (run.container || null) === (want.container || null) && LISTS.every((k) => (want[k] || []).every((n) => (run[k] || []).includes(n)));
-/* What LOOKUP would have found for this component alone, from what it found for the run. */
+/* What LOOKUP would have found for this component alone, from what it found for the run: its names only, and of the
+   sets only those before where its own walk stops (the icon container and every style and icon it wants found; the
+   other walks never stop short of a name they want). */
 export const keptFor = (found, want) => {
   const pick = (o, names) => Object.fromEntries(Object.entries(o || {}).filter(([k]) => (names || []).includes(k)));
-  return { styles: pick(found.styles, want.styles), icons: pick(found.icons, want.icons), iconContainer: found.iconContainer, vars: pick(found.vars, want.vars), sets: pick(found.sets, want.components),
+  const at = found.at || {}, reached = [at.container, ...(want.styles || []).map((n) => (at.styles || {})[n]), ...(want.icons || []).map((n) => (at.icons || {})[n])];
+  const stop = found.iconContainer && want.container && reached.every((x) => typeof x === 'number') ? Math.max(...reached) : Infinity;
+  return { styles: pick(found.styles, want.styles), icons: pick(found.icons, want.icons), iconContainer: found.iconContainer, vars: pick(found.vars, want.vars), sets: Object.fromEntries(Object.entries(pick(found.sets, want.components)).filter(([n]) => ((at.sets || {})[n] ?? -1) <= stop)),
     swaps: Object.fromEntries(Object.entries(found.swaps || {}).filter(([n]) => (want.swaps || []).some((t) => n === t || n.endsWith('/' + t)))), fillStyles: pick(found.fillStyles, want.fillStyles) };
 };
 
@@ -2015,19 +2030,18 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const exec = (code, fileKey, timeout) => figmaExec(svc, fileKey, code, timeout);
   // the library the drawing takes its components, styles and variables from, as every tool chooses it (libraryOf)
   const { libraryOf } = await import('../parity/project.mjs');
-  const { libKey, lib } = libraryOf(label);
+  const settings = drawSettings(libraryOf(label)), { libKey } = settings;
   // the library's Icon container (its `draw`) and the mode its code is compared in (its code.parity's one tier), where
   // its context document says; without them, the lookups below find them, and a value is its collection's first mode's
-  const map = { draw: lib.draw, mode: lib.code && lib.code.parity && lib.code.parity.tiers && lib.code.parity.tiers[0] };
+  const map = { mode: settings.mode };
   // the house's axis order, as that library's settings derive it (figma-standard rule 1)
-  const axisOrder = (lib.tokens || {}).axisOrder || [];
-  const sizeAxis = (lib.tokens || {}).sizeAxis || null;
+  const { axisOrder, sizeAxis } = settings;
   // every variable the project's tokens name (by key, or by value where a snapshot older than 0.52 kept no keys), so
   // one at the top of its collection is a variable too
   const isVar = varNamer(Object.values(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')).collections || {}).flatMap((col) => [...Object.keys(col.keys || {}), ...Object.values(col.values || {}).flatMap((m) => Object.keys(m || {}))]));
   const p = plan(c, { axisOrder }), want = needs(p, isVar);
   const pageName = drawingPage(p.name, !!libKey && into === libKey);
-  const container = (map.draw && map.draw.iconContainer) || null;
+  const container = settings.iconContainer;
   const lookupCode = (missing) => `const styleIdsOf = ${styleIdsOf.toString()};\nreturn (${LOOKUP.toString()})(${JSON.stringify(missing)});`;
   if (lookupOut) {
     if (!libKey) { console.log('no library file to look keys up in: each drawing takes what the snapshot keys'); process.exit(0); }

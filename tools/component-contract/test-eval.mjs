@@ -6,7 +6,8 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs } from './eval.mjs';
+import { drawSettings } from './to-figma.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
 import { selfDrawn, siteFiles, drawnAll, GENERATOR } from './site.mjs';
@@ -484,24 +485,47 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   const quiet = (f) => { const said = [], log = console.log; console.log = (l) => said.push(String(l)); try { f(); } finally { console.log = log; } return said; };
   const taken = () => JSON.parse(fs.readFileSync(path.join(home, 'round-trip', 'taken.json'), 'utf8'));
   const retake = (f) => { const t = taken(); f(t); fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify(t)); };
-  let said = quiet(() => draw(where, 'x', 'F', [], { run: fake }));
+  const S = drawSettings({ libKey: 'L', lib: {} });
+  const go = (o = {}) => quiet(() => { calls.length = 0; draw(where, 'x', o.into || 'F', [], { run: fake, settings: S, ...o }); });
+  let said = go();
   ok('draw: the keys are looked up once for every component, and each drawing is given them', calls.filter((a) => a.includes('--lookup')).length === 1 && runs().length === 2 && calls.filter((a) => a.includes('--run')).every((a) => a.includes('--looked')), calls);
-  ok('draw: to-figma\'s own timing line is kept in the log, beside each step\'s time', said.some((l) => /keys looked up: .* drawn in 3\.2s/.test(l)) && said.includes('tag: lookup 0.1s, draw 3.2s, readback 2.5s, geometry 0.3s') && said.some((l) => /looked up once for 2 component/.test(l)), said);
+  ok('draw: to-figma\'s own timing line is kept in the log, beside each step\'s time', said.some((l) => /keys looked up: .* drawn in 3\.2s/.test(l)) && said.includes('tag: lookup 0.1s, draw 3.2s, readback 2.5s, geometry 0.3s') && said.includes('keys looked up once for 2 component(s) in 4.5s'), said);
   const first = taken().figma.tag;
-  ok('draw: each step\'s time is in taken.json, and when it was drawn', JSON.stringify(first.times) === '{"lookup":0.1,"draw":3.2,"readback":2.5,"geometry":0.3}' && /^\d{4}-\d\d-\d\dT/.test(first.at), first);
-  calls.length = 0; said = quiet(() => draw(where, 'x', 'F', [], { run: fake }));
-  ok('draw: a component whose contract and inputs are those of its last drawing is not drawn again, said with when', !runs().length && !calls.length && said.includes(`tag: unchanged since ${first.at}`), { calls, said });
-  calls.length = 0; quiet(() => draw(where, 'x', 'F', [], { run: fake, redraw: true }));
-  ok('draw: --redraw draws every one again', runs().length === 2);
+  ok('draw: each step\'s time is in taken.json, the run\'s one lookup too, and when and into which file it was drawn', JSON.stringify(first.times) === '{"lookup":0.1,"draw":3.2,"readback":2.5,"geometry":0.3,"runLookup":4.5}' && /^\d{4}-\d\d-\d\dT/.test(first.at) && first.into === 'F', first);
+  go();
+  ok('draw: without --keep-unchanged every component is drawn again', runs().length === 2);
+  said = go({ keepUnchanged: true });
+  const at = taken().figma.tag.at;
+  ok('draw: --keep-unchanged keeps a component whose contract and inputs are its last drawing\'s, said with when', !calls.length && said.includes(`tag: unchanged since ${at}`), { calls, said });
+  go({ keepUnchanged: true, into: 'G' });
+  ok('draw: a drawing into another file is drawn again', runs().length === 2, calls);
+  go();
+  go({ keepUnchanged: true, settings: drawSettings({ libKey: 'L', lib: { tokens: { axisOrder: ['Size'] } } }) });
+  ok('draw: one drawn under other project settings (its axis order) is drawn again', runs().length === 2, calls);
+  go();
+  for (const [lib, what] of [[{ draw: { iconContainer: 'Icons' } }, 'icon container'], [{ code: { parity: { tiers: ['dark'] } } }, 'mode'], [{ tokens: { sizeAxis: 'Size' } }, 'size axis']]) {
+    const m = measure(where, [], { figma: figmaInputs(where, [], drawSettings({ libKey: 'L', lib })) });
+    ok(`measure: a Figma reading drawn under another ${what} is stale, said why`, /the project's drawing settings changed since/.test(m.legs.figma.tag.stale || ''), m.legs.figma.tag);
+  }
+  ok('measure: and one under the same settings is not', !measure(where, [], { figma: figmaInputs(where, [], S) }).legs.figma.tag.stale);
+  ok('measure: nor under another library file', /drawing settings/.test(measure(where, [], { figma: figmaInputs(where, [], drawSettings({ libKey: 'M', lib: {} })) }).legs.figma.tag.stale || ''));
   retake((t) => { t.figma.chip.kept = true; });
-  calls.length = 0; quiet(() => draw(where, 'x', 'F', [], { run: fake }));
+  go({ keepUnchanged: true });
   ok('draw: a reading kept from an unanswered drawing is drawn again; the rest are not', JSON.stringify(runs()) === '["chip"]', calls);
   fs.writeFileSync(path.join(home, 'components', 'tag', 'contract.json'), JSON.stringify({ contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' }, c: { kind: 'instance', component: 'Chip', parent: 'root' } }, variants: [] }));
-  calls.length = 0; quiet(() => draw(where, 'x', 'F', [], { run: fake }));
+  go({ keepUnchanged: true });
   ok('draw: a changed contract is drawn again', JSON.stringify(runs()) === '["tag"]', calls);
   retake((t) => { t.figma.chip.kept = true; });
-  calls.length = 0; quiet(() => draw(where, 'x', 'F', [], { run: fake }));
+  go({ keepUnchanged: true });
   ok('draw: one that places a component drawn again in this run is drawn again too', JSON.stringify(runs().sort()) === '["chip","tag"]', calls);
+  // the one placing sorts before the one it places: decided before any is drawn, whatever the order
+  for (const [f, c] of [['apple', { contract: 1, component: 'Apple', props: {}, anatomy: { root: { kind: 'container' }, z: { kind: 'instance', component: 'Zebra', parent: 'root' } }, variants: [] }], ['zebra', { contract: 1, component: 'Zebra', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }]]) {
+    fs.mkdirSync(path.join(home, 'components', f), { recursive: true }); fs.writeFileSync(path.join(home, 'components', f, 'contract.json'), JSON.stringify(c));
+  }
+  go();
+  retake((t) => { t.figma.zebra.kept = true; });
+  go({ keepUnchanged: true });
+  ok('draw: one placing a component drawn again is drawn again though it comes first', JSON.stringify(runs().sort()) === '["apple","zebra"]', calls);
   fs.rmSync(home, { recursive: true, force: true });
 }
 console.log(`${n} passed`);
