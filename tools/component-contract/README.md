@@ -27,7 +27,7 @@ node tools/component-contract/to-markup.mjs --project <label> --framework react
 # from code back to a contract, and back into Figma
 node tools/component-contract/from-code.mjs --project <label> <component>
 node tools/component-contract/from-code.mjs --project <label> <component> --rebuild --code-only
-node tools/component-contract/to-figma.mjs <contract> --run --project <label> --into <scratch fileKey>
+node tools/component-contract/to-figma.mjs <contract> --run --project <label> --into <scratch fileKey> [--looked <keys file>]
 node tools/component-contract/to-figma.mjs <contract> --verify --project <label> --into <scratch fileKey>
 node tools/component-contract/to-figma.mjs <contract>… --lookup <keys file> --project <label>
 node tools/component-contract/to-figma.mjs <contract> --patch <set id> --base <contract> --project <label> --library <key> --folder <name>
