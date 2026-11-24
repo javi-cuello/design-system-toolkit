@@ -330,7 +330,7 @@ function strokeOf(m) {
    combination's name; `value`, the resolver (its `modes`, a token in every mode); `focus`, whether a focus is forced.
    A row's kind names the mechanism where this reader can tell it: a value the token has in another of its modes (the
    page's base mode is not Figma's default), a part to-markup drew as an icon's placeholder (`data-icon`, a gap it names
-   for frontend-build), the root's own size (the caller's in code), and the rest by field. */
+   for frontend-build), the root's own size, and the rest by field. */
 export function compareOne(exp, page, chains, colours, { at = '', value = null, focus = false, unread = {}, skipped = [], stored = null } = {}) {
   const rows = [];
   // what is not compared is said: a field by name (`unread`), a part with no element to find by its id (`skipped`)

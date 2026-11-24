@@ -800,10 +800,6 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       continue;
     }
     const parent = e.parent ? a[e.parent] : null;
-    // an outer box laid out at a drawn width: the width is the frame's, and the box takes its container's, so a
-    // parent that stretches it is obeyed; a component that keeps its own width says so in its own sheet
-    const sample = id === 'root' && e.layout && e.layout.direction && typeof e.width === 'number';
-    if (sample) e = { ...e, width: 'fill' };
     const anchors = Object.values(a).some((x) => x.parent === id && (x.position === 'absolute' || x.absolute) && !ringOf(c, when, Object.keys(a).find((k) => a[k] === x), x, a, t));
     // the parent's own size, where it is a number: what a part that scales with it is a share of
     // (or one stretched between its own parent's edges, placed out of the flow: that parent's size less both offsets,
@@ -850,7 +846,6 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       // so the component's own sheet, its pointer states included, holds there)
       kept.push(...over.changed, ...[...everOverrides(c, id, mains, ictx)].filter((p) => !said.has(p)).map((p) => [p, over.theirs.get(p) ?? 'unset', undefined, true]));
     }
-    if (sample) kept.push(['inline-size', '100%']);
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
     // (only where an auto layout lays it out, and never on a part out of the flow: order moves neither, CSS Flexbox 4.1)
     if (parent && parent.layout && reordered(c).has(e.parent) && typeof e.order === 'number' && !(e.position === 'absolute' || e.absolute)) kept.push(['order', String(e.order)]);
