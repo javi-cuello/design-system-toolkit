@@ -315,10 +315,13 @@ ok('the runner chooses the run\'s token, so it can take back its own and leave a
   const comp = { type: 'COMPONENT_SET', name: 'Chip', parent: { type: 'PAGE', getPluginData: () => '' }, fills: [], strokes: [] };
   const placed = { type: 'INSTANCE', parent: comp, fills: [], strokes: [], getMainComponentAsync: async () => null };
   const nested = { type: 'FRAME', parent: placed, boundVariables: { itemSpacing: alias('V:nested') }, fills: [], strokes: [] };
-  const stand = (ownFile, modeVar = 'V:mode') => {
-    comp.boundVariables = { paddingLeft: alias('V:pad') };
-    const own = { type: 'FRAME', parent: comp, boundVariables: { itemSpacing: alias(modeVar) }, fills: [], strokes: [] };
-    comp.findAll = () => [placed, nested, own];
+  // (modeVars: what the component's own frames bind for the mode; padOnPlaced: the padding bound on the placed instance
+  // itself, as its main component in another library binds it, and not on the component)
+  const stand = (ownFile, modeVars = ['V:mode'], padOnPlaced = false) => {
+    comp.boundVariables = padOnPlaced ? {} : { paddingLeft: alias('V:pad') };
+    placed.boundVariables = padOnPlaced ? { paddingLeft: alias('V:pad') } : {};
+    const own = modeVars.map((id) => ({ type: 'FRAME', parent: comp, boundVariables: { itemSpacing: alias(id) }, fills: [], strokes: [] }));
+    comp.findAll = () => [placed, nested, ...own];
     const root = { children: [], ...data(), findAllWithCriteria: () => [comp] };
     root.setPluginData('to-figma-running', '1');
     globalThis.figma = { root, currentPage: page('Chip'), mixed: Symbol('mixed'), getLocalTextStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getStyleByIdAsync: async () => null,
@@ -339,8 +342,14 @@ ok('the runner chooses the run\'s token, so it can take back its own and leave a
     ok('…and a mode\'s collection is reached by the variable of it the component\'s own layers bind, hidden as it is, never one a placed instance binds inside',
       calls.includes('collection C:tone') && !calls.includes('collection C:nested') && !calls.includes('import k-mode-snapshot'));
     calls.length = 0;
-    await run('const __token = 1;\n' + stand(true, 'V:elsewhere')).catch(() => null);
+    await run('const __token = 1;\n' + stand(true, ['V:elsewhere'])).catch(() => null);
     ok('…a variable of that name in another collection is not the mode\'s: its key is imported as before', calls.includes('import k-mode-snapshot'));
+    calls.length = 0;
+    await run('const __token = 1;\n' + stand(true, ['V:elsewhere', 'V:mode'])).catch(() => null);
+    ok('…two bound of the mode\'s name, in two collections: the one of the mode\'s collection reaches it', calls.includes('collection C:tone') && !calls.includes('import k-mode-snapshot'));
+    calls.length = 0;
+    await run('const __token = 1;\n' + stand(true, ['V:mode'], true)).catch(() => null);
+    ok('…a variable bound on a placed instance itself (its main component\'s, another library\'s) is not the component\'s own: the snapshot key is imported', calls.includes('import k-snapshot'));
     calls.length = 0;
     await run('const __token = 1;\n' + stand(false)).catch(() => null);
     ok('…in another file, the snapshot key is imported as before', calls.includes('import k-snapshot') && calls.includes('import k-mode-snapshot'));

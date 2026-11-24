@@ -640,7 +640,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // in the library's own file, each variable its own component binds, by name: the one to draw with, over the snapshot's
   // key, which can name another variable of that name (two collections of one name, from two copies of a library)
   // and, where it is hidden from publishing, one no import reaches
-  const bound = new Map();
+  // (and every candidate of each name, for a mode's collection, which its collection's name decides)
+  const bound = new Map(), boundAll = new Map();
   if (K.ownFile) {
     // each kind on its own, so one listing that stalls or fails (listing a library's variables has hung) costs only
     // its own keys, which are then imported as before
@@ -667,7 +668,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       const take = (x) => { if (x && want.has(x.key)) { ownKeys.set(x.key, x); want.delete(x.key); } };
       // (each name's candidates among the component's own layers, never a placed instance's insides, which can bind
       // another library's variable of that name; two of one name is one the snapshot's key decides, else left to it)
-      const seen = new Map();
+      const seen = boundAll;
       const takeBound = (x) => { if (x && ownVarIds.has(x.id) && wantNames.has(x.name)) { seen.set(x.name, new Map([...(seen.get(x.name) || []), [x.id, x]])); } };
       // (a set named under its page, Page/Set, is found by its own name)
       const drawnPage = (n) => { while (n && n.type !== 'PAGE') n = n.parent; return !!(n && n.getPluginData('drawings')); };
@@ -681,7 +682,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         try {
           for (const id of styleIdsOf(n)) styleIds.add(id);
           if (n.type === 'TEXT' && typeof n.textStyleId === 'string' && n.textStyleId && typeof n.fontName !== 'symbol' && !textFont.has(n.textStyleId)) textFont.set(n.textStyleId, n.fontName);
-          mine = !inside(n, r);
+          // (a placed instance's own bindings are its main component's, another library's, unless overridden: not the component's)
+          mine = n.type !== 'INSTANCE' && !inside(n, r);
           alias(n.boundVariables);
           for (const paint of [].concat(Array.isArray(n.fills) ? n.fills : [], Array.isArray(n.strokes) ? n.strokes : [])) alias(paint.boundVariables);
           if (n.type === 'INSTANCE') insts.push(n);
@@ -716,7 +718,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   const cols = {};
   const modeSets = [...new Set(els.flatMap((e) => Object.keys(e.modes || {})))].flatMap((a) => (K.modes || {})[a] || []);
   // (a bound variable of that name reaches it only where it is of that collection: a name is unique within one alone)
-  const ofCollection = async (m) => { const v = bound.get(m.name), c = v && await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(() => null); return c && c.name === m.collection ? c : null; };
+  const ofCollection = async (m) => { for (const v of (boundAll.get(m.name) || new Map()).values()) { const c = await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(() => null); if (c && c.name === m.collection) return c; } return null; };
   await Promise.all(modeSets.filter((m) => m.key).map(async (m) => { const c = await ofCollection(m); if (c) { cols[m.key] = c; return; } const v = await tried(`a variable of ${m.collection}`, () => own(m.key, () => figma.variables.importVariableByKeyAsync(m.key))); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
   // (each collection on its own, a failure said and the rest still set; a layer that cannot hold a mode, said)
   const setModes = (n, e, id) => {
