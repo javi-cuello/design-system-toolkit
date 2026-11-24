@@ -665,12 +665,28 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const plain = spec([]); plain.variants[0].children = [frame([], 'FRAME')];
   const kept = derive(plain).anatomy.content;
   ok('a plain frame recorded empty keeps its size while it is empty, as a slot does', kept.minHeight === 200 && JSON.stringify(kept.whileEmpty) === '["minHeight"]');
+  // a plain frame another variant fills keeps nothing: code draws that variant's layers in it here too, hidden, so it is
+  // never empty there (a slot keeps it: a caller fills a slot, above)
+  const plain2 = spec([]); plain2.props.Size = ['md', 'lg']; plain2.variants[0].children = [frame([], 'FRAME')];
+  plain2.variants.push({ name: 'Size=lg', type: 'COMPONENT', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [frame([{ name: 'Body', type: 'TEXT', w: 360, h: 160 }], 'FRAME')] });
+  ok('a plain frame another variant fills keeps no empty size', derive(plain2).anatomy.content.minHeight === undefined && !JSON.stringify(derive(plain2).variants).includes('whileEmpty'));
+  // nor one another variant places inside an instance (a menu detached in one state, placed in the rest): code draws
+  // that component's layers there
+  const placedElse = spec([]); placedElse.props.Size = ['md', 'lg']; placedElse.variants[0].children = [{ name: 'Menu', type: 'FRAME', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [frame([], 'FRAME')] }];
+  placedElse.variants.push({ name: 'Size=lg', type: 'COMPONENT', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [{ name: 'Menu', type: 'INSTANCE', instanceOf: 'Menu', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [frame([], 'FRAME')] }] });
+  ok('a plain frame placed inside an instance in another variant keeps no empty size', !JSON.stringify(derive(placedElse)).includes('whileEmpty'));
   // a size below its padding is still the size Figma left it at (a status frame 16 high in 20 of padding); one at its
   // padding says nothing the padding does not
   const tight = spec([]); tight.variants[0].children = [{ name: 'Status', type: 'FRAME', w: 40, h: 16, layout: 'HORIZONTAL', pad: [10, 10, 10, 10], gap: 0, align: 'MIN/MIN', sizing: 'HUG/HUG', children: [] }];
   const st = derive(tight).anatomy.status;
   const at = spec([]); at.variants[0].children = [{ name: 'Status', type: 'FRAME', w: 20, h: 20, layout: 'HORIZONTAL', pad: [10, 10, 10, 10], gap: 0, align: 'MIN/MIN', sizing: 'HUG/HUG', children: [] }];
-  ok('an empty hugging frame below its padding keeps that size; one at its padding keeps none', st.minWidth === 40 && st.minHeight === 16 && JSON.stringify(st.whileEmpty) === '["minWidth","minHeight"]' && !('whileEmpty' in derive(at).anatomy.status)); }
+  ok('an empty hugging frame below its padding keeps that size; one at its padding keeps none', st.minWidth === 40 && st.minHeight === 16 && JSON.stringify(st.whileEmpty) === '["minWidth","minHeight"]' && !('whileEmpty' in derive(at).anatomy.status));
+  // inside a placed instance the frame is its component's: code draws the component's layers there (hidden ones among
+  // them), so `while empty` could never hold there
+  const held = (fills) => { const h = spec([]); h.variants[0].children = [{ name: 'Tag', type: 'INSTANCE', instanceOf: 'Tag', w: 40, h: 16, layout: 'HORIZONTAL', pad: [0, 0, 0, 0], sizing: 'HUG/HUG', children: [{ name: 'Status', type: 'FRAME', w: 40, h: 16, layout: 'HORIZONTAL', pad: [0, 0, 0, 0], gap: 0, align: 'MIN/MIN', sizing: 'HUG/HUG', ...(fills && { fills }), children: [] }] }]; return h; };
+  const inTag = (h) => Object.entries(derive(h, ['Tag'], { mains: (n) => (n === 'Tag' ? { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, status: { kind: 'container', parent: 'root', layout: { direction: 'row', gap: 0, align: 'start', crossAlign: 'start', padding: { top: 0, end: 0, bottom: 0, start: 0 } }, width: 'hug', height: 'hug', order: 0, name: 'Status' } }, variants: [] } : null) }).anatomy).find(([k]) => k.endsWith('status'));
+  const alike = inTag(held()), painted = inTag(held(['C/x']));
+  ok('an empty hugging frame inside a placed instance is its component\'s where alike, and kept for a fill keeps no empty size', !alike && !!painted && painted[1].background === 'C/x' && painted[1].minWidth === undefined && !('whileEmpty' in painted[1])); }
 { // a placed instance is the component its key says: a name another component carries (an icon named Checkbox beside
   // the Checkbox set) is a fallback only where the key does not contradict it (layers.mjs keyMatches, placedOf)
   const box = { component: 'Checkbox', figma: { key: 'set' } }, chip = { component: 'Chip' };

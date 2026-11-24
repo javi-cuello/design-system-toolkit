@@ -531,7 +531,14 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
   // (kept, the sizes say they hold only while the part is empty, `whileEmpty`: Figma's empty frame keeps the size it (figma-fact:empty-hug-keeps-size, believed)
   // last had, and the same frame filled hugs what it holds, which a minimum would not: a dialog's content 172 empty, 146
   // filled on a screen)
-  flat.forEach((f, i) => { for (const [k, x] of Object.entries(f.anatomy)) if (x && x.emptyKept) { if (filled.get(base(i)).has(k)) for (const m of x.emptyKept) delete x[m]; else x.whileEmpty = x.emptyKept; delete x.emptyKept; } });
+  // (nor where any variant places it inside an instance, whose component's own layers code draws there, hidden ones
+  // among them; and a frame no slot holds, where any variant fills it: code draws every variant's layers in it, hidden
+  // where another shows them, so it is never empty there. A caller fills a slot, so a slot's stands)
+  const within = (a, k) => { for (let p = a[k] && a[k].parent; p; p = a[p] && a[p].parent) if (a[p] && a[p].kind === 'instance') return true; return false; };
+  const placed = new Set(flat.flatMap((f) => Object.keys(f.anatomy).filter((k) => within(f.anatomy, k))));
+  const anywhere = new Set(flat.flatMap((f) => Object.values(f.anatomy).map((x) => x && x.parent).filter(Boolean)));
+  const slotty = (a, x) => x.kind === 'slot' || (a[x.parent] || {}).kind === 'slot';
+  flat.forEach((f, i) => { for (const [k, x] of Object.entries(f.anatomy)) if (x && x.emptyKept) { if (filled.get(base(i)).has(k) || placed.has(k) || (!slotty(f.anatomy, x) && anywhere.has(k))) for (const m of x.emptyKept) delete x[m]; else x.whileEmpty = x.emptyKept; delete x.emptyKept; } });
   // (`found`: a Map, by each variant's `when`, of the instances its insides are kept whole in)
   if (mains) for (const f of flat) { const here = found ? new Set() : null; ownInsides(f.anatomy, mains, { found: here }); if (found) found.set(JSON.stringify(f.when), [...here]); }
   return flat;
@@ -660,6 +667,9 @@ function asGlyphOf(e, x, reading) {
   const { asset: _, iconSize, ...rest } = e;
   return { ...rest, kind: 'instance', component: x.component, ...(iconSize != null && { with: { ...(rest.with || {}), Size: iconSize } }) };
 }
+// a part without the size it keeps only while empty (whileEmpty): an instance's layer keeps none (anatomies), so its
+// component's part is compared without it
+const emptyless = (e) => { if (!e || !e.whileEmpty) return e; const r = { ...e }; for (const f of e.whileEmpty) delete r[f]; delete r.whileEmpty; return r; };
 function ownInsides(anatomy, mains, { partial = false, whole = new Set(), coloured = null, reading = false, found = null } = {}) {
   ownStyling(anatomy, mains);
   for (const id of Object.keys(anatomy)) {
@@ -716,7 +726,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     const own = (k) => {
       // (a vector's paths are its component's: the walk records none inside an instance, snapshot 0.86.0, so a placed
       // layer is held to its part without them where it states none)
-      const mk = match[k.slice(id.length + 1)], x0 = mk && M[mk], x = x0 && x0.paths && !anatomy[k].paths ? (({ paths: _, ...r }) => r)(x0) : x0;
+      const mk = match[k.slice(id.length + 1)], x1 = mk && M[mk], x0 = x1 && emptyless(x1), x = x0 && x0.paths && !anatomy[k].paths ? (({ paths: _, ...r }) => r)(x0) : x0;
       // (a key is no look, but two that differ are two components: a swap to another library's Icon of one name)
       if (!x || !keyMatches(anatomy[k].key, x.key)) return false;
       // (a layer of an instance nested in this one has its position-less constraints left out at that instance's own
