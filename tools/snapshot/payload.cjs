@@ -19,6 +19,12 @@
 
 const SCHEMA_VERSION = 1;
 
+/* The page a round trip draws on in the library's own file (to-figma.mjs drawingPage): a drawing, never one of the
+   library's components or screens, so the store drops what sits on it on every post, a kept payload re-posted included
+   (the plugin, which imports nothing, sends it). One prefix, the drawing's and the store's. */
+const DRAWING_PAGE = 'Round trip · ';
+const drawnPage = (page) => typeof page === 'string' && page.startsWith(DRAWING_PAGE);
+
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isStr = (v) => typeof v === 'string';
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -147,4 +153,4 @@ function screens(p) {
   return errors;
 }
 
-module.exports = { SCHEMA_VERSION, tokens, component, library, screens };
+module.exports = { SCHEMA_VERSION, DRAWING_PAGE, drawnPage, tokens, component, library, screens };

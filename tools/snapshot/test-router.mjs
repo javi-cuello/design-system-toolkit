@@ -1915,3 +1915,24 @@ test('a vector\'s outline and paths first recorded change no component and edit 
     assert.notEqual(post('b2c3d4e5').lines.find((l) => l.label === 'changed').text, 'none since the last snapshot', 'a new outline edits the screen');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('a round trip\'s drawing page is never the library\'s: its components and frames are dropped on every post, the page named by the one rule the drawing uses', async () => {
+  const { createRequire } = await import('node:module');
+  const req = createRequire(import.meta.url);
+  const store = req('./store.cjs'), { drawnPage } = req('./payload.cjs');
+  const { drawingPage } = await import('../component-contract/to-figma.mjs');
+  const page = drawingPage('Checkbox', true);
+  assert.ok(drawnPage(page) && !drawnPage(drawingPage('Checkbox', false)) && !drawnPage('Checkbox'), 'the drawing\'s page is what the store drops, and only it');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'drawn-'));
+  try {
+    const P = store.paths(dir);
+    const v = { name: 'Size=sm', type: 'COMPONENT', w: 10, h: 10 };
+    const r = store.writeLibrary(lib('L', { components: [{ name: 'Checkbox', id: '1:1', page: 'Checkbox', props: { Size: ['sm'] }, variants: [v] }, { name: `${page}/Checkbox`, id: '2:2', page, props: { Size: ['sm'] }, variants: [v] }] }), P);
+    assert.deepEqual(fs.readdirSync(P.components), ['checkbox'], 'only the library\'s own component is written');
+    assert.ok(!Object.values(JSON.parse(fs.readFileSync(P.index, 'utf8')).components).some((e) => e.page === page), 'nor indexed');
+    assert.ok(r.lines.some((l) => l.label === 'passed over' && /1 component/.test(l.text)), 'and the drop is said');
+    const frame = (pg, name, id) => ({ section: null, page: pg, frame: name, id, devStatus: { type: 'READY_FOR_DEV' }, tree: { name, type: 'FRAME', w: 100 } });
+    store.writeScreens({ _meta: { fileId: 'S' }, screens: [frame('Login', '<Login> 1-1 - Login', 'a'), frame(page, '<Checkbox> 1-1 - Checkbox', 'b')] }, P);
+    assert.deepEqual(fs.readdirSync(P.screens), ['login--login'], 'a screens post drops the drawing page\'s frames too');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

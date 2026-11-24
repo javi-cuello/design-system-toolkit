@@ -1067,6 +1067,9 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
    * 128 components for a file with 120. `ids` is the routing entry's pair;
    * the index converges on its first (the key where the project states one).
    */
+  // a round trip's drawing in the library's own file is not the library's (payload.cjs drawnPage): never written
+  const drawn = p.components.filter((c) => payload.drawnPage(c.page));
+  if (drawn.length) p = { ...p, components: p.components.filter((c) => !drawn.includes(c)) };
   const fileId = p.tokens._meta.fileKey || p.tokens._meta.fileId;
   const thisFile = new Set([fileId, ...ids].filter(Boolean));
   const fileRef = ids[0] || fileId;
@@ -1074,6 +1077,7 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   const say = (label, text, detail = []) => lines.push({ label, text, detail });
   say('payload', `${p.components.length} components, ${(p.iconSets || []).length} icon sets named, ${p.icons.length} icon files`);
   // a set the plugin could not read (Figma holds it in error): said, so its absence is never read as the library's
+  if (drawn.length) say('passed over', `${drawn.length} component(s) on a round trip's drawing page, not the library's`, drawn.map((c) => `${c.name} (${c.page})`));
   if ((p.unreadable || []).length) say('warning', `${p.unreadable.length} component set(s) Figma could not read; fix them in the file and snapshot again`, p.unreadable.map((x) => `${x.name}${x.page ? ` (${x.page})` : ''} — ${x.reason}`));
 
   const tokensBefore = readJson(P.tokens, null);
@@ -1376,6 +1380,9 @@ function writeScreens(p, P, { now = new Date(), version, states = [], ids: route
   const fileId = p._meta.fileKey || p._meta.fileId;
   const lines = [];
   const say = (label, text, detail = []) => lines.push({ label, text, detail });
+  // a round trip's drawing is no screen (payload.cjs drawnPage): its frames never written
+  const drawn = p.screens.filter((x) => payload.drawnPage(x.page));
+  if (drawn.length) { p = { ...p, screens: p.screens.filter((x) => !drawn.includes(x)) }; say('passed over', `${drawn.length} frame(s) on a round trip's drawing page`); }
   const refuse = (why) => ({ lines, refused: why });
   // Three ways a snapshot can look like a pass and write nothing true: no
   // frames at all; a plugin older than 0.7.2, which sends no ready status, so

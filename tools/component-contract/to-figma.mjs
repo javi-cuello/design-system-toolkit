@@ -160,7 +160,9 @@ function outer(x) {
 // the page a drawing goes on: the component's name, or in the library's own file (where a page of that name is the
 // library's own, which a drawing must never touch) that name marked as the round trip's. Every reader of a drawing asks
 // this, never the bare name
-export const drawingPage = (name, own) => (own ? `Round trip · ${name}` : name);
+// (the prefix is the store's too, which drops what sits on such a page from every snapshot: payload.cjs)
+const { DRAWING_PAGE } = req('../snapshot/payload.cjs');
+export const drawingPage = (name, own) => (own ? `${DRAWING_PAGE}${name}` : name);
 
 export function dashes(x) {
   if (!x) return x;
