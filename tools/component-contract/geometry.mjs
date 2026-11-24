@@ -18,7 +18,7 @@ import { createRequire } from 'node:module';
 import { near } from '../parity/schema.mjs';
 
 const req = createRequire(import.meta.url);
-const { resolve, layerPaths } = req('../snapshot/spec.cjs');
+const { resolve, layerPaths, boxOnly } = req('../snapshot/spec.cjs');
 const { knownFor } = req('../snapshot/store.cjs');
 
 /* The walk keeps two decimals (code.js round()): one value read twice can land a step apart across a rounding edge. */
@@ -52,8 +52,11 @@ export function geometry(library, drawn, { known = null, tolerance = TOLERANCE }
   const row = (at, l, d, why) => rows.push({ at, library: l ?? null, drawn: d ?? null, ...(why && { why }) });
   // (a loose vector the walk recorded an outline for and no paths, past its cap: the drawing had only its box to draw)
   const fields = (x, y, at, loose = false) => {
+    // (paths that say nothing beyond each side's box, a line along it or a rectangle over it, are that box however each
+    // is written, so neither they nor their digest is a row: the box's own size is, spec.cjs boxOnly)
+    const boxes = boxOnly(x.paths, x.w, x.h) && boxOnly(y.paths, y.w, y.h);
     for (const k of new Set([...Object.keys(x), ...Object.keys(y)])) {
-      if (IDS.has(k) || (known && !known.has(k) && x[k] === undefined)) continue;
+      if (IDS.has(k) || (known && !known.has(k) && x[k] === undefined) || (boxes && (k === 'outline' || k === 'paths'))) continue;
       if (k === 'bindings') {
         const bx = x.bindings || {}, by = y.bindings || {};
         for (const b of new Set([...Object.keys(bx), ...Object.keys(by)])) if (!(known && !known.has(`bindings.${b}`) && bx[b] === undefined) && !same(bx[b], by[b], tolerance)) row(`${at}.bindings.${b}`, bx[b], by[b]);

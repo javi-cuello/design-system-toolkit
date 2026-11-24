@@ -277,6 +277,16 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     { name: 'Icon', type: 'RECTANGLE', x: 8.3, y: 7.75, w: 24, h: 24, sizing: 'FIXED/FIXED', absolute: true, constraints: 'CENTER/CENTER' }] }] }).anatomy;
   ok('a part centred in its parent is its offsets from both edges, and keeps its size', JSON.stringify(centred.icon.absolute) === '{"x":8.3,"y":7.75,"end":7.7,"bottom":8.25}' && centred.icon.width === 24 && centred.icon.height === 24);
   ok('a vector keeps its paths, Figma\'s own, and not their digest', JSON.stringify(A1['free/line'].paths) === '[{"windingRule":"NONE","data":"M 0 0 L 8 0"}]' && !('outline' in A1['free/line']));
+  // a path that says nothing beyond the layer's box is no shape: a line along a box of no height (or width), a closed
+  // rectangle exactly over its box; the box and its stroke draw those, and code cannot write a path to compare
+  { const vec = (w, h, data, windingRule = 'NONE') => ({ name: 'V', type: 'VECTOR', w, h, x: 0, y: 0, sizing: 'FIXED/FIXED', strokes: ['C/line'], outline: '0a1b2c3d', paths: [{ windingRule, data }] });
+    const kept = (v) => 'paths' in derive({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', children: [v] }] }).anatomy.v;
+    ok('a line along its box, either way, and a rectangle over its box, from any corner, carry no paths',
+      [vec(320, 0, 'M 0 0 L 320 0'), vec(0, 40, 'M 0 0 L 0 40'), vec(320, 0, 'M 320 0 L 0 0'), vec(24, 24, 'M 0 0 L 24 0 L 24 24 L 0 24 Z', 'NONZERO'),
+        vec(24, 16, 'M 24 16 L 0 16 L 0 0 L 24 0 L 24 16 Z', 'EVENODD')].every((v) => !kept(v)));
+    ok('…a path that says more keeps them: a diagonal, a line across a box of height, a line short of its box, an inset or open box, a curve, two paths',
+      [vec(8, 8, 'M 0 0 L 8 8'), vec(8, 8, 'M 0 4 L 8 4'), vec(320, 0, 'M 0 0 L 160 0'), vec(8, 8, 'M 1 1 L 7 1 L 7 7 L 1 7 Z'), vec(8, 8, 'M 0 0 L 8 0 L 8 8 L 0 8'),
+        vec(8, 8, 'M 8 4 C 8 6.21 6.21 8 4 8 Z'), { ...vec(320, 0, 'M 0 0 L 320 0'), paths: [{ windingRule: 'NONE', data: 'M 0 0 L 320 0' }, { windingRule: 'NONE', data: 'M 0 0 L 320 0' }] }].every(kept)); }
   ok('part of a circle keeps its arc, and a line its rounded ends', JSON.stringify(A1['free/dot'].arc) === '{"start":0,"end":180,"inner":0}' && A1['free/line'].border.cap === 'round');
   ok('wrapped rows keep the gap between them, and a box stacked first on top says so', A1.box.layout.firstOnTop === true && A1.box.layout.wrap === true && A1.box.layout.crossGap === 'S/8');
   ok('a repeat takes its name from its id; a part in a box no layout places is at its point there', !A1['box/option_2'].name && JSON.stringify(A1['free/dot'].absolute) === '{"x":6,"y":4}' && !A1['box/option'].absolute);

@@ -51,6 +51,14 @@ const dotted0 = copy(library); dotted0.variants[0].children.push({ name: 'Dot', 
 const squared = copy(dotted0); Object.assign(squared.variants[0].children[3], { outline: 'b2c3d4e5', paths: box });
 ok('(c) a vector\'s outline gives exactly its rows, the digest and the paths', JSON.stringify(geometry(dotted0, squared)) === JSON.stringify([{ at: 'Size=md, State=rest/Dot.outline', library: 'a1b2c3d4', drawn: 'b2c3d4e5' }, { at: 'Size=md, State=rest/Dot.paths', library: round, drawn: box }]), geometry(dotted0, squared));
 
+// a path that says nothing beyond its box (a line along it, a rectangle over it) is the box: written another way round,
+// it is no row, its outline neither; a path that says more still is
+const lined = copy(library); lined.variants[0].children.push({ name: 'Rule', type: 'VECTOR', w: 120, h: 0, x: 0, y: 40, index: 3, outline: 'c1c1c1c1', paths: [{ windingRule: 'NONE', data: 'M 120 0 L 0 0' }] });
+const linedBack = copy(lined); Object.assign(linedBack.variants[0].children[3], { outline: 'd2d2d2d2', paths: [{ windingRule: 'NONE', data: 'M 0 0 L 120 0' }] });
+ok('a line along its box drawn the other way round is no row', geometry(lined, linedBack).length === 0, geometry(lined, linedBack));
+const boxed = copy(dotted0); Object.assign(boxed.variants[0].children[3], { outline: 'e3e3e3e3', paths: [{ windingRule: 'NONE', data: 'M 0 0 L 8 0 L 8 8 L 0 8 L 0 0 Z' }] });
+ok('a rectangle over its box closed another way is no row', geometry(boxed, squared).length === 0, geometry(boxed, squared));
+ok('…a box drawn for a dot still is', geometry(dotted0, squared).length === 2, geometry(dotted0, squared));
 // a loose vector the library recorded an outline for and no paths (past the walk's cap) is drawn as its box: its row says so
 const capped = copy(dotted0), cappedDrawn = copy(squared); delete capped.variants[0].children[3].paths; delete cappedDrawn.variants[0].children[3].paths;
 ok('a vector past the walk\'s cap says why its outline differs', geometry(capped, cappedDrawn)[0].why === 'paths past the walk\'s cap: drawn as its box', geometry(capped, cappedDrawn));

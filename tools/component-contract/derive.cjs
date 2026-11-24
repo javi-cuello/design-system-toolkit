@@ -21,7 +21,8 @@
  */
 
 const { nameOf } = require('../snapshot/graph.cjs');
-const MODES = require('../tokens/modes.cjs');const { resolve, layerPaths } = require('../snapshot/spec.cjs');
+const MODES = require('../tokens/modes.cjs');
+const { resolve, layerPaths, boxOnly } = require('../snapshot/spec.cjs');
 
 const SHAPE = 1;
 const j = (x) => JSON.stringify(x);
@@ -140,7 +141,9 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
   // part of a circle or a ring, in degrees (snapshot 0.62.0 on): a progress indicator at 50% is half of one
   if (n.arc) e.arc = { ...n.arc };
   // a vector's own outline (snapshot 0.86.0 on), Figma's paths, so a drawing draws the dot and not its box
-  if (n.paths) e.paths = n.paths.map((p) => ({ ...p }));
+  // (none where they say nothing beyond its box, a divider's line or a rectangle over it: the box and its stroke draw
+  // those, as before 0.86.0, and code has no path to write; spec.cjs boxOnly)
+  if (n.paths && !boxOnly(n.paths, n.w, n.h)) e.paths = n.paths.map((p) => ({ ...p }));
   if (n.type === 'RECTANGLE') e.shape = 'rectangle';
   if (n.rotation) e.rotation = n.rotation;
   // a mirror, as the snapshot takes it out of the matrix (x: horizontal, y: vertical)
