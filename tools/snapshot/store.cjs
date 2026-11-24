@@ -1069,7 +1069,9 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
    */
   // a round trip's drawing in the library's own file is not the library's (payload.cjs drawnPage): never written
   const drawn = p.components.filter((c) => payload.drawnPage(c.page));
-  if (drawn.length) p = { ...p, components: p.components.filter((c) => !drawn.includes(c)) };
+  const drawnNames = new Set(drawn.map((c) => c.name));
+  if (drawn.length) p = { ...p, components: p.components.filter((c) => !drawn.includes(c)), ...(p.previews && { previews: p.previews.filter((g) => !drawnNames.has(g.name)) }) };
+  if (p.unreadable) p = { ...p, unreadable: p.unreadable.filter((x) => !payload.drawnPage(x.page)) };
   const fileId = p.tokens._meta.fileKey || p.tokens._meta.fileId;
   const thisFile = new Set([fileId, ...ids].filter(Boolean));
   const fileRef = ids[0] || fileId;
@@ -1151,8 +1153,15 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   // specs are never this file's to judge.
   const others = Object.entries(index.components).filter(([s, e]) => !thisFile.has(e.file) && !mine.has(s) && !orphan(e.file)).map(([s]) => s);
   const pruned = pruneSpecs(P.components, new Set([...mine, ...others]));
+  // a drawing an older store took in (its stored page or index entry the round trip's) goes as no library change
+  const wasDrawn = (s) => payload.drawnPage((pruned.before[s] || {}).page) || payload.drawnPage((index.components[s] || {}).page);
+  const drawnHeld = [...pruned.removed, ...pruned.kept].filter(wasDrawn);
+  for (const s of drawnHeld) delete pruned.before[s];
+  pruned.removed = pruned.removed.filter((s) => !drawnHeld.includes(s));
+  pruned.kept = pruned.kept.filter((s) => !drawnHeld.includes(s));
   Object.assign(specsBefore, pruned.before);
-  for (const s of [...pruned.removed, ...pruned.kept]) delete index.components[s];
+  for (const s of [...pruned.removed, ...pruned.kept, ...drawnHeld]) delete index.components[s];
+  if (drawnHeld.length) say('passed over', `${drawnHeld.length} round trip drawing(s) an earlier snapshot stored, no longer kept`, drawnHeld);
   say('components', changed.length ? `${changed.length} changed — ${changed.join(', ')}` : 'none changed', [
     ...pruned.removed.map((d) => `${d} is no longer in the library — its spec removed (nothing was built on it)`),
     ...pruned.kept.map((d) => `the library no longer has "${d}", and there is code beside its spec — left alone. A renamed component? Move the code to the new folder; a dropped one? Delete it.`),

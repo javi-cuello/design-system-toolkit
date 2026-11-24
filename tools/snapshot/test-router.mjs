@@ -1936,3 +1936,31 @@ test('a round trip\'s drawing page is never the library\'s: its components and f
     assert.deepEqual(fs.readdirSync(P.screens), ['login--login'], 'a screens post drops the drawing page\'s frames too');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('a drawing a store already holds is pruned as no library change, and a drawing\'s preview and unreadable set are passed over too', async () => {
+  const { createRequire } = await import('node:module');
+  const store = createRequire(import.meta.url)('./store.cjs');
+  const { drawingPage } = await import('../component-contract/to-figma.mjs');
+  const page = drawingPage('Checkbox', true), name = `${page}/Checkbox`;
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'drawn-held-'));
+  try {
+    const P = store.paths(dir);
+    const v = { name: 'Size=sm', type: 'COMPONENT', w: 10, h: 10 };
+    const own = { name: 'Checkbox', id: '1:1', page: 'Checkbox', props: { Size: ['sm'] }, variants: [v] };
+    const drawn = { name, id: '2:2', page: 'Checkbox', props: { Size: ['sm'] }, variants: [v] };
+    store.writeLibrary(lib('L', { components: [own, drawn] }), P);
+    // a store written before the rule: the drawing held under its drawing page
+    const folder = fs.readdirSync(P.components).find((d) => d !== 'checkbox');
+    const f = path.join(P.components, folder, 'figma.json');
+    fs.writeFileSync(f, JSON.stringify({ ...JSON.parse(fs.readFileSync(f, 'utf8')), page }));
+    const index = JSON.parse(fs.readFileSync(P.index, 'utf8')); index.components[folder].page = page; fs.writeFileSync(P.index, JSON.stringify(index));
+    const png = Buffer.from('x').toString('base64');
+    const r = store.writeLibrary({ ...lib('L', { components: [own, { ...drawn, page }] }), previews: [{ name: 'Checkbox', w: 1, h: 1, png }, { name, w: 1, h: 1, png }], unreadable: [{ name: 'Broken', page, reason: 'x' }] }, P);
+    assert.deepEqual(fs.readdirSync(P.components), ['checkbox'], 'the held drawing is pruned');
+    const grade = r.lines.find((l) => l.label === 'grade');
+    assert.ok(!grade.detail.some((d) => /removed from the library/.test(d)), `its prune grades no removal: ${grade.text} ${grade.detail.join(' | ')}`);
+    assert.ok(!r.lines.some((l) => l.detail.some((d) => /no longer in the library/.test(d))), 'nor is it said to have left the library');
+    assert.deepEqual(fs.readdirSync(P.previews), ['checkbox.png'], 'only the library\'s preview is written');
+    assert.ok(!r.lines.some((l) => l.label === 'warning' && /could not read/.test(l.text)), 'a drawing Figma could not read is no warning');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
