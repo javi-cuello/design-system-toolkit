@@ -646,9 +646,13 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     // each kind on its own, so one listing that stalls or fails (listing a library's variables has hung) costs only
     // its own keys, which are then imported as before
     const keep = (xs) => { for (const x of xs || []) if (x && x.key) ownKeys.set(x.key, x); };
-    // not under `tried`: a listing that stalls or fails is no token unbound (its keys are imported as before), so it
-    // never reaches `missing`, which refuses a patch; the beat is kept and a given-up drawing still stops
-    const listing = async (what, f, ms = 8000) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); keep(await Promise.race([Promise.resolve().then(f).catch(() => null), new Promise((r) => setTimeout(() => r(null), ms))])); };
+    // not under `tried`: a listing is never a token unbound, which refuses a patch. Each runs to its end: one cut short at
+    // a time drew with what it had reached, which a slower machine reached less of (two copies of a variable, a mode's
+    // collection, chosen by machine speed). One that fails, or that Figma leaves unanswered for a minute, stops the
+    // drawing and names itself. The beat is kept and a given-up drawing still stops
+    const STALL = 60000;
+    const answered = (what, p) => new Promise((ok, no) => { const t = setTimeout(() => no(new Error(`${what}: Figma gave no answer in ${STALL / 1000} s, so the drawing stopped rather than bind from part of it`)), STALL); Promise.resolve(p).then((v) => { clearTimeout(t); ok(v); }, (e) => { clearTimeout(t); no(new Error(`${what} failed: ${e && e.message || e}`)); }); });
+    const listing = async (what, f) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); keep(await answered(what, Promise.resolve().then(f))); };
     await listing("this file's components", () => figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] }));
     await listing("this file's text styles", () => figma.getLocalTextStylesAsync());
     await listing("this file's effect styles", () => figma.getLocalEffectStylesAsync());
@@ -660,11 +664,11 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     // component uses. Its own set only, never a drawing of it (on a page the drawings record)
     await listing('what its own component takes from other libraries', async () => {
       const want = new Set([K.styles, K.fillStyles, K.icons, K.vars, K.effects, K.sets, ...Object.values(K.variants || {})].flatMap((m) => Object.values(m || {})).concat(K.iconContainer || []).filter((k) => k && !ownKeys.has(k)));
-      // each found copy kept as it comes (a scan cut short keeps what it found), and the scan stops once every key
-      // asked for is found or 25 s have gone, its walk included, which runs before any timer could fire
+      // each found copy kept as it comes; the lookups stop once every key asked for is found, never at a time
       const wantNames = new Set([...names, ...Object.values(K.modes || {}).flat().map((m) => m.name)].filter(Boolean));
       // (a name the component does not bind is never found: it keeps the walk going, not the key lookups' waits)
-      const until = Date.now() + 25000, keysDone = () => !want.size || Date.now() > until, done = () => (keysDone() && !wantNames.size) || Date.now() > until;
+      // (the walk's one bound is its layers: past it the drawing fails, naming it, never binds from the part it reached)
+      const LAYERS = 100000, keysDone = () => !want.size, done = () => keysDone() && !wantNames.size;
       const take = (x) => { if (x && want.has(x.key)) { ownKeys.set(x.key, x); want.delete(x.key); } };
       // (each name's candidates among the component's own layers, never a placed instance or its insides, which can bind
       // another library's variable of that name; two of one name is one the snapshot's key decides, else left to it)
@@ -677,8 +681,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       let mine = false;
       const alias = (v) => { if (!v) return; if (Array.isArray(v)) v.forEach(alias); else if (typeof v === 'object') { if (v.type === 'VARIABLE_ALIAS' && v.id) { varIds.add(v.id); if (mine) ownVarIds.add(v.id); } else Object.values(v).forEach(alias); } };
       const inside = (n, r) => { for (let q = n.parent; q && q !== r; q = q.parent) if (q.type === 'INSTANCE') return true; return false; };
-      walk: for (const r of roots) for (const n of [r, ...r.findAll(() => true)]) {
-        if (Date.now() > until) break walk;
+      let walked = 0;
+      for (const r of roots) for (const n of [r, ...r.findAll(() => true)]) {
+        if (++walked > LAYERS) throw new Error(`${P.name}: its own component has over ${LAYERS} layers, the own-file scan's bound (LAYERS in to-figma.mjs); the drawing stopped rather than bind from part of it`);
         try {
           for (const id of styleIdsOf(n)) styleIds.add(id);
           if (n.type === 'TEXT' && typeof n.textStyleId === 'string' && n.textStyleId && typeof n.fontName !== 'symbol' && !textFont.has(n.textStyleId)) textFont.set(n.textStyleId, n.fontName);
@@ -690,13 +695,13 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
           if (n.type === 'INSTANCE') insts.push(n);
         } catch { /* a layer inside another library's instance can need Figma's servers to read: skipped */ }
       }
-      const settle = async (xs, get, stop = keysDone) => { for (let k = 0; k < xs.length && !stop(); k += 100) { figma.root.setPluginData('to-figma-beat', String(Date.now())); for (const x of await Promise.all(xs.slice(k, k + 100).map((v) => get(v).catch(() => null)))) for (const y of [].concat(x || [])) take(y); } };
-      await settle([...styleIds], async (id) => { const st = await figma.getStyleByIdAsync(id); if (st && typeof st.fontName === 'symbol' && textFont.has(id)) lentFont.set(st.key, textFont.get(id)); return st; });
-      await settle([...varIds], async (id) => { const v = await figma.variables.getVariableByIdAsync(id); takeBound(v); return v; }, () => Date.now() > until);
+      const settle = async (what, xs, get, stop = keysDone) => { for (let k = 0; k < xs.length && !stop(); k += 100) { figma.root.setPluginData('to-figma-beat', String(Date.now())); for (const x of await answered(what, Promise.all(xs.slice(k, k + 100).map((v) => get(v).catch(() => null))))) for (const y of [].concat(x || [])) take(y); } };
+      await settle("its own component's styles", [...styleIds], async (id) => { const st = await figma.getStyleByIdAsync(id); if (st && typeof st.fontName === 'symbol' && textFont.has(id)) lentFont.set(st.key, textFont.get(id)); return st; });
+      await settle("its own component's variables", [...varIds], async (id) => { const v = await figma.variables.getVariableByIdAsync(id); takeBound(v); return v; }, () => false);
       for (const [n, xs] of seen) { const vs = [...xs.values()], one = vs.length === 1 ? vs[0] : vs.find((v) => v.key === (K.vars || {})[n]); if (one) bound.set(n, one); }
-      await settle(insts, async (n) => { const m = await n.getMainComponentAsync(); return m ? [m, m.parent && m.parent.type === 'COMPONENT_SET' ? m.parent : null] : null; });
+      await settle("its own component's placed components", insts, async (n) => { const m = await n.getMainComponentAsync(); return m ? [m, m.parent && m.parent.type === 'COMPONENT_SET' ? m.parent : null] : null; });
       return [];
-    }, 30000);
+    });
   }
   const lib = K.vars || {};
   const vars = {};

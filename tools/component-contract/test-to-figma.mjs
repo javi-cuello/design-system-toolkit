@@ -357,6 +357,28 @@ ok('the runner chooses the run\'s token, so it can take back its own and leave a
     calls.length = 0;
     await run('const __token = 1;\n' + stand(false)).catch(() => null);
     ok('…in another file, the snapshot key is imported as before', calls.includes('import k-snapshot') && calls.includes('import k-mode-snapshot'));
+    // the scan walks to its end however slow the machine: a clock that runs ten seconds a call (a slow Figma) draws
+    // with the same variable and the same mode's collection as a fast one
+    calls.length = 0;
+    const now = Date.now; let fake = now();
+    Date.now = () => (fake += 10000);
+    try { await run('const __token = 1;\n' + stand(true)).catch(() => null); } finally { Date.now = now; }
+    ok('the own-file scan is never cut by the clock: on a slow machine the bound variable and its mode\'s collection are still the ones drawn',
+      !calls.includes('import k-snapshot') && calls.includes('collection C:tone') && !calls.includes('import k-mode-snapshot'));
+    // a component past the scan's bound fails the drawing, naming the bound, never draws from the part it reached
+    calls.length = 0;
+    const big = stand(true), many = Array.from({ length: 100001 }, () => ({ type: 'FRAME', parent: comp, boundVariables: {}, fills: [], strokes: [] }));
+    const short = comp.findAll; comp.findAll = () => many;
+    const failed = await run('const __token = 1;\n' + big).then(() => null, (e) => e);
+    comp.findAll = short;
+    ok('…a component past the scan\'s bound on layers fails the drawing, naming the bound', failed && /100000 layers/.test(failed.message) && !calls.length);
+    // a listing Figma never answers fails the drawing, naming it, rather than going on without it
+    const hung = stand(true);
+    figma.variables.getLocalVariablesAsync = () => new Promise(() => {});
+    globalThis.setTimeout = (f, ms) => quiet(f, ms >= 60000 ? 0 : ms);
+    const stalled = await run('const __token = 1;\n' + hung).then(() => null, (e) => e);
+    globalThis.setTimeout = (f, ms) => { const t = quiet(f, ms); if (t && t.unref) t.unref(); return t; };
+    ok('…a listing Figma never answers fails the drawing, naming the listing', stalled && /this file's variables/.test(stalled.message) && /no answer/.test(stalled.message));
   } finally { globalThis.setTimeout = quiet; }
 }
 delete globalThis.figma;
@@ -393,7 +415,7 @@ delete globalThis.figma;
   const at = [...code.matchAll(/figma\.(?:variables\.)?import\w+ByKeyAsync\(/g)].map((m) => m.index);
   const unowned = at.filter((i) => !/own\([^\n]*$/.test(code.slice(Math.max(0, i - 160), i)));
   const block = code.slice(code.indexOf('if (K.ownFile) {'), code.indexOf('const lib = K.vars'));
-  ok('a listing of the file that stalls or fails is never a token unbound (it is not under tried, so no patch is refused)', block.length > 0 && !block.includes('tried(') && block.includes('setTimeout'));
+  ok('a listing of the file that stalls or fails is never a token unbound (it is not under tried, so no patch is refused): it stops the drawing, naming itself', block.length > 0 && !block.includes('tried(') && block.includes('setTimeout'));
   ok('every import by key is asked of the open file first, and the file is listed only when it is the library', at.length > 0 && !unowned.length && /if \(K\.ownFile\) \{/.test(code) && code.includes('getLocalVariablesAsync'));
 }
 
@@ -837,8 +859,8 @@ delete globalThis.figma;
   // in the library's own file a drawing's page is marked as the round trip's, never the library's own page of that name
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
   ok('in the library\'s own file the keys of what other libraries lent are taken from the copies its own component uses, never a drawing\'s',
-    src.includes("await listing('what its own component takes from other libraries'") && src.includes("(n.name === P.name || P.name.endsWith('/' + n.name)) && !drawnPage(n)") && src.includes('}, 30000);')
-    && src.includes('ownKeys.set(x.key, x); want.delete(x.key);') && src.includes('for (const id of styleIdsOf(n)) styleIds.add(id);') && src.includes('if (Date.now() > until) break walk;'));
+    src.includes("await listing('what its own component takes from other libraries'") && src.includes("(n.name === P.name || P.name.endsWith('/' + n.name)) && !drawnPage(n)") && !src.includes('}, 30000);')
+    && src.includes('ownKeys.set(x.key, x); want.delete(x.key);') && src.includes('for (const id of styleIdsOf(n)) styleIds.add(id);') && src.includes('if (++walked > LAYERS) throw') && !/until|Date\.now\(\) >/.test(src.slice(src.indexOf('if (K.ownFile) {'), src.indexOf('const lib = K.vars'))));
   ok('a variable at the top of its collection is a variable where the project names it, a literal never',
     (() => { const v = varNamer(['layer-hover (contextual)']); return v('layer-hover (contextual)') && v('Colour/Primary') && !v('#808080') && !v('16px (1rem)') && !varNamer()('layer-hover (contextual)'); })()
     && needs({ variants: [{ anatomy: { root: { background: 'layer-hover (contextual)' } } }] }, varNamer(['layer-hover (contextual)'])).vars.includes('layer-hover (contextual)')
