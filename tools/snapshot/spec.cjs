@@ -149,40 +149,21 @@ function repeatOf(segment) {
 }
 
 /*
- * Whether a vector's paths (the walk's `paths`, Figma's vectorPaths) say nothing beyond its box of w by h: one straight
- * segment along a box with no height (or no width), a divider's line; or one closed rectangle exactly over the box. The
- * box and its stroke draw either, so they are no shape of their own: derive carries no paths for them, and geometry
- * holds two such readings of one box the same however each is written. Figma writes paths as M, L, Q, C and Z;
- * anything but M, L and Z says more.
+ * Whether a vector's paths (the walk's `paths`, Figma's vectorPaths) say nothing beyond its box of w by h: one open
+ * straight segment, either way, along a box with no height (or no width), a divider's line. The box and its stroke draw
+ * it, so it is no shape of its own: derive carries no paths for it where to-figma draws it as its line, and geometry
+ * holds two such readings of one box the same however each is written. Only a line: a closed box path fills under its
+ * fill rule (NONE draws an outline only), which the box does not say.
  */
 function boxOnly(paths, w, h, tol = 0.01) {
   if (!Array.isArray(paths) || paths.length !== 1 || typeof w !== 'number' || typeof h !== 'number') return false;
-  const t = String(paths[0].data || '').trim().split(/\s+|(?=[A-Za-z])|(?<=[A-Za-z])/).filter(Boolean);
-  const pts = [];
-  let closed = false;
-  for (let i = 0; i < t.length;) {
-    const c = t[i++];
-    if (c === 'Z') { if (i !== t.length) return false; closed = true; continue; }
-    if ((c !== 'M' || i !== 1) && c !== 'L') return false;
-    const x = +t[i++], y = +t[i++];
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
-    pts.push([x, y]);
-  }
+  const m = /^\s*M\s*(-?[\d.]+)\s+(-?[\d.]+)\s*L\s*(-?[\d.]+)\s+(-?[\d.]+)\s*$/.exec(String(paths[0].data || ''));
+  if (!m) return false;
+  const [x0, y0, x1, y1] = m.slice(1).map(Number);
   const eq = (a, b) => Math.abs(a - b) <= tol;
-  const at = ([x, y], [u, v]) => eq(x, u) && eq(y, v);
-  // a closed path back to where it began says its last corner twice
-  if (closed && pts.length > 1 && at(pts[0], pts[pts.length - 1])) pts.pop();
-  if (!closed && pts.length === 2) {
-    const [[x0, y0], [x1, y1]] = pts;
-    if (eq(h, 0) && w > tol) return eq(y0, 0) && eq(y1, 0) && eq(Math.min(x0, x1), 0) && eq(Math.max(x0, x1), w);
-    if (eq(w, 0) && h > tol) return eq(x0, 0) && eq(x1, 0) && eq(Math.min(y0, y1), 0) && eq(Math.max(y0, y1), h);
-    return false;
-  }
-  if (!closed || pts.length !== 4 || !(w > tol && h > tol)) return false;
-  // its four corners each once, every side along one axis
-  const corners = [[0, 0], [w, 0], [w, h], [0, h]];
-  return corners.every((c) => pts.filter((p) => at(p, c)).length === 1)
-    && pts.every((p, i) => { const q = pts[(i + 1) % 4]; return eq(p[0], q[0]) !== eq(p[1], q[1]); });
+  if (eq(h, 0) && w > tol) return eq(y0, 0) && eq(y1, 0) && eq(Math.min(x0, x1), 0) && eq(Math.max(x0, x1), w);
+  if (eq(w, 0) && h > tol) return eq(x0, 0) && eq(x1, 0) && eq(Math.min(y0, y1), 0) && eq(Math.max(y0, y1), h);
+  return false;
 }
 
 module.exports = { compact, resolve, slug, sameShape, layerPaths, repeatOf, boxOnly };

@@ -141,9 +141,8 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
   // part of a circle or a ring, in degrees (snapshot 0.62.0 on): a progress indicator at 50% is half of one
   if (n.arc) e.arc = { ...n.arc };
   // a vector's own outline (snapshot 0.86.0 on), Figma's paths, so a drawing draws the dot and not its box
-  // (none where they say nothing beyond its box, a divider's line or a rectangle over it: the box and its stroke draw
-  // those, as before 0.86.0, and code has no path to write; spec.cjs boxOnly)
-  if (n.paths && !boxOnly(n.paths, n.w, n.h)) e.paths = n.paths.map((p) => ({ ...p }));
+  // (a divider's line along its box is dropped once placed, below, where to-figma's line draws it)
+  if (n.paths) e.paths = n.paths.map((p) => ({ ...p }));
   if (n.type === 'RECTANGLE') e.shape = 'rectangle';
   if (n.rotation) e.rotation = n.rotation;
   // a mirror, as the snapshot takes it out of the matrix (x: horizontal, y: vertical)
@@ -398,6 +397,10 @@ function flatten(list, characters = new Map(), known = [], axes = [], turned = n
         if (c === 'stretch' && typeof e[size] === 'number') delete e[size];
       }
     }
+    // a line along its box (a divider, spec.cjs boxOnly) carries no paths where to-figma draws it as its line (a graphic
+    // of no height, or no width, along that axis, that no icon names): the box and its stroke say it, as before 0.86.0,
+    // and code has no path to write. Anywhere else (stretched both ways) the paths stay, so it is never drawn a frame
+    if (e.paths && e.kind === 'graphic' && !e.asset && boxOnly(node.paths, node.w, node.h) && (Math.abs(node.h) <= 0.01 ? e.height === 0 : e.width === 0)) delete e.paths;
     if (parent != null) e.order = order;
     const prop = characters.get(keyOf(segs)) || characters.get(plain(segs));
     if (prop && node.type === 'TEXT') e.content = `{${prop}}`;
