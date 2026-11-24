@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.10] - 2026-11-24
+### Fixed
+- **Carries the snapshot plugin's walk at 0.88.0 and the components audit's probes at 2.54.1**: each collection records its default mode; an alias into a collection with no mode of that name reads the target's default mode, not its first.
+
 ## [0.14.9] - 2026-11-24
 ### Changed
 - **Carries the snapshot plugin's walk at 0.87.2**: a text style's Auto line height, never measured in the facts mode, takes the whole-pixel height that text already drawn in its family fixes, else is recorded unmeasured; no one-font table.

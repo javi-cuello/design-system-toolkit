@@ -1,6 +1,13 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.88.0] - 2026-11-24
+### Added
+- **Each collection records its default mode** (`defaultMode`, by name, from Figma's `defaultModeId`). The token build wrote the first mode file by name on `:root`, so one library's base was its Blue DT theme and another's strokes read a grey of the wrong theme. The export's resolver and the build now take this mode as the base, and say so where a snapshot lacks it.
+
+### Fixed
+- An alias into a collection with no mode of the same name reads the target's default mode, not its first.
+
 ## [0.87.2] - 2026-11-24
 ### Fixed
 - **An unmeasured Auto line height is never a rounded guess.** 0.87.1 took the largest drawn text's height over its size, a ratio rounded to whole pixels, so a fallback run could disagree with a measured one; it also read text trimmed to its cap height. Now each one-line Auto text of the family with no leading trim bounds the metric, and a style gets the whole-pixel height those bounds fix. Where they fix none, or nothing is drawn in the family, the style is recorded `unmeasured` with no line height (it was 1.2 for every family but Inter, which a table gave exactly), and the token build omits it and says so.

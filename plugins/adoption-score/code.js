@@ -1,4 +1,4 @@
-// Adoption score — v0.7.2 · skill-standard v1.9.0
+// Adoption score — v0.7.3 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -237,7 +237,8 @@ const FCA_FACTORY = function () {
     if (!v) return undefined;
     const c = await api.collection(v.variableCollectionId);
     if (!c) return undefined;
-    const m = c.modes.find((x) => x.name === modeName) || c.modes[0];
+    // (no mode of that name, a single-mode primitives collection: its default mode in Figma, not its first)
+    const m = c.modes.find((x) => x.name === modeName) || c.modes.find((x) => x.modeId === c.defaultModeId) || c.modes[0];
     const val = v.valuesByMode[m.modeId];
     if (val && val.type === "VARIABLE_ALIAS") return hops < 6 ? FCA.resolveInMode(val.id, modeName, api, hops + 1) : undefined;
     return val;

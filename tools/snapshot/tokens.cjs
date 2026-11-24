@@ -5,7 +5,8 @@
  * and the stored values are already resolved, per collection and per mode. A
  * name lives in one collection; the mode is the collection's own where it has
  * that mode (matched without case: a run says `dark`, the file says `Dark`),
- * else its first — a primitives collection has no Light or Dark and is the
+ * else its default mode in Figma (`defaultMode`; its first where a snapshot
+ * predates it) — a primitives collection has no Light or Dark and is the
  * same in both. It holds no state, so two renders in two modes never share one.
  *
  * Three readers had written this separately (two parity loops and the docs),
@@ -15,7 +16,7 @@ function valueOf(snapshot, name, mode) {
   const want = String(mode || '').toLowerCase();
   for (const entry of Object.values((snapshot && snapshot.collections) || {})) {
     const modes = entry.modes || [];
-    const m = modes.find((x) => x.toLowerCase() === want) || modes[0];
+    const m = modes.find((x) => x.toLowerCase() === want) || (modes.includes(entry.defaultMode) ? entry.defaultMode : modes[0]);
     const vals = (entry.values || {})[m] || {};
     if (Object.hasOwn(vals, name)) return vals[name];
   }

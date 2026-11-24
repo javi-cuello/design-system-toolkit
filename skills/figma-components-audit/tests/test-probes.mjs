@@ -128,6 +128,10 @@ const api = { variable: async (id) => VARS[id] || null, collection: async (id) =
 expect("resolve: an alias is followed BY MODE NAME, not into the target's first mode, and alpha survives",
   await FCA.resolveInMode("sem", "Dark", api), { r: 0, g: 0, b: 0, a: 0.05 });
 expect("resolve: a missing variable is undefined, not a throw", await FCA.resolveInMode("nope", "Dark", api), undefined);
+// a target with no mode of that name is read at its default mode in Figma, not its first
+const COLLS2 = { ...COLLS, "c-pal": { defaultModeId: "p-d", modes: [{ name: "Blue", modeId: "p-l" }, { name: "Base", modeId: "p-d" }] } };
+expect("resolve: a target lacking the mode reads its default mode, not its first",
+  await FCA.resolveInMode("sem", "Dark", { ...api, collection: async (id) => COLLS2[id] || null }), { r: 0, g: 0, b: 0, a: 0.05 });
 
 // ---- §3.8 text coverage ------------------------------------------------
 s = set("Card", {}, [node("COMPONENT", "Size=md", { children: [

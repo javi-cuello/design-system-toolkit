@@ -694,8 +694,10 @@ export async function tokenSides(snapshot, repo, spec, valueOf) {
   }
   // sizes: each of our primitive groups against the module the map pairs it with
   for (const [prefix, { file, export: ex, as }] of Object.entries(spec.sizes || {})) {
-    const col = Object.values(snapshot.collections).find((c) => Object.keys(c.values[c.modes[0]] || {}).some((n) => n.startsWith(prefix + '/')));
-    for (const n of Object.keys(col ? col.values[col.modes[0]] : {})) if (n.startsWith(prefix + '/')) ours.push({ group: 'size', name: n, words: [as, ...tokenWords(n.slice(prefix.length + 1))], value: valueOf(snapshot, n, col.modes[0]) });
+    // (each collection read at its default mode in Figma, its first where a snapshot predates it)
+    const base = (c) => (c.modes.includes(c.defaultMode) ? c.defaultMode : c.modes[0]);
+    const col = Object.values(snapshot.collections).find((c) => Object.keys(c.values[base(c)] || {}).some((n) => n.startsWith(prefix + '/')));
+    for (const n of Object.keys(col ? col.values[base(col)] : {})) if (n.startsWith(prefix + '/')) ours.push({ group: 'size', name: n, words: [as, ...tokenWords(n.slice(prefix.length + 1))], value: valueOf(snapshot, n, base(col)) });
     for (const [p, v] of leaves((await mod(file))[ex])) theirs.push({ group: 'size', name: `${ex}.${p.join('.')}`, words: [as, ...tokenWords(p)], value: v });
   }
   // text styles: the words in any order, the library's own prefix and filler words left out

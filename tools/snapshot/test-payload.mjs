@@ -8,7 +8,7 @@ import payload from './payload.cjs';
 
 const tokens = () => ({
   _meta: { file: 'UI library', fileId: 'abc' },
-  collections: { Semantic: { modes: ['Light', 'Dark'], values: { Light: { 'Colour/Text/strong': '#161616' }, Dark: { 'Colour/Text/strong': '#f5f5f5' } }, alias: {}, descriptions: { 'Colour/Text/strong': 'Body text' } } },
+  collections: { Semantic: { modes: ['Light', 'Dark'], defaultMode: 'Light', values: { Light: { 'Colour/Text/strong': '#161616' }, Dark: { 'Colour/Text/strong': '#f5f5f5' } }, alias: {}, descriptions: { 'Colour/Text/strong': 'Body text' } } },
   textStyles: [{ name: 'Body/md', family: 'Inter', weight: 'Regular', size: 16, lineHeight: 1.5 }],
   paintStyles: [],
   effects: [{ name: 'Elevation/base', layers: [] }],
@@ -50,6 +50,7 @@ test('each broken field is named', () => {
     [(p) => { p.previews[0].anatomy = { parts: [] }; }, 'previews[0]: needs name, w, h and png; dark only as a png; anatomy only with a png and parts'],
     [(p) => { p.tokens._meta.pages = ['Cover', 3]; }, 'tokens._meta.pages: must list page names when present'],
     [(p) => { p.icons[0].size = undefined; }, 'icons[0]: needs name, size and svg'],
+    [(p) => { p.tokens.collections.Semantic.defaultMode = 'Dim'; }, 'tokens.collections["Semantic"].defaultMode: must be one of its modes when present'],
   ];
   for (const [breakIt, expected] of cases) {
     const p = library();

@@ -1,6 +1,10 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.7.3] - 2026-11-24
+### Fixed
+- **Carries the components audit's probes at 2.54.1**: an alias into a collection with no mode of that name reads the target's default mode, not its first.
+
 ## [0.7.2] - 2026-11-22
 ### Fixed
 - **A checkbox's or switch's own name reads in text colour.** FigUI3 greys every label, so a control's name read as disabled; the shared frame (ui-base v5) corrects it for every plugin. Nothing in this plugin shows it today: none of its checkboxes or switches carries its own label.

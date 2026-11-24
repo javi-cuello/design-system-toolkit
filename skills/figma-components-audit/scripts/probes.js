@@ -263,7 +263,8 @@ globalThis.__FCA_PROBES_FACTORY = function () {
     if (!v) return undefined;
     const c = await api.collection(v.variableCollectionId);
     if (!c) return undefined;
-    const m = c.modes.find((x) => x.name === modeName) || c.modes[0];
+    // (no mode of that name, a single-mode primitives collection: its default mode in Figma, not its first)
+    const m = c.modes.find((x) => x.name === modeName) || c.modes.find((x) => x.modeId === c.defaultModeId) || c.modes[0];
     const val = v.valuesByMode[m.modeId];
     if (val && val.type === "VARIABLE_ALIAS") return hops < 6 ? FCA.resolveInMode(val.id, modeName, api, hops + 1) : undefined;
     return val;

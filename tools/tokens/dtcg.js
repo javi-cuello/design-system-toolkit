@@ -557,7 +557,11 @@
       }
       // a collection holding nothing DTCG can type (only booleans, say) adds
       // no axis: its modes would multiply the resolutions with nothing between them
-      if (held) axes.push({ collection: c.name, single: single, variants: variants });
+      // Figma's default mode (the snapshot records it, `defaultMode`) is the modifier's default; a snapshot from
+      // before it was recorded takes the first mode in Figma's order, and says so: a guess at the base is never silent
+      if (held && !single && !(c.defaultMode && c.modes.indexOf(c.defaultMode) !== -1))
+        report.warnings.push({ name: c.name, reason: 'no default mode recorded: Figma\'s first mode, ' + c.modes[0] + ', taken as the base; snapshot the file again' });
+      if (held) axes.push({ collection: c.name, single: single, defaultMode: c.defaultMode, variants: variants });
       else files.splice(files.length - variants.length, variants.length);
     }
 
@@ -661,7 +665,10 @@
         }
         steps.push({ mode: mode, files: files });
       }
-      axisList.push({ collections: group.map(function (x) { return x.collection; }), steps: steps });
+      // the default: the first collection's own, where it recorded one of these modes, else its first
+      var def = steps[0].mode;
+      for (var d = 0; d < steps.length; d++) if (group[0].defaultMode && slug(steps[d].mode) === slug(group[0].defaultMode)) def = steps[d].mode;
+      axisList.push({ collections: group.map(function (x) { return x.collection; }), steps: steps, defaultMode: def });
     }
     return { fixed: fixed, axes: axisList };
   }
@@ -692,7 +699,7 @@
    * (designtokens.org/tr/2025.10/resolver; its schema pins version "2025.10").
    * The single-mode files are one set; each axis is one modifier, its contexts
    * the modes (slugged, as the file names are) and its default Figma's default
-   * mode. Figma has no name for an axis, so a modifier is named by the
+   * mode (`defaultMode`, else the first collection's first mode). Figma has no name for an axis, so a modifier is named by the
    * collections that move on it, joined with "+": stable when a mode is added,
    * honest when two tiers share one switch, and the description says it.
    * File references are relative to the resolver, which sits at the export's
@@ -717,7 +724,7 @@
       doc.modifiers[name] = {
         description: 'The Figma modes of ' + ax.collections.join(', ') + '.',
         contexts: contexts,
-        'default': slug(ax.steps[0].mode)
+        'default': slug(ax.defaultMode)
       };
       order.push({ $ref: '#/modifiers/' + name });
     }

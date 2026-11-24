@@ -24,8 +24,9 @@
  *     `--colour-text-strong`; two paths that land on one name fail the build;
  *   - references are kept (`outputReferences`): a semantic token is
  *     `var(--palette-grey-12)`, so a mode switch re-points one tier;
- *   - a Light/Dark collection writes Light on :root and Dark under
- *     `[data-theme="dark"]` and under the system preference when nothing is
+ *   - an axis writes its collection's default mode in Figma on :root (the
+ *     resolver's default, never the first file by name); a Light/Dark one writes the other under
+ *     `[data-theme="<it>"]` and under the system preference when nothing is
  *     chosen — both on screen only, because a page printed in the dark tier
  *     prints near-white text on white paper; a Mobile/Tablet/Desktop collection writes Mobile on :root and the
  *     others from the sm/md breakpoint; any other mode is `[data-<collection>="<mode>"]`;
@@ -91,6 +92,18 @@ export const breakpointOf = (path, values) => {
 };
 
 const read = (f) => JSON.parse(readFileSync(f, 'utf8'));
+
+const RESOLVER = 'tokens.resolver.json';
+/** Each modifier's default in the export's resolver: [{ mode, folders }], the folders its contexts' files sit in
+ *  (one per collection that moves on it). None where there is no resolver. */
+function defaultsOf(dir) {
+  const file = join(dir, RESOLVER);
+  if (!existsSync(file)) return [];
+  return Object.values(read(file).modifiers || {}).filter((m) => m && typeof m.default === 'string').map((m) => ({
+    mode: m.default,
+    folders: new Set(Object.values(m.contexts || {}).flat().map((r) => String(r && r.$ref).split('/')[0])),
+  }));
+}
 
 /** Folders of DTCG files: collection → { modes: Map(mode → file) }. */
 function discover(dir) {
@@ -305,10 +318,24 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
   register(SD);
   const collections = discover(tokens);
   const { single, axes } = axesOf(collections);
+  // An axis's base (:root) is its collection's default mode in Figma, which the export's resolver records as the
+  // modifier's default (dtcg.js buildResolver). The files are read in name order, so their first is no base: one
+  // library's :root was its Blue DT theme, not Light. A folder with no default for the axis falls back to a Light or
+  // Mobile mode, else the first by name, and says so, naming the collections.
+  const defaults = defaultsOf(tokens), based = new Map();
   const baseMode = (axis) => {
-    const k = axis.kind;
-    const want = k === 'theme' ? 'light' : k === 'responsive' ? 'mobile' : null;
-    return axis.modes.find((m) => m.toLowerCase() === want) || axis.modes[0];
+    if (based.has(axis)) return based.get(axis);
+    // (a responsive axis is mobile first whatever Figma's default: its other modes switch at min-width queries)
+    if (axis.kind === 'responsive' && axis.modes.includes('mobile')) return 'mobile';
+    const recorded = defaults.find((d) => axis.members.every((s) => d.folders.has(s)) && axis.modes.includes(d.mode));
+    let mode = recorded && recorded.mode;
+    if (!mode) {
+      const want = axis.kind === 'theme' ? 'light' : axis.kind === 'responsive' ? 'mobile' : null;
+      mode = axis.modes.find((m) => m.toLowerCase() === want) || axis.modes[0];
+      console.warn(`tokens: ${axis.members.join(', ')}: no default mode recorded (${RESOLVER} has none for it); ${mode} taken as the base. Export the tokens again from a fresh snapshot`);
+    }
+    based.set(axis, mode);
+    return mode;
   };
   const baseFiles = [...single, ...axes.flatMap((a) => a.members.map((s) => collections.get(s).modes.get(baseMode(a))))];
 

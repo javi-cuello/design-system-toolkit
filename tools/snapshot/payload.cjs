@@ -54,6 +54,8 @@ function tokens(t, where = 'tokens') {
       if (!need(isObj(c), at, 'must be an object')) continue;
       if (!need(Array.isArray(c.modes) && c.modes.length > 0 && c.modes.every(isStr), `${at}.modes`, 'must list at least one mode name')) continue;
       need(isObj(c.values) && c.modes.every((m) => isObj(c.values[m])), `${at}.values`, 'must hold an object per mode');
+      // Figma's default mode, the base a token build writes on :root (plugin 0.88.0 on; absent in older snapshots)
+      need(c.defaultMode === undefined || c.modes.includes(c.defaultMode), `${at}.defaultMode`, 'must be one of its modes when present');
       need(c.alias === undefined || isObj(c.alias), `${at}.alias`, 'must be an object when present');
       need(c.descriptions === undefined || (isObj(c.descriptions) && Object.values(c.descriptions).every(isStr)), `${at}.descriptions`, 'must map names to text when present');
       need(c.codeSyntax === undefined || (isObj(c.codeSyntax) && Object.values(c.codeSyntax).every((o) => isObj(o) && Object.values(o).every(isStr))), `${at}.codeSyntax`, 'must map names to { platform: text } when present');

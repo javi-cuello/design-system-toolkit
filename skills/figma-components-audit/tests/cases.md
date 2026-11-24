@@ -306,7 +306,7 @@ Not walked.
 Fixture: five bound semantic colour tokens from Project A's `Button`, each aliasing one hop into a hidden primitive, in a `Light`/`Dark` collection.
 Assert: each mode resolves to its own colour. **This failed before the fix.** Following the alias into the target collection's `modes[0]` returned the *Light* colour for every mode — an inverse text token came back `0.992` (near-white) in Dark instead of `0.071` — so every dark-mode ratio was computed from light-mode colours, and Light and Dark reported identical ratios.
 Assert why that is worse than the `NaN` trap it sits beside: an unfollowed alias yields `NaN`, which is obviously broken. A wrongly-followed alias yields **a real colour that is the wrong one**, and identical Light/Dark ratios read as a theme-invariant token rather than a broken resolver. Both are silent; only one looks plausible.
-Assert the fallback is retained and why: a target collection with no mode of that name — a single-mode primitive collection — is correctly read at `modes[0]`. Figma provides no mapping between collections' modes, so name matching is the heuristic, not a guarantee.
+Assert the fallback is retained and why: a target collection with no mode of that name — a single-mode primitive collection — is read at its default mode (`defaultModeId`), which is not always `modes[0]` (2026-11-24: one library's first mode was not its default). Figma provides no mapping between collections' modes, so name matching is the heuristic, not a guarantee.
 Assert the finding names the mode alongside the token pair. A report naming only the pairing sends the maintainer to a component that looks correct on screen.
 
 Walked live: 2026-08-08 — five bound semantic tokens on Project A `Button` in a Light/Dark collection.

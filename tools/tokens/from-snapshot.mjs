@@ -107,6 +107,8 @@ export function toDtcgSnapshot(t) {
       name: built(cname),
       ...(built(cname) !== cname && { figmaName: cname }),
       modes: c.modes,
+      // Figma's default mode, the resolver's default and the token build's base (the plugin records it since 0.88.0)
+      ...(c.defaultMode && { defaultMode: c.defaultMode }),
       variables: names.map((name) => {
         const values = {};
         let type = null;

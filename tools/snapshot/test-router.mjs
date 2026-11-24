@@ -1099,6 +1099,8 @@ test('tokens: the canonical shape, and a style a file deletes is gone from the s
   assert.deepEqual(Object.keys(t), ['_meta', 'collections', 'textStyles', 'paintStyles', 'effects'], 'no convenience keys: the design, under its own names');
   assert.equal(valueOf(t, 'fg', 'dark'), '#fff', 'a value by name and mode, the mode matched without case');
   assert.equal(valueOf(t, 'constructor', 'dark'), undefined, 'a name the values do not hold is no token, though every object answers to it');
+  const m3 = { collections: { M3: { modes: ['Blue DT', 'Light'], defaultMode: 'Light', values: { 'Blue DT': { s: 1 }, Light: { s: 2 } } } } };
+  assert.equal(valueOf(m3, 's', 'high contrast'), 2, 'a mode the collection lacks reads its default mode, not its first');
   core.tokens.textStyles = [ts('Body')];
   store.writeLibrary(core, P);
   t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));

@@ -237,8 +237,8 @@ export function tokenLists(snapshot = {}) {
   const colours = [];
   const lengths = [];
   for (const [collection, c] of Object.entries(snapshot.collections || {})) {
-    // the collection's first mode, as it names its modes; else the first it holds
-    const first = c.values && ((c.modes && c.values[c.modes[0]]) || Object.values(c.values)[0]);
+    // the collection's default mode in Figma; else its first, as it names its modes; else the first it holds
+    const first = c.values && ((c.defaultMode && c.values[c.defaultMode]) || (c.modes && c.values[c.modes[0]]) || Object.values(c.values)[0]);
     // the mode called Dark, matched without case, as the snapshot's own reader picks it (tools/snapshot/tokens.cjs valueOf,
     // which this page cannot import, being CommonJS; test-anatomy.mjs holds the two to one answer)
     const darkMode = c.values && Object.keys(c.values).find((m) => /^dark$/i.test(m));

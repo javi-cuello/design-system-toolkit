@@ -1,4 +1,4 @@
-// Design system snapshot — v0.87.2 · plugin-standard v1.1.0
+// Design system snapshot — v0.88.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -603,7 +603,8 @@ async function collectTokens() {
         // value written into the Dark map, well-formed and wrong. The store's
         // own reader (tokens.cjs) has matched without case since it was
         // written; this side had not.
-        const tm = tc ? (tc.modes.find((m) => m.name.toLowerCase() === mode.name.toLowerCase()) || tc.modes[0]) : null;
+        // (a target with no mode of that name, a single-mode primitives collection, is read at its default mode)
+        const tm = tc ? (tc.modes.find((m) => m.name.toLowerCase() === mode.name.toLowerCase()) || tc.modes.find((m) => m.modeId === tc.defaultModeId) || tc.modes[0]) : null;
         raw = tm ? target.valuesByMode[tm.modeId] : undefined;
       }
       out[v.name] = raw && typeof raw === 'object' && 'r' in raw ? colour(raw) : raw;
@@ -615,7 +616,7 @@ async function collectTokens() {
   say('reading variables');
   // Every collection, every mode, under Figma's own names. Read once here and
   // reused for the legacy keys below, so nothing is fetched twice.
-  /** @type {Record<string, { modes: string[], values: Record<string, unknown>, alias: Record<string, unknown>, descriptions: Record<string, string>, hidden?: string[], keys?: Record<string, string>, scopes?: Record<string, string[]>, codeSyntax?: Record<string, Record<string, string>>, extends?: string }>} */
+  /** @type {Record<string, { modes: string[], defaultMode?: string, values: Record<string, unknown>, alias: Record<string, unknown>, descriptions: Record<string, string>, hidden?: string[], keys?: Record<string, string>, scopes?: Record<string, string[]>, codeSyntax?: Record<string, Record<string, string>>, extends?: string }>} */
   const byName = {};
   // and the collections of another library whose variables the components bind (a component file whose colours, spaces
   // and radii live in a foundations file has none local), marked remote: a name a local one holds is that one
@@ -626,7 +627,10 @@ async function collectTokens() {
     if (c && !here.has(c.name)) others.set(c.name, c);
   }
   for (const c of [...collections, ...others.values()]) {
-    const entry = { modes: c.modes.map((m) => m.name), values: {}, alias: {}, descriptions: {}, ...(c.remote && { remote: true }) };
+    // its default mode by name: the base a token build writes on :root. A reader took the first mode it listed, and
+    // the DTCG files are named, so sorted, by mode: one library's base was its Blue DT theme, not Light
+    const def = c.modes.find((m) => m.modeId === c.defaultModeId);
+    const entry = { modes: c.modes.map((m) => m.name), ...(def && { defaultMode: def.name }), values: {}, alias: {}, descriptions: {}, ...(c.remote && { remote: true }) };
     // Which collection an extension extends, so a reader can say what it is.
     if (c.isExtension) {
       const parent = await figma.variables.getVariableCollectionByIdAsync(c.parentVariableCollectionId).catch(() => null);
@@ -790,7 +794,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.87.2';
+const VERSION = '0.88.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
