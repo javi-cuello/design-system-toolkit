@@ -379,6 +379,12 @@ export const counts = (legs) => Object.fromEntries(Object.entries(legs).flatMap(
   if (tagged.length) out.push([`${leg} strict`, Object.fromEntries(tagged.map(([c, x]) => [c, strictCount(x)]))]);
   return out;
 }));
+// A count derived from a leg (`<leg> strict`, `<leg> left`, `<leg> predicted`: a space in its name) that accepted.json
+// does not hold at all is new bookkeeping of a leg already accepted, not a rise: unaccepted says it, worse passes it. A
+// base leg absent (a Figma leg drawn since the accept) is still held, each reading newly measured.
+const derivedOnly = (leg, accepted) => leg.includes(' ') && (accepted || {})[leg] === undefined;
+export const unaccepted = (now, accepted) => Object.entries(now).filter(([leg, cs]) => derivedOnly(leg, accepted) && Object.keys(cs).length)
+  .map(([leg, cs]) => `${leg}: not yet accepted (${Object.keys(cs).length} component${Object.keys(cs).length === 1 ? '' : 's'}): --accept once to hold it`);
 export function worse(now, accepted) {
   const out = [];
   for (const [leg, cs] of Object.entries(accepted || {})) for (const [c, n] of Object.entries(cs)) {
@@ -387,7 +393,7 @@ export function worse(now, accepted) {
     else if (m > n) out.push(`${leg} ${c}: ${n} → ${m}`);
   }
   // a component measured since the accept is held from its first count: accepted once, with what its rows say
-  for (const [leg, cs] of Object.entries(now)) for (const [c, m] of Object.entries(cs)) if (m > 0 && ((accepted || {})[leg] || {})[c] === undefined) out.push(`${leg} ${c}: newly measured at ${m}, not accepted yet`);
+  for (const [leg, cs] of Object.entries(now)) if (!derivedOnly(leg, accepted)) for (const [c, m] of Object.entries(cs)) if (m > 0 && ((accepted || {})[leg] || {})[c] === undefined) out.push(`${leg} ${c}: newly measured at ${m}, not accepted yet`);
   return out;
 }
 
@@ -939,7 +945,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     if (!fs.existsSync(file)) { console.log(`no accepted counts at ${file}: run with --accept once`); process.exit(1); }
     // a check that measured nothing has not passed: the project reads its components first, or rules the gate out
     if (!Object.values(now).some((cs) => Object.keys(cs).length)) { console.log('nothing measured: no component has a reading from code or from Figma'); process.exit(1); }
-    const bad = worse(now, panel ? scoped(JSON.parse(fs.readFileSync(file, 'utf8')), argv) : JSON.parse(fs.readFileSync(file, 'utf8')));
+    const was = panel ? scoped(JSON.parse(fs.readFileSync(file, 'utf8')), argv) : JSON.parse(fs.readFileSync(file, 'utf8'));
+    for (const u of unaccepted(now, was)) console.log(`  ${u}`);
+    const bad = worse(now, was);
     for (const b of bad) console.log(`  rose: ${b}`);
     if (bad.length) { console.log('a count rose against the accepted one: fix what the rows say, or accept with a reason in the commit'); process.exit(1); }
   }

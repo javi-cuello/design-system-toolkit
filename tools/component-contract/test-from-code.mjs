@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1061,4 +1061,20 @@ ok('changedPaths: the leaves that differ, a key added or gone among them', JSON.
   A.take('text-align', r, () => { r.anatomy.t.textAlign = 'left'; });
   A.add('slot-sample', 'anatomy.s/x');
   ok('assistsOf: a step that changed a field tags it by its rule; one that changed nothing tags none', JSON.stringify(A.out()) === JSON.stringify({ 'component-name': ['component'], 'slot-sample': ['anatomy.s/x'] })); }
+
+// the borrowings in a render's read: a container the design draws as a graphic takes its shape, a placed instance and
+// its insides take their main's tokens for a zero, and a name inside a placed component the markup does not carry is
+// the design's; each tagged by its rule, once per field
+{ const A = assistsOf(), x = { kind: 'container', full: true };
+  A.take('design-shape', { anatomy: { dot: x } }, () => asShape(x, { kind: 'graphic', shape: 'ellipse' }, false));
+  const h = { kind: 'instance', layout: { direction: 'row' } }, value = (t) => ({ 'S/0': 0 })[t];
+  A.take('placed-main-token', { anatomy: { chip: h } }, () => zeroTokens(h, { layout: { padding: { top: 'S/0', end: 'S/0', bottom: 'S/0', start: 'S/0' } } }, value, { fill: true }));
+  const same = { kind: 'instance', layout: { direction: 'row', padding: { top: 'S/0', end: 'S/0', bottom: 'S/0', start: 'S/0' } } };
+  A.take('placed-main-token', { anatomy: { kept: same } }, () => zeroTokens(same, { layout: { padding: { top: 'S/0', end: 'S/0', bottom: 'S/0', start: 'S/0' } } }, value, { fill: true }));
+  const out = A.out();
+  ok('a shape and a main\'s zero tokens taken from the design are tagged; a token already there is not',
+    out['design-shape'].includes('anatomy.dot.kind') && out['design-shape'].includes('anatomy.dot.shape') && out['placed-main-token'].some((q) => q.startsWith('anatomy.chip.layout.padding')) && !out['placed-main-token'].some((q) => q.startsWith('anatomy.kept')));
+  ok('a name inside a placed component is borrowed where only the design names it; the markup\'s own is not',
+    nameInside('chip', 'chip/label', null, { 'chip/label': 'Label' }) !== nameInside('chip', 'chip/label', null, null)
+    && nameInside(null, 'label', 'Own', { label: 'Label' }) === nameInside(null, 'label', 'Own', null)); }
 console.log(`${n}/${n} passed`);

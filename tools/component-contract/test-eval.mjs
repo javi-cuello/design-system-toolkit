@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, gapOf, GAPS } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, gapOf, GAPS, leftToCode as leftToCode0, unaccepted } from './eval.mjs';
 import { drawSettings } from './to-figma.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
@@ -14,6 +14,9 @@ import { selfDrawn, siteFiles, drawnAll, GENERATOR } from './site.mjs';
 import { isDeepStrictEqual } from 'node:util';
 
 let n = 0;
+// every excuse the fixtures below meet, by its gap id: each must be met once (checked at the end)
+const seenGaps = new Set();
+const leftToCode = (...a) => { const g = gapOf(...a), yes = leftToCode0(...a); return (at, row) => { const r = g(at, row); if (r) seenGaps.add(r); if (!!r !== yes(at, row)) throw new Error(`gapOf and leftToCode disagree at ${at}`); return !!r; }; };
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
 
 ok('a field is said without its element, so one cause in many elements is one line', fieldOf('content/icon.border.width') === '*.border.width' && fieldOf('props') === 'props' && fieldOf('root.shadow.0.color') === '*.shadow.N.color');
@@ -564,4 +567,28 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   ok('gapOf names the branch that excuses a row, and none for a difference', g('menu') === 'pointer-only-part' && g('slot/sample.content') === 'slot-sample' && g('tip.radius', { library: 'mixed', drawn: null }) === 'path-radius' && g('root.width') === null);
   ok('every gap id is described', ['pointer-only-part', 'slot-sample', 'path-radius', 'unexposed-override', 'pointer-words', 'pointer-with', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
   ok('leftToCode is gapOf said as yes or no', leftToCode(c)('menu') === true && leftToCode(c)('root.width') === false); }
+
+// a count derived from an accepted leg (`self strict`) that accepted.json does not hold yet is said, never failed on: it
+// is new bookkeeping, not a rise; a base leg absent still fails, as a Figma leg drawn since its accept does
+{ const now = { self: { a: 1 }, 'self strict': { a: 4 }, figma: { a: 2 } }, acc = { self: { a: 1 } };
+  const w = worse(now, acc);
+  ok('--check: a derived count absent from accepted.json is not a failure; a base leg absent still is', !w.some((x) => /self strict/.test(x)) && w.some((x) => /figma a: newly measured/.test(x)));
+  ok('--check: the derived count not yet accepted is said', unaccepted(now, acc).some((x) => /self strict: not yet accepted \(1 component/.test(x)) && !unaccepted(now, { ...acc, 'self strict': { a: 4 } }).length); }
+// a stored reading with no `assisted` is untagged; one with tags carries them
+{ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'eval-'));
+  const comps = path.join(home, 'components', 'tag');
+  fs.mkdirSync(comps, { recursive: true });
+  const c = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  fs.writeFileSync(path.join(comps, 'contract.json'), JSON.stringify(c));
+  const where = { projectDir: home, paths: { components: path.join(home, 'components') } };
+  for (const d of [path.join(home, 'parity', 'from-code'), path.join(home, 'round-trip', 'self', 'from-code'), path.join(home, 'round-trip', 'self2', 'from-code')]) fs.mkdirSync(d, { recursive: true });
+  fs.writeFileSync(path.join(home, 'parity', 'from-code', 'tag.json'), JSON.stringify({ of: hashOf(c), unread: 0, asFigma: c }));
+  fs.writeFileSync(path.join(home, 'round-trip', 'self', 'from-code', 'tag.json'), JSON.stringify({ unread: 0, assisted: { 'component-name': ['component'] }, asFigma: c }));
+  fs.writeFileSync(path.join(home, 'round-trip', 'self2', 'from-code', 'tag.json'), JSON.stringify({ unread: 0, assisted: {}, asFigma: c }));
+  const m = measure(where);
+  ok('measure: a stored reading without `assisted` is untagged, one with it carries its tags',
+    m.legs.browser.tag.untagged === true && !isStrict(m.legs.browser.tag) && isSame(m.legs.browser.tag)
+    && m.legs.self.tag.assisted['component-name'][0] === 'component' && !isStrict(m.legs.self.tag) && isSame(m.legs.self.tag) && isStrict(m.legs.second.tag));
+  fs.rmSync(home, { recursive: true, force: true }); }
+ok('every gap id is met by a fixture', Object.keys(GAPS).every((g) => seenGaps.has(g)), [...Object.keys(GAPS)].filter((g) => !seenGaps.has(g)));
 console.log(`${n} passed`);
