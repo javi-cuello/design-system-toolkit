@@ -2,7 +2,8 @@
 /*
  * Does each running dashboard serve the records the projects actually have?
  *
- *   node tools/figma-audit/check-services.mjs
+ *   node tools/figma-audit/check-services.mjs           judge (bin/check)
+ *   node tools/figma-audit/check-services.mjs --heal    restart stale idle services first, then judge (bin/land)
  *
  * A launch agent holds its arguments until it is reloaded from disk, and
  * `launchctl kickstart` restarts it with the definition launchd already has —
@@ -68,7 +69,7 @@ export function judge(found, wanted, newest) {
 }
 
 /*
- * A stale service is asked to restart before it is judged (its route /restart-when-idle: stale-self's now()), and
+ * With --heal (bin/land, before queuing), a stale service is asked to restart before it is judged (its route /restart-when-idle: stale-self's now()), and
  * waited for: a dashboard restarts itself once idle, but looks only once a minute and waits out a docs build (about a
  * minute), and stale dashboards failed a land that had nothing to do with them (2026-11-24). What stays a failure is
  * returned, each with why: a plugin connected (it keeps the old code while the plugin is open), nothing supervising it,
@@ -131,7 +132,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const judged = judge(running().filter((r) => !r.test), wanted, newest);
   const { seen, found } = judged;
   let bad = judged.bad;
-  if (judged.stale.length) {
+  // --heal (bin/land, before queuing, outside the lock) restarts what it can first; bin/check only judges
+  if (judged.stale.length && process.argv.includes('--heal')) {
     const left = await heal(judged.stale, { newest });
     const healed = judged.stale.filter((s) => !left.some((l) => l.startsWith(s.msg)));
     bad = bad.filter((b) => !judged.stale.some((s) => s.msg === b)).concat(left);

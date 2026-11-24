@@ -218,6 +218,20 @@ async function quickCheck(main, sha) {
   } finally { t.remove(); }
 }
 
+/* The main checkout's dashboards check, healing: the line saying which stale services it restarted, or null. Its verdict
+   is the full check's to give, so nothing else of it is read here. */
+function healServices(main) {
+  const script = path.join(main, 'tools', 'figma-audit', 'check-services.mjs');
+  if (!fs.existsSync(script)) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let out = '';
+    const c = spawn(process.execPath, [script, '--heal'], { cwd: main, stdio: ['ignore', 'pipe', 'ignore'] });
+    c.stdout.setEncoding('utf8'); c.stdout.on('data', (d) => { out += d; });
+    c.on('error', () => resolve(null));
+    c.on('close', () => resolve(out.split('\n').find((l) => / restarted/.test(l)) || null));
+  });
+}
+
 export async function land(from, target) {
   const main = mainOf(from);
   const asDir = target && fs.existsSync(target) ? path.resolve(target) : null;
@@ -234,7 +248,10 @@ export async function land(from, target) {
   if (was?.outcome === 'red') { say(`${branch} at ${sha.slice(0, 8)} was red on main at ${new Date(was.at).toTimeString().slice(0, 5)}: commit a fix, or rebase on origin/main, then land again`); return 1; }
   // the quick check first, on the commit as committed (a temporary worktree of it), with no lock: a branch it finds red
   // never waits for the lock and a full check to be told so (2026-11-24: two lands red on quick steps after 13 minutes each)
-  const quick = await quickCheck(main, sha);
+  // beside it, stale dashboards are restarted (the main checkout's check-services --heal: those they run from), outside
+  // the lock, so the full check under it only judges them (2026-11-24: stale dashboards failed a land unrelated to them)
+  const [quick, healed] = await Promise.all([quickCheck(main, sha), healServices(main)]);
+  if (healed) say(healed);
   if (quick.code !== 0) {
     say(`${branch} at ${sha.slice(0, 8)}: the quick check's run:\n${quick.out.trimEnd().split('\n').map((l) => `  ${l}`).join('\n')}`);
     say(`${branch} not queued: the quick check is red: ${quick.failed.join(', ') || 'see its run above'}. Fix it, commit, then land again`);

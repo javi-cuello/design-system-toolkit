@@ -228,8 +228,10 @@ actually have. With no service running it passes on nothing, so its verdicts
 are held by `test-check-services.mjs`, fed a list in place of the process
 table (`judge`): healthy, none running, the supervisor's duplicate pair, a
 process older than its source, `--data` pinned to a record, and a path no
-project claims. A process older than its source is first asked to restart
-(`POST /restart-when-idle`, `heal`) and waited for up to two minutes, since a
+project claims. With `--heal` (run by `bin/land` before queuing, outside the
+measuring lock; `bin/check` only judges), a process older than its source is
+first asked to restart (`POST /restart-when-idle`, `heal`) and waited for up
+to two minutes, since a
 dashboard restarts itself once idle but looks only once a minute and waits out
 a docs build; it stays a failure only when it holds a plugin, nothing
 supervises it, it cannot be asked, or it is not back in time (stale dashboards

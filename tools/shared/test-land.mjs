@@ -246,5 +246,17 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.equal(remoteHas('n11.txt'), 'n11');
   assert.equal(fs.readdirSync(path.join(main, '.claude', 'worktrees')).filter((f) => f.startsWith('.at-')).length, 0, 'no temporary worktree left'); }
 
+// (s) stale dashboards are restarted before queuing, outside the lock, by the main checkout's check-services --heal;
+// the full check under the lock only judges them (2026-11-24: stale dashboards failed a land that had nothing to do with them)
+{ const fake = path.join(main, 'tools', 'figma-audit', 'check-services.mjs'), said = path.join(tmp, 'healed');
+  fs.mkdirSync(path.dirname(fake), { recursive: true });
+  fs.writeFileSync(fake, `import fs from 'node:fs'; fs.appendFileSync(${JSON.stringify(said)}, process.argv.slice(2).join(' ') + '\\n'); console.log('dashboards: 1 stale service(s) restarted, idle, on the files on disk: p');`);
+  const S = wt('n12'); fs.writeFileSync(path.join(S, 'n12.txt'), 'n12\n'); git(S, 'add', '.'); git(S, 'commit', '-qm', 'n12');
+  r = await quiet(() => land(S));
+  fs.rmSync(path.join(main, 'tools'), { recursive: true, force: true });
+  assert.equal(r.code, 0, r.out);
+  assert.equal(fs.readFileSync(said, 'utf8').trim(), '--heal', 'asked once, to heal');
+  assert.match(r.out, /1 stale service\(s\) restarted/, r.out); }
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');
