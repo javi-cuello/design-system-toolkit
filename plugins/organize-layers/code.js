@@ -1,4 +1,4 @@
-// Layer organiser — v0.7.2 · plugin-standard v1.7.0
+// Layer organiser — v0.7.3 · plugin-standard v1.7.0
 // @ts-check
 // Arranges layers on the canvas from their names: the text before the delimiter
 // picks the group, the text after it orders the members inside it. Groups advance
@@ -255,11 +255,18 @@ function setRelaunch(node) {
  */
 function organise(poolOverride) {
   var plan = buildPlan(poolOverride);
+  /** @type {SceneNode[]} */
+  var all = [];
+  plan.columns.forEach(function (col) { all = all.concat(col.items); });
+  var before = all.map(function (n) { return n.x + ',' + n.y; });
   var moved = applyPlan(plan);
   if (moved === 0) {
     figma.notify('Nothing to organise \u2014 select some layers, or open a page with top-level layers.');
     return 0;
   }
+  // the view follows the layers that moved, so the result is on screen, not off where they used to be
+  var changed = all.filter(function (n, k) { return n.x + ',' + n.y !== before[k]; });
+  if (changed.length > 0) figma.viewport.scrollAndZoomIntoView(changed);
   setRelaunch(plan.columns[0].items[0]);
   figma.notify('Organised ' + moved + ' layer' + (moved === 1 ? '' : 's') +
     ' into ' + plan.columns.length + ' column' + (plan.columns.length === 1 ? '' : 's') + '.');

@@ -60,8 +60,10 @@ global.figma = {
     getAsync: async function () { return storage; },
     setAsync: async function (k, v) { storage = v; }
   },
+  viewport: { scrollAndZoomIntoView: function (ns) { zoomed = ns.map(function (n) { return n.name; }); } },
   get currentPage() { return PAGE; }
 };
+var zoomed = null;
 
 // The Layers panel lists children back to front, so panel order is the reverse.
 function panelOrder() { return PAGE.children.slice().reverse().map(function (n) { return n.name; }); }
@@ -210,6 +212,15 @@ eq(normalise({ direction: 'sideways' }).direction, 'horizontal', '6 · an unknow
   await runFromRelaunch();
   ok(notices.length === 1 && /Nothing to organise/.test(notices[0]), '7 · an empty run notifies');
   ok(closed, '7 · and still closes');
+
+  // 2026-11-24: after a run the view zooms to the layers that moved, and only those.
+  reset([makeNode('1 - 1', 10, 10, 0, 0, PAGE), makeNode('1 - 2', 10, 10, 500, 500, PAGE)]);
+  zoomed = null;
+  organise(null);
+  eq(zoomed, ['1 - 2'], '8 · the view zooms to the layers that moved, and not to one already in place');
+  zoomed = null;
+  organise(null);
+  ok(zoomed === null, '8 · a run that moves nothing leaves the view where it is');
 
   // A parent with no appendChild is a no-op, not a throw.
   var ORPHAN = { type: 'PAGE' };

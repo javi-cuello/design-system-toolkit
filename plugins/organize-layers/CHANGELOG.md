@@ -1,6 +1,10 @@
 # Changelog — Layer organiser
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.7.3] - 2026-11-24
+### Added
+- **After a run, the view zooms to the layers that moved**, so the result is on screen. A run that moves nothing leaves the view where it was.
+
 ## [0.7.2] - 2026-11-22
 ### Fixed
 - **A checkbox's or switch's own name reads in text colour.** FigUI3 greys every label, so a control's name read as disabled; the shared frame (ui-base v5) corrects it for every plugin. Nothing in this plugin shows it today: none of its checkboxes or switches carries its own label.
