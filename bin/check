@@ -7,6 +7,8 @@
 #   bin/check            everything (about six minutes)
 #   bin/check --quick    the standards and the scanners, no test suites (under a minute)
 #   bin/check --no-fix   heal nothing: read only
+#   bin/check --serial   one step at a time, as before the scheduler
+#   bin/check --workers=N   N steps at once (default 2); steps sharing a resource never overlap
 #
 # Green is the floor, not the answer: bin/closing's questions are what
 # catch what no script can see.
@@ -20,18 +22,26 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 # One measuring lock (tools/shared/lock.mjs): a second bin/check, or an eval beside it, waits and says who holds
 # it, and the run is niced. Two at once took 8 to 10+ minutes each (2026-11-20). The usage check below runs first.
-for a in "$@"; do case "$a" in --quick|--no-fix) ;; *) A_BAD=1 ;; esac; done
+# --step and --list are the scheduler's own: one step run alone (tools/toolkit-check/check-parallel.mjs runs each
+# so), and the step list printed; neither goes through the lock or the record.
+case "${1:-}" in --step|--list) INNER=$1; shift ;; *) INNER= ;; esac
+for a in "$@"; do case "$a" in --quick|--no-fix|--serial|--workers=[1-9]|--workers=[1-9][0-9]) ;; *) A_BAD=1 ;; esac; done
 # A clean tree already checked with the same options gets that run's result (tools/shared/check-cache.mjs); --no-fix
 # (the pre-push run) and TOOLKIT_CHECK_FRESH=1 always run.
-if [ -z "${TOOLKIT_LOCK_HELD:-}" ] && [ -z "${A_BAD:-}" ]; then exec node "$REPO/tools/shared/check-cache.mjs" "$REPO" "$@"; fi
+if [ -z "$INNER" ] && [ -z "${TOOLKIT_LOCK_HELD:-}" ] && [ -z "${A_BAD:-}" ]; then exec node "$REPO/tools/shared/check-cache.mjs" "$REPO" "$@"; fi
 FAIL=0
 QUICK=0
+WORKERS=2
 # an option it does not know is refused, never read as "everything": --help or a
 # typo would otherwise start the full run, healing included
-for a in "$@"; do case "$a" in --quick|--no-fix) ;; *) echo "usage: bin/check [--quick] [--no-fix]   (everything takes about six minutes; --quick under one)" >&2; exit 2 ;; esac; done
+[ "$INNER" = "--step" ] || for a in "$@"; do case "$a" in --quick|--no-fix|--serial|--workers=[1-9]|--workers=[1-9][0-9]) ;; *) echo "usage: bin/check [--quick] [--no-fix] [--serial | --workers=N]   (everything takes about six minutes; --quick under one)" >&2; exit 2 ;; esac; done
 case " $* " in *" --quick "*) QUICK=1 ;; esac
 FIX=--fix
 case " $* " in *" --no-fix "*) FIX= ;; esac
+for a in "$@"; do case "$a" in --serial) WORKERS=1 ;; --workers=*) WORKERS=${a#--workers=} ;; esac; done
+# a step run alone takes the run's healing from it: check-standards heals only when the run does
+[ "$INNER" = "--step" ] && FIX=${TOOLKIT_CHECK_FIX-}
+
 
 # Each step says how long it took: a step that got slow is then visible
 # without anyone looking for it (toolkit-standard §D 0's third question).
@@ -40,22 +50,30 @@ case " $* " in *" --no-fix "*) FIX= ;; esac
 # a test of its own (tools/toolkit-check/test-check-summary.mjs).
 . "$REPO/bin/check-lib.sh"
 
+
+
+s_wellformed() {
 step "standards, skills and plugins are well formed"
 # Judged by exit code, never by the words a step prints: a crash prints no "FAIL".
 if OUT=$(./standards/tests/check.sh 2>&1); then ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; else bad "$OUT"; fi
+}
 
+s_standards() {
 step "standards: rules enforced, citations resolve, settings registered"
 if OUT=$(node tools/toolkit-check/check-standards.mjs $FIX 2>&1); then ok; printf '%s\n' "$OUT" | grep -E "healed|clean|skipped" | sed 's/^/  /'; else bad "$OUT"; fi
+}
 
 # Advisory by design: the scanner cannot tell a real file key from a
 # plausible-looking placeholder, so it raises candidates and a person reads
 # them. Counted here, never failed — a gate that cries wolf is a gate nobody
 # reads (it exits non-zero whenever it has candidates).
+s_project_data() {
 step "project data in skills (candidates to read)"
 OUT=$(python3 standards/tests/scan-clause-d.py 2>&1)
 ok
 printf '%s\n' "$OUT" | grep -E "candidate|clean" | head -1 | sed 's/^/  /'
 printf '%s\n' "$OUT" | grep -qE '^[0-9]+ candidate' && echo "  each listed by: python3 standards/tests/scan-clause-d.py"
+}
 
 # The one gate for "one job, one owner" (toolkit-standard §D 1) ran in every
 # project repo and never here — where the owners live. First run against this
@@ -74,6 +92,7 @@ printf '%s\n' "$OUT" | grep -qE '^[0-9]+ candidate' && echo "  each listed by: p
 # xattr write makes an old change read younger, so the check can miss, never
 # invent. A rename entry in `-z` output is followed by its source path as a
 # separate field; it is skipped, not read as a second change.
+s_uncommitted() {
 step "nothing left uncommitted for over a day"
 OUT=$(python3 - <<'PY'
 import os, subprocess, time
@@ -90,22 +109,28 @@ print('\n'.join(line for _, line in sorted(old, reverse=True)))
 PY
 )
 if [ -z "$OUT" ]; then ok; else echo "warn $(took)"; printf '%s\n' "$OUT" | head -12 | sed 's/^/  /'; N=$(printf '%s\n' "$OUT" | wc -l | tr -d ' '); [ "$N" -gt 12 ] && echo "  … and $((N - 12)) more"; fi
+}
 
 # Worktrees, branches and stashes over a day old that the closing pass cannot remove on its own (unmerged, dirty, a
 # stash): warned, never failed, with the session that left each when known (tools/toolkit-check/leftovers.mjs).
+s_leftovers() {
 step "no worktree, branch or stash left behind"
 OUT=$(node tools/toolkit-check/leftovers.mjs . 2>&1)
 if [ -z "$OUT" ]; then ok; else echo "warn $(took)"; printf '%s\n' "$OUT" | sed 's/^/  /'; fi
+}
 
+s_owned() {
 step "no job the toolkit owns is written twice"
 OUT=$(node tools/toolkit-check/owned-check.mjs --repo . 2>&1)
 [ $? -eq 0 ] && ok || bad "$OUT"
+}
 
 # Where a project lives is the contract's one answer (contract.homeOf,
 # contract.homes): 32 files once built `toolkit/projects/<label>` themselves,
 # and each would have broken when the projects moved out. Code only; tests
 # and comments may name the folder, and a line saying why carries
 # `projects-path:` (a test's fixture tree).
+s_project_paths() {
 step "no tool builds a project's path itself"
 # -co --exclude-standard: untracked files too, as every other step reads the working tree; a new file passed here and
 # failed only at the push, once committed (owners.mjs, 2026-11-20)
@@ -114,50 +139,64 @@ OUT=$(git ls-files -co --exclude-standard 'tools/*.mjs' 'tools/*.cjs' 'tools/*.j
   | xargs grep -InE "['\"]projects['\"] *[,)]|\.\./\.\./projects|/projects/\\\$|\\\$REPO/projects" 2>/dev/null \
   | grep -vE '^[^:]+:[0-9]+: *(//|\*|#)|projects-path:')
 [ -z "$OUT" ] && ok || bad "$OUT"
+}
 
 # toolkit-standard §D 6: a test that names the owner's home passes here and fails
 # everywhere else; one reached CI red on 2026-11-01. A test takes the repo's path
 # from where it runs. A line where the text is only data carries `machine-path:`.
+s_machine_home() {
 step "no test needs this machine's home"
 OUT=$(git ls-files -co --exclude-standard | grep -E '(^|/)test-[^/]*\.(mjs|cjs|js|py|sh)$' \
   | xargs grep -IniE '~/Projects|\$\{?HOME\}?"?/Projects|/Users/[^/ '"'"'"]+/Projects' 2>/dev/null \
   | grep -vE '^[^:]+:[0-9]+: *(//|\*|#)|machine-path:')
 [ -z "$OUT" ] && ok || bad "$OUT"
+}
 
 # toolkit-standard §D 22 and skill-standard §A clause I: a README or a skill is read, so it is held to plain-language numbers; those written before the rule
 # by a ratchet that only tightens (tools/toolkit-check/readability.json).
+s_readability() {
 step "every README and skill reads plainly"
 OUT=$(node tools/toolkit-check/readability.mjs 2>&1)
 if [ $? -eq 0 ]; then ok; [ -z "$OUT" ] || printf '%s\n' "$OUT" | sed 's/^/  /'; else bad "$OUT"; fi
+}
 
 # toolkit-standard §D 22: every folder a newcomer opens says what it is.
+s_readmes() {
 step "every folder a newcomer opens has a README"
 OUT=$(node tools/toolkit-check/readmes.mjs 2>&1)
 [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$OUT"
+}
 
 # toolkit-standard §D 13: a push runs this check. Git skips a core.hooksPath that does not exist without
 # a word; this clone's pointed at a deleted worktree's folder and pushes ran nothing (2026-11-11).
+s_push_hook() {
 step "a push runs this check"
 OUT=$(node tools/shared/push-hook.mjs 2>&1)
 [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$OUT"
+}
 
 # toolkit-standard §D 22: prose that restates what another file owns agrees with it.
 # knowledge/README.md missed §D 21's weights and a tool's README three of its scripts (2026-11-11).
+s_restated() {
 step "restated prose agrees with its owners"
 OUT=$(node tools/toolkit-check/restated.mjs 2>&1)
 [ $? -eq 0 ] && ok || bad "$OUT"
+}
 
 # A script's main guard compared argv[1] as typed: run through ~/.claude/skills
 # (a symlink) it did nothing and exited 0, and a --check passed every
 # description that way. Twelve scripts did it on 2026-10-30.
+s_main_guards() {
 step "every script knows it is the one being run"
 OUT=$(node tools/toolkit-check/main-guards.mjs 2>&1)
 [ $? -eq 0 ] && ok || bad "$OUT"
+}
 
 # toolkit-standard §D 6: the repo is shareable only if no file in it names a
 # project. 232 mentions sat in walk records and comments on 2026-10-14; each
 # became "one project" or a stand-in ("Project A"). Labels from the contract,
 
+s_no_project_named() {
 step "no project is named in the toolkit"
 # the names, and why a crash is a failure of its own: tools/toolkit-check/project-names.sh
 OUT=""
@@ -174,19 +213,24 @@ done
 PI=$(node tools/toolkit-check/personal-info.mjs 2>&1); [ $? -eq 0 ] || OUT="$OUT
 $PI"
 [ -z "$OUT" ] && ok || bad "$OUT"
+}
 
 # Nothing builds research/index.html, so an article added without it was missing from the site
 # with nothing saying so (2026-11-13): tools/toolkit-check/research-index.mjs.
+s_research_index() {
 step "the research site carries every article"
 OUT=$(node tools/toolkit-check/research-index.mjs 2>&1)
 [ $? -eq 0 ] && ok || bad "$OUT"
+}
 
 # The half check.mjs cannot see: a job no one has moved here yet, written in
 # two projects. Warned, not failed — a twin is a decision (toolkit-standard
 # §D 2). Fired first on two parity engines, 2026-10-01.
+s_twins() {
 step "no job written in two projects"
 OUT=$(node tools/toolkit-check/twins.mjs 2>&1)
 [ $? -eq 0 ] && ok || { echo "warn $(took)"; printf '%s\n' "$OUT" | sed 's/^/  /'; }
+}
 
 # A launch agent keeps its arguments until it is reloaded from DISK, and
 # `kickstart` restarts the definition launchd already holds — so a change to
@@ -194,30 +238,38 @@ OUT=$(node tools/toolkit-check/twins.mjs 2>&1)
 # running service. It was: four dashboards went on serving a record filename
 # that no longer existed, and the page showed an audited project as never
 # audited with nothing anywhere saying so.
+s_services() {
 step "the running dashboards serve what the projects have"
 OUT=$(node tools/figma-audit/check-services.mjs 2>&1)
 [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$OUT"
+}
 
 # The dashboard is one long script in one scope; its check lives with the page, in the docs engine.
 # A fresh clone has no packages: a skip here (a failure in CI, which installs them), never a red that hides new reds.
+s_docs_engine() {
 step "the docs engine resolves"
 if [ ! -d tools/docs-site/node_modules ]; then skip "the docs site's packages are not installed: run (cd tools/docs-site && pnpm install --frozen-lockfile)"
 elif OUT=$(node tools/docs-site/src/dashboard/check.mjs 2>&1); then ok; else bad "$OUT"; fi
+}
 
 # The docs site is the toolkit's own front end, and nothing held it to
 # code-standard's stylesheet gates: a one-off run on 2026-10-11 found 219
 # literals with no reason and four `!important`, one of which hid tab panels
 # from a reader with no JavaScript. It has no snapshot, so its sheets are
 # named in a config of their own.
+s_docs_sheets() {
 step "the docs site's sheets hold the style gates"
 OUT=$(node tools/css-lint/check.mjs --config tools/docs-site/styles.config.json 2>&1)
 [ $? -eq 0 ] && ok || bad "$(printf '%s' "$OUT" | grep -v '^ok\|^note')"
+}
 
+s_audit_rows() {
 step "the audit record's writer holds its rules"
 OUT=$(node tools/figma-audit/test-rows.mjs 2>&1)
 [ $? -eq 0 ] && ok || bad "$OUT"
+}
 
-[ "$QUICK" = "1" ] && { [ "$FAIL" = "0" ] && green " (quick)" || summary; exit $FAIL; }
+
 
 # code-standard rule 3 on the docs site's own pages: a one-off probe on
 # 2026-10-11 found unnamed sections on four page types, and nothing ran it
@@ -232,39 +284,34 @@ has_library() { node -e "const p=require('./tools/snapshot/projects.cjs');const 
 # Runs the step's suite only where there is a library: a skip for none, not applicable for a code-only project
 # ("design": "none", snapshot-standard rule 18: neither passed nor skipped), a failure for a project that cannot be read.
 library_or_skip() { LIB=$(has_library "$1"); case $? in 0) return 0;; 1) skip "$1 has no stored library yet";; 3) echo "not applicable: no design";; *) bad "$1: $LIB";; esac; return 1; }
-HOMES=$(node tools/snapshot/projects.cjs homes) || { step "the project list reads"; bad "projects.cjs homes failed: no project's site or specs were checked"; }
-TAB=$(printf '\t')
-while IFS="$TAB" read -r label home; do
-    d="$home/site"
-    [ -f "$d/index.html" ] || continue
+s_structure() {
+    label=$1; d="$2/site"
     step "page structure: $label"
     OUT=$(node tools/docs-site/check-structure.mjs "$d" 2>&1)
     [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | tail -20)"
-    # the system MCP over the same built site, every tool called as a client would (tools/system-mcp/smoke.mjs); run by
-    # nothing until 2026-10-31. Its packages are its own install: without them a skip, never a pass.
+}
+# the system MCP over the same built site, every tool called as a client would (tools/system-mcp/smoke.mjs); run by
+# nothing until 2026-10-31. Its packages are its own install: without them a skip, never a pass.
+s_mcp() {
+    label=$1; d="$2/site"
     step "system MCP: $label"
-    library_or_skip "$label" || continue
+    library_or_skip "$label" || return 0
     OUT=$(node tools/system-mcp/smoke.mjs "$d" 2>&1)
     RC=$?
     if [ $RC -eq 0 ]; then ok; elif [ $RC -eq 77 ]; then skip "$OUT"; else bad "$(printf '%s' "$OUT" | tail -8)"; fi
-done <<EOF
-$HOMES
-EOF
+}
 
 # The specs of the projects stored here (a design-only project has no repo
 # and no bin/check of its own): each round-trips and carries the contract it
 # derives. A project with a repo runs the same check from tools/project-check.
 # Nothing ran it on these until 2026-10-05, when contracts were added and the
 # question "who checks Project B's 207 specs?" had no answer.
-while IFS="$TAB" read -r label home; do
-    d="$home/snapshot/components"
-    [ -d "$d" ] || continue
+s_specs() {
+    label=$1; d="$2/snapshot/components"
     step "stored specs: $label"
     OUT=$(node tools/snapshot/check-specs.cjs "$d" 2>&1)
     [ $? -eq 0 ] && ok || bad "$(printf '%s' "$OUT" | tail -8)"
-done <<EOF
-$HOMES
-EOF
+}
 
 # The contract editor on the toolkit's own sample library (tools/contract-editor/sample/), with every check that names
 # a component: those ran on one project's library until 2026-10-30, and failed as soon as that library changed.
@@ -273,6 +320,7 @@ EOF
 # under an empty HOME stalls now and then, so the editor's browser keeps this one's). A file the editor uses that bin/get does not
 # follow, or one not yet committed, fails it here rather than in someone else's checkout. bin/get follows
 # HEAD's code: an uncommitted new import is followed once it is committed.
+s_editor_sample() {
 step "contract editor: the sample library, from bin/get"
 SP=$(mktemp -d)
 OUT=$( { git clone -q --sparse "file://$REPO" "$SP/t" && cd "$SP/t" && git sparse-checkout set bin && cp "$REPO/bin/get" bin/get \
@@ -285,11 +333,13 @@ rm -rf "$SP"
 # the editor's browser half exits 77 with no Chrome: the step is then a skip, though test-serve ran
 if [ $RC -eq 0 ] && printf '%s\n' "$OUT" | grep -q '^skip:'; then skip "$(printf '%s\n' "$OUT" | grep -m1 '^skip:')"
 else [ $RC -eq 0 ] && { ok; printf '%s\n' "$OUT" | grep -E ' passed' | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | grep -B1 -A3 -E 'Error|FAIL|fatal|not checked out' | head -10)"; fi
+}
 
 # Skills alone, the way someone takes them: bin/get them into a sparse clone and run install.sh under an empty
 # HOME. install.sh stopped there on the standards guard until 2026-10-30. figma-plugin-creator brings standards/
 # and figma-foundations-audit brings part of other skills and both services' folders: only the two whole skills
 # are linked, and no service is touched (launchctl is a stand-in that records any call; launchd is not per HOME).
+s_skills_install() {
 step "skills, from bin/get, install"
 SP=$(mktemp -d)
 mkdir -p "$SP/fake" && printf '#!/bin/sh\necho "$@" >> "%s/launchctl.log"\nexit 1\n' "$SP" > "$SP/fake/launchctl" && chmod +x "$SP/fake/launchctl"
@@ -302,11 +352,13 @@ OUT=$( { git clone -q --sparse "file://$REPO" "$SP/t" && cd "$SP/t" && git spars
 RC=$?
 rm -rf "$SP"
 [ $RC -eq 0 ] && ok || bad "$(printf '%s' "$OUT" | tail -6)"
+}
 
 # Every skill alone, each in turn in one sparse clone: bin/get takes the toolkit paths its SKILL.md and
 # references name and the skills it says to run, and fails when one it reached is not in the checkout; a
 # name the toolkit lacks, or a bin/ script that cannot find what it runs, is said on stderr and fails here.
 # Until 2026-10-31 bin/get read only code, and six skills came out without the tools their prose runs.
+s_every_skill() {
 step "every skill, from bin/get, has what it names"
 SP=$(mktemp -d)
 OUT=$( { git clone -q --sparse "file://$REPO" "$SP/t" && cd "$SP/t" && git sparse-checkout set bin && cp "$REPO/bin/get" bin/get \
@@ -323,22 +375,27 @@ OUT=$( { git clone -q --sparse "file://$REPO" "$SP/t" && cd "$SP/t" && git spars
 RC=$?
 rm -rf "$SP"
 [ $RC -eq 0 ] && ok || bad "$(printf '%s' "$OUT" | tail -8)"
+}
+
+# The contract editor on every project's library: the discovery walk below
+# runs it with none, and it was run on one library by hand until 2026-10-19,
 
 # The contract editor on every project's library: the discovery walk below
 # runs it with none, and it was run on one library by hand until 2026-10-19,
 # when three others failed it on what only that one had.
-while IFS="$TAB" read -r label home; do
-    # no project: the list is empty, and the here-document still gives one empty line
-    [ -n "$label" ] || continue
+s_editor() {
+    label=$1
     step "contract editor: $label"
-    library_or_skip "$label" || continue
+    library_or_skip "$label" || return 0
     OUT=$(node tools/contract-editor/test-editor.mjs --project "$label" 2>&1)
     RC=$?
-    [ $RC -eq 77 ] && { skip "$(printf '%s\n' "$OUT" | grep -m1 '^skip:')"; continue; }
+    [ $RC -eq 77 ] && { skip "$(printf '%s\n' "$OUT" | grep -m1 '^skip:')"; return 0; }
     [ $RC -eq 0 ] && { ok; printf '%s\n' "$OUT" | grep -E 'passed' | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | grep -A3 -E 'Error' | head -8)"
-done <<EOF
-$HOMES
-EOF
+}
+
+s_project_list() {
+    step "the project list reads"; bad "projects.cjs homes failed: no project's site or specs were checked"
+}
 
 # Every test a skill or tool ships, by discovery: a new suite is covered by
 # existing here, not by being added to a list somebody forgets.
@@ -354,11 +411,16 @@ EOF
 # does NOT match rather than by reading it, which is the only way this kind of
 # hole is ever found.
 # bin/ joined it when its own commands got suites (set-key, deploy: 2026-11-01).
-for t in bin/test-*.mjs tools/*/test-*.mjs tools/*/test-*.cjs tools/*/test-*.js tools/*/test-*.py \
-         skills/*/tests/test-*.mjs skills/*/tests/test-*.js skills/*/tests/test-*.py \
-         plugins/*/tests/test-*.mjs plugins/*/tests/test-*.js plugins/*/tests/test-*.py \
-         standards/tests/test-*.sh; do
-    [ -e "$t" ] || continue
+suites() {
+    for t in bin/test-*.mjs tools/*/test-*.mjs tools/*/test-*.cjs tools/*/test-*.js tools/*/test-*.py \
+             skills/*/tests/test-*.mjs skills/*/tests/test-*.js skills/*/tests/test-*.py \
+             plugins/*/tests/test-*.mjs plugins/*/tests/test-*.js plugins/*/tests/test-*.py \
+             standards/tests/test-*.sh; do
+        [ -e "$t" ] && printf '%s\n' "$t"
+    done
+}
+s_suite() {
+    t=$1
     # -E: a basic regex's \| is GNU's alone, so on macOS no prefix was ever stripped
     step "$(printf '%s' "$t" | sed -E 's#^(bin|tools|skills|plugins|standards)/##; s#/tests/#/#')"
     case "$t" in *.py) OUT=$(python3 "$t" 2>&1) ;; *.sh) OUT=$(sh "$t" 2>&1) ;; *) OUT=$(node "$t" 2>&1) ;; esac
@@ -378,7 +440,303 @@ for t in bin/test-*.mjs tools/*/test-*.mjs tools/*/test-*.cjs tools/*/test-*.js 
         elif printf '%s\n' "$OUT" | grep -q '^✖ failing tests:'; then bad "$(printf '%s\n' "$OUT" | sed -n '/^✖ failing tests:/,$p' | grep -vE '^ +at ' | head -30)"
         else bad "$(printf '%s' "$OUT" | tail -20)"; fi
     fi
-done
+}
 
-[ "$FAIL" = "0" ] && green || summary
+# What each step shares with another, so two never disturb each other when steps run side by side
+# (tools/toolkit-check/check-parallel.mjs). A tag names the resource; two steps holding one never overlap, unless
+# LIMITS lets a few hold it at once:
+#   chrome               a headless Chrome (tools/shared/cdp.mjs): its own profile and port, but CPU and memory
+#   home:downloads       ~/Downloads, which the contract editor's tests read to prove nothing lands there
+#   home:<what>          another path under the home folder, named
+#   lockdir              the measuring lock's folder (tools/shared/lock.mjs) and the read cache kept in it (pruned)
+#   launchd              the running services and ~/Library/LaunchAgents
+#   tree                 writes into this repo's tree
+#   alone                nothing runs beside it, nor after it before it ends
+#   -                    nothing
+# A step with no line here runs alone. tools/toolkit-check/test-check-shares.mjs fails a step that launches Chrome,
+# calls launchctl, or writes under the home folder or the repo without saying so, and a line naming no step.
+LIMITS="chrome=1"
+SUITE_SHARES='
+bin/test-deploy.mjs                                              -
+bin/test-set-key.mjs                                             -
+plugins/audit-lite/tests/test-audit-lite.mjs                     -
+plugins/component-graph/tests/test-graph.js                      -
+plugins/component-graph/tests/test-ui-keyboard.mjs               chrome
+plugins/component-guidelines/tests/test-guidelines.js            -
+plugins/design-system-snapshot/tests/test-walk.mjs               -
+plugins/lucide-icon-importer/tests/test-importer.mjs             -
+plugins/lucide-icon-importer/tests/test-svg-clean.mjs            chrome
+plugins/lucide-icon-importer/tests/test-ui-fetch.mjs             -
+plugins/lucide-icon-importer/tests/test-ui-keyboard.mjs          chrome
+plugins/organize-layers/tests/test-organize.js                   -
+plugins/theme-switcher/tests/test-switcher.js                    -
+skills/component-validator/tests/test-walk-figma.mjs             -
+skills/figma-component-descriptions/tests/test-engines.mjs       -
+skills/figma-component-descriptions/tests/test-sections.mjs      -
+skills/figma-component-descriptions/tests/test-verify.mjs        -
+skills/figma-components-audit/tests/test-audit.mjs               -
+skills/figma-components-audit/tests/test-probes.mjs              -
+skills/figma-components-audit/tests/test-sweep.mjs               -
+skills/figma-context-capture/tests/test-passes.mjs               -
+skills/figma-contrast-matrix/tests/test-discover-node-map.mjs    -
+skills/figma-contrast-matrix/tests/test-find-grid-instances.mjs  -
+skills/figma-contrast-matrix/tests/test-matrix.py                -
+skills/figma-contrast-matrix/tests/test-read-ramp-hexes.mjs      -
+skills/figma-contrast-matrix/tests/test-wcag-copy.mjs            -
+skills/figma-doc-generator/tests/test-describe-coverage.mjs      -
+skills/figma-doc-generator/tests/test-describe-write.mjs         -
+skills/figma-doc-generator/tests/test-docgen.js                  -
+skills/figma-doc-generator/tests/test-load-protocol.js           -
+skills/figma-doc-generator/tests/test-recipes.js                 -
+skills/figma-file-diff/tests/test-coverage-body.mjs              -
+skills/figma-file-diff/tests/test-report.mjs                     -
+skills/figma-file-diff/tests/test-serialise.mjs                  -
+skills/figma-foundations-audit/tests/test-foundations.mjs        -
+skills/figma-plugin-creator/tests/test-conformance.mjs           -
+skills/figma-plugin-creator/tests/test-fetch-queue.mjs           -
+skills/figma-plugin-creator/tests/test-scaffold.mjs              -
+skills/figma-project-audit/tests/test-stages.mjs                 -
+skills/figma-properties-table/tests/test-properties-table.js     -
+skills/figma-prototype/tests/test-feedback.mjs                   -
+skills/figma-tokens-examples/tests/test-tokens-mapping.mjs       -
+skills/figma-variable-audit/tests/test-descriptions.mjs          -
+skills/figma-variable-audit/tests/test-extensions.mjs            -
+skills/figma-variable-audit/tests/test-links.mjs                 -
+skills/figma-variable-audit/tests/test-report.mjs                -
+skills/frontend-build/tests/test-sass-entry.mjs                  -
+skills/frontend-build/tests/test-scaffold.mjs                    -
+skills/humanizer/tests/test-scan-tells.py                        -
+skills/oklch-color-scale-system/tests/test-oklch.js              -
+skills/type-scale/tests/test-generate.mjs                        -
+tools/claude-hooks/test-gates.mjs                                -
+tools/claude-hooks/test-hooks.mjs                                -
+tools/claude-hooks/test-knowledge-read.mjs                       -
+tools/claude-hooks/test-standards-read.mjs                       -
+tools/claude-hooks/test-stop-items.mjs                           -
+tools/claude-hooks/test-validate-turn.mjs                        -
+tools/component-contract/test-analyze.mjs                        -
+tools/component-contract/test-battery.mjs                        chrome,lockdir
+tools/component-contract/test-contract-rows.mjs                  -
+tools/component-contract/test-contract.mjs                       -
+tools/component-contract/test-eval.mjs                           -
+tools/component-contract/test-figma-facts.mjs                    -
+tools/component-contract/test-from-code.mjs                      chrome,lockdir
+tools/component-contract/test-geometry.mjs                       -
+tools/component-contract/test-looks.mjs                          -
+tools/component-contract/test-official.mjs                       -
+tools/component-contract/test-read-cache.mjs                     -
+tools/component-contract/test-rules.mjs                          -
+tools/component-contract/test-to-code.mjs                        -
+tools/component-contract/test-to-figma.mjs                       -
+tools/component-contract/test-to-markup.mjs                      chrome
+tools/component-validator/test-validate.mjs                      -
+tools/contract-editor/test-anatomy.mjs                           -
+tools/contract-editor/test-editor.mjs                            chrome,home:downloads
+tools/contract-editor/test-props.mjs                             -
+tools/contract-editor/test-serve.mjs                             -
+tools/contract-editor/test-variants.mjs                          -
+tools/css-lint/test-lint.mjs                                     -
+tools/docs-site/test-build-lock.mjs                              -
+tools/docs-site/test-changelog.mjs                               -
+tools/docs-site/test-check-structure.mjs                         chrome
+tools/docs-site/test-dashboard-logic.mjs                         -
+tools/docs-site/test-dashboard-safety.mjs                        -
+tools/docs-site/test-empty-build.mjs                             -
+tools/docs-site/test-format.mjs                                  -
+tools/docs-site/test-lib.mjs                                     -
+tools/docs-site/test-parity-pages.mjs                            -
+tools/figma-audit/test-breaking.mjs                              -
+tools/figma-audit/test-check-services.mjs                        -
+tools/figma-audit/test-claude.mjs                                -
+tools/figma-audit/test-fix-queue.mjs                             -
+tools/figma-audit/test-frames.mjs                                -
+tools/figma-audit/test-judge-rules.mjs                           -
+tools/figma-audit/test-paths.mjs                                 -
+tools/figma-audit/test-probe.mjs                                 -
+tools/figma-audit/test-routes.mjs                                -
+tools/figma-audit/test-rows.mjs                                  -
+tools/figma-audit/test-scores.mjs                                -
+tools/figma-audit/test-session.mjs                               -
+tools/figma-audit/test-socket.mjs                                -
+tools/parity/test-adapt.mjs                                      -
+tools/parity/test-baseline.mjs                                   -
+tools/parity/test-diff.mjs                                       -
+tools/parity/test-external.mjs                                   -
+tools/parity/test-gates.mjs                                      -
+tools/parity/test-hosts.mjs                                      chrome
+tools/parity/test-layers.mjs                                     -
+tools/parity/test-lessons.mjs                                    -
+tools/parity/test-measurements.mjs                               -
+tools/parity/test-pages.mjs                                      chrome
+tools/parity/test-pair.mjs                                       -
+tools/parity/test-parity-report.mjs                              -
+tools/parity/test-probe.mjs                                      chrome
+tools/parity/test-project.mjs                                    chrome
+tools/parity/test-propose.mjs                                    chrome
+tools/parity/test-same-as.mjs                                    -
+tools/parity/test-schema.mjs                                     -
+tools/parity/test-serve.mjs                                      -
+tools/parity/test-session.mjs                                    chrome
+tools/parity/test-shots.mjs                                      -
+tools/parity/test-spec-keys.mjs                                  -
+tools/parity/test-timing.mjs                                     -
+tools/parity/test-values.mjs                                     -
+tools/parity/test-waivers.mjs                                    -
+tools/parity/test-watch-stories.mjs                              -
+tools/parity/test-watch.mjs                                      -
+tools/project-check/test-check.mjs                               -
+tools/project-check/test-init.mjs                                -
+tools/project-check/test-loop.mjs                                -
+tools/project-check/test-pre-push.mjs                            -
+tools/shared/test-cdp.mjs                                        chrome
+tools/shared/test-check-cache.mjs                                -
+tools/shared/test-code-inventory.mjs                             -
+tools/shared/test-colour.mjs                                     -
+tools/shared/test-dialect.mjs                                    -
+tools/shared/test-free-port.mjs                                  -
+tools/shared/test-knowledge.mjs                                  -
+tools/shared/test-land.mjs                                       -
+tools/shared/test-lock.mjs                                       -
+tools/shared/test-mode-description.mjs                           -
+tools/shared/test-model-routing.mjs                              -
+tools/shared/test-names.mjs                                      -
+tools/shared/test-origin.mjs                                     -
+tools/shared/test-output.mjs                                     -
+tools/shared/test-project-knowledge.mjs                          -
+tools/shared/test-prop-attr.mjs                                  -
+tools/shared/test-push-hook.mjs                                  -
+tools/shared/test-real-path.mjs                                  -
+tools/shared/test-stale-self.mjs                                 -
+tools/shared/test-text-units.mjs                                 -
+tools/shared/test-worktree.mjs                                   -
+tools/skill-evals/test-eval.mjs                                  -
+tools/skill-evals/test-figma.mjs                                 -
+tools/snapshot/test-changes.cjs                                  -
+tools/snapshot/test-check-specs.cjs                              -
+tools/snapshot/test-graph.cjs                                    -
+tools/snapshot/test-guidance.cjs                                 -
+tools/snapshot/test-mcp.mjs                                      -
+tools/snapshot/test-payload.mjs                                  -
+tools/snapshot/test-recipes.mjs                                  -
+tools/snapshot/test-router.mjs                                   -
+tools/snapshot/test-rulings-log.mjs                              -
+tools/snapshot/test-spec.cjs                                     -
+tools/snapshot/test-unpack.mjs                                   -
+tools/system-mcp/test-server.mjs                                 -
+tools/system-mcp/test-validate.mjs                               -
+tools/tokens/test-build-tokens.mjs                               -
+tools/tokens/test-check.mjs                                      -
+tools/tokens/test-dtcg.js                                        -
+tools/tokens/test-from-snapshot.mjs                              -
+tools/tokens/test-names.mjs                                      -
+tools/tokens/test-schema.mjs                                     -
+tools/tokens/test-ts.mjs                                         -
+tools/toolkit-check/test-cadence.mjs                             -
+tools/toolkit-check/test-check-parallel.mjs                      -
+tools/toolkit-check/test-check-runs.mjs                          -
+tools/toolkit-check/test-check-shares.mjs                        -
+tools/toolkit-check/test-check-standards.mjs                     -
+tools/toolkit-check/test-check-summary.mjs                       -
+tools/toolkit-check/test-closing.mjs                             -
+tools/toolkit-check/test-content-is-data.mjs                     -
+tools/toolkit-check/test-dependabot.mjs                          -
+tools/toolkit-check/test-leftovers.mjs                           -
+tools/toolkit-check/test-main-guards.mjs                         -
+tools/toolkit-check/test-missing-input.mjs                       -
+tools/toolkit-check/test-owned-check.mjs                         -
+tools/toolkit-check/test-paste-hash.mjs                          -
+tools/toolkit-check/test-pre-push-names.mjs                      -
+tools/toolkit-check/test-readability.mjs                         -
+tools/toolkit-check/test-readmes.mjs                             -
+tools/toolkit-check/test-research-index.mjs                      -
+tools/toolkit-check/test-restated.mjs                            -
+tools/toolkit-check/test-review-run.mjs                          -
+tools/toolkit-check/test-sandbox-paste.mjs                       -
+tools/toolkit-check/test-twins.mjs                               -
+tools/ui-check/test-axe.mjs                                      chrome
+tools/ui-check/test-check.mjs                                    chrome
+tools/ui-check/test-own-pages.mjs                                chrome
+'
+TAB=$(printf '\t')
+# The steps in order, one line each: shares, function, arguments (tab-separated).
+steps_list() {
+    l() { printf '%s' "$1"; shift; printf '\t%s' "$@"; printf '\n'; }
+    l -        s_wellformed
+    # healing writes into the tree every other step reads
+    l "$([ -n "$FIX" ] && echo alone || echo -)" s_standards
+    l -        s_project_data
+    l -        s_uncommitted
+    l -        s_leftovers
+    l -        s_owned
+    l -        s_project_paths
+    l -        s_machine_home
+    l -        s_readability
+    l -        s_readmes
+    l -        s_push_hook
+    l -        s_restated
+    l -        s_main_guards
+    l -        s_no_project_named
+    l -        s_research_index
+    l -        s_twins
+    l -        s_services
+    l -        s_docs_engine
+    l -        s_docs_sheets
+    l -        s_audit_rows
+    [ "$QUICK" = "1" ] && return 0
+    HOMES=$(node tools/snapshot/projects.cjs homes) || l - s_project_list
+    while IFS="$TAB" read -r label home; do
+        [ -f "$home/site/index.html" ] || continue
+        l chrome s_structure "$label" "$home"
+        l -      s_mcp "$label" "$home"
+    done <<EOF
+$HOMES
+EOF
+    while IFS="$TAB" read -r label home; do
+        [ -d "$home/snapshot/components" ] && l - s_specs "$label" "$home"
+    done <<EOF
+$HOMES
+EOF
+    l chrome,home:downloads s_editor_sample
+    l -      s_skills_install
+    l -      s_every_skill
+    while IFS="$TAB" read -r label home; do
+        # no project: the list is empty, and the here-document still gives one empty line
+        [ -n "$label" ] && l chrome,home:downloads s_editor "$label"
+    done <<EOF
+$HOMES
+EOF
+    suites | SUITE_SHARES="$SUITE_SHARES" awk 'BEGIN { n = split(ENVIRON["SUITE_SHARES"], r, "\n"); for (i = 1; i <= n; i++) if (split(r[i], f, " ") == 2) s[f[1]] = f[2] }
+        { print (($0 in s) ? s[$0] : "alone") "\ts_suite\t" $0 }'
+}
+
+case "$INNER" in
+--list) steps_list; exit 0 ;;
+--step)
+    # one step, alone: its failed and skipped names go where the scheduler reads them
+    case "${1:-}" in s_*) ;; *) echo "bin/check --step: no step $1" >&2; exit 2 ;; esac
+    fn=$1; shift
+    "$fn" "$@"
+    printf '%s' "$FAILED" > "$TOOLKIT_CHECK_STATE.failed"; printf '%s' "$SKIPPED" > "$TOOLKIT_CHECK_STATE.skipped"
+    exit $FAIL ;;
+esac
+
+if [ "$WORKERS" = "1" ]; then
+    # read on fd 3, so a step keeps the run's stdin
+    while IFS="$TAB" read -r shares fn a1 a2 <&3; do "$fn" "$a1" "$a2"; done 3<<EOF
+$(steps_list)
+EOF
+else
+    # each step alone in its own bin/check, its output kept and printed whole in list order: the run reads as a
+    # serial one, the closing summary included
+    ST=$(mktemp -d)
+    steps_list | TOOLKIT_CHECK_FIX="$FIX" node tools/toolkit-check/check-parallel.mjs --workers "$WORKERS" --limit "$LIMITS" --state "$ST" -- sh "$REPO/bin/check" --step \
+        || { echo "the scheduler failed: no step's result can be trusted" >&2; FAIL=1; }
+    # $(…) drops the last newline: the x keeps it, so each name stays a line of its own
+    FAILED=$(cat "$ST/failed" 2>/dev/null; echo x); FAILED=${FAILED%x}
+    SKIPPED=$(cat "$ST/skipped" 2>/dev/null; echo x); SKIPPED=${SKIPPED%x}
+    [ -n "$FAILED" ] && FAIL=1
+    rm -rf "$ST"
+fi
+
+[ "$FAIL" = "0" ] && { [ "$QUICK" = "1" ] && green " (quick)" || green; } || summary
 exit $FAIL

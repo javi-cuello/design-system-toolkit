@@ -6,7 +6,7 @@
  * minutes for an answer the first run already had (2026-11-20). The record is asked twice: before waiting for the
  * lock, and again once the lock is held, so a run queued behind the same tree's run takes its answer.
  *
- *   node tools/shared/check-cache.mjs <repo> [--quick] [--no-fix]   bin/check's own entry
+ *   node tools/shared/check-cache.mjs <repo> [--quick] [--no-fix] [--serial | --workers=N]   bin/check's own entry
  *   node tools/shared/check-cache.mjs --commit <repo> <commit>       the pre-push check: that commit, as committed
  *
  * Reused only when the tree is clean (nothing modified, staged or untracked), its git tree id and the run's kind
@@ -36,9 +36,10 @@ export function treeKey(repo) {
     return git('status', '--porcelain').trim() ? null : git('rev-parse', 'HEAD^{tree}').trim();
   } catch { return null; }
 }
-// A run is quick or full: --no-fix and a --fix run that left the tree as it was read the same tree the same way.
+// A run is quick or full: --no-fix and a --fix run that left the tree as it was read the same tree the same way, and
+// how many steps run at once (--serial, --workers=N) changes no step's result.
 const mode = (args) => (args.includes('--quick') ? 'quick' : 'full');
-const reusable = (args) => !process.env.TOOLKIT_CHECK_FRESH && args.every((a) => a === '--quick' || a === '--no-fix');
+const reusable = (args) => !process.env.TOOLKIT_CHECK_FRESH && args.every((a) => a === '--quick' || a === '--no-fix' || a === '--serial' || /^--workers=\d+$/.test(a));
 const read = () => { try { const a = JSON.parse(fs.readFileSync(cacheFile(), 'utf8')); return Array.isArray(a) ? a : []; } catch { return []; } };
 export function lookup(tree, args, now = Date.now()) {
   if (!tree) return null;
@@ -101,7 +102,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     process.exitCode = await atCommit(path.resolve(repo), rev);
   } else {
   const [repo, ...args] = process.argv.slice(2);
-  if (!repo) { console.error('usage: check-cache.mjs <repo> [--quick] [--no-fix] | --commit <repo> <commit>'); process.exit(2); }
+  if (!repo) { console.error('usage: check-cache.mjs <repo> [--quick] [--no-fix] [--serial | --workers=N] | --commit <repo> <commit>'); process.exit(2); }
   process.exitCode = await run(path.resolve(repo), args); // exitCode, not exit(): piped output still queued is written first
   }
 }

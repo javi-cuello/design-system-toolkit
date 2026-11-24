@@ -138,7 +138,7 @@ for (const [runner, file] of Object.entries(RUNNER_FILES)) {
   const sessionSrc = readFileSync(join(ROOT, RUNNER_FILES.session), "utf8");
   ok("bin/audit prints stoppedLines for its run and exits 1 when there are any, after writing the payload",
     /const stopped = stoppedLines\(ran\);\s*if \(stopped\.length\) \{[^}]*console\.error[^}]*process\.exitCode = 1;/.test(sessionSrc)
-    && sessionSrc.indexOf("fs.writeFileSync(out") < sessionSrc.indexOf("stoppedLines(ran)"));
+    && sessionSrc.indexOf("fs.writeFileSync(out") < sessionSrc.indexOf("stoppedLines(ran)")); // not-shared: a search for that text in a source, not a write
 }
 
 // (planted) the check fails both ways

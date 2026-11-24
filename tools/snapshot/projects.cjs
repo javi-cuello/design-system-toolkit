@@ -560,7 +560,7 @@ function keepUnclaimed(payload, list = projects().list) {
   if (copied(list, meta.fileKey, meta.fileId)) meta.fileId = null;
   const text = JSON.stringify(payload);
   if (Buffer.byteLength(text) > LARGEST) throw new Error(`a snapshot over ${LARGEST >> 20} MB is not kept`);
-  fs.mkdirSync(UNCLAIMED, { recursive: true, mode: 0o700 });
+  fs.mkdirSync(UNCLAIMED, { recursive: true, mode: 0o700 }); // not-shared: only the router keeps one (router.mjs), and its tests set TOOLKIT_UNCLAIMED
   if (!owned()) throw new Error(`${UNCLAIMED} is not this user's alone (another owner, or others may read it)`);
   // a code another kept snapshot has is drawn again, never written over it
   for (;;) {

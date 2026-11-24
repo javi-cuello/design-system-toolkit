@@ -34,7 +34,7 @@ const argv = process.argv.slice(2);
 const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : null; };
 const REPO = realPath(arg('--repo') || '.');
 const DRY = argv.includes('--dry-run');
-const tilde = (p) => (p.startsWith(os.homedir() + path.sep) ? `~${p.slice(os.homedir().length)}` : p);
+const tilde = (p) => (p.startsWith(os.homedir() + path.sep) ? `~${p.slice(os.homedir().length)}` : p); // not-shared: a path shown as ~/…, never a folder written to
 const git = (...a) => { try { return execFileSync('git', ['-C', REPO, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return null; } };
 
 if (git('rev-parse', '--is-inside-work-tree') !== 'true') { console.error(`${REPO} is not a git repo`); process.exit(2); }
@@ -80,7 +80,7 @@ const SKELETON = NODESIGN ? { toolkit: TK, project: LABEL } : {
 file('snapshot.config.json', JSON.stringify(SKELETON, null, 2) + '\n', { holds: /"toolkit"[\s\S]*"project"|"project"[\s\S]*"toolkit"/, why: 'names no "toolkit" and "project": add both' });
 if (!existing && !NODESIGN) later.push('snapshot.config.json: `paths.styles` is a default (src/styles/tokens); move it to where this repo keeps its token stylesheets');
 // each script finds the toolkit where snapshot.config.json says, the one place a repo names it
-const SHIM = (tool) => `#!/bin/sh\nREPO="$(cd "$(dirname "$0")/.." && pwd)"\nexec node "$(node -e "console.log(require('$REPO/snapshot.config.json').toolkit.replace(/^~/, require('os').homedir()))")/${tool}"`;
+const SHIM = (tool) => `#!/bin/sh\nREPO="$(cd "$(dirname "$0")/.." && pwd)"\nexec node "$(node -e "console.log(require('$REPO/snapshot.config.json').toolkit.replace(/^~/, require('os').homedir()))")/${tool}"`; // not-shared: the text of the shim it writes, which reads the home folder when a project runs it
 if (!NODESIGN) file('bin/tokens', `${SHIM('tools/tokens/build.mjs')} --repo "$REPO" "$@"\n`, { mode: 0o755 });
 file('bin/check', `${SHIM('tools/project-check/check.mjs')} --repo "$REPO" "$@"\n`, { mode: 0o755,
   holds: /tools\/project-check\/check\.mjs/, why: 'does not run tools/project-check/check.mjs: add the line tools/project-check/README.md step 4 shows beside its own steps' });

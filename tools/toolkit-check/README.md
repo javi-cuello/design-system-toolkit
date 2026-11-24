@@ -5,7 +5,7 @@ The checks that keep the toolkit itself honest. They make sure the standards sta
 ## Use
 
 ```sh
-bin/check                                              # runs all of these, and every test
+bin/check                                              # runs all of these, and every test, two steps at a time
 node tools/toolkit-check/check-standards.mjs           # the standards against themselves; --fix heals what it safely can
 node tools/toolkit-check/owned-check.mjs --repo <dir>  # a repo writing a job the toolkit owns (every project's check runs it)
 bin/closing                                            # what is open across the toolkit and every project
@@ -17,6 +17,7 @@ bin/closing                                            # what is open across the
 |---|---|
 | `check-standards.mjs` | Every rule names a check that exists, every citation resolves, every setting is registered ([toolkit-standard](../../standards/toolkit-standard.md) §C). |
 | `rules.mjs`, `strip.mjs`, `settings-allowlist.json` | What `check-standards.mjs` reads rules, code and accepted literals through. |
+| `check-parallel.mjs` | Runs `bin/check`'s steps a few at a time and keeps apart steps that share a resource. Its flags are `--workers`, `--limit` and `--state`. The output reads as a serial run's. |
 | `check-runs.mjs` | Every assertion a skill's `tests/cases.md` says it runs still exists in the test it names. |
 | `owned-check.mjs` + `owned.json` | Fails a repo that writes again a job the toolkit owns, instead of calling the toolkit. |
 | `leftovers.mjs` | Worktrees, branches and stashes left behind. It removes what is clean, old and merged, and parks work left untouched for a week. |

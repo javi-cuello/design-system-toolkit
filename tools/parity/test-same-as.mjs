@@ -16,7 +16,7 @@ fs.writeFileSync(path.join(home, 'snapshot', 'components', 'chip', 'contract.jso
 const mappings = path.join(home, 'parity', 'mappings.json');
 fs.writeFileSync(mappings, JSON.stringify({ chip: { storyId: 'chip--playground', props: { tone: { code: 'color', values: { info: 'primary' } } } } }));
 const parity = { host: { kind: 'storybook', build: { run: 'build -o {out}', dir: 'apps/sb' } }, tiers: ['Light'], mappings: { components: { json: 'parity/mappings.json' } } };
-fs.writeFileSync(path.join(home, 'design-system-context.md'), '# acme\n\n```json snapshot-routing\n' + JSON.stringify({ files: { library: [{ key: 'KEYA', id: 'IDA', roles: ['components', 'tokens'] }] } }) + '\n```\n\n```json audit-settings\n' + JSON.stringify({ libraries: { KEYA: { framework: 'mui', code: { repo: '~/elsewhere', components: 'src', parity } } } }) + '\n```\n');
+fs.writeFileSync(path.join(home, 'design-system-context.md'), '# acme\n\n```json snapshot-routing\n' + JSON.stringify({ files: { library: [{ key: 'KEYA', id: 'IDA', roles: ['components', 'tokens'] }] } }) + '\n```\n\n```json audit-settings\n' + JSON.stringify({ libraries: { KEYA: { framework: 'mui', code: { repo: '~/elsewhere', components: 'src', parity } } } }) + '\n```\n'); // not-shared: the text of a fixture, written into a temp folder
 const before = process.env.TOOLKIT_PROJECTS_ROOT;
 process.env.TOOLKIT_PROJECTS_ROOT = root;
 try {

@@ -6,6 +6,14 @@ Detail moved from [README.md](README.md): what each file does, in full.
 
 Every rule names a check that exists, every citation resolves, every setting is registered ([toolkit-standard](../../standards/toolkit-standard.md) §C). Reads rules through `rules.mjs` and code through `strip.mjs` (comments removed); `settings-allowlist.json` lists the few literals it must accept.
 
+## `check-parallel.mjs`
+
+bin/check's scheduler. bin/check lists its steps (`bin/check --list`: shares, function, arguments) and runs each as `bin/check --step <function> <arguments>`, two at a time by default (`--workers=N`; `--serial` runs them in one shell as before). A step's shares are declared in bin/check: its fixed steps in `steps_list`, its suites in `SUITE_SHARES`. Two steps holding a tag never overlap, `LIMITS` lets a counted tag (`chrome=1`) be held by that many, and a step with no declaration, or `alone`, runs with nothing beside it and nothing listed after it starts first. Each step's output is kept and printed whole in list order, and its failed and skipped names come back through `<state>/<n>.failed` and `.skipped`, so the output and the closing summary read as a serial run's. A step that exits non-zero and names nothing is named a failure. `test-check-parallel.mjs` runs it on stand-in steps.
+
+## `test-check-shares.mjs`
+
+Every step's declared shares cover what its code uses: a Chrome launch through `cdp.mjs`, a `launchctl` call, a write under the home folder, the measuring lock or the read cache, and a suite's own write outside a temp folder (the tree). It reads each step's entry files and the scripts they start by path whole, and their direct imports for a Chrome launch and a `launchctl` call only; deeper imports and a library's writes are past what a grep can see. A use an environment variable moves (`HOME`, `TOOLKIT_LOCK_DIR`, `TOOLKIT_PAIRING`) is not needed by a step that sets it, and a line marked `not-shared: <why>` is not read. It also fails a `SUITE_SHARES` line naming a suite that is gone.
+
 ## `check-runs.mjs`
 
 Every assertion a skill's `tests/cases.md` says it runs still exists in the test it names. `CHECK_RUNS_ROOT` here, and `STANDARDS_ROOT`, `STANDARDS_SCANNERS`, `STANDARDS_OPTS` and `STANDARDS_READERS` in `check-standards.mjs`, are test seams: they point a check at a fixture tree, never set in a real run.

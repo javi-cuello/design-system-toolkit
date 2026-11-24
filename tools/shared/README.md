@@ -9,7 +9,7 @@ Most files are libraries that other tools import. A few also run as commands beh
 ## The commands
 
 ```sh
-node tools/shared/check-cache.mjs <repo> [--quick] [--no-fix]      # bin/check's front door
+node tools/shared/check-cache.mjs <repo> [--quick] [--no-fix] [--serial | --workers=N]   # bin/check's front door
 node tools/shared/check-cache.mjs --commit <repo> <commit>         # the pre-push check of one commit
 node tools/shared/lock.mjs --run <what> -- <command…>              # run a command under the measuring lock
 node tools/shared/lock.mjs --who                                   # which slots are held, and by what
