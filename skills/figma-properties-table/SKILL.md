@@ -5,7 +5,7 @@ description: Generate and insert a Properties table into a Figma component docum
 
 # Figma Properties Table Generator
 
-**Version 1.15.1** — history in CHANGELOG.md.
+**Version 1.15.2** — history in CHANGELOG.md.
 
 This skill fills the Properties table on a Figma component's documentation page, in any file. Each table lists every variant axis, boolean, text property, instance swap and slot the component exposes. The rows come from the component's contract, read live from the open file by the snapshot plugin's own walk. Use it to generate, add, refresh or check the properties section of a component page.
 

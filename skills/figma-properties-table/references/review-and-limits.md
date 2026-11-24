@@ -26,7 +26,7 @@ Also surface to the person any note that reads oddly, and any component whose mi
 
 The rows' sources:
 
-- A contract keeps a boolean axis's `figmaValues` only when Figma spells it other than False/True. Otherwise its order and spelling are read from the spec, in the same walk.
+- A contract keeps a boolean axis's `figmaValues` only when Figma's order or spelling is not False, True. Otherwise both are read from the spec, in the same walk.
 - A component no contract can be derived for gets no table. `derive.cjs` refuses it, as it does on a snapshot, and `--live` names it.
 - The rows need the audit service and the Desktop Bridge. With either missing, `--live` says which and the table waits. The stored snapshot is never read instead, since it can be older than the file.
 

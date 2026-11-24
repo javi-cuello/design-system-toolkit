@@ -1,4 +1,6 @@
-# Eval cases — figma-properties-table (v1.15.0)
+# Eval cases — figma-properties-table (v1.15.2)
+
+**Walked: 2026-11-24 for 1.15.2** — A11: `node tools/component-contract/test-contract-rows.mjs` 17 passed (the new lower-case axis case failed first); `node tests/test-properties-table.js` 54 passed.
 
 **Walked: 2026-11-21 for 1.15.0** — SKILL.md and references rewritten to skill-standard §A clause I, no behaviour changed; every case read against the new text and each still holds: A1 and A2 (SKILL.md *Project context first*, principle 1), A3 (references/table-rules.md), A4 (references/running.md §4), A5 (references/profile.md), A6 (references/running.md §3), A7 to A15 by their `Runs:` lines. `node tests/test-properties-table.js` 54 passed, `node tools/component-contract/test-contract-rows.mjs` 16 passed. A stale pointer to the removed `prop-rows.js` test now names the test that replaced it.
 

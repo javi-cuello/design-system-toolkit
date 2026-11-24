@@ -1,5 +1,6 @@
 # Changelog — figma-properties-table
 
+- 1.15.2 (2026-11-24): a boolean axis Figma spells in lower case (`false`/`true`) has its default marked in the table, as `False`/`True` already had. Source hash unchanged. Case A11 walked.
 - 1.15.1 (2026-11-24): a False/True axis's options come from the contract's `figmaValues`, which `derive.cjs` now keeps for it where they are not `False`, `True`; the spec is read otherwise. No rule changed; source hash unchanged. Case A11 walked.
 - 1.15.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I: a lead, seven numbered steps, detail in four references (running, profile, table-rules, review-and-limits). No rule changed; source hash unchanged.
 - 1.14.0 (2026-11-04): rows come from the snapshot plugin's own walk of the open file, through the audit service's `/table-rows` and `contract-rows.mjs --live`, loaded with `PT.rows()`. The script's own walk and its copy of the rules are gone. Source hash changes. Cases A10, A11.

@@ -106,8 +106,8 @@ const propRows = (props) => {
     let options = '-';
     if (p.type === 'VARIANT') {
       const o = p.options || [];
-      const binary = o.length === 2 && o.every((v) => v === 'True' || v === 'False');
-      options = binary ? o.map((v) => (v === p.default ? v + ' (default)' : v)).join('\n') : o.join('\n');
+      const binary = o.length === 2 && o.every((v) => /^(true|false)$/i.test(v));
+      options = binary ? o.map((v) => (lower(v) === lower(p.default) ? v + ' (default)' : v)).join('\n') : o.join('\n');
     } else if (p.type === 'BOOLEAN') {
       const on = p.default === true || p.default === 'true';
       options = ['False', 'True'].map((v) => ((v === 'True') === on ? v + ' (default)' : v)).join('\n');

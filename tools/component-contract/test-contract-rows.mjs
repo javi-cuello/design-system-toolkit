@@ -39,6 +39,11 @@ eq(rows.map((r) => r[0]), ['Selected', 'Size', 'Left icon', 'Icon swap', 'Label 
 eq(rows[0], ['Selected', 'Variant', 'True (default)\nFalse', '-'], 'a False/True axis keeps Figma\'s order, read from the stored spec, never reordered');
 eq(rows[1], ['Size', 'Variant', 'Large\nIcon only', '-'], 'an enum lists Figma\'s spelling, verbatim order');
 eq(rows[2], ['Left icon', 'Boolean', 'False (default)\nTrue', '-'], 'a boolean property is False then True, its default marked');
+{
+  const c = { name: 'Flagged', props: { isOff: { type: 'boolean', default: false, axis: true, figma: 'isOff', figmaValues: ['false', 'true'] } } };
+  const r = rowsOf(c, { name: 'Flagged', props: { isOff: ['false', 'true'] } }).map((x) => x.values);
+  eq(r[0], ['isOff', 'Variant', 'false (default)\ntrue', '-'], 'a boolean axis Figma spells in lower case still has its default marked');
+}
 eq(rows[3], ['Icon swap', 'Component swap', '-', 'Only for left icon=true'], 'a swap inside a boolean\'s shown layer is noted as gated by it');
 eq(rows[5], ['Hint', 'Editable string', '-', 'Only for size=icon only'], 'a text whose layer is drawn only under one value is noted with it, as Figma spells it');
 eq(rows[6], ['Extra', 'Slot', '-', '-'], 'a slot found through its part\'s content');
