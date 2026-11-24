@@ -1105,6 +1105,9 @@ ok('codeFigma: the design component a generated module names, read from its text
 { const props = { appearance: { type: 'enum', values: ['default', 'primary'], code: 'appearance' }, state: { type: 'enum', values: ['default', 'hover'], code: 'state' }, size: { type: 'enum', values: ['s', 'm'], code: 'size' }, kept: { type: 'enum', values: ['a', 'b'], code: 'kept', figma: 'Own' } };
   const axes = { appearance: { default: {}, primary: { appearance: 'primary' } }, State: { default: {}, hover: { pseudo: 'hover' }, pressed: { state: 'hover' } }, Size: { s: {}, m: { size: 'm', other: 1 } }, Kept: { a: {}, b: { kept: 'b' } } };
   axisNames(props, axes);
+  const one = { arrow: { type: 'enum', values: ['default'], code: 'arrow' } };
+  axisNames(one, { Arrow: { Default: {} }, Other: { x: {} } });
+  ok('axisNames: a one-value enum takes the axis that moves nothing whose option is its value', one.arrow.figma === 'Arrow');
   ok('axisNames: an enum takes the name of the one mapping axis that moves its arg alone; one moved beside another arg, or already named, keeps its own',
     props.appearance.figma === 'appearance' && props.state.figma === 'State' && props.size.figma === undefined && props.kept.figma === 'Own'); }
 console.log(`${n}/${n} passed`);

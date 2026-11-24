@@ -889,10 +889,13 @@ export function dropOwnGlyph(id, e, variants, mains) {
    test-from-code.mjs. */
 export function axisNames(props, axes) {
   const opts = (t) => (t && typeof t === 'object' ? Object.values(t) : []);
+  // (an axis that moves nothing, a one-value enum's, is that prop's where its options are the prop's values, said alike)
+  const word = (v) => String(v).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const stillAxis = (t, p) => opts(t).every((o) => !Object.keys(o).length) && JSON.stringify(Object.keys(t).map(word).sort()) === JSON.stringify(p.values.map(word).sort());
   for (const p of Object.values(props)) {
     if (p.type !== 'enum' || p.figma || !p.code) continue;
     const hits = Object.entries(axes || {}).filter(([, t]) => opts(t).length && opts(t).every((o) => o && typeof o === 'object' && Object.keys(o).every((k) => k === p.code || k === 'pseudo'))
-      && opts(t).some((o) => p.code in o) && opts(t).every((o) => !(p.code in o) || p.values.map(String).includes(String(o[p.code]))));
+      && (opts(t).some((o) => p.code in o) || stillAxis(t, p)) && opts(t).every((o) => !(p.code in o) || p.values.map(String).includes(String(o[p.code]))));
     if (hits.length === 1) p.figma = hits[0][0];
   }
   return props;
