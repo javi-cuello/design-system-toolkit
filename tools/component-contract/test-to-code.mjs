@@ -418,12 +418,12 @@ for (const { name: label } of projects.projects().list) {
   const w = projects.layout(null, label);
   const dir = w && w.paths && w.paths.components;
   if (!dir || !fs.existsSync(dir)) continue;
-  for (const f of fs.readdirSync(dir)) {
-    const file = path.join(dir, f, 'contract.json');
-    if (!fs.existsSync(file)) continue;
-    const c = JSON.parse(fs.readFileSync(file, 'utf8'));
+  // (with the project's own components as the mains it places: an override inside one is checked as the sheet writes it)
+  const all = fs.readdirSync(dir).map((f) => [f, path.join(dir, f, 'contract.json')]).filter(([, file]) => fs.existsSync(file)).map(([f, file]) => [f, JSON.parse(fs.readFileSync(file, 'utf8'))]);
+  const mains = require('./derive.cjs').byComponentName(all.map(([, c]) => c));
+  for (const [f, c] of all) {
     stored++;
-    if (selfCheck(c, rulesOf(c).rules).length) { off++; console.log('  not rebuilt:', label, f); }
+    if (selfCheck(c, rulesOf(c, mains).rules, mains).length) { off++; console.log('  not rebuilt:', label, f); }
   }
 }
 if (stored) ok(`every stored contract's stylesheet rebuilds every variant it draws (${stored} contracts)`, off === 0);
@@ -617,7 +617,7 @@ else console.log('skip: no stored contracts on this machine');
   ok('a combination that sets an added override back to the component\'s value writes that value, never unset',
     /data-big[^{]*> \.ds-tag__text \{\s*color: var\(--c-strong\);\s*\}/.test(ad) && !/color: unset/.test(ad) && selfCheck(added, rulesOf(added, mains).rules, mains).length === 0);
   // what the component declares that the instance does not is unset
-  const bare ={ ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/strong' } } };
+  const bare = { ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/strong' } } };
   ok('a declaration the instance takes away is unset', /\.ds-tag__text \{[^}]*font[\w-]*: unset;/.test(toCss(bare, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains })));
   // an override inside one of several copies is said, never written on every copy
   const two = { ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': card.anatomy['tag/text'], tag_2: { ...card.anatomy.tag, order: 1 } } };

@@ -649,6 +649,22 @@ function ownOverride(x, ctx, mains) {
    variant's that adds it or sets a field of it, at the defaults' other values): each combination says every one, its
    override or its component's own value, so no rule of another combination's reaches it, nor an `unset` the cascade
    would write where one drops it (which would undo the component's own value). */
+/* The properties any combination overrides on a part inside a placed component (its own differing from the
+   component's there): at the defaults and at each variant that adds or sets the part. */
+const EVER_IN = new WeakMap();
+function everInside(c, id, mains) {
+  const byLib = EVER_IN.get(c) || new WeakMap(); EVER_IN.set(c, byLib);
+  const memo = byLib.get(mains) || new Map(); byLib.set(mains, memo);
+  if (memo.has(id)) return memo.get(id);
+  const ps = new Set(), d = variantDefaults(c), B = expand(c, d);
+  for (const when of [d, ...(c.variants || []).filter((v) => (v.add || {})[id] || Object.keys(v.set || {}).some((k) => k.startsWith(`${id}.`))).map((v) => ({ ...d, ...v.when }))]) {
+    const a = expand(c, when), host = a[id] && hostOf(a, id), m = host && a[host].component && mains(a[host].component, a[host].key);
+    const over = m && overrideOf(a, host, id.slice(host.length + 1), m, mains, B, c);
+    if (over) for (const [p, v] of over.mine) if (over.theirs.get(p) !== v) ps.add(p);
+  }
+  memo.set(id, ps);
+  return ps;
+}
 const EVER = new WeakMap();
 function everOverrides(c, id, mains, ctx) {
   // (per library too: the same contract read against another set of mains overrides otherwise)
@@ -752,9 +768,11 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       // where the component has none: unset, or the base's override would stand)
       const said = new Set([...over.mine.map(([p]) => p), ...over.removed]);
       // (a value only the defaults' override makes it say, the component's own here, is `given`: said where a rule sets it)
-      // (every value, the component's own given: a rule before this one that overrides it, the defaults' or a variant's
-      // add, is answered with that value, never left to the cascade's unset, which would undo the component's own)
-      const decls = [...over.mine.map(([p, v, note]) => [p, v, note, over.theirs.get(p) === v]), ...over.removed.map((p) => [p, 'unset']), ...[...base].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset', undefined, true])];
+      // (and the component's own value, given, where any combination overrides that property otherwise, a variant's add
+      // among them: a rule before this one that does is answered with that value, never left to the cascade's unset,
+      // which would undo the component's own; elsewhere nothing is written)
+      const ever = everInside(c, id, mains);
+      const decls = [...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p) || ever.has(p)).map(([p, v, note]) => [p, v, note, over.theirs.get(p) === v]), ...over.removed.map((p) => [p, 'unset']), ...[...base].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset', undefined, true])];
       if (decls.length) out[id] = { decls: new Map(decls.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: [] };
       continue;
     }
@@ -972,7 +990,9 @@ function pointerGone(c, full, dflt, mains, t = HOUSE) {
   const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
   if (!pk || full[pk] === dflt[pk] || !(c.props[pk].pointer || []).includes(full[pk])) return [];
   const at = { ...full, [pk]: dflt[pk] }, rest = drawn(c, at, mains, t), restA = expand(c, at), nowA = expand(c, full);
-  return Object.keys(rest).filter((id) => restA[id] && !nowA[id] && !id.includes('::') && (!restA[id].parent || restA[id].parent === 'root' || nowA[restA[id].parent]));
+  // (a part inside a placed component is drawn at rest only where it overrides the component: one that says only the
+  // component's own values, given, is the component's part, and a pointer state that drops it draws it as the component)
+  return Object.keys(rest).filter((id) => [...rest[id].decls.values()].some((d) => !d.given) && restA[id] && !nowA[id] && !id.includes('::') && (!restA[id].parent || restA[id].parent === 'root' || nowA[restA[id].parent]));
 }
 
 // the parts a pointer state puts in that the rest of the grid draws too (to-markup's partsOf `pointerShown`): the markup
@@ -1010,6 +1030,8 @@ export function rulesOf(c, mains, t = HOUSE) {
     const when = v.combination ? { ...v.when } : Object.fromEntries(Object.entries(v.when || {}).filter(([k, x]) => x !== dflt[k] || v.combination));
     const full = { ...dflt, ...when };
     const now = drawn(c, full, mains, t);
+    // (a part a pointer state takes away keeps its hide: no reset of this layer's undoes it, below)
+    const gone = new Set(withTurns(c, pointerGone(c, full, dflt, mains, t)));
     const parts = {};
     for (const [id, { decls, unread: u, unshared: x }] of Object.entries(now)) {
       for (const f of u) { if (!unread.has(f)) unread.set(f, new Set()); unread.get(f).add(id); }
@@ -1018,12 +1040,12 @@ export function rulesOf(c, mains, t = HOUSE) {
       const own = new Map();
       for (const [p, d] of decls) if (d.given ? given.has(p) && given.get(p).v !== d.v : !given.has(p) || given.get(p).v !== d.v) own.set(p, d);
       // a property the rules before it set that this combination does not draw goes back to the element's own
-      for (const [p] of given) if (!decls.has(p) && given.get(p).v !== 'unset') own.set(p, { v: 'unset' });
+      for (const [p] of given) if (!decls.has(p) && given.get(p).v !== 'unset' && !(p === 'display' && gone.has(id))) own.set(p, { v: 'unset' });
       if (own.size) parts[id] = own;
     }
     // a part a pointer state takes away (a field's chevron at focus, where another stands): the markup holds it at every
     // state, so the sheet hides it there (to-markup names it pointerGone); the outermost part gone, its insides with it
-    for (const id of withTurns(c, pointerGone(c, full, dflt, mains, t))) if ((cascade(rules, full, id).get('display') || {}).v !== 'none') (parts[id] ||= new Map()).set('display', { v: 'none' });
+    for (const id of gone) if ((cascade(rules, full, id).get('display') || {}).v !== 'none') (parts[id] ||= new Map()).set('display', { v: 'none' });
     // (one a pointer state puts in, held by the markup beyond where the contract draws it, is hidden by selfCheck's rules
     // alone, each naming its whole combination: a hide on a layer would reach combinations that draw it, and showing it
     // again there would take a display this sheet cannot know, a placed component's own)
@@ -1073,10 +1095,12 @@ export function selfCheck(c, rules, mains, t = HOUSE) {
   const out = [];
   for (const m of combinations(c)) {
     const full = { ...dflt, ...m };
+    const gone = new Set(withTurns(c, pointerGone(c, full, dflt, mains, t)));
     for (const [id, { decls }] of Object.entries(drawn(c, full, mains, t))) {
       const got = cascade(rules, full, id);
       for (const [p, d] of decls) if (d.given ? got.has(p) && got.get(p).v !== d.v : !got.has(p) || got.get(p).v !== d.v) out.push({ when: m, part: id, property: p, want: d.v, got: got.get(p)?.v, ...(d.knob && { knob: d.knob }) });
-      for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset') out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
+      // (a pointer state's hide is the check below's, never a declaration this one lacks)
+      for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset' && !(p === 'display' && gone.has(id))) out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
     }
     // and a part a pointer state takes away stays hidden there, whatever a rule of the same weight gives it
     for (const id of withTurns(c, [...pointerGone(c, full, dflt, mains, t), ...pointerShown(c, full, t)])) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v }); }
