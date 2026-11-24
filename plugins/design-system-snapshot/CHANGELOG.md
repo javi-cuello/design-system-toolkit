@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.88.1] - 2026-11-24
+### Fixed
+- **A text with no style in a variable font records its face.** Figma reads such a text's font as mixed though it is in one face (its segment carries the font's axes), so 0.82.0's `fontFamily` and `fontStyle` were left out for 776 texts across three libraries (Carbon's IBM Plex Sans, measured) and the contract said a bare `literal`. The text's segments now say the face where they all agree; a text truly in two faces still records none. Stored snapshots gain it when retaken.
+
 ## [0.88.0] - 2026-11-24
 ### Added
 - **Each collection records its default mode** (`defaultMode`, by name, from Figma's `defaultModeId`). The token build wrote the first mode file by name on `:root`, so one library's base was an accent theme and another's strokes read a grey of the wrong theme. The export's resolver and the build now take this mode as the base, and say so where a snapshot lacks it.

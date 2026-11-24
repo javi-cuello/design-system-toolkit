@@ -1,4 +1,4 @@
-// Design system snapshot — v0.88.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.88.1 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -794,7 +794,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.88.0';
+const VERSION = '0.88.1';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1046,7 +1046,14 @@ async function walk(n, depth, at, inInstance = false) {
     // its browser's default 16px where nothing recorded the 12px drawn.
     if (o.textStyle === 'literal') {
       if (typeof n.fontSize === 'number') o.fontSize = round(n.fontSize);
-      const f = n.fontName;
+      // A variable font's text (its segments carry variationSettings) reads its
+      // fontName as mixed in one face: the segments say the face, and only
+      // where they all agree on it.
+      let f = n.fontName;
+      if (typeof f === 'symbol' && typeof n.getStyledTextSegments === 'function') {
+        const faces = [...new Set(n.getStyledTextSegments(['fontName']).map((s) => JSON.stringify([s.fontName.family, s.fontName.style])))];
+        f = faces.length === 1 ? { family: JSON.parse(faces[0])[0], style: JSON.parse(faces[0])[1] } : null;
+      }
       if (f && typeof f === 'object') { o.fontFamily = f.family; o.fontStyle = f.style; }
     }
     // Alignment inside the box, which the box itself cannot show: a heading

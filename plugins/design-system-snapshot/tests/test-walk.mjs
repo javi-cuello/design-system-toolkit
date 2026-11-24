@@ -345,6 +345,13 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("a text with no style records its size and face", bare.textStyle === "literal" && bare.fontSize === 12 && bare.fontFamily === "Inter" && bare.fontStyle === "Semi Bold");
   const several = await walk({ ...text(Symbol("mixed")), fontSize: Symbol("mixed"), fontName: Symbol("mixed") }, 1);
   ok("…a text of several styles records none", several.textStyle === "mixed" && !("fontSize" in several) && !("fontFamily" in several));
+  // 2026-11-24, measured in Carbon's file: a variable font's text (IBM Plex Sans, `variationSettings`) reads its
+  // fontName as mixed with one segment, so 776 texts with no style in three libraries said a size and no face
+  const seg = (family, style, start, end) => ({ start, end, fontName: { family, style, variationSettings: { wght: 400 } } });
+  const variable = await walk({ ...text(""), fontName: Symbol("mixed"), getStyledTextSegments: () => [seg("IBM Plex Sans", "Regular", 0, 5)] }, 1);
+  ok("…a variable font's text, read as mixed in one face, records that face", variable.fontFamily === "IBM Plex Sans" && variable.fontStyle === "Regular");
+  const two = await walk({ ...text(""), fontName: Symbol("mixed"), getStyledTextSegments: () => [seg("Inter", "Regular", 0, 2), seg("Inter", "Bold", 2, 5)] }, 1);
+  ok("…one truly in two faces still records none", !("fontFamily" in two) && !("fontStyle" in two));
 }
 
 // 2026-11-24: a run could not be stopped. Cancel sets a flag the walk reads at
