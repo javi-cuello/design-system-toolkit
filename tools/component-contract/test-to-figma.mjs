@@ -308,9 +308,17 @@ ok('the runner chooses the run\'s token, so it can take back its own and leave a
   // taken from the file by name, never the snapshot's key imported (which fails, and left the padding a raw number)
   const calls = [];
   const v = (id, key, name, col) => ({ id, key, name, variableCollectionId: col, remote: true, hiddenFromPublishing: true });
-  const byId = { 'V:pad': v('V:pad', 'k-bound', 'Space/150', 'C:space'), 'V:mode': v('V:mode', 'k-mode-bound', 'Tone/fg', 'C:tone') };
-  const comp = { type: 'COMPONENT_SET', name: 'Chip', parent: { type: 'PAGE', getPluginData: () => '' }, boundVariables: { paddingLeft: { type: 'VARIABLE_ALIAS', id: 'V:pad' }, itemSpacing: { type: 'VARIABLE_ALIAS', id: 'V:mode' } }, fills: [], strokes: [], findAll: () => [] };
-  const stand = (ownFile) => {
+  const byId = { 'V:pad': v('V:pad', 'k-bound', 'Space/150', 'C:space'), 'V:mode': v('V:mode', 'k-mode-bound', 'Tone/fg', 'C:tone'), 'V:nested': v('V:nested', 'k-nested', 'Tone/fg', 'C:nested'), 'V:elsewhere': v('V:elsewhere', 'k-elsewhere', 'Tone/fg', 'C:other') };
+  const collections = { 'C:tone': 'Tone', 'C:nested': 'Tone', 'C:other': 'Size' };
+  const alias = (id) => ({ type: 'VARIABLE_ALIAS', id });
+  // walked first: a placed instance whose insides bind another library's variable of the same name
+  const comp = { type: 'COMPONENT_SET', name: 'Chip', parent: { type: 'PAGE', getPluginData: () => '' }, fills: [], strokes: [] };
+  const placed = { type: 'INSTANCE', parent: comp, fills: [], strokes: [], getMainComponentAsync: async () => null };
+  const nested = { type: 'FRAME', parent: placed, boundVariables: { itemSpacing: alias('V:nested') }, fills: [], strokes: [] };
+  const stand = (ownFile, modeVar = 'V:mode') => {
+    comp.boundVariables = { paddingLeft: alias('V:pad') };
+    const own = { type: 'FRAME', parent: comp, boundVariables: { itemSpacing: alias(modeVar) }, fills: [], strokes: [] };
+    comp.findAll = () => [placed, nested, own];
     const root = { children: [], ...data(), findAllWithCriteria: () => [comp] };
     root.setPluginData('to-figma-running', '1');
     globalThis.figma = { root, currentPage: page('Chip'), mixed: Symbol('mixed'), getLocalTextStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getStyleByIdAsync: async () => null,
@@ -318,7 +326,7 @@ ok('the runner chooses the run\'s token, so it can take back its own and leave a
       loadFontAsync: async () => { root.setPluginData('to-figma-running', 'stop'); },
       variables: { getLocalVariablesAsync: async () => [], getVariableByIdAsync: async (id) => byId[id] || null,
         importVariableByKeyAsync: async (k) => { calls.push(`import ${k}`); throw new Error('hidden from publishing'); },
-        getVariableCollectionByIdAsync: async (id) => { calls.push(`collection ${id}`); return { id, modes: [{ name: 'Dark', modeId: 'm2' }] }; } } };
+        getVariableCollectionByIdAsync: async (id) => { calls.push(`collection ${id}`); return { id, name: collections[id], modes: [{ name: 'Dark', modeId: 'm2' }] }; } } };
     return pluginCode({ contract: 1, component: 'Chip', props: {}, anatomy: { root: { kind: 'container', modes: { tone: 'dark' }, layout: { direction: 'row', padding: { start: 'Space/150' }, gap: 'Space/other' } } }, variants: [] },
       { ownFile, vars: { 'Space/150': 'k-snapshot', 'Space/other': 'k-other' }, values: { 'Space/150': 12 }, modes: { tone: [{ collection: 'Tone', key: 'k-mode-snapshot', name: 'Tone/fg', names: { dark: 'Dark' } }] } });
   };
@@ -328,7 +336,11 @@ ok('the runner chooses the run\'s token, so it can take back its own and leave a
     await run('const __token = 1;\n' + stand(true)).catch(() => null);
     ok('in the library\'s own file, a variable its component binds is taken by name, its snapshot key never imported; one it does not bind is still imported by key',
       !calls.includes('import k-snapshot') && calls.includes('import k-other'));
-    ok('…and a mode\'s collection is reached by the variable of it the component binds, hidden as it is', calls.includes('collection C:tone') && !calls.includes('import k-mode-snapshot'));
+    ok('…and a mode\'s collection is reached by the variable of it the component\'s own layers bind, hidden as it is, never one a placed instance binds inside',
+      calls.includes('collection C:tone') && !calls.includes('collection C:nested') && !calls.includes('import k-mode-snapshot'));
+    calls.length = 0;
+    await run('const __token = 1;\n' + stand(true, 'V:elsewhere')).catch(() => null);
+    ok('…a variable of that name in another collection is not the mode\'s: its key is imported as before', calls.includes('import k-mode-snapshot'));
     calls.length = 0;
     await run('const __token = 1;\n' + stand(false)).catch(() => null);
     ok('…in another file, the snapshot key is imported as before', calls.includes('import k-snapshot') && calls.includes('import k-mode-snapshot'));

@@ -662,27 +662,35 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // each found copy kept as it comes (a scan cut short keeps what it found), and the scan stops once every key
       // asked for is found or 25 s have gone, its walk included, which runs before any timer could fire
       const wantNames = new Set([...names, ...Object.values(K.modes || {}).flat().map((m) => m.name)].filter(Boolean));
-      const until = Date.now() + 25000, done = () => (!want.size && !wantNames.size) || Date.now() > until;
+      // (a name the component does not bind is never found: it keeps the walk going, not the key lookups' waits)
+      const until = Date.now() + 25000, keysDone = () => !want.size || Date.now() > until, done = () => (keysDone() && !wantNames.size) || Date.now() > until;
       const take = (x) => { if (x && want.has(x.key)) { ownKeys.set(x.key, x); want.delete(x.key); } };
-      const takeBound = (x) => { if (x && wantNames.has(x.name)) { bound.set(x.name, x); wantNames.delete(x.name); } };
+      // (each name's candidates among the component's own layers, never a placed instance's insides, which can bind
+      // another library's variable of that name; two of one name is one the snapshot's key decides, else left to it)
+      const seen = new Map();
+      const takeBound = (x) => { if (x && ownVarIds.has(x.id) && wantNames.has(x.name)) { seen.set(x.name, new Map([...(seen.get(x.name) || []), [x.id, x]])); } };
       // (a set named under its page, Page/Set, is found by its own name)
       const drawnPage = (n) => { while (n && n.type !== 'PAGE') n = n.parent; return !!(n && n.getPluginData('drawings')); };
       const roots = !done() ? figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).filter((n) => (n.name === P.name || P.name.endsWith('/' + n.name)) && !drawnPage(n)) : [];
-      const styleIds = new Set(), varIds = new Set(), insts = [], textFont = new Map();
-      const alias = (v) => { if (!v) return; if (Array.isArray(v)) v.forEach(alias); else if (typeof v === 'object') { if (v.type === 'VARIABLE_ALIAS' && v.id) varIds.add(v.id); else Object.values(v).forEach(alias); } };
+      const styleIds = new Set(), varIds = new Set(), ownVarIds = new Set(), insts = [], textFont = new Map();
+      let mine = false;
+      const alias = (v) => { if (!v) return; if (Array.isArray(v)) v.forEach(alias); else if (typeof v === 'object') { if (v.type === 'VARIABLE_ALIAS' && v.id) { varIds.add(v.id); if (mine) ownVarIds.add(v.id); } else Object.values(v).forEach(alias); } };
+      const inside = (n, r) => { for (let q = n.parent; q && q !== r; q = q.parent) if (q.type === 'INSTANCE') return true; return false; };
       walk: for (const r of roots) for (const n of [r, ...r.findAll(() => true)]) {
         if (Date.now() > until) break walk;
         try {
           for (const id of styleIdsOf(n)) styleIds.add(id);
           if (n.type === 'TEXT' && typeof n.textStyleId === 'string' && n.textStyleId && typeof n.fontName !== 'symbol' && !textFont.has(n.textStyleId)) textFont.set(n.textStyleId, n.fontName);
+          mine = !inside(n, r);
           alias(n.boundVariables);
           for (const paint of [].concat(Array.isArray(n.fills) ? n.fills : [], Array.isArray(n.strokes) ? n.strokes : [])) alias(paint.boundVariables);
           if (n.type === 'INSTANCE') insts.push(n);
         } catch { /* a layer inside another library's instance can need Figma's servers to read: skipped */ }
       }
-      const settle = async (xs, get) => { for (let k = 0; k < xs.length && !done(); k += 100) { figma.root.setPluginData('to-figma-beat', String(Date.now())); for (const x of await Promise.all(xs.slice(k, k + 100).map((v) => get(v).catch(() => null)))) for (const y of [].concat(x || [])) take(y); } };
+      const settle = async (xs, get, stop = keysDone) => { for (let k = 0; k < xs.length && !stop(); k += 100) { figma.root.setPluginData('to-figma-beat', String(Date.now())); for (const x of await Promise.all(xs.slice(k, k + 100).map((v) => get(v).catch(() => null)))) for (const y of [].concat(x || [])) take(y); } };
       await settle([...styleIds], async (id) => { const st = await figma.getStyleByIdAsync(id); if (st && typeof st.fontName === 'symbol' && textFont.has(id)) lentFont.set(st.key, textFont.get(id)); return st; });
-      await settle([...varIds], async (id) => { const v = await figma.variables.getVariableByIdAsync(id); takeBound(v); return v; });
+      await settle([...varIds], async (id) => { const v = await figma.variables.getVariableByIdAsync(id); takeBound(v); return v; }, () => Date.now() > until);
+      for (const [n, xs] of seen) { const vs = [...xs.values()], one = vs.length === 1 ? vs[0] : vs.find((v) => v.key === (K.vars || {})[n]); if (one) bound.set(n, one); }
       await settle(insts, async (n) => { const m = await n.getMainComponentAsync(); return m ? [m, m.parent && m.parent.type === 'COMPONENT_SET' ? m.parent : null] : null; });
       return [];
     }, 30000);
@@ -707,7 +715,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // `key` one variable of that collection, imported to reach it; `names` its modes by the contract's spelling)
   const cols = {};
   const modeSets = [...new Set(els.flatMap((e) => Object.keys(e.modes || {})))].flatMap((a) => (K.modes || {})[a] || []);
-  await Promise.all(modeSets.filter((m) => m.key).map(async (m) => { const v = await tried(`a variable of ${m.collection}`, () => (bound.has(m.name) ? bound.get(m.name) : own(m.key, () => figma.variables.importVariableByKeyAsync(m.key)))); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
+  // (a bound variable of that name reaches it only where it is of that collection: a name is unique within one alone)
+  const ofCollection = async (m) => { const v = bound.get(m.name), c = v && await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(() => null); return c && c.name === m.collection ? c : null; };
+  await Promise.all(modeSets.filter((m) => m.key).map(async (m) => { const c = await ofCollection(m); if (c) { cols[m.key] = c; return; } const v = await tried(`a variable of ${m.collection}`, () => own(m.key, () => figma.variables.importVariableByKeyAsync(m.key))); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
   // (each collection on its own, a failure said and the rest still set; a layer that cannot hold a mode, said)
   const setModes = (n, e, id) => {
     if (!('setExplicitVariableModeForCollection' in n)) { missing.add(`${e.name || id} (its modes: a ${n.type} holds none)`); return; }
