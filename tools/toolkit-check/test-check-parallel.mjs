@@ -55,6 +55,8 @@ const most = Math.max(...['a', 'b', 'c'].map((x) => ['a', 'b', 'c'].filter((y) =
 assert.ok(overlap(c.t, 'a', 'b'), 'chrome=2 lets two run at once');
 assert.ok(!(overlap(c.t, 'a', 'b') && overlap(c.t, 'a', 'c') && overlap(c.t, 'b', 'c')), 'never three');
 assert.ok(most >= 1, 'the count was used');
+const w = run([['-', 'a', '0.3', 'ok'], ['chrome', 'b', '0.3', 'ok'], ['chrome', 'c', '0.3', 'ok']], ['--workers', '2', '--limit', 'chrome=2']);
+assert.ok(w.t.a.start < w.t.b.end && w.t.a.start < w.t.c.end, 'a counted resource as wide as the workers leaves one worker to the list order');
 
 // An undeclared step (no shares, or "alone") runs with nothing beside it.
 for (const tag of ['', 'alone']) {
@@ -81,4 +83,4 @@ assert.equal(spawnSync('node', [SCHED, '--workers', '0', '--state', tmp, '--', R
 assert.equal(spawnSync('node', [SCHED, '--state', tmp], { input: '' }).status, 2, 'no runner is refused');
 
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log('ok check scheduler: 18 assertions');
+console.log('ok check scheduler: 19 assertions');

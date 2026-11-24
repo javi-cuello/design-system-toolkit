@@ -455,7 +455,9 @@ s_suite() {
 #   -                    nothing
 # A step with no line here runs alone. tools/toolkit-check/test-check-shares.mjs fails a step that launches Chrome,
 # calls launchctl, or writes under the home folder or the repo without saying so, and a line naming no step.
-LIMITS="chrome=1"
+# Two Chrome steps at once: three full runs with chrome=2 (2026-11-24, load 7 to 20) gave every step the result of a
+# serial run; each launch has its own profile and port (cdp.mjs).
+LIMITS="chrome=2"
 SUITE_SHARES='
 bin/test-deploy.mjs                                              -
 bin/test-set-key.mjs                                             -

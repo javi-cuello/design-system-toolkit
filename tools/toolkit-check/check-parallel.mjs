@@ -9,9 +9,9 @@
  * <shares> is what the step uses that another step could disturb (bin/check's step list says which): comma-separated
  * tags, `-` for none, and `alone` or nothing for a step nobody declared, which then runs with nothing beside it and
  * nothing listed after it starts before it ends.
- * Two steps holding a tag never overlap; `--limit chrome=2` lets that many hold it at once. A step holding a counted
- * tag is started first when it fits: that lane is the run's floor (2026-11-24: the 42 Chrome steps took 358-444 s of
- * an 823 s serial run).
+ * Two steps holding a tag never overlap; `--limit chrome=2` lets that many hold it at once. A step holding a tag is
+ * started first when it fits, while a worker stays for the list's own order: that lane is the run's floor
+ * (2026-11-24: the 42 Chrome steps took 358-444 s of an 823 s serial run).
  *
  * Each step's stdout and stderr are kept, and printed whole, in list order, once it and every step before it ended,
  * so the output reads as a serial run's. At the end <dir>/failed and <dir>/skipped hold every step's names in list
@@ -61,7 +61,10 @@ export function schedule({ steps, workers, limits, state, runner, write = (s) =>
         // starts before it ends (a healing step writes what the later ones read), and it starts once the floor clears
         const bar = pending.findIndex((s) => s.tags.includes('alone'));
         const open = bar < 0 ? pending.length : bar === 0 ? 1 : bar;
-        let k = pending.findIndex((s, j) => j < open && counted(s) && fits(s));
+        // …but one worker is always left to the list's own order: with chrome=2 and two workers, the Chrome steps took
+        // both, and nothing else (the first step's output with it) moved until all 34 had run (2026-11-24)
+        const busy = [...running].filter(counted).length;
+        let k = busy < workers - 1 ? pending.findIndex((s, j) => j < open && counted(s) && fits(s)) : -1;
         if (k < 0) k = pending.findIndex((s, j) => j < open && fits(s));
         if (k < 0) break;
         const s = pending.splice(k, 1)[0];
