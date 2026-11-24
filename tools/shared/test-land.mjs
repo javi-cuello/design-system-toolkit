@@ -269,5 +269,12 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.equal(r.code, 0, r.out);
   assert.equal(remoteHas('n13.txt'), 'n13'); }
 
+// (u) a merge with main that fails for another reason than a conflict says that reason, never "conflict"
+{ const U = wt('n14'); git(U, 'checkout', '-q', '--orphan', 'worktree-orphan'); git(U, 'commit', '-qm', 'orphan');
+  r = await quiet(() => land(U));
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /unrelated histories/, r.out);
+  assert.doesNotMatch(r.out, /\(conflict\)/, r.out); }
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');

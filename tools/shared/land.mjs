@@ -207,7 +207,11 @@ async function quickCheck(main, sha) {
   const t = temp(main, git(main, 'rev-parse', 'origin/main'));
   try {
     const m = tryGit(t.dir, '-c', 'user.name=bin-land', '-c', 'user.email=bin-land@localhost', 'merge', '-q', '--no-edit', sha);
-    if (!m.ok) return { code: 1, conflict: tryGit(t.dir, 'diff', '--name-only', '--diff-filter=U').out.split('\n').filter(Boolean) };
+    if (!m.ok) {
+      const files = tryGit(t.dir, 'diff', '--name-only', '--diff-filter=U').out.split('\n').filter(Boolean);
+      // a merge refused for another reason (unrelated histories) says that reason, never "conflict"
+      return files.length ? { code: 1, conflict: files } : { code: 1, out: m.out, failed: [`merging with origin/main: ${m.out.split('\n')[0]}`] };
+    }
     return await new Promise((resolve) => {
       let out = '';
       const c = spawn(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), 'check-cache.mjs'), t.dir, '--quick', '--no-fix'], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -257,7 +261,7 @@ export async function land(from, target) {
   // the lock, so the full check under it only judges them (2026-11-24: stale dashboards failed a land unrelated to them)
   const [quick, healed] = await Promise.all([quickCheck(main, sha), healServices(main)]);
   if (healed) say(healed);
-  if (quick.conflict) { say(`${branch} does not apply on main (${quick.conflict.join(', ') || 'conflict'}): rebase it on origin/main, then land again`); return 1; }
+  if (quick.conflict) { say(`${branch} does not apply on main (${quick.conflict.join(', ')}): rebase it on origin/main, then land again`); return 1; }
   if (quick.code !== 0) {
     say(`${branch} at ${sha.slice(0, 8)}: the quick check's run:\n${quick.out.trimEnd().split('\n').map((l) => `  ${l}`).join('\n')}`);
     say(`${branch} not queued: the quick check is red: ${quick.failed.join(', ') || 'see its run above'}. Fix it, commit, then land again`);
