@@ -50,7 +50,10 @@ function nameOf(instanceOf, known = []) {
   const has = typeof known === 'function' ? known : ((set) => (n) => set.has(n))(new Set(known));
   // Longest name the string starts with, on a " / " boundary.
   for (let k = parts.length; k > 0; k--) { const n = parts.slice(0, k).join(' / ').trim(); if (has(n)) return n; }
-  return parts[0].trim();
+  // nothing known: a set's instance ends in its variant (`Prop=Value, …`, which Figma names every variant with), cut off
+  // where it begins; a component outside a set (`Code parts / <TopNavStart>`) is its whole name
+  const at = parts.findIndex((p, i) => i > 0 && /^[^=,]+=/.test(p.trim()));
+  return at > 0 ? parts.slice(0, at).join(' / ').trim() : s;
 }
 
 /**

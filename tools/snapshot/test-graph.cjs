@@ -83,6 +83,11 @@ const v = (name, children) => ({ name, type: 'COMPONENT', children });
 // ---- nameOf on its own --------------------------------------------------
 expect('nameOf takes the longest known name', nameOf('A - B / C / Size=md', ['A - B', 'A - B / C']), 'A - B / C');
 expect('and falls back to the first segment when nothing is known', nameOf('Thing / Size=md', []), 'Thing');
+// 2026-11-24, the Figma oracle: a component outside a set named with " / " (Atlassian's `Code parts / <TopNavStart>`,
+// `Icon / <TeamsIcon>`) was cut to `Code parts` where nothing stored knew it; only a variant (`Prop=Value`) is cut off
+expect('a name with no variant after it is the whole name when nothing is known', nameOf('Code parts / <TopNavStart>', []), 'Code parts / <TopNavStart>');
+expect('and a set named with " / " keeps all of it, its variant cut', nameOf('Table - Cell / Fill / Size=md, State=Rest', []), 'Table - Cell / Fill');
+expect('…a variant whose value holds " / " cut whole', nameOf('Chip / Size=S / M', []), 'Chip');
 
 // ---- the relation in the shape a skill can take ------------------------
 // A skill may not require this file, so it takes the relation as INPUT. Keyed

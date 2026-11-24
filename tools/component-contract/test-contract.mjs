@@ -180,7 +180,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const host = { name: 'Column', props: {}, variants: [{ name: 'Column', type: 'COMPONENT', children: [{ name: 'Cell', type: 'INSTANCE', instanceOf: 'Table - Cell / Fill / Size=md' }] }] };
   const comp = (c) => c.anatomy.cell.component;
   ok('an instance of a set whose name holds " / " resolves to the stored name', comp(derive(host, ['Table - Cell / Fill', 'Column'])) === 'Table - Cell / Fill');
-  ok('and with no names known it falls back to the first segment, as before', comp(derive(host)) === 'Table - Cell');
+  ok('and with no names known it cuts the variant off, where the variant begins (graph.cjs nameOf)', comp(derive(host)) === 'Table - Cell / Fill');
   ok('selfCheck\'s own contract is derived with the names it checks against', selfCheck(host, undefined, ['Table - Cell / Fill', 'Column']).length === 0);
 }
 
