@@ -258,5 +258,16 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.equal(fs.readFileSync(said, 'utf8').trim(), '--heal', 'asked once, to heal');
   assert.match(r.out, /1 stale service\(s\) restarted/, r.out); }
 
+// (t) the quick check reads the branch with main merged in: a step red when it branched and fixed on main since
+// does not refuse it
+{ git(main, 'fetch', '-q', 'origin'); git(main, 'merge', '-q', '--ff-only', 'origin/main');
+  fs.writeFileSync(path.join(main, 'q.txt'), 'QUICKBAD\n'); git(main, 'add', 'q.txt'); git(main, 'commit', '-qm', 'q red'); git(main, 'push', '-q', 'origin', 'main');
+  const T = wt('n13');
+  fs.writeFileSync(path.join(main, 'q.txt'), 'q fixed\n'); git(main, 'commit', '-qam', 'q fixed'); git(main, 'push', '-q', 'origin', 'main');
+  fs.writeFileSync(path.join(T, 'n13.txt'), 'n13\n'); git(T, 'add', '.'); git(T, 'commit', '-qm', 'n13');
+  r = await quiet(() => land(T));
+  assert.equal(r.code, 0, r.out);
+  assert.equal(remoteHas('n13.txt'), 'n13'); }
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');

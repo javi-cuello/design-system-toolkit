@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /*
  * Landing: the one way work reaches main. A session commits on its own branch (a worktree per piece of work,
- * worktree.mjs) and runs bin/land; a quick check of the commit runs first (red: not queued), then the branch joins a
- * queue, and whoever holds the measuring lock lands every queued branch together: their new commits replayed onto origin/main in an integration worktree, one full check of the
+ * worktree.mjs) and runs bin/land; a quick check of the commit merged with main runs first (red, or not merging: not
+ * queued), then the branch joins a queue, and whoever holds the measuring lock lands every queued branch together:
+ * their new commits replayed onto origin/main in an integration worktree, one full check of the
  * result, and a push from there. N sessions landing at once cost one check, not N (the bors model: test main with the
  * change applied, then move main; github.com/bors-ng/bors-ng). A branch whose commits do not apply is dropped and told;
  * a red batch is split in half until the red branch is alone (step()). The lock is held for one check at a time, with a
@@ -198,11 +199,15 @@ async function step(main, me, state) {
   return null;
 }
 
-/* bin/check --quick --no-fix on a commit, through check-cache (a tree checked before answers at once): its exit code,
-   its output, and the steps its closing summary names as failed. */
+/* bin/check --quick --no-fix on a commit merged with origin/main (a step fixed on main since it branched does not refuse
+   it), through check-cache (a tree checked before answers at once): its exit code, its output, and the steps its closing
+   summary names as failed. A commit that does not merge is refused here, as the replay would. */
 async function quickCheck(main, sha) {
-  const t = temp(main, sha);
+  tryGit(main, 'fetch', '-q', 'origin');
+  const t = temp(main, git(main, 'rev-parse', 'origin/main'));
   try {
+    const m = tryGit(t.dir, '-c', 'user.name=bin-land', '-c', 'user.email=bin-land@localhost', 'merge', '-q', '--no-edit', sha);
+    if (!m.ok) return { code: 1, conflict: tryGit(t.dir, 'diff', '--name-only', '--diff-filter=U').out.split('\n').filter(Boolean) };
     return await new Promise((resolve) => {
       let out = '';
       const c = spawn(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), 'check-cache.mjs'), t.dir, '--quick', '--no-fix'], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -246,12 +251,13 @@ export async function land(from, target) {
   // red on main at this very commit: another try checks the same tree for the same answer
   const was = readJSON(path.join(outcomes(main), `${encodeURIComponent(branch)}@${sha}`));
   if (was?.outcome === 'red') { say(`${branch} at ${sha.slice(0, 8)} was red on main at ${new Date(was.at).toTimeString().slice(0, 5)}: commit a fix, or rebase on origin/main, then land again`); return 1; }
-  // the quick check first, on the commit as committed (a temporary worktree of it), with no lock: a branch it finds red
+  // the quick check first, on the commit merged with main (a temporary worktree), with no lock: a branch it finds red
   // never waits for the lock and a full check to be told so (2026-11-24: two lands red on quick steps after 13 minutes each)
   // beside it, stale dashboards are restarted (the main checkout's check-services --heal: those they run from), outside
   // the lock, so the full check under it only judges them (2026-11-24: stale dashboards failed a land unrelated to them)
   const [quick, healed] = await Promise.all([quickCheck(main, sha), healServices(main)]);
   if (healed) say(healed);
+  if (quick.conflict) { say(`${branch} does not apply on main (${quick.conflict.join(', ') || 'conflict'}): rebase it on origin/main, then land again`); return 1; }
   if (quick.code !== 0) {
     say(`${branch} at ${sha.slice(0, 8)}: the quick check's run:\n${quick.out.trimEnd().split('\n').map((l) => `  ${l}`).join('\n')}`);
     say(`${branch} not queued: the quick check is red: ${quick.failed.join(', ') || 'see its run above'}. Fix it, commit, then land again`);
