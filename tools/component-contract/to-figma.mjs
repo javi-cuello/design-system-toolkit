@@ -1115,9 +1115,11 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
           // hugging, as the source's empty slot does (a filled one hugs what it holds)
           const onlyEmpty = new Set(e.whileEmpty || []);
           for (const f of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (e[f] != null && !onlyEmpty.has(f)) await num(n, f, e[f]);
-          if (onlyEmpty.size && !ids.some((x) => variant.anatomy[x].parent === id)) {
+          // (an empty one that hugs with no size kept is at its padding, as the source's is: derive keeps every other)
+          if ((onlyEmpty.size || e.width === 'hug' || e.height === 'hug') && !ids.some((x) => variant.anatomy[x].parent === id)) {
             const modes = [n.primaryAxisSizingMode, n.counterAxisSizingMode];
-            n.resize(onlyEmpty.has('minWidth') ? px(e.minWidth) : n.width, onlyEmpty.has('minHeight') ? px(e.minHeight) : n.height);
+            const side = (f, v, room) => (onlyEmpty.has(f) ? px(e[f]) : v === 'hug' ? Math.max(room, 0.01) : null);
+            n.resize(side('minWidth', e.width, n.paddingLeft + n.paddingRight) ?? n.width, side('minHeight', e.height, n.paddingTop + n.paddingBottom) ?? n.height);
             [n.primaryAxisSizingMode, n.counterAxisSizingMode] = modes;
           }
         } else if (n.type !== 'VECTOR' && n.type !== 'ELLIPSE' && ids.some((x) => variant.anatomy[x].parent === id && !variant.anatomy[x].absolute)) {

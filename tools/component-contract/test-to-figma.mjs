@@ -748,6 +748,9 @@ delete globalThis.figma;
     // (sized to its part, which scales its paths, where the part's size is not theirs: in the flow and placed out of it)
     && src.includes("else if (n.type === 'VECTOR' && e.paths && px(e.width) > 0 && px(e.height) > 0 && (Math.abs(px(e.width) - n.width) > 0.01 || Math.abs(px(e.height) - n.height) > 0.01)) n.resize(px(e.width), px(e.height));")
     && src.includes("if ('resize' in n && (n.type !== 'VECTOR' || (e.paths && w > 0 && h > 0)) && (Math.abs(w - n.width) > 0.01"));
+  ok('an empty auto layout that hugs is drawn at the size it kept while empty, else at its padding, never Figma\'s 100 for an empty frame',
+    src.includes("const side = (f, v, room) => (onlyEmpty.has(f) ? px(e[f]) : v === 'hug' ? Math.max(room, 0.01) : null);")
+    && src.includes("n.resize(side('minWidth', e.width, n.paddingLeft + n.paddingRight) ?? n.width, side('minHeight', e.height, n.paddingTop + n.paddingBottom) ?? n.height);"));
   ok('a placed instance takes its own fill, stroke, corners, shadow and clipping, and a layer inside one its stroke\'s weights and place, never its colour alone; neither from a contract read from code',
     src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e, e.background); await lookOver(n, e); }")
     && src.includes("if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);") && src.includes("await lookOver(n, e); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")

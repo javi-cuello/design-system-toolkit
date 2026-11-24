@@ -93,16 +93,16 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
     if (!parent && (w === 'FILL' || h === 'FILL')) e.canvas = { ...(w === 'FILL' ? { width: n.w } : {}), ...(h === 'FILL' ? { height: n.h } : {}) };
   }
   for (const k of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (n[k] != null) e[k] = b[k] ?? n[k];
-  // an empty slot that hugs, or the empty sample frame a slot holds, keeps the size it last had (Figma's way: a
-  // dialog's empty content at 200): that size is its least, where it is more than its padding. Only there: any other
-  // frame the walk records empty may hold layers it skipped as hidden (a text field's label container), its size
-  // theirs
-  const slotty = n.type === 'SLOT' || (n.type === 'FRAME' && up && up.type === 'SLOT');
-  if (slotty && n.layout && n.sizing && !(n.children || []).length && Array.isArray(n.pad)) {
+  // an auto layout that hugs and holds nothing the walk records keeps the size it last had (Figma's way: a dialog's
+  // empty slot at 200; a tile's icon frame 40 by 40 round the icon it hides; a status frame 16 high in 20 of padding),
+  // wherever it differs from its padding: drawn without it, it is Figma's 100 for an empty frame. It holds only while
+  // the part is empty (whileEmpty, below), so a frame code fills hugs what it holds, and a frame a boolean fills keeps
+  // nothing
+  if (['FRAME', 'SLOT', 'COMPONENT'].includes(n.type) && n.layout && n.sizing && !(n.children || []).length && Array.isArray(n.pad)) {
     const [w, h] = String(n.sizing).split('/');
     const kept = [];
-    if (w === 'HUG' && n.minWidth == null && n.w > n.pad[1] + n.pad[3] + 0.5) { e.minWidth = n.w; kept.push('minWidth'); }
-    if (h === 'HUG' && n.minHeight == null && n.h > n.pad[0] + n.pad[2] + 0.5) { e.minHeight = n.h; kept.push('minHeight'); }
+    if (w === 'HUG' && n.minWidth == null && Math.abs(n.w - (n.pad[1] + n.pad[3])) > 0.5) { e.minWidth = n.w; kept.push('minWidth'); }
+    if (h === 'HUG' && n.minHeight == null && Math.abs(n.h - (n.pad[0] + n.pad[2])) > 0.5) { e.minHeight = n.h; kept.push('minHeight'); }
     // (checked against every variant in anatomies: one a boolean fills elsewhere only holds hidden layers here)
     if (kept.length) e.emptyKept = kept;
   }

@@ -659,8 +659,18 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('an empty hugging frame keeps its size while it is empty (whileEmpty); one a variant fills does not', empty.minHeight === 200 && JSON.stringify(empty.whileEmpty) === '["minHeight"]' && !('emptyKept' in empty) && shown.minHeight === undefined && !('whileEmpty' in shown) && !('emptyKept' in shown));
   const two = spec([]); two.props.Size = ['md', 'lg']; two.variants.push({ name: 'Size=lg', type: 'COMPONENT', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [frame([{ name: 'Body', type: 'TEXT', w: 360, h: 160 }])] });
   ok('another variant filling a part of that name leaves this one\'s kept size', derive(two).anatomy.content.minHeight === 200);
+  // any frame the walk records empty keeps the size Figma left it at, its hidden layers' room among them (a tile's icon
+  // frame 40 by 40 round a hidden icon): drawn without it, it is Figma's 100 by 100; only while empty, so a frame code
+  // fills hugs what it holds
   const plain = spec([]); plain.variants[0].children = [frame([], 'FRAME')];
-  ok('a plain frame recorded empty keeps nothing (its layers may be hidden ones the walk skipped)', derive(plain).anatomy.content.minHeight === undefined); }
+  const kept = derive(plain).anatomy.content;
+  ok('a plain frame recorded empty keeps its size while it is empty, as a slot does', kept.minHeight === 200 && JSON.stringify(kept.whileEmpty) === '["minHeight"]');
+  // a size below its padding is still the size Figma left it at (a status frame 16 high in 20 of padding); one at its
+  // padding says nothing the padding does not
+  const tight = spec([]); tight.variants[0].children = [{ name: 'Status', type: 'FRAME', w: 40, h: 16, layout: 'HORIZONTAL', pad: [10, 10, 10, 10], gap: 0, align: 'MIN/MIN', sizing: 'HUG/HUG', children: [] }];
+  const st = derive(tight).anatomy.status;
+  const at = spec([]); at.variants[0].children = [{ name: 'Status', type: 'FRAME', w: 20, h: 20, layout: 'HORIZONTAL', pad: [10, 10, 10, 10], gap: 0, align: 'MIN/MIN', sizing: 'HUG/HUG', children: [] }];
+  ok('an empty hugging frame below its padding keeps that size; one at its padding keeps none', st.minWidth === 40 && st.minHeight === 16 && JSON.stringify(st.whileEmpty) === '["minWidth","minHeight"]' && !('whileEmpty' in derive(at).anatomy.status)); }
 { // a placed instance is the component its key says: a name another component carries (an icon named Checkbox beside
   // the Checkbox set) is a fallback only where the key does not contradict it (layers.mjs keyMatches, placedOf)
   const box = { component: 'Checkbox', figma: { key: 'set' } }, chip = { component: 'Chip' };
