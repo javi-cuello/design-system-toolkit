@@ -1037,8 +1037,10 @@ function bridge(stored) {
     for (const e of t.list) {
       const id = idOf(e.segs);
       const key = keyOf(e.segs.map((s) => s.replace(/#.*$/s, '')));
-      if (owner[id] !== undefined && owner[id] !== key) { clashes.push(`${id}: ${owner[id].split(SEP).join(' > ')} and ${key.split(SEP).join(' > ')}`); continue; }
-      owner[id] = key;
+      // two names one id (`Text overflow`, `Text Overflow`; a trailing space) are one part, at both paths: said as a clash,
+      // since the id cannot say which name, and kept, since the part is drawn at each
+      if (owner[id] !== undefined && owner[id] !== key) clashes.push(`${id}: ${owner[id].split(SEP).join(' > ')} and ${key.split(SEP).join(' > ')}`);
+      else owner[id] = key;
       const p = at.get(e.node);
       if (p == null) continue;
       add(paths, id, p);

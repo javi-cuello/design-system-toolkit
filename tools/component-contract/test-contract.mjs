@@ -218,6 +218,15 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const items = { name: 'Crumbs', id: '2:1', key: 'k2', props: { Size: ['Md'] }, variants: [{ name: 'Size=Md', type: 'COMPONENT', children: [
     { name: 'Item', type: 'TEXT', text: 'a' }, { name: 'Item', type: 'TEXT', text: 'b' }, { name: 'Item 2', type: 'TEXT', text: 'c' }] }] };
   ok('a layer named with a number and a repeated layer take two ids, never one', bridge(items).clashes.length === 0 && bridge(items).ids['Item 2'].join() === 'item2' && bridge(items).ids['Item#2'].join() === 'item_2');
+  // 2026-11-24, the Figma oracle: Carbon names one layer `Text overflow` in some variants and `Text Overflow` in others
+  // (and `Accordion content` with a trailing space); the bridge kept the first path alone, so the part read as missing
+  // wherever Figma spelled it the other way
+  const renamed = { name: 'Switch', id: '3:1', key: 'k3', props: { Size: ['Sm', 'Md'] }, variants: [
+    { name: 'Size=Sm', type: 'COMPONENT', children: [{ name: 'Text overflow', type: 'FRAME', children: [{ name: 'Label', type: 'TEXT', text: 'a' }] }] },
+    { name: 'Size=Md', type: 'COMPONENT', children: [{ name: 'Text Overflow', type: 'FRAME', children: [{ name: 'Label', type: 'TEXT', text: 'a' }] }] }] };
+  const rb = bridge(renamed);
+  ok('one part under two spellings of its name is at both paths, and the two are said as a clash',
+    JSON.stringify(rb.paths.textOverflow) === '["Text Overflow","Text overflow"]' && JSON.stringify(rb.paths['textOverflow/label']) === '["Text Overflow > Label","Text overflow > Label"]' && rb.clashes.length === 2);
 }
 
 // what the drawing compared with its original found lost on the way (a drawing pushed back to Figma, field by field):
