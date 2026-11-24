@@ -41,7 +41,7 @@ node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey
 node tools/component-contract/eval.mjs --project <label> --self --twice --changed --jobs 4 --second
 node tools/component-contract/eval.mjs --projects <label,label…> --legs self,second --jobs 4 --log <file>
 node tools/component-contract/eval.mjs --projects <label,label…> --mechanisms --top 25 --near 15
-node tools/component-contract/eval.mjs --project <label> --mutate [--sample 10] [--seed 1]
+node tools/component-contract/eval.mjs --project <label> --mutate [--sample 10] [--seed 1] [--check]
 
 # the spec and the contract held to Figma's own REST API (a token: bin/set-key figma)
 node tools/component-contract/oracle-figma.mjs --project <label>[,<label>…] [--cache <dir>] [--offline] [--out <rows.json>] [--version snapshot|latest] [--interval <s>]

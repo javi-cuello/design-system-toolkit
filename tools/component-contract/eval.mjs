@@ -24,7 +24,7 @@
  *   node tools/component-contract/eval.mjs --project <label> --causes
  *   node tools/component-contract/eval.mjs --project <label> --diff [--accept]
  *   node tools/component-contract/eval.mjs --project <label> --make-panel 30, then --panel with any of the above
- *   node tools/component-contract/eval.mjs --project <label> --mutate [--sample N] [--seed S]   the comparer proven: each leg's share of known changes caught, beside the headline (mutate.mjs)
+ *   node tools/component-contract/eval.mjs --project <label> --mutate [--sample N] [--seed S] [--check]   the comparer proven: each leg's share of known changes caught, beside the headline (mutate.mjs)
  *   node tools/component-contract/eval.mjs --project <label> --second [components…]
  *   node tools/component-contract/eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]
  *   node tools/component-contract/eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top 25] [--near 15]   the panels' rows by mechanism, across libraries, and the components nearest the same: what to fix first
@@ -929,8 +929,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const today = await todayOf(label, where, panel ? argv : []);
   const m = measure(where, panel ? argv : [], today);
   report(label, m, fields, byCause);
-  // (its own process: mutate.mjs imports this module, which is still running here)
-  if (mutate && spawnSync(process.execPath, [path.join(HERE, 'mutate.mjs'), '--project', label, '--sample', String(mutate.sample), '--seed', String(mutate.seed)], { stdio: 'inherit' }).status) process.exit(2);
+  // (its own process: mutate.mjs imports this module, which is still running here). Under --check a kind caught under
+  // mutate.mjs's floor fails the check (rc 1); a run that died, or ended with no status, fails it as an error (rc 2)
+  const mutated = mutate && (spawnSync(process.execPath, [path.join(HERE, 'mutate.mjs'), '--project', label, '--sample', String(mutate.sample), '--seed', String(mutate.seed), ...(check ? ['--check'] : [])], { stdio: 'inherit' }).status ?? 2);
+  if (mutated >= 2) process.exit(2);
   const file = path.join(m.home, 'round-trip', 'accepted.json');
   const now = counts(m.legs);
   const causesFile = path.join(m.home, 'round-trip', 'accepted-causes.json');
@@ -959,5 +961,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const bad = worse(now, was);
     for (const b of bad) console.log(`  rose: ${b}`);
     if (bad.length) { console.log('a count rose against the accepted one: fix what the rows say, or accept with a reason in the commit'); process.exit(1); }
+    if (mutated) process.exit(1);
   }
 }

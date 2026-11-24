@@ -42,6 +42,7 @@ import { parseColour } from '../parity/values.mjs';
 import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, looksLikeValue } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 import { turnedParts } from './to-code.mjs';
+import { geometry } from './geometry.mjs';
 
 import { realpathSync } from 'node:fs';
 const req = createRequire(import.meta.url);
@@ -1978,6 +1979,15 @@ export function heldTo(index, name, { folder, library, libraryKey, key, keyAt, f
    (`index`, 0.83.0 on; derive orders two layers two booleans show by it), a vector's outline and paths (0.85.0, 0.86.0).
    `comp` is the walk's, its variants whole; `known` null (no stored snapshot to ask) leaves nothing out. */
 const SIZED = ['fontSize', 'fontFamily', 'fontStyle'];
+/* The Figma leg's compare, one function for --verify and for mutate.mjs: the walk's reading of a drawn set (`comp`), as
+   the stored snapshot records it (walkedAs), derived and held to the library's contract (`held`, its contract.json), and
+   the reading itself, before derive drops what it does not keep, held to the stored figma.json (`snap`) layer by layer
+   (geometry.mjs), against the fields the library's snapshot records anywhere (`known`). */
+export function heldToLibrary(held, comp, snap, { names, deriveOptions, mains, known }) {
+  const walked = walkedAs(comp, known);
+  const now = req('./derive.cjs').derive(req('../snapshot/spec.cjs').compact(walked), names, deriveOptions);
+  return { rt: roundTrip(held, now, { mains }), geo: snap ? geometry(snap, walked, { known }) : null };
+}
 export function walkedAs(comp, known) {
   if (!known) return comp;
   const keep = (f) => known.has(f);
@@ -2087,25 +2097,19 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       if (comp) namedByKey(comp, keyedNames(where.paths.components));
       if (comp) {
         const { compact } = req('../snapshot/spec.cjs');
-        const { derive } = req('./derive.cjs');
         const held = JSON.parse(fs.readFileSync(libFile, 'utf8'));
         // (the snapshot it was derived from, beside the library's contract)
         let snap = null; try { snap = JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, 'figma.json'), 'utf8')); } catch { /* none stored: the walk as read */ }
         // what the stored snapshot records, by the store's version gate, read once for both: what the live read keeps, and
         // which fields the geometry holds it to
-        const { geometry, knownOf } = await import('./geometry.mjs');
+        const { knownOf } = await import('./geometry.mjs');
         const specs = Object.fromEntries(req('../snapshot/store.cjs').readSpecs(where.paths.components, { compact: true }).map((x) => [x.folder, x.spec]));
         // (per file: the release that recorded this component's own file, over every spec that file recorded)
         const known = snap && knownOf(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), { ...specs, [folder]: compact(snap) }, (walk.match(/const VERSION = '([^']+)'/) || [])[1], { file: (index[folder] || {}).file, fileOf: (k) => (index[k] || {}).file });
         // derived under the library's own settings (its stateAxis, pointerStates), as its contract was, never the file
-        // drawn into's
-        const now = derive(compact(walkedAs(comp, known)), Object.values(index).map((x) => x.name), contractRouter.deriveOptionsFor(where.paths.components)(folder));
-        // the library's components by name, as eval.mjs compares with them: the same rules on every leg
+        // drawn into's; the library's components by name, as eval.mjs compares with them: the same rules on every leg
         const { contracts } = await import('./official.mjs');
-        const rt = roundTrip(held, now, { mains: req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract)) });
-        // and the reading itself, before derive drops what it does not keep, held to the stored one layer by layer: the
-        // geometry part of the Figma leg (geometry.mjs), against the fields the library's snapshot records anywhere
-        const geo = snap && geometry(snap, walkedAs(comp, known), { known });
+        const { rt, geo } = heldToLibrary(held, comp, snap, { names: Object.values(index).map((x) => x.name), deriveOptions: contractRouter.deriveOptionsFor(where.paths.components)(folder), mains: req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract)), known });
         back = rt.rows.length + (geo ? geo.length : 0);
         const rtOut = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`);
         const body = JSON.stringify({ component: p.name, combinations: rt.combinations, ...(rt.invalid && { invalid: rt.invalid }), ...(rt.cut && { cut: rt.cut }), rows: rt.rows, ...(geo && { geometry: geo }) }, null, 2) + '\n';
