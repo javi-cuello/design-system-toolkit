@@ -73,8 +73,8 @@ ok('token lists: colours and lengths told apart by value, text styles by name', 
   assert.deepEqual(t.textStyles, ['Label/md']);
   assert.deepEqual(tokenLists(), { colours: [], lengths: [], shadows: [], textStyles: [], textStyleOf: {} }, 'no snapshot, no tokens');
   // a collection's preview value is its default mode's, not its first's
-  const m3 = tokenLists({ collections: { M3: { modes: ['Blue DT', 'Light'], defaultMode: 'Light', values: { 'Blue DT': { 'Stroke': '#0000ff' }, Light: { 'Stroke': '#e0e0e0' } } } } });
-  assert.match(JSON.stringify(m3.colours), /e0e0e0/i, 'the default mode previews');
+  const brand = tokenLists({ collections: { Brand: { modes: ['Accent', 'Light'], defaultMode: 'Light', values: { 'Accent': { 'Stroke': '#0000ff' }, Light: { 'Stroke': '#e0e0e0' } } } } });
+  assert.match(JSON.stringify(brand.colours), /e0e0e0/i, 'the default mode previews');
   const fam = tokenLists({ collections: { S: { values: { L: { 'I/N/soft': '#1', 'I/D/medium': '#2', 'I/N/medium': '#3', 'I/D/strong': '#4', 'I/N/inverse': '#5' } } } } });
   assert.deepEqual(fam.colours.map((x) => x.name), ['I/N/soft', 'I/N/medium', 'I/N/inverse', 'I/D/medium', 'I/D/strong'], 'a family is listed together, a shade made later beside its own');
   const tree = tokenLists({ collections: { S: { values: { L: { 'Colour/Control/Neutral/rest': '#1', 'Colour/Level/1': '#2', 'Colour/Control/Feedback/Danger/rest': '#3', 'Colour/Level/2': '#4' } } } } });

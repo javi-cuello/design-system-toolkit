@@ -3,7 +3,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
 ## [0.88.0] - 2026-11-24
 ### Added
-- **Each collection records its default mode** (`defaultMode`, by name, from Figma's `defaultModeId`). The token build wrote the first mode file by name on `:root`, so one library's base was its Blue DT theme and another's strokes read a grey of the wrong theme. The export's resolver and the build now take this mode as the base, and say so where a snapshot lacks it.
+- **Each collection records its default mode** (`defaultMode`, by name, from Figma's `defaultModeId`). The token build wrote the first mode file by name on `:root`, so one library's base was an accent theme and another's strokes read a grey of the wrong theme. The export's resolver and the build now take this mode as the base, and say so where a snapshot lacks it.
 
 ### Fixed
 - An alias into a collection with no mode of the same name reads the target's default mode, not its first.

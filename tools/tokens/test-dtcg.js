@@ -238,17 +238,21 @@ eq('the default follows the first collection, whatever order the next one keeps'
   reordered.modifiers['primitive+semantic']['default'], 'light');
 
 // Figma's default mode, recorded by the snapshot (defaultMode), is the modifier's default wherever the collection lists
-// it: Material 3's first mode by name is not its base, and a reader taking the files' (alphabetical) order got Blue DT
-var byDefault = DTCG.buildResolver([{ collection: 'M3', single: false, defaultMode: 'Light', variants: [{ mode: 'Blue DT', file: 'm3/blue-dt.json' }, { mode: 'Light', file: 'm3/light.json' }] }]);
+// it: a collection's first mode by name need not be its base, and a reader taking the files' (alphabetical) order got the wrong one
+var byDefault = DTCG.buildResolver([{ collection: 'Brand', single: false, defaultMode: 'Light', variants: [{ mode: 'Accent', file: 'brand/accent.json' }, { mode: 'Light', file: 'brand/light.json' }] }]);
 eq('the default is the mode Figma records as the collection\'s default, not its first',
-  byDefault.modifiers.m3['default'], 'light');
-var m3 = { collections: [{ name: 'M3', modes: ['Blue DT', 'Light'], defaultMode: 'Light', variables: [{ name: 'Stroke/width', type: 'FLOAT', values: { 'Blue DT': 1, Light: 2 } }] }] };
-var withDefault = DTCG.buildFiles(m3, {});
-eq('buildFiles carries a collection\'s defaultMode to its modifier', withDefault.resolver.modifiers.m3['default'], 'light');
+  byDefault.modifiers.brand['default'], 'light');
+var brand = { collections: [{ name: 'Brand', modes: ['Accent', 'Light'], defaultMode: 'Light', variables: [{ name: 'Stroke/width', type: 'FLOAT', values: { 'Accent': 1, Light: 2 } }] }] };
+var withDefault = DTCG.buildFiles(brand, {});
+eq('buildFiles carries a collection\'s defaultMode to its modifier', withDefault.resolver.modifiers.brand['default'], 'light');
 ok('and says nothing of a default it was given', !withDefault.report.warnings.some(function (w) { return /default mode/.test(w.reason); }), withDefault.report.warnings);
-var noDefault = DTCG.buildFiles({ collections: [{ name: 'M3', modes: ['Blue DT', 'Light'], variables: m3.collections[0].variables }] }, {});
-eq('a collection with no recorded default takes its first mode in Figma\'s order', noDefault.resolver.modifiers.m3['default'], 'blue-dt');
-ok('and says so, naming the collection', noDefault.report.warnings.some(function (w) { return w.name === 'M3' && /default mode/.test(w.reason); }), noDefault.report.warnings);
+var noDefault = DTCG.buildFiles({ collections: [{ name: 'Brand', modes: ['Accent', 'Light'], variables: brand.collections[0].variables }] }, {});
+eq('a collection with no recorded default takes its first mode in Figma\'s order', noDefault.resolver.modifiers.brand['default'], 'accent');
+// the marker a reader trusts the default by: an export from before defaultMode was recorded carries only Figma's first mode
+eq('a recorded default is marked as recorded, under the export\'s own $extensions key',
+  withDefault.resolver.modifiers.brand.$extensions, { 'com.figma.variables': { defaultMode: 'Light' } });
+ok('an unrecorded one is not', noDefault.resolver.modifiers.brand.$extensions === undefined, noDefault.resolver.modifiers.brand);
+ok('and says so, naming the collection', noDefault.report.warnings.some(function (w) { return w.name === 'Brand' && /default mode/.test(w.reason); }), noDefault.report.warnings);
 
 /* ---- A12 effects are declared missing, not silently dropped ---- */
 ok('the effect styles this version does not export are reported',

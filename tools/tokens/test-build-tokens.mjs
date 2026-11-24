@@ -78,23 +78,47 @@ test('Light is the base, Dark is the attribute and the unchosen system preferenc
   assert.match(css, /@media screen and \(prefers-color-scheme: dark\) \{\s*:root:not\(\[data-theme="light"\]\) \{[^}]*--text-strong: var\(--palette-grey-1\)/);
 });
 
-// Material 3's modes by file name put Blue DT first: the base is the default the resolver records from Figma, never
-// the folder's alphabetical first
-const M3 = { m3: { 'blue-dt': { stroke: colour('#0000ff') }, light: { stroke: colour('#e0e0e0') } } };
-const resolver = (dir, def) => { writeFileSync(join(dir, 'tokens.resolver.json'), JSON.stringify({ version: '2025.10', modifiers: { m3: { contexts: { 'blue-dt': [{ $ref: 'm3/blue-dt.json' }], light: [{ $ref: 'm3/light.json' }] }, default: def } }, resolutionOrder: [{ $ref: '#/modifiers/m3' }] })); return dir; };
+// A collection whose first mode by file name (Accent) is not its default (Light): the base is the default the
+// resolver records from Figma, trusted only where the export marks it as recorded (dtcg.js, from defaultMode)
+const BRAND = { brand: { accent: { stroke: colour('#0000ff') }, light: { stroke: colour('#e0e0e0') } } };
+const THEMED = { palette: { dark: { ink: colour('#ffffff') }, light: { ink: colour('#000000') } } };
+const VENDOR = 'com.figma.variables';
+/** A resolver over one collection's folder: its modes in Figma's order, its default, and whether the export recorded it. */
+const resolver = (dir, name, modes, def, recorded) => {
+  const contexts = Object.fromEntries(modes.map((m) => [m, [{ $ref: `${name}/${m}.json` }]]));
+  const modifier = { contexts, default: def, ...(recorded && { $extensions: { [VENDOR]: { defaultMode: def } } }) };
+  writeFileSync(join(dir, 'tokens.resolver.json'), JSON.stringify({ version: '2025.10', modifiers: { [name]: modifier }, resolutionOrder: [{ $ref: `#/modifiers/${name}` }] }));
+  return dir;
+};
 const warned = async (fn) => { const said = [], was = console.warn; console.warn = (...a) => said.push(a.join(' ')); try { return [await fn(), said]; } finally { console.warn = was; } };
+const built = (dir) => warned(() => buildTokens(SD, { tokens: dir, out: '', write: false })).then(([f, said]) => [f.get('_tokens.scss'), said.filter((x) => /default mode/.test(x))]);
 
-test("the base is the collection's default mode, as the resolver records it, not the first file", { skip }, async () => {
-  const [files, said] = await warned(() => buildTokens(SD, { tokens: resolver(folder(M3), 'light'), out: '', write: false }));
-  const css = files.get('_tokens.scss');
+test("the base is the collection's default mode, as the export records it, not the first file", { skip }, async () => {
+  const [css, said] = await built(resolver(folder(BRAND), 'brand', ['light', 'accent'], 'light', true));
   assert.match(css, /:root \{[^}]*--stroke: #e0e0e0/);
-  assert.match(css, /\[data-m3="blue-dt"\] \{[^}]*--stroke: #0000ff/);
-  assert.deepEqual(said.filter((s) => /default mode/.test(s)), []);
+  assert.match(css, /\[data-brand="accent"\] \{[^}]*--stroke: #0000ff/);
+  assert.deepEqual(said, []);
+  // a recorded Dark default is a Dark base, even on a theme axis
+  const [dark] = await built(resolver(folder(THEMED), 'palette', ['dark', 'light'], 'dark', true));
+  assert.match(dark, /:root \{[^}]*--ink: #ffffff/);
 });
 
-test('with no default recorded, the build says so, naming the collection', { skip }, async () => {
-  const [, said] = await warned(() => buildTokens(SD, { tokens: folder(M3), out: '', write: false }));
-  assert.ok(said.some((s) => /m3/.test(s) && /default mode/.test(s)), said.join('\n'));
+test("an older export's default is only Figma's first mode: a theme axis keeps Light, and the build says so", { skip }, async () => {
+  const [css, said] = await built(resolver(folder(THEMED), 'palette', ['dark', 'light'], 'dark', false));
+  assert.match(css, /:root \{[^}]*--ink: #000000/);
+  assert.ok(said.some((x) => /palette/.test(x)), said.join('\n'));
+});
+
+test("an older export's other axes take Figma's first mode, in the resolver's order, never the first by name", { skip }, async () => {
+  const [css, said] = await built(resolver(folder(BRAND), 'brand', ['light', 'accent'], 'light', false));
+  assert.match(css, /:root \{[^}]*--stroke: #e0e0e0/);
+  assert.ok(said.some((x) => /brand/.test(x)), said.join('\n'));
+});
+
+test('with no resolver, the build says so, naming the collection and the base it took', { skip }, async () => {
+  const [css, said] = await built(folder(THEMED));
+  assert.match(css, /:root \{[^}]*--ink: #000000/);
+  assert.ok(said.some((x) => /palette/.test(x) && /light/.test(x)), said.join('\n'));
 });
 
 test('lengths are rem except the ones that must not scale; colours are untouched', { skip }, async () => {

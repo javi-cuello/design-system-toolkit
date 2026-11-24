@@ -48,7 +48,10 @@ test('every token file and the resolver an export writes are valid DTCG 2025.10'
   const s = snapshot();
   s.textStyles[0].letterSpacing = -0.02; // a tracking fraction and the spacing in $extensions, as real libraries have
   s.textStyles[0].paragraphSpacing = 12;
+  // a recorded default mode, which marks its modifier in $extensions
+  s.collections['Primitives - Colour'].defaultMode = 'Light';
   const { docs } = exported(s);
+  assert.ok(Object.values(docs[RESOLVER].modifiers).some((m) => m.$extensions), 'a recorded default is marked');
   // the whole set by name: a style kind that stops being written (the only shadow, the only gradient) fails here
   assert.deepEqual(Object.keys(docs).sort(), [
     'color-style/value.json', 'effect-style/value.json',

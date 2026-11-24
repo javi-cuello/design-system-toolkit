@@ -359,4 +359,24 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("a cancelled run stops before the next component, and says it was cancelled", stopped && stopped.constructor.name === "Cancelled" && reads === 0);
 }
 
+// 0.88.0: each collection records its default mode by name, which need not be its first; an alias into a collection
+// lacking the mode reads that default
+{
+  const coll = (id, modes, defaultModeId, variableIds) => ({ id, name: id, modes, defaultModeId, variableIds, isExtension: false });
+  const theme = coll("Theme", [{ name: "Alt", modeId: "t-a" }, { name: "Base", modeId: "t-b" }], "t-b", ["v1"]);
+  const prim = coll("Primitives", [{ name: "One", modeId: "p-1" }, { name: "Two", modeId: "p-2" }], "p-2", ["v2"]);
+  const vars = {
+    v1: { id: "v1", name: "Fg", key: "k1", scopes: [], variableCollectionId: "Theme", valuesByMode: { "t-a": { type: "VARIABLE_ALIAS", id: "v2" }, "t-b": { type: "VARIABLE_ALIAS", id: "v2" } } },
+    v2: { id: "v2", name: "Grey", key: "k2", scopes: [], variableCollectionId: "Primitives", valuesByMode: { "p-1": 1, "p-2": 2 } },
+  };
+  const page = { type: "PAGE", name: "Page", children: [], findAll: () => [], findAllWithCriteria: () => [] };
+  const ff = { root: { name: "Lib", children: [page], getPluginData: () => "", findAllWithCriteria: () => [] }, fileKey: "K",
+    variables: { getLocalVariableCollectionsAsync: async () => [theme, prim], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async (id) => ({ Theme: theme, Primitives: prim })[id] || null },
+    getLocalTextStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async () => null };
+  const c = vm.createContext({ figma: ff, console, setTimeout, clearTimeout });
+  const t = await vm.runInContext(src + "\n;collectTokens()", c);
+  ok("a collection records its default mode by name, not its first", t.collections.Theme.defaultMode === "Base" && t.collections.Primitives.defaultMode === "Two");
+  ok("…and an alias into a collection without the mode reads its default mode", t.collections.Theme.values.Alt.Fg === 2 && t.collections.Theme.values.Base.Fg === 2);
+}
+
 console.log(n + "/" + n + " passed");

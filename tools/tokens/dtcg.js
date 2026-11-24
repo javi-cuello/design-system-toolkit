@@ -666,9 +666,9 @@
         steps.push({ mode: mode, files: files });
       }
       // the default: the first collection's own, where it recorded one of these modes, else its first
-      var def = steps[0].mode;
-      for (var d = 0; d < steps.length; d++) if (group[0].defaultMode && slug(steps[d].mode) === slug(group[0].defaultMode)) def = steps[d].mode;
-      axisList.push({ collections: group.map(function (x) { return x.collection; }), steps: steps, defaultMode: def });
+      var def = steps[0].mode, recorded = false;
+      for (var d = 0; d < steps.length; d++) if (group[0].defaultMode && slug(steps[d].mode) === slug(group[0].defaultMode)) { def = steps[d].mode; recorded = true; }
+      axisList.push({ collections: group.map(function (x) { return x.collection; }), steps: steps, defaultMode: def, recorded: recorded });
     }
     return { fixed: fixed, axes: axisList };
   }
@@ -726,6 +726,9 @@
         contexts: contexts,
         'default': slug(ax.defaultMode)
       };
+      // marked when Figma's defaultModeId gave it: an export from before it was recorded names only the first mode,
+      // and a reader (the house build) trusts the default by this mark alone
+      if (ax.recorded) { doc.modifiers[name].$extensions = {}; doc.modifiers[name].$extensions[VENDOR] = { defaultMode: ax.defaultMode }; }
       order.push({ $ref: '#/modifiers/' + name });
     }
     doc.resolutionOrder = order;

@@ -1099,8 +1099,8 @@ test('tokens: the canonical shape, and a style a file deletes is gone from the s
   assert.deepEqual(Object.keys(t), ['_meta', 'collections', 'textStyles', 'paintStyles', 'effects'], 'no convenience keys: the design, under its own names');
   assert.equal(valueOf(t, 'fg', 'dark'), '#fff', 'a value by name and mode, the mode matched without case');
   assert.equal(valueOf(t, 'constructor', 'dark'), undefined, 'a name the values do not hold is no token, though every object answers to it');
-  const m3 = { collections: { M3: { modes: ['Blue DT', 'Light'], defaultMode: 'Light', values: { 'Blue DT': { s: 1 }, Light: { s: 2 } } } } };
-  assert.equal(valueOf(m3, 's', 'high contrast'), 2, 'a mode the collection lacks reads its default mode, not its first');
+  const brand = { collections: { Brand: { modes: ['Accent', 'Light'], defaultMode: 'Light', values: { 'Accent': { s: 1 }, Light: { s: 2 } } } } };
+  assert.equal(valueOf(brand, 's', 'high contrast'), 2, 'a mode the collection lacks reads its default mode, not its first');
   core.tokens.textStyles = [ts('Body')];
   store.writeLibrary(core, P);
   t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
@@ -1418,6 +1418,12 @@ test('a change is graded per audience: what loses a consumer\'s work is major fo
   assert.equal(only(T(t)), 'mode-added');
   t = tokens(); t.collections.Semantic.modes = ['Light', 'Night']; t.collections.Semantic.values.Night = t.collections.Semantic.values.Dark; delete t.collections.Semantic.values.Dark;
   g = T(t); assert.equal(only(g), 'mode-renamed'); assert.deepEqual([g.figma, g.code], ['patch', 'major']);
+  // a new default mode moves every frame set to none in Figma and the code's base (:root); a default first recorded is no change
+  const defaulted = (m) => { const x = tokens(); x.collections.Semantic.defaultMode = m; return x; };
+  g = store.grade({ ...base, tokens: defaulted('Light') }, { ...base, tokens: defaulted('Dark') });
+  assert.equal(only(g), 'mode-default'); assert.deepEqual([g.figma, g.code], ['minor', 'major']); assert.match(rule(g, 'mode-default').what, /Light → Dark/);
+  assert.equal(T(defaulted('Light')).level, null, 'an older snapshot without one is not a change');
+  assert.deepEqual(store.diff({ ...base, tokens: defaulted('Light') }, { ...base, tokens: defaulted('Dark') }).tokens.changed, ['default mode Semantic: Light → Dark']);
   // a collection renamed keeps its tokens: one event, a patch for Figma
   t = tokens(); t.collections = { 'Semantic colour': t.collections.Semantic };
   g = T(t); assert.deepEqual([only(g), g.figma, g.code], ['collection-renamed', 'patch', 'major']);

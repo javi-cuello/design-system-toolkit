@@ -257,6 +257,7 @@ const GRADE_RULES = {
   'mode-removed': ['major', 'major', 'Removed', 'a mode removed: frames set to it fall back to the default mode without a warning, and its theme leaves the code'],
   'mode-renamed': ['patch', 'major', 'Renamed', 'a mode renamed: Figma frames keep it, and the code’s theme name changes'],
   'mode-added': ['minor', 'minor', 'Added', 'a mode added'],
+  'mode-default': ['minor', 'major', 'Changed', 'the default mode changed: frames set to no mode show another, and the code’s base (:root) moves'],
   'token-removed': ['major', 'major', 'Removed', 'variables removed: bindings to them are left holding a stale value, and their names leave the code'],
   'token-renamed': ['patch', 'major', 'Renamed', 'variables renamed: Figma bindings follow them, and their code names change'],
   'token-added': ['minor', 'minor', 'Added', 'variables added'],
@@ -340,6 +341,8 @@ function tokenFacts(bt, at) {
     const goneM = bm.filter((m) => !am.includes(m)), newM = am.filter((m) => !bm.includes(m));
     if (goneM.length === 1 && newM.length === 1 && jsonOf((b.values || {})[goneM[0]]) === jsonOf((a.values || {})[newM[0]])) fact('mode-renamed', `${c}: ${goneM[0]} → ${newM[0]}`);
     else { for (const m of goneM) fact('mode-removed', `${c}: ${m}`); for (const m of newM) fact('mode-added', `${c}: ${m}`); }
+    // (recorded since snapshot plugin 0.88.0: one first recorded, the other side older, is no change)
+    if (b.defaultMode && a.defaultMode && b.defaultMode !== a.defaultMode) fact('mode-default', `${c}: ${b.defaultMode} → ${a.defaultMode}`);
     const shared = am.filter((m) => bm.includes(m));
     const names = (side, modes) => new Set(modes.flatMap((m) => Object.keys((side.values || {})[m] || {})));
     const bn = names(b, bm), an = names(a, am);
@@ -682,7 +685,7 @@ function diff(before, after) {
   const tokens = {
     added: [...pick(['token-added', 'style-added', 'collection-added'], (x) => x.names || []), ...pick(['mode-added'], (x) => [`mode ${x.detail}`])].sort(),
     removed: [...pick(['token-removed', 'style-removed', 'collection-removed'], (x) => x.names || []), ...pick(['mode-removed'], (x) => [`mode ${x.detail}`])].sort(),
-    changed: pick(['token-value', 'token-retyped', 'style-changed'], (x) => x.names || []).sort(),
+    changed: [...pick(['token-value', 'token-retyped', 'style-changed'], (x) => x.names || []), ...pick(['mode-default'], (x) => [`default mode ${x.detail}`])].sort(),
     renamed: [...pick(['token-renamed', 'style-renamed'], (x) => (x.pairs || []).map(([p, q]) => `${p} \u2192 ${q}`)),
               ...pick(['collection-renamed'], (x) => [`collection ${x.detail}`]), ...pick(['mode-renamed'], (x) => [`mode ${x.detail}`])],
   };

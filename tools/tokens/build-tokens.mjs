@@ -94,6 +94,7 @@ export const breakpointOf = (path, values) => {
 const read = (f) => JSON.parse(readFileSync(f, 'utf8'));
 
 const RESOLVER = 'tokens.resolver.json';
+const VENDOR = 'com.figma.variables';
 /** Each modifier's default in the export's resolver: [{ mode, folders }], the folders its contexts' files sit in
  *  (one per collection that moves on it). None where there is no resolver. */
 function defaultsOf(dir) {
@@ -101,6 +102,10 @@ function defaultsOf(dir) {
   if (!existsSync(file)) return [];
   return Object.values(read(file).modifiers || {}).filter((m) => m && typeof m.default === 'string').map((m) => ({
     mode: m.default,
+    // the modes in Figma's order, as the export lists them
+    order: Object.keys(m.contexts || {}),
+    // recorded from Figma's defaultModeId (dtcg.js marks it); an older export's default is only Figma's first mode
+    recorded: !!(m.$extensions && m.$extensions[VENDOR] && m.$extensions[VENDOR].defaultMode),
     folders: new Set(Object.values(m.contexts || {}).flat().map((r) => String(r && r.$ref).split('/')[0])),
   }));
 }
@@ -320,19 +325,22 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
   const { single, axes } = axesOf(collections);
   // An axis's base (:root) is its collection's default mode in Figma, which the export's resolver records as the
   // modifier's default (dtcg.js buildResolver). The files are read in name order, so their first is no base: one
-  // library's :root was its Blue DT theme, not Light. A folder with no default for the axis falls back to a Light or
-  // Mobile mode, else the first by name, and says so, naming the collections.
+  // library's :root was an accent theme, not Light. The default is trusted only where the export marks it recorded
+  // from Figma; otherwise the build falls back and says so, naming the collections.
   const defaults = defaultsOf(tokens), based = new Map();
   const baseMode = (axis) => {
     if (based.has(axis)) return based.get(axis);
     // (a responsive axis is mobile first whatever Figma's default: its other modes switch at min-width queries)
     if (axis.kind === 'responsive' && axis.modes.includes('mobile')) return 'mobile';
-    const recorded = defaults.find((d) => axis.members.every((s) => d.folders.has(s)) && axis.modes.includes(d.mode));
-    let mode = recorded && recorded.mode;
+    const d = defaults.find((x) => axis.members.every((s) => x.folders.has(s)) && axis.modes.includes(x.mode));
+    let mode = d && d.recorded ? d.mode : null;
     if (!mode) {
-      const want = axis.kind === 'theme' ? 'light' : axis.kind === 'responsive' ? 'mobile' : null;
-      mode = axis.modes.find((m) => m.toLowerCase() === want) || axis.modes[0];
-      console.warn(`tokens: ${axis.members.join(', ')}: no default mode recorded (${RESOLVER} has none for it); ${mode} taken as the base. Export the tokens again from a fresh snapshot`);
+      // an older export: a theme keeps Light; any other axis Figma's first mode, in the resolver's order; with no
+      // resolver, Figma's order is unknown and the first by name is all there is
+      const light = axis.kind === 'theme' && axis.modes.find((m) => m.toLowerCase() === 'light');
+      mode = light || (d && d.order.find((m) => axis.modes.includes(m))) || axis.modes[0];
+      const why = d ? `${RESOLVER} names Figma's first mode, not its recorded default` : `no ${RESOLVER} for it, so the order by name`;
+      console.warn(`tokens: ${axis.members.join(', ')}: no default mode recorded (${why}); ${mode} taken as the base. Snapshot the file again and export the tokens`);
     }
     based.set(axis, mode);
     return mode;

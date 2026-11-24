@@ -392,8 +392,8 @@ test('a name that is a token and a group is a group with its own token, $root, a
 });
 
 test("the default mode the snapshot records is the resolver's default, whatever the modes' order", () => {
-  const t = { collections: { M3: { modes: ['Blue DT', 'Light'], defaultMode: 'Light', values: { 'Blue DT': { Stroke: 1 }, Light: { Stroke: 2 } }, alias: {} } } };
+  const t = { collections: { Brand: { modes: ['Accent', 'Light'], defaultMode: 'Light', values: { 'Accent': { Stroke: 1 }, Light: { Stroke: 2 } }, alias: {} } } };
   const d = mkdtempSync(join(tmpdir(), 'dtcg-default-'));
   writeDtcg(t, d);
-  assert.equal(JSON.parse(readFileSync(join(d, RESOLVER), 'utf8')).modifiers.m3.default, 'light');
+  assert.equal(JSON.parse(readFileSync(join(d, RESOLVER), 'utf8')).modifiers.brand.default, 'light');
 });

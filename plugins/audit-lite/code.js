@@ -1935,7 +1935,7 @@ async function collectTokens() {
   }
   for (const c of [...collections, ...others.values()]) {
     // its default mode by name: the base a token build writes on :root. A reader took the first mode it listed, and
-    // the DTCG files are named, so sorted, by mode: one library's base was its Blue DT theme, not Light
+    // the DTCG files are named, so sorted, by mode: one library's base was an accent theme, not Light
     const def = c.modes.find((m) => m.modeId === c.defaultModeId);
     const entry = { modes: c.modes.map((m) => m.name), ...(def && { defaultMode: def.name }), values: {}, alias: {}, descriptions: {}, ...(c.remote && { remote: true }) };
     // Which collection an extension extends, so a reader can say what it is.
