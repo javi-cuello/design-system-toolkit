@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, gapOf, GAPS, leftToCode as leftToCode0, unaccepted } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, gapOf, GAPS, leftToCode as leftToCode0, unaccepted, identifiedNote } from './eval.mjs';
 import { drawSettings } from './to-figma.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
@@ -589,6 +589,18 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   ok('measure: a stored reading without `assisted` is untagged, one with it carries its tags',
     m.legs.browser.tag.untagged === true && !isStrict(m.legs.browser.tag) && isSame(m.legs.browser.tag)
     && m.legs.self.tag.assisted['component-name'][0] === 'component' && !isStrict(m.legs.self.tag) && isSame(m.legs.self.tag) && isStrict(m.legs.second.tag));
+  fs.rmSync(home, { recursive: true, force: true }); }
+{ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'eval-'));
+  const comps = path.join(home, 'components', 'tag');
+  fs.mkdirSync(comps, { recursive: true });
+  const c = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  fs.writeFileSync(path.join(comps, 'contract.json'), JSON.stringify(c));
+  fs.mkdirSync(path.join(home, 'round-trip', 'self', 'from-code'), { recursive: true });
+  fs.writeFileSync(path.join(home, 'round-trip', 'self', 'from-code', 'tag.json'), JSON.stringify({ unread: 0, assisted: {}, declared: ['component-name'], asFigma: c }));
+  const m = measure({ projectDir: home, paths: { components: path.join(home, 'components') } });
+  ok('measure: what the code declares (its module\'s label) is carried as declared, kept out of assisted; the verdict counts it as identified',
+    JSON.stringify(m.legs.self.tag.declared) === JSON.stringify(['component-name']) && isStrict(m.legs.self.tag)
+    && identifiedNote(Object.entries(m.legs.self)) === '; 1 identified by the code\'s own label' && identifiedNote([['x', { rows: [] }]]) === '');
   fs.rmSync(home, { recursive: true, force: true }); }
 ok('every gap id is met by a fixture', Object.keys(GAPS).every((g) => seenGaps.has(g)), [...Object.keys(GAPS)].filter((g) => !seenGaps.has(g)));
 

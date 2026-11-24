@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1120,4 +1120,18 @@ ok('paddingSaid: a 0 padding the code writes is four sides of 0; one it leaves u
 // the reading gives the instance; none where the module says no key
 ok('codeKeys: the key each placed module says it draws, by the instance\'s name; none where it says none',
   JSON.stringify(codeKeys({ 'radio-radio': 'Radio/❖ Radio', 'icon-x': 'Icon' }, (f) => ({ 'radio-radio': { component: 'Radio/❖ Radio', key: 'k9' }, 'icon-x': { component: 'Icon' } })[f])) === JSON.stringify({ 'Radio/❖ Radio': 'k9' }));
+ok('codeKeys: two modules saying different keys for one instance name say none',
+  JSON.stringify(codeKeys({ a: 'Radio', b: 'Radio' }, (f) => ({ a: { key: 'k1' }, b: { key: 'k2' } })[f])) === '{}');
+// a name or key the code declares (its module's label, as Code Connect's) is identity, not a measurement: recorded as
+// declared, never as assisted; a module without the label still borrows them from the design, tagged
+{ const named = codeName('button-button', (f) => ({ 'button-button': { component: 'Button/❖ Button' } })[f]), bare = codeName('button-button', () => null);
+  const A = assistsOf(), r = { component: bare.component };
+  A.take('component-name', r, () => { r.component = 'Button/❖ Button'; });
+  ok('codeName: the module\'s label names it, declared; without one the folder stays, and the design\'s name is a component-name borrowing',
+    named.component === 'Button/❖ Button' && named.declared && bare.component === 'button-button' && !bare.declared && JSON.stringify(A.out()) === JSON.stringify({ 'component-name': ['component'] })); }
+{ const read = () => ({ root: { kind: 'container' }, r: { kind: 'instance', parent: 'root', component: 'Radio' } });
+  const A = assistsOf(), a = read(), da = keyInstances(a, { Radio: 'k1' }, { Radio: 'k1' }, A);
+  const B = assistsOf(), b = read(), db = keyInstances(b, {}, { Radio: 'k1' }, B);
+  ok('keyInstances: a key the placed module declares is declared, untagged; without it the library\'s is a placed-key borrowing',
+    a.r.key === 'k1' && da && !Object.keys(A.out()).length && b.r.key === 'k1' && !db && JSON.stringify(B.out()) === JSON.stringify({ 'placed-key': ['anatomy.r.key'] })); }
 console.log(`${n}/${n} passed`);

@@ -918,6 +918,25 @@ export function codeKeys(others, figmaOf) {
   return Object.fromEntries(Object.entries(out).filter(([, k]) => k));
 }
 
+/* The component's name as the code declares it, its module's label (codeFigma), or the folder where it declares none.
+   A declared name is identity the code states, as Code Connect's, not a measurement: `declared`, never assisted. */
+export function codeName(folder, figmaOf) {
+  const said = figmaOf && (figmaOf(folder) || {}).component;
+  return said ? { component: said, declared: true } : { component: folder, declared: false };
+}
+
+/* Each placed instance's key: the one its placed module declares (`fromCode`, codeKeys), else the library contract's
+   (`fromLibrary`), taken from the design and tagged placed-key in `A`. True where any key was declared. */
+export function keyInstances(anatomy, fromCode, fromLibrary, A) {
+  let declared = false;
+  for (const [hid, h] of Object.entries(anatomy)) {
+    if (h.kind !== 'instance' || h.key) continue;
+    if (fromCode[h.component]) { h.key = fromCode[h.component]; declared = true; }
+    else if (fromLibrary[h.component]) { h.key = fromLibrary[h.component]; A.add('placed-key', `anatomy.${hid}.key`); }
+  }
+  return declared;
+}
+
 /* What a generated module says it draws (to-markup's `export const figma = {…}`): the design component's name, read from
    the code's text, or null where it says nothing. Tested by test-from-code.mjs. */
 export function codeFigma(js) {
@@ -1848,6 +1867,8 @@ async function main() {
     keyOfPlaced[fig] = fig in keyOfPlaced && keyOfPlaced[fig] !== k ? null : k;
   }
   const keyFromCode = codeKeys(others, L.figmaOf);
+  // what the code declares of itself, its modules' labels (codeName, keyInstances): identity, kept apart from `assisted`
+  const declared = new Set();
   // how the markup names a part and an icon: the library's own (code.partClass, code.iconClass), else its framework's (audit-defaults frameworks)
   const partClass = (L.lib.code && L.lib.code.partClass) || L.lib.frameworkProfile?.partClass || null;
   const partModifiers = L.lib.frameworkProfile?.partModifiers || null;
@@ -2678,9 +2699,8 @@ async function main() {
       // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
       // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
       // one equal to its component's own is folded below
-      // (the key the placed module says it draws first, the code's own; else the library contract's, taken from the design)
-      for (const [hid, h] of Object.entries(anatomy)) if (h.kind === 'instance' && !h.key && keyFromCode[h.component]) h.key = keyFromCode[h.component];
-      for (const [hid, h] of Object.entries(anatomy)) if (h.kind === 'instance' && !h.key && keyOfPlaced[h.component]) { h.key = keyOfPlaced[h.component]; A.add('placed-key', `anatomy.${hid}.key`); }
+      // (the key the placed module declares first, the code's own; else the library contract's, taken from the design)
+      if (keyInstances(anatomy, keyFromCode, keyOfPlaced, A)) declared.add('placed-key');
       for (const [hid, h] of Object.entries(anatomy)) {
         const hm = h.kind === 'instance' && mainOf(h.component, h.key);
         if (!hm || Object.keys(anatomy).some((k) => k.startsWith(`${hid}/`))) continue;
@@ -2776,7 +2796,8 @@ async function main() {
 
     // what two props do together that each alone does not explain: read every pair of
     // non-default values, and where expand() mispredicts it, a pair layer (as derive.cjs has)
-    const fromCode = { contract: 1, component: (L.figmaOf && (L.figmaOf(name) || {}).component) || name, code: { story: m.story, from: 'code' }, props: Object.fromEntries(Object.entries(props).map(([k, p]) => { const { sample, emptied, ...rest } = p; return [k, rest]; })), anatomy: base, variants };
+    const codeNamed = codeName(name, L.figmaOf); if (codeNamed.declared) declared.add('component-name');
+    const fromCode = { contract: 1, component: codeNamed.component, code: { story: m.story, from: 'code' }, props: Object.fromEntries(Object.entries(props).map(([k, p]) => { const { sample, emptied, ...rest } = p; return [k, rest]; })), anatomy: base, variants };
     const valuesOf = (p) => (p.type === 'enum' ? p.values.filter((v) => v !== p.default) : p.type === 'boolean' ? [!p.default] : p.type === 'swap' && p.shows ? [p.glyph || 'none'] : []);
     const argOf = (p, v) => (p.type === 'boolean' ? v : String(v));
     const keys = Object.keys(props);
@@ -3330,7 +3351,7 @@ async function main() {
       unread: skipped, selfCheck: bad.length ? { notRebuilt: bad } : heldOut ? `every render rebuilt, ${heldOut} combination(s) of four props or more among them: ${heldOut - fourLayers} predicted by the layers, ${fourLayers} kept as layers of their own, each from one read${skipped ? `; ${skipped} of five props or more left unread, no three or more of their props building a layer together` : ''}` : 'every render rebuilt, but fewer than four props vary: nothing was left unread to check the layers against',
       ...(notes.length && { notes }), ties, compare, propsCompare, structure, renamed: shaped.renamed,
       // (every field taken from the design, by rule: eval.mjs counts a component holding one the same only as assisted)
-      assisted: A.out(), contract: fromCode, asFigma: shaped.contract };
+      assisted: A.out(), declared: [...declared].sort(), contract: fromCode, asFigma: shaped.contract };
     const out = path.join(L.out, 'from-code', `${name}.json`);
     fs.mkdirSync(path.dirname(out), { recursive: true });
     // the same code reads back to the same file: a run that found nothing new leaves it as it was
