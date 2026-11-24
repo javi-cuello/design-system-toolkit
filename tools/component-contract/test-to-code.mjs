@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector } from './to-code.mjs';
+import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn } from './to-code.mjs';
 import { declarations } from './css.mjs';
 import { toElement } from './to-markup.mjs';
 import { ELEMENT } from './site.mjs';
@@ -616,8 +616,34 @@ else console.log('skip: no stored contracts on this machine');
   const ad = toCss(added, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
   ok('a combination that sets an added override back to the component\'s value writes that value, never unset',
     /data-big[^{]*> \.ds-tag__text \{\s*color: var\(--c-strong\);\s*\}/.test(ad) && !/color: unset/.test(ad) && selfCheck(added, rulesOf(added, mains).rules, mains).length === 0);
+  // the component's own value is given only where some combination overrides that property otherwise: a part that
+  // matches its component at the defaults, which a variant recolours, says its colour there as given and nothing else
+  const plain = { ...loud, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/strong', typography: 'Label/sm' } },
+    props: { loud: loud.props.loud, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] } },
+    variants: [{ when: { loud: true }, set: { 'tag/text.color': 'C/x' } }, { when: { state: 'hover' }, remove: ['tag/text'] }] };
+  const at0 = drawn(plain, { loud: false, state: 'rest' }, mains)['tag/text'];
+  ok('a part as its component draws it gives only what a combination overrides otherwise, as given', !!at0 && [...at0.decls].length === 1 && at0.decls.get('color').given === true, JSON.stringify(at0 && [...at0.decls]));
+  // a pointer state that drops such a part draws it as its component: never hidden
+  const ps = toCss(plain, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('a part a pointer state drops that matched its component at rest is drawn as the component there, never hidden',
+    !(ps.match(/[^\n]*:hover[^{]*> \.ds-tag__text \{[^}]*\}/g) || []).some((r) => !/data-loud/.test(r) && /display: none/.test(r)) && selfCheck(plain, rulesOf(plain, mains).rules, mains).length === 0);
+  // a part a pointer state takes away (an override at rest) stays hidden in every combination that drops it, whatever a
+  // later rule resets, and shows where a combination draws it again (a danger press puts it back): a glyph of another
+  // library placed in a holder this one keeps, recoloured
+  const holder = { contract: 1, component: 'Holder', props: { size: { type: 'enum', values: ['12', '20'], default: '12', figma: 'Size', figmaValues: ['12', '20'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, glyph: { kind: 'instance', parent: 'root', component: 'Glyph', width: 12, height: 12, order: 0 } },
+    variants: [{ when: { size: '20' }, set: { 'glyph.width': 20, 'glyph.height': 20 } }] };
+  const held = (n) => (n === 'Holder' ? holder : null);
+  const glyph = { kind: 'instance', parent: 'holder', component: 'Glyph', width: 20, height: 20, order: 0 }, shape = { kind: 'graphic', parent: 'holder/glyph', width: 13, height: 13, background: 'C/icon', order: 0 };
+  const fb = { contract: 1, component: 'Row', props: { feedback: { type: 'enum', values: ['neutral', 'danger'], default: 'neutral' }, disabled: { type: 'boolean', default: false, axis: true },
+    state: { type: 'enum', values: ['rest', 'press'], default: 'rest', role: 'interaction', pointer: ['press'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, holder: { kind: 'instance', parent: 'root', component: 'Holder', with: { Size: '20' }, order: 0 }, 'holder/glyph': glyph, 'holder/glyph/shape': shape },
+    variants: [{ when: { disabled: true }, set: { 'root.opacity': 0.5 } }, { when: { state: 'press' }, remove: ['holder/glyph', 'holder/glyph/shape'] }, { when: { feedback: 'danger', state: 'press' }, add: { 'holder/glyph': glyph, 'holder/glyph/shape': shape } }] };
+  const fs2 = toCss(fb, 'row', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: held });
+  const pressed = (fs2.match(/[^\n]*active[^{]*> \.ds-holder__glyph \{[^}]*\}/g) || []);  ok('a part a pointer state takes away keeps its hide against a later reset, and shows where a combination draws it again',
+    selfCheck(fb, rulesOf(fb, held).rules, held).length === 0 && pressed.some((r) => /display: none/.test(r) && !/danger/.test(r)) && pressed.some((r) => /danger/.test(r) && /display: unset/.test(r)) && !pressed.some((r) => !/danger/.test(r) && /display: unset/.test(r)), pressed.join('\n'));
   // what the component declares that the instance does not is unset
-  const bare = { ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/strong' } } };
+  const bare ={ ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/strong' } } };
   ok('a declaration the instance takes away is unset', /\.ds-tag__text \{[^}]*font[\w-]*: unset;/.test(toCss(bare, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains })));
   // an override inside one of several copies is said, never written on every copy
   const two = { ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': card.anatomy['tag/text'], tag_2: { ...card.anatomy.tag, order: 1 } } };

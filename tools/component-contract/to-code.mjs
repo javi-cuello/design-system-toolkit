@@ -1030,7 +1030,7 @@ export function rulesOf(c, mains, t = HOUSE) {
     const when = v.combination ? { ...v.when } : Object.fromEntries(Object.entries(v.when || {}).filter(([k, x]) => x !== dflt[k] || v.combination));
     const full = { ...dflt, ...when };
     const now = drawn(c, full, mains, t);
-    // (a part a pointer state takes away keeps its hide: no reset of this layer's undoes it, below)
+    // (the parts a pointer state takes away here, hidden below)
     const gone = new Set(withTurns(c, pointerGone(c, full, dflt, mains, t)));
     const parts = {};
     for (const [id, { decls, unread: u, unshared: x }] of Object.entries(now)) {
@@ -1040,7 +1040,7 @@ export function rulesOf(c, mains, t = HOUSE) {
       const own = new Map();
       for (const [p, d] of decls) if (d.given ? given.has(p) && given.get(p).v !== d.v : !given.has(p) || given.get(p).v !== d.v) own.set(p, d);
       // a property the rules before it set that this combination does not draw goes back to the element's own
-      for (const [p] of given) if (!decls.has(p) && given.get(p).v !== 'unset' && !(p === 'display' && gone.has(id))) own.set(p, { v: 'unset' });
+      for (const [p] of given) if (!decls.has(p) && given.get(p).v !== 'unset') own.set(p, { v: 'unset' });
       if (own.size) parts[id] = own;
     }
     // a part a pointer state takes away (a field's chevron at focus, where another stands): the markup holds it at every
