@@ -330,7 +330,7 @@ function strokeOf(m) {
    combination's name; `value`, the resolver (its `modes`, a token in every mode); `focus`, whether a focus is forced.
    A row's kind names the mechanism where this reader can tell it: a value the token has in another of its modes (the
    page's base mode is not Figma's default), a part to-markup drew as an icon's placeholder (`data-icon`, a gap it names
-   for frontend-build), the root's own size, and the rest by field. */
+   for frontend-build), the root's own size (the caller's in code), and the rest by field. */
 export function compareOne(exp, page, chains, colours, { at = '', value = null, focus = false, unread = {}, skipped = [], stored = null } = {}) {
   const rows = [];
   // what is not compared is said: a field by name (`unread`), a part with no element to find by its id (`skipped`)
@@ -441,10 +441,12 @@ export function argsFor(c, library, combo) {
   return { args, pseudo };
 }
 
-/* The room the root is drawn in: as wide as what it holds, so the page sets no width the contract does not say; a root
-   that fills is its parent's width, and its parent is the canvas the library drew it in (the contract's `canvas`). */
-export function stageOf(c) {
-  const r = (c.anatomy && c.anatomy.root) || {}, w = r.width === 'fill' && r.canvas && typeof r.canvas.width === 'number' ? `${r.canvas.width}px` : 'max-content';
+/* The room the root is drawn in at a combination, as from-code's roomOf reads it: a fixed root's own width (code writes
+   it as 100% of its room), a root that fills its canvas's (the contract's `canvas`), else as wide as what it holds, so
+   the page sets no width the contract does not say. */
+export function stageOf(c, combo = {}) {
+  const r = (c.variants ? expand(c, { ...variantDefaults(c), ...combo }).root : c.anatomy && c.anatomy.root) || {};
+  const w = typeof r.width === 'number' ? `${r.width}px` : r.width === 'fill' && r.canvas && typeof r.canvas.width === 'number' ? `${r.canvas.width}px` : 'max-content';
   return `display:flow-root;box-sizing:content-box;inline-size:${w};padding:24px`;
 }
 
@@ -481,7 +483,7 @@ export async function measureComponent({ library, folder, tokensCss, settingsOf,
         try { s.append(window.R[f](a)); } catch (e) { return String(e && e.message || e); }
         document.getElementById('stage').replaceChildren(s);
         return true;
-      }, [folder, args, stageOf(c)]);
+      }, [folder, args, stageOf(c, combo)]);
       if (ok !== true) { rows.push({ at: `${at}/root`, contract: 'drawn', drawn: `render threw: ${ok}`, kind: 'render failed' }); continue; }
       if (pseudo.length) {
         const sel = `#stage ${tag}`;

@@ -129,9 +129,11 @@ const TOKENS = { collections: {
 
 /* ── the room a root is drawn in: its content's, or the canvas a root that fills was drawn in ── */
 {
-  ok('a root that fills is drawn in a room as wide as its canvas; any other in one as wide as what it holds',
+  const wide = { props: { wide: { type: 'boolean', default: false } }, anatomy: { root: { width: 400 } }, variants: [{ when: { wide: true }, set: { 'root.width': 600 } }] };
+  ok('a fixed root is drawn in a room its own width, at each combination; a root that fills in its canvas; a hug root in what it holds',
     /inline-size:1342px/.test(stageOf({ anatomy: { root: { width: 'fill', canvas: { width: 1342 } } } }))
-    && /inline-size:max-content/.test(stageOf({ anatomy: { root: { width: 400 } } })) && /inline-size:max-content/.test(stageOf({ anatomy: { root: { width: 'fill' } } })));
+    && /inline-size:400px/.test(stageOf(wide, {})) && /inline-size:600px/.test(stageOf(wide, { wide: true }))
+    && /inline-size:max-content/.test(stageOf({ anatomy: { root: { width: 'hug' } } })) && /inline-size:max-content/.test(stageOf({ anatomy: { root: { width: 'fill' } } })));
 }
 
 /* ── paint styles by value, text styles with no record named ── */
@@ -197,6 +199,14 @@ else {
     for (const combo of [{}]) for (const id of Object.keys(expand(c, { ...variantDefaults(c), ...combo }))) if (own.includes(id)) want.push(id);
     const missing = new Set(hidden.rows.filter((r) => r.kind === 'part missing' && r.drawn === 'hidden').map((r) => r.at.slice(r.at.indexOf('/') + 1)));
     ok(`every part hidden on ${f}'s page is a part-missing row, one per part (${want.length})`, want.length > 0 && want.every((id) => missing.has(id)), `${want} / ${[...missing]}`);
+    // a fixed root is drawn in a room as wide as it (code writes it as 100% of its room, as from-code reads it), and a
+    // variant that fixes another width gives its own room: no root size row at either
+    const panel = { contract: 1, component: 'Room panel', props: { wide: { type: 'boolean', default: false, axis: true, figma: 'Wide' } },
+      anatomy: { root: { kind: 'container', layout: { direction: 'column', gap: 0, padding: { top: 0, end: 0, bottom: 0, start: 0 } }, width: 400, height: 40 },
+        dot: { kind: 'container', parent: 'root', order: 0, width: 10, height: 10 } },
+      variants: [{ when: { wide: true }, set: { 'root.width': 600 } }] };
+    const roomed = await measureComponent({ library: { ...library, 'Room panel': { ...panel, folder: 'room-panel' } }, folder: 'room-panel', tokensCss, settingsOf: () => undefined, tokens, browserEndpoint: browser.endpoint });
+    ok('a fixed root renders at its width in its room, and a variant\'s own width in its own room', !roomed.error && roomed.combinations === 2 && !roomed.rows.some((r) => /\/root\.(width|height)$/.test(r.at)), JSON.stringify(roomed.error || roomed.rows.slice(0, 4)));
   } finally { await browser.close(); }
 }
 console.log(`${n} passed`);

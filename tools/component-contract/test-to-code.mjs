@@ -205,9 +205,6 @@ ok('Selected is the attribute or a checked control in the box; a box naming no c
 // an outer box that hugs keeps its own width where a parent would stretch it; an instance a parent fills across drops its own
 ok('a hugging outer box is fit-content, and a placed instance filled across is auto', /inline-size: fit-content/.test(toCss({ ...chip, anatomy: { ...chip.anatomy, root: { ...chip.anatomy.root, width: 'hug' } } }, 'chip'))
   && decl({ kind: 'instance', width: 'fill' }, { row: false })['inline-size'] === 'auto');
-// a root the contract fixes renders at that size, never its container's (an accordion 400 wide drawn 179.5 in a
-// max-content stage, 2026-11-24): the contract is the one source of the size
-ok('a laid-out root fixed in the contract is that width, never 100% of its container', (() => { const s = toCss({ ...chip, anatomy: { ...chip.anatomy, root: { ...chip.anatomy.root, width: 400 } } }, 'chip'); return /inline-size: 25rem/.test(s) && !/inline-size: 100%/.test(s); })());
 ok('an outside ring beside an effect style is the first box-shadow layer', decl({ border: { color: 'C/line', width: 1, align: 'outside' }, shadow: 'Elevation/Raised' })['box-shadow'] === '0 0 0 1px var(--c-line), var(--elevation-raised)');
 ok('a line no wide is a border on its leading edge, no outline', (() => { const d = decl({ kind: 'graphic', width: 0, height: 'fill', border: { color: 'C/line', width: [1, 1, 1, 1], sides: { top: 1, end: 1, bottom: 1, start: 1 }, align: 'center' } }); return d['border-left'] === '1px solid var(--c-line)' && !('outline' in d) && !('box-shadow' in d); })()
   && decl({ kind: 'graphic', width: 'fill', height: 0, border: { color: 'C/line', width: 1 } })['border-top'] === '1px solid var(--c-line)');
