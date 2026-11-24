@@ -227,6 +227,10 @@ ok("a regex literal holding a quote does not swallow the comment after it", !/li
 // two strings each holding a slash on one line read as one regex between them, and quoted what lay there (2026-11-24)
 d = tree({ scanner: "const a = TOK.stateAxis; go(dir + '/checkout'); log(new State('/' + x));" });
 ok("a quoted string holding a slash is never read as a regex", run(d).status === 0);
+d = tree({ scanner: "const a = TOK.stateAxis; const t = `${n.replace(/State/, '')}`;" });
+ok("a regex inside a template's ${} is still read", /quotes the house values? "State"/.test(run(d).stdout));
+d = tree({ scanner: "const a = TOK.stateAxis; const s = f(n)/'/.length;\nif (/^State$/.test(n)) go('x');" });
+ok("a quote left open on its line does not hide the regexes of the next", /quotes the house values? "State"/.test(run(d).stdout));
 d = tree({ scanner: "const a = TOK.stateAxis; viewport(tab, 1280, 900); const id = 'x1280'; wait(12800);", settings: { ...SETTINGS, "audit-defaults": { ...SETTINGS["audit-defaults"], interface: { viewportWidth: 1280 } }, "audit-keys": { ...SETTINGS["audit-keys"], interface: { viewportWidth: "the CSS width a page is measured at" } } } });
 r = run(d);
 ok("a house measuring width written as a number is refused; inside a string or a longer number it is not", /writes the house viewportWidth \(1280\) as a number/.test(r.stdout) && (r.stdout.match(/as a number/g) || []).length === 1);
