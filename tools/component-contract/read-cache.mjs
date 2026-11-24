@@ -31,6 +31,15 @@ const VERSION = 'read-cache 1';
 const hash = (...parts) => createHash('sha1').update(parts.map(String).join('\0')).digest('hex');
 const copy = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+/* Where two answers first part, as a path and both values (each cut to 80 characters): what a disagreement names. */
+export function firstDiff(a, b, at = '') {
+  if (same(a, b)) return null;
+  if (a && b && typeof a === 'object' && typeof b === 'object' && Array.isArray(a) === Array.isArray(b)) {
+    for (const k of [...new Set([...Object.keys(a), ...Object.keys(b)])]) { const d = firstDiff(a[k], b[k], `${at}${Array.isArray(a) ? `[${k}]` : `.${k}`}`); if (d) return d; }
+  }
+  const cut = (v) => { const t = JSON.stringify(v) ?? 'undefined'; return t.length > 80 ? `${t.slice(0, 77)}...` : t; };
+  return `${at || '(the whole answer)'}: kept ${cut(a)}, now ${cut(b)}`;
+}
 
 export const cacheOff = () => /^(off|0|no|false)$/i.test(process.env.TOOLKIT_READ_CACHE || '');
 export const cacheDir = () => path.join(lockDir(), 'read-cache');
@@ -142,37 +151,41 @@ export function recorder({ key, dir = cacheDir(), live, pool = () => false }) {
       if (!same(got, s.want)) {
         if (scope) fs.rmSync(fileOf(scope), { force: true });
         table = {}; dirty = false;
-        throw new Error(`read cache: the page's answer disagrees with the kept one (${s.kind}, combination ${scope ? scope.slice(0, 12) : 'before the first render'}): the combination is dropped; read again, or with TOOLKIT_READ_CACHE=off`);
+        throw new Error(`read cache: the page's answer disagrees with the kept one (${s.kind}, combination ${scope ? scope.slice(0, 12) : 'before the first render'}, question ${log.indexOf(s) + 1} of ${log.length}, ${String(s.text).slice(0, 60).replace(/\s+/g, ' ')}…, first at ${firstDiff(s.want, got)}): the combination is dropped; read again, or with TOOLKIT_READ_CACHE=off`);
       }
     }
     isLive = true;
   };
+  // one question at a time, in the order asked: questions asked side by side (Promise.all) that missed together each
+  // replayed the combination, interleaved on the one page, and the chain of answers took the order they were answered in
+  let queue = Promise.resolve();
+  const serial = (f) => { const p = queue.then(f); queue = p.catch(() => {}); return p; };
   return {
     stats,
-    async reset(label, renderIt) {
+    reset: (label, renderIt) => serial(async () => {
       flush();
       scope = at = hash(key, 'render', label);
       table = load(scope); log = []; render = renderIt; isLive = false; keep = true;
       // (read: its date says so to prune)
       if (Object.keys(table).length) try { const t = new Date(); fs.utimesSync(fileOf(scope), t, t); } catch { /* gone meanwhile */ }
-    },
-    async step(kind, text, ask) {
+    }),
+    step: (kind, text, ask) => serial(async () => {
       const k = hash(at, kind, text);
       // (a pooled part gone missing is a miss, never an error)
       let want, hit = !isLive && Object.hasOwn(table, k);
       if (hit) try { want = back(table[k].r); } catch { hit = false; delete table[k]; }
-      if (hit) { stats.hits++; at = k; log.push({ kind, ask, want }); return copy(want); }
+      if (hit) { stats.hits++; at = k; log.push({ kind, ask, want, text }); return copy(want); }
       if (!isLive) { stats.misses++; await goLive(); }
       const r = await ask(await page());
       at = k;
       if (keep && scope) { table[k] = { r: out(copy(r)) }; dirty = true; stats.kept++; }
       return r;
-    },
-    async send(method, params) {
+    }),
+    send: (method, params) => serial(async () => {
       await goLive();
       keep = false;
       return (await page()).send(method, params);
-    },
-    async close() { flush(); },
+    }),
+    close: () => serial(async () => { flush(); }),
   };
 }

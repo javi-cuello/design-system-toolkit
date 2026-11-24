@@ -160,6 +160,33 @@ const run = async (p, key, fn = walker, { args = ['#a'] } = {}) => {
   ok('a font file replaced under the same name moves the fonts said (its size, its date)', a !== b && b !== c);
 }
 
+// questions asked side by side (a reading's corners, Promise.all) go to the page one after another, in the order asked:
+// two that missed together each replayed the combination, the second walk finding the first's stamps on the page, and
+// "the page's answer disagrees" dropped the combination and stopped the reading (reproduced on a real slider, 2026-11-24)
+{
+  const p = { launched: 0, stamped: false, renders: 0 };
+  p.live = async () => { p.launched++; return { evaluate: async (expr) => { await new Promise((r) => setImmediate(r)); if (expr === 'walk') { const was = p.stamped; p.stamped = true; return was; } return expr; } }; };
+  const render = async () => { p.renders++; await new Promise((r) => setImmediate(r)); p.stamped = false; };
+  const combo = async (a, b) => {
+    const rec = recorder({ key: 'side-by-side', dir, live: p.live });
+    await rec.reset('c', render);
+    const walked = await rec.step('eval', 'walk', (t) => t.evaluate('walk'));
+    const both = await Promise.all([a, b].map((q) => rec.step('eval', q, (t) => t.evaluate(q))));
+    await rec.close();
+    return [walked, ...both];
+  };
+  const first = await combo('a', 'b');
+  const again = await combo('a2', 'b2').catch((e) => e);
+  ok('two questions that miss side by side replay the combination once, and the walk agrees with its kept answer',
+    !(again instanceof Error) && JSON.stringify(first) === '[false,"a","b"]' && JSON.stringify(again) === '[false,"a2","b2"]' && p.renders === 2);
+  const third = await combo('a3', 'b3');
+  const order = [];
+  const rec = recorder({ key: 'side-by-side-order', dir, live: async () => ({ evaluate: async (e) => { order.push(`ask ${e}`); await new Promise((r) => setTimeout(r, e === 'slow' ? 20 : 0)); order.push(`got ${e}`); return e; } }) });
+  await rec.reset('c', async () => {});
+  await Promise.all(['slow', 'fast'].map((q) => rec.step('eval', q, (t) => t.evaluate(q))));
+  ok('…and each is put to the page only once the one asked before it is answered', order.join() === 'ask slow,got slow,ask fast,got fast' && third[0] === false);
+}
+
 ok('TOOLKIT_READ_CACHE=off turns it off', (process.env.TOOLKIT_READ_CACHE = 'off', cacheOff()) && (delete process.env.TOOLKIT_READ_CACHE, !cacheOff()));
 
 fs.rmSync(dir, { recursive: true, force: true });
