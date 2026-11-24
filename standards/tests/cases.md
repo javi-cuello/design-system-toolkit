@@ -4,6 +4,8 @@ Cases for the standards themselves, not for any one skill (toolkit-standard §C 
 
 Three scripts live in this directory, all run from the repo root: `check-frontmatter.sh` (clause F), `check.sh` (skills, plugins, markdown shape and each standard's scope line, delegating clause F), and `scan-clause-d.py` (advisory: clause D needs a read). Rules, citations, histories and settings are `tools/toolkit-check/check-standards.mjs`'s, run by `bin/check`.
 
+**Walked: 2026-11-24, for toolkit-standard 2.49.0** — §D 21 says a sample or demonstration file is never evidence; a judgement rule with no script, so no new case (§C clause E). S22 read against it: it asserts weights and sources, not which systems count, so it holds. `knowledge/` grep for "Simple Design System", "figma/sds", "SDS": 0. `check-standards.mjs`: clean.
+
 **Walked: 2026-11-20, for toolkit-standard 2.48.0** — §D 21 gains the commit gate on a `Knowledge:` trailer naming pages not read whole; its cases are the five in `tools/claude-hooks/test-knowledge-read.mjs` (5/5), and S22 and the closing pass's question 12 read against it: neither asserts what a trailer proves, so both hold. `check-standards.mjs`: clean.
 
 **Walked: 2026-11-20, for toolkit-standard 2.46.0** — §D 13's Close row gains the Stop block on a session's own uncommitted edits; its cases are the five new ones in `tools/claude-hooks/test-gates.mjs` (45 passed), and S21 re-walked for bin/check's scans now reading untracked files. No other case reads §D 13's Close row.
