@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { combosOf, resolver, textStyleOf, expected, compareOne, comboOfVariant, measureComponent, matches } from './oracle-dom.mjs';
+import { combosOf, resolver, textStyleOf, expected, compareOne, comboOfVariant, measureComponent, matches, boxesOf, variantOf } from './oracle-dom.mjs';
 import { namer, partSeg } from './to-code.mjs';
 import { expand, variantDefaults } from './layers.mjs';
 import { ELEMENT } from './site.mjs';
@@ -94,7 +94,46 @@ const TOKENS = { collections: {
     end: { kind: 'container', parent: 'root', order: 0, absolute: { x: 92, y: 4, end: 8 }, constraints: { horizontal: 'max', vertical: 'min' } },
     mid: { kind: 'container', parent: 'root', order: 1, absolute: { x: 10, y: 0, end: 6, bottom: 0 }, constraints: { horizontal: 'center', vertical: 'scale' } } } };
   const { parts, unread } = expected(c, {}, { value: resolver(TOKENS), tokens: TOKENS });
-  ok('max holds the far edge, not x; center holds the centre\'s offset; scale is left unread', parts.end.end === 8 && parts.end.x === undefined && parts.end.y === 4 && parts.mid.cx === 2 && parts.mid.y === undefined && unread['place that scales'] === 1, JSON.stringify(parts));
+  ok('max holds the far edge, not x; center holds the centre\'s offset; scale is held to the stored box', parts.end.end === 8 && parts.end.x === undefined && parts.end.y === 4 && parts.mid.cx === 2 && parts.mid.y === undefined && parts.mid.storedPlace && !unread['place that scales'], JSON.stringify(parts));
+}
+
+/* ── hug, fill and scaling places held to the stored figma.json box ── */
+{
+  const tree = { name: 'Size=Large', w: 100, h: 40, children: [
+    { name: 'Content', type: 'FRAME', x: 8, y: 4, w: 84, h: 32, children: [{ name: 'Label', type: 'TEXT', x: 2, y: 3, w: 40, h: 20, children: [] }, { name: 'Label', type: 'TEXT', x: 44, y: 3, w: 30, h: 20, children: [] }] }] };
+  const b = boxesOf(tree);
+  ok('stored boxes by contract id, from the root, a repeat numbered as derive numbers it', b.root.w === 100 && b['content/label'].x === 10 && b['content/label'].y === 7 && b['content/label_2'].w === 30, JSON.stringify(b));
+  const c = { props: { size: { type: 'enum', values: ['large', 'small'], figmaValues: ['Large', 'Small'], figma: 'Size', default: 'large' }, on: { type: 'boolean', default: false, figma: 'On' } }, anatomy: {} };
+  const vs = [{ name: 'Size=Small' }, { name: 'Size=Large' }];
+  ok('a combination\'s stored variant is the one its axes name', variantOf(c, vs, { size: 'small' }) === vs[0] && variantOf(c, vs, {}) === vs[1]);
+  ok('a combination with a property off its default has no stored variant', variantOf(c, vs, { on: true }) === null);
+  const k = { props: {}, anatomy: { root: { kind: 'container', width: 'hug', height: 40 },
+    content: { kind: 'container', parent: 'root', width: 'fill', height: 'hug' },
+    'content/label': { kind: 'text', parent: 'content', width: 'hug', height: 'hug', absolute: { x: 2, y: 3 }, constraints: { horizontal: 'scale', vertical: 'scale' } } } };
+  const { parts, unread } = expected(k, {}, { value: resolver(TOKENS), tokens: TOKENS });
+  ok('hug and fill sizes and scaling places are held to the stored box, not left unread', parts.root.storedW && parts.content.storedW && parts.content.storedH && parts['content/label'].storedPlace && !unread['width hug'] && !unread['place that scales'], JSON.stringify({ parts, unread }));
+  const box = (o) => ({ box: { x: 0, y: 0, w: 100, h: 40 }, inParent: { x: 0, y: 0 }, shown: true, display: 'block', padding: { top: 0, end: 0, bottom: 0, start: 0 }, gap: { row: 0, column: 0 }, radius: [0, 0, 0, 0], background: [0, 0, 0, 0], border: [0, 0, 0, 0], borderColour: [null, null, null, null], shadows: [], outline: null, opacity: 1, ...o });
+  const page = (labelW, fontLoaded) => ({ root: box({}), parts: [{ chain: 'content', own: true, ...box({ box: { x: 8, y: 4, w: 84, h: 32 } }) }, { chain: 'content > label', own: true, ...box({ box: { x: 10, y: 7, w: labelW, h: 20 }, fontLoaded }) }] });
+  const ch = { content: ['content'], 'content/label': ['content', 'label'] };
+  const stored = { root: { x: 0, y: 0, w: 100, h: 40 }, content: { x: 8, y: 4, w: 84, h: 32 }, 'content/label': { x: 10, y: 7, w: 40, h: 20 } };
+  const same = compareOne(parts, page(40, true), ch, {}, { at: 'x', stored });
+  ok('boxes as Figma stored them are no row', same.length === 0, JSON.stringify(same));
+  const font = compareOne(parts, page(46, false), ch, {}, { at: 'x', stored });
+  ok('a text\'s size off where its font is not on the machine is a font-metric row', font.length === 1 && font[0].kind === 'font metrics' && font[0].at === 'x/content/label.width', JSON.stringify(font));
+  const real = compareOne(parts, page(46, true), ch, {}, { at: 'x', stored });
+  ok('a text\'s size off with its font on the machine is a size row', real.length === 1 && real[0].kind === 'size', JSON.stringify(real));
+  const u = {};
+  compareOne(parts, page(40, true), ch, {}, { at: 'x', stored: null, unread: u });
+  ok('with no stored variant, each stored-box field is unread, named so', u['no stored variant'] > 0, JSON.stringify(u));
+}
+
+/* ── paint styles by value, text styles with no record named ── */
+{
+  const T = { ...TOKENS, paintStyles: [{ name: 'Fill/Base', paints: [{ type: 'SOLID', color: 'bg/base' }] }, { name: 'Ink', paints: [{ type: 'SOLID', color: '#123456' }] }] };
+  const c = { props: {}, anatomy: { root: { kind: 'container', fillStyle: 'Fill/Base' }, t: { kind: 'text', parent: 'root', fillStyle: 'Ink', typography: 'Nowhere' } } };
+  const { parts, unread } = expected(c, {}, { value: resolver(T), tokens: T });
+  ok('a paint style resolves to its value, a fill on a box and a colour on a text', parts.root.background === '#ffffff' && parts.t.color === '#123456' && !unread.fillStyle, JSON.stringify({ parts, unread }));
+  ok('a text style with no snapshot record is unread, named "no record"', unread['typography: no record'] === 1, JSON.stringify(unread));
 }
 
 /* ── "matches the contract" ── */

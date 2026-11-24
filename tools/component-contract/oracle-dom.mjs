@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { expand, variantDefaults } from './layers.mjs';
+import { expand, variantDefaults, camel } from './layers.mjs';
 import { selfSiteFiles, serveSite } from './site.mjs';
 import { partSeg, entryOf } from './to-code.mjs';
 import { propsOf } from './to-markup.mjs';
@@ -109,14 +109,16 @@ export function expected(c, combo, { value, tokens }) {
       const p = e.layout.padding || {};
       for (const s of SIDES) { const v = num(p[s] ?? 0); if (v !== undefined) x[`padding.${s}`] = v; else skip('padding'); }
     }
-    for (const f of ['width', 'height']) { if (typeof e[f] === 'number') x[f] = e[f]; else if (typeof e[f] === 'string' && e[f] !== 'hug' && e[f] !== 'fill') { const v = num(e[f]); if (v !== undefined) x[f] = v; else skip(f); } else if (e[f] !== undefined) skip(`${f} ${e[f]}`); }
+    // (a size the contract says as hug or fill is what it resolves to in Figma: held to the stored figma.json box)
+    for (const f of ['width', 'height']) { if (typeof e[f] === 'number') x[f] = e[f]; else if (e[f] === 'hug' || e[f] === 'fill') x[f === 'width' ? 'storedW' : 'storedH'] = true; else if (typeof e[f] === 'string') { const v = num(e[f]); if (v !== undefined) x[f] = v; else skip(f); } }
     // a point out of the flow, held as its constraint holds it (Figma's): from the start (min), from the end (max), its
     // centre's offset (center), both edges (stretch); one that scales with its parent is a share this reader leaves
     if (e.absolute) {
       const a = e.absolute, con = e.constraints || {};
       for (const [axis, from, to, mid] of [['horizontal', 'x', 'end', 'cx'], ['vertical', 'y', 'bottom', 'cy']]) {
         const k = con[axis] || 'min', near0 = typeof a[from] === 'number', far = typeof a[to] === 'number';
-        if (k === 'scale') { skip('place that scales'); continue; }
+        // (a place that scales with its parent is held to where Figma's stored box puts it)
+        if (k === 'scale') { x.storedPlace = true; continue; }
         if ((k === 'min' || k === 'stretch') && near0) x[from] = a[from];
         if ((k === 'max' || k === 'stretch') && far) x[to] = a[to];
         if (k === 'center' && near0 && far) x[mid] = (a[from] - a[to]) / 2;
@@ -129,7 +131,6 @@ export function expected(c, combo, { value, tokens }) {
     }
     tok('background', e.background); if (e.border) tok('strokeColour', e.border.color); tok('color', e.color);
     if (e.background !== undefined) { const v = col(e.background); if (v !== undefined) x.background = v; else skip(typeof e.background === 'object' ? (Array.isArray(e.background) ? 'background list' : 'background gradient') : 'background'); }
-    if (e.fillStyle !== undefined) skip('fillStyle');
     if (e.border && e.border.color !== undefined) {
       const b = e.border, raw = Array.isArray(b.width) ? b.width : SIDES.map((s) => b.width ?? (b.sides && typeof b.sides[s] === 'number' ? b.sides[s] : 1));
       const widths = raw.map((w, i) => { const n = num(w); return n !== undefined ? n : b.sides && typeof b.sides[SIDES[i]] === 'number' ? b.sides[SIDES[i]] : undefined; });
@@ -144,11 +145,21 @@ export function expected(c, combo, { value, tokens }) {
       if (e.color !== undefined) { const v = col(e.color); if (v !== undefined) x.color = v; else skip('color'); }
       if (e.typography) {
         const t = textStyleOf(tokens, e.typography, value, modes);
-        if (!t) skip('typography'); else {
+        if (!t) skip('typography: no record'); else {
           x.fontSize = t.size; if (t.lineHeight != null) x.lineHeight = t.lineHeight; if (t.weight != null) x.fontWeight = t.weight;
           x.fontFamily = t.family; x.tokens = { ...(x.tokens || {}), ...t.bound }; const ls = typeof e.letterSpacing === 'number' ? e.letterSpacing : t.letterSpacing; if (ls != null) x.letterSpacing = ls;
         }
       }
+    }
+    // a paint style by its value, through the snapshot's styles: a text's colour, a box's fill, where nothing else says it
+    if (e.fillStyle !== undefined) {
+      const st = ((tokens && tokens.paintStyles) || []).find((y) => y.name === e.fillStyle);
+      const paints = st && (st.paints || []).filter((q) => q.visible !== false);
+      const v = paints && paints.length === 1 && paints[0].type === 'SOLID' ? col(paints[0].color) : undefined;
+      if (!st) skip('paint style: no record');
+      else if (v === undefined) skip('paint style not one solid colour');
+      else if (e.kind === 'text') { if (x.color === undefined) { x.color = v; if (!COLOUR.test(paints[0].color)) x.tokens.color = paints[0].color; } }
+      else if (x.background === undefined) { x.background = v; if (!COLOUR.test(paints[0].color)) x.tokens.background = paints[0].color; }
     }
     if (typeof e.opacity === 'number') x.opacity = e.opacity;
     if (e.shadow !== undefined) skip('shadow');
@@ -186,6 +197,36 @@ export function chainsOf(c, drawn, mainOf) {
   return Object.fromEntries(Object.keys(drawn).filter((id) => id !== 'root').map((id) => [id, chain(id)]));
 }
 
+/* A stored variant's layers by contract id (derive's idOf: each name camel-cased, a repeat among its siblings
+   numbered `_2`), each box from the variant's own origin. A layer a boolean shows carries its prop in its id and is
+   not found here: its fields are unread, `no stored box`. */
+export function boxesOf(variant) {
+  const out = { root: { x: 0, y: 0, w: variant.w, h: variant.h } };
+  const walk = (node, id, ox, oy) => {
+    const seen = {};
+    for (const k of node.children || []) {
+      seen[k.name] = (seen[k.name] || 0) + 1;
+      const seg = camel(k.name) + (seen[k.name] > 1 ? `_${seen[k.name]}` : ''), kid = id ? `${id}/${seg}` : seg;
+      const x = ox + (k.x || 0), y = oy + (k.y || 0);
+      if (!(kid in out)) out[kid] = { x, y, w: k.w, h: k.h };
+      walk(k, kid, x, y);
+    }
+  };
+  walk(variant, '', 0, 0);
+  return out;
+}
+
+/* The stored variant a combination is: its axes as the variant's name says them, every other prop at its default;
+   none where a prop no variant is chosen by is off its default (a boolean property flipped). */
+export function variantOf(c, variants, combo) {
+  const full = { ...variantDefaults(c), ...combo };
+  for (const v of variants || []) {
+    const named = comboOfVariant(c, v.name);
+    if (Object.entries(full).every(([k, val]) => (k in named ? named[k] === val : val === (c.props[k] || {}).default))) return v;
+  }
+  return null;
+}
+
 /* ---------- the page's side: the reader, given nothing but the host's tag ---------- */
 
 /* Runs in the page. Every element under the host that carries `data-part`, by its chain of `data-part`s, with its box
@@ -202,6 +243,15 @@ export function readPage(tag, colours) {
     const m = /rgba?\(([^)]+)\)/.exec(v); if (!m) return null;
     const p = m[1].split(',').map((x) => parseFloat(x));
     return [p[0] / 255, p[1] / 255, p[2] / 255, p[3] ?? 1];
+  };
+  // whether a family is on the machine: a sample set in it, falling back to two different generic families, measures alike
+  const known = {};
+  const fontHere = (list) => {
+    const f = list.split(',')[0].trim();
+    if (f in known) return known[f];
+    if (/^(serif|sans-serif|monospace|system-ui|cursive|fantasy)$/i.test(f)) return (known[f] = true);
+    const probe = (fb) => { cv.font = `40px ${f}, ${fb}`; return cv.measureText('mmmmmmmmmlli WQ@#').width; };
+    return (known[f] = probe('monospace') === probe('serif'));
   };
   const hs = getComputedStyle(host);
   const rootEl = hs.display === 'contents' ? host.firstElementChild || host : host;
@@ -238,7 +288,7 @@ export function readPage(tag, colours) {
       radius: ['border-top-left-radius', 'border-top-right-radius', 'border-bottom-right-radius', 'border-bottom-left-radius'].map((k) => px(s[k])),
       background: bg, border, borderColour,
       shadows: shadows(s.boxShadow), outline: s.outlineStyle !== 'none' ? { width: px(s.outlineWidth), offset: px(s.outlineOffset), colour: rgba(s.outlineColor), auto: s.outlineStyle === 'auto' } : null,
-      icon: el.hasAttribute('data-icon'),
+      icon: el.hasAttribute('data-icon'), fontLoaded: fontHere(s.fontFamily),
       color: rgba(s.color), fontSize: px(s.fontSize), lineHeight: s.lineHeight === 'normal' ? null : px(s.lineHeight), fontWeight: +s.fontWeight,
       fontFamily: s.fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, ''), letterSpacing: s.letterSpacing === 'normal' ? 0 : px(s.letterSpacing), opacity: +s.opacity,
     };
@@ -281,7 +331,7 @@ function strokeOf(m) {
    A row's kind names the mechanism where this reader can tell it: a value the token has in another of its modes (the
    page's base mode is not Figma's default), a part to-markup drew as an icon's placeholder (`data-icon`, a gap it names
    for frontend-build), the root's own size (the caller's in code), and the rest by field. */
-export function compareOne(exp, page, chains, colours, { at = '', value = null, focus = false, unread = {}, skipped = [] } = {}) {
+export function compareOne(exp, page, chains, colours, { at = '', value = null, focus = false, unread = {}, skipped = [], stored = null } = {}) {
   const rows = [];
   // what is not compared is said: a field by name (`unread`), a part with no element to find by its id (`skipped`)
   const leave = (f) => { unread[f] = (unread[f] || 0) + 1; };
@@ -327,6 +377,22 @@ export function compareOne(exp, page, chains, colours, { at = '', value = null, 
     const lineSide = (want, got) => x.line && want === 0 && sameN(got, Math.max(...x.stroke));
     if (x.width !== undefined && !sameN(x.width, m.box.w) && !lineSide(x.width, m.box.w)) row(id, 'width', x.width, m.box.w, kindOf(unit(x.width, m.box.w, 'size')));
     if (x.height !== undefined && !sameN(x.height, m.box.h) && !lineSide(x.height, m.box.h)) row(id, 'height', x.height, m.box.h, kindOf(unit(x.height, m.box.h, 'size')));
+    // hug, fill and a scaling place against Figma's stored box at this combination; a size off where a text under it
+    // is set in a font this machine lacks is told apart as font metrics
+    if (x.storedW || x.storedH || x.storedPlace) {
+      const sb = stored && stored[id];
+      const n = (x.storedW ? 1 : 0) + (x.storedH ? 1 : 0) + (x.storedPlace ? 2 : 0);
+      if (!sb) for (let i = 0; i < n; i++) leave(stored ? 'no stored box' : 'no stored variant');
+      else {
+        const scope = x.storedPlace ? (x.parent || 'root') : id;
+        const fontless = Object.entries(exp).some(([k, y]) => y.kind === 'text' && (k === scope || scope === 'root' || k.startsWith(`${scope}/`)) && ((elementOf(k) || {}).fontLoaded === false));
+        const kind = (k, a, b) => kindOf(fontless && Math.abs(a - b) > 1 / 64 + 1e-9 ? 'font metrics' : unit(a, b, k));
+        if (x.storedW && !sameN(sb.w, m.box.w)) row(id, 'width', sb.w, m.box.w, kind('size', sb.w, m.box.w));
+        if (x.storedH && !sameN(sb.h, m.box.h)) row(id, 'height', sb.h, m.box.h, kind('size', sb.h, m.box.h));
+        if (x.storedPlace && !sameN(sb.x, m.box.x)) row(id, 'x', sb.x, m.box.x, kind('place', sb.x, m.box.x));
+        if (x.storedPlace && !sameN(sb.y, m.box.y)) row(id, 'y', sb.y, m.box.y, kind('place', sb.y, m.box.y));
+      }
+    }
     for (const f of ['x', 'y', 'end', 'bottom', 'cx', 'cy']) if (x[f] !== undefined && !sameN(x[f], m.inParent[f])) row(id, f, x[f], m.inParent[f], kindOf(unit(x[f], m.inParent[f], 'place')));
     // (a radius past half the box draws as half, in CSS and in Figma alike)
     if (x.radius) { const cap = Math.min(m.box.w, m.box.h) / 2, e = x.radius.map((v) => Math.min(v, cap)), d = m.radius.map((v) => Math.min(v, cap)); if (!e.every((v, i) => sameN(v, d[i]))) row(id, 'radius', x.radius, m.radius, kindOf('radius')); }
@@ -376,13 +442,14 @@ export function argsFor(c, library, combo) {
 }
 
 /* Opens one page per component and measures every combination; returns { rows, combinations, unread, ms, error? }. */
-export async function measureComponent({ library, folder, tokensCss, settingsOf, tokens, browserEndpoint, max = Infinity, pixels = null }) {
+export async function measureComponent({ library, folder, tokensCss, settingsOf, tokens, browserEndpoint, max = Infinity, pixels = null, specOf = () => null }) {
   const t0 = Date.now();
   const c = Object.values(library).find((x) => x.folder === folder);
   if (!c) return { error: 'no contract', rows: [], combinations: 0, unread: {}, ms: 0 };
   const { byComponentName } = req('./derive.cjs');
   const mainOf = byComponentName(Object.values(library));
   const value = resolver(tokens);
+  const spec = specOf(folder);
   let combos = combosOf(c);
   const total = combos.length;
   if (combos.length > max) { const step = combos.length / max; combos = Array.from({ length: max }, (_, i) => combos[Math.floor(i * step)]); }
@@ -399,6 +466,7 @@ export async function measureComponent({ library, folder, tokensCss, settingsOf,
       const { parts, unread: u } = expected(c, combo, { value, tokens });
       for (const [k, n] of Object.entries(u)) unread[k] = (unread[k] || 0) + n;
       const chains = chainsOf(c, expand(c, { ...variantDefaults(c), ...combo }), mainOf);
+      const sv = variantOf(c, (spec || {}).variants, combo), stored = sv ? boxesOf(sv) : null;
       const { args, pseudo } = argsFor(c, library, combo);
       await tab.send('DOM.getDocument', { depth: 0 });
       const ok = await call(tab, ([f, a]) => {
@@ -416,7 +484,7 @@ export async function measureComponent({ library, folder, tokensCss, settingsOf,
       const colours = [...new Set(Object.values(parts).flatMap((x) => [x.background, x.strokeColour, x.color, ...['background', 'strokeColour', 'color'].flatMap((f) => (x.tokens[f] ? Object.values(value.modes(x.tokens[f])) : []))]).filter((v) => typeof v === 'string'))];
       const page = await call(tab, readPage, tag, colours);
       if (page.error) { rows.push({ at: `${at}/root`, contract: 'drawn', drawn: page.error, kind: 'render failed' }); continue; }
-      rows.push(...compareOne(parts, page, chains, page.colours, { at, value, focus: pseudo.includes('focus'), unread, skipped }));
+      rows.push(...compareOne(parts, page, chains, page.colours, { at, value, focus: pseudo.includes('focus'), unread, skipped, stored }));
     }
     // (a pixel step that fails is said for this component, its rows kept)
     if (pixels) { try { looks.push(...(await pixelsOf({ c, tab, tag: `ds-${folder}`, library, pixels }))); } catch (e) { looks.push({ variant: null, error: `pixels failed: ${e.message}` }); } }
@@ -518,12 +586,15 @@ async function main(argv) {
       },
     };
   }
+  const store = req('../snapshot/store.cjs');
+  // (the full stored spec: its variants' trees hold every layer's box)
+  const fullSpec = (f) => { try { return store.readSpec(where.paths.components, f); } catch { return null; } };
   const browser = await launch({});
   const report = {};
   try {
     for (const folder of names) {
       let r;
-      try { r = await measureComponent({ library, folder, tokensCss, settingsOf, tokens, browserEndpoint: browser.endpoint, max, pixels }); } catch (e) { r = { error: e.message, rows: [], combinations: 0, unread: {}, ms: 0 }; }
+      try { r = await measureComponent({ library, folder, tokensCss, settingsOf, tokens, browserEndpoint: browser.endpoint, max, pixels, specOf: fullSpec }); } catch (e) { r = { error: e.message, rows: [], combinations: 0, unread: {}, ms: 0 }; }
       report[folder] = r;
       const kinds = {}; for (const x of r.rows) kinds[x.kind] = (kinds[x.kind] || 0) + 1;
       const left = Object.values(r.unread || {}).reduce((a, b) => a + b, 0), skippedN = (r.skipped || []).length;
