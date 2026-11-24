@@ -21,6 +21,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { reapChromes } from '../toolkit-check/leftovers.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -70,6 +71,8 @@ export function chromeVersion(chrome = findChrome(), timeout = 10_000) { try { r
 export function chromeMajor(version = chromeVersion()) { const m = /(\d+)\./.exec(version); return m ? +m[1] : null; }
 
 export async function launch({ chrome = findChrome(), port = 0, profile, args = [], timeout = 30_000 }) {
+  // a browser an earlier run left (killed, crashed) goes before another is added: one ps (leftovers.mjs)
+  try { const { reaped } = reapChromes(); if (reaped.length) console.error(`cdp: reaped ${reaped.length} headless Chrome(s) an earlier run left: ${reaped.join(', ')}`); } catch { /* a cleanup, never the launch's failure */ }
   const dir = profile || mkdtempSync(join(tmpdir(), 'parity-chrome-'));
   const file = join(dir, 'DevToolsActivePort');
   rmSync(file, { force: true });

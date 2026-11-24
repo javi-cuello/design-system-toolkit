@@ -31,7 +31,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { rulesOf } from './rules.mjs';
 import { areas } from '../claude-hooks/standards-read.mjs';
-import { sweep } from './leftovers.mjs';
+import { sweep, reapChromes, chromeItems } from './leftovers.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOLKIT = path.resolve(HERE, '../..');
@@ -297,6 +297,12 @@ if ((process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); 
       } else if (p && p.lessons && p.lessons.error) say(`  (the parity facts could not be read: ${p.lessons.error.split('\n')[0]})`);
     }
     if (name === 'toolkit') for (const l of cadence(repo)) flag(l);
+    // headless Chromes the toolkit left go here too; one a live run has held over an hour is said, never silent
+    if (name === 'toolkit') {
+      const { reaped, left } = reapChromes();
+      if (reaped.length) console.log(`${BRIEF ? 'toolkit: ' : '  '}reaped ${reaped.length} headless Chrome(s) the toolkit left: ${reaped.join(', ')}`);
+      for (const l of chromeItems(left)) flag(l);
+    }
     if (name === 'toolkit') for (const b of reviewBranches(repo)) flag(`review branch ${b.branch} was held, not merged (${b.commits} commit(s); its last message says why): the next owed bin/review run redoes it, unless a person has committed on it, which keeps it theirs; nothing is owed here unless that reason is yours to fix`);
     // not on the Stop hook's brief pass, which has 20 s and runs every turn: a network call there can cost 5 of them
     if (name === 'toolkit' && !BRIEF) {

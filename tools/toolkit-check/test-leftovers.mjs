@@ -130,5 +130,44 @@ assert.match(git(side, 'branch', '--list', 'main'), /main/, 'and main with it');
   } finally { delete process.env.TOOLKIT_SESSIONS_DIR; }
 }
 
+// Headless Chromes the toolkit started (cdp.mjs: --user-data-dir=<tmpdir>/parity-chrome-*), from a fake ps listing:
+// reaped when orphaned, or an hour old with no living node parent; the user's browser and another tool's never.
+{
+  const { toolkitChromes, reapChromes, chromeItems } = await import('./leftovers.mjs');
+  const T = path.join(tmp, 'T'); fs.mkdirSync(T);
+  const prof = (id) => { const d = path.join(T, `parity-chrome-${id}`); fs.mkdirSync(d, { recursive: true }); return d; };
+  const CH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --headless=new';
+  const HELP = '/Applications/Google Chrome.app/Contents/Frameworks/Helpers/Google Chrome Helper (Renderer) --type=renderer';
+  const ps = [
+    '  500     1 02-03:00:00 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome',                    // the user's browser
+    '  501   500 02-03:00:00 /Applications/Google Chrome.app/Contents/Frameworks/Helpers/Google Chrome Helper --type=renderer',
+    `  600     1 03:00:00 ${CH} --user-data-dir=${T}/puppeteer_dev_chrome_profile-x`,                         // another tool's, orphaned
+    `  650     1 03:00:00 ${CH} --user-data-dir=/Users/x/parity-chrome-mine`,                                  // a caller's own profile
+    `  700     1 02-01:00:00 ${CH} --user-data-dir=${prof('orphan')}`,                                          // ours, orphaned: reaped
+    `  701   700 02-01:00:00 ${HELP} --user-data-dir=${prof('orphan')}`,                                        // its helper: reaped
+    `  702   701    05:00 ${HELP}`,                                                                             // a helper's child: reaped
+    `  800   999    10:00 ${CH} --user-data-dir=${prof('dead')}`,                                               // ours, parent gone: reaped
+    '  900   100    10:00 /usr/local/bin/node tools/parity/run.mjs',
+    `  910   900    10:00 ${CH} --user-data-dir=${prof('live')}`,                                               // ours, live run: kept
+    `  911   910    10:00 ${HELP} --user-data-dir=${prof('live')}`,
+    '  920   100  02:00:00 node tools/ui-check/check.mjs',
+    `  930   920  02:00:00 ${CH} --user-data-dir=${prof('long')}`,                                              // ours, old, live node: kept, said
+    '  940   100  02:00:00 /bin/zsh',
+    `  950   940  02:00:00 ${CH} --user-data-dir=${prof('adopted')}`,                                           // ours, old, no node parent: reaped
+    `  960   940    20:00 ${CH} --user-data-dir=${prof('young')}`,                                              // ours, young, shell parent: kept
+  ].join('\n');
+  assert.deepEqual(toolkitChromes(ps, [T]).map((c) => c.dir.split('-').pop()).sort(), ['adopted', 'dead', 'live', 'long', 'orphan', 'young'], 'only parity-chrome-* under tmpdir is the toolkit\'s');
+  const killed = [];
+  const { reaped, left } = reapChromes({ ps, tmp: [T], kill: (pid) => killed.push(pid) });
+  assert.deepEqual(killed.sort((a, b) => a - b), [700, 701, 702, 800, 950], 'exactly the orphaned, the parentless and the old without a node parent, with their helpers');
+  assert.equal(reaped.length, 3);
+  for (const id of ['orphan', 'dead', 'adopted']) assert.ok(!fs.existsSync(path.join(T, `parity-chrome-${id}`)), `${id}'s profile removed`);
+  for (const id of ['live', 'long', 'young']) assert.ok(fs.existsSync(path.join(T, `parity-chrome-${id}`)), `${id}'s profile kept`);
+  assert.deepEqual(left.map((c) => c.main), [910, 930, 960]);
+  // the Stop hook's item: a toolkit Chrome over an hour old that stays
+  const items = chromeItems(left);
+  assert.equal(items.length, 1); assert.match(items[0], /930.*2h.*node tools\/ui-check/);
+}
+
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log('test-leftovers: 21 assertions passed');
+console.log('test-leftovers: 30 assertions passed');
