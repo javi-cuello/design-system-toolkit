@@ -172,6 +172,15 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
       r(box(0, 'literal'), box(0.01, 'literal 12/0 regular Inter')) === '' && r(box(0, 'literal'), box(0.02, 'literal')) === 'rail.height'
       && r(box(0, 'literal'), box(0.01, 'literal 12/0 regular Inter'), { layoutUnit: true }) === 'label.typography'
       && r(box(0, 'Body/01'), box(0, 'literal 12/0 regular Inter')) === 'label.typography' && r(box(0, 'literal 14/20 regular Inter'), box(0, 'literal')) === 'label.typography'); }
+  { // a text's vertical alignment no CSS writes (css.mjs says it unread): where the text's height follows its words, on
+    // either side, it shows nowhere, so a browser's reading is not held to it, at any combination; a box of its own height
+    // is, and Figma's own drawing always (the file unchanged)
+    const tv = (e, set) => ({ contract: 1, component: 'V', props: { size: { type: 'enum', values: ['s', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' }, t: { kind: 'text', parent: 'root', ...e } }, variants: set ? [{ when: { size: 'l' }, set }] : [] });
+    const r = (a, b, o = { layoutUnit: true }) => roundTrip(a, b, o).rows.filter((x) => x.at.endsWith('.verticalAlign')).map((x) => x.at).join();
+    ok('a text that grows to its words is not held to a vertical alignment where a browser read it; one of its own height is, and a drawing in Figma always',
+      r(tv({ autoResize: 'height', verticalAlign: 'center' }), tv({ autoResize: 'height' })) === '' && r(tv({ autoResize: 'none', height: 40 }, { 't.verticalAlign': 'end' }), tv({ height: 'hug' })) === ''
+      && r(tv({ autoResize: 'none', height: 40, verticalAlign: 'center' }), tv({ autoResize: 'none', height: 40 })) === 't.verticalAlign'
+      && r(tv({ autoResize: 'height', verticalAlign: 'center' }), tv({ autoResize: 'height' }), {}) === 't.verticalAlign'); }
   { // a text's own words where the design binds none are a difference from a reading bound to a prop, even where they are
     // that prop's default: Figma's layer there ignores the prop, code's follows it, and a reading at the defaults cannot
     // tell the two apart, so neither side is folded into the other

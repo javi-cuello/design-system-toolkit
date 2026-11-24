@@ -158,9 +158,9 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
     if (n.truncate) e.truncate = true;
     // how the box follows its words, and where they sit in it: neither is a text style's
     if (n.textAutoResize) e.autoResize = n.textAutoResize.toLowerCase();
-    // (only where the box's height is its own: a text that grows to its words has no room to place them in, so no
-    // alignment shows, and code has none to read)
-    if (n.textAlignVertical && !/^(width_and_height|height)$/i.test(n.textAutoResize || '')) e.verticalAlign = n.textAlignVertical === 'CENTER' ? 'center' : n.textAlignVertical === 'BOTTOM' ? 'end' : 'start';
+    // (as the design states it, a text that grows to its words too: there no alignment shows, but a drawing that
+    // leaves it out is not the file; css.mjs writes none, and from-code takes the design's where the text hugs)
+    if (n.textAlignVertical) e.verticalAlign = n.textAlignVertical === 'CENTER' ? 'center' : n.textAlignVertical === 'BOTTOM' ? 'end' : 'start';
     // spacing and case a style would give, said only for words no style sets
     if (!n.textStyle) for (const k of ['letterSpacing', 'lineHeight', 'paragraphSpacing', 'listSpacing']) if (n[k] != null) e[k] = n[k];
     if (!n.textStyle && n.textCase) e.textCase = n.textCase.toLowerCase();

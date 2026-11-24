@@ -443,7 +443,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     if (mains) req('./derive.cjs').ownInsides(JSON.parse(JSON.stringify(A)), mains, { found: here });
     const loose = [...whole].filter((h) => !here.has(h));
     const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k))));
-    const a = same(loose.length ? ownInPlaced(theirsIn, A, mains, here) : A), b = same(ownInPlaced(A, B, mains, whole));
+    const a = same(loose.length ? ownInPlaced(theirsIn, A, mains, here) : A), b = unaligned(same(ownInPlaced(A, B, mains, whole)), a, layoutUnit);
     diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
@@ -458,6 +458,20 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
 function spread(x) {
   const out = { ...x };
   for (const [id, e] of Object.entries(x)) if (e && e.layout && e.layout.align === 'space-between' && 'gap' in e.layout) { const { gap: _, ...l } = e.layout; out[id] = { ...e, layout: l }; }
+  return out;
+}
+/* A text's vertical alignment no CSS writes (css.mjs says it unread): where the text's height follows its words, on
+   either side, it shows nowhere, so a browser's reading (`layoutUnit`) takes the design's there, as from-code takes its
+   horizontal one where the width hugs; a box of its own height stays held to it, and Figma's own drawing always. Per
+   combination, so a variant's alignment too. Tested by test-to-figma.mjs. */
+function unaligned(x, design, layoutUnit) {
+  if (!layoutUnit) return x;
+  const grows = (e) => /^(width_and_height|height)$/.test(e.autoResize || '') || e.height == null || e.height === 'hug';
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) {
+    const d = design[id];
+    if (e && d && e.kind === 'text' && d.kind === 'text' && d.verticalAlign && e.verticalAlign !== d.verticalAlign && (grows(d) || grows(e))) out[id] = { ...e, verticalAlign: d.verticalAlign };
+  }
   return out;
 }
 /* Which swap prop drives a layer (swappedBy) is how the design ties a layer to its prop, used above (atDefault) and
