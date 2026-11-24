@@ -14,6 +14,7 @@ import { samePath, realPath } from '../shared/real-path.mjs';
 
 // this checkout's root, which a service is asked to be running (call)
 const ROOT = fileURLToPath(new URL('../..', import.meta.url)).replace(/[\\/]$/, '');
+const SERVER = fileURLToPath(new URL('./server.mjs', import.meta.url));
 
 /* A process's working folder, for a path it was given relative to it: /proc on Linux, lsof elsewhere; null when
    neither can say. */
@@ -80,8 +81,14 @@ export function running() {
 
 /* A project's running service: the one whose audit folder is this one on disk. Compared through samePath, never as
    typed: a shell that entered through ~/projects reports a path no stored ~/Projects one string-matches, and bin/audit
-   compared them as typed and found no service while one ran. */
-export const serviceFor = (auditDir) => running().find((x) => x.data && x.port && samePath(x.data, auditDir)) || null;
+   compared them as typed and found no service while one ran.
+   Two on one folder (the main checkout's and a worktree's): this checkout's first, then one whose script could not be
+   read, then another's, which call() refuses naming both; taking the first listed refused a worktree its own. */
+export function pick(services, auditDir, server = SERVER) {
+  const on = services.filter((x) => x.data && x.port && samePath(x.data, auditDir));
+  return on.find((x) => x.server && samePath(x.server, server)) || on.find((x) => !x.server) || on[0] || null;
+}
+export const serviceFor = (auditDir) => pick(running(), auditDir);
 
 /* A route of a service called with JSON (GET without a body): its answer, or the `error` it carries thrown, with the
    `hint` beside it on the same line (a file to reopen), since a caller prints the message and nothing else. */

@@ -94,6 +94,17 @@ try { out = execFileSync(process.execPath, [script], { encoding: 'utf8', env: { 
 catch (e) { out = String(e.stdout); code = e.status; }
 ok('as a script it gives one verdict', /^dashboards: /.test(out) && (code === 0 || code === 1));
 
+// two services on one folder, the main checkout's and a worktree's: each caller is given its own checkout's, else one
+// whose script could not be read, else another's (which call() then refuses, naming both)
+{
+  const { pick } = await import('./services.mjs');
+  const mine = fileURLToPath(new URL('./server.mjs', import.meta.url));
+  const A = '/home/p/alpha/audit';
+  const theirs = { data: A, port: '1', server: '/elsewhere/tools/figma-audit/server.mjs' }, ours = { data: A, port: '2', server: mine }, unread = { data: A, port: '3', server: null };
+  ok('of two services on one folder, the one this checkout runs is taken, whichever is listed first',
+    pick([theirs, ours], A) === ours && pick([theirs, unread], A) === unread && pick([theirs], A) === theirs && pick([theirs], '/none') === null);
+}
+
 // a service is asked which checkout it runs before anything else is asked of it: another checkout's, or one serving
 // another folder on that port, is refused naming both; one that cannot say (older than the route) is refused too
 {
