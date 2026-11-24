@@ -7,7 +7,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { combosOf, resolver, textStyleOf, expected, compareOne, comboOfVariant, measureComponent } from './oracle-dom.mjs';
+import { combosOf, resolver, textStyleOf, expected, compareOne, comboOfVariant, measureComponent, matches } from './oracle-dom.mjs';
+import { namer, partSeg } from './to-code.mjs';
+import { expand, variantDefaults } from './layers.mjs';
+import { ELEMENT } from './site.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { findChrome, launch } from '../shared/cdp.mjs';
 
@@ -65,6 +68,20 @@ const TOKENS = { collections: {
   ok('a part the contract draws and the page hides is a row', gone.length === 1 && gone[0].kind === 'part missing' && gone[0].drawn === 'hidden');
   const extra = rows(box(), label(), [{ ...label(), chain: 'icon' }]);
   ok('a part of its own the page draws and the contract does not is a row', extra.some((r) => r.kind === 'part not in contract' && r.at === 'x/[icon]'));
+  // what is left is said: a part with no element to find is skipped, a gap on a box not laid out is unread
+  { const unread = {}, skipped = [];
+    compareOne(parts, { root: box({ display: 'block' }), parts: [label()] }, {}, colours, { at: 'x', value: v, unread, skipped });
+    ok('a part with no element to find is skipped, by id', skipped.length === 1 && skipped[0] === 'x/label', JSON.stringify(skipped));
+    ok('a gap on a box not laid out is unread', unread['gap on a box not laid out'] === 1, JSON.stringify(unread)); }
+  const rootFill = compareOne({ ...parts, root: { ...parts.root, background: undefined } }, { root: box(), parts: [label()] }, chains, colours, { at: 'x', value: v });
+  ok('a fill the root draws that the contract lacks is a row', rootFill.some((r) => r.at === 'x/root.background' && r.kind === 'fill not in contract'), JSON.stringify(rootFill));
+  // a focus ring layer is met only by its ringed element's own outline
+  { const ringed = { ...parts, ring: { kind: 'container', parent: 'root', stroke: [2, 2, 2, 2], strokeColour: '#000000', tokens: {} } };
+    const ch = { ...chains, ring: ['ring'] };
+    const elsewhere = compareOne(ringed, { root: box(), parts: [label({ outline: { width: 2, offset: 0, colour: [0, 0, 0, 1] } })] }, ch, colours, { at: 'x', value: v, focus: true });
+    ok('a focus ring is not excused by an outline on another element', elsewhere.some((r) => r.kind === 'focus ring missing'), JSON.stringify(elsewhere));
+    const own = compareOne(ringed, { root: box({ outline: { width: 2, offset: 0, colour: [0, 0, 0, 1] } }), parts: [label()] }, ch, colours, { at: 'x', value: v, focus: true });
+    ok('a focus ring is met by its ringed element\'s outline', !own.some((r) => /focus ring/.test(r.kind)), JSON.stringify(own)); }
   const ring = rows(box({ outline: { width: 2, offset: 0, colour: [0, 0, 1, 1], auto: true } }), label());
   ok('the browser\'s own focus ring where the contract draws no stroke is named so', ring.length === 1 && ring[0].kind === 'browser focus ring', JSON.stringify(ring));
   const shadowStroke = compareOne({ ...parts, root: { ...parts.root, stroke: [1, 1, 1, 1], strokeColour: '#000000' } }, { root: box({ shadows: [{ inset: true, x: 0, y: 0, blur: 0, spread: 1, colour: [0, 0, 0, 1] }] }), parts: [label()] }, chains, colours, { at: 'x', value: v });
@@ -78,6 +95,15 @@ const TOKENS = { collections: {
     mid: { kind: 'container', parent: 'root', order: 1, absolute: { x: 10, y: 0, end: 6, bottom: 0 }, constraints: { horizontal: 'center', vertical: 'scale' } } } };
   const { parts, unread } = expected(c, {}, { value: resolver(TOKENS), tokens: TOKENS });
   ok('max holds the far edge, not x; center holds the centre\'s offset; scale is left unread', parts.end.end === 8 && parts.end.x === undefined && parts.end.y === 4 && parts.mid.cx === 2 && parts.mid.y === undefined && unread['place that scales'] === 1, JSON.stringify(parts));
+}
+
+/* ── "matches the contract" ── */
+{
+  const clean = { rows: [], unread: {}, skipped: [], combinations: 4, of: 4 };
+  ok('no row, nothing unread or skipped, every combination: matches', matches(clean));
+  ok('a field unread keeps a component out of matches', !matches({ ...clean, unread: { 'background gradient': 1 } }));
+  ok('a part skipped keeps a component out of matches', !matches({ ...clean, skipped: ['x/label'] }));
+  ok('combinations sampled out keep a component out of matches', !matches({ ...clean, combinations: 2 }));
 }
 
 /* ── a stored variant's name as a combination ── */
@@ -110,12 +136,21 @@ else {
     const f = folders.find((x) => { const c = library[Object.keys(library).find((k) => library[k].folder === x)]; return c.anatomy.root.layout && c.anatomy.root.background !== undefined; }) || folders[0];
 
 
-    const padded = await run(f, `\nds-${f}, ds-${f} > button { padding-inline-start: 41px !important; }`);
+    // (each selector the generator's own: its root element and its part attribute, to-code's namer and partSeg)
+    const N = namer(f, ELEMENT), root = `${N.root}, ${N.root} > button`;
+    const c = Object.values(library).find((x) => x.folder === f);
+    const padded = await run(f, `\n${root} { padding-inline-start: 41px !important; }`);
     ok(`a padding changed on ${f}'s page is a padding row`, padded.rows.some((r) => r.kind === 'padding' && /root\.padding\.start$/.test(r.at)) && padded.rows.length > base[f].rows.length, JSON.stringify(padded.rows.slice(0, 3)));
-    const filled = await run(f, `\nds-${f}, ds-${f} > button { background: rgb(1, 2, 3) !important; }`);
-    ok(`a fill changed on ${f}'s page is a fill row`, filled.rows.some((r) => /root\.background$/.test(r.at) && (r.kind === 'fill' || r.kind === 'token in another mode')), JSON.stringify(filled.rows.slice(0, 3)));
-    const hidden = await run(f, `\nds-${f} [data-part] { display: none !important; }`);
-    ok(`every part hidden on ${f}'s page is a part-missing row`, hidden.rows.some((r) => r.kind === 'part missing' && r.drawn === 'hidden'), JSON.stringify(hidden.rows.slice(0, 3)));
+    const filled = await run(f, `\n${root} { background: rgb(1, 2, 3) !important; }`);
+    const fillRows = filled.rows.filter((r) => /\/root\.background$/.test(r.at));
+    ok(`a fill changed on ${f}'s page is a fill row at every combination, of the fill kind exactly`, fillRows.length === filled.combinations && fillRows.every((r) => r.kind === 'fill'), JSON.stringify(fillRows.slice(0, 3)));
+    // every part the contract draws, hidden by its own part attribute, is a part-missing row at every combination it is drawn
+    const own = Object.keys(c.anatomy).filter((id) => id !== 'root' && !id.split('/').slice(0, -1).some((_, i, a) => (c.anatomy[a.slice(0, i + 1).join('/')] || {}).kind === 'instance'));
+    const hidden = await run(f, `\n${own.map((id) => `${N.root} ${N.part(partSeg(c, id))}`).join(', ')} { display: none !important; }`);
+    const want = [];
+    for (const combo of [{}]) for (const id of Object.keys(expand(c, { ...variantDefaults(c), ...combo }))) if (own.includes(id)) want.push(id);
+    const missing = new Set(hidden.rows.filter((r) => r.kind === 'part missing' && r.drawn === 'hidden').map((r) => r.at.slice(r.at.indexOf('/') + 1)));
+    ok(`every part hidden on ${f}'s page is a part-missing row, one per part (${want.length})`, want.length > 0 && want.every((id) => missing.has(id)), `${want} / ${[...missing]}`);
   } finally { await browser.close(); }
 }
 console.log(`${n} passed`);

@@ -13,7 +13,8 @@
  * padding, gap, direction, radius, fills, strokes (a border, an inset shadow or an outline), text style and colour,
  * opacity and whether it is drawn, and compares each with what the contract says there, a number within geometry.mjs's
  * TOLERANCE by parity's `near`, a colour per channel (0..1) within the same. Rows are
- * `{ at: '<combination>/<part>.<field>', contract, drawn, kind }`; a component with none "matches the contract".
+ * `{ at: '<combination>/<part>.<field>', contract, drawn, kind }`. A component "matches the contract" only with no row,
+ * nothing unread, no part skipped (one with no element to find) and every combination read (`matches`).
  * What this reader does not compare (a gradient, several fills, a shadow, a paint style, a fill or hug size) is
  * counted per component as `unread`, never a row. `--pixels` also renders each stored variant and compares it with
  * Figma's own PNG of that variant (REST /v1/images, the token as tools/snapshot/version.cjs finds it) by looks.mjs's
@@ -280,8 +281,10 @@ function strokeOf(m) {
    A row's kind names the mechanism where this reader can tell it: a value the token has in another of its modes (the
    page's base mode is not Figma's default), a part to-markup drew as an icon's placeholder (`data-icon`, a gap it names
    for frontend-build), the root's own size (the caller's in code), and the rest by field. */
-export function compareOne(exp, page, chains, colours, { at = '', value = null, focus = false } = {}) {
+export function compareOne(exp, page, chains, colours, { at = '', value = null, focus = false, unread = {}, skipped = [] } = {}) {
   const rows = [];
+  // what is not compared is said: a field by name (`unread`), a part with no element to find by its id (`skipped`)
+  const leave = (f) => { unread[f] = (unread[f] || 0) + 1; };
   const row = (id, field, contract, drawn, kind) => rows.push({ at: `${at}/${id}${field ? `.${field}` : ''}`, contract: r2(contract), drawn: r2(drawn), kind });
   const byChain = new Map();
   for (const p of page.parts) if (!byChain.has(p.chain) || (!byChain.get(p.chain).shown && p.shown)) byChain.set(p.chain, p);
@@ -299,23 +302,26 @@ export function compareOne(exp, page, chains, colours, { at = '', value = null, 
   // a box apart by no more than Chrome's layout unit, 1/64 px, which is coarser than the tolerance: named, still a row
   const unit = (a, b, k) => (Math.abs(a - b) <= 1 / 64 + 1e-9 ? 'within Chrome\'s 1/64 px' : k);
   const wanted = new Set();
-  const anyOutline = page.parts.some((p) => p.outline && p.outline.width > 0) || !!(page.root.outline && page.root.outline.width > 0);
+  const elementOf = (id) => (id === 'root' || !id ? page.root : chains[id] ? byChain.get(chains[id].join(' > ')) : undefined);
+  const outlined = (m) => !!(m && m.shown && m.outline && m.outline.width > 0);
   for (const [id, x] of Object.entries(exp)) {
     const m = id === 'root' ? page.root : chains[id] ? byChain.get(chains[id].join(' > ')) : undefined;
-    if (id !== 'root' && !chains[id]) continue;
+    if (id !== 'root' && !chains[id]) { skipped.push(`${at}/${id}`); continue; }
     if (id !== 'root') wanted.add(chains[id].join(' > '));
     const icon = id !== 'root' && under(id);
     const kindOf = (k) => (icon ? `icon placeholder: ${k}` : id === 'root' && k === 'size' ? 'root size' : k);
     const ring = focus && x.stroke && x.stroke.some((v) => v > 0);
     if (!m || !m.shown) {
       // (a focus ring drawn as a layer is the ringed element's outline in code: figma-handoff, Focus rings)
-      if (ring && anyOutline) continue;
+      // (only where the element it rings, its parent, draws that outline)
+      if (ring && outlined(elementOf(x.parent))) continue;
       row(id, '', 'drawn', m ? 'hidden' : 'absent', kindOf(ring ? 'focus ring missing' : 'part missing'));
       continue;
     }
     if (x.direction && /flex/.test(m.display)) { if (m.direction.replace('-reverse', '') !== x.direction) row(id, 'direction', x.direction, m.direction, kindOf('direction')); }
     else if (x.direction && Object.values(exp).some((y) => y.parent === id)) row(id, 'direction', x.direction, m.display, kindOf('not laid out'));
     if (x.gap !== undefined && /flex/.test(m.display)) { const g = x.direction === 'column' ? m.gap.row : m.gap.column; if (!sameN(x.gap, g)) row(id, 'gap', x.gap, g, kindOf('gap')); }
+    else if (x.gap !== undefined) leave('gap on a box not laid out');
     for (const s of SIDES) if (x[`padding.${s}`] !== undefined && !sameN(x[`padding.${s}`], m.padding[s])) row(id, `padding.${s}`, x[`padding.${s}`], m.padding[s], kindOf('padding'));
     // (a line's no-size side is its stroke's in CSS, which has no zero-size box that paints)
     const lineSide = (want, got) => x.line && want === 0 && sameN(got, Math.max(...x.stroke));
@@ -328,7 +334,7 @@ export function compareOne(exp, page, chains, colours, { at = '', value = null, 
       const want = colours[x.background], got = m.background;
       if (got && !Array.isArray(got)) row(id, 'background', want, got.image, kindOf('fill drawn otherwise'));
       else if (!sameC(want, got || [0, 0, 0, 0])) row(id, 'background', want, got, kindOf(otherMode(x, 'background', got || [0, 0, 0, 0], true) ? 'token in another mode' : 'fill'));
-    } else if (Array.isArray(m.background) && m.background[3] > 0 && id !== 'root' && x.kind !== 'instance') row(id, 'background', null, m.background, kindOf('fill not in contract'));
+    } else if (Array.isArray(m.background) && m.background[3] > 0 && x.kind !== 'instance') row(id, 'background', null, m.background, kindOf('fill not in contract'));
     if (x.stroke) {
       const st = strokeOf(m), none = x.stroke.every((v) => v === 0);
       // (a line, no wide or no tall, stroked all round draws one line: a border on any one edge draws the same)
@@ -382,7 +388,7 @@ export async function measureComponent({ library, folder, tokensCss, settingsOf,
   if (combos.length > max) { const step = combos.length / max; combos = Array.from({ length: max }, (_, i) => combos[Math.floor(i * step)]); }
   const site = await serveSite(selfSiteFiles(library, folder, { tokensCss, settingsOf }));
   const tab = await attach(await newPage(browserEndpoint));
-  const rows = [], unread = {}, looks = [];
+  const rows = [], unread = {}, skipped = [], looks = [];
   try {
     await media(tab, { 'prefers-color-scheme': 'light' });
     await navigate(tab, `${site.url}index.html`);
@@ -410,13 +416,20 @@ export async function measureComponent({ library, folder, tokensCss, settingsOf,
       const colours = [...new Set(Object.values(parts).flatMap((x) => [x.background, x.strokeColour, x.color, ...['background', 'strokeColour', 'color'].flatMap((f) => (x.tokens[f] ? Object.values(value.modes(x.tokens[f])) : []))]).filter((v) => typeof v === 'string'))];
       const page = await call(tab, readPage, tag, colours);
       if (page.error) { rows.push({ at: `${at}/root`, contract: 'drawn', drawn: page.error, kind: 'render failed' }); continue; }
-      rows.push(...compareOne(parts, page, chains, page.colours, { at, value, focus: pseudo.includes('focus') }));
+      rows.push(...compareOne(parts, page, chains, page.colours, { at, value, focus: pseudo.includes('focus'), unread, skipped }));
     }
-    if (pixels) looks.push(...(await pixelsOf({ c, tab, tag: `ds-${folder}`, library, pixels })));
+    // (a pixel step that fails is said for this component, its rows kept)
+    if (pixels) { try { looks.push(...(await pixelsOf({ c, tab, tag: `ds-${folder}`, library, pixels }))); } catch (e) { looks.push({ variant: null, error: `pixels failed: ${e.message}` }); } }
   } finally {
     await tab.close(); await site.close();
   }
-  return { rows, combinations: combos.length, of: total, unread, ms: Date.now() - t0, ...(pixels && { looks }) };
+  return { rows, combinations: combos.length, of: total, unread, skipped, ms: Date.now() - t0, ...(pixels && { looks }) };
+}
+
+/* "Matches the contract" only where nothing was left: no row, no field unread, no part skipped, and every combination
+   read (none sampled out by --max). */
+export function matches(r) {
+  return !!r && !r.error && r.rows.length === 0 && Object.values(r.unread || {}).every((n) => !n) && !(r.skipped || []).length && r.combinations > 0 && r.combinations === (r.of ?? r.combinations);
 }
 
 /* ---------- pixels against Figma's own export ---------- */
@@ -513,11 +526,13 @@ async function main(argv) {
       try { r = await measureComponent({ library, folder, tokensCss, settingsOf, tokens, browserEndpoint: browser.endpoint, max, pixels }); } catch (e) { r = { error: e.message, rows: [], combinations: 0, unread: {}, ms: 0 }; }
       report[folder] = r;
       const kinds = {}; for (const x of r.rows) kinds[x.kind] = (kinds[x.kind] || 0) + 1;
-      console.log(`${folder}: ${r.error ? `error: ${r.error}` : r.rows.length ? `${r.rows.length} rows (${Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', ')})` : 'matches the contract'} — ${r.combinations}${r.of > r.combinations ? ` of ${r.of}` : ''} combinations, ${(r.ms / 1000).toFixed(1)} s${r.looks ? `; pixels: ${r.looks.map((l) => (l.error ? l.error : `${l.share}`)).join(' ')}` : ''}`);
+      const left = Object.values(r.unread || {}).reduce((a, b) => a + b, 0), skippedN = (r.skipped || []).length;
+      console.log(`${folder}: ${r.error ? `error: ${r.error}` : matches(r) ? 'matches the contract' : `${r.rows.length} rows${r.rows.length ? ` (${Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', ')})` : ''}, ${left} unread, ${skippedN} parts skipped`} — ${r.combinations}${r.of > r.combinations ? ` of ${r.of}` : ''} combinations, ${(r.ms / 1000).toFixed(1)} s${r.looks ? `; pixels: ${r.looks.map((l) => (l.error ? l.error : `${l.share}`)).join(' ')}` : ''}`);
     }
   } finally { await browser.close(); }
   const done = Object.values(report).filter((r) => !r.error);
-  console.log(`${label}: ${done.filter((r) => !r.rows.length).length} of ${names.length} match the contract; ${Object.values(report).filter((r) => r.error).length} errors`);
+  const rowless = done.filter((r) => !r.rows.length).length;
+  console.log(`${label}: ${done.filter(matches).length} of ${names.length} match the contract (no row, nothing unread or skipped, every combination); ${rowless} with no row; ${Object.values(report).filter((r) => r.error).length} errors`);
   if (out) fs.writeFileSync(out, JSON.stringify({ project: label, made: new Date().toISOString(), components: report }, null, 1));
   return 0;
 }
