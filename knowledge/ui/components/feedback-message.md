@@ -130,7 +130,7 @@ A feedback message is the short line on one form field that says what is wrong w
 **Differences**
 - [moderate] Where the project takes the icon side, the icon is in the message, where Carbon's code puts it inside the input; a project on Carbon draws the icon in the field and the message as text, and records that.
 - [weak] The field draws the message as a layer, not the nested component code composes, for the reason in [In Figma](#in-figma).
-- [weak] The text property is `Error message`; Primer's is the `Validation` slot's children and Carbon's `invalidText`. The mapping row is where a project's names meet its kit's (figma-standard rule 21).
+- [required] The text property is `Error message` (figma-standard rule 21); Primer's is the `Validation` slot's children and Carbon's `invalidText`. The mapping row is where a project's names meet its kit's (figma-standard rule 21).
 
 **Check**
 - *Script*: the component contract lists the type axis's values beside the code's types; a type drawn with no prop, or a prop with no frame and no line under *Differences*, is a finding (design-code-parity).

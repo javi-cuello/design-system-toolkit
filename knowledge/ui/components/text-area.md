@@ -125,7 +125,7 @@ A text area takes free text longer than one line: a description, a message, a re
 
 **Differences**
 - [required] Carbon's `Warning` and skeleton, Primer's `contrast`, and MUI's variants (sources above) are drawn only where the project's code renders them (figma-standard rule 51).
-- [required] `Disabled` and `Validation` are axes of their own where the kits put them in `State` (Code Connect files above; figma-standard rules 1 and 57); `Read-only` stays a `State` value, as there ([text input: *In Figma*](text-input.md#in-figma)).
+- [required] `Disabled` and `Validation` are axes of their own (figma-standard rules 1 and 57); `Read-only` stays a `State` value ([text input: *In Figma*](text-input.md#in-figma)).
 
 **Check**
 - *Script*: the component contract lists the set's axes beside the code's props; a `Show count` with no counter prop, or a drawn height that matches no `rows`, shows in the parity report (design-code-parity).

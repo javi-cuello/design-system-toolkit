@@ -6,7 +6,7 @@ A slider sets a number in a range by moving a thumb along a track: a volume, a z
 
 **Use when / don't use**
 - [weak] An approximate value set by feel, with the result visible at once; where the exact number matters, a number field. The cases are [*Slider*](#slider).
-- [weak] One component for one thumb and for two, the range a `Range` variant of it (*In Figma*): MUI's `Slider` becomes a range when its `value` is an array ([useSlider](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Slider/useSlider.ts)).
+- [strong] One component for one thumb and for two, the range a `Range` variant of it (*In Figma*): MUI, Carbon and Radix each hold one value or two in one slider ([Alignment with code](#alignment-with-code)).
 
 **Anatomy**
 - [moderate] A label, a track with its filled part, a thumb per value, and the value shown as text. Carbon draws a label, a number input and a track with a handle, plus minimum and maximum value text ([Carbon slider](https://carbondesignsystem.com/components/slider/usage/)); MUI's slots are `rail`, `track`, `thumb`, `mark`, `valueLabel` and `input` ([Slider types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Slider/Slider.d.ts)).
@@ -63,7 +63,7 @@ A slider sets a number in a range by moving a thumb along a track: a volume, a z
 - [weak] The filled part's length and the thumb's place are a mechanism, driven by one width or padding; figma-standard rule 29 treats a raw value serving a mechanism as a question to record, not a defect.
 
 **Properties**
-- [required] `Label` and `Value` are text properties; `Show description` sits directly above `Description` (figma-standard rules 5, 21 and 37); figma-standard rule 21 keeps `Has` for content the component holds and writes `Show` for a boolean that reveals a layer.
+- [required] `Label` and `Value` are text properties; `Show description` sits directly above `Description` (figma-standard rules 5, 21 and 37);
 - [weak] A range slider is the same component at `Range=True`, never a set of its own and never two sliders laid over each other: it changes the thumbs, their names and the value text, more than one subtree, so it is a variant, not a boolean (figma-standard rule 35).
 
 **Variants and states**

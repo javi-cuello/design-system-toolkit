@@ -87,7 +87,7 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 - [weak] Carbon's Figma `Tag` turns a `Dismissible` boolean into a different code component, `DismissibleTag` ([Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)). This page keeps the badge passive and the removable value a [chip](chip.md), so the badge set has no remove property.
 
 **Mapping**
-- [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)).:
+- [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
   |---|---|
