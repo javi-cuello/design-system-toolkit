@@ -32,7 +32,7 @@
  * said), a 429 waits its Retry-After; four failures in a row stop the run. Responses are cached under --cache
  * (<project home>/round-trip/oracle-figma/cache unless said), keyed by file and version, geometry stripped. The file
  * version read is the one the router recorded as the snapshot arrived (tokens.json sources[file].atOrAfter,
- * deliver.cjs), said `pinned`; a snapshot older than that record is read at the first version saved at or after it
+ * deliver.cjs), said `the snapshot is at or after <id>`; a snapshot older than that record is read at the first version saved at or after it
  * (changes.json), said `unpinned: may include later edits`.
  * --version latest reads the file as it is. --offline reads the cache alone, and the version its fetch recorded.
  * Exits 2 on a usage error, 1 when a fetch fails, else 0.
@@ -334,7 +334,8 @@ export function restWalk(n, ctx, depth = 0, parent = null, at, inInstance = fals
     const ov = overridesOf(n);
     if (ov.length && depth < 12) {
       // REST names a style override inheritFillStyleId where the plugin API says fillStyleId
-      o.overrides = ov.map((x) => [...new Set(x.overriddenFields.map((f) => (OVERRIDE_NAME[f] || f.replace(/^inherit(\w)(\w*StyleId)$/, (_, a, b) => a.toLowerCase() + b))))].join(','));
+      // the plugin API's `textStyleId` alone is REST's `inheritTextStyleId,text`
+      o.overrides = ov.map((x) => (x.overriddenFields.length === 2 && x.overriddenFields.includes('inheritTextStyleId') && x.overriddenFields.includes('text') ? { overriddenFields: ['textStyleId'] } : x)).map((x) => [...new Set(x.overriddenFields.map((f) => (OVERRIDE_NAME[f] || f.replace(/^inherit(\w)(\w*StyleId)$/, (_, a, b) => a.toLowerCase() + b))))].join(','));
       o.children = (n.children || []).filter((c) => c.visible !== false).map((c) => restWalk(c, ctx, depth + 1, n, undefined, true, inner));
     }
     return o;
@@ -368,9 +369,8 @@ export function specOurs(s, figmaNode) {
   if (Array.isArray(o.overrides)) o.overrides = overrideFields(o.overrides);
   return o;
 }
-// an override's fields, sorted, a style id's left out (REST lists a fill style's override and not always a stroke's); an
-// entry left empty is kept: the plugin API's `textStyleId` is REST's `inheritTextStyleId,text`, one layer overridden either way
-const overrideFields = (list) => list.map((x) => x.split(',').filter((f) => !/StyleId$/.test(f)).sort().join(',')).sort();
+// an override's fields, sorted, a style id's left out (REST lists a fill style's override and not always a stroke's)
+const overrideFields = (list) => list.map((x) => x.split(',').filter((f) => !/StyleId$/.test(f)).sort().join(',')).filter(Boolean).sort();
 function restOurs(o) {
   const out = { ...o };
   delete out.children;
@@ -745,6 +745,7 @@ export function compareContract(component, setNode, contract, ctx) {
     if (main) {
       const ip = Object.fromEntries(Object.entries(main.props || {}).map(([id, p]) => [p.figma, id]));
       const when = whenOfProps(main, ip, instanceProps(ctx, inst));
+      if (!when) { expansions.set(inst, UNSPELT); return UNSPELT; }
       const mflat = expand(main, when);
       const { found } = addressParts(mflat, inst, ip);
       // a text a string prop fills says the instance's value for it; a part an instance prop swaps, the component it names
@@ -777,6 +778,7 @@ export function compareContract(component, setNode, contract, ctx) {
       for (let q = n; q && q !== v; q = parentOf.get(q)) {
         if (q.type !== 'INSTANCE') continue;
         const x = expansion(q);
+        if (x === UNSPELT) return { unspelt: true };
         if (!x) { whole = false; continue; }
         if (x.byNode.has(n)) said.push(x.part(x.byNode.get(n)));
       }
@@ -796,7 +798,8 @@ export function compareContract(component, setNode, contract, ctx) {
       // unsaid is its main's, read from the main's own contract expanded at the instance's props, the host's word over
       // it; with no contract for the main, a field Figma has there is a row of its own, `not stated`, never a difference
       if (n.type === 'INSTANCE' || inInstance(n)) {
-        const { said, whole } = mainSays(n);
+        const { said, whole, unspelt } = mainSays(n);
+        if (unspelt) for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { delete a[k]; t.skip(SPELL); }
         if (said) { b = { ...said, ...b }; for (const k of OWN) if (k in said && !(k in part)) delete b[k]; }
         if (!whole) unstated(v.name, id, a, b);
       }
@@ -804,7 +807,8 @@ export function compareContract(component, setNode, contract, ctx) {
     }
     // a layer Figma draws that no part is: inside an instance whose main's contract says it, held to that; else a row
     for (const { path: p, node } of untaken(v, taken)) {
-      const { said, whole } = inInstance(node) ? mainSays(node) : { said: null, whole: true };
+      const { said, whole, unspelt } = inInstance(node) ? mainSays(node) : { said: null, whole: true };
+      if (unspelt) { t.skip(SPELL); continue; }
       if (!said) { if (whole) t.differ(v.name, p, 'part', 'present', 'missing'); else t.differ(v.name, p, 'not stated', 'present', undefined); continue; }
       t.check(v.name, p, 'part', true, true);
       const a = restPart(node, parentOf.get(node) || null, ctx, idOfProp, frameOf(node));
@@ -857,6 +861,9 @@ export function compareContract(component, setNode, contract, ctx) {
     }
     }
 }
+// an instance whose props its main's contract cannot spell is not expanded: its insides are skipped, never guessed
+const UNSPELT = { unspelt: true };
+const SPELL = "an instance's props its main's contract cannot spell";
 // the fields a placed instance says of itself, never its main's
 const OWN = ['kind', 'component', 'key', 'with', 'swappedBy'];
 // an instance's props (Figma's names and values) in its main's contract's spelling
@@ -866,7 +873,12 @@ function whenOfProps(main, ip, given) {
     const id = ip[fp], p = id && main.props[id];
     if (!p || fv === UNNAMED) continue;
     if (p.type === 'boolean') when[id] = typeof fv === 'boolean' ? fv : /^true$/i.test(fv);
-    else if (p.type === 'enum') { const i = (p.figmaValues || []).indexOf(fv); when[id] = p.values && i >= 0 ? p.values[i] : fv; } else when[id] = fv;
+    else if (p.type === 'enum') {
+      // by the contract's own figmaValues, as whenOf spells a variant; else a value the contract spells as Figma does;
+      // else null, not checkable: guessed, a value no variant names expands the default by accident
+      const i = (p.figmaValues || []).indexOf(fv);
+      if (p.values && i >= 0) when[id] = p.values[i]; else if ((p.values || []).includes(fv)) when[id] = fv; else return null;
+    } else when[id] = fv;
   }
   return when;
 }
@@ -918,12 +930,13 @@ export async function versionAt(get, fileKey, at) {
   return after && { id: after.id, at: after.created_at, pinned: false };
 }
 /* What a result says it read. */
-export const readAt = (version, snapshotAt) => `read at ${version && version.id ? `${version.id}, ${version.at || 'its date unknown'}` : 'latest'}${version && version.pinned ? '; pinned: the newest version when the snapshot arrived, which the snapshot is at or after' : `; unpinned: may include later edits than the snapshot of ${snapshotAt || 'an unknown time'}`}`;
+export const readAt = (version, snapshotAt) => `read at ${version && version.id ? `${version.id}, ${version.at || 'its date unknown'}` : 'latest'}${version && version.atOrAfter ? `; the snapshot is at or after ${version.id}` : `; unpinned: may include later edits than the snapshot of ${snapshotAt || 'an unknown time'}`}`;
 /* The version the router recorded for file `file` when its snapshot arrived (tokens.json _meta.sources[file].atOrAfter,
-   deliver.cjs): the snapshot is at or after it, so it is read pinned. An older snapshot records none: null. */
-export function pinOf(meta, file) {
+   deliver.cjs): the snapshot is at or after it, never pinned to it (edits after it may be in the snapshot). An older
+   snapshot records none: null. */
+export function recordedOf(meta, file) {
   const x = meta && meta.sources && meta.sources[file] && meta.sources[file].atOrAfter;
-  return x && x.id ? { id: x.id, at: x.at || null, pinned: true } : null;
+  return x && x.id ? { id: x.id, at: x.at || null, atOrAfter: true } : null;
 }
 
 /* Every set's REST node, cached per file and version, fetched in batches no bigger than `per` ids or `variants` variants. */
@@ -1040,7 +1053,7 @@ async function main(argv) {
         try { version = JSON.parse(fs.readFileSync(path.join(d, vs[0], 'version.json'), 'utf8')); } catch { version = vs[0] === 'latest' ? null : { id: vs[0], pinned: false }; }
       } else if (opt.version === 'snapshot') {
         // the version the router recorded when the snapshot arrived, else the first saved after it, unpinned
-        version = pinOf(meta, file);
+        version = recordedOf(meta, file);
         if (!version) try { version = await versionAt(get, file, at); } catch (e) { console.error(e.message); return 1; }
       }
       const said = readAt(version, at);

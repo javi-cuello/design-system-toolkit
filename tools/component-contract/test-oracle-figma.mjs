@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { pinOf, readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
+import { recordedOf, readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
 
 const require = createRequire(import.meta.url);
 const { compact, resolve } = require('../snapshot/spec.cjs');
@@ -249,6 +249,11 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     // a layer Figma draws inside it that neither the host nor the main says is a part row
     const set2 = structuredClone(set); for (const v of set2.children) v.children.find((c) => c.type === 'INSTANCE').children.push({ id: v.id + 'x', name: 'Extra', type: 'FRAME', size: { x: 1, y: 1 }, relativeTransform: T(0, 0) });
     assert.ok(compareContract('chip', set2, host, { ...ctx, mains }).rows.some((x) => x.kind === 'contract:part' && /Extra/.test(x.path)));
+    // a main enum with no Figma spelling: the instance's value is not guessed and the default never expanded by accident
+    const bare = icon(); delete bare.props.size.figmaValues;
+    const r4 = compareContract('chip', set, host, { ...ctx, mains: () => bare });
+    assert.ok(!r4.rows.some((x) => /Glyph/.test(x.path) && x.kind === 'contract:width'), 'not held to the default (24) variant');
+    assert.ok(r4.skipped["an instance's props its main's contract cannot spell"] > 0, 'counted as skipped');
     // no contract for the main: the fields stay "not stated"
     const r3 = compareContract('chip', set, h2, { ...ctx, mains: () => null });
     assert.ok(r3.rows.some((x) => x.kind === 'contract:not stated' && x.path === 'icon.opacity'));
@@ -290,7 +295,10 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
   const stored = (ov) => ({ name: 'Host', id: 'h', key: 'kh', props: {}, variants: [{ name: 'Host', type: 'COMPONENT', w: 10, h: 10, children: [{ ...restWalk(host.children[0], ctx, 1, host), overrides: ov }] }] });
   const ovRows = (ov) => compareSpec('host', host, stored(ov), ctx).rows.filter((x) => x.kind === 'spec:overrides');
   assert.deepEqual(ovRows(['height,width', 'textStyleId']), [], 'one text-style override each side');
-  assert.equal(ovRows(['height,width']).length, 1, 'one fewer is still a row');
+  assert.equal(ovRows(['textStyleId']).length, 1, 'a layer overridden in Figma and not in the walk is still a row');
+  // a style-only override the plugin lists and REST does not (a stroke style's) fakes no row
+  const host2 = structuredClone(host); host2.children[0].overrides = [{ id: 'i', overriddenFields: ['height', 'width'] }];
+  assert.deepEqual(compareSpec('host', host2, stored(['height,width', 'strokeStyleId']), ctx).rows.filter((x) => x.kind === 'spec:overrides'), [], 'a plugin-only strokeStyleId');
 }
 
 /* ---- one real pair: a small component as Figma's REST and the snapshot gave it (names of its library scrubbed) */
@@ -347,14 +355,14 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
   // each result says which version it read and that it is unpinned
   assert.match(readAt({ id: 'v2', at: '2026-11-24T09:00:00Z', pinned: false }, '2026-11-24T08:30:00Z'), /read at v2, 2026-11-24T09:00:00Z.*unpinned: may include later edits/);
   assert.match(readAt(null, '2026-11-24T08:30:00Z'), /read at latest.*unpinned: may include later edits/);
-  // pinned: the version the router recorded when the snapshot arrived ("at or after" it), read and said so
-  const pin = pinOf({ sources: { K: { at: '2026-11-24', atOrAfter: { id: 'v7', at: '2026-11-24T08:20:00Z' } } } }, 'K');
-  assert.deepEqual(pin, { id: 'v7', at: '2026-11-24T08:20:00Z', pinned: true });
-  assert.equal(pinOf({ sources: { K: { at: '2026-11-24' } } }, 'K'), null, 'an older snapshot records none: unpinned');
-  assert.equal(pinOf(undefined, 'K'), null);
+  // the version the router recorded when the snapshot arrived: the snapshot is at or after it, and said so
+  const pin = recordedOf({ sources: { K: { at: '2026-11-24', atOrAfter: { id: 'v7', at: '2026-11-24T08:20:00Z' } } } }, 'K');
+  assert.deepEqual(pin, { id: 'v7', at: '2026-11-24T08:20:00Z', atOrAfter: true });
+  assert.equal(recordedOf({ sources: { K: { at: '2026-11-24' } } }, 'K'), null, 'an older snapshot records none: unpinned');
+  assert.equal(recordedOf(undefined, 'K'), null);
   const said = readAt(pin, '2026-11-24T08:30:00Z');
-  assert.match(said, /read at v7, 2026-11-24T08:20:00Z; pinned/);
-  assert.ok(!/unpinned/.test(said));
+  assert.match(said, /read at v7, 2026-11-24T08:20:00Z; the snapshot is at or after v7$/);
+  assert.ok(!/pinned/.test(said), 'never "pinned": the snapshot may hold edits after the version');
   // fetchSets: batched, cached by file and version, read back without a request
   const cache = fs.mkdtempSync(path.join(os.tmpdir(), 'oracle-figma-'));
   const asked = [];

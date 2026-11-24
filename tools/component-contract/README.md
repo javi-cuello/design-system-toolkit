@@ -42,6 +42,9 @@ node tools/component-contract/eval.mjs --project <label> --self --twice --change
 node tools/component-contract/eval.mjs --projects <label,label…> --legs self,second --jobs 4 --log <file>
 node tools/component-contract/eval.mjs --projects <label,label…> --mechanisms --top 25 --near 15
 
+# the spec and the contract held to Figma's own REST API (a token: bin/set-key figma)
+node tools/component-contract/oracle-figma.mjs --project <label>[,<label>…] [--cache <dir>] [--offline] [--out <rows.json>]
+
 # which contract is official, and a component's properties table
 node tools/component-contract/official.mjs --project <label>
 node tools/component-contract/contract-rows.mjs --live <project> <page name…> --file <library key>
@@ -71,6 +74,7 @@ It reads a project's stored specs and, for the code commands, the project's rend
 | `looks.mjs` | compares the drawn set with the library by pixels |
 | `geometry.mjs` | holds the drawn set's reading to the library's, layer by layer |
 | `eval.mjs` | runs the whole round trip and scores it |
+| `oracle-figma.mjs` | holds the stored spec and the contract to Figma's REST API, field by field |
 | `official.mjs` | decides which contract is the official one |
 | `contract-rows.mjs` | a component's properties table, from its contract |
 | `analyze.mjs` | finds where a library disagrees with itself |

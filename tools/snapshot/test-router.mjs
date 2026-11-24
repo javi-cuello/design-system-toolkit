@@ -608,6 +608,32 @@ test('each library file a project routes is pinned to its own publish and checke
   }
 });
 
+test('a snapshot whose newest version Figma will not give is still written, with no atOrAfter recorded', async () => {
+  const { createRequire } = await import('node:module');
+  const req = createRequire(import.meta.url);
+  const { deliver } = req('./deliver.cjs');
+  const { projectsDir, made } = world([{ name: 'nonewest', files: { library: [{ key: 'KEYN', id: 'IDN', name: 'Lib' }] } }]);
+  const project = projects(projectsDir).list.find((p) => p.name === 'nonewest');
+  const { fake } = fakeFigma({ KEYN: '2026-10-01T00:00:00Z' });
+  // the one request for the newest version fails; the release's still answers
+  const failing = async (url) => { if (new URL(url).searchParams.get('page_size') === '1') throw new Error('offline'); return fake(url); };
+  const saved = { fetch: globalThis.fetch, token: process.env.FIGMA_TOKEN };
+  globalThis.fetch = failing; process.env.FIGMA_TOKEN = 'test';
+  const said = [];
+  try {
+    const p = lib('IDN'); p.tokens._meta.fileKey = 'KEYN';
+    assert.equal((await deliver(project, 'library', p, { say: (l, t) => said.push(`${l}: ${t}`), under: () => {} })).result, 'written');
+    const P = req('./store.cjs').paths(made[0].repo, contract.locate(made[0].repo).paths);
+    const src = JSON.parse(fs.readFileSync(P.tokens, 'utf8'))._meta.sources.KEYN;
+    assert.ok(src, 'the file\'s entry is written');
+    assert.equal(src.atOrAfter, undefined, 'no version recorded that Figma did not give');
+    assert.ok(said.some((l) => /newest version unavailable/.test(l)), 'and said so');
+  } finally {
+    globalThis.fetch = saved.fetch;
+    if (saved.token !== undefined) process.env.FIGMA_TOKEN = saved.token; else delete process.env.FIGMA_TOKEN;
+  }
+});
+
 test('a version Figma saved after the last delivery of a file is named: its edits may not be in the snapshot', async () => {
   const { createRequire } = await import('node:module');
   const req = createRequire(import.meta.url);
