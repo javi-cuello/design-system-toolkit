@@ -820,6 +820,9 @@ export function projectsOptions({ projects, legs, jobs, log, rest = [] }, { cwd,
    lets it go. spawn is spawnSync but in the tests. */
 export const stepRunner = (fd, spawn = spawnSync) => (args) => spawn(process.execPath, [fileURLToPath(import.meta.url), ...args], { cwd: path.resolve(HERE, '../..'), stdio: ['ignore', fd ?? 'inherit', fd ?? 'inherit'] }).status ?? 2;
 /* The log opened to append, or why not: { fd } | { error }. */
+/* What the mutation run's exit says (mutate.mjs): 0 passed; 1 under --check the floor failed; anything else, 1 without
+   --check, 2 (a crash) or no status at all, an error that stops the run. */
+export const mutateVerdict = (rc, check) => (rc === 0 ? null : rc === 1 && check ? 'floor' : 'error');
 export const openLog = (file) => { try { return { fd: fs.openSync(file, 'a') }; } catch (e) { return { error: `cannot write the log ${file}: ${e.code || e.message}` }; } };
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
@@ -931,8 +934,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   report(label, m, fields, byCause);
   // (its own process: mutate.mjs imports this module, which is still running here). Under --check a kind caught under
   // mutate.mjs's floor fails the check (rc 1); a run that died, or ended with no status, fails it as an error (rc 2)
-  const mutated = mutate && (spawnSync(process.execPath, [path.join(HERE, 'mutate.mjs'), '--project', label, '--sample', String(mutate.sample), '--seed', String(mutate.seed), ...(check ? ['--check'] : [])], { stdio: 'inherit' }).status ?? 2);
-  if (mutated >= 2) process.exit(2);
+  const mutated = mutate && mutateVerdict(spawnSync(process.execPath, [path.join(HERE, 'mutate.mjs'), '--project', label, '--sample', String(mutate.sample), '--seed', String(mutate.seed), ...(check ? ['--check'] : [])], { stdio: 'inherit' }).status, check);
+  if (mutated === 'error') { console.error('the mutation run failed (see above): nothing diffed, accepted or checked'); process.exit(2); }
   const file = path.join(m.home, 'round-trip', 'accepted.json');
   const now = counts(m.legs);
   const causesFile = path.join(m.home, 'round-trip', 'accepted-causes.json');

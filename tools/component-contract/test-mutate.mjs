@@ -9,8 +9,8 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { KINDS, rng, catalogueOf, mutateContract, mutateSpec, compareContract, compareFigma, runMutations, summary, lines, reachesOf, reachesAny, caughtAt, atPlace, numberStep, belowFloor, FLOOR, geometryAt, idOfPath } from './mutate.mjs';
-import { measure } from './eval.mjs';
+import { KINDS, rng, catalogueOf, mutateContract, mutateSpec, compareContract, compareFigma, runMutations, summary, lines, reachesOf, reachesAny, caughtAt, atPlace, numberStep, belowFloor, FLOOR, figmaPlaces } from './mutate.mjs';
+import { measure, mutateVerdict } from './eval.mjs';
 import { heldToLibrary } from './to-figma.mjs';
 
 const req = createRequire(import.meta.url);
@@ -113,7 +113,7 @@ ok('(c) a contract held to itself is no row', lib.every(({ contract }) => compar
 // (h) the Figma leg: to-figma --verify's own compare, red at the mutated place on its contract rows or its geometry
 {
   const variant = (name, x, size) => ({
-    name, type: 'COMPONENT', w: 120, h: 40, layout: 'HORIZONTAL', pad: [8, 12, 8, 12], gap: 8, fills: ['Color/Background/primary'], place: { x, y: 0 }, sizing: 'FIXED/FIXED', align: 'MIN/CENTER', radius: 4, strokeWeight: 1, strokes: ['Color/Border/default'], effect: 'Shadow/raised',
+    name, type: 'COMPONENT', w: 120, h: 40, layout: 'HORIZONTAL', pad: [8, 12, 8, 12], gap: 8, fills: ['Color/Background/primary'], place: { x, y: 0 }, sizing: 'FIXED/FIXED', align: 'MIN/CENTER', radius: 4, strokeSides: [1, 1, 1, 1], strokeAlign: 'INSIDE', strokes: ['Color/Border/default'], effect: 'Shadow/raised',
     bindings: { gap: 'Spacing/8' },
     children: [
       { name: 'Icon', type: 'INSTANCE', w: 16, h: 16, x: 12, y: 12, index: 0, instanceOf: 'Icon container', instanceOfKey: 'k1', props: { Filled: 'false' } },
@@ -131,20 +131,35 @@ ok('(c) a contract held to itself is no row', lib.every(({ contract }) => compar
     const before = JSON.stringify(spec);
     const m = mutateSpec(spec, kind, { rng: rng(4), catalogue: cat });
     ok(`(h) ${kind}: applies to the drawing and names its place, the stored one untouched`, m && typeof m.at === 'string' && m.places.length && JSON.stringify(spec) === before, m && m.at);
-    if (m) { const now = compareFigma(held, spec, m.spec, ctx).rows; ok(`(h) ${kind}: the Figma leg shows a row at the mutated place`, caughtAt(base, now, m.places), { at: m.at, places: m.places, rows: now.map((r) => r.at) }); }
+    if (m) {
+      const now = compareFigma(held, spec, m.spec, ctx).rows, places = figmaPlaces(spec, m.places);
+      ok(`(h) ${kind}: the Figma leg shows a row at the mutated place`, caughtAt(base, now, places), { at: m.at, places, rows: now.map((r) => r.at) });
+      // the contract rows count too, placed by derive's own ids: each kind but those the contract does not keep
+      if (!['order', 'sizing'].includes(kind)) ok(`(h) ${kind}: a contract row at the place counts, by derive's ids`, caughtAt(base.filter((r) => !r.geometry), now.filter((r) => !r.geometry), places), { at: m.at, places, rows: now.filter((r) => !r.geometry).map((r) => r.at) });
+    }
   }
   const s = { legs: { figma: { kinds: { gap: { n: 10, caught: 10 } }, n: 10, caught: 10, errored: 0, none: 0, dropped: 0 } }, missed: [], errors: [] };
   ok('(h) the Figma leg is said stored only, never a plain rate', /figma \(stored only: the drawer and the walk are untested\) 10 of 10/.test(lines('x', s).join('\n')));
 }
 
-// (h) a repeated layer keeps its number on both sides: a row at the second item is the second item's place, not the first's
-ok('(h) a geometry row at a repeat is at that repeat\'s place, and not at the first one\'s', atPlace(geometryAt('Size=sm/Row/Item#2.gap'), [{ el: idOfPath('Row > Item#2'), field: 'gap' }]) && !atPlace(geometryAt('Size=sm/Row/Item#2.gap'), [{ el: idOfPath('Row > Item'), field: 'gap' }]) && geometryAt('Size=sm.gap') === 'root.gap');
+// (h) a repeated layer keeps its number: a row at the second item is the second item's place, not the first's, on the
+// geometry's side (its path) and the contract's (derive's id, item_2)
+{
+  const item = (x) => ({ name: 'Item', type: 'FRAME', w: 10, h: 10, x, y: 0, layout: 'HORIZONTAL', pad: [0, 0, 0, 0], gap: 2 });
+  const v = { name: 'Size=sm', type: 'COMPONENT', w: 40, h: 10, layout: 'HORIZONTAL', children: [{ name: 'Row', type: 'FRAME', w: 40, h: 10, x: 0, y: 0, children: [item(0), item(10)] }] };
+  const stored = { name: 'List', props: { Size: ['sm'] }, variants: [v] };
+  const second = figmaPlaces(stored, [{ path: 'Row > Item#2', field: 'layout.gap', geo: 'gap' }]), first = figmaPlaces(stored, [{ path: 'Row > Item', field: 'layout.gap', geo: 'gap' }]);
+  const geo = { at: 'Size=sm/Row/Item#2.gap', library: 2, drawn: 3, geometry: true }, row = { at: 'row/item_2.layout.gap', library: 2, drawn: 3 };
+  ok('(h) a geometry row at a repeat is at that repeat\'s place, not the first one\'s', caughtAt([], [geo], second) && !caughtAt([], [geo], first));
+  ok('(h) a contract row at a repeat is placed by derive\'s id (item_2)', caughtAt([], [row], second) && !caughtAt([], [row], first), second);
+  ok('(h) a geometry row is never matched to a contract place, nor the reverse', !caughtAt([], [{ ...geo, at: 'row/item_2.layout.gap' }], second.filter((p) => p.geometry)));
+}
 
 {
   const twin = (x) => ({ name: 'Field', type: 'FRAME', w: 10, h: 10, x, y: 0 });
   const v = { name: 'Size=sm', type: 'COMPONENT', w: 40, h: 10, layout: 'HORIZONTAL', children: [twin(0), twin(10), { name: 'Note', type: 'TEXT', w: 10, h: 10, x: 20, y: 0, text: 'n' }] };
   const m = mutateSpec({ name: 'Form', props: { Size: ['sm'] }, variants: [v] }, 'order', { rng: rng(1), catalogue: cat });
-  ok('(h) two layers of one name never trade places: a reorder the walk could not see', m && /Field and Note trade places/.test(m.at), m && m.at);
+  ok('(h) two layers of one name never trade places: a reorder the walk could not see', m && /Field#2 and Note trade places/.test(m.at), m && m.at);
 }
 
 // (i) a mutation that changes nothing compared is no test: a part hidden where a boolean off already hides it, or at a
@@ -160,6 +175,18 @@ ok('(h) a geometry row at a repeat is at that repeat\'s place, and not at the fi
   ok('(i) a change at a drawn combination reaches it', reachesAny(c, moved, reaches.combos));
 }
 
+// (h) a bound stroke steps its binding with its value; a bound width too
+{
+  const t = { collections: { D: { modes: ['Default'], values: { Default: { 'Border/1': 1, 'Border/2': 2, 'Size/24': 24, 'Size/32': 32 } } } } };
+  const cc = catalogueOf(t, []);
+  const v = { name: 'Size=sm', type: 'COMPONENT', w: 24, h: 24, sizing: 'FIXED/FIXED', strokeSides: [1, 1, 1, 1], strokeAlign: 'INSIDE', strokes: ['#000000'], bindings: { strokeWeight: ['Border/1', 'Border/1', 'Border/1', 'Border/1'], w: 'Size/24' } };
+  const st = mutateSpec({ name: 'Box', props: { Size: ['sm'] }, variants: [v] }, 'stroke', { rng: rng(1), catalogue: cc });
+  const sz = mutateSpec({ name: 'Box', props: { Size: ['sm'] }, variants: [v] }, 'sizing', { rng: rng(1), catalogue: cc });
+  const sv = st && st.spec.variants[0], zv = sz && sz.spec.variants[0];
+  ok('(h) a bound stroke steps one side to the next token, as padding does, its binding with it', sv && JSON.stringify(sv.strokeSides) === '[2,1,1,1]' && JSON.stringify(sv.bindings.strokeWeight) === JSON.stringify(['Border/2', 'Border/1', 'Border/1', 'Border/1']), sv);
+  ok('(h) a bound width steps to the next token, its binding with it', zv && zv.w === 32 && zv.bindings.w === 'Size/32', zv);
+}
+
 // (j) the floor --check holds: a kind under it where it applied often enough, none where it applied too rarely to say
 {
   const s = { legs: { self: { kinds: { gap: { n: 10, caught: 8 }, radius: { n: 3, caught: 0 }, text: { n: 10, caught: 10 } } } } };
@@ -170,6 +197,23 @@ ok('(h) a geometry row at a repeat is at that repeat\'s place, and not at the fi
 {
   const r = spawnSync(process.execPath, [fileURLToPath(new URL('./eval.mjs', import.meta.url)), '--mutate', '--sample', '0'], { encoding: 'utf8' });
   ok('(k) eval --mutate --sample 0 is a usage error', r.status === 2 && /--mutate takes --sample N/.test(r.stderr), r.stderr);
+}
+
+// (l) a mutation run that crashes is an error (rc 2), never a floor failure (rc 1); eval stops on any rc but the floor's
+// 1 under --check, and on 2 always
+{
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'mutate-crash-'));
+  try {
+    const dir = path.join(home, 'p', 'figma-design-system');
+    fs.mkdirSync(path.join(dir, 'snapshot', 'components', 'x'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'design-system-context.md'), '# p\n');
+    fs.writeFileSync(path.join(dir, 'snapshot', 'components', 'x', 'contract.json'), '{not json');
+    fs.writeFileSync(path.join(dir, 'snapshot', 'components', 'x', 'figma.json'), '{}');
+    const r = spawnSync(process.execPath, [fileURLToPath(new URL('./mutate.mjs', import.meta.url)), '--project', 'p'], { encoding: 'utf8', env: { ...process.env, TOOLKIT_PROJECTS_ROOT: home } });
+    ok('(l) a crash in the mutation run exits 2, with its message', r.status === 2 && r.stderr.trim().length > 0, { status: r.status, stderr: r.stderr.slice(0, 200) });
+  } finally { fs.rmSync(home, { recursive: true, force: true }); }
+  ok('(l) eval: 0 passes, 1 under --check is the floor, 1 without it, 2, any other or none is an error',
+    mutateVerdict(0, true) === null && mutateVerdict(1, true) === 'floor' && mutateVerdict(1, false) === 'error' && mutateVerdict(2, true) === 'error' && mutateVerdict(2, false) === 'error' && mutateVerdict(null, false) === 'error' && mutateVerdict(3, true) === 'error');
 }
 
 console.log(`${n - failed} of ${n} passed`);

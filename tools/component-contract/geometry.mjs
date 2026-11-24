@@ -29,7 +29,7 @@ const IDS = new Set(['id', 'key', 'instanceOfId', 'instanceOfKey', 'index', 'nam
   // the main's still marks one, and every value it could hide is compared on its own field (parity's adapt.mjs agrees)
   'overrides']);
 // (a row's place is read by `/` and `.`: a name holding them keeps one segment)
-const seg = (s) => String(s).replace(/[/.]/g, '_');
+export const seg = (s) => String(s).replace(/[/.]/g, '_');
 
 const same = (a, b, tol) => {
   if (typeof a === 'number' && typeof b === 'number') return near(a, b, tol + 1e-9);

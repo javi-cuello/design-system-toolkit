@@ -29,9 +29,9 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { roundTrip, inWordsOf, figmaSide, heldToLibrary } from './to-figma.mjs';
 import { leftToCode } from './eval.mjs';
-import { expand, camel } from './layers.mjs';
+import { expand } from './layers.mjs';
 import { contracts } from './official.mjs';
-import { knownOf } from './geometry.mjs';
+import { knownOf, seg } from './geometry.mjs';
 
 const req = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -133,19 +133,31 @@ const flipWord = (v) => (v === true ? false : v === false ? true : v === 'true' 
 export function atPlace(at, places) {
   const dot = at.indexOf('.'), el = dot < 0 ? at : at.slice(0, dot), f = dot < 0 ? '' : at.slice(dot + 1);
   return places.some((p) => (p.subtree ? el === p.el || el.startsWith(`${p.el}/`)
-    : el === p.el && (f === '' || f === p.field || f.startsWith(`${p.field}.`) || p.field.startsWith(`${f}.`))));
+    : el === p.el && (f === '' || p.field === '' || f === p.field || f.startsWith(`${p.field}.`) || p.field.startsWith(`${f}.`))));
 }
 /* Caught: a row at the mutated place that the unmutated compare did not have (a new one, or one whose values moved).
-   A component already red elsewhere is no catch: rows that change anywhere else are not counted. */
+   A component already red elsewhere is no catch: rows that change anywhere else are not counted. A geometry row
+   (`geometry: true`, the Figma leg's) is held to the geometry places only, by its layer path, and a contract row to
+   the others. */
 export function caughtAt(base, now, places) {
   const had = new Set(base.map((x) => JSON.stringify(x)));
-  return now.some((x) => !had.has(JSON.stringify(x)) && atPlace(x.at, places));
+  return now.some((x) => !had.has(JSON.stringify(x)) && atPlace(x.geometry ? geometryAt(x.at) : x.at, places.filter((p) => !p.geometry === !x.geometry)));
 }
-/* A geometry row's place in contract words: its layer path, each layer by its id (layers.mjs camel), the variant dropped. */
-export const geometryAt = (at) => { const slash = at.indexOf('/'), dot = at.indexOf('.'); if (slash < 0 || (dot >= 0 && dot < slash)) return `root${dot < 0 ? '' : at.slice(dot)}`; const rest = at.slice(slash + 1), d = rest.indexOf('.'); return `${(d < 0 ? rest : rest.slice(0, d)).split('/').map(camel).join('/')}${d < 0 ? '' : rest.slice(d)}`; };
-/* A layer path (`Content > Icon`) as a contract id (`content/icon`): the variant itself is the root. */
-// (a repeat keeps its number, `Item#2` → `item2`, as geometryAt says it: the third item is not the second's place)
-export const idOfPath = (p) => (p ? p.split(' > ').map(camel).join('/') : 'root');
+/* A geometry row's place: its layer path as geometry.mjs writes it (seg), the variant dropped; the variant's own fields
+   are the root's. */
+const geometryAt = (at) => { const slash = at.indexOf('/'), dot = at.indexOf('.'); return slash < 0 || (dot >= 0 && dot < slash) ? `root${dot < 0 ? '' : at.slice(dot)}` : at.slice(slash + 1); };
+/* A spec mutation's places ({ path, field, geo, subtree }: its layer path, the contract's field and the walk's) as the
+   Figma leg's rows say them: by derive's own ids for the contract rows (derive.cjs bridge: `Item#2` is item_2, a
+   boolean's layer named for its prop), by the layer path for the geometry rows. A path derive gives no id has no
+   contract place. */
+export function figmaPlaces(stored, places) {
+  const { ids } = req('./derive.cjs').bridge(stored);
+  const geo = (p) => (p ? p.split(' > ').map(seg).join('/') : 'root');
+  return places.flatMap((x) => [
+    ...(x.path ? ids[x.path] || [] : ['root']).map((el) => (x.subtree ? { el, subtree: true } : { el, field: x.field })),
+    x.subtree ? { el: geo(x.path), subtree: true, geometry: true } : { el: geo(x.path), field: x.geo, geometry: true },
+  ]);
+}
 
 /* ---- a contract (an official one, or a reading's asFigma) ---- */
 
@@ -305,15 +317,19 @@ function atPath(spec, p, f) {
 const parentOf = (v, p) => (p.includes(' > ') ? nodesOf(v).get(p.slice(0, p.lastIndexOf(' > '))) : v);
 /* A bound number one step: its token's neighbour in value and that token's value; an unbound one, one more. A bound
    value whose token has no neighbour is left alone (undefined). */
-const boundStep = (n, k, j, cat) => {
-  const b = n.bindings && n.bindings[k], bound = Array.isArray(b) ? b[j] : j == null ? b : undefined;
+// (`bk`, the binding's own key where it is not the value's: a stroke's sides are bound as strokeWeight, one per side,
+// code.js)
+const boundStep = (n, k, j, cat, bk = k) => {
+  const b = n.bindings && n.bindings[bk];
+  const bound = Array.isArray(b) ? (j == null ? b.find((x) => x != null) : b[j]) : j == null ? b : undefined;
   if (bound == null) return { value: (j == null ? n[k] : n[k][j]) + 1 };
   const to = numberStep(bound, cat);
-  return to === undefined ? undefined : { value: cat.vars.get(to).value, binding: to };
+  return to === undefined ? undefined : { value: cat.vars.get(to).value, binding: to, from: bound };
 };
-const putStep = (n, k, j, s) => {
+const putStep = (n, k, j, s, bk = k) => {
   if (j == null) n[k] = s.value; else n[k] = n[k].map((x, i) => (i === j ? s.value : x));
-  if (s.binding) n.bindings[k] = j == null ? s.binding : n.bindings[k].map((x, i) => (i === j ? s.binding : x));
+  const b = s.binding && n.bindings[bk];
+  if (s.binding) n.bindings[bk] = !Array.isArray(b) ? s.binding : b.map((x, i) => ((j == null ? x === s.from : i === j) ? s.binding : x));
   return true;
 };
 
@@ -321,28 +337,28 @@ const putStep = (n, k, j, s) => {
 export function mutateSpec(stored, kind, { rng: r, catalogue: cat }) {
   const spec = resolve(copy(stored));
   const paths = [...new Set(spec.variants.flatMap((v) => [...nodesOf(v).keys()]))].sort();
-  // a place in contract words, for the contract rows, and in the walk's for geometry's (geometryAt maps those)
-  const place = (p, f) => [{ el: idOfPath(p), field: f }];
+  // a place by its layer path, the contract's field and the walk's (figmaPlaces says it as each kind of row does)
   const first = (test, change, label, f = label) => {
     const cands = paths.filter((p) => spec.variants.some((v) => { const n = nodesOf(v).get(p); return n && test(n, p); }));
     const start = Math.floor(r() * cands.length);
     for (let i = 0; i < cands.length; i++) {
       const p = cands[(start + i) % cands.length];
       const out = atPath(spec, p, (n) => test(n, p) && change(n));
-      if (out) return { spec: out, at: `${p || '(variant)'}.${label}`, places: [...place(p, f), ...place(p, label)] };
+      if (out) return { spec: out, at: `${p || '(variant)'}.${label}`, places: [{ path: p, field: f, geo: label }] };
     }
     return null;
   };
-  const numeric = (k, j = null) => (n) => (j == null ? typeof n[k] === 'number' : Array.isArray(n[k]) && typeof n[k][j] === 'number') && !!boundStep(n, k, j, cat);
-  const stepped = (k, j = null) => (n) => putStep(n, k, j, boundStep(n, k, j, cat));
+  const numeric = (k, j = null, bk = k) => (n) => (j == null ? typeof n[k] === 'number' : Array.isArray(n[k]) && typeof n[k][j] === 'number') && !!boundStep(n, k, j, cat, bk);
+  const stepped = (k, j = null, bk = k) => (n) => putStep(n, k, j, boundStep(n, k, j, cat, bk), bk);
   if (kind === 'padding') return first((n) => numeric('pad', 0)(n) && n.layout && n.layout !== 'NONE', stepped('pad', 0), 'pad', 'layout.padding');
   if (kind === 'gap') return first((n) => numeric('gap')(n) && n.layout && n.layout !== 'NONE', stepped('gap'), 'gap', 'layout.gap');
   if (kind === 'radius') return first(numeric('radius'), stepped('radius'), 'radius');
   if (kind === 'stroke') {
-    return first(numeric('strokeWeight'), stepped('strokeWeight'), 'strokeWeight', 'border')
-      || first((n) => Array.isArray(n.strokeSides) && n.strokeSides.some((x) => x > 0), (n) => { const j = n.strokeSides.findIndex((x) => x > 0); n.strokeSides = n.strokeSides.map((x, i) => (i === j ? x + 1 : x)); return true; }, 'strokeSides', 'border');
+    // (the walk records a stroke's width per side, strokeSides, bound as strokeWeight: the first side drawn steps)
+    const side = (n) => (Array.isArray(n.strokeSides) ? n.strokeSides.findIndex((x) => x > 0) : -1);
+    return first((n) => side(n) >= 0 && numeric('strokeSides', side(n), 'strokeWeight')(n), (n) => stepped('strokeSides', side(n), 'strokeWeight')(n), 'strokeSides', 'border');
   }
-  if (kind === 'sizing') return first((n) => typeof n.w === 'number' && /^FIXED/.test(n.sizing || ''), (n) => { n.w += 1; return true; }, 'w', 'width');
+  if (kind === 'sizing') return first((n) => numeric('w')(n) && /^FIXED/.test(n.sizing || ''), stepped('w'), 'w', 'width');
   if (kind === 'token') {
     const swap = (n) => { for (const k of Object.keys(n.bindings || {}).sort()) { const b = n.bindings[k]; if (typeof b === 'string' && tokenSwap(b, cat, r)) { n.bindings[k] = tokenSwap(b, cat, rng(hash(b))); return true; } if (Array.isArray(b)) { const j = b.findIndex((x) => typeof x === 'string' && tokenSwap(x, cat, r)); if (j >= 0) { n.bindings[k] = b.map((x, i) => (i === j ? tokenSwap(x, cat, rng(hash(x))) : x)); return true; } } } return false; };
     const has = (n) => Object.values(n.bindings || {}).some((b) => (Array.isArray(b) ? b : [b]).some((x) => typeof x === 'string' && cat.vars.has(x)));
@@ -380,17 +396,17 @@ export function mutateSpec(stored, kind, { rng: r, catalogue: cat }) {
     if (!cands.length) return null;
     const p = cands[Math.floor(r() * cands.length)];
     let names = null;
-    const out = atPath(spec, p, (n) => {
+    const out = atPath(spec, p, (n, v) => {
       const j = pairAt(n);
       if (j < 0) return false;
       const a = n.children[j], b = n.children[j + 1];
-      names ||= [a.name, b.name];
+      // (each by its path before the trade, its repeat number kept: the second Item is Item#2)
+      if (!names) { const at = new Map([...nodesOf(v)].map(([k, x]) => [x, k])); names = [at.get(a), at.get(b)]; }
       for (const k of ['x', 'y', 'index']) [a[k], b[k]] = [b[k], a[k]];
       n.children = [...n.children.slice(0, j), b, a, ...n.children.slice(j + 2)];
       return true;
     });
-    const kid = (name) => `${p ? `${p} > ` : ''}${name}`;
-    return out && { spec: out, at: `${p || '(variant)'}: ${names.join(' and ')} trade places`, places: names.flatMap((x) => [{ el: idOfPath(kid(x)), subtree: true }]) };
+    return out && { spec: out, at: `${names.join(' and ')} trade places`, places: names.map((x) => ({ path: x, subtree: true })) };
   }
   if (kind === 'child' || kind === 'visibility') {
     const cands = paths.filter((p) => p);
@@ -405,7 +421,7 @@ export function mutateSpec(stored, kind, { rng: r, catalogue: cat }) {
       const up = parentOf(v, p), n = nodesOf(v).get(p);
       if (up && n) up.children = up.children.filter((x) => x !== n);
     });
-    return { spec: out, at: kind === 'visibility' ? `${p} hidden in ${out.variants[only].name}` : p, places: [{ el: idOfPath(p), subtree: true }] };
+    return { spec: out, at: kind === 'visibility' ? `${p} hidden in ${out.variants[only].name}` : p, places: [{ path: p, subtree: true }] };
   }
   throw new Error(`no mutation kind ${kind}`);
 }
@@ -421,11 +437,11 @@ export function compareContract(held, reading, { mains = null, settings, split =
   const isLeft = leftToCode(contract, mains, settings, { ownSheet });
   return { rows: r.rows.filter((x) => !isLeft(x.at, x)), left: r.rows.filter((x) => isLeft(x.at, x)) };
 }
-/* The Figma leg: to-figma --verify's own compare (heldToLibrary), its contract rows and its geometry rows, the geometry
-   rows' places said in contract words (geometryAt) so one place check reads both. */
+/* The Figma leg: to-figma --verify's own compare (heldToLibrary), its contract rows and its geometry rows, these marked
+   `geometry` so each is placed as its kind of row says it (caughtAt). */
 export function compareFigma(held, snap, drawn, ctx) {
   const { rt, geo } = heldToLibrary(held, drawn, snap, ctx);
-  return { rows: [...rt.rows, ...(geo || []).map((x) => ({ ...x, at: geometryAt(x.at), geometry: x.at }))], left: [] };
+  return { rows: [...rt.rows, ...(geo || []).map((x) => ({ ...x, geometry: true }))], left: [] };
 }
 /* Which of a reading's variants the compare reaches: those that apply to a combination roundTrip holds (every one of
    the held side's axes, less its invalid ones), in the reading's words (inWordsOf), as roundTrip pairs them. */
@@ -503,7 +519,7 @@ export function runMutations(where, { sample = 10, seed = 1, legs = LEGS, kinds 
         side = resolve(copy(input.stored));
         const ctx = { names, deriveOptions: deriveOptionsFor(folder), mains, known: knownFor(folder, input.stored) };
         compare = (drawn) => compareFigma(input.held, input.stored, drawn, ctx);
-        apply = (kind, rr) => { const m = mutateSpec(side, kind, { rng: rr, catalogue: cat }); return m && { side: m.spec, at: m.at, places: m.places }; };
+        apply = (kind, rr) => { const m = mutateSpec(side, kind, { rng: rr, catalogue: cat }); return m && { side: m.spec, at: m.at, places: figmaPlaces(input.stored, m.places) }; };
       } else {
         const opts = { mains, settings: settingsOf(folder), split: leg !== 'browser', contract, ...(leg === 'second' && { ownSheet: false, pointerFrom: contract }) };
         const held = leg === 'second' ? { ...input.first, invalid: contract.invalid } : contract;
@@ -573,6 +589,8 @@ export function lines(label, s, { seed, sample } = {}) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
+  // a run that crashed is an error (2), never the floor's failure (1): eval tells the two apart by it
+  process.on('uncaughtException', (e) => { console.error(`mutate.mjs: ${e && e.stack || e}`); process.exit(2); });
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   const check = argv.includes('--check');
