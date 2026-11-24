@@ -448,6 +448,9 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   { const { store, ...old } = b.tag; taken({ drawnFrom: old });
     const said = measure(where, [], { figma: b }).legs.figma.tag.stale;
     ok('one drawn before the store was recorded says so, not that the store changed', said === 'taken before the stored snapshot was recorded', said);
+    taken({ drawnFrom: { ...old, walk: 'other' } });
+    const both = measure(where, [], { figma: b }).legs.figma.tag.stale;
+    ok('one drawn before the store was recorded, whose walk also moved, says both', /^taken before the stored snapshot was recorded; the walk changed since/.test(both), both);
     taken({ drawnFrom: b.tag }); }
   { const { settings, ...old } = b.tag; taken({ drawnFrom: old });
     ok('one drawn before the drawing settings were recorded says so, with what else changed', measure(where, [], { figma: b }).legs.figma.tag.stale === 'taken before the drawing settings were recorded'
