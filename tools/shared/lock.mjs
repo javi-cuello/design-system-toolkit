@@ -29,7 +29,9 @@ export const lockDir = () => process.env.TOOLKIT_LOCK_DIR || common();
 /* A few slots, not one: a long run takes any free slot, so parallel sessions and agents measure side by side without
    overloading the machine, and none has reason to move the lock aside (agents given their own TOOLKIT_LOCK_DIR ran
    five measures at once and doubled the load, 2026-11-21). One slot per four cores (a measure runs about four jobs);
-   TOOLKIT_LOCK_SLOTS sets it (the tests: 1). Slot 0 keeps the old file names. */
+   TOOLKIT_LOCK_SLOTS sets it (the tests: 1). A full bin/check now runs two steps at once, up to two of them Chromes
+   (bin/check's LIMITS): measured 2026-11-24, it used 1.1 cores on average (551 CPU-s in 500 s) against 0.5 serial
+   (498 in 936 s), still under a slot's four, so the slot count stays. Slot 0 keeps the old file names. */
 /* bin/check and bin/land take slot 0 alone (`first`): land rebases and pushes in one shared worktree, and a queued
    check takes the answer of the same tree's run before it, so both need their kind one at a time; measures take any slot. */
 export const slots = () => Math.max(1, +process.env.TOOLKIT_LOCK_SLOTS || Math.floor(os.cpus().length / 4));
