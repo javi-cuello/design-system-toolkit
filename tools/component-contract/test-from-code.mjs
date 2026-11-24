@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1100,4 +1100,11 @@ ok('nameBorrowed: a name only the design gives, or a markup name the design drop
 ok('codeFigma: the design component a generated module names, read from its text; null where it names none',
   codeFigma('export function renderX() {}\nexport const figma = {"component":"Button/❖ Button"};\n').component === 'Button/❖ Button'
   && codeFigma('export function renderX() {}') === null && codeFigma(undefined) === null);
+// an enum's design name from the code's mapping (to-markup's parity axes, keyed by the design's prop name): the one axis
+// that moves that arg alone; none where two do, or where an axis moves another arg too
+{ const props = { appearance: { type: 'enum', values: ['default', 'primary'], code: 'appearance' }, state: { type: 'enum', values: ['default', 'hover'], code: 'state' }, size: { type: 'enum', values: ['s', 'm'], code: 'size' }, kept: { type: 'enum', values: ['a', 'b'], code: 'kept', figma: 'Own' } };
+  const axes = { appearance: { default: {}, primary: { appearance: 'primary' } }, State: { default: {}, hover: { pseudo: 'hover' }, pressed: { state: 'hover' } }, Size: { s: {}, m: { size: 'm', other: 1 } }, Kept: { a: {}, b: { kept: 'b' } } };
+  axisNames(props, axes);
+  ok('axisNames: an enum takes the name of the one mapping axis that moves its arg alone; one moved beside another arg, or already named, keeps its own',
+    props.appearance.figma === 'appearance' && props.state.figma === 'State' && props.size.figma === undefined && props.kept.figma === 'Own'); }
 console.log(`${n}/${n} passed`);

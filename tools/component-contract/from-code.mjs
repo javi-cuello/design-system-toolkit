@@ -883,6 +883,21 @@ export function dropOwnGlyph(id, e, variants, mains) {
   }
 }
 
+/* An enum's design name from the code's mapping (tools/parity/REFERENCE.md, The mapping format: `axes`, keyed by the
+   design's prop name; to-markup's toParity writes it): the one axis whose options move that prop's arg alone, a
+   pointer state's pseudo-class beside it; a prop already named, or one two axes move, keeps its own. Tested by
+   test-from-code.mjs. */
+export function axisNames(props, axes) {
+  const opts = (t) => (t && typeof t === 'object' ? Object.values(t) : []);
+  for (const p of Object.values(props)) {
+    if (p.type !== 'enum' || p.figma || !p.code) continue;
+    const hits = Object.entries(axes || {}).filter(([, t]) => opts(t).length && opts(t).every((o) => o && typeof o === 'object' && Object.keys(o).every((k) => k === p.code || k === 'pseudo'))
+      && opts(t).some((o) => p.code in o) && opts(t).every((o) => !(p.code in o) || p.values.map(String).includes(String(o[p.code]))));
+    if (hits.length === 1) p.figma = hits[0][0];
+  }
+  return props;
+}
+
 /* What a generated module says it draws (to-markup's `export const figma = {…}`): the design component's name, read from
    the code's text, or null where it says nothing. Tested by test-from-code.mjs. */
 export function codeFigma(js) {
@@ -1422,7 +1437,7 @@ async function governedSource(project, name) {
     value: (x) => (typeof x === 'string' ? valueOf(tokens, x, tier) ?? x : x),
     textStyle: (n) => (tokens.textStyles || []).find((x) => x.name === n),
     components: project.paths.components, story: t.mapping.storyId || t.name, container,
-    m: { story: t.mapping.storyId || t.name }, root: t.mapping.root || null, pseudoOf: G.pseudoOf,
+    m: { story: t.mapping.storyId || t.name, axes: t.mapping.axes }, root: t.mapping.root || null, pseudoOf: G.pseudoOf,
     // another component of the library inside this one, by the project's instance pattern (parity.instance)
     instanceOf: (slug) => (project.parity.instance ? project.parity.instance.replace(/\{(?:slug|Name)\}/, slug) : null),
     instancePattern: project.parity.instance ? (await import('../parity/pair.mjs')).rootPattern(project.parity.instance) : null,
@@ -1642,7 +1657,7 @@ async function selfSource(project, name, { second = false } = {}) {
     ...(second && { drawnFrom: c }),
     value: (x) => (typeof x === 'string' ? valueOf(tokens, x, tier) ?? x : x),
     textStyle: (n) => (tokens.textStyles || []).find((x) => x.name === n),
-    components: project.paths.components, story: t.mapping.storyId, container, m: { story: t.mapping.storyId }, root: t.mapping.root, pseudoOf: G.pseudoOf,
+    components: project.paths.components, story: t.mapping.storyId, container, m: { story: t.mapping.storyId, axes: t.mapping.axes }, root: t.mapping.root, pseudoOf: G.pseudoOf,
     // what each served module says it draws (to-markup's export): the code's own word for the component
     figmaOf: (folder) => codeFigma(files[`components/${folder}/${folder}.js`]),
     instanceOf: (slug) => `ds-${slug}`,
@@ -3201,6 +3216,8 @@ async function main() {
         for (const e of Object.values(v.add || {})) adopt(e, 'opacity');
       }
       });
+      // the name the code's mapping gives each enum (its axis), before the design's is looked for
+      axisNames(fromCode.props, L.m && L.m.axes);
       A.take('design-enum-order', fromCode, () => {
       for (const p of Object.values(fromCode.props)) {
         if (p.type !== 'enum') continue;
