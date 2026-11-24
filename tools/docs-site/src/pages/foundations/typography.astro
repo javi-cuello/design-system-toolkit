@@ -22,7 +22,8 @@ import { mixinName } from '../../lib/project.js';
 const styles = snapshot.textStyles || [];
 const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
 // Line height arrives as a ratio (1.25) or, when the style fixes it, in px.
-const lh = (s) => (s.lineHeight > 4 ? `${s.lineHeight}px` : s.lineHeight);
+// (null: an Auto line height the snapshot could not measure, the font's own: `normal`)
+const lh = (s) => (s.lineHeight == null ? 'normal' : s.lineHeight > 4 ? `${s.lineHeight}px` : s.lineHeight);
 // The variable a field is bound to, as the snapshot records it, so a
 // responsive size reads as a token rather than a number.
 const FIELD = { size: 'fontSize', family: 'fontFamily', weight: 'fontWeight' };
@@ -74,7 +75,7 @@ const SPECIMEN = 'The quick brown fox jumps over the lazy dog. Pack my box with 
  */
 const LOADED = ['Inter', 'Inter Tight', 'JetBrains Mono'];
 const substituted = [...new Set(styles.map((s) => s.family).filter((f) => f && !LOADED.includes(f)))];
-const css = (s) => `font-family: '${s.family}', sans-serif; font-weight: ${weight(s.weight)}; font-size: ${s.size}px; line-height: ${s.lineHeight > 4 ? `${s.lineHeight}px` : s.lineHeight}; letter-spacing: ${s.letterSpacing || 0}em`;
+const css = (s) => `font-family: '${s.family}', sans-serif; font-weight: ${weight(s.weight)}; font-size: ${s.size}px; line-height: ${lh(s)}; letter-spacing: ${s.letterSpacing || 0}em`;
 // A bound variable by its last two segments, its full path on hover, as the
 // collection pages show an alias: the family the column already names
 // ("Font/") is noise, and the room goes to the style's code name.

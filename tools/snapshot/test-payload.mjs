@@ -29,6 +29,13 @@ test('a stored, compacted spec passes', () => {
   assert.deepStrictEqual(payload.component(stored), []);
 });
 
+test('an Auto line height recorded unmeasured passes; any other missing one does not', () => {
+  const p = library(); Object.assign(p.tokens.textStyles[0], { lineHeight: null, lineHeightSource: 'unmeasured' });
+  assert.deepStrictEqual(payload.library(p), []);
+  const q = library(); q.tokens.textStyles[0].lineHeight = null;
+  assert.ok(payload.library(q).some((e) => /needs name, family, size and lineHeight/.test(e)));
+});
+
 test('each broken field is named', () => {
   const cases = [
     [(p) => { delete p.tokens._meta.fileId; }, 'tokens._meta: must carry fileKey or fileId'],

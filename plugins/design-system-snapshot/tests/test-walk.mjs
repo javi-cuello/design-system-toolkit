@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const src = readFileSync(fileURLToPath(new URL("../code.js", import.meta.url)), "utf8");
 const figma = { variables: { getVariableByIdAsync: async () => null }, getStyleByIdAsync: async () => null };
 const ctx = vm.createContext({ figma, console, setTimeout, clearTimeout });
-const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, unescaped, VERSION } = vm.runInContext(src + "\n;({ walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, unescaped, VERSION })", ctx);
+const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION } = vm.runInContext(src + "\n;({ walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION })", ctx);
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log("ok", name); };
@@ -218,12 +218,16 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
   ok("…and none where nothing is drawn in it", drawnIn({ id: "S:2" }) === null);
   figma.root = { children: [page("Button", [text("S:3", "one" + String.fromCharCode(0x2028) + "two", "WIDTH_AND_HEIGHT", 40)])] };
   ok("…nor where its only text breaks its line with a line separator", drawnIn({ id: "S:3" }) === null);
-  // 0.87.1: where a style's line can be neither measured nor found drawn, its family's Auto line height is read from text
-  // already drawn in that family, the largest; no font's metrics are named in code (review 2026-11-24)
-  const inFamily = (family, size, h, x = {}) => ({ characters: "Ab", textAutoResize: "WIDTH_AND_HEIGHT", fontName: { family, style: "Regular" }, fontSize: size, lineHeight: { unit: "AUTO" }, height: h, ...x });
-  figma.root = { children: [page("Snapshot (temporary)", [inFamily("Sans", 100, 999)]), page("Card", [inFamily("Sans", 12, 15), inFamily("Sans", 48, 58), inFamily("Sans", 64, 99, { lineHeight: { unit: "PIXELS", value: 99 } }), inFamily("Serif", 80, 90)])] };
-  ok("a family's Auto line height is read from the largest one-line text drawn in it with an Auto line height", familyMetric("Sans") === 58 / 48);
-  ok("…and none where nothing is drawn in that family", familyMetric("Mono") === null);
+  // 0.87.1/0.87.2: where a style's line can be neither measured nor found drawn, its family's Auto line height is read from
+  // text already drawn in that family, no font's metrics named in code; never a rounded guess (review 2026-11-24): each
+  // drawn text's whole-pixel height bounds the metric, and a size gets a height only where those bounds fix one
+  const inFamily = (family, size, h, x = {}) => ({ characters: "Ab", textAutoResize: "WIDTH_AND_HEIGHT", fontName: { family, style: "Regular" }, fontSize: size, lineHeight: { unit: "AUTO" }, leadingTrim: "NONE", height: h, ...x });
+  figma.root = { children: [page("Snapshot (temporary)", [inFamily("Sans", 100, 999)]), page("Card", [inFamily("Sans", 48, 58), inFamily("Sans", 64, 77), inFamily("Sans", 64, 99, { lineHeight: { unit: "PIXELS", value: 99 } }), inFamily("Sans", 80, 58, { leadingTrim: "CAP_HEIGHT" }), inFamily("Serif", 80, 90)])] };
+  const range = familyMetric("Sans");
+  ok("a family's metric is bounded by every one-line Auto text drawn in it, a fixed line and a trimmed one left out", range && range[0] === 57.5 / 48 && range[1] === 77.5 / 64, JSON.stringify(range));
+  ok("…a size those bounds fix gets its whole-pixel height, the one Figma draws", autoLineAt(48, range) === 58 && autoLineAt(16, range) === 19);
+  ok("…and a size they do not fix gets none (unmeasured), never a rounded guess", autoLineAt(100, range) === null);
+  ok("…and none where nothing is drawn in that family", familyMetric("Mono") === null && autoLineAt(16, null) === null);
   ok("a description the cloud hands back escaped reads as typed", unescaped("west, &lt;- &amp; &quot;back&quot; &#39;x&#39; -&gt;") === "west, <- & \"back\" 'x' ->" && unescaped("a < b") === "a < b");
 }
 // 0.67.0: a duplicated file keeps its original's id, so the key tells them
@@ -329,7 +333,7 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   // the icon page's glyph colour reaches the unused check through the icon facts (owns.iconColours), as the stored specs leave the icon page out
   ok("…the variables the components bind, by name, off the icon and scratch pages as the stored specs are, and those components counted", JSON.stringify(facts.used) === JSON.stringify(["Space/4"]) && facts.components === 1, JSON.stringify(facts.used));
   ok("…and skipInvisibleInstanceChildren put back as it was, so the caller's next read sees every layer", ff.skipInvisibleInstanceChildren === false);
-  ok("…an Auto line height taken from the metric, with nothing drawn in the file", facts.tokens.textStyles.length === 1 && facts.tokens.textStyles[0].lineHeightSource === "metric" && wrote.length === 0, wrote.join(", "));
+  ok("…an Auto line height nothing measures or bounds is recorded unmeasured, with no number guessed", facts.tokens.textStyles.length === 1 && facts.tokens.textStyles[0].lineHeightSource === "unmeasured" && facts.tokens.textStyles[0].lineHeight === null && wrote.length === 0, wrote.join(", "));
   ok("…and the tokens payload a snapshot sends", facts.tokens && facts.tokens._meta.plugin === VERSION && typeof facts.tokens.collections === "object");
 }
 

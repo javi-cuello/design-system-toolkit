@@ -24,7 +24,11 @@ ok('one of four pixels that show differs, whatever the background around them', 
 ok('the colour distance is perceptual: ΔE of black and white is 100', Math.abs(deltaE([0, 0, 0], [255, 255, 255]) - 100) < 0.01);
 const taller = img(4, 6, () => [255, 255, 255, 255]);
 ok('a drawing taller than the library differs where only it has pixels', Math.abs(compare(white, taller).share - 0.5) < 1e-9, compare(white, taller).share);
-ok('a faint edge only one image has (a shadow\'s tail an export trimmed) does not differ', compare(white, { w: 4, h: 6, px: Buffer.concat([white.px, img(4, 3, () => [0, 0, 0, 12]).px]) }).share === 0);
+ok('a faint edge only one image has (a shadow\'s tail an export trimmed, no eye tells it on white) does not differ', compare(white, { w: 4, h: 6, px: Buffer.concat([white.px, img(4, 3, () => [0, 0, 0, 5]).px]) }).share === 0);
+// (review 2026-11-24, second) low-alpha paint the drawing omits, a 12% black wash, is seen: background only where both
+// sides are faint and no eye tells them apart on white
+const wash = img(4, 3, () => [0, 0, 0, 31]), none = img(4, 3, () => [0, 0, 0, 0]);
+ok('a 12% black wash the drawing omits differs', compare(wash, none).share === 1, compare(wash, none).share);
 ok('two pixels nothing shows of are the same, whatever their colour', compare(img(1, 1, () => [255, 255, 255, 0]), img(1, 1, () => [0, 0, 0, 0])).share === 0);
 ok('within the library\'s area (a set that clips cut it), only that area is compared', compare(white, taller, { within: true }).share === 0);
 

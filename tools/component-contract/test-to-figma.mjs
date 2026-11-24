@@ -761,8 +761,14 @@ delete globalThis.figma;
   // snapshot, and library-wide, never by which fields one component's trees happen to show
   ok('a snapshot taken by the walk\'s own release keeps every field of the live read, though no stored layer shows one',
     j(walkedAs(dot(true), knownOf({ _meta: { plugin: '9.9.9' } }, { d: compact(dot(false)) }, '9.9.9'))).includes('"paths"'));
-  ok('an older release\'s snapshot that records sizes on another component keeps a text size added to this one',
-    j(walkedAs(one('Top', [text(sizes())]), kn(one('Top', [{ name: 'Box', type: 'FRAME' }]), one('Other', [text(sizes())])))).includes('"fontSize":14'));
+  // (review 2026-11-24, second) gated per component, by the release that recorded its own file: in a two-file library
+  // snapshotted by two releases, a field only the newer recorded is unknown for the older file's components
+  const twoFiles = { _meta: { plugin: '9.9.9', sources: { A: { plugin: '0.81.0' }, B: { plugin: '9.9.9' } } } };
+  const aSnap = compact(JSON.parse(JSON.stringify(one('Top', [text({})])))), bSnap = compact(JSON.parse(JSON.stringify(one('Other', [text(sizes())]))));
+  ok('a component of the file an older release recorded drops a field only the other file\'s release records',
+    !j(walkedAs(one('Top', [text(sizes())]), knownOf(twoFiles, { top: aSnap, other: bSnap }, '9.9.9', { file: 'A', folder: 'top' }))).includes('"fontSize"'));
+  ok('…and one of the file the walk\'s own release recorded keeps every field',
+    j(walkedAs(one('Other', [text(sizes())]), knownOf(twoFiles, { top: aSnap, other: bSnap }, '9.9.9', { file: 'B', folder: 'other' }))).includes('"fontSize":14'));
 }
 { // (review 2026-11-24) the readback was derived under the scratch file's settings (house defaults), the library's contract
   // under its own: every derive in to-figma takes the component's own library options, keyed by its folder

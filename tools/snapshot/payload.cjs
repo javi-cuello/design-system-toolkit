@@ -60,7 +60,7 @@ function tokens(t, where = 'tokens') {
     }
   }
   if (need(Array.isArray(t.textStyles), `${where}.textStyles`, 'must be an array')) {
-    t.textStyles.forEach((s, i) => need(isObj(s) && isStr(s.name) && isStr(s.family) && isNum(s.size) && isNum(s.lineHeight),
+    t.textStyles.forEach((s, i) => need(isObj(s) && isStr(s.name) && isStr(s.family) && isNum(s.size) && (isNum(s.lineHeight) || (s.lineHeight === null && s.lineHeightSource === 'unmeasured')),
       `${where}.textStyles[${i}]`, 'needs name, family, size and lineHeight'));
   }
   if (need(Array.isArray(t.paintStyles), `${where}.paintStyles`, 'must be an array')) {

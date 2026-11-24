@@ -68,12 +68,13 @@ export function deltaE(p, q) { const a = lab(p), b = lab(q); return Math.hypot(a
 /* ΔE*ab ≈ 2.3 is a just noticeable difference (Sharma, Digital Color Imaging Handbook, 2003): a pixel apart by more is
    seen apart. A per-channel tolerance of 40/255 passed a one-step grey token change on text (35 a channel). */
 export const JND = 2.3;
-/* A pixel shows where its alpha passes this: below, on both sides, it is background (a shadow's faint tail one export
-   keeps and the other trims), and neither counted nor compared. */
-const SHOWS = 40;
+/* A pixel is background where both sides are at most this alpha AND no eye tells them apart on white (a shadow's faint
+   tail one export keeps and the other trims): neither counted nor compared. Faint alone is not enough: a 12% black wash
+   the drawing omits is seen. */
+const FAINT = 40;
 
 /* Two images compared over the larger of their sizes (a pixel only one has differs), over the pixels that show on
-   either side, the transparent background left out (a text's pixels are few: a share of the whole image hid a change of
+   either side, the background left out (faint on both sides and alike on white) (a text's pixels are few: a share of the whole image hid a change of
    its colour): the share that differs by more than `threshold` ΔE as it shows over white or over black (its alpha
    applied, so a white pixel differs from none), and an image of where (red over the faded library image). */
 export function compare(a, b, { within = false, threshold = JND } = {}) {
@@ -85,9 +86,10 @@ export function compare(a, b, { within = false, threshold = JND } = {}) {
   const over = (p, bg) => [0, 1, 2].map((k) => (p[k] * p[3] + bg * (255 - p[3])) / 255);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const p = at(a, x, y), q = at(b, x, y), o = (y * w + x) * 4;
-    const shows = p[3] > SHOWS || q[3] > SHOWS;
+    const onWhite = deltaE(over(p, 255), over(q, 255));
+    const shows = !(p[3] <= FAINT && q[3] <= FAINT && onWhite < threshold);
     if (shows) shown++;
-    const differs = shows && Math.max(deltaE(over(p, 255), over(q, 255)), deltaE(over(p, 0), over(q, 0))) > threshold;
+    const differs = shows && Math.max(onWhite, deltaE(over(p, 0), over(q, 0))) > threshold;
     if (differs) { off++; px[o] = 230; px[o + 1] = 30; px[o + 2] = 60; px[o + 3] = 255; }
     else { const g = 255 - Math.round((255 - (p[0] + p[1] + p[2]) / 3) * (p[3] / 255) * 0.3); px[o] = px[o + 1] = px[o + 2] = g; px[o + 3] = 255; }
   }

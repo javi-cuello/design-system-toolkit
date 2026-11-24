@@ -1304,7 +1304,7 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
 function snapshotFacts() {
 const __html__ = undefined;
 const FACTS = true;
-// Design system snapshot — v0.87.1 · plugin-standard v1.1.0
+// Design system snapshot — v0.87.2 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -1781,7 +1781,7 @@ async function paintNames(paints, all = false) {
 // so the measure is raced against a timeout and falls back to the metric; the
 // source is recorded either way. The metric is the file's own (familyMetric),
 // never a table of fonts named here: one held Inter alone, and every other
-// family fell to 1.2.
+// family fell to 1.2. Where the file fixes none, it is recorded unmeasured.
 // (`font`: another library's style whose own font reads mixed gives the one its text uses)
 /** @param {TextStyle} s @param {FontName} font @returns {Promise<number | null>} */
 const measureStyle = (s, font) => new Promise((resolve) => {
@@ -1807,23 +1807,32 @@ const drawnIn = (s) => {
   return null;
 };
 
-/* A family's Auto line height as a share of its size, where a style's line can be neither measured nor found drawn: from
-   the largest one-line text with an Auto line height already drawn in that family (the larger, the less its whole-pixel
-   rounding weighs), never the run's own. Null where none is, and 1.2 stands. */
-/** @param {string | undefined} family @returns {number | null} */
+/* Where a family's Auto line height (a share of its size) lies, from text already drawn in that family, where a style's
+   line can be neither measured nor found drawn: Figma draws ascender + descender rounded to whole pixels, so a one-line
+   text of size s and height h puts it in [(h - 0.5) / s, (h + 0.5) / s), and every such text narrows that. Only text
+   with an Auto line height and no leading trim (a trimmed one is cut to its cap height), never the run's own. Null
+   where none is. */
+/** @param {string | undefined} family @returns {[number, number] | null} */
 const familyMetric = (family) => {
-  /** @type {TextNode | null} */
-  let best = null;
+  let lo = -Infinity, hi = Infinity;
   for (const p of figma.root.children) {
     if (p.name === SCRATCH) continue;
     for (const t of /** @type {TextNode[]} */ (p.findAllWithCriteria({ types: ['TEXT'] }))) {
-      const f = t.fontName, lh = t.lineHeight;
-      if (typeof f !== 'object' || f.family !== family || typeof lh !== 'object' || lh.unit !== 'AUTO' || typeof t.fontSize !== 'number' || !t.fontSize) continue;
-      if (t.textAutoResize !== 'WIDTH_AND_HEIGHT' || !t.characters || /\n/.test(t.characters) || t.characters.includes(String.fromCharCode(0x2028))) continue;
-      if (!best || t.fontSize > /** @type {number} */ (best.fontSize)) best = t;
+      const f = t.fontName, lh = t.lineHeight, size = t.fontSize;
+      if (typeof f !== 'object' || f.family !== family || typeof lh !== 'object' || lh.unit !== 'AUTO' || typeof size !== 'number' || !size) continue;
+      if (t.leadingTrim !== 'NONE' || t.textAutoResize !== 'WIDTH_AND_HEIGHT' || !t.characters || /\n/.test(t.characters) || t.characters.includes(String.fromCharCode(0x2028))) continue;
+      lo = Math.max(lo, (t.height - 0.5) / size); hi = Math.min(hi, (t.height + 0.5) / size);
     }
   }
-  return best ? best.height / /** @type {number} */ (best.fontSize) : null;
+  return Number.isFinite(lo) && lo < hi ? [lo, hi] : null;
+};
+/* The Auto line height Figma draws at `size`, in whole pixels, where the family's range fixes it to one; null where it
+   does not, recorded unmeasured: never a rounded guess. */
+/** @param {number} size @param {[number, number] | null} range @returns {number | null} */
+const autoLineAt = (size, range) => {
+  if (!range) return null;
+  const a = Math.round(size * range[0]), b = Math.round(size * range[1] - 1e-9);
+  return a === b ? a : null;
 };
 
 /* Every variable the components on `pages` bind, by id: on the component, its layers, and their fills, strokes and effects. */
@@ -1959,7 +1968,7 @@ async function collectTokens() {
   const textOf = new Map();
   const remote = /** @type {TextStyle[]} */ ((await Promise.all([...at.keys()].map(async (i) => { const s = await figma.getStyleByIdAsync(i); if (s) textOf.set(s, at.get(i)); return s; }))).filter((s) => s && s.remote && !names.has(s.name) && names.add(s.name)));
   // (each family's metric read once a run, where a style needs it)
-  /** @type {Map<string | undefined, number | null>} */
+  /** @type {Map<string | undefined, [number, number] | null>} */
   const metrics = new Map();
   for (const s of [...local, ...remote]) {
     // (a remote style whose family is bound to that library's variable says its font is mixed: a text using it says which)
@@ -1972,7 +1981,12 @@ async function collectTokens() {
       // the facts mode writes nothing: measuring draws a text on a scratch page, and no audit check reads a line height
       const h = typeof FACTS !== 'undefined' && FACTS ? null : await measureStyle(s, font);
       if (h !== null) { lh = +(h / s.fontSize).toFixed(4); source = 'measured'; }
-      else { if (!metrics.has(font.family)) metrics.set(font.family, familyMetric(font.family)); lh = +(Math.round(s.fontSize * (metrics.get(font.family) || 1.2)) / s.fontSize).toFixed(4); source = 'metric'; }
+      else {
+        if (!metrics.has(font.family)) metrics.set(font.family, familyMetric(font.family));
+        const px = autoLineAt(s.fontSize, metrics.get(font.family) || null);
+        // (none the file's own text fixes: unmeasured, and the token build omits it and says so, never a guess)
+        if (px !== null) { lh = +(px / s.fontSize).toFixed(4); source = 'metric'; } else { lh = null; source = 'unmeasured'; }
+      }
     } else { lh = perFontSize(s.lineHeight, s.fontSize); source = 'style'; }
     textStyles.push({
       // its key, as each effect's: what another file imports it by (tools/component-contract/to-figma.mjs)
@@ -2082,7 +2096,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.87.1';
+const VERSION = '0.87.2';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

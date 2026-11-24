@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.87.2] - 2026-11-24
+### Fixed
+- **An unmeasured Auto line height is never a rounded guess.** 0.87.1 took the largest drawn text's height over its size, a ratio rounded to whole pixels, so a fallback run could disagree with a measured one; it also read text trimmed to its cap height. Now each one-line Auto text of the family with no leading trim bounds the metric, and a style gets the whole-pixel height those bounds fix. Where they fix none, or nothing is drawn in the family, the style is recorded `unmeasured` with no line height (it was 1.2 for every family but Inter, which a table gave exactly), and the token build omits it and says so.
+
 ## [0.87.1] - 2026-11-24
 ### Fixed
 - **An Auto line height that cannot be measured takes its family's metric from the file**: the largest one-line text already drawn in that family with an Auto line height. A table held one family's metric and gave every other 1.2.

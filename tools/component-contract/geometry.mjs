@@ -40,7 +40,15 @@ const same = (a, b, tol) => {
 /* The fields to compare, as the store's grade picks them (knownFor): every one where the library's snapshot was taken by
    the walk's own release, since the walk leaves a default out and a field no library layer sets is recorded nowhere;
    else only those it records anywhere. tokens: the snapshot's tokens file (its _meta), specs: { folder: spec }. */
-export const knownOf = (tokens, specs, walkVersion) => knownFor({ tokens, specs }, { tokens: { _meta: { plugin: walkVersion } } });
+// `file`, `folder`: one component's gate, as the release that recorded its own file decides it (a two-file library
+// snapshotted by two releases: a field only the newer records is unknown for the older file's components), over its own
+// spec, as the absence rule read it per component
+export const knownOf = (tokens, specs, walkVersion, { file = null, folder = null } = {}) => {
+  const own = file && tokens && tokens._meta && tokens._meta.sources && tokens._meta.sources[file];
+  const t = own ? { _meta: { plugin: own.plugin || null } } : tokens;
+  const s = folder ? { [folder]: specs[folder] } : specs;
+  return knownFor({ tokens: t, specs: s }, { tokens: { _meta: { plugin: walkVersion } } });
+};
 
 /* library, drawn: specs as figma.json holds them (compact or full). known: the fields the library's snapshot recorded
    anywhere (knownOf), so one an older plugin never recorded is not a row; null, every field. */
