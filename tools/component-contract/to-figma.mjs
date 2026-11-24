@@ -7,13 +7,15 @@
  *   node tools/component-contract/to-figma.mjs <contract> <keys.json>  > plugin.js
  *   node tools/component-contract/to-figma.mjs <contract> --run --project <label> --into <scratch fileKey>
  *   node tools/component-contract/to-figma.mjs <contract> --verify --project <label> --into <scratch fileKey>
+ *   node tools/component-contract/to-figma.mjs <contract>… --lookup <keys file> --project <label>
  *
  * prints plugin code for the Desktop Bridge, or runs it through the project's
  * docs service (figma-audit services.mjs): the set drawn on a page of the
  * component's own name in the scratch file, one drawing at a time. Keys come
  * from the snapshot (text styles, the components it places); what it lacks
- * is looked up by name in the library file (LOOKUP); `keys.json` names them
- * when the code is only printed. `--verify` reads the drawing back and holds
+ * is looked up by name in the library file (LOOKUP), once for a whole run with
+ * `--lookup` (a `--run` given `--looked <keys file>` takes its own from it);
+ * `keys.json` names them when the code is only printed. `--verify` reads the drawing back and holds
  * it to the contract.
  *
  *   plan(contract) → { name, axes, booleans, text, variants }
@@ -1479,10 +1481,6 @@ export function needs(p, isVar = varNamer()) {
   return { styles: [...new Set(els.map((e) => e.typography).filter(Boolean))], icons: [...new Set(els.map((e) => e.asset).filter(Boolean))], vars: [...vars], components: [...new Set(els.filter((e) => e.kind === 'instance' && e.component).map((e) => e.component))], swaps: [...new Set(els.flatMap((e) => Object.values(e.with || {})).filter((v) => typeof v === 'string'))], effects: [...new Set(els.map((e) => e.shadow).filter((x) => x && !/\(/.test(x)))], fillStyles: [...new Set(els.map((e) => e.fillStyle).filter(Boolean))] };
 }
 
-/* In the library file: the keys of the text styles, icons and icon container
-   named, found where the library uses them (a text node in that style, an
-   instance of that icon), since a style or icon another library owns is not
-   among this file's own. Passed to the service's /exec. */
 /** Each mode axis's collections, as the drawing sets a layer's mode on them: { axis: [{ collection, key, name, names }] },
  *  `key` (and `name`) one variable of the collection, imported to reach it (one hidden from publishing cannot be, but
  *  in the library's own file, `ownFile`, it is taken from the file), `names` its modes by the contract's spelling. */
@@ -1494,7 +1492,13 @@ export function modeSets(tokenFile, { ownFile = false } = {}) {
     ]));
 }
 
-const LOOKUP = async (want) => {
+/* In the library file: the keys of the text styles, icons and icon container
+   named, found where the library uses them (a text node in that style, an
+   instance of that icon), since a style or icon another library owns is not
+   among this file's own. Passed to the service's /exec. Each name takes the first layer that carries it in the file's
+   order, whatever else is wanted, so one walk over a run's every want (lookupWants) finds each component's own keys
+   (keptFor). */
+export const LOOKUP = async (want) => {
   await figma.loadAllPagesAsync();
   const styles = {}, icons = {}, vars = {}, sets = {}, swaps = {}, fillStyles = {};
   let container = null;
@@ -1535,6 +1539,30 @@ const LOOKUP = async (want) => {
   }
   return { styles, icons, iconContainer: container, vars, sets, swaps, fillStyles };
 };
+
+const LISTS = ['styles', 'fillStyles', 'icons', 'vars', 'components', 'swaps'];
+/* A run's wants, every component's in one: each list's names once; the icon container is the library's, one for all. */
+export const lookupWants = (wants) => ({ ...Object.fromEntries(LISTS.map((k) => [k, [...new Set(wants.flatMap((w) => w[k] || []))]])), container: (wants.find((w) => w.container) || {}).container || null });
+/* Whether a run's lookup was made for everything this component wants. */
+export const covers = (run, want) => (run.container || null) === (want.container || null) && LISTS.every((k) => (want[k] || []).every((n) => (run[k] || []).includes(n)));
+/* What LOOKUP would have found for this component alone, from what it found for the run. */
+export const keptFor = (found, want) => {
+  const pick = (o, names) => Object.fromEntries(Object.entries(o || {}).filter(([k]) => (names || []).includes(k)));
+  return { styles: pick(found.styles, want.styles), icons: pick(found.icons, want.icons), iconContainer: found.iconContainer, vars: pick(found.vars, want.vars), sets: pick(found.sets, want.components),
+    swaps: Object.fromEntries(Object.entries(found.swaps || {}).filter(([n]) => (want.swaps || []).some((t) => n === t || n.endsWith('/' + t)))), fillStyles: pick(found.fillStyles, want.fillStyles) };
+};
+
+/* What the stored snapshot keys for a drawing's wants (its text styles from plugin 0.51.0 on, its variables from 0.52.0
+   on, each placed component's variants as an instance's `instanceOfKey` met them), and what is left to look up in the
+   library file (`missing`, LOOKUP's want): one reading for a drawing and for its run's lookup. */
+export function storeKeys(want, tokenFile, components, container = null) {
+  const styles = Object.fromEntries((tokenFile.textStyles || []).filter((x) => x.key && want.styles.includes(x.name)).map((x) => [x.name, x.key]));
+  const vars = {};
+  for (const col of Object.values(tokenFile.collections || {})) for (const [n, k] of Object.entries(col.keys || {})) if (want.vars.includes(n) && !vars[n]) vars[n] = k;
+  const variants = variantKeys(components, want.components, want.swaps);
+  return { styles, vars, variants, missing: { styles: want.styles.filter((n) => !styles[n]), fillStyles: want.fillStyles, icons: want.icons, container, vars: want.vars.filter((n) => !vars[n]), components: want.components,
+    swaps: (want.swaps || []).filter((t) => !Object.keys(variants).some((n) => n === t || n.endsWith('/' + t))) } };
+}
 
 /* Where a drawing goes: a page of the component's own name in the scratch file,
    made if missing and put in alphabetical order, at 0,0, so nothing on another page is touched. The page records
@@ -1963,14 +1991,17 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const baseFile = opt('--base');
   // the contract to hold the read-back to, and its folder: the official one, where the caller has it (eval.mjs)
   const libraryFile = opt('--library'), libraryFolder = opt('--folder');
+  // the keys every component of a run wants, looked up once in the library file and written to this file (eval.mjs
+  // --draw); a drawing given it (--looked) takes its own from there
+  const lookupOut = opt('--lookup'), lookedFile = opt('--looked');
   if (target && !check) run = true;
   const [report, keysFile] = argv;
-  if (!report || (!run && !check && !keysFile) || ((run || check) && (!label || !into))) { console.error('usage: to-figma.mjs <from-code report> <keys.json>            prints the plugin code\n       to-figma.mjs <from-code report> --run --project <label> --into <scratch fileKey>   draws it through the project\'s docs service\n       to-figma.mjs <contract> --patch <set id> [--base <contract>] --project <label> --into <fileKey>   updates that component set in place, refused where the set is no longer the base\n       to-figma.mjs <contract> --verify --project <label> --into <scratch fileKey> [--patch <set id>] [--library <contract> --folder <component folder>]   reads the drawing back and holds it to the contract, and to the library\'s own (its contract.json, or the one --library names)'); process.exit(2); }
+  if (!report || (!run && !check && !lookupOut && !keysFile) || ((run || check) && (!label || !into)) || (lookupOut && !label)) { console.error('usage: to-figma.mjs <from-code report> <keys.json>            prints the plugin code\n       to-figma.mjs <from-code report> --run --project <label> --into <scratch fileKey>   draws it through the project\'s docs service\n       to-figma.mjs <contract> --patch <set id> [--base <contract>] --project <label> --into <fileKey>   updates that component set in place, refused where the set is no longer the base\n       to-figma.mjs <contract> --verify --project <label> --into <scratch fileKey> [--patch <set id>] [--library <contract> --folder <component folder>]   reads the drawing back and holds it to the contract, and to the library\'s own (its contract.json, or the one --library names)\n       to-figma.mjs <contract>… --lookup <keys file> --project <label>   looks up in the library file, once, the keys every one of them wants; a --run given --looked <keys file> takes its own from there'); process.exit(2); }
   const r = JSON.parse(fs.readFileSync(report, 'utf8'));
   const c = r.asFigma || r;
   // with no project, the house's own axis order (audit-defaults, derived as for a library)
   const house = () => req('../snapshot/projects.cjs').flatSettings(JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../standards/audit-settings.json'), 'utf8'))['audit-defaults'], {});
-  if (!run && !check) { process.stdout.write(pluginCode(c, JSON.parse(fs.readFileSync(keysFile, 'utf8')), { axisOrder: house().axisOrder || [], sizeAxis: house().sizeAxis || null })); process.exit(0); }
+  if (!run && !check && !lookupOut) { process.stdout.write(pluginCode(c, JSON.parse(fs.readFileSync(keysFile, 'utf8')), { axisOrder: house().axisOrder || [], sizeAxis: house().sizeAxis || null })); process.exit(0); }
   // through the project's own docs service, which holds the Figma bridge
   const contractRouter = req('../snapshot/projects.cjs');
   const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -1996,10 +2027,25 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const isVar = varNamer(Object.values(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')).collections || {}).flatMap((col) => [...Object.keys(col.keys || {}), ...Object.values(col.values || {}).flatMap((m) => Object.keys(m || {}))]));
   const p = plan(c, { axisOrder }), want = needs(p, isVar);
   const pageName = drawingPage(p.name, !!libKey && into === libKey);
+  const container = (map.draw && map.draw.iconContainer) || null;
+  const lookupCode = (missing) => `const styleIdsOf = ${styleIdsOf.toString()};\nreturn (${LOOKUP.toString()})(${JSON.stringify(missing)});`;
+  if (lookupOut) {
+    if (!libKey) { console.log('no library file to look keys up in: each drawing takes what the snapshot keys'); process.exit(0); }
+    const tokenFile = JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8'));
+    const wants = lookupWants(argv.map((f) => { const x = JSON.parse(fs.readFileSync(f, 'utf8')); return storeKeys(needs(plan(x.asFigma || x, { axisOrder }), isVar), tokenFile, where.paths.components, container).missing; }));
+    const t = Date.now();
+    const found = await exec(lookupCode(wants), libKey, 180000).catch((e) => { console.error(`not looked up: the library file (${libKey}) did not answer: ${e.message.split('\n')[0]}`); process.exit(1); });
+    fs.writeFileSync(lookupOut, JSON.stringify({ wants, found }));
+    console.log(`keys looked up once for ${argv.length} component(s) in ${((Date.now() - t) / 1000).toFixed(1)}s`);
+    process.exit(0);
+  }
   if (check) {
     // the drawing read back and held to the contract it was drawn from; with the code contract held to
     // Figma's by from-code.mjs, that is all three sides
+    // each step timed: the reads in Figma, and the derive, compare and geometry in Node
+    let tr = Date.now(), readMs = 0, geoMs = 0;
     const drawn = await exec(`return (${READBACK.toString()})(${JSON.stringify(p.name)}, ${JSON.stringify(target)}, ${JSON.stringify(pageName)});`, into, 60000);
+    readMs += Date.now() - tr;
     if (drawn.missing) { console.error(drawn.missing); process.exit(1); }
     const rows = verify(p, drawn, isVar);
     const n = (v) => rows.filter((r) => r.verdict === v).length;
@@ -2016,10 +2062,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const { folder, file: libFile, refused } = target ? {} : heldTo(index, p.name, { folder: libraryFolder, library: libraryFile, libraryKey: lent, key: (c.figma || {}).key, keyAt, fileOf: (k) => path.join(where.paths.components, k, 'contract.json'), exists: fs.existsSync });
     if (refused) { console.error(refused); process.exit(2); }
     if (libFile && fs.existsSync(libFile)) {
+      tr = Date.now();
       const setId = await exec(`await figma.loadAllPagesAsync(); const pg = figma.root.children.find((x) => x.name === ${JSON.stringify(pageName)}); const s = pg && pg.children.find((x) => (x.type === 'COMPONENT_SET' || x.type === 'COMPONENT') && x.name === ${JSON.stringify(p.name)}); return s ? s.id : null;`, into, 60000);
       const walk = fs.readFileSync(path.join(TOOLKIT, 'plugins/design-system-snapshot/code.js'), 'utf8');
       const live = setId && await exec(`const SCOPE = ${JSON.stringify([setId])};\n${walk}\nreturn __headless();`, into, 120000);
       const comp = live && (live.components || []).find((x) => x.id === setId);
+      readMs += Date.now() - tr; tr = Date.now();
       // the snapshot walk names a set after its page where the two differ (Page/Set); in the library's own file the page
       // is the round trip's (drawingPage), never the design's, so only that exact prefix is taken off
       if (comp && comp.name === `${pageName}/${p.name}`) comp.name = p.name;
@@ -2049,50 +2097,51 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
         const rtOut = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`);
         const body = JSON.stringify({ component: p.name, combinations: rt.combinations, ...(rt.invalid && { invalid: rt.invalid }), ...(rt.cut && { cut: rt.cut }), rows: rt.rows, ...(geo && { geometry: geo }) }, null, 2) + '\n';
         if (!fs.existsSync(rtOut) || fs.readFileSync(rtOut, 'utf8') !== body) fs.writeFileSync(rtOut, body);
+        geoMs = Date.now() - tr;
         console.log(`${p.name} as drawn, against the library's own: ${rt.rows.length ? `${rt.rows.length} difference(s)` : 'the same'} over ${rt.combinations} combination(s), ${!geo ? 'geometry not compared (no stored figma.json)' : geo.length ? `${geo.length} geometry row(s)` : 'geometry the same'} — ${path.relative(process.cwd(), rtOut)}`);
         for (const r of rt.rows.slice(0, 12)) console.log(`  ${r.at}: library ${JSON.stringify(r.library)}, drawn ${JSON.stringify(r.drawn)} (${r.in}/${rt.combinations})`);
         for (const r of (geo || []).slice(0, 12)) console.log(`  geometry ${r.at}: library ${JSON.stringify(r.library)}, drawn ${JSON.stringify(r.drawn)}`);
       } else { back = 1; const stale = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`); if (fs.existsSync(stale)) fs.unlinkSync(stale); console.log(`${p.name}: not found drawn in ${into}, so it could not be held to the library's own: failed`); }
     }
+    console.log(`${p.name} timed: readback ${(readMs / 1000).toFixed(1)}s, geometry ${(geoMs / 1000).toFixed(1)}s`);
     // not bound is a failure too: a drawing is held to its contract, and a value it could not bind is not held
     process.exit(n('differs') + n('not drawn') + n('not bound') + back ? 1 : 0);
   }
-  // a text style's key from the snapshot (plugin 0.51.0 on); the rest looked up where the library uses them
-  const stored = JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')).textStyles || [];
-  const keys = { styles: Object.fromEntries(stored.filter((x) => x.key && want.styles.includes(x.name)).map((x) => [x.name, x.key])), icons: {}, iconContainer: null };
+  // what the snapshot keys (storeKeys); the rest looked up where the library uses them
+  const tokenFile = JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8'));
+  const inStore = storeKeys(want, tokenFile, where.paths.components, container);
+  const keys = { styles: inStore.styles, icons: {}, iconContainer: null };
   // an image fill is the library's asset, not the contract's: the library's own component of this name, by its key, so
   // the drawing paints each image layer with the picture the library's layer of the same name holds
   if (JSON.stringify(c).includes('"IMAGE:')) { const byKey = keyedNames(where.paths.components); keys.image = Object.keys(byKey).find((k) => byKey[k] === c.component) || null; }
   // a colour style's key, looked up where the library uses it (the snapshot records none); its colour from the snapshot
   keys.fillStyles = {};
-  keys.fillStyleColours = styleColours(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), want.fillStyles);
-  const missing = { styles: want.styles.filter((n) => !keys.styles[n]), fillStyles: want.fillStyles, icons: want.icons, container: (map.draw && map.draw.iconContainer) || null, vars: want.vars, components: want.components };
+  keys.fillStyleColours = styleColours(tokenFile, want.fillStyles);
+  const missing = inStore.missing;
   const tl = Date.now();
-  // a variable's key from the snapshot (plugin 0.52.0 on); else looked up in the library file below
-  keys.vars = {};
-  for (const col of Object.values(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')).collections || {})) for (const [n, k] of Object.entries(col.keys || {})) if (want.vars.includes(n) && !keys.vars[n]) keys.vars[n] = k;
-  missing.vars = want.vars.filter((n) => !keys.vars[n]);
+  keys.vars = inStore.vars;
   // each token's own value, drawn where its variable cannot be bound
   const { valueOf } = req('../snapshot/tokens.cjs');
-  const tokenFile = JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8'));
   // an effect style's key from the snapshot, which has always recorded it
   keys.effects = Object.fromEntries((tokenFile.effects || []).filter((fx) => fx.key && want.effects.includes(fx.name)).map((fx) => [fx.name, fx.key]));
   keys.values = Object.fromEntries(want.vars.map((n) => [n, valueOf(tokenFile, n, map.mode)]).filter(([, v]) => v != null));
   // the scratch file is the library's own file: what it holds is taken from it (RUNTIME's ownKeys), published or not
   keys.ownFile = !!libKey && into === libKey;
   keys.modes = modeSets(tokenFile, { ownFile: keys.ownFile });
-  // each component's variants as the snapshot met them (an instance's `instanceOfKey`): no library file needs to be open
-  keys.variants = variantKeys(where.paths.components, want.components, want.swaps);
-  missing.swaps = (want.swaps || []).filter((t) => !Object.keys(keys.variants).some((n) => n === t || n.endsWith('/' + t)));
+  keys.variants = inStore.variants;
   const notOpen = [];
+  // the run's one lookup, where it was made for everything this drawing wants (covers); else this drawing's own
+  let shared = null;
+  if (lookedFile) { try { shared = JSON.parse(fs.readFileSync(lookedFile, 'utf8')); } catch { /* none: looked up here */ } }
+  const once = !!(libKey && shared && shared.found && shared.wants && covers(shared.wants, missing));
   if (libKey) {
     // the rest where the library uses them, in the library file itself, which must be open with the Desktop Bridge
-    const found = await exec(`const styleIdsOf = ${styleIdsOf.toString()};\nreturn (${LOOKUP.toString()})(${JSON.stringify(missing)});`, libKey, 60000).catch((e) => { notOpen.push(`the library file (${libKey}) is not open with the Desktop Bridge, so only what the snapshot names was found: ${e.message.split('\n')[0]}`); return null; });
+    const found = once ? keptFor(shared.found, missing) : await exec(lookupCode(missing), libKey, 60000).catch((e) => { notOpen.push(`the library file (${libKey}) is not open with the Desktop Bridge, so only what the snapshot names was found: ${e.message.split('\n')[0]}`); return null; });
     if (found) { Object.assign(keys.styles, found.styles); Object.assign(keys.fillStyles, found.fillStyles || {}); keys.icons = found.icons; keys.iconContainer = found.iconContainer; Object.assign(keys.vars, found.vars); keys.sets = found.sets; for (const [n, k] of Object.entries(found.swaps || {})) keys.variants[n] ||= { [n]: k }; }
   }
   // a variable the library hides from publishing cannot be imported here: its name, said with why it is not bound
   const hidden = new Set(Object.values(tokenFile.collections || {}).flatMap((col) => col.hidden || []));
-  const looked = Math.round((Date.now() - tl) / 1000);
+  const looked = ((Date.now() - tl) / 1000).toFixed(1);
   if (process.env.DEBUG) console.error('keys', JSON.stringify(keys));
   if (target && baseFile) {
     // the library's component as it is now, read by the snapshot's own walk (the shape the snapshot stores) and its
@@ -2179,5 +2228,5 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     console.log(`${p.name} updated in place (${res.set}): ${ch.kept} variant(s) kept, ${ch.added} added, ${ch.removed} removed${res.orphaned ? ` (${res.orphaned} instance(s) in this file used a removed one)` : ''}, ${ch.layers} change(s) to layers; props ${res.props.map((k) => bareProp(k)).join(', ')}; ${res.missing.length ? `not bound or not changed: ${res.missing.join(', ')}` : 'every value bound'}; in ${Math.round((Date.now() - t0) / 1000)}s`);
     process.exit(0);
   }
-  console.log(`${p.name}: ${res.variants} variants into ${into}, laid out ${res.layout}, props ${res.props.join(', ')}; ${res.missing.length ? `not bound: ${res.missing.map((n) => (hidden.has(n) ? `${n} (hidden from publishing in the library: choose a published token)` : n)).join(', ')}` : 'every value bound'}; keys looked up: ${Object.keys(keys.vars || {}).length} variable(s), ${Object.keys(keys.styles).length} style(s), ${Object.keys(keys.icons).length} icon(s)${keys.iconContainer ? ', the icon container' : ''} in ${looked}s; drawn in ${Math.round((Date.now() - t0) / 1000)}s`);
+  console.log(`${p.name}: ${res.variants} variants into ${into}, laid out ${res.layout}, props ${res.props.join(', ')}; ${res.missing.length ? `not bound: ${res.missing.map((n) => (hidden.has(n) ? `${n} (hidden from publishing in the library: choose a published token)` : n)).join(', ')}` : 'every value bound'}; keys looked up: ${Object.keys(keys.vars || {}).length} variable(s), ${Object.keys(keys.styles).length} style(s), ${Object.keys(keys.icons).length} icon(s)${keys.iconContainer ? ', the icon container' : ''} in ${looked}s${once ? ' (once for the run)' : ''}; drawn in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }

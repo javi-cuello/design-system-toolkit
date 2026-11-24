@@ -19,7 +19,7 @@
  * then a row of the translation table (rules.mjs), then the count drops and is accepted.
  *
  *   node tools/component-contract/eval.mjs --project <label> [--fields] [--check | --accept]
- *   node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> [components…]
+ *   node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> [--redraw] [components…]
  *   node tools/component-contract/eval.mjs --project <label> --self [--twice] [components…]
  *   node tools/component-contract/eval.mjs --project <label> --causes
  *   node tools/component-contract/eval.mjs --project <label> --diff [--accept]
@@ -254,6 +254,16 @@ export function unknownNames(names, folders, panel = []) {
   return { said: missing.filter((c) => panel.includes(c)).map((c) => `panel: ${c} is not in the library now`), refused: missing.filter((c) => !panel.includes(c)) };
 }
 
+/* A Figma reading drawn from another stored figma.json, walk or drawing code than today's (figmaInputs) is stale: why,
+   or null. */
+const drawnMoved = (was, today) => {
+  if (!today) return null;
+  if (!was) return 'taken before its spec, walk and code were recorded';
+  if (was.store === undefined && today.store !== undefined) return 'taken before the stored snapshot was recorded';
+  const said = [['spec', 'its stored figma.json'], ['store', 'the stored snapshot'], ['walk', 'the walk'], ['code', 'the drawing\'s code']].filter(([k]) => was[k] !== today[k]).map(([, w]) => w);
+  return said.length ? `${said.join(', ')} changed since` : null;
+};
+
 export function measure(where, only = [], now = {}) {
   const home = where.projectDir;
   const readings = path.join(home, 'parity', 'from-code');
@@ -263,14 +273,6 @@ export function measure(where, only = [], now = {}) {
   const taken = readTaken(home);
   // a reading of another contract than today's, or one kept when its drawing went unanswered, is stale: measured, said apart
   const stale = (leg, folder, contract) => { const t = (taken[leg] || {})[folder]; return !t ? 'taken before readings were fingerprinted' : t.kept ? 'kept from an earlier drawing (an import went unanswered)' : t.hash !== hashOf(contract) ? 'its contract changed since' : leg === 'self' ? moved(t, now.inputs && now.inputs[folder]) : leg === 'figma' ? drawnMoved(t.drawnFrom, now.figma && now.figma[folder]) : null; };
-  // a Figma reading drawn from another stored figma.json, walk or drawing code than today's (figmaInputs) is stale too
-  const drawnMoved = (was, today) => {
-    if (!today) return null;
-    if (!was) return 'taken before its spec, walk and code were recorded';
-    if (was.store === undefined && today.store !== undefined) return 'taken before the stored snapshot was recorded';
-    const said = [['spec', 'its stored figma.json'], ['store', 'the stored snapshot'], ['walk', 'the walk'], ['code', 'the drawing\'s code']].filter(([k]) => was[k] !== today[k]).map(([, w]) => w);
-    return said.length ? `${said.join(', ')} changed since` : null;
-  };
   // a reading from code taken under another Chrome major, or before its Chrome was recorded, is stale
   const browserMoved = (was) => (!now.chrome ? null : !was ? 'taken before its Chrome was recorded' : was !== now.chrome ? `taken under Chrome ${was}, ${now.chrome} installed now` : null);
   // a self or second reading read from other inputs than today's, or under another Chrome major, is stale too
@@ -421,9 +423,16 @@ export function report(label, { legs }, fields, byCause) {
   }
 }
 
+/* to-figma.mjs with these arguments: { out, ok }. */
+const toFigma = (args) => { try { return { out: execFileSync('node', [path.join(HERE, 'to-figma.mjs'), ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }), ok: true }; } catch (e) { return { out: `${e.stdout || ''}${e.stderr || ''}`, ok: false }; } };
+
 /* contract → to-figma → the scratch file → the snapshot's walk and derive → contract, per component: to-figma's own
-   --verify reads it back and writes <component>.roundtrip.json beside the contract it was given. */
-function draw(where, label, into, only, retry = true) {
+   --verify reads it back and writes <component>.roundtrip.json beside the contract it was given. The library file's keys
+   are looked up once for the run (to-figma --lookup); each step's time is logged and noted (taken.json `times`). A
+   component whose contract and inputs (figmaInputs) are its last drawing's keeps that reading, unless it is stale, lacks
+   geometry, or places a component drawn again in this run; `redraw` draws every one. `run` is to-figma (a fake in the
+   tests). */
+export function draw(where, label, into, only, { retry = true, redraw = false, run = toFigma, looked = null } = {}) {
   const dir = path.join(where.projectDir, 'round-trip');
   fs.mkdirSync(dir, { recursive: true });
   let fails = 0;
@@ -434,45 +443,77 @@ function draw(where, label, into, only, retry = true) {
   // a component Figma never publishes (`_`, `.`) is placed from its own page in the scratch file, so it is drawn before
   // the components that place it: a modal drawn first placed its dialog as it was before this run
   const unpublished = (c) => /^[_.]/.test(c.component || '');
-  const order = contracts(where).sort((a, b) => unpublished(b.contract) - unpublished(a.contract));
+  const all = contracts(where);
+  const order = [...all].sort((a, b) => unpublished(b.contract) - unpublished(a.contract));
   // what each drawing is drawn from, taken as the run starts: a reading taken from other ones reads stale (measure)
   const from = figmaInputs(where, only);
+  const taken = readTaken(where.projectDir).figma || {};
+  const lib = Object.fromEntries(all.filter((x) => x.contract).map(({ folder, contract }) => [contract.component, { ...contract, folder }]));
+  const reading = (folder) => path.join(dir, `${folder}.roundtrip.json`);
+  const drawnNow = new Set(), todo = [];
   for (const { folder, contract } of order) {
     if (only.length && !only.includes(folder)) continue;
-    const file = path.join(dir, `${folder}.json`);
-    fs.writeFileSync(file, JSON.stringify(contract, null, 2) + '\n');
-    // the last run's reading goes first: a drawing that fails now must not be counted by the last one's rows
-    const reading = path.join(dir, `${folder}.roundtrip.json`), last = fs.existsSync(reading) ? fs.readFileSync(reading) : null;
-    fs.rmSync(reading, { force: true });
-    const run = (args) => { try { return { out: execFileSync('node', [path.join(HERE, 'to-figma.mjs'), file, ...args, '--project', label, '--into', into, '--library', file, '--folder', folder], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }), ok: true }; } catch (e) { return { out: `${e.stdout || ''}${e.stderr || ''}`, ok: false }; } };
-    // a drawing still holding the file (one that failed lets go within a minute), or a connection that dropped, is waited
-    // out: 15 s, eight times (a failed one lets go within two minutes), then it counts as a failure
-    let d = run(['--run']);
-    for (let i = 0; i < 8 && !d.ok && /still running in this file|Unable to establish connection/.test(d.out); i++) { execFileSync('sleep', ['15']); d = run(['--run']); }
-    // a scratch file another project claims refuses every drawing alike: a setup error, not a reading, so the last
-    // reading goes back and the run stops at once
-    if (!d.ok && /refused: \S+ is \S+'s scratch file/.test(d.out)) { fs.unlinkSync(file); if (last) fs.writeFileSync(reading, last); console.log(`${folder}: ${d.out.trim().split('\n').pop()}`); process.exitCode = 1; return; }
-    if (!d.ok) { fs.unlinkSync(file); if (failed(folder, 'not drawn', d.out)) return; continue; }
-    // a library import (a component, icon, style or variable) unanswered; a font that never loads (to-figma's `font of …`,
-    // whichever font) is the machine's, and stays a row of the reading
-    if (d.out.split(/, |: |\n/).some((x) => /\(no answer/.test(x) && !/^font of /.test(x.trim()))) {
-      fs.unlinkSync(file);
-      if (last) { fs.writeFileSync(reading, last); noteTaken(where.projectDir, 'figma', folder, contract, true); }
-      unanswered.push(folder);
-      console.log(`${folder}: an import went unanswered, ${last ? 'its last reading kept' : 'no reading yet'}${retry ? '; drawn again after the rest' : ''}`);
-      if (!retry) process.exitCode = 1;
-      continue;
-    }
-    const v = run(['--verify']);
-    fs.unlinkSync(file);
-    fs.rmSync(path.join(dir, `${folder}.drawn.json`), { force: true });
-    const line = v.out.split('\n').find((l) => /against the library's own/.test(l));
-    if (!line) { if (failed(folder, 'not read back', v.out)) return; continue; }
-    fails = 0;
-    noteTaken(where.projectDir, 'figma', folder, contract, false, { drawnFrom: from[folder] });
-    console.log(line);
+    const t = taken[folder];
+    let back = null; try { back = JSON.parse(fs.readFileSync(reading(folder), 'utf8')); } catch { /* none */ }
+    const keep = !redraw && t && !t.kept && t.hash === hashOf(contract) && t.drawnFrom && !drawnMoved(t.drawnFrom, from[folder]) && back && back.geometry
+      && ![...closureOf(lib, [folder])].some((f) => f !== folder && drawnNow.has(f));
+    if (keep) { console.log(`${folder}: unchanged since ${t.at || 'its last drawing'}`); continue; }
+    drawnNow.add(folder);
+    todo.push({ folder, contract, file: path.join(dir, `${folder}.json`) });
   }
-  if (retry && unanswered.length) draw(where, label, into, unanswered, false);
+  for (const { contract, file } of todo) fs.writeFileSync(file, JSON.stringify(contract, null, 2) + '\n');
+  // the library file's keys every drawing wants, looked up in one walk of it (each drawing looked them up on its own)
+  let lookedHere = null;
+  if (!looked && todo.length) {
+    const file = path.join(dir, `.looked-${process.pid}.json`), l = run([...todo.map((x) => x.file), '--lookup', file, '--project', label]);
+    const said = l.out.trim().split('\n').pop();
+    if (l.ok && fs.existsSync(file)) { looked = lookedHere = file; console.log(said); } else console.log(`keys not looked up once for the run${said ? ` (${said})` : ''}: each drawing looks up its own`);
+  }
+  try {
+    for (const { folder, contract, file } of todo) {
+      // the last run's reading goes first: a drawing that fails now must not be counted by the last one's rows
+      const last = fs.existsSync(reading(folder)) ? fs.readFileSync(reading(folder)) : null;
+      fs.rmSync(reading(folder), { force: true });
+      const step = (args) => run([file, ...args, '--project', label, '--into', into, '--library', file, '--folder', folder]);
+      // a drawing still holding the file (one that failed lets go within a minute), or a connection that dropped, is waited
+      // out: 15 s, eight times (a failed one lets go within two minutes), then it counts as a failure
+      const drawIt = () => step(['--run', ...(looked ? ['--looked', looked] : [])]);
+      let d = drawIt();
+      for (let i = 0; i < 8 && !d.ok && /still running in this file|Unable to establish connection/.test(d.out); i++) { execFileSync('sleep', ['15']); d = drawIt(); }
+      // a scratch file another project claims refuses every drawing alike: a setup error, not a reading, so the last
+      // reading goes back and the run stops at once
+      if (!d.ok && /refused: \S+ is \S+'s scratch file/.test(d.out)) { fs.unlinkSync(file); if (last) fs.writeFileSync(reading(folder), last); console.log(`${folder}: ${d.out.trim().split('\n').pop()}`); process.exitCode = 1; return; }
+      if (!d.ok) { fs.unlinkSync(file); if (failed(folder, 'not drawn', d.out)) return; continue; }
+      // a library import (a component, icon, style or variable) unanswered; a font that never loads (to-figma's `font of …`,
+      // whichever font) is the machine's, and stays a row of the reading
+      if (d.out.split(/, |: |\n/).some((x) => /\(no answer/.test(x) && !/^font of /.test(x.trim()))) {
+        fs.unlinkSync(file);
+        if (last) { fs.writeFileSync(reading(folder), last); noteTaken(where.projectDir, 'figma', folder, contract, true); }
+        unanswered.push(folder);
+        console.log(`${folder}: an import went unanswered, ${last ? 'its last reading kept' : 'no reading yet'}${retry ? '; drawn again after the rest' : ''}`);
+        if (!retry) process.exitCode = 1;
+        continue;
+      }
+      // to-figma's own line, with its lookup and drawing times
+      const drew = d.out.split('\n').find((l) => /keys looked up: /.test(l));
+      if (drew) console.log(drew);
+      const v = step(['--verify']);
+      fs.unlinkSync(file);
+      fs.rmSync(path.join(dir, `${folder}.drawn.json`), { force: true });
+      const line = v.out.split('\n').find((l) => /against the library's own/.test(l));
+      if (!line) { if (failed(folder, 'not read back', v.out)) return; continue; }
+      fails = 0;
+      const dt = (drew || '').match(/ in ([\d.]+)s(?: \([^)]*\))?; drawn in ([\d.]+)s/), vt = v.out.match(/timed: readback ([\d.]+)s, geometry ([\d.]+)s/);
+      const times = { ...(dt && { lookup: +dt[1], draw: +dt[2] }), ...(vt && { readback: +vt[1], geometry: +vt[2] }) };
+      noteTaken(where.projectDir, 'figma', folder, contract, false, { drawnFrom: from[folder], at: new Date().toISOString(), times });
+      console.log(line);
+      console.log(`${folder}: ${Object.entries(times).map(([k, x]) => `${k} ${x}s`).join(', ') || 'no times said'}`);
+    }
+    if (retry && unanswered.length) draw(where, label, into, unanswered, { retry: false, redraw: true, run, looked });
+  } finally {
+    for (const { file } of todo) fs.rmSync(file, { force: true });
+    if (lookedHere) fs.rmSync(lookedHere, { force: true });
+  }
 }
 
 
@@ -749,12 +790,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const say = (l) => (fd == null ? console.log(l) : fs.writeSync(fd, l + '\n'));
     process.exit(await runAll(o.projects, legs, { run: stepRunner(fd), say, jobs }));
   }
-  const label = opt('--project'), into = opt('--draw'), self = flag('--self');
+  const label = opt('--project'), into = opt('--draw'), self = flag('--self'), redraw = flag('--redraw');
   const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), showDiff = flag('--diff'), panel = flag('--panel'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');
   const makeAt = argv.indexOf('--make-panel'), makePanel = makeAt >= 0 ? argv.splice(makeAt, 2)[1] : null;
   if (makeAt >= 0 && !/^[1-9]\d*$/.test(makePanel || '')) { console.error('--make-panel takes the panel\'s size, a whole number (30)'); process.exit(2); }
   const opts = { changed: flag('--changed'), jobs: Math.max(1, +(opt('--jobs') || 1)) };
-  if (!label) { console.error('usage: eval.mjs --project <label> [--panel] [--fields] [--causes] [--diff] [--check | --accept]\n       eval.mjs --project <label> --make-panel <n>\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]\n       eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]\n       eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top N] [--near N]'); process.exit(2); }
+  if (!label) { console.error('usage: eval.mjs --project <label> [--panel] [--fields] [--causes] [--diff] [--check | --accept]\n       eval.mjs --project <label> --make-panel <n>\n       eval.mjs --project <label> --draw <scratch fileKey> [--redraw] [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]\n       eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]\n       eval.mjs --projects <label,label…> --mechanisms [--legs self] [--top N] [--near N]'); process.exit(2); }
   const where = req('../snapshot/projects.cjs').layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
   if (makePanel) {
@@ -799,7 +840,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     if (bad) { console.log(`the bridge is not fit to draw (${bad.check}): ${bad.said}`); process.exit(1); }
     for (const h of health.filter((x) => x.skipped)) console.log(`the bridge's ${h.check} check had nothing to check: ${h.said}`);
   }
-  if (into) { draw(where, label, into, argv); process.exit(); }
+  if (into) { draw(where, label, into, argv, { redraw }); process.exit(); }
   if (self && second) { console.error('--self and --second are two runs: the first, then the second'); process.exit(2); }
   if (self && twice) { process.exit(await readTwice(where, label, argv, { jobs: opts.jobs })); }
   if (self) { await readSelf(where, label, argv, false, opts); process.exit(); }

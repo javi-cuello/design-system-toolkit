@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf, arrangementOf, placeVariants } from './to-figma.mjs';
+import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf, arrangementOf, placeVariants, LOOKUP, lookupWants, keptFor, covers } from './to-figma.mjs';
+import { isDeepStrictEqual } from 'node:util';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -944,6 +945,47 @@ delete globalThis.figma;
     && JSON.stringify(styleIdsOf({ type: 'TEXT', textStyleId: 't', fillStyleId: Symbol('mixed'), getStyledTextSegments: (f) => (f[0] === 'fillStyleId' ? [{ fillStyleId: 'f1' }, { fillStyleId: '' }] : []) })) === '["t","f1"]'
     && src.includes('const styleIdsOf = ${styleIdsOf.toString()};') && (src.match(/styleIdsOf\(n\)/g) || []).length === 2);
   ok('…and a patch carries a layer\'s colour style over with its fills', src.includes("if ('fillStyleId' in from && from.fillStyleId !== to.fillStyleId && typeof from.fillStyleId === 'string') { await to.setFillStyleIdAsync(from.fillStyleId); n++; }"));
+}
+
+// the library lookup once for a run: over a made-up library file, every component's keys from the one walk over all
+// their wants are exactly what its own walk finds (the same first match where two layers carry one name), so the plugin
+// code each draws is the same
+{
+  const styles = { s1: { type: 'TEXT', name: 'Body', key: 'kBody1' }, s2: { type: 'TEXT', name: 'Body', key: 'kBody2' }, s3: { type: 'TEXT', name: 'Label', key: 'kLabel' }, p1: { type: 'PAINT', name: 'Brand/red', key: 'kRed1' }, p2: { type: 'PAINT', name: 'Brand/red', key: 'kRed2' } };
+  const vars = { v1: { name: 'Colour/a', key: 'kva' }, v2: { name: 'Colour/b', key: 'kvb' }, v3: { name: 'Colour/a', key: 'kva2' } };
+  const main = (name, key) => ({ name, key });
+  const nodes = [
+    { type: 'FRAME', boundVariables: { itemSpacing: { type: 'VARIABLE_ALIAS', id: 'v2' } }, fills: [{ boundVariables: { color: { type: 'VARIABLE_ALIAS', id: 'v1' } } }], fillStyleId: 'p1' },
+    { type: 'TEXT', textStyleId: 's1', fillStyleId: '', getStyledTextSegments: () => [] },
+    { type: 'INSTANCE', mc: main('Icon/x', 'kx1'), fills: [{ boundVariables: { color: { type: 'VARIABLE_ALIAS', id: 'v3' } } }] },
+    { type: 'COMPONENT_SET', name: 'Button', key: 'kButton1' },
+    { type: 'TEXT', textStyleId: 's2', fillStyleId: 'p2', getStyledTextSegments: () => [] },
+    { type: 'INSTANCE', mc: main('Icon/x', 'kx2') }, { type: 'INSTANCE', mc: main('Icon/y', 'ky') },
+    { type: 'COMPONENT_SET', name: 'Icons/sun', key: 'kSun' }, { type: 'COMPONENT_SET', name: 'Icon container', key: 'kCont' },
+    { type: 'TEXT', textStyleId: 's3', fillStyleId: '', getStyledTextSegments: () => [] }, { type: 'COMPONENT_SET', name: 'Button', key: 'kButton2' },
+  ].map((x) => ({ ...x, getMainComponentAsync: async () => x.mc || null }));
+  const saved = globalThis.figma;
+  globalThis.figma = { loadAllPagesAsync: async () => {}, getStyleByIdAsync: async (id) => styles[id] || null, getLocalPaintStylesAsync: async () => [{ name: 'Brand/blue', key: 'kBlue' }],
+    variables: { getVariableByIdAsync: async (id) => vars[id] || null },
+    root: { findAll: (f) => nodes.filter(f), findAllWithCriteria: ({ types }) => nodes.filter((x) => types.includes(x.type)) } };
+  try {
+    for (const container of ['Icon container', null]) {
+      const wants = [
+        { styles: ['Body'], fillStyles: ['Brand/red'], icons: ['Icon/x'], container, vars: ['Colour/a'], components: ['Button'], swaps: ['sun'] },
+        { styles: ['Label', 'Body'], fillStyles: ['Brand/blue', 'Brand/red'], icons: ['Icon/y', 'Icon/x'], container, vars: ['Colour/b'], components: [], swaps: [] },
+        { styles: [], fillStyles: [], icons: [], container, vars: [], components: [], swaps: [] },
+        { styles: ['Missing'], fillStyles: ['Gone'], icons: ['Icon/z'], container, vars: ['Colour/c'], components: ['Nope'], swaps: ['moon'] },
+      ];
+      const once = await LOOKUP(lookupWants(wants));
+      for (const [i, w] of wants.entries()) {
+        const own = await LOOKUP(w), shared = keptFor(once, w);
+        ok(`the run's one lookup gives component ${i} exactly its own lookup's keys (container ${container ? 'named' : 'none'})`, isDeepStrictEqual(shared, own), { own, shared });
+        ok(`…so its plugin code, which carries the keys whole, is the same (component ${i})`, pluginCode(contract, own) === pluginCode(contract, shared));
+      }
+      ok('the one lookup finds each name at its first layer, as each component\'s own did', once.styles.Body === 'kBody1' && once.icons['Icon/x'] === 'kx1' && once.fillStyles['Brand/red'] === 'kRed1' && once.sets.Button === 'kButton1' && once.vars['Colour/a'] === 'kva');
+      ok('a component wanting what the run did not look up is not given the run\'s keys', !covers(lookupWants(wants.slice(0, 2)), wants[3]) && covers(lookupWants(wants), wants[1]));
+    }
+  } finally { globalThis.figma = saved; }
 }
 
 console.log(`${n}/${n} passed`);

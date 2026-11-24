@@ -29,6 +29,7 @@ node tools/component-contract/from-code.mjs --project <label> <component>
 node tools/component-contract/from-code.mjs --project <label> <component> --rebuild --code-only
 node tools/component-contract/to-figma.mjs <contract> --run --project <label> --into <scratch fileKey>
 node tools/component-contract/to-figma.mjs <contract> --verify --project <label> --into <scratch fileKey>
+node tools/component-contract/to-figma.mjs <contract>… --lookup <keys file> --project <label>
 node tools/component-contract/to-figma.mjs <contract> --patch <set id> --base <contract> --project <label> --library <key> --folder <name>
 node tools/component-contract/looks.mjs --project <label> [components…] --out <dir>
 
@@ -36,7 +37,7 @@ node tools/component-contract/looks.mjs --project <label> [components…] --out 
 node tools/component-contract/eval.mjs --project <label> --fields --causes --diff --panel --check
 node tools/component-contract/eval.mjs --project <label> --accept
 node tools/component-contract/eval.mjs --project <label> --make-panel <n>
-node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey>
+node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> --redraw
 node tools/component-contract/eval.mjs --project <label> --self --twice --changed --jobs 4 --second
 node tools/component-contract/eval.mjs --projects <label,label…> --legs self,second --jobs 4 --log <file>
 node tools/component-contract/eval.mjs --projects <label,label…> --mechanisms --top 25 --near 15
