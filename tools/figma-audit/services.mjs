@@ -108,7 +108,8 @@ function vouch(svc, root = ROOT) {
   const k = `${svc.port}\0${svc.data || ''}`;
   if (!vouched.has(k)) vouched.set(k, (async () => {
     let j;
-    try { j = await request(svc, '/checkout'); } catch (e) { throw new Error(`the service on port ${svc.port}${svc.data ? ` for ${svc.data}` : ''} cannot say which checkout it runs (${e.message}): it is older than its /checkout route; restart it`); }
+    const route = '/checkout'; // (its own line: the standards scan reads a slash-led string and a later slash as a regex)
+    try { j = await request(svc, route); } catch (e) { throw new Error(`the service on port ${svc.port}${svc.data ? ` for ${svc.data}` : ''} cannot say which checkout it runs (${e.message}): it is older than its /checkout route; restart it`); }
     if (!j || !j.root || !samePath(j.root, root)) throw new Error(`the service on port ${svc.port}${svc.data ? ` for ${svc.data}` : ''} runs the toolkit at ${j && j.root}, and this is the toolkit at ${root}: run this from that checkout, or start a service from this one`);
     if (svc.data && !(j.data && samePath(j.data, svc.data))) throw new Error(`the service on port ${svc.port} serves ${j.data}, not ${svc.data}`);
   })().catch((e) => { vouched.delete(k); throw e; }));
