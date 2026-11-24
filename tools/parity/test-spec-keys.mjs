@@ -41,9 +41,9 @@ ok('an excuse is stale only when no registered project records its key; a missin
     mkdirSync(join(root, 'projects', label), { recursive: true });
     writeFileSync(join(root, 'projects', label, 'design-system-context.md'), '```json snapshot-routing\n' + JSON.stringify({ repo, files: { screens: { key: 'k', id: 'i' } } }) + '\n```\n');
     if (!node) return;
-    mkdirSync(join(repo, 's', 'one'), { recursive: true });
-    writeFileSync(join(repo, 'snapshot.config.json'), JSON.stringify({ paths: { screens: 's' }, parity: {} }));
-    writeFileSync(join(repo, 's', 'one', 'figma.json'), JSON.stringify({ name: 'one', tree: node }));
+    mkdirSync(join(repo, 's', 'one'), { recursive: true }); // not-shared: repo: a temp folder each caller passes
+    writeFileSync(join(repo, 'snapshot.config.json'), JSON.stringify({ paths: { screens: 's' }, parity: {} })); // not-shared: repo: a temp folder each caller passes
+    writeFileSync(join(repo, 's', 'one', 'figma.json'), JSON.stringify({ name: 'one', tree: node })); // not-shared: repo: a temp folder each caller passes
   };
   project('a', join(root, 'a'), { name: 'A', type: 'FRAME', paragraphSpacing: 8 });
   project('b', join(root, 'b'), { name: 'B', type: 'FRAME' });

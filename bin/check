@@ -447,14 +447,15 @@ s_suite() {
 # LIMITS lets a few hold it at once:
 #   chrome               a headless Chrome (tools/shared/cdp.mjs): its own profile and port, but CPU and memory
 #   home:downloads       ~/Downloads, which the contract editor's tests read to prove nothing lands there
-#   home:<what>          another path under the home folder, named
+#   home:<what>          another path under the home folder, named by its first folder there (~/.toolkit: home:toolkit)
 #   lockdir              the measuring lock's folder (tools/shared/lock.mjs) and the read cache kept in it (pruned)
 #   launchd              the running services and ~/Library/LaunchAgents
-#   tree                 writes into this repo's tree
+#   tree                 writes into this repo's tree, its worktrees or its branches
 #   alone                nothing runs beside it, nor after it before it ends
 #   -                    nothing
 # A step with no line here runs alone. tools/toolkit-check/test-check-shares.mjs fails a step that launches Chrome,
 # calls launchctl, or writes under the home folder or the repo without saying so, and a line naming no step.
+# A line may end in `# <why>`, for a tag set by hand past what that test reads.
 # Two Chrome steps at once: three full runs with chrome=2 (2026-11-24, load 7 to 20) gave every step the result of a
 # serial run; each launch has its own profile and port (cdp.mjs).
 LIMITS="chrome=2"
@@ -535,7 +536,7 @@ tools/component-validator/test-validate.mjs                      -
 tools/contract-editor/test-anatomy.mjs                           -
 tools/contract-editor/test-editor.mjs                            chrome,home:downloads
 tools/contract-editor/test-props.mjs                             -
-tools/contract-editor/test-serve.mjs                             -
+tools/contract-editor/test-serve.mjs                             home:toolkit  # by hand: starts serve.mjs with the real HOME, whose project list sweeps ~/.toolkit/snapshot-unclaimed
 tools/contract-editor/test-variants.mjs                          -
 tools/css-lint/test-lint.mjs                                     -
 tools/docs-site/test-build-lock.mjs                              -
@@ -668,7 +669,8 @@ steps_list() {
     l "$([ -n "$FIX" ] && echo alone || echo -)" s_standards
     l -        s_project_data
     l -        s_uncommitted
-    l -        s_leftovers
+    # the sweep prunes and removes worktrees and deletes branches of this repo, which the steps cloning it read
+    l alone    s_leftovers
     l -        s_owned
     l -        s_project_paths
     l -        s_machine_home
@@ -707,7 +709,7 @@ EOF
     done <<EOF
 $HOMES
 EOF
-    suites | SUITE_SHARES="$SUITE_SHARES" awk 'BEGIN { n = split(ENVIRON["SUITE_SHARES"], r, "\n"); for (i = 1; i <= n; i++) if (split(r[i], f, " ") == 2) s[f[1]] = f[2] }
+    suites | SUITE_SHARES="$SUITE_SHARES" awk 'BEGIN { n = split(ENVIRON["SUITE_SHARES"], r, "\n"); for (i = 1; i <= n; i++) if (split(r[i], f, " ") >= 2) s[f[1]] = f[2] }
         { print (($0 in s) ? s[$0] : "alone") "\ts_suite\t" $0 }'
 }
 
@@ -731,12 +733,8 @@ else
     # each step alone in its own bin/check, its output kept and printed whole in list order: the run reads as a
     # serial one, the closing summary included
     ST=$(mktemp -d)
-    steps_list | TOOLKIT_CHECK_FIX="$FIX" node tools/toolkit-check/check-parallel.mjs --workers "$WORKERS" --limit "$LIMITS" --state "$ST" -- sh "$REPO/bin/check" --step \
-        || { echo "the scheduler failed: no step's result can be trusted" >&2; FAIL=1; }
-    # $(…) drops the last newline: the x keeps it, so each name stays a line of its own
-    FAILED=$(cat "$ST/failed" 2>/dev/null; echo x); FAILED=${FAILED%x}
-    SKIPPED=$(cat "$ST/skipped" 2>/dev/null; echo x); SKIPPED=${SKIPPED%x}
-    [ -n "$FAILED" ] && FAIL=1
+    steps_list | TOOLKIT_CHECK_FIX="$FIX" node tools/toolkit-check/check-parallel.mjs --workers "$WORKERS" --limit "$LIMITS" --state "$ST" -- sh "$REPO/bin/check" --step
+    gather "$ST" $?
     rm -rf "$ST"
 fi
 

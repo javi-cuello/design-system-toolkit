@@ -23,7 +23,7 @@ const git = (args, cwd) => { try { return execFileSync('git', args, { cwd, encod
 
 export function patterns(cwd = process.cwd()) {
   // a name whose address is @localhost is a machine's placeholder (CI's "check"), not a person's
-  const name = /@localhost$/.test(git(['config', 'user.email'], cwd)) ? '' : fold(git(['config', 'user.name'], cwd));
+  const name = /@localhost$/.test(git(['config', 'user.email'], cwd)) ? '' : fold(git(['config', 'user.name'], cwd)); // not-shared: reads the setting
   if (!name) console.error('personal-info: no git user.name, so the maintainer\'s name is not looked for');
   const words = name.split(/[^\p{L}]+/u).filter((w) => w.length >= 3);
   const nameRe = words.length ? new RegExp(`\\b(?:${[name, ...words].map((w) => escape(w).replace(/\s+/g, '\\s+')).join('|')})\\b`, 'i') : null;

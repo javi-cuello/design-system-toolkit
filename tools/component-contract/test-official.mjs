@@ -34,7 +34,7 @@ try {
 
   // the official contract changed (the editor's save), Figma not yet
   const official = { ...chip, props: { size: { ...chip.props.size, default: 'sm' } } };
-  fs.writeFileSync(o.fileOf(KEY), JSON.stringify(official));
+  fs.writeFileSync(o.fileOf(KEY), JSON.stringify(official)); // not-shared: under TOOLKIT_PROJECTS_ROOT, set to a temp folder above
   ok('the official file is what every reader gets, never the reading', contracts(where())[0].contract.props.size.default === 'sm');
   const late = behind(where());
   ok('Figma is behind where its reading differs, and the brief names the value to change and what Figma has',

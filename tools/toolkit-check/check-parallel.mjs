@@ -13,10 +13,10 @@
  * started first when it fits, while a worker stays for the list's own order: that lane is the run's floor
  * (2026-11-24: the 42 Chrome steps took 358-444 s of an 823 s serial run).
  *
- * Each step's stdout and stderr are kept, and printed whole, in list order, once it and every step before it ended,
- * so the output reads as a serial run's. At the end <dir>/failed and <dir>/skipped hold every step's names in list
- * order; a step that exited non-zero and named nothing is named there, never lost. Exit 2 on a usage error, else 0:
- * the verdict is in <dir>/failed.
+ * Each step's stdout and stderr are kept apart, as a serial run keeps them, and printed whole, in list order, once it
+ * and every step before it ended, so the output reads as a serial run's. At the end <dir>/failed and <dir>/skipped
+ * hold every step's names in list order; a step that exited non-zero and named nothing is named there, never lost.
+ * Exit 2 on a usage error, else 0: the verdict is in <dir>/failed (bin/check's gather, in check-lib.sh, reads it).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -41,7 +41,7 @@ export function parseArgs(argv) {
 
 const tagsOf = (s) => (s === '-' ? [] : !s || s === 'alone' ? ['alone'] : s.split(',').filter(Boolean));
 
-export function schedule({ steps, workers, limits, state, runner, write = (s) => process.stdout.write(s) }) {
+export function schedule({ steps, workers, limits, state, runner, write = (s) => process.stdout.write(s), writeErr = (s) => process.stderr.write(s) }) {
   const held = {}; // tag -> how many running steps hold it
   const running = new Set();
   const pending = steps.map((s, i) => ({ ...s, i, tags: tagsOf(s.shares) }));
@@ -54,7 +54,7 @@ export function schedule({ steps, workers, limits, state, runner, write = (s) =>
   };
   const counted = (s) => s.tags.some((t) => t !== 'alone');
   return new Promise((resolve) => {
-    const flush = () => { while (printed < steps.length && done[printed]) write(done[printed++].out); };
+    const flush = () => { while (printed < steps.length && done[printed]) { const d = done[printed++]; write(d.out); if (d.err) writeErr(d.err); } };
     const pump = () => {
       while (running.size < workers && pending.length) {
         // the first that fits, a step holding a resource before one holding none; nothing listed after an alone step
@@ -70,17 +70,17 @@ export function schedule({ steps, workers, limits, state, runner, write = (s) =>
         const s = pending.splice(k, 1)[0];
         running.add(s); for (const t of s.tags) held[t] = (held[t] || 0) + 1;
         const st = path.join(state, String(s.i).padStart(4, '0'));
-        let out = '';
+        let out = '', err = '';
         const c = spawn(runner[0], [...runner.slice(1), ...s.fields], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, TOOLKIT_CHECK_STATE: st } });
         c.stdout.setEncoding('utf8'); c.stderr.setEncoding('utf8');
-        c.stdout.on('data', (d) => (out += d)); c.stderr.on('data', (d) => (out += d));
+        c.stdout.on('data', (d) => (out += d)); c.stderr.on('data', (d) => (err += d));
         const end = (code) => {
           if (done[s.i]) return;
           running.delete(s); for (const t of s.tags) held[t]--;
           const read = (f) => { try { return fs.readFileSync(st + f, 'utf8'); } catch { return ''; } };
           let failed = read('.failed');
           if (code !== 0 && !failed) failed = `step ${s.i + 1} (${s.fields.join(' ')}) ended with exit ${code} and no result\n`;
-          done[s.i] = { out, failed, skipped: read('.skipped') };
+          done[s.i] = { out, err, failed, skipped: read('.skipped') };
           flush();
           if (printed === steps.length) resolve(done); else pump();
         };

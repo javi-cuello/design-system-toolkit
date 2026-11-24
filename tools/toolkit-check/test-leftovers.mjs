@@ -17,7 +17,7 @@ const repo = path.join(tmp, 'repo');
 fs.mkdirSync(repo);
 const env = { ...process.env, GIT_AUTHOR_NAME: 'x', GIT_AUTHOR_EMAIL: 'x@x', GIT_COMMITTER_NAME: 'x', GIT_COMMITTER_EMAIL: 'x@x' };
 const git = (cwd, ...a) => execFileSync('git', ['-C', cwd, ...a], { encoding: 'utf8', env, stdio: ['ignore', 'pipe', 'ignore'] });
-const commit = (cwd, file, msg) => { fs.writeFileSync(path.join(cwd, file), msg + Math.random()); git(cwd, 'add', file); git(cwd, 'commit', '-q', '-m', msg); };
+const commit = (cwd, file, msg) => { fs.writeFileSync(path.join(cwd, file), msg + Math.random()); git(cwd, 'add', file); git(cwd, 'commit', '-q', '-m', msg); }; // not-shared: cwd, a temp repo each caller passes
 git(repo, 'init', '-q', '-b', 'main'); commit(repo, 'a.txt', 'one');
 const wt = (name) => { const d = path.join(repo, '.claude/worktrees', name); git(repo, 'worktree', 'add', '-q', '-b', `wt-${name}`, d); return d; };
 

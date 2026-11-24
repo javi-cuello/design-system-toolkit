@@ -57,7 +57,7 @@ const listed = () => (existsSync(theirs) ? readdirSync(theirs) : []);
 const theirsBefore = new Set(listed());
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok  ' + name); };
-const shot = async (name) => { if (process.env.SHOTS) writeFileSync(join(process.env.SHOTS, name + '.png'), Buffer.from(await screenshot(tab), 'base64')); };
+const shot = async (name) => { if (process.env.SHOTS) writeFileSync(join(process.env.SHOTS, name + '.png'), Buffer.from(await screenshot(tab), 'base64')); }; // not-shared: only with SHOTS set, a folder the caller names
 const js = (expr) => tab.evaluate(expr);
 // the tree opens one level deep; a check that reaches a deeper part opens it all first
 const expandAll = () => js(`(() => { const b = document.querySelector('[data-fold-all]'); if (b && !b.parentElement.hidden && b.textContent === 'Expand all') b.click(); })()`);
@@ -266,10 +266,10 @@ try {
   ok('a new Text prop brings a text part in the outer box, its words from it, and says so', (await json()).anatomy.label?.kind === 'text' && (await json()).anatomy.label.content === '{label}' && /a text part for it in Anatomy/.test(await js(`new Promise(r => requestAnimationFrame(() => r(document.querySelector('[data-status]').textContent)))`)));
   // renamed, the prop takes the part still named for it along; renamed back for the steps after
   const rename = async (from, to) => { await js(`${row(from)}.querySelector('[data-edit]').click()`); await waitFor(tab, `!!${inDialog('[data-name]')}`); await js(`(() => { const i = ${inDialog('[data-name]')}; i.value = '${to}'; i.dispatchEvent(new Event('input')); })()`); await save(); };
-  await rename('Label', 'Caption');
+  await rename('Label', 'Caption'); // not-shared: the editor's rename, through the page
   const after = (await json()).anatomy;
   ok('a prop renamed renames the part named for it', after.caption?.content === '{caption}' && !after.label);
-  await rename('Caption', 'Label');
+  await rename('Caption', 'Label'); // not-shared: the editor's rename, through the page
   // taken out, so the steps after build the anatomy themselves
   await dropPart('Label');
   await js(`${row('Label')}.querySelector('[data-edit]').click()`);

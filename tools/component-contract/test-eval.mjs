@@ -487,7 +487,7 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   const fake = (args) => {
     calls.push(args);
     const folder = args[args.indexOf('--folder') + 1];
-    if (args.includes('--lookup')) { fs.writeFileSync(args[args.indexOf('--lookup') + 1], '{}'); return { ok: true, out: 'keys looked up once for 2 component(s) in 4.5s\n' }; }
+    if (args.includes('--lookup')) { fs.writeFileSync(args[args.indexOf('--lookup') + 1], '{}'); return { ok: true, out: 'keys looked up once for 2 component(s) in 4.5s\n' }; } // not-shared: a stand-in writing where the code under test asks, a temp folder
     if (args.includes('--run')) return { ok: true, out: `${folder}: 1 variants into F, laid out row, props ; every value bound; keys looked up: 0 variable(s), 0 style(s), 0 icon(s) in 0.1s (once for the run); drawn in 3.2s\n` };
     fs.writeFileSync(path.join(home, 'round-trip', `${folder}.roundtrip.json`), JSON.stringify({ rows: [], combinations: 1, geometry: [] }));
     return { ok: true, out: `${folder} as drawn, against the library's own: the same over 1 combination(s), geometry the same\n${folder} timed: readback 2.5s, geometry 0.3s\n` };

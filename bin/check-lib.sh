@@ -29,6 +29,20 @@ green() {
   echo "green${1:-}, $(printf '%s' "$SKIPPED" | grep -c .) skipped (could not run here):"
   printf '%s' "$SKIPPED" | sed 's/^/  - /'
 }
+# A parallel run's FAILED and SKIPPED, from the scheduler's folder (tools/toolkit-check/check-parallel.mjs), given its
+# exit code. A scheduler that died is named as the failure: its steps' results cannot be trusted, and the summary
+# must not say "== 0 FAILED".
+gather() {
+  FAILED=$(cat "$1/failed" 2>/dev/null; echo x); FAILED=${FAILED%x}   # the x keeps the last newline $(…) drops
+  SKIPPED=$(cat "$1/skipped" 2>/dev/null; echo x); SKIPPED=${SKIPPED%x}
+  if [ "$2" != "0" ] || [ ! -f "$1/failed" ]; then
+    echo "the scheduler (tools/toolkit-check/check-parallel.mjs) exited $2: no step's result can be trusted"
+    FAILED="${FAILED}the scheduler (tools/toolkit-check/check-parallel.mjs)
+"
+  fi
+  [ -n "$FAILED" ] && FAIL=1
+  return 0
+}
 summary() {
   n=$(printf '%s' "$FAILED" | grep -c .)
   echo "== $n FAILED (detail above each):"

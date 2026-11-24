@@ -27,7 +27,7 @@ function repo() {
   return dir;
 }
 const made = [];
-process.on('exit', () => { for (const d of made) fs.rmSync(d, { recursive: true, force: true }); });
+process.on('exit', () => { for (const d of made) fs.rmSync(d, { recursive: true, force: true }); }); // not-shared: made holds the temp folders it made
 const projectsAt = (dir) => ({ repos: () => [{ name: 'sample', dir }], layout: () => ({ site: SITE, doc: '' }), rulings: () => [] });
 
 test('code the turn wrote and left uncommitted, in scope, is read and its findings returned', () => {

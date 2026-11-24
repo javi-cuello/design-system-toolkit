@@ -31,4 +31,15 @@ const ci = run('step "browser suite"; skip "skip: no Chrome"; [ "$FAIL" = 1 ] &&
 assert.match(ci, /browser suite\s+FAIL/, 'in CI a skip is a failure');
 assert.match(ci, /== 1 FAILED/, '…and is counted as one');
 
-console.log('ok check summary: 13 assertions');
+// A parallel run's names come back from the scheduler's folder; a scheduler that died names itself, never "== 0 FAILED".
+import('node:fs').then(({ default: fs }) => {
+  const st = fs.mkdtempSync(join((process.env.TMPDIR || '/tmp'), 'gather-'));
+  fs.writeFileSync(join(st, 'failed'), 'a suite\nanother\n'); fs.writeFileSync(join(st, 'skipped'), 'browser suite\n');
+  const got = run(`gather "${st}" 0; [ "$FAIL" = 1 ] && summary`).trim().split('\n');
+  assert.deepEqual(got, ['== 2 FAILED (detail above each):', '  - a suite', '  - another', '   and 1 skipped (could not run here):', '  - browser suite'], 'the scheduler\'s names, each on its line, in the summary');
+  const died = run(`gather "${st}/none" 1; [ "$FAIL" = 1 ] && summary`).trim().split('\n');
+  assert.match(died[0], /check-parallel\.mjs\) exited 1/, 'a scheduler that died says so, as a failed step\'s detail');
+  assert.deepEqual(died.slice(1), ['== 1 FAILED (detail above each):', '  - the scheduler (tools/toolkit-check/check-parallel.mjs)'], '…and is the failure the summary names');
+  fs.rmSync(st, { recursive: true, force: true });
+  console.log('ok check summary: 16 assertions');
+});

@@ -129,7 +129,7 @@ console.log('ok the validate gate asks where the system\'s own code is');
     assert.match(line(plan(wt), /changed code uses/), /\bok\b|runs/, 'restored, it reads the build again');
     fs.writeFileSync(path.join(wt, 'tokens.json'), '{}'); git(wt, 'add', 'tokens.json'); git(wt, 'commit', '-qm', 'tokens');
     assert.match(line(plan(wt), /changed code uses/), /no built docs site/, 'a worktree that changed the snapshot\'s store does not');
-    const seen = spawnSync(process.execPath, ['-e', `const c=require(${JSON.stringify(path.join(HERE, '../snapshot/projects.cjs'))});const l=c.layout(null,'acme');console.log(l.projectDir+'|'+l.repo)`],
+    const seen = spawnSync(process.execPath, ['-e', `const c=require(${JSON.stringify(path.join(HERE, '../snapshot/projects.cjs'))});const l=c.layout(null,'acme');console.log(l.projectDir+'|'+l.repo)`], // not-shared: calls layout() only, which writes nothing
       { encoding: 'utf8', env: { ...env, TOOLKIT_WORKTREE: `acme=${wt}` } }).stdout.trim();
     assert.equal(seen, `${path.join(wt, 'figma-design-system')}|${wt}`, 'under TOOLKIT_WORKTREE a tool resolves the project to the worktree');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }

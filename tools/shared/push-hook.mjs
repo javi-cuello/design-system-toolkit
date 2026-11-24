@@ -31,7 +31,7 @@ if (process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.rea
   const repo = process.argv[2] ? path.resolve(process.argv[2]) : path.resolve(path.dirname(HERE), '../..');
   const p = pushHookProblem(repo, /bin\/check/, 'git config core.hooksPath .githooks');
   let set = '';
-  try { set = execFileSync('git', ['-C', repo, 'config', 'core.hooksPath'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch {}
+  try { set = execFileSync('git', ['-C', repo, 'config', 'core.hooksPath'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch {} // not-shared: reads the setting
   // A clone that never installed the hook (CI, a stranger's) is told so; one that set a path git cannot run is red.
   if (p && !set) { console.log(`not installed in this clone: ${p}`); process.exit(0); }
   if (p) { console.error(p); process.exit(1); }
