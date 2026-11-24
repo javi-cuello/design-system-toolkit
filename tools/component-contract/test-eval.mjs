@@ -444,6 +444,10 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   const taken = (t) => fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ figma: { tag: { hash: hashOf(c), ...t } } }));
   taken({ drawnFrom: b.tag });
   ok('a Figma reading drawn from today\'s spec, walk and code is current', !measure(where, [], { figma: b }).legs.figma.tag.stale);
+  { const { store, ...old } = b.tag; taken({ drawnFrom: old });
+    const said = measure(where, [], { figma: b }).legs.figma.tag.stale;
+    ok('one drawn before the store was recorded says so, not that the store changed', said === 'taken before the stored snapshot was recorded', said);
+    taken({ drawnFrom: b.tag }); }
   ok('one drawn from another spec, walk or code is stale, said which', /^its stored figma\.json, the stored snapshot changed since$/.test(measure(where, [], { figma: a }).legs.figma.tag.stale)
     && /the walk changed since/.test(measure(where, [], { figma: { tag: { ...b.tag, walk: 'other' } } }).legs.figma.tag.stale)
     && /the drawing's code changed since/.test(measure(where, [], { figma: { tag: { ...b.tag, code: 'other' } } }).legs.figma.tag.stale)

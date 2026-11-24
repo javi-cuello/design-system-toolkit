@@ -267,6 +267,7 @@ export function measure(where, only = [], now = {}) {
   const drawnMoved = (was, today) => {
     if (!today) return null;
     if (!was) return 'taken before its spec, walk and code were recorded';
+    if (was.store === undefined && today.store !== undefined) return 'taken before the stored snapshot was recorded';
     const said = [['spec', 'its stored figma.json'], ['store', 'the stored snapshot'], ['walk', 'the walk'], ['code', 'the drawing\'s code']].filter(([k]) => was[k] !== today[k]).map(([, w]) => w);
     return said.length ? `${said.join(', ')} changed since` : null;
   };
