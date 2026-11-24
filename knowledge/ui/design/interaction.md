@@ -459,13 +459,13 @@ The fundamentals of the design standard's Interaction area: what happens between
 - [required] Content shown on hover or focus can be dismissed, hovered over, and persists (WCAG 1.4.13).
 
 **How:**
-- [moderate] Row actions show at rest or behind a visible "More" per row; keyboard and touch have no hover. How shipped tables show them is [tables: *Row actions*](../patterns/tables.md#row-actions).
+- Row actions, at rest or on hover, are [tables: *Row actions*](../patterns/tables.md#row-actions); keyboard and touch have no hover.
 - [moderate] A tooltip repeats or explains, and is never the only reason for a disabled state; what hover shows, focus shows. How tooltips behave, and how one names an icon button, is [tooltips](../components/tooltip.md#tooltips).
 - [required] Hover or focus content: Escape dismisses it without moving pointer or focus; the pointer can move onto it; it stays until trigger leaves, dismissal, or invalidity (WCAG 1.4.13).
 - [moderate] Menus open on click; truncated text has its full value reachable another way.
 
 **Cases**
-- Edit and delete icons appear on row hover → show them, or a visible "…" menu.
+- Edit and delete icons appear on row hover only → reveal them on focus too, and at rest on touch ([tables: *Row actions*](../patterns/tables.md#row-actions)).
 - A disabled button explains itself only in a tooltip → the reason in text beside it.
 - A tooltip vanishes as the pointer heads for its link → keep it while hovered (1.4.13), or make it a click popover.
 - A truncated file name full only on hover → [disclosure: show more and truncation](../patterns/disclosure.md#show-more-and-truncation).
