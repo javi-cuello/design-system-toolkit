@@ -228,7 +228,12 @@ actually have. With no service running it passes on nothing, so its verdicts
 are held by `test-check-services.mjs`, fed a list in place of the process
 table (`judge`): healthy, none running, the supervisor's duplicate pair, a
 process older than its source, `--data` pinned to a record, and a path no
-project claims. A service is only a process whose program runs this toolkit's
+project claims. A process older than its source is first asked to restart
+(`POST /restart-when-idle`, `heal`) and waited for up to two minutes, since a
+dashboard restarts itself once idle but looks only once a minute and waits out
+a docs build; it stays a failure only when it holds a plugin, nothing
+supervises it, it cannot be asked, or it is not back in time (stale dashboards
+failed a land that had nothing to do with them, 2026-11-24). A service is only a process whose program runs this toolkit's
 `server.mjs` with `--data` (`services.mjs` `parse`): its script is its first
 argument that is not a flag (`node --watch server.mjs` counts), and a relative
 one is read against that process's own folder (`/proc`, else `lsof`), else
@@ -283,6 +288,7 @@ Several skills write to one project's record, so they write rows the same way. T
 | `POST /rows` | `{owner, fileKey?, target?, full, scope, exhaustive?, ran?, origin?, findings[], dismissed[]?, why?, language?, dryRun?}` filed into the record by the one writer (`rows.mjs`): keys, matches, reopens and closes by owner; `scope` is required with `full`, `ran` with `full` from an owner whose scanner reports it, `why` is said on each row a full run closes; any other field is refused; `dryRun` reports and writes nothing |
 | `GET /health` | what the plugin probes before opening a socket |
 | `GET /checkout` | `{root, data}`: the toolkit checkout this service runs and the audit folder it serves. A client finds a service by its `--data` (`services.mjs`, any checkout's), then asks this before anything else, and refuses one running another checkout, naming both |
+| `POST /restart-when-idle` | look for a changed bound file now and, stale and supervised, restart once idle; answers `{stale, supervised, plugin}` (`check-services.mjs`) |
 
 It binds to `127.0.0.1` only, **and that is not the protection** — the attacker's
 code runs in the victim's browser, so `localhost` is reachable from any page the

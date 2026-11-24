@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { judge } from './check-services.mjs';
+import { judge, heal } from './check-services.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -39,6 +39,24 @@ ok('one bad service among good ones fails', mixed.bad.length === 1 && mixed.seen
 
 const undated = judge([{ data: A, port: '9231', started: new Date('not a date') }], wanted, newest);
 ok('a start time ps did not give is not read as stale', undated.bad.length === 0);
+
+// a stale service is asked to restart before it is judged (2026-11-24: stale dashboards failed a land that had nothing
+// to do with them); a failure stays only when the restart does not happen: a plugin held, unsupervised, unasked, or not back
+{
+  const svc = (data, port) => ({ r: { data, port, started: before }, label: data, msg: `${data} runs the old file` });
+  const asked = [];
+  const answers = { a: { stale: true, supervised: true, plugin: false }, b: { stale: true, supervised: true, plugin: true }, c: { stale: true, supervised: false, plugin: false }, e: { stale: true, supervised: true, plugin: false } };
+  const ask = async (r) => { asked.push(r.port); if (r.port === 'd') throw new Error('not_found'); return answers[r.port]; };
+  // a comes back on the new files; e never does
+  const list = () => [{ data: 'A', port: 'a', started: after }, { data: 'E', port: 'e', started: before }];
+  const left = await heal([svc('A', 'a'), svc('B', 'b'), svc('C', 'c'), svc('D', 'd'), svc('E', 'e')], { ask, list, newest, timeout: 50, poll: 5 });
+  ok('an idle stale service asked to restart and back on the new files is no failure', !left.some((l) => l.startsWith('A ')) && asked.includes('a'));
+  ok('one holding a plugin stays a failure, said so', left.some((l) => /^B .*plugin is connected/.test(l)));
+  ok('one nothing supervises stays a failure, said so', left.some((l) => /^C .*nothing supervises/.test(l)));
+  ok('one that cannot be asked (an older service with no such route) stays a failure, with the reason', left.some((l) => /^D .*could not be asked.*not_found/.test(l)));
+  ok('one asked that is not back on the new files in time stays a failure', left.some((l) => /^E .*not back/.test(l)));
+  ok('nothing else is a failure', left.length === 4);
+}
 
 // running()'s reading of the process list: a figma-audit server.mjs run with --data is a service, of any checkout, known
 // by its --data; which checkout it runs is asked of it (call, below), never guessed from a path
@@ -158,6 +176,9 @@ ok('as a script it gives one verdict', /^dashboards: /.test(out) && (code === 0 
       const { running } = await import('./services.mjs');
       ok('running() finds the test server, started by a relative path, and marks it a test\'s', running().some((r) => r.test && r.data.startsWith(dir) && r.port === String(port)));
       ok('a test server running beside the check is not a dashboard it fails on', log.includes('figma audit') && !out.includes(dir) && /^dashboards: /.test(out));
+      const { call } = await import('./services.mjs');
+      const a = await call({ port }, '/restart-when-idle', {});
+      ok('a service asked to restart when idle answers stale, supervised and plugin; fresh and run by hand, it keeps serving', a.stale === false && a.supervised === false && a.plugin === false && !log.includes('changed since'));
     } finally { srv.kill(); fs.rmSync(dir, { recursive: true, force: true }); }
   }
 }

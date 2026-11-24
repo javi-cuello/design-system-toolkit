@@ -18,7 +18,7 @@
  * records are. Services are optional: none running is not a failure. One
  * running against a path no project claims is.
  */
-import { running } from './services.mjs';
+import { running, call } from './services.mjs';
 import { existsSync, statSync, realpathSync } from 'node:fs';
 import { basename, join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,12 +46,13 @@ export function judge(found, wanted, newest) {
   const serverChanged = newest ? newest.mtime : null;
   // One line per service: the supervisor and each child both carry a pair.
   found = [...new Map(found.map((r) => [r.data + '|' + r.port, r])).values()];
-  const bad = [];
+  const bad = [], stale = [];
   const seen = new Set();
   for (const r of found) {
     const label = wanted.get(r.data);
     if (label && serverChanged && r.started instanceof Date && !isNaN(r.started) && serverChanged > r.started) {
-      bad.push(`${label} (port ${r.port || '?'}) started ${r.started.toISOString().slice(0, 16).replace('T', ' ')}, and ${basename(newest.f)} changed ${serverChanged.toISOString().slice(0, 16).replace('T', ' ')} — the process runs the old file; kickstart the agent`);
+      const msg = `${label} (port ${r.port || '?'}) started ${r.started.toISOString().slice(0, 16).replace('T', ' ')}, and ${basename(newest.f)} changed ${serverChanged.toISOString().slice(0, 16).replace('T', ' ')} — the process runs the old file; kickstart the agent`;
+      bad.push(msg); stale.push({ r, label, msg });
       continue;
     }
     if (label) { seen.add(label); continue; }
@@ -63,7 +64,39 @@ export function judge(found, wanted, newest) {
       ? `${inside[1]} (port ${r.port || '?'}) serves ${r.data} — point --data at ${inside[0]}, the folder`
       : `port ${r.port || '?'} serves ${r.data}, which no project claims`);
   }
-  return { bad, seen, found };
+  return { bad, seen, found, stale };
+}
+
+/*
+ * A stale service is asked to restart before it is judged (its route /restart-when-idle: stale-self's now()), and
+ * waited for: a dashboard restarts itself once idle, but looks only once a minute and waits out a docs build (about a
+ * minute), and stale dashboards failed a land that had nothing to do with them (2026-11-24). What stays a failure is
+ * returned, each with why: a plugin connected (it keeps the old code while the plugin is open), nothing supervising it,
+ * a service too old to be asked, or not back on the new files within `timeout`. `ask`, `list` and the times are its
+ * test's to replace.
+ */
+export async function heal(stale, { ask = (r) => Promise.race([call(r, '/restart-when-idle', {}), new Promise((_, no) => setTimeout(() => no(new Error('no answer in 5 s')), 5000).unref())]), list = () => running().filter((r) => !r.test), newest, timeout = 120000, poll = 1000 } = {}) {
+  const left = [], waiting = [];
+  for (const s of stale) {
+    if (!s.r.port) { left.push(s.msg); continue; }
+    let a;
+    try { a = await ask(s.r); } catch (e) { left.push(`${s.msg} (it could not be asked to restart: ${e.message})`); continue; }
+    if (a && a.stale === false) continue; // restarted since the process list was read
+    if (!a || !a.supervised) left.push(`${s.msg} (nothing supervises it to bring it back)`);
+    else if (a.plugin) left.push(`${s.msg} (a plugin is connected: it restarts itself once the plugin closes)`);
+    else waiting.push(s);
+  }
+  const back = (s, now) => now.some((x) => x.data === s.r.data && x.port === s.r.port && x.started instanceof Date && x.started > newest.mtime);
+  const end = Date.now() + timeout;
+  let wait = waiting;
+  while (wait.length) {
+    const now = list();
+    wait = wait.filter((s) => !back(s, now));
+    if (!wait.length || Date.now() >= end) break;
+    await new Promise((r) => setTimeout(r, poll));
+  }
+  for (const s of wait) left.push(`${s.msg} (asked to restart, and not back on the new files within ${Math.round(timeout / 1000)} s: a build or a call still in progress)`);
+  return left;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
@@ -95,7 +128,16 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   }
 
   // a test's server (its --data in the temp folder) is not a dashboard, whichever session ran it
-  const { bad, seen, found } = judge(running().filter((r) => !r.test), wanted, newest);
+  const judged = judge(running().filter((r) => !r.test), wanted, newest);
+  const { seen, found } = judged;
+  let bad = judged.bad;
+  if (judged.stale.length) {
+    const left = await heal(judged.stale, { newest });
+    const healed = judged.stale.filter((s) => !left.some((l) => l.startsWith(s.msg)));
+    bad = bad.filter((b) => !judged.stale.some((s) => s.msg === b)).concat(left);
+    for (const s of healed) seen.add(s.label);
+    if (healed.length) console.log(`dashboards: ${healed.length} stale service(s) restarted, idle, on the files on disk: ${healed.map((s) => s.label).join(', ')}`);
+  }
   if (bad.length) {
     console.log(`dashboards: ${bad.length} service(s) serving something the projects do not have`);
     for (const b of bad) console.log('  ' + b);

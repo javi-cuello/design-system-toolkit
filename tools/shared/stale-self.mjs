@@ -50,17 +50,30 @@ export function restartWhenStale(entries, { servers = [], busy = () => false, on
     const late = setTimeout(() => { if (over) return; over = true; for (const s of servers) if (s.closeAllConnections) s.closeAllConnections(); done(); }, giveUp);
     if (late.unref) late.unref();
   };
+  const sup = () => (typeof supervised === 'function' ? supervised() : supervised);
+  const look = () => {
+    if (changed) return changed;
+    const now = Date.now();
+    // (newer than the process and not dated ahead of the clock: a file from the future would restart it forever)
+    return (changed = importClosure(entries).find((f) => { try { const m = fs.statSync(f).mtimeMs; return m > start && m <= now; } catch { return false; } }) || null);
+  };
+  let said = false, stopping = false;
   const tick = () => {
-    if (!changed) {
-      const now = Date.now();
-      // (newer than the process and not dated ahead of the clock: a file from the future would restart it forever)
-      changed = importClosure(entries).find((f) => { try { const m = fs.statSync(f).mtimeMs; return m > start && m <= now; } catch { return false; } }) || null;
-      if (changed && !(typeof supervised === 'function' ? supervised() : supervised)) return log(`${path.basename(changed)} changed since this process started, so it runs the old file: restart it (nothing supervises this copy to bring it back)`);
-      if (changed) { log(`${path.basename(changed)} changed since this process started: restarting once nothing is in progress`); if (onStale) onStale(); }
+    if (look() && !said) {
+      said = true;
+      if (!sup()) return log(`${path.basename(changed)} changed since this process started, so it runs the old file: restart it (nothing supervises this copy to bring it back)`);
+      log(`${path.basename(changed)} changed since this process started: restarting once nothing is in progress`); if (onStale) onStale();
     }
-    if (changed && idle()) return stop();
+    if (changed && idle()) { if (!stopping) { stopping = true; stop(); } return; }
     handle.timer = setTimeout(tick, changed ? idleEvery : every);
     if (handle.timer.unref) handle.timer.unref();
+  };
+  // asked from outside (the dashboards check, through a service's route): look now, not at the next minute's look, and
+  // restart once idle; the asking request is let settle first (a turn of the loop), as it counts as work
+  handle.now = () => {
+    const stale = !!look(), supervisedNow = !!sup();
+    if (stale && supervisedNow && !stopping) { clearTimeout(handle.timer); handle.timer = setTimeout(tick, 0); if (handle.timer.unref) handle.timer.unref(); }
+    return { stale, supervised: supervisedNow };
   };
   // a parent that is itself stale asks whether its children are idle before it stops them (askIdle below)
   if (typeof process.send === 'function') process.on('message', (m) => { if (m && m.idleAsked) try { process.send({ idleSaid: m.idleAsked, idle: idle() }); } catch {} });

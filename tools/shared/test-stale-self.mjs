@@ -115,5 +115,25 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   if (was === undefined) delete process.env.XPC_SERVICE_NAME; else process.env.XPC_SERVICE_NAME = was;
   ok('launchd\'s label inherited by a process launchd did not start supervises nothing', (typeof process.send === 'function' || process.ppid === 1) || (!said.includes('exit') && /restart it/.test(said.join())));
 }
+// asked from outside (the dashboards check, through the service's route): it looks now, not at its next minute's look
+{
+  const ask = (opts) => new Promise((done) => {
+    let answer, t;
+    t = restartWhenStale([entry], { servers: [server()], start, every: 60000, idleEvery: 10, log: () => {}, exit: (c) => { clearTimeout(t.timer); done({ code: c, answer }); }, ...opts });
+    answer = t.now();
+    setTimeout(() => { clearTimeout(t.timer); done({ code: null, answer }); }, 300);
+  });
+  r = await ask({ supervised: true });
+  ok('asked while nothing changed: not stale, it keeps serving', r.code === null && r.answer.stale === false);
+  touch(dep);
+  r = await ask({ supervised: true });
+  ok('asked while stale and idle: it says so and restarts at once, not a minute later', r.code === 0 && r.answer.stale && r.answer.supervised);
+  r = await ask({ supervised: false });
+  ok('asked while stale with nothing to bring it back: it says so and keeps serving', r.code === null && r.answer.stale && !r.answer.supervised);
+  let b = true;
+  r = await ask({ supervised: true, busy: () => b });
+  ok('asked while stale and busy: it keeps serving the work', r.code === null && r.answer.stale);
+  touch(dep, past);
+}
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(`${n}/${n} passed`);

@@ -805,6 +805,11 @@ const server = createServer(held(async (req, res) => {
     if (url.pathname === "/checkout" && req.method === "GET")
       return json(res, 200, { root: resolve(HERE, "../.."), data: AUDIT_DIR });
 
+    // the dashboards check (check-services.mjs), finding this process older than a file it binds, asks it to restart
+    // once idle now rather than at its next minute's look; it answers whether it is stale, supervised, and holds a plugin
+    // (which keeps it from restarting for as long as the plugin is open)
+    if (url.pathname === "/restart-when-idle" && req.method === "POST") return json(res, 200, { ...selfRestart.now(), plugin: plugged() });
+
     if (url.pathname === "/status") {
       const files = [...plugins.entries()]
         .filter(([, e]) => !e.socket.destroyed)
@@ -1322,8 +1327,8 @@ server.headersTimeout = 60000;
 // a file this binds that changes (bound.mjs) makes it restart itself once no request, build or upload is in
 // progress and no plugin is connected (a dropped plugin is reopened in Figma by hand: REFERENCE.md), the parent
 // bringing it back with what is on disk; check-services.mjs names one still waiting
-restartWhenStale(boundBy(HERE), { servers: [server], label: "com.toolkit.figma-audit",
-  busy: () => pending.size > 0 || [...plugins.values()].some((e) => !e.socket.destroyed) });
+const plugged = () => [...plugins.values()].some((e) => !e.socket.destroyed);
+const selfRestart = restartWhenStale(boundBy(HERE), { servers: [server], label: "com.toolkit.figma-audit", busy: () => pending.size > 0 || plugged() });
 server.listen(PORT, "127.0.0.1", () => {
   console.log("figma audit      http://127.0.0.1:" + PORT);
   console.log("records          " + AUDIT_DIR + (LEGACY ? " (single record: audit.json)" : "/<library>.json"));
