@@ -267,7 +267,7 @@ export function measure(where, only = [], now = {}) {
   const drawnMoved = (was, today) => {
     if (!today) return null;
     if (!was) return 'taken before its spec, walk and code were recorded';
-    const said = [['spec', 'its stored figma.json'], ['walk', 'the walk'], ['code', 'the drawing\'s code']].filter(([k]) => was[k] !== today[k]).map(([, w]) => w);
+    const said = [['spec', 'its stored figma.json'], ['store', 'the stored snapshot'], ['walk', 'the walk'], ['code', 'the drawing\'s code']].filter(([k]) => was[k] !== today[k]).map(([, w]) => w);
     return said.length ? `${said.join(', ')} changed since` : null;
   };
   // a reading from code taken under another Chrome major, or before its Chrome was recorded, is stale
@@ -278,9 +278,10 @@ export function measure(where, only = [], now = {}) {
   // each component by its name, as the pipeline resolves it, for what an instance of it draws at its defaults
   const mains = req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract));
   // the combinations a reading left unread and predicted from its layers (from-code's `unread`; one read before it was
-  // kept, its self-check's words): held apart, never measured. Unknown (a self-check that failed): none said
+  // kept, its self-check's words): held apart, never measured. One that does not say (a self-check that failed, or
+  // none) is `unknown`: never the same, and no count
   const unreadOf = (r) => (typeof r.unread === 'number' ? r.unread : typeof r.selfCheck === 'string' ? +((r.selfCheck.match(/(\d+) of five props or more left unread/) || [])[1] || 0) : undefined);
-  const predicted = (r) => { const p = unreadOf(r); return p === undefined ? {} : { predicted: p }; };
+  const predicted = (r) => ({ predicted: unreadOf(r) ?? 'unknown' });
   const selfDir = path.join(drawn, 'self', 'from-code');
   // (what the markup leaves to the code, under the library's settings, the ones the self leg writes under)
   const settingsOf = req('../snapshot/projects.cjs').librarySettingsFor(where.paths.components);
@@ -326,9 +327,10 @@ export const counts = (legs) => Object.fromEntries(Object.entries(legs).flatMap(
   // (every component the leg splits, 0 included: one whose left rows fall to none is measured, not gone)
   const left = Object.entries(cs).filter(([, x]) => x.rows && x.left);
   if (left.length) out.push([`${leg} left`, Object.fromEntries(left.map(([c, x]) => [c, x.left.length]))]);
-  // (and the combinations predicted, not read: every component that says, 0 included, where any predicts one)
-  const said = Object.entries(cs).filter(([, x]) => x.rows && x.predicted != null);
-  if (said.some(([, x]) => x.predicted)) out.push([`${leg} predicted`, Object.fromEntries(said.map(([c, x]) => [c, x.predicted]))]);
+  // (and the combinations predicted, not read: every component that says how many, 0 included, as `left`: one read in
+  // full since its accept is a count that fell, never a reading gone)
+  const said = Object.entries(cs).filter(([, x]) => x.rows && typeof x.predicted === 'number');
+  if (said.length) out.push([`${leg} predicted`, Object.fromEntries(said.map(([c, x]) => [c, x.predicted]))]);
   return out;
 }));
 export function worse(now, accepted) {
@@ -408,7 +410,7 @@ export function report(label, { legs }, fields, byCause) {
     const m = Object.entries(cs).filter(([, x]) => x.rows), skipped = Object.entries(cs).filter(([, x]) => x.skipped);
     const rows = m.flatMap(([, x]) => x.rows);
     const all = Object.keys(cs).length, old = m.filter(([, x]) => x.stale), nc = m.reduce((a, [, x]) => a + Object.keys(causes(x.rows, x.combinations)).length, 0);
-    console.log(`${label} ${leg}: ${m.filter(([, x]) => isSame(x)).length} of ${all} the same; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (drawn only at a pointer state, slot samples, or overrides a placed component has no prop for)` : ''}${m.some(([, x]) => x.predicted) ? `; ${m.reduce((a, [, x]) => a + (x.predicted || 0), 0)} combinations predicted, not read (in ${m.filter(([, x]) => x.predicted).length})` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
+    console.log(`${label} ${leg}: ${m.filter(([, x]) => isSame(x)).length} of ${all} the same; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (drawn only at a pointer state, slot samples, or overrides a placed component has no prop for)` : ''}${m.some(([, x]) => typeof x.predicted === 'number' && x.predicted) ? `; ${m.reduce((a, [, x]) => a + (typeof x.predicted === 'number' ? x.predicted : 0), 0)} combinations predicted, not read (in ${m.filter(([, x]) => typeof x.predicted === 'number' && x.predicted).length})` : ''}${m.some(([, x]) => x.predicted === 'unknown') ? `; ${m.filter(([, x]) => x.predicted === 'unknown').length} not saying what was predicted (read before it was said, or a self-check that failed)` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
     for (const [c, x] of m) if (x.cut) console.log(`  ${c}: ${x.cut} combination(s) past the first ${x.combinations} not compared`);
     if (byCause) for (const [c, k, n] of m.flatMap(([c, x]) => Object.entries(causes(x.rows, x.combinations)).map(([k, n]) => [c, k, n])).sort((a, b) => b[2] - a[2])) console.log(`  ${String(n).padStart(4)}  ${c}: ${k}`);
     if (!fields) continue;
@@ -474,8 +476,8 @@ function draw(where, label, into, only, retry = true) {
 
 
 /* What each Figma reading is drawn from, per component: its stored figma.json (the geometry rows' side, and the
-   arrangement to-figma draws to), the snapshot walk's VERSION (the reading's reader) and the drawing's code (to-figma.mjs
-   and geometry.mjs, with what they import). { folder: { spec, walk, code } }, each a hash or the version. */
+   arrangement to-figma draws to), the whole stored snapshot (`store`), the snapshot walk's VERSION (the reading's reader) and the drawing's code (to-figma.mjs
+   and geometry.mjs, with what they import). { folder: { spec, store, walk, code } }, each a hash or the version. */
 export function figmaInputs(where, only = []) {
   const sha = (x) => createHash('sha1').update(x).digest('hex');
   const tools = path.join(HERE, '..'), h = createHash('sha1');
@@ -483,7 +485,15 @@ export function figmaInputs(where, only = []) {
   const code = h.digest('hex');
   let walk = 'none'; try { walk = (fs.readFileSync(path.join(HERE, '..', '..', 'plugins', 'design-system-snapshot', 'code.js'), 'utf8').match(/const VERSION = '([^']+)'/) || [])[1] || 'none'; } catch { /* no walk: said none */ }
   const spec = (folder) => { try { return sha(fs.readFileSync(path.join(where.paths.components, folder, 'figma.json'))); } catch { return 'none'; } };
-  return Object.fromEntries(contracts(where).map(({ folder }) => folder).filter((f) => !only.length || only.includes(f)).map((f) => [f, { spec: spec(f), walk, code }]));
+  const folders = contracts(where).map(({ folder }) => folder);
+  // (and the whole store the drawing and its geometry read: the tokens (knownOf, styles, variables), the index, and every
+  // component's figma.json (knownOf's fields, the keys a placed instance is drawn from); no fingerprint of its own)
+  const s = createHash('sha1'), add = (name, f) => { s.update(name).update('\0'); try { s.update(fs.readFileSync(f)); } catch { s.update('none'); } s.update('\0'); };
+  add('tokens', where.paths.tokens || ''); add('index', where.paths.index || '');
+  let all = []; try { all = fs.readdirSync(where.paths.components).sort(); } catch { /* no store */ }
+  for (const f of all) add(f, path.join(where.paths.components, f, 'figma.json'));
+  const store = s.digest('hex');
+  return Object.fromEntries(folders.filter((f) => !only.length || only.includes(f)).map((f) => [f, { spec: spec(f), store, walk, code }]));
 }
 
 /* The reader's own code: every file a self reading runs through (from-code.mjs and what it imports), but to-markup's and

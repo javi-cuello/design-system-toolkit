@@ -387,8 +387,19 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   ok('a reading that left combinations unread is predicted, not the same; one that read them all is the same',
     m.legs.browser.tag.predicted === 4 && !isSame(m.legs.browser.tag) && m.legs.self.tag.predicted === 713 && !isSame(m.legs.self.tag) && !m.legs.second.tag.predicted && isSame(m.legs.second.tag));
   const k = counts(m.legs);
-  ok('the combinations predicted are counted as a leg of their own, so a rise there is said', k['self predicted'].tag === 713 && k['browser predicted'].tag === 4 && !k['second predicted']
+  ok('the combinations predicted are counted as a leg of their own, so a rise there is said', k['self predicted'].tag === 713 && k['browser predicted'].tag === 4
     && worse(k, { ...k, 'self predicted': { tag: 700 } }).some((w) => /self predicted tag: 700 → 713/.test(w)));
+  ok('a leg whose every reading reads all its combinations still counts them, 0 each: one read in full since its accept is no reading gone',
+    k['second predicted'].tag === 0 && !worse(k, { ...k, 'second predicted': { tag: 713 } }).length && !diff(k, { ...k, 'second predicted': { tag: 713 } }).some((l) => /not measured/.test(l)));
+  // a reading that does not say what it left unread (a self-check that failed, or none): unknown, never the same
+  fs.writeFileSync(path.join(home, 'round-trip', 'self2', 'from-code', 'tag.json'), JSON.stringify({ selfCheck: { notRebuilt: ['{}'] }, asFigma: c }));
+  fs.writeFileSync(path.join(home, 'parity', 'from-code', 'tag.json'), JSON.stringify({ of: hashOf(c), asFigma: c }));
+  const u = measure(where);
+  ok('a reading that does not say what it left unread is predicted: unknown, and not the same', u.legs.second.tag.predicted === 'unknown' && !isSame(u.legs.second.tag) && u.legs.browser.tag.predicted === 'unknown' && !isSame(u.legs.browser.tag)
+    && counts(u.legs)['second predicted'] === undefined);
+  { const said2 = []; const log2 = console.log; console.log = (l) => said2.push(l);
+    try { (await import('./eval.mjs')).report('lib', u); } finally { console.log = log2; }
+    ok('the verdict says how many readings do not say what they predicted', said2.some((l) => /^lib second: 0 of 1 the same;.*1 not saying what was predicted/.test(l)), said2); }
   const said = []; const log = console.log; console.log = (l) => said.push(l);
   try { (await import('./eval.mjs')).report('lib', m); } finally { console.log = log; }
   ok('the leg\'s verdict says how many were predicted, not read', said.some((l) => /^lib self: 0 of 1 the same;.*713 combinations predicted, not read/.test(l)), said);
@@ -418,13 +429,25 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   const b = figmaInputs(where);
   ok('figmaInputs: the spec, the walk\'s version and the code, each its own hash; a spec that moved moves only its own',
     /^[0-9a-f]{40}$/.test(a.tag.spec) && /^[0-9a-f]{40}$/.test(a.tag.code) && typeof a.tag.walk === 'string' && a.tag.walk.length > 0 && a.tag.spec !== b.tag.spec && a.tag.code === b.tag.code && a.tag.walk === b.tag.walk);
+  // the drawing and its geometry read the whole store (the tokens, every component's figma.json, the index): `store`
+  { const other = path.join(home, 'components', 'pill'); fs.mkdirSync(other); fs.writeFileSync(path.join(other, 'contract.json'), JSON.stringify({ ...c, component: 'Pill' })); fs.writeFileSync(path.join(other, 'figma.json'), JSON.stringify({ name: 'Pill' }));
+    const tokens = path.join(home, 'tokens.json'); fs.writeFileSync(tokens, '{"collections":{}}');
+    const w2 = { ...where, paths: { ...where.paths, tokens } };
+    const s0 = figmaInputs(w2).tag;
+    fs.writeFileSync(path.join(other, 'figma.json'), JSON.stringify({ name: 'Pill', w: 3 }));
+    const s1 = figmaInputs(w2).tag;
+    fs.writeFileSync(tokens, '{"collections":{"c":{}}}');
+    const s2 = figmaInputs(w2).tag;
+    ok('figmaInputs: another component\'s figma.json or the tokens moves the store\'s hash, not the spec\'s', /^[0-9a-f]{40}$/.test(s0.store) && s0.store !== s1.store && s1.store !== s2.store && s0.spec === s1.spec && s1.spec === s2.spec);
+    fs.rmSync(other, { recursive: true, force: true }); fs.rmSync(tokens); }
   fs.writeFileSync(path.join(home, 'round-trip', 'tag.roundtrip.json'), JSON.stringify({ rows: [], geometry: [], combinations: 1 }));
   const taken = (t) => fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ figma: { tag: { hash: hashOf(c), ...t } } }));
   taken({ drawnFrom: b.tag });
   ok('a Figma reading drawn from today\'s spec, walk and code is current', !measure(where, [], { figma: b }).legs.figma.tag.stale);
-  ok('one drawn from another spec, walk or code is stale, said which', /its stored figma\.json changed since/.test(measure(where, [], { figma: a }).legs.figma.tag.stale)
+  ok('one drawn from another spec, walk or code is stale, said which', /^its stored figma\.json, the stored snapshot changed since$/.test(measure(where, [], { figma: a }).legs.figma.tag.stale)
     && /the walk changed since/.test(measure(where, [], { figma: { tag: { ...b.tag, walk: 'other' } } }).legs.figma.tag.stale)
-    && /the drawing's code changed since/.test(measure(where, [], { figma: { tag: { ...b.tag, code: 'other' } } }).legs.figma.tag.stale));
+    && /the drawing's code changed since/.test(measure(where, [], { figma: { tag: { ...b.tag, code: 'other' } } }).legs.figma.tag.stale)
+    && /the stored snapshot changed since/.test(measure(where, [], { figma: { tag: { ...b.tag, store: 'other' } } }).legs.figma.tag.stale));
   taken({});
   ok('one drawn before what it was drawn from was recorded is stale once today\'s is known', /before its spec, walk and code were recorded/.test(measure(where, [], { figma: b }).legs.figma.tag.stale) && !measure(where).legs.figma.tag.stale);
   fs.rmSync(home, { recursive: true, force: true }); }
