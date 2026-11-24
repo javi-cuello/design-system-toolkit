@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { combosOf, resolver, textStyleOf, expected, compareOne, comboOfVariant, measureComponent, matches, boxesOf, variantOf } from './oracle-dom.mjs';
+import { combosOf, resolver, textStyleOf, expected, compareOne, comboOfVariant, measureComponent, matches, boxesOf, variantOf, stageOf } from './oracle-dom.mjs';
 import { namer, partSeg } from './to-code.mjs';
 import { expand, variantDefaults } from './layers.mjs';
 import { ELEMENT } from './site.mjs';
@@ -125,6 +125,13 @@ const TOKENS = { collections: {
   const u = {};
   compareOne(parts, page(40, true), ch, {}, { at: 'x', stored: null, unread: u });
   ok('with no stored variant, each stored-box field is unread, named so', u['no stored variant'] > 0, JSON.stringify(u));
+}
+
+/* ── the room a root is drawn in: its content's, or the canvas a root that fills was drawn in ── */
+{
+  ok('a root that fills is drawn in a room as wide as its canvas; any other in one as wide as what it holds',
+    /inline-size:1342px/.test(stageOf({ anatomy: { root: { width: 'fill', canvas: { width: 1342 } } } }))
+    && /inline-size:max-content/.test(stageOf({ anatomy: { root: { width: 400 } } })) && /inline-size:max-content/.test(stageOf({ anatomy: { root: { width: 'fill' } } })));
 }
 
 /* ── paint styles by value, text styles with no record named ── */

@@ -441,6 +441,13 @@ export function argsFor(c, library, combo) {
   return { args, pseudo };
 }
 
+/* The room the root is drawn in: as wide as what it holds, so the page sets no width the contract does not say; a root
+   that fills is its parent's width, and its parent is the canvas the library drew it in (the contract's `canvas`). */
+export function stageOf(c) {
+  const r = (c.anatomy && c.anatomy.root) || {}, w = r.width === 'fill' && r.canvas && typeof r.canvas.width === 'number' ? `${r.canvas.width}px` : 'max-content';
+  return `display:flow-root;box-sizing:content-box;inline-size:${w};padding:24px`;
+}
+
 /* Opens one page per component and measures every combination; returns { rows, combinations, unread, ms, error? }. */
 export async function measureComponent({ library, folder, tokensCss, settingsOf, tokens, browserEndpoint, max = Infinity, pixels = null, specOf = () => null }) {
   const t0 = Date.now();
@@ -469,12 +476,12 @@ export async function measureComponent({ library, folder, tokensCss, settingsOf,
       const sv = variantOf(c, (spec || {}).variants, combo), stored = sv ? boxesOf(sv) : null;
       const { args, pseudo } = argsFor(c, library, combo);
       await tab.send('DOM.getDocument', { depth: 0 });
-      const ok = await call(tab, ([f, a]) => {
-        const s = document.createElement('section'); s.style.cssText = 'display:flow-root;inline-size:max-content;padding:24px';
+      const ok = await call(tab, ([f, a, stage]) => {
+        const s = document.createElement('section'); s.style.cssText = stage;
         try { s.append(window.R[f](a)); } catch (e) { return String(e && e.message || e); }
         document.getElementById('stage').replaceChildren(s);
         return true;
-      }, [folder, args]);
+      }, [folder, args, stageOf(c)]);
       if (ok !== true) { rows.push({ at: `${at}/root`, contract: 'drawn', drawn: `render threw: ${ok}`, kind: 'render failed' }); continue; }
       if (pseudo.length) {
         const sel = `#stage ${tag}`;
