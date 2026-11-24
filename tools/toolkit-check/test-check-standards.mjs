@@ -231,6 +231,14 @@ d = tree({ scanner: "const a = TOK.stateAxis; const t = `${n.replace(/State/, ''
 ok("a regex inside a template's ${} is still read", /quotes the house values? "State"/.test(run(d).stdout));
 d = tree({ scanner: "const a = TOK.stateAxis; const s = f(n)/'/.length;\nif (/^State$/.test(n)) go('x');" });
 ok("a quote left open on its line does not hide the regexes of the next", /quotes the house values? "State"/.test(run(d).stdout));
+// a ${} is code: a string in it holding a backtick or a brace ends nothing, and a backtick never closed hides nothing
+for (const [what, src] of [["a backtick in a string inside ${}", "const t = `${a ? '`' : ''}`;\nconst r = /State/;"],
+  ["a brace in a string inside ${}", "const t = `${'}' + f(/State/)}`;"],
+  ["a backtick never closed", "s = f(n)/`/g;\nif (/^State$/.test(n)) go();"],
+  ["a division before a template", "x = f(N / 2, `${a}/${N}`);\nif (/^State$/.test(n)) go(`x`);"]]) {
+  d = tree({ scanner: "const a = TOK.stateAxis; " + src });
+  ok(`${what} hides no regex`, /quotes the house values? "State"/.test(run(d).stdout));
+}
 d = tree({ scanner: "const a = TOK.stateAxis; viewport(tab, 1280, 900); const id = 'x1280'; wait(12800);", settings: { ...SETTINGS, "audit-defaults": { ...SETTINGS["audit-defaults"], interface: { viewportWidth: 1280 } }, "audit-keys": { ...SETTINGS["audit-keys"], interface: { viewportWidth: "the CSS width a page is measured at" } } } });
 r = run(d);
 ok("a house measuring width written as a number is refused; inside a string or a longer number it is not", /writes the house viewportWidth \(1280\) as a number/.test(r.stdout) && (r.stdout.match(/as a number/g) || []).length === 1);

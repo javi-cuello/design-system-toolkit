@@ -54,7 +54,7 @@ const TOP = new Set(readdirSync(ROOT));
 // The handle table and the rule reader are tools/toolkit-check/rules.mjs's, shared with
 // the edit hook and the closing pass. A standard with no entry is refused, never skipped.
 import { STANDARDS, rulesOf, unfence, names, numeric, parted, titled, CITE_NUM, CITE_PART, partOwner, canon } from "./rules.mjs";
-import { code, stripComments } from "./strip.mjs";
+import { code, stripComments, regexes as regexesOf } from "./strip.mjs";
 import { GENERATED } from "../../skills/figma-plugin-creator/scripts/conformance.mjs";
 const MARKER = /\*Checked:\*|\*Reviewed:\*/;
 const standards = readdirSync(join(ROOT, "standards")).filter((f) => /-standard\.md$/.test(f)); // a standard is <name>-standard.md; the README is the folder's guide
@@ -457,28 +457,6 @@ function runsOnItsOwn(rel) {
   const runners = (m[1].match(/[\w.-]+\/[\w./-]+\.(?:mjs|cjs|js|sh)/g) || []).filter(has);
   return runners.some((r) => stripComments(r, read(r)).includes(basename(rel)));
 }
-/* The regex literals in code, read left to right with strings as the other choice, so a slash inside a string never
-   opens a regex ('/checkout'); … new Error('/' read as one regex quoting "Error", 2026-11-24). A quote string ends at its
-   line, so one left open hides nothing below it; a template's ${} is code, and read the same way. */
-const RX = /'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`((?:[^`\\]|\\.)*)`|(?<![\w)\]])\/(?![*/])((?:\\.|\[[^\]\n]*\]|[^/\\\n])+)\/[gimsuy]*/g;
-function interpolations(t) {
-  const out = [];
-  for (let i = t.indexOf("${"); i >= 0; i = t.indexOf("${", i)) {
-    let depth = 1, k = i + 2;
-    for (; k < t.length && depth; k++) { if (t[k] === "{") depth++; else if (t[k] === "}") depth--; }
-    out.push(t.slice(i + 2, k - 1));
-    i = k;
-  }
-  return out;
-}
-function regexesIn(src) {
-  const out = [];
-  for (const m of src.matchAll(RX)) {
-    if (m[2] !== undefined) out.push(m[2]);
-    else if (m[1] !== undefined) for (const e of interpolations(m[1])) out.push(...regexesIn(e));
-  }
-  return out;
-}
 const houseValues = new Set();
 // Values under three characters (`md`, `sm`) are skipped: they collide with ordinary code too often to mean anything.
 for (const v of SECTIONS.flatMap((sec) => Object.values(defaults[sec] || {}))) for (const x of [].concat(v)) if (typeof x === "string" && x.trim().length >= 3 && !/^[\^\[]/.test(x)) houseValues.add(x);
@@ -503,7 +481,7 @@ for (const rel of SCANNERS) {
   if (emoji) problems.push(`${rel}: literal ${[...new Set(emoji)].join(" ")} in code; a marker belongs in the settings (or the allowlist, with a reason)`);
   const strings = [...src.matchAll(/(["'`])((?:(?!\1)[^\\]|\\.)*)\1/g)].map((m) => m[2]);
   const quoted = strings.filter((x) => houseValues.has(x));
-  const regexes = regexesIn(src);
+  const regexes = regexesOf(src);
   for (const body of regexes) for (const w of words) if (new RegExp("(^|[^A-Za-z])" + w + "([^A-Za-z]|$)").test(body)) quoted.push(w);
   // In a longer string a house word is ordinary English ("Text styles") unless it is variant syntax ("State=Rest").
   for (const body of strings.filter((x) => !houseValues.has(x))) for (const w of words) if (new RegExp("(^|[^A-Za-z])" + w + "=").test(body)) quoted.push(w);
