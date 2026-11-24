@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.89.0] - 2026-11-24
+### Changed
+- **A text is recorded whole.** It was cut at 400 characters, and the contract kept the cut copy as the layer's content (Carbon's multi-line code snippet runs to 648). The three libraries measured hold eight texts past 400, the longest 1520, so a snapshot grows by a few kilobytes. Stored snapshots gain it when retaken.
+
 ## [0.88.1] - 2026-11-24
 ### Fixed
 - **A text with no style in a variable font records its face.** Figma reads such a text's font as mixed though it is in one face (its segment carries the font's axes), so 0.82.0's `fontFamily` and `fontStyle` were left out for 776 texts across three libraries (Carbon's IBM Plex Sans, measured) and the contract said a bare `literal`. The text's segments now say the face where they all agree; a text truly in two faces still records none. Stored snapshots gain it when retaken.

@@ -354,6 +354,14 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("…one truly in two faces still records none", !("fontFamily" in two) && !("fontStyle" in two));
 }
 
+// 2026-11-24, the Figma oracle: a text past 400 characters (Carbon's multi-line code snippet, 648) was cut there, and
+// the contract kept the cut copy as the layer's content
+{
+  const long = "x".repeat(1520);
+  const walked = await walk({ name: "Code", type: "TEXT", width: 300, height: 400, x: 0, y: 0, characters: long, textStyleId: "", textAlignHorizontal: "LEFT", fontSize: 14, fontName: { family: "IBM Plex Mono", style: "Regular" }, lineHeight: { unit: "AUTO" }, letterSpacing: { unit: "PIXELS", value: 0 }, boundVariables: {} }, 1);
+  ok("a text is recorded whole, however long", walked.text === long);
+}
+
 // 2026-11-24: a run could not be stopped. Cancel sets a flag the walk reads at
 // each component's step; the run stops there, before the next is read.
 {

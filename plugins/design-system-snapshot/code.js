@@ -1,4 +1,4 @@
-// Design system snapshot — v0.88.1 · plugin-standard v1.1.0
+// Design system snapshot — v0.89.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -794,7 +794,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.88.1';
+const VERSION = '0.89.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1038,8 +1038,9 @@ async function walk(n, depth, at, inInstance = false) {
     if (kinds.length) o.effects = kinds;
   }
   if (n.type === 'TEXT') {
-    // whole, so copy the design decides can be compared with what renders
-    o.text = n.characters.slice(0, 400);
+    // whole, so copy the design decides can be compared with what renders (cut
+    // at 400 characters until 0.89.0, and the contract kept the cut copy)
+    o.text = n.characters;
     o.textStyle = typeof n.textStyleId === 'symbol' ? 'mixed' : (await styleName(n.textStyleId)) || 'literal';
     // A text with no style has no name to say its size and face with, so they
     // are said as they are: the contract writes them as values, and code read
