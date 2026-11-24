@@ -32,6 +32,7 @@ node tools/shared/model-routing.mjs                                # print the m
 | `worktree.mjs` | a worktree per piece of work |
 | `land.mjs` | `bin/land`, the one way work reaches main |
 | `cdp.mjs` | the Chrome DevTools client |
+| `chromes.mjs` | finds the headless Chromes `cdp.mjs` started and kills those whose parent is gone |
 | `free-port.mjs` | a free port for tests |
 | `origin.mjs` | whether a request comes from Figma |
 | `real-path.mjs` | a path in its on-disk spelling |
