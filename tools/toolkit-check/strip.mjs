@@ -9,11 +9,26 @@ const valueMayBegin = (before) => !/(\+\+|--)\s*$/.test(before) && /(^|[(,=:[!&|
 
 // Comments are prose and may cite anything; strings and regexes are code.
 // A small scanner rather than a regex: `//` inside a string is not a comment, and a comment may hold quotes.
+// Templates nest through ${}: a stack of what each level is, "`" in a template's text or a number (the open braces) in
+// a ${}; the inner backtick of `x${b ? `${p}/*` : id}` ended the outer template, and its /* blanked 65 lines of code
+// as a comment (to-code.mjs, 2026-11-24).
 export function code(src) {
   let out = "", q = null;
+  const stack = [];
   for (let i = 0; i < src.length; i++) {
-    const ch = src[i], two = src.slice(i, i + 2);
-    if (q) { out += ch; if (ch === "\\") { out += src[++i] || ""; } else if (ch === q || (ch === "\n" && q !== "`")) q = null; continue; }
+    const ch = src[i], two = src.slice(i, i + 2), top = stack[stack.length - 1];
+    if (q) { out += ch; if (ch === "\\") { out += src[++i] || ""; } else if (ch === q || ch === "\n") q = null; continue; }
+    if (top === "`") {
+      out += ch;
+      if (ch === "\\") out += src[++i] || "";
+      else if (ch === "`") stack.pop();
+      else if (two === "${") { out += "{"; i++; stack.push(0); }
+      continue;
+    }
+    if (typeof top === "number") {
+      if (ch === "{") stack[stack.length - 1]++;
+      else if (ch === "}") { if (top === 0) { stack.pop(); out += ch; continue; } stack[stack.length - 1]--; }
+    }
     if (two === "/*") { const e = src.indexOf("*/", i + 2); const end = e < 0 ? src.length : e + 2; out += src.slice(i, end).replace(/[^\n]/g, ""); i = end - 1; continue; }
     if (two === "//" && src[i - 1] !== ":") { const e = src.indexOf("\n", i); i = (e < 0 ? src.length : e) - 1; continue; }
     // A regex literal is code, copied whole: a quote inside one (/`([^`]+)`/) opened a string that swallowed
@@ -26,7 +41,8 @@ export function code(src) {
       }
       if (src[j] === "/") { out += src.slice(i, j + 1); i = j; continue; }
     }
-    if (ch === '"' || ch === "'" || ch === "`") q = ch;
+    if (ch === "`") stack.push("`");
+    else if (ch === '"' || ch === "'") q = ch;
     out += ch;
   }
   return out;
@@ -46,7 +62,8 @@ export function stripComments(rel, src) {
    one: '/checkout'); … new Error('/' read as one regex quoting "Error" (2026-11-24). A quote string ends at its line, and
    a template never closed is no template, so neither hides what follows; a template's ${} is code, read the same way,
    strings in it included (a backtick or a brace in one ends nothing). */
-const REGEX_AT = /(?<![\w)\]])\/(?![*/])((?:\\.|\[[^\]\n]*\]|[^/\\\n])+)\/[gimsuy]*/y;
+// (a character class may hold an escaped bracket: /[\]/]Rest/)
+const REGEX_AT = /(?<![\w)\]])\/(?![*/])((?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n])+)\/[gimsuy]*/y;
 export function regexes(src) {
   const out = [];
   // a quote string's end, or -1 when its line ends first

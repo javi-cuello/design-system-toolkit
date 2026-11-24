@@ -235,7 +235,10 @@ ok("a quote left open on its line does not hide the regexes of the next", /quote
 for (const [what, src] of [["a backtick in a string inside ${}", "const t = `${a ? '`' : ''}`;\nconst r = /State/;"],
   ["a brace in a string inside ${}", "const t = `${'}' + f(/State/)}`;"],
   ["a backtick never closed", "s = f(n)/`/g;\nif (/^State$/.test(n)) go();"],
-  ["a division before a template", "x = f(N / 2, `${a}/${N}`);\nif (/^State$/.test(n)) go(`x`);"]]) {
+  ["a division before a template", "x = f(N / 2, `${a}/${N}`);\nif (/^State$/.test(n)) go(`x`);"],
+  // a nested template's backtick ended the outer one, and its /* blanked the code below as a comment (to-code.mjs)
+  ["a comment opener in a nested template", "const t = `x${b ? `${p}/*` : id}::e`; const r = /^State$/;"],
+  ["an escaped bracket in a character class", "const r = /[\\]/]State/;"]]) {
   d = tree({ scanner: "const a = TOK.stateAxis; " + src });
   ok(`${what} hides no regex`, /quotes the house values? "State"/.test(run(d).stdout));
 }
