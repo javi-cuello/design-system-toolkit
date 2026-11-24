@@ -1269,7 +1269,7 @@ async function main() {
   if (map.tokens) {
     const { ours, theirs } = await tokenSides(tokens, repo, map.tokens, valueOf);
     report.tokens = compareTokens(ours, theirs);
-    console.log(`tokens: ${Object.entries(report.tokens).map(([g, x]) => `${g} ${x.checked} checked, ${x.differs} differ, ${x.missing} missing in code, ${x.onlyInCode} only in code${x.unmeasured ? `, ${x.unmeasured.length} with a line height unmeasured in the design` : ''}`).join('; ')}`);
+    console.log(`tokens: ${Object.entries(report.tokens).map(([g, x]) => `${g} ${x.checked} checked, ${x.differs} differ, ${x.missing} missing in code, ${x.onlyInCode} only in code${x.unmeasured ? `, ${x.unmeasured.length} with a field unmeasured in the design` : ''}`).join('; ')}`);
   }
   report.seconds = Math.round((Date.now() - t0) / 1000);
   // the same code reads back to the same file: a run that found nothing new leaves it as it was
