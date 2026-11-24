@@ -282,6 +282,7 @@ Several skills write to one project's record, so they write rows the same way. T
 | `POST /parity` | `{lib, figma[]}`: the library's component names against the components in the code its settings name, through `tools/shared/code-inventory.mjs`; answers what is in both, only in Figma and only in code, and writes nothing |
 | `POST /rows` | `{owner, fileKey?, target?, full, scope, exhaustive?, ran?, origin?, findings[], dismissed[]?, why?, language?, dryRun?}` filed into the record by the one writer (`rows.mjs`): keys, matches, reopens and closes by owner; `scope` is required with `full`, `ran` with `full` from an owner whose scanner reports it, `why` is said on each row a full run closes; any other field is refused; `dryRun` reports and writes nothing |
 | `GET /health` | what the plugin probes before opening a socket |
+| `GET /checkout` | `{root, data}`: the toolkit checkout this service runs and the audit folder it serves. A client finds a service by its `--data` (`services.mjs`, any checkout's), then asks this before anything else, and refuses one running another checkout, naming both |
 
 It binds to `127.0.0.1` only, **and that is not the protection** — the attacker's
 code runs in the victim's browser, so `localhost` is reachable from any page the

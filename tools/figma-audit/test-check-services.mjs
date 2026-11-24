@@ -40,7 +40,8 @@ ok('one bad service among good ones fails', mixed.bad.length === 1 && mixed.seen
 const undated = judge([{ data: A, port: '9231', started: new Date('not a date') }], wanted, newest);
 ok('a start time ps did not give is not read as stale', undated.bad.length === 0);
 
-// running()'s reading of the process list: only this toolkit's server.mjs run with --data is a service
+// running()'s reading of the process list: a figma-audit server.mjs run with --data is a service, of any checkout, known
+// by its --data; which checkout it runs is asked of it (call, below), never guessed from a path
 {
   const { parse } = await import('./services.mjs');
   const server = fileURLToPath(new URL('./server.mjs', import.meta.url));
@@ -65,12 +66,18 @@ ok('a start time ps did not give is not read as stale', undated.bad.length === 0
   L(`/usr/bin/env bash -c node tools/figma-audit/server.mjs --data ../q/audit`);
   L(`-zsh -c node tools/figma-audit/server.mjs --data ../q/audit`);
   L(`/usr/bin/node -r dotenv/config --env-file .env ${server} --data /home/p/iota/audit --port 9222`); // 115
+  L(`/usr/bin/node -e import('/x/tools/figma-audit/server.mjs') /x/tools/figma-audit/server.mjs --data /home/p/lambda/audit --port 9221`); // 116
+  L(`node --print 1 /x/tools/figma-audit/server.mjs --data /home/p/mu/audit --port 9220`);  // 117
+  L(`node tools/figma-audit/server.mjs --data audit --port 9219`);                          // 118: folder unreadable, --data relative
   const cwds = { 107: '/home/p/kappa', 101: '/', 108: '/' };
   const asked = [];
   const found = parse(lines.join('\n'), { server, tmp, cwd: (p) => { asked.push(p); return p === '107' ? toolkit : cwds[p] || null; } });
   const by = (d) => found.find((f) => f.data === d);
   ok('this toolkit\'s server.mjs with --data is a service, with its port and start', by('/home/p/alpha/figma-design-system/audit')?.port === '9231' && found[0].started.getFullYear() === 2026 && !found[0].test);
-  ok('a shell or an editor whose line names server.mjs and --data is not one, nor another checkout\'s server', !found.some((f) => /beta|gamma|^\/x|\bat$/.test(f.data)));
+  ok('a shell or an editor whose line names server.mjs and --data is not one', !found.some((f) => /beta|^\/x|\bat$/.test(f.data)));
+  ok('another checkout\'s server is a service, known by its --data, its script kept to say which', by('/home/p/gamma/audit')?.server === '/elsewhere/tools/figma-audit/server.mjs' && by('/home/p/alpha/figma-design-system/audit')?.server === server);
+  ok('a `node -e` or `--print` whose code names server.mjs and --data is not a service', !by('/home/p/lambda/audit') && !by('/home/p/mu/audit'));
+  ok('a relative --data whose process\'s folder cannot be read is no service, never read against this one\'s folder', !found.some((f) => f.port === '9219'));
   ok('a service whose --data is in the temp folder is a test\'s, and says so', by(`${tmp}/audit-socket-1/audit`)?.test === true);
   ok('started by a relative path, it is read against its own folder, and so is a relative --data', by(`${toolkit}/audit`)?.port === '9226');
   ok('`node --watch server.mjs`: the script is the first argument that is not a flag', by('/home/p/delta/audit')?.port === '9227');
@@ -86,6 +93,37 @@ let out = '', code = 0;
 try { out = execFileSync(process.execPath, [script], { encoding: 'utf8', env: { ...process.env, TOOLKIT_PROJECTS_ROOT: '/nonexistent-projects-root' } }); } // projects-path: none, on purpose
 catch (e) { out = String(e.stdout); code = e.status; }
 ok('as a script it gives one verdict', /^dashboards: /.test(out) && (code === 0 || code === 1));
+
+// a service is asked which checkout it runs before anything else is asked of it: another checkout's, or one serving
+// another folder on that port, is refused naming both; one that cannot say (older than the route) is refused too
+{
+  const http = await import('node:http');
+  const { call } = await import('./services.mjs');
+  const toolkit = fileURLToPath(new URL('../..', import.meta.url)).replace(/\/$/, '');
+  let says = null;
+  const asked = [];
+  const stand = http.createServer((req, res) => { asked.push(req.url); res.setHeader('Content-Type', 'application/json');
+    if (req.url === '/checkout') { if (!says) { res.writeHead(404); return res.end('not found'); } return res.end(JSON.stringify(says)); }
+    res.end(JSON.stringify({ ok: 1 })); });
+  await new Promise((r) => stand.listen(0, '127.0.0.1', r));
+  const port = stand.address().port;
+  try {
+    says = { root: toolkit, data: '/home/p/alpha/audit' };
+    const fine = await call({ port, data: '/home/p/alpha/audit' }, '/status').catch((e) => e);
+    ok('a service of this checkout serving the folder asked for answers', fine && fine.ok === 1 && asked.join() === '/checkout,/status');
+    // (each case its own folder: a service vouched for is asked once per port and folder in a run)
+    says = { root: '/elsewhere/toolkit', data: '/home/p/beta/audit' };
+    asked.length = 0;
+    const other = await call({ port, data: '/home/p/beta/audit' }, '/status').then(() => null, (e) => e.message);
+    ok('a service of another checkout is refused, naming both checkouts, and is asked nothing else', other && other.includes('/elsewhere/toolkit') && other.includes(toolkit) && !asked.includes('/status'));
+    says = { root: toolkit, data: '/home/p/other/audit' };
+    const folder = await call({ port, data: '/home/p/gamma/audit' }, '/status').then(() => null, (e) => e.message);
+    ok('a service serving another folder on that port is refused, naming both folders', folder && folder.includes('/home/p/other/audit') && folder.includes('/home/p/gamma/audit'));
+    says = null;
+    const old = await call({ port, data: '/home/p/delta/audit' }, '/status').then(() => null, (e) => e.message);
+    ok('a service that cannot say its checkout is refused, saying to restart it', old && /checkout/.test(old) && /restart/.test(old));
+  } finally { stand.close(); }
+}
 
 // end to end: a test's server, its --data in the temp folder, running beside the check does not turn it red
 {

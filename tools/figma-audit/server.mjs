@@ -800,6 +800,11 @@ const server = createServer(held(async (req, res) => {
     if (url.pathname === "/health")
       return json(res, 200, { status: "ok", service: "figma-console-mcp", serverVersion: "dashboard-1", port: PORT, pid: process.pid });
 
+    // Which checkout this service runs and which folder it serves: a client finds a service by its --data, then
+    // asks this before anything else, and refuses one running another checkout's code (services.mjs, call).
+    if (url.pathname === "/checkout" && req.method === "GET")
+      return json(res, 200, { root: resolve(HERE, "../.."), data: AUDIT_DIR });
+
     if (url.pathname === "/status") {
       const files = [...plugins.entries()]
         .filter(([, e]) => !e.socket.destroyed)

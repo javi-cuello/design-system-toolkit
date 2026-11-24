@@ -12,7 +12,8 @@ import { resolve, sep, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { samePath, realPath } from '../shared/real-path.mjs';
 
-const SERVER = fileURLToPath(new URL('./server.mjs', import.meta.url));
+// this checkout's root, which a service is asked to be running (call)
+const ROOT = fileURLToPath(new URL('../..', import.meta.url)).replace(/[\\/]$/, '');
 
 /* A process's working folder, for a path it was given relative to it: /proc on Linux, lsof elsewhere; null when
    neither can say. */
@@ -21,19 +22,21 @@ export function cwdOf(pid) {
   try { const m = execFileSync('lsof', ['-a', '-b', '-w', '-p', String(pid), '-d', 'cwd', '-Fn'], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).match(/^n(.+)$/m); return m ? m[1] : null; } catch { return null; }
 }
 
-/* The services in a `ps -eo pid=,lstart=,args=` listing. A service is a process whose program runs THIS toolkit's
-   server.mjs with --data: its script is the first argument past the program that is server.mjs, so a flag and its
-   value (`node --watch server.mjs`, `node -r dotenv/config server.mjs`) are passed over,
-   and a relative one (`node tools/figma-audit/server.mjs`, as the README starts it) is read against that process's
-   own folder; where that cannot be read, a path ending in tools/figma-audit/server.mjs is taken as this one. A
-   shell or an editor whose command line merely mentions server.mjs and --data is not one, and read as one it
-   failed the dashboards check with a service serving "at" (2026-11-01). One whose --data is under the temp folder,
+/* The services in a `ps -eo pid=,lstart=,args=` listing. A service is a process whose program runs a toolkit's
+   tools/figma-audit/server.mjs with --data, known by that --data, whichever checkout it runs (`server`, its script,
+   says which as far as the listing can; call() asks the service itself). Its script is the first argument past the
+   program that is server.mjs, so a flag and its value (`node --watch server.mjs`, `node -r dotenv/config server.mjs`)
+   are passed over, and a relative one (`node tools/figma-audit/server.mjs`, as the README starts it) is read against
+   that process's own folder; where that cannot be read, a path typed as ending in tools/figma-audit/server.mjs is
+   still one, but a relative --data is not read against this process's folder: unread, it is no service. A shell, an
+   editor, or a `node -e`/`-p` whose code merely mentions server.mjs and --data is not one, and read as one it failed
+   the dashboards check with a service serving "at" (2026-11-01). One whose --data is under the temp folder,
    where no project's records live, is a test's and says so (`test`): the dashboards check leaves it out, since
    another session's test server turned it red for as long as it ran, while a test still finds its own by its
    folder (serviceFor). Pure but for `cwdOf`, which its test replaces. */
 const LINE = /^\s*(\d+)\s+(\w{3} \w{3} [ \d]\d \d\d:\d\d:\d\d \d{4})\s+(.*)$/;
 const SUFFIX = /(^|[\\/])tools[\\/]figma-audit[\\/]server\.mjs$/;
-export function parse(ps, { server = SERVER, tmp = os.tmpdir(), cwd = cwdOf } = {}) {
+export function parse(ps, { tmp = os.tmpdir(), cwd = cwdOf } = {}) {
   const out = [];
   const temps = [...new Set([resolve(tmp), realPath(tmp)])];
   const under = (p) => temps.some((t) => p === t || p.startsWith(t + sep));
@@ -50,13 +53,17 @@ export function parse(ps, { server = SERVER, tmp = os.tmpdir(), cwd = cwdOf } = 
     if (sh >= 0 && parts.slice(sh + 1).some((x) => /^-[a-z]*c[a-z]*$/.test(x))) continue; // `-c`, `-lc`, `-ec`; `-zsh`, `env bash`
     let dir = null;
     const from = (p) => (isAbsolute(p) ? p : (dir ??= cwd(pid) || '') ? resolve(dir, p) : null);
-    const isServer = (x) => { if (x.startsWith('-') || !/server\.mjs$/.test(x)) return false; const abs = from(x); return abs ? samePath(abs, server) : SUFFIX.test(x); };
-    const at = parts.findIndex((x, i) => i > 0 && isServer(x));
+    const at = parts.findIndex((x, i) => i > 0 && !x.startsWith('-') && /server\.mjs$/.test(x));
     if (at < 0) continue;
+    // code given on the line (`node -e`, `--print`) runs instead of a script: what follows it is that code's arguments
+    if (parts.slice(1, at).some((x) => /^(-[a-z]*[ep][a-z]*|--(eval|print)(=.*)?)$/.test(x))) continue;
+    const script = from(parts[at]);
+    if (!SUFFIX.test(script || parts[at])) continue;
     for (let i = at + 1; i < parts.length; i++) {
       if (parts[i] !== '--data' || !parts[i + 1]) continue;
-      const data = from(parts[i + 1]) || resolve(parts[i + 1]);
-      out.push({ pid: Number(pid), data, test: under(data) || under(realPath(data)), port: parts[parts.indexOf('--port', i)] ? parts[parts.indexOf('--port', i) + 1] : null, started });
+      const data = from(parts[i + 1]);
+      if (!data) continue;
+      out.push({ pid: Number(pid), data, server: script, test: under(data) || under(realPath(data)), port: parts[parts.indexOf('--port', i)] ? parts[parts.indexOf('--port', i) + 1] : null, started });
     }
   }
   return out;
@@ -81,6 +88,27 @@ export const serviceFor = (auditDir) => running().find((x) => x.data && x.port &
 // node:http, not fetch: fetch gives up on an answer after five minutes (undici's headersTimeout), and a drawing or an
 // update in place is allowed nine; the bridge times the code out itself
 export async function call(svc, route, body) {
+  await vouch(svc);
+  return request(svc, route, body);
+}
+
+/* A service is asked, once per port and folder, which checkout it runs and which folder it serves (/checkout), before
+   anything else is asked of it: found by its --data, it may run another checkout's code (a draw from the main checkout
+   reaching a worktree's service, or the other way round), which would answer with that code. A mismatch is refused,
+   naming both; one that cannot say is older than the route, and is refused too. */
+const vouched = new Map();
+function vouch(svc, root = ROOT) {
+  const k = `${svc.port}\0${svc.data || ''}`;
+  if (!vouched.has(k)) vouched.set(k, (async () => {
+    let j;
+    try { j = await request(svc, '/checkout'); } catch (e) { throw new Error(`the service on port ${svc.port}${svc.data ? ` for ${svc.data}` : ''} cannot say which checkout it runs (${e.message}): it is older than its /checkout route; restart it`); }
+    if (!j || !j.root || !samePath(j.root, root)) throw new Error(`the service on port ${svc.port}${svc.data ? ` for ${svc.data}` : ''} runs the toolkit at ${j && j.root}, and this is the toolkit at ${root}: run this from that checkout, or start a service from this one`);
+    if (svc.data && !(j.data && samePath(j.data, svc.data))) throw new Error(`the service on port ${svc.port} serves ${j.data}, not ${svc.data}`);
+  })().catch((e) => { vouched.delete(k); throw e; }));
+  return vouched.get(k);
+}
+
+async function request(svc, route, body) {
   const data = body && JSON.stringify(body);
   const text = await new Promise((ok, fail) => {
     const req = http.request({ host: '127.0.0.1', port: svc.port, path: route, method: body ? 'POST' : 'GET', headers: { Origin: `http://127.0.0.1:${svc.port}`, 'Content-Type': 'application/json', ...(data && { 'Content-Length': Buffer.byteLength(data) }) } }, (res) => {
