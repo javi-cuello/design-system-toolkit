@@ -929,7 +929,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const today = await todayOf(label, where, panel ? argv : []);
   const m = measure(where, panel ? argv : [], today);
   report(label, m, fields, byCause);
-  if (mutate) { const M = await import('./mutate.mjs'); for (const l of M.lines(label, M.summary(M.runMutations(where, mutate)), mutate)) console.log(l); }
+  // (its own process: mutate.mjs imports this module, which is still running here)
+  if (mutate && spawnSync(process.execPath, [path.join(HERE, 'mutate.mjs'), '--project', label, '--sample', String(mutate.sample), '--seed', String(mutate.seed)], { stdio: 'inherit' }).status) process.exit(2);
   const file = path.join(m.home, 'round-trip', 'accepted.json');
   const now = counts(m.legs);
   const causesFile = path.join(m.home, 'round-trip', 'accepted-causes.json');
