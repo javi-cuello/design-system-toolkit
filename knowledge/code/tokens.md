@@ -428,6 +428,37 @@ ds-card[disabled] > * { --dim: 1; }
 
 **Sources:** as linked. Systems agree on a short scale, roles by job, `full` as a large length and logical corners; they differ on naming (t-shirt, value, index), radius per size, and px against rem.
 
+## Width tokens
+
+The widths components take (a field, a modal, a menu, a tooltip) as tokens: their tier, their names and how Figma holds them. The values themselves are on each component's page: [forms: field widths](../ui/patterns/forms.md#field-widths), [modal dialog: size and scrolling](../ui/components/modal-dialog.md#size-and-scrolling), [drawer](../ui/components/drawer.md#drawers-and-side-sheets), [popover](../ui/components/popover.md#popovers) and [placement](../ui/components/popover.md#placement) for menus, [tooltip](../ui/components/tooltip.md#tooltips), [toast](../ui/components/toast.md#toasts). Screen widths are [responsive: breakpoints](responsive.md#breakpoints).
+
+**What good looks like**
+- [contested] **Which tier holds a width.** A primitive scale, with the component's code choosing the step: Paste `size-10` … `size-120`, its Modal `size60` or `size80` and its Tooltip `size30` ([Paste tokens](https://unpkg.com/@twilio-paste/design-tokens/dist/tokens.custom-properties.css), [Modal.tsx](https://raw.githubusercontent.com/twilio-labs/paste/main/packages/paste-core/components/modal/src/Modal.tsx)); Polaris `--p-width-0` … `3200` ([width.ts](https://raw.githubusercontent.com/Shopify/polaris/main/polaris-tokens/src/themes/base/width.ts)); SLDS `--slds-g-sizing-1` … `16` ([SLDS hooks](https://unpkg.com/@salesforce-ux/sds-metadata/dist/globalStylingHooks.metadata.json)). A shared functional set: Primer `overlay.width.xsmall` … `xlarge`, 192 to 960px ([size.json5](https://raw.githubusercontent.com/primer/primitives/main/src/tokens/functional/size/size.json5)); Spectrum `container-width-*`, `container-minimum-width-*` and `container-maximum-width-*` ([layout.json](https://unpkg.com/@adobe/spectrum-tokens/src/layout.json)). A token per component: Orbit `modalSmallWidth` … `modalExtraLargeWidth` ([Orbit tokens](https://unpkg.com/@kiwicom/orbit-design-tokens@11.0.0/dist/index.js)); PatternFly `--pf-v6-c-modal-box--m-sm--sm--MaxWidth`, `--pf-v6-c-tooltip--MaxWidth` ([modal-box.css](https://unpkg.com/@patternfly/patternfly/components/ModalBox/modal-box.css)); Ant's tooltip `maxWidth` ([tooltip style](https://unpkg.com/antd/es/tooltip/style/index.js)); Material `md.comp.navigation-drawer.container.width` ([navigation drawer tokens](https://unpkg.com/@material/web/tokens/versions/latest/sass/_md-comp-navigation-drawer.scss)). Atlassian, Carbon and Fluent ship no width tokens: the numbers sit in the component ([Atlassian token names](https://unpkg.com/@atlaskit/tokens/dist/esm/artifacts/token-names.js), [Carbon `_modal.scss`](https://unpkg.com/@carbon/styles/scss/components/modal/_modal.scss), [Fluent tokens](https://unpkg.com/@fluentui/tokens/dist/index.d.ts)).
+- [strong] **Overlays share one width scale.** Spectrum deprecated its tooltip and toast widths as "Consolidated into the shared" container scale ([tooltip.json](https://github.com/adobe/spectrum-design-data/blob/main/packages/tokens/src/tooltip.json)); SLDS's menus, popovers and tooltips all step on its `SIZE_*` scale, 6 to 60rem ([sizing.yml](https://github.com/salesforce-ux/design-system/blob/master/design-tokens/aliases/sizing.yml)); Chakra's tooltip, popover and dialog read its `sizes` scale ([sizes.ts](https://github.com/chakra-ui/chakra-ui/blob/main/packages/react/src/theme/tokens/sizes.ts)), which is Tailwind's container scale, 16 to 80rem ([Tailwind theme.css](https://github.com/tailwindlabs/tailwindcss/blob/main/packages/tailwindcss/theme.css)).
+- [strong] **Words at the shared and component tier, numbers at the primitive.** Primer `xsmall` … `xlarge`, Spectrum `small` … `3x-large`, Orbit `Small` … `ExtraLarge` above; Polaris `0` … `3200`, Paste `10` … `120`, SLDS `1` … `16` below (sources above).
+- [strong] **The value is a literal at the shared and component tier.** Primer's overlay widths, Orbit's, PatternFly's, Ant's and Material's hold px or rem; only Spectrum's `container-maximum-width-small` (`{size-1400}`) and SLDS's one navigation hook (`var(--slds-g-sizing-15)`) alias a primitive (sources above). figma-standard rule 49 departs: it has a component token alias a semantic one.
+- [contested] **Name order.** Subject, property, size: Primer `overlay.width.medium`, Material `container.width`. Property first, with a minimum or maximum: Spectrum `field-minimum-width-large`, `container-maximum-width-small`. Size before property: Orbit `modalLargeWidth`, PatternFly `--m-lg--lg--MaxWidth` (sources above).
+- [strong] **A width for text is set in characters.** SLDS `--slds-g-sizing-content-1` … `3` at 20, 45 and 60ch (SLDS hooks); USWDS's input widths in ex ([input-widths.scss](https://unpkg.com/@uswds/uswds/packages/uswds-core/src/styles/tokens/units/input-widths.scss)); GOV.UK's in em ([forms: field widths](../ui/patterns/forms.md#field-widths)).
+
+**How**
+- [required] **In Figma a width is a number variable scoped "Width and height"** (`WIDTH_HEIGHT`), one scope for both: no scope offers a width alone ([`VariableScope`](https://developers.figma.com/docs/plugins/api/VariableScope/), [Figma: variable scopes](https://help.figma.com/hc/en-us/articles/15145852043927)). It binds to `width`, `height`, `minWidth`, `maxWidth`, `minHeight` and `maxHeight` ([`VariableBindableNodeField`](https://www.figma.com/plugin-docs/api/VariableBindableNodeField/)); a variable hidden from publishing still binds inside its own file (same help page).
+- [weak] Primer's build sends `overlay.width.*` to Figma in the `pattern/size` collection, scoped `size`, which its transformer writes as `WIDTH_HEIGHT` ([size.json5](https://raw.githubusercontent.com/primer/primitives/main/src/tokens/functional/size/size.json5), [figmaAttributes.ts](https://raw.githubusercontent.com/primer/primitives/main/src/transformers/figmaAttributes.ts)). It is the only shipped system whose sources show where its widths sit in Figma.
+- [strong] A preset reaches code as a maximum, so the component still shrinks with its column ([forms: field widths](../ui/patterns/forms.md#field-widths)); bound in Figma, it is the frame's `maxWidth`, with the width filling the container.
+
+**Cases**
+- A width variable with every scope → offered for gaps and radii; scope it to "Width and height".
+- A modal drawn at a fixed 600 while code sets `max-width: 600px` → bind `maxWidth`, fill the width, and resize the frame to check it shrinks.
+- Tooltip 240, popover 320 and menu 280 each as a literal in its own component → the shared-scale systems would step all three on one scale.
+
+**Accessibility**
+- [required] Widths in rem or characters follow the reader's text size, so a field still holds its answer at 200% (WCAG 1.4.4; code-standard rule 54).
+
+**Check**
+- *Script:* could list every Figma variable scoped `WIDTH_HEIGHT` and the nodes binding it, and flag a component frame whose fixed width matches a width token without binding it.
+- *Judgement:* is each width a step on one scale, or a number per component?
+
+**Sources:** token files as linked, read 2026-11-24. Systems split three ways on the tier and agree on words above numbers and on literals; Figma's documentation is the evidence for scopes and bindings.
+
 ## Density
 
 **What good looks like**
