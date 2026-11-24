@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
+import { readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
 
 const require = createRequire(import.meta.url);
 const { compact, resolve } = require('../snapshot/spec.cjs');
@@ -138,10 +138,13 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
   variants: [], invalid: [] });
 {
   assert.deepEqual(linksOf(setNode.children), { Label: { kind: 'characters', layers: [['Label']] } });
-  const rows = compareSpec('chip', setNode, storedFull(), ctx);
-  assert.deepEqual(rows, [], 'a spec that says what Figma says has no row');
-  const crows = compareContract('chip', setNode, compact(storedFull()), contract(), ctx);
-  assert.deepEqual(crows, [], 'a contract that says what Figma says has no row');
+  const sp = compareSpec('chip', setNode, storedFull(), ctx);
+  assert.deepEqual(sp.rows, [], 'a spec that says what Figma says has no row');
+  assert.ok(sp.checked > 20, 'and its fields were checked, each counted');
+  const cp = compareContract('chip', setNode, contract(), ctx);
+  assert.deepEqual(cp.rows, [], 'a contract that says what Figma says has no row');
+  assert.ok(cp.checked > 10, 'and its fields were checked, each counted');
+  const kinds = (r) => r.rows.map((x) => x.kind);
   // each change to the stored spec is a row of its field
   const cases = [
     [(s) => { s.variants[0].gap = 6; }, 'spec:gap'],
@@ -158,17 +161,25 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
   ];
   for (const [change, kind] of cases) {
     const s = storedFull(); change(s);
-    assert.ok(compareSpec('chip', setNode, s, ctx).some((r) => r.kind === kind), `a changed ${kind} is caught`);
+    assert.ok(kinds(compareSpec('chip', setNode, s, ctx)).includes(kind), `a changed ${kind} is caught`);
   }
-  // a token's name is not checkable: another name for the same bound fill is no row, and no row says it passed either
-  { const s = storedFull(); s.variants[0].fills = ['Brand/other']; assert.deepEqual(compareSpec('chip', setNode, s, ctx), []); }
-  // fields REST does not say are not compared at all
-  { const s = storedFull(); s.variants[0].notes = [{ text: 'x' }]; s.variants[0].children[0].paths = [{ data: 'M 0 0' }]; assert.deepEqual(compareSpec('chip', setNode, s, ctx), []); }
-  // a boolean's flipped tree is the walk's own, not a variant Figma lacks
+  // a token's name is not checkable: another name for the same bound fill is no row; the fill is still checked as bound
+  { const s = storedFull(); s.variants[0].fills = ['Brand/other']; const r = compareSpec('chip', setNode, s, ctx); assert.deepEqual(r.rows, []); assert.equal(r.checked, sp.checked); }
+  // fields REST does not say are neither rows nor checks
+  { const s = storedFull(); s.variants[0].notes = [{ text: 'x' }]; s.variants[0].children[0].paths = [{ data: 'M 0 0' }]; const r = compareSpec('chip', setNode, s, ctx); assert.deepEqual(r.rows, []); assert.equal(r.checked, sp.checked); }
+  // mixed text and a swap REST does not name are skipped, counted as such, never passing
+  {
+    const set = structuredClone(setNode); set.children[0].children[0].characterStyleOverrides = [0, 1];
+    const r = compareSpec('chip', set, storedFull(), ctx);
+    assert.equal(r.skipped['textStyle of mixed text'], 1);
+    assert.equal(r.checked, sp.checked - 1, 'a skipped field is not a checked one');
+  }
+  // a boolean's flipped tree is the walk's own, not a variant Figma lacks, and it is counted as skipped
   {
     const set = structuredClone(setNode); set.componentPropertyDefinitions['Show#2:0'] = { type: 'BOOLEAN', defaultValue: false };
     const s = storedFull(); s.props.Show = 'BOOLEAN'; s.variants.push({ ...storedTree('Size=Small, Show=True', 0, 60) });
-    assert.ok(!compareSpec('chip', set, s, ctx).some((r) => r.kind === 'spec:variant'));
+    const r = compareSpec('chip', set, s, ctx);
+    assert.ok(!kinds(r).includes('spec:variant')); assert.equal(r.skipped['flipped-boolean tree'], 1);
   }
   // and each change to the contract
   const ccases = [
@@ -185,12 +196,64 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
   ];
   for (const [change, kind] of ccases) {
     const c = contract(); change(c);
-    assert.ok(compareContract('chip', setNode, compact(storedFull()), c, ctx).some((r) => r.kind === kind), `a changed ${kind} is caught`);
+    assert.ok(kinds(compareContract('chip', setNode, c, ctx)).includes(kind), `a changed ${kind} is caught`);
   }
-  const rep = report('lib', [{ component: 'chip', rows: [] }, { component: 'other', rows: [{ kind: 'spec:gap', against: 'spec', component: 'other' }] }, { component: 'gone', missing: true, rows: [] }]);
-  assert.deepEqual([rep.components, rep.unread, rep.specMatches, rep.contractMatches, rep.bothMatch], [3, 1, 1, 2, 1], 'a component Figma does not have matches nothing');
+  // parts are found in Figma's own tree by their names, never through the stored spec; two candidates are ambiguous
+  {
+    const set = structuredClone(setNode);
+    for (const v of set.children) v.children.splice(1, 0, { ...structuredClone(v.children[0]), id: v.id + 't2' });
+    const r = compareContract('chip', set, contract(), ctx);
+    assert.ok(kinds(r).includes('contract:ambiguous'), 'one part, two layers it could be: ambiguous, not the first');
+    assert.ok(!r.rows.some((x) => x.kind === 'contract:content'), 'an ambiguous part is not compared as if found');
+  }
+  // inside an instance: a field Figma has and the contract leaves unsaid is a row, as is a layer no part is
+  {
+    const inst = (v) => ({ id: v.id + 'i', name: 'Icon', type: 'INSTANCE', componentId: 'C:9', size: { x: 16, y: 16 }, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', opacity: 0.5,
+      overrides: [{ id: 'x', overriddenFields: ['opacity'] }], children: [{ id: v.id + 'g', name: 'Glyph', type: 'VECTOR', size: { x: 12, y: 12 }, relativeTransform: T(2, 2) }] });
+    const set = structuredClone(setNode); for (const v of set.children) v.children.push(inst(v));
+    const c = contract(); c.anatomy.icon = { kind: 'instance', parent: 'root', order: 1, component: 'Icon', key: 'kset-icon', width: 16, height: 16 };
+    const r = compareContract('chip', set, c, ctx);
+    assert.ok(r.rows.some((x) => x.kind === 'contract:not stated' && x.path === 'icon.opacity'), 'the instance\'s own opacity, unsaid');
+    assert.ok(r.rows.some((x) => x.kind === 'contract:part' && /Glyph/.test(x.path)), 'a layer inside a walked instance that no part is');
+  }
+  // a layer stretched with neither width nor end said has its width held to Figma's box
+  {
+    const set = structuredClone(setNode);
+    for (const v of set.children) { delete v.layoutMode; v.children[0].constraints = { horizontal: 'LEFT_RIGHT', vertical: 'TOP' }; }
+    const c = contract(); delete c.anatomy.root.layout; delete c.anatomy.label.width; c.anatomy.label.absolute = { x: 8, y: 6 }; c.anatomy.label.constraints = { horizontal: 'stretch', vertical: 'min' };
+    assert.ok(compareContract('chip', set, c, ctx).rows.some((x) => x.kind === 'contract:width' && x.path === 'label'));
+  }
+  // the counts: a component nothing was checked on is not checked, never a match
+  const R = (checked, rows = [], skipped = {}) => ({ rows, checked, skipped });
+  const rep = report('lib', [
+    { component: 'chip', spec: R(10), contract: R(5) },
+    { component: 'other', spec: R(10, [{ kind: 'spec:gap', against: 'spec', component: 'other' }]), contract: R(5) },
+    { component: 'empty', spec: R(0, [], { 'textStyle of mixed text': 2 }), contract: R(0) },
+    { component: 'gone', missing: true },
+  ]);
+  assert.deepEqual(rep.spec, { matched: 1, differing: 1, notChecked: 2, checked: 20, skipped: 2 });
+  assert.deepEqual(rep.contract, { matched: 2, differing: 0, notChecked: 2, checked: 10, skipped: 0 });
+  assert.deepEqual([rep.components, rep.unread, rep.both], [4, 1, 1]);
   assert.equal(rep.top[0].kind, 'spec:gap');
   assert.ok(resolve(compact(storedFull())).variants.length === 2);
+}
+
+/* ---- one real pair: a small component as Figma's REST and the snapshot gave it (names of its library scrubbed) */
+{
+  const F = path.join(path.dirname(new URL(import.meta.url).pathname), 'fixtures', 'oracle-figma');
+  const rest = JSON.parse(fs.readFileSync(path.join(F, 'rest.json'), 'utf8'));
+  const stored = JSON.parse(fs.readFileSync(path.join(F, 'figma.json'), 'utf8'));
+  const con = JSON.parse(fs.readFileSync(path.join(F, 'contract.json'), 'utf8'));
+  const rctx = { styles: rest.styles, components: rest.components, componentSets: rest.componentSets };
+  const s = compareSpec('real', rest.document, resolve(stored), rctx);
+  assert.deepEqual(s.rows, [], 'the walk read this component as Figma says it');
+  assert.ok(s.checked > 50, `its fields checked (${s.checked})`);
+  const c = compareContract('real', rest.document, con, rctx);
+  assert.ok(c.checked > 20, `the contract's fields checked (${c.checked})`);
+  assert.deepEqual(c.rows.filter((x) => x.kind === 'contract:part' || x.kind === 'contract:ambiguous'), [], 'every part found in Figma\'s own tree');
+  // and a real value changed is a real row
+  const changed = structuredClone(rest); changed.document.children[0].paddingLeft = (changed.document.children[0].paddingLeft || 0) + 3;
+  assert.ok(compareSpec('real', changed.document, resolve(stored), rctx).rows.some((x) => x.kind === 'spec:pad'));
 }
 
 /* ---- the fetch: one at a time, a 429 waits, the token in the header and nowhere else, four failures stop it */
@@ -210,10 +273,25 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
   await assert.rejects(forbidden('/v1/x'), /403/, 'a 403 is not retried');
 }
 {
-  // versionAt: the first version saved at or after the snapshot
+  // versionAt: the first version saved at or after the snapshot, compared as dates; never pinned (no version is stored)
   const pages = { versions: [{ id: 'v3', created_at: '2026-11-24T12:00:00Z' }, { id: 'v2', created_at: '2026-11-24T09:00:00Z' }, { id: 'v1', created_at: '2026-11-24T08:00:00Z' }] };
-  assert.deepEqual(await versionAt(async () => pages, 'K', '2026-11-24T08:30:00Z'), { id: 'v2', at: '2026-11-24T09:00:00Z' });
+  assert.deepEqual(await versionAt(async () => pages, 'K', '2026-11-24T08:30:00Z'), { id: 'v2', at: '2026-11-24T09:00:00Z', pinned: false });
   assert.equal(await versionAt(async () => pages, 'K', '2026-11-24T13:00:00Z'), null, 'none since: the file as it is');
+  assert.equal(await versionAt(async () => pages, 'K', null), null, 'no snapshot time: the file as it is');
+  // as dates: a version saved at 08:26:13 is before a snapshot at 08:26:13.582, which a string comparison says it is not
+  const close = { versions: [{ id: 'b', created_at: '2026-11-24T09:00:00Z' }, { id: 'a', created_at: '2026-11-24T08:26:13Z' }] };
+  assert.equal((await versionAt(async () => close, 'K', '2026-11-24T08:26:13.582Z')).id, 'b');
+  // pages followed until a version older than the snapshot is met
+  const pagesAsked = [];
+  const paged = async (p) => { pagesAsked.push(p); return p.includes('before=') ? { versions: [{ id: 'v1', created_at: '2026-11-24T08:00:00Z' }] } : { versions: [{ id: 'v3', created_at: '2026-11-24T12:00:00Z' }, { id: 'v2', created_at: '2026-11-24T09:00:00Z' }], pagination: { next_page: 'https://api.figma.com/v1/files/K/versions?page_size=50&before=2' } }; };
+  assert.equal((await versionAt(paged, 'K', '2026-11-24T08:30:00Z')).id, 'v2');
+  assert.equal(pagesAsked.length, 2, 'the second page read');
+  // a next page off Figma's host is never followed (the token goes to Figma only)
+  const off = async () => ({ versions: [{ id: 'v2', created_at: '2026-11-24T09:00:00Z' }], pagination: { next_page: 'https://elsewhere.example/v' } });
+  assert.equal((await versionAt(off, 'K', '2026-11-24T08:30:00Z')).id, 'v2');
+  // each result says which version it read and that it is unpinned
+  assert.match(readAt({ id: 'v2', at: '2026-11-24T09:00:00Z', pinned: false }, '2026-11-24T08:30:00Z'), /read at v2, 2026-11-24T09:00:00Z.*unpinned: may include later edits/);
+  assert.match(readAt(null, '2026-11-24T08:30:00Z'), /read at latest.*unpinned: may include later edits/);
   // fetchSets: batched, cached by file and version, read back without a request
   const cache = fs.mkdtempSync(path.join(os.tmpdir(), 'oracle-figma-'));
   const asked = [];

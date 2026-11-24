@@ -1,0 +1,180 @@
+{
+  "name": "Data table header item",
+  "id": "4630:273365",
+  "page": "Data table ",
+  "description": "",
+  "props": {
+    "Description text": "TEXT",
+    "Description": "BOOLEAN",
+    "Title text": "TEXT"
+  },
+  "links": {
+    "Title text": {
+      "kind": "characters",
+      "layers": [
+        [
+          "Title + Description",
+          "Data table header"
+        ]
+      ]
+    },
+    "Description text": {
+      "kind": "characters",
+      "layers": [
+        [
+          "Title + Description",
+          "Data table description"
+        ]
+      ]
+    },
+    "Description": {
+      "kind": "visible",
+      "layers": [
+        [
+          "Title + Description",
+          "Data table description"
+        ]
+      ]
+    }
+  },
+  "key": "11ffe86532bb62a16eff3534be3d47ed59f1fc1e",
+  "default": {
+    "name": "Data table header item",
+    "type": "COMPONENT",
+    "w": 800,
+    "h": 86,
+    "layout": "HORIZONTAL",
+    "pad": [
+      16,
+      16,
+      24,
+      16
+    ],
+    "gap": 16,
+    "wrap": false,
+    "align": "MIN/MIN",
+    "sizing": "FIXED/HUG",
+    "children": [
+      {
+        "name": "Title + Description",
+        "type": "FRAME",
+        "w": 768,
+        "h": 46,
+        "x": 16,
+        "y": 16,
+        "index": 0,
+        "layout": "VERTICAL",
+        "pad": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": 0,
+        "wrap": false,
+        "align": "MIN/MIN",
+        "sizing": "FILL/HUG",
+        "children": [
+          {
+            "name": "Data table header",
+            "type": "TEXT",
+            "w": 768,
+            "h": 28,
+            "x": 0,
+            "y": 0,
+            "index": 0,
+            "sizing": "FILL/HUG",
+            "fills": [
+              "Text/text-primary"
+            ],
+            "text": "Title",
+            "textStyle": "Fixed heading styles/heading-03",
+            "textAlign": "LEFT",
+            "textAutoResize": "HEIGHT",
+            "lineHeight": "28"
+          },
+          {
+            "name": "Data table description",
+            "type": "TEXT",
+            "w": 768,
+            "h": 18,
+            "x": 0,
+            "y": 28,
+            "index": 1,
+            "sizing": "FILL/HUG",
+            "fills": [
+              "Text/text-secondary"
+            ],
+            "text": "Description",
+            "textStyle": "Body styles/body-compact-01",
+            "textAlign": "LEFT",
+            "textAutoResize": "HEIGHT",
+            "letterSpacing": "0.16",
+            "lineHeight": "18"
+          }
+        ]
+      }
+    ]
+  },
+  "variants": [
+    {
+      "name": "Data table header item, Description=False",
+      "type": "FRAME",
+      "w": 800,
+      "h": 68,
+      "layout": "HORIZONTAL",
+      "pad": [
+        16,
+        16,
+        24,
+        16
+      ],
+      "gap": 16,
+      "wrap": false,
+      "align": "MIN/MIN",
+      "sizing": "FIXED/HUG",
+      "children": [
+        {
+          "name": "Title + Description",
+          "type": "FRAME",
+          "w": 768,
+          "h": 28,
+          "x": 16,
+          "y": 16,
+          "index": 0,
+          "layout": "VERTICAL",
+          "pad": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "gap": 0,
+          "wrap": false,
+          "align": "MIN/MIN",
+          "sizing": "FILL/HUG",
+          "children": [
+            {
+              "name": "Data table header",
+              "type": "TEXT",
+              "w": 768,
+              "h": 28,
+              "x": 0,
+              "y": 0,
+              "index": 0,
+              "sizing": "FILL/HUG",
+              "fills": [
+                "Text/text-primary"
+              ],
+              "text": "Title",
+              "textStyle": "Fixed heading styles/heading-03",
+              "textAlign": "LEFT",
+              "textAutoResize": "HEIGHT",
+              "lineHeight": "28"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

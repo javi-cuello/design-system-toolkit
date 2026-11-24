@@ -1,0 +1,108 @@
+{
+  "contract": 1,
+  "component": "Data table header item",
+  "figma": {
+    "name": "Data table header item",
+    "key": "11ffe86532bb62a16eff3534be3d47ed59f1fc1e",
+    "id": "4630:273365"
+  },
+  "props": {
+    "descriptionText": {
+      "type": "string",
+      "default": "Description",
+      "figma": "Description text",
+      "sets": [
+        "titleDescription/dataTableDescription"
+      ]
+    },
+    "description": {
+      "type": "boolean",
+      "default": true,
+      "figma": "Description",
+      "shows": [
+        "titleDescription/dataTableDescription"
+      ]
+    },
+    "titleText": {
+      "type": "string",
+      "default": "Title",
+      "figma": "Title text",
+      "sets": [
+        "titleDescription/dataTableHeader"
+      ]
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "row",
+        "gap": 16,
+        "align": "start",
+        "crossAlign": "start",
+        "padding": {
+          "top": 16,
+          "end": 16,
+          "bottom": 24,
+          "start": 16
+        }
+      },
+      "width": 800,
+      "height": "hug"
+    },
+    "titleDescription": {
+      "kind": "container",
+      "parent": "root",
+      "layout": {
+        "direction": "column",
+        "gap": 0,
+        "align": "start",
+        "crossAlign": "start",
+        "padding": {
+          "top": 0,
+          "end": 0,
+          "bottom": 0,
+          "start": 0
+        }
+      },
+      "width": "fill",
+      "height": "hug",
+      "order": 0,
+      "name": "Title + Description"
+    },
+    "titleDescription/dataTableHeader": {
+      "kind": "text",
+      "parent": "titleDescription",
+      "width": "fill",
+      "height": "hug",
+      "color": "Text/text-primary",
+      "typography": "Fixed heading styles/heading-03",
+      "textAlign": "start",
+      "autoResize": "height",
+      "content": "{titleText}",
+      "order": 0
+    },
+    "titleDescription/dataTableDescription": {
+      "kind": "text",
+      "parent": "titleDescription",
+      "width": "fill",
+      "height": "hug",
+      "color": "Text/text-secondary",
+      "typography": "Body styles/body-compact-01",
+      "textAlign": "start",
+      "autoResize": "height",
+      "content": "{descriptionText}",
+      "order": 1
+    }
+  },
+  "variants": [
+    {
+      "when": {
+        "description": false
+      },
+      "remove": [
+        "titleDescription/dataTableDescription"
+      ]
+    }
+  ]
+}

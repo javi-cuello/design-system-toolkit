@@ -8,17 +8,19 @@
  *   contract  expand(contract, props) for each variant the set draws (layers.mjs), part by part
  *
  * Each side is read from Figma's own JSON by this file's mapping (FIELDS, below, the one table of what is compared
- * and how), never by the walk or derive: a value is never held to something computed from itself. The one thing
- * borrowed is the address: which contract part is which stored layer (derive.cjs `bridge`), and which contract value
- * is which Figma option; an address that is wrong shows as a part missing, never as a field that passes.
+ * and how), never by the walk or derive: a value is never held to something computed from itself. Even the address is
+ * Figma's own: a contract part is found in the REST tree by its layer's name (addressParts), never through figma.json,
+ * and a part two layers could be is `ambiguous`, never the first that fits.
  *
  * A field the REST API does not expose (a variable's name without the file_variables scope, a vector's paths, a
  * Dev Mode note, the plugin's flipped-boolean trees) is listed as not checkable (NOT_CHECKABLE), never counted as
  * passing; a bound value whose token name is not checkable is still held to being bound (`@bound`).
  *
  * Rows: { component, variant, path, figma, ours, kind } where kind is `<against>:<field>` (`spec:fills`,
- * `contract:layout.padding`, `contract:part`). A library's report: the components whose spec, contract, and both
- * match Figma on every checked field, and the kinds that differ most.
+ * `contract:layout.padding`, `contract:part`, `contract:not stated` for a field Figma has inside an instance that the
+ * contract leaves unsaid). Every field compared is counted, and every field skipped (REST silent, mixed text, a swap
+ * REST does not name) is counted apart, never as passing. A library's report, per side: the components that match on
+ * every field checked, that differ, and that had nothing checked; and the kinds that differ most.
  *
  *   node tools/component-contract/oracle-figma.mjs --project <label>[,<label>…] [--cache <dir>] [--out <file>]
  *        [--version snapshot|latest] [--interval <s>] [--offline] [--top <n>] [components…]
@@ -27,20 +29,20 @@
  * sent to api.figma.com only, never printed or written. Requests go one at a time, --interval seconds apart (7 unless
  * said), a 429 waits its Retry-After; four failures in a row stop the run. Responses are cached under --cache
  * (<project home>/round-trip/oracle-figma/cache unless said), keyed by file and version, geometry stripped. The file
- * version read is the first saved at or after the project's last snapshot of that file (changes.json), so a later edit
- * of the library is not a difference; --version latest reads the file as it is. --offline reads the cache alone.
+ * version read is the first saved at or after the project's last snapshot of that file (changes.json); a snapshot
+ * stores no version id, so every result says `read at <version, its date>; unpinned: may include later edits`.
+ * --version latest reads the file as it is. --offline reads the cache alone, and the version its fetch recorded.
  * Exits 2 on a usage error, 1 when a fetch fails, else 0.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { expand } from './layers.mjs';
+import { expand, camel } from './layers.mjs';
 import { WEIGHTS } from '../parity/values.mjs';
 
 const require = createRequire(import.meta.url);
 const { resolve: resolveSpec, layerPaths } = require('../snapshot/spec.cjs');
-const { bridge } = require('./derive.cjs');
 const { variantValues: valuesOf } = require('../shared/names.js');
 
 /* ---------------------------------------------------------------- the mapping */
@@ -387,72 +389,88 @@ function byPath(tree) {
 // the visible layers only, each holding its REST node (`$n`), as the walk sees a variant
 const visible = (n) => ({ name: n.name, $n: n, children: (n.children || []).filter((c) => c.visible !== false).map(visible) });
 
+/*
+ * What one comparison found: its rows, how many fields it checked, and how many it skipped and why (a field REST does
+ * not state, a text of mixed styles, a swap REST does not name). A skipped field is never a checked one, so a
+ * component with nothing checked is "not checked", never a match.
+ */
+function tally(component, against) {
+  const t = { rows: [], checked: 0, skipped: {} };
+  t.check = (variant, p, field, figma, ours, eq = same) => { t.checked++; if (!eq(figma, ours)) t.rows.push({ component, variant, path: p, figma, ours, kind: `${against}:${field}`, against }); };
+  t.differ = (variant, p, field, figma, ours) => { t.checked++; t.rows.push({ component, variant, path: p, figma, ours, kind: `${against}:${field}`, against }); };
+  t.skip = (why, n = 1) => { t.skipped[why] = (t.skipped[why] || 0) + n; };
+  return t;
+}
+const result = (t) => ({ rows: t.rows, checked: t.checked, skipped: t.skipped });
+
 /* -------------------------------------------------------- figma vs the spec */
 
 export function compareSpec(component, setNode, spec, ctx) {
-  const rows = [];
-  const add = (variant, p, field, figma, ours) => rows.push({ component, variant, path: p, figma, ours, kind: `spec:${field}`, against: 'spec' });
+  const t = tally(component, 'spec');
   const isSet = setNode.type === 'COMPONENT_SET';
   const variants = isSet ? setNode.children || [] : [setNode];
   // set level
   const defs = setNode.componentPropertyDefinitions || {};
   const props = Object.fromEntries(Object.entries(defs).map(([k, d]) => [bare(k), d.type === 'VARIANT' ? d.variantOptions : d.type]));
-  for (const k of new Set([...Object.keys(props), ...Object.keys(spec.props || {})])) if (!same(props[k], (spec.props || {})[k])) add(null, `props.${k}`, 'props', props[k], (spec.props || {})[k]);
+  for (const k of new Set([...Object.keys(props), ...Object.keys(spec.props || {})])) t.check(null, `props.${k}`, 'props', props[k], (spec.props || {})[k]);
   if (isSet) {
     const want = Object.fromEntries(Object.entries(defs).filter(([, d]) => d.type === 'VARIANT').map(([k, d]) => [bare(k), d.defaultValue]));
-    const got = valuesOf(spec.defaultVariant || '');
-    if (!same(want, got)) add(null, 'defaultVariant', 'defaultVariant', want, got);
+    t.check(null, 'defaultVariant', 'defaultVariant', want, valuesOf(spec.defaultVariant || ''));
   }
   const meta = isSet ? ctx.componentSets[setNode.id] : ctx.components[setNode.id];
-  if (meta && plainText(meta.description) !== plainText(spec.description)) add(null, 'description', 'description', meta.description || '', spec.description || '');
-  if (isSet && setNode.size && spec.set && !same({ w: r2(setNode.size.x), h: r2(setNode.size.y) }, spec.set)) add(null, 'set', 'set', { w: r2(setNode.size.x), h: r2(setNode.size.y) }, spec.set);
+  if (meta) t.check(null, 'description', 'description', meta.description || '', spec.description || '', (a, b) => plainText(a) === plainText(b));
+  else t.skip('description: the set is not in the response');
+  if (isSet && setNode.size) t.check(null, 'set', 'set', { w: r2(setNode.size.x), h: r2(setNode.size.y) }, spec.set);
   const links = linksOf(variants);
-  for (const k of new Set([...Object.keys(links), ...Object.keys(spec.links || {})])) if (!same(links[k], (spec.links || {})[k])) add(null, `links.${k}`, 'links', links[k], (spec.links || {})[k]);
+  for (const k of new Set([...Object.keys(links), ...Object.keys(spec.links || {})])) t.check(null, `links.${k}`, 'links', links[k], (spec.links || {})[k]);
   // variant by variant
   const stored = new Map((spec.variants || []).map((v) => [v.name, v]));
   const figmaNames = new Set(variants.map((v) => v.name));
   for (const v of variants) {
     const s = stored.get(v.name);
-    if (!s) { add(v.name, '$root', 'variant', 'drawn', 'missing'); continue; }
+    if (!s) { t.differ(v.name, '$root', 'variant', 'drawn', 'missing'); continue; }
+    t.check(v.name, '$root', 'variant', true, true);
     const walked = restWalk(v, ctx);
     if (isSet) { const p = placeOf(v); walked.place = { x: p.x, y: p.y }; }
-    diffTree(walked, s, v, (p, f, a, b) => add(v.name, p, f, a, b));
+    diffTree(walked, s, v, t);
   }
-  // a stored variant Figma does not draw, other than a flipped boolean's (not checkable)
+  // a stored variant Figma does not draw, other than a flipped boolean's (the walk's own: skipped)
   const booleans = Object.entries(defs).filter(([, d]) => d.type === 'BOOLEAN').map(([k]) => bare(k));
-  for (const name of stored.keys()) if (!figmaNames.has(name) && !booleans.some((b) => new RegExp(`, ${b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=(True|False)$`).test(name))) add(name, '$root', 'variant', 'missing', 'stored');
-  return rows;
+  for (const name of stored.keys()) {
+    if (figmaNames.has(name)) continue;
+    if (booleans.some((b) => new RegExp(`, ${b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=(True|False)$`).test(name))) t.skip('flipped-boolean tree');
+    else t.differ(name, '$root', 'variant', 'missing', 'stored');
+  }
+  return result(t);
 }
-// a description as words: REST gives it plain, the walk as markdown (a link's text, emphasis, blank lines)
+// a description as words: REST gives it plain, the walk as markdown (a link's text, emphasis, a list's markers)
 // (REST also drops the line a bold heading ends, so the words are held with no space between them)
-export const plainText = (t) => String(t || '').replace(/^[ \t]*(?:[-*+]|\d+\.)[ \t]+/gm, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/&#(\d+);/g, (_, c) => String.fromCodePoint(+c)).replace(/(\*\*|__|\*|_|`)(\S(?:.*?\S)?)\1/g, '$2').replace(/\\([\\`*_{}[\]()#+\-.!])/g, '$1').replace(/[\s\uFEFF\u200B]+/g, '');
+export const plainText = (t) => String(t || '').replace(/^[ \t]*(?:[-*+]|\d+\.)[ \t]+/gm, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/&#(\d+);/g, (_, c) => String.fromCodePoint(+c)).replace(/(\*\*|__|\*|_|`)(\S(?:.*?\S)?)\1/g, '$2').replace(/\\([\\`*_{}[\]()#+\-.!])/g, '$1').replace(/[\s﻿​]+/g, '');
 
-function diffTree(walked, stored, restRoot, say) {
+function diffTree(walked, stored, restRoot, t) {
+  const variant = walked.name;
   const fig = new Map([['$root', walked]]); layerPaths(walked, (n, p) => { fig.set(p, n); });
   const ours = new Map([['$root', stored]]); layerPaths(stored, (n, p) => { ours.set(p, n); });
   const rest = byPath(restRoot);
   for (const [p, f] of fig) {
     const o = ours.get(p);
-    if (!o) { if (ours.has(parentPath(p))) say(p, 'layer', 'present', 'missing'); continue; }
+    if (!o) { if (ours.has(parentPath(p))) t.differ(variant, p, 'layer', 'present', 'missing'); continue; }
+    t.check(variant, p, 'layer', true, true);
     const a = restOurs(f), b = specOurs(o, rest.get(p));
     if (p === '$root') { delete a.name; delete b.name; }
     for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
-      // where-stated: REST leaves these out on some layers (an instance's corner smoothing, which the plugin API reads
-      // through to its component)
-      if ((k === 'strokesInLayout' || k === 'sizing' || (k === 'smoothing' && f.type === 'INSTANCE')) && !(k in a)) continue;
-      // an ellipse's corner radius is the plugin API's alone, and draws nothing
-      if (k === 'radius' && f.type === 'ELLIPSE' && !(k in a)) continue;
-      if (k === 'textStyle' && (a[k] === 'mixed' || b[k] === 'mixed')) continue; // not checkable
-      // the walk keeps an instance's first eight overrides, in the plugin's order: each of those is one Figma lists
-      // how many layers an instance overrides; the fields' names are REST's own (individualStrokeWeights for
-      // strokeBottomWeight, fontFamily for fontName), not checkable
-      if (k === 'overrides' && Array.isArray(a[k]) && Array.isArray(b[k])) { if (b[k].length !== Math.min(8, a[k].length)) say(p, k, a[k].length, b[k].length); continue; }
-      if (k === 'instanceOf' && typeof a[k] === 'string' && typeof b[k] === 'string') { if (!(b[k] === a[k] || b[k].endsWith('/' + a[k]))) say(p, k, a[k], b[k]); continue; }
-      if (k === 'props') dropUnnamed(a[k], b[k]);
-      if (!same(a[k], b[k])) say(p, k, a[k], b[k]);
+      // REST silent on a field the walk states: skipped, by name (an instance's corner smoothing, which the plugin API
+      // reads through to its component; an ellipse's radius; whether strokes take room; sizing on a vector)
+      if (!(k in a) && (k === 'strokesInLayout' || k === 'sizing' || (k === 'smoothing' && f.type === 'INSTANCE') || (k === 'radius' && f.type === 'ELLIPSE'))) { t.skip(`${k}: REST silent`); continue; }
+      if (k === 'textStyle' && (a[k] === 'mixed' || b[k] === 'mixed')) { t.skip('textStyle of mixed text'); continue; }
+      // how many layers an instance overrides (the walk keeps eight); the fields' names are REST's own, not checkable
+      if (k === 'overrides' && Array.isArray(a[k]) && Array.isArray(b[k])) { t.check(variant, p, k, Math.min(8, a[k].length), b[k].length); continue; }
+      if (k === 'instanceOf' && typeof a[k] === 'string' && typeof b[k] === 'string') { t.check(variant, p, k, a[k], b[k], (x, y) => y === x || y.endsWith('/' + x)); continue; }
+      if (k === 'props') { const n = dropUnnamed(a[k], b[k]); if (n) t.skip('swap REST does not name', n); }
+      t.check(variant, p, k, a[k], b[k]);
     }
   }
-  for (const p of ours.keys()) if (!fig.has(p) && fig.has(parentPath(p))) say(p, 'layer', 'missing', 'present');
+  for (const p of ours.keys()) if (!fig.has(p) && fig.has(parentPath(p))) t.differ(variant, p, 'layer', 'missing', 'present');
 }
 const parentPath = (p) => (p.includes(' > ') ? p.slice(0, p.lastIndexOf(' > ')) : '$root');
 
@@ -617,9 +635,58 @@ export function partOurs(e) {
   return o;
 }
 
-export function compareContract(component, setNode, stored, contract, ctx) {
-  const rows = [];
-  const add = (variant, p, field, figma, ours) => rows.push({ component, variant, path: p, figma, ours, kind: `contract:${field}`, against: 'contract' });
+/*
+ * Which REST layer each contract part is, found in Figma's own tree and never through the stored spec (the walk being
+ * judged): parent first, a part is the child of its parent's layer whose name it carries (`name`, Figma's own, where
+ * the contract keeps it), or whose name camel-cases to its id's last part (a repeat's `_2` taken off), or a boolean's
+ * own layer, named for its prop (layers.mjs). One candidate is the part; several are told apart only by a repeat's
+ * number, and only where the contract has as many such parts as Figma has layers; else the part is ambiguous, never
+ * the first that fits.
+ */
+export function addressParts(flat, variant, propIds) {
+  const found = new Map([['root', variant]]), ambiguous = new Map(), taken = new Set([variant]);
+  const kids = (n) => (n.children || []).filter((c) => c.visible !== false);
+  const depth = (id) => { let d = 0; for (let p = flat[id] && flat[id].parent; p; p = flat[p] && flat[p].parent) d++; return d; };
+  const ids = Object.keys(flat).filter((id) => id !== 'root').sort((a, b) => depth(a) - depth(b));
+  const baseOf = (id) => { const last = id.slice(id.lastIndexOf('/') + 1); const m = /^(.*)_(\d+)$/.exec(last); return m ? { base: m[1], nth: +m[2] } : { base: last, nth: 1 }; };
+  const fits = (part, base, c) => {
+    if (part.name) return part.name === c.name;
+    if (camel(c.name) === base) return true;
+    const ref = c.componentPropertyReferences && c.componentPropertyReferences.visible, pid = ref && propIds[bare(ref)];
+    return !!pid && base === pid + camel(c.name).replace(/^./, (x) => x.toUpperCase());
+  };
+  for (const id of ids) {
+    const part = flat[id], parent = found.get(part.parent || 'root');
+    if (!parent) continue;
+    const { base, nth } = baseOf(id);
+    const fit = kids(parent).filter((c) => fits(part, base, c));
+    if (!fit.length) continue;
+    // the parts of this parent that the same layers would fit
+    const siblings = ids.filter((x) => (flat[x].parent || 'root') === (part.parent || 'root') && baseOf(x).base === base && (flat[x].name || null) === (part.name || null));
+    const c = fit.length === 1 ? fit[0] : siblings.length === fit.length ? fit[nth - 1] : null;
+    if (c && !taken.has(c)) { found.set(id, c); taken.add(c); continue; }
+    ambiguous.set(id, fit.map((x) => `${x.name} (#${kids(parent).indexOf(x) + 1})`));
+  }
+  return { found, ambiguous, taken };
+}
+
+/* REST layers no part took, by their path in Figma's tree, inside an instance only where the walk goes (an instance
+   that overrides something, every one around it too) */
+function untaken(variant, taken) {
+  const out = [];
+  const walk = (n, at, open) => {
+    for (const c of (n.children || []).filter((x) => x.visible !== false)) {
+      const p = at ? `${at} > ${c.name}` : c.name;
+      if (open && !taken.has(c)) out.push({ path: p, node: c });
+      walk(c, p, open && (c.type !== 'INSTANCE' || overridesOf(c).length > 0));
+    }
+  };
+  walk(variant, '', true);
+  return out;
+}
+
+export function compareContract(component, setNode, contract, ctx) {
+  const t = tally(component, 'contract');
   const isSet = setNode.type === 'COMPONENT_SET';
   const variants = isSet ? setNode.children || [] : [setNode];
   const defs = setNode.componentPropertyDefinitions || {};
@@ -629,28 +696,25 @@ export function compareContract(component, setNode, stored, contract, ctx) {
   const TYPE = { VARIANT: 'enum', BOOLEAN: 'boolean', TEXT: 'string', INSTANCE_SWAP: 'instance', SLOT: 'slot' };
   for (const [k, d] of Object.entries(defs)) {
     const id = idOfProp[bare(k)], p = id && cprops[id];
-    if (!p) { add(null, `props.${bare(k)}`, 'props', d.type, 'missing'); continue; }
+    if (!p) { t.differ(null, `props.${bare(k)}`, 'props', d.type, 'missing'); continue; }
     const axisBool = d.type === 'VARIANT' && p.type === 'boolean' && p.axis;
-    if (!axisBool && TYPE[d.type] !== p.type) add(null, `props.${id}.type`, 'props.type', TYPE[d.type], p.type);
+    if (!axisBool) t.check(null, `props.${id}.type`, 'props.type', TYPE[d.type], p.type);
     if (d.type === 'VARIANT') {
       const opts = p.figmaValues || (axisBool ? ['False', 'True'] : null);
-      if (opts && !same(opts, d.variantOptions)) add(null, `props.${id}.figmaValues`, 'props.values', d.variantOptions, opts);
+      if (opts) t.check(null, `props.${id}.figmaValues`, 'props.values', d.variantOptions, opts); else t.skip('props.values: the contract keeps no Figma spelling');
       const def = axisBool ? /^true$/i.test(d.defaultValue) : p.values && p.figmaValues ? p.values[p.figmaValues.indexOf(d.defaultValue)] : d.defaultValue;
-      if (!same(def, p.default)) add(null, `props.${id}.default`, 'props.default', def, p.default);
-    } else if (d.type === 'BOOLEAN' || d.type === 'TEXT') {
-      if (!same(d.defaultValue, p.default) && d.type === 'BOOLEAN') add(null, `props.${id}.default`, 'props.default', d.defaultValue, p.default);
-    }
+      t.check(null, `props.${id}.default`, 'props.default', def, p.default);
+    } else if (d.type === 'BOOLEAN') t.check(null, `props.${id}.default`, 'props.default', d.defaultValue, p.default);
   }
-  for (const [id, p] of Object.entries(cprops)) if (!Object.keys(defs).some((k) => bare(k) === p.figma)) add(null, `props.${id}`, 'props', 'missing', p.type);
-  // each variant's props in the contract's spelling
-  const br = bridge(stored);
+  for (const [id, p] of Object.entries(cprops)) if (!Object.keys(defs).some((k) => bare(k) === p.figma)) t.differ(null, `props.${id}`, 'props', 'missing', p.type);
+  // each variant's props in the contract's spelling, by the contract's own figmaValues
   const whenOf = (name) => {
     const when = {};
     for (const [fp, fv] of Object.entries(valuesOf(name))) {
       const id = idOfProp[fp]; if (!id) continue;
-      const p = cprops[id], back = Object.entries((br.props[id] || {}).values || {}).find(([, v]) => v === fv);
-      const val = back ? back[0] : fv;
-      when[id] = p.type === 'boolean' ? val === 'true' || val === true : val;
+      const p = cprops[id], i = (p.figmaValues || []).indexOf(fv);
+      if (p.type === 'boolean') when[id] = /^true$/i.test(fv);
+      else when[id] = p.values && i >= 0 ? p.values[i] : fv;
     }
     return when;
   };
@@ -663,72 +727,79 @@ export function compareContract(component, setNode, stored, contract, ctx) {
       const name = Object.entries(c).map(([k, v]) => `${k}=${v}`).join(', ');
       const when = whenOf(name), isDrawn = drawn.has(JSON.stringify(sortKeys(when)));
       const invalid = contract.invalid.some((x) => Object.entries(x).every(([k, v]) => same(when[k], v)));
-      if (isDrawn === invalid) add(null, name, 'invalid', isDrawn ? 'drawn' : 'not drawn', invalid ? 'invalid' : 'valid');
-    }
-  }
+      t.check(null, name, 'invalid', isDrawn ? 'valid' : 'invalid', invalid ? 'invalid' : 'valid');
+    } else t.skip('invalid: over 4,096 combinations');
+  } else if (isSet) t.skip('invalid: the contract lists none');
   // part by part, each variant Figma draws
-  const pathsOf = br.paths;
   for (const v of variants) {
     const flat = expand(contract, whenOf(v.name));
-    const rest = byPath(v);
-    const seen = new Set();
-    const insideInstance = (p) => { for (let q = parentPath(p); q !== '$root'; q = parentPath(q)) if (rest.get(q) && rest.get(q).type === 'INSTANCE') return true; return false; };
+    const { found, ambiguous, taken } = addressParts(flat, v, idOfProp);
+    const fpath = new Map([[v, '$root']]);
+    layerPaths(visible(v), (x, p) => { fpath.set(x.$n, p); });
+    const parentOf = new Map();
+    const index = (n) => { for (const c of n.children || []) { parentOf.set(c, n); index(c); } };
+    index(v);
+    const inInstance = (n) => { for (let q = parentOf.get(n); q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') return true; return false; };
     for (const [id, part] of Object.entries(flat)) {
-      const at = id === 'root' ? '$root' : (pathsOf[id] || []).find((p) => rest.has(p));
-      if (!at) { add(v.name, id, 'part', 'missing', 'present'); continue; }
-      seen.add(at);
-      const n = rest.get(at), parent = at === '$root' ? null : rest.get(parentPath(at));
-      let fr = at;
-      do fr = parentPath(fr); while (fr !== '$root' && rest.get(fr) && GROUPS.has(rest.get(fr).type));
-      const a = restPart(n, parent, ctx, idOfProp, at === '$root' ? null : rest.get(fr)), b = partOurs(part);
-      // an instance, and a layer inside one, says only what differs from its component (derive's ownStyling): there
-      // each field is held where the contract states it, the instance's identity always
-      if (n.type === 'INSTANCE' || insideInstance(at)) for (const k of Object.keys(a)) if (!(k in b) && !['kind', 'component', 'key', 'with', 'swappedBy'].includes(k)) delete a[k];
-      // a layer stretched on an axis is sized by its place (absolute x and end, y and bottom), said where stated
-      if (a.constraints && a.constraints.horizontal === 'stretch' && !('width' in b)) delete a.width;
-      if (a.constraints && a.constraints.vertical === 'stretch' && !('height' in b)) delete a.height;
-      for (const f of part.whileEmpty || []) if (!(f in a)) delete b[f];
-      if (n.type === 'INSTANCE' && !('smoothing' in a)) delete b.smoothing;
-      if (n.type === 'ELLIPSE' && !('radius' in a)) delete b.radius;
-      if (a.typography === 'mixed') { delete a.typography; delete b.typography; }
+      if (ambiguous.has(id)) { t.differ(v.name, id, 'ambiguous', ambiguous.get(id), 'one part'); continue; }
+      const n = found.get(id);
+      if (!n) { t.differ(v.name, id, 'part', 'missing', 'present'); continue; }
+      t.check(v.name, id, 'part', true, true);
+      const parent = parentOf.get(n) || null;
+      let frame = parent;
+      while (frame && GROUPS.has(frame.type)) frame = parentOf.get(frame);
+      const a = restPart(n, n === v ? null : parent, ctx, idOfProp, n === v ? null : frame), b = partOurs(part);
+      // an instance, and a layer inside one, says what differs from its component (derive's ownStyling); a field Figma
+      // has there that the contract leaves unsaid is a row of its own, `not stated`
+      if (n.type === 'INSTANCE' || inInstance(n)) {
+        for (const k of Object.keys(a)) if (!(k in b) && !['kind', 'component', 'key', 'with', 'swappedBy'].includes(k)) { t.differ(v.name, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; }
+      }
+      // a layer stretched on an axis is sized by its place where the contract says its end (or bottom); with neither
+      // that nor a width, its width is held to Figma's box
+      const abs = b.absolute || {};
+      if (a.constraints && a.constraints.horizontal === 'stretch' && !('width' in b)) { if ('end' in abs) { delete a.width; t.skip('width: said by the stretched layer\'s end'); } else a.width = sizeOf(n).w; }
+      if (a.constraints && a.constraints.vertical === 'stretch' && !('height' in b)) { if ('bottom' in abs) { delete a.height; t.skip('height: said by the stretched layer\'s bottom'); } else a.height = sizeOf(n).h; }
+      for (const f of part.whileEmpty || []) if (!(f in a)) { delete b[f]; t.skip(`${f}: an empty frame's minimum (whileEmpty)`); }
+      if (n.type === 'INSTANCE' && !('smoothing' in a) && 'smoothing' in b) { delete b.smoothing; t.skip('smoothing: REST silent'); }
+      if (n.type === 'ELLIPSE' && !('radius' in a) && 'radius' in b) { delete b.radius; t.skip('radius: REST silent'); }
+      if (a.typography === 'mixed') { delete a.typography; delete b.typography; t.skip('textStyle of mixed text'); }
       // a styled text's letter spacing is its style's, said by the contract only where the layer sets its own
-      if (typeof a.typography === 'string' && !('letterSpacing' in b)) delete a.letterSpacing;
+      if (typeof a.typography === 'string' && 'letterSpacing' in a && !('letterSpacing' in b)) { delete a.letterSpacing; t.skip('letterSpacing: a styled text\'s, unsaid'); }
       for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
         if (k === 'absolute') {
           // x and y wherever either side places the layer, end and bottom where the contract states them
-          if (!b.absolute) { add(v.name, id, 'absolute', a.absolute, undefined); continue; }
+          if (!b.absolute) { t.differ(v.name, id, 'absolute', a.absolute, undefined); continue; }
           for (const f of ['x', 'y', 'end', 'bottom']) {
-            if ((f === 'end' || f === 'bottom') && !(f in b.absolute)) continue;
-            const fa = a.absolute && a.absolute[f];
-            if (!same(fa, b.absolute[f], 0.51)) add(v.name, id, `absolute.${f}`, fa, b.absolute[f]);
+            if ((f === 'end' || f === 'bottom') && !(f in b.absolute)) { if (a.absolute && f in a.absolute) t.skip(`absolute.${f}: unsaid`); continue; }
+            t.check(v.name, id, `absolute.${f}`, a.absolute && a.absolute[f], b.absolute[f], (x, y) => same(x, y, 0.51));
           }
           continue;
         }
         if (k === 'border' && a.border && b.border) {
           for (const f of new Set([...Object.keys(a.border), ...Object.keys(b.border)])) {
-            if (f === 'inLayout' && !('inLayout' in a.border)) continue;
-            if (!same(a.border[f], b.border[f])) add(v.name, id, `border.${f}`, a.border[f], b.border[f]);
+            if (f === 'inLayout' && !('inLayout' in a.border)) { t.skip('border.inLayout: REST silent'); continue; }
+            t.check(v.name, id, `border.${f}`, a.border[f], b.border[f]);
           }
           continue;
         }
         if (k === 'layout' && a.layout && b.layout) {
-          for (const f of new Set([...Object.keys(a.layout), ...Object.keys(b.layout)])) if (!same(a.layout[f], b.layout[f])) add(v.name, id, `layout.${f}`, a.layout[f], b.layout[f]);
+          for (const f of new Set([...Object.keys(a.layout), ...Object.keys(b.layout)])) t.check(v.name, id, `layout.${f}`, a.layout[f], b.layout[f]);
           continue;
         }
-        if (k === 'component' && typeof a[k] === 'string' && typeof b[k] === 'string') { if (!(b[k] === a[k] || b[k].endsWith('/' + a[k]) || b[k].endsWith(' / ' + a[k]))) add(v.name, id, k, a[k], b[k]); continue; }
+        if (k === 'component' && typeof a[k] === 'string' && typeof b[k] === 'string') { t.check(v.name, id, k, a[k], b[k], (x, y) => y === x || y.endsWith('/' + x) || y.endsWith(' / ' + x)); continue; }
         // a swap the property makes everywhere is the prop's `swaps`; `swappedBy` says one that holds in some variants
-        if (k === 'swappedBy' && !b[k]) { const p = cprops[a[k]]; if (!(p && (p.swaps || []).includes(id))) add(v.name, id, k, a[k], undefined); continue; }
-        if (k === 'with') dropUnnamed(a[k], b[k]);
-        if (!same(a[k], b[k])) add(v.name, id, k, a[k], b[k]);
+        if (k === 'swappedBy' && !b[k]) { const p = cprops[a[k]]; t.check(v.name, id, k, a[k], p && (p.swaps || []).includes(id) ? a[k] : undefined); continue; }
+        if (k === 'with') { const n2 = dropUnnamed(a[k], b[k]); if (n2) t.skip('swap REST does not name', n2); }
+        t.check(v.name, id, k, a[k], b[k]);
       }
     }
-    // a layer Figma draws that no part is (not inside an instance: there the contract keeps only what is its own)
-    for (const p of rest.keys()) if (p !== '$root' && !seen.has(p) && !insideInstance(p)) add(v.name, p, 'part', 'present', 'missing');
+    // a layer Figma draws that no part is
+    for (const { path: p } of untaken(v, taken)) t.differ(v.name, p, 'part', 'present', 'missing');
   }
-  return rows;
+  return result(t);
 }
-// a swap REST does not name is held by neither side
-function dropUnnamed(a, b) { if (a && typeof a === 'object') for (const [k, v] of Object.entries(a)) if (v === UNNAMED) { delete a[k]; if (b && typeof b === 'object') delete b[k]; } }
+// a swap REST does not name is held by neither side; how many were dropped
+function dropUnnamed(a, b) { let n = 0; if (a && typeof a === 'object') for (const [k, v] of Object.entries(a)) if (v === UNNAMED) { n++; delete a[k]; if (b && typeof b === 'object') delete b[k]; } return n; }
 const sortKeys = (o) => Object.fromEntries(Object.entries(o).sort(([a], [b]) => (a < b ? -1 : 1)));
 
 /* ------------------------------------------------------------- reading Figma */
@@ -757,18 +828,25 @@ export function client(token, { interval = 7000, fetch = globalThis.fetch, sleep
   };
 }
 
-/* The version to read: the first saved at or after the snapshot `at`, else the file as it is (null). */
+/*
+ * The version to read: the first saved at or after the snapshot `at` (dates compared as dates: `08:26:13Z` is before
+ * `08:26:13.582Z`, which a string comparison denies), else null, the file as it is. Never pinned: a snapshot stores no
+ * version id, so the one read may hold edits made between the snapshot and its save.
+ */
 export async function versionAt(get, fileKey, at) {
-  if (!at) return null;
+  const when = Date.parse(at);
+  if (!at || Number.isNaN(when)) return null;
   let page = await get(`/v1/files/${fileKey}/versions?page_size=50`), after = null;
   for (let i = 0; i < 20; i++) {
-    for (const v of page.versions || []) { if (v.created_at >= at) after = v; else return after && { id: after.id, at: after.created_at }; }
+    for (const v of page.versions || []) { if (Date.parse(v.created_at) >= when) after = v; else return after && { id: after.id, at: after.created_at, pinned: false }; }
     const next = page.pagination && page.pagination.next_page;
     if (!next || !String(next).startsWith(`${API}/`)) break;
     page = await get(String(next).slice(API.length));
   }
-  return after && { id: after.id, at: after.created_at };
+  return after && { id: after.id, at: after.created_at, pinned: false };
 }
+/* What a result says it read. */
+export const readAt = (version, snapshotAt) => `read at ${version && version.id ? `${version.id}, ${version.at || 'its date unknown'}` : 'latest'}${version && version.pinned ? '' : `; unpinned: may include later edits than the snapshot of ${snapshotAt || 'an unknown time'}`}`;
 
 /* Every set's REST node, cached per file and version, fetched in batches no bigger than `per` ids or `variants` variants. */
 export async function fetchSets(get, fileKey, sets, { version, cache, offline = false, per = 20, variants = 150, log = () => {} }) {
@@ -797,14 +875,26 @@ export async function fetchSets(get, fileKey, sets, { version, cache, offline = 
 
 /* ------------------------------------------------------------------- report */
 
+/* Per side: components that match on every field checked (at least one), that differ, and that had nothing checked
+   (or are not in Figma); the fields checked and skipped. `both`: matched on both sides. */
 export function report(label, results, top = 5) {
-  const n = results.length;
-  const clean = (k) => results.filter((r) => !r.missing && !r.rows.some((x) => x.against === k)).length;
-  const both = results.filter((r) => !r.missing && !r.rows.length).length;
+  const side = (k) => {
+    const out = { matched: 0, differing: 0, notChecked: 0, checked: 0, skipped: 0 };
+    for (const r of results) {
+      const s = !r.missing && r[k];
+      if (!s || !s.checked) { out.notChecked++; if (s) out.skipped += Object.values(s.skipped || {}).reduce((a, b) => a + b, 0); continue; }
+      out.checked += s.checked; out.skipped += Object.values(s.skipped || {}).reduce((a, b) => a + b, 0);
+      if (s.rows.length) out.differing++; else out.matched++;
+    }
+    return out;
+  };
+  const ok = (s) => s && s.checked > 0 && !s.rows.length;
   const kinds = {};
-  for (const r of results) for (const x of r.rows) { const k = kinds[x.kind] || (kinds[x.kind] = { kind: x.kind, rows: 0, components: new Set(), example: x }); k.rows++; k.components.add(r.component); }
+  for (const r of results) for (const x of [...((r.spec || {}).rows || []), ...((r.contract || {}).rows || [])]) { const k = kinds[x.kind] || (kinds[x.kind] = { kind: x.kind, rows: 0, components: new Set(), example: x }); k.rows++; k.components.add(r.component); }
   const ranked = Object.values(kinds).sort((a, b) => b.components.size - a.components.size || b.rows - a.rows).slice(0, top).map((k) => ({ kind: k.kind, components: k.components.size, rows: k.rows, example: k.example }));
-  return { label, components: n, unread: results.filter((r) => r.missing).length, specMatches: clean('spec'), contractMatches: clean('contract'), bothMatch: both, top: ranked };
+  const skippedBy = {};
+  for (const r of results) for (const k of ['spec', 'contract']) for (const [why, n] of Object.entries((r[k] || {}).skipped || {})) skippedBy[`${k}: ${why}`] = (skippedBy[`${k}: ${why}`] || 0) + n;
+  return { label, components: results.length, unread: results.filter((r) => r.missing).length, spec: side('spec'), contract: side('contract'), both: results.filter((r) => !r.missing && ok(r.spec) && ok(r.contract)).length, skippedBy, top: ranked };
 }
 
 /* --------------------------------------------------------------------- run */
@@ -850,35 +940,37 @@ async function main(argv) {
     }
     const results = [];
     for (const [file, sets] of Object.entries(byFile)) {
-      const at = changes.filter((c) => c.file === file && c.at).map((c) => c.at).sort().pop();
+      const at = changes.filter((c) => c.file === file && c.at && !Number.isNaN(Date.parse(c.at))).map((c) => c.at).sort((x, y) => Date.parse(x) - Date.parse(y)).pop();
       let version = null;
-      if (opt.version === 'snapshot' && !opt.offline) {
-        try { version = await versionAt(get, file, at); } catch (e) { console.error(e.message); return 1; }
-      } else if (opt.offline) {
+      if (opt.offline) {
+        // the version the cache holds, as its fetch recorded it (version.json)
         const d = path.join(cache, file);
         const vs = fs.existsSync(d) ? fs.readdirSync(d) : [];
-        version = vs.length === 1 ? { id: vs[0] === 'latest' ? null : vs[0] } : null;
+        if (vs.length !== 1) { console.error(`${label}: ${file}: ${vs.length ? 'more than one version cached' : 'nothing cached'}; name one with --cache`); return 2; }
+        try { version = JSON.parse(fs.readFileSync(path.join(d, vs[0], 'version.json'), 'utf8')); } catch { version = vs[0] === 'latest' ? null : { id: vs[0], pinned: false }; }
+      } else if (opt.version === 'snapshot') {
+        try { version = await versionAt(get, file, at); } catch (e) { console.error(e.message); return 1; }
       }
-      console.error(`${label}: ${file} at ${version && version.id ? `version ${version.id} (${version.at || 'cached'}), the first after the snapshot of ${at}` : 'its latest'}; ${sets.length} components`);
+      const said = readAt(version, at);
+      console.log(`${label}: ${file} ${said}; ${sets.length} components`);
       let got;
       try { got = await fetchSets(get, file, sets, { version: version && version.id, cache, offline: opt.offline, log: (s) => console.error(s) }); } catch (e) { console.error(e.message); return 1; }
+      if (!opt.offline) fs.writeFileSync(path.join(cache, file, (version && version.id) || 'latest', 'version.json'), JSON.stringify({ ...(version || { id: null }), pinned: false, snapshotAt: at || null }) + '\n');
       for (const s of sets) {
         const r = got[s.id];
-        if (!r || r.missing || !r.document) { results.push({ component: s.folder, missing: true, rows: [] }); continue; }
+        if (!r || r.missing || !r.document) { results.push({ component: s.folder, missing: true, readAt: said }); continue; }
         const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {} };
         const spec = resolveSpec(s.stored);
         let contract = null;
         try { contract = JSON.parse(fs.readFileSync(path.join(w.paths.components, s.folder, 'contract.json'), 'utf8')); } catch { /* no contract: the spec alone */ }
-        const rows = compareSpec(s.folder, r.document, spec, ctx);
-        if (contract) rows.push(...compareContract(s.folder, r.document, s.stored, contract, ctx));
-        else rows.push({ component: s.folder, variant: null, path: '$root', figma: 'drawn', ours: 'no contract', kind: 'contract:missing', against: 'contract' });
-        results.push({ component: s.folder, rows });
+        results.push({ component: s.folder, readAt: said, spec: compareSpec(s.folder, r.document, spec, ctx), contract: contract ? compareContract(s.folder, r.document, contract, ctx) : null });
       }
     }
     const rep = report(label, results, opt.top);
     reports.push(rep);
-    for (const r of results) all.push(...r.rows.map((x) => ({ library: label, ...x })));
-    console.log(`${label}: ${rep.components} components${rep.unread ? ` (${rep.unread} not in Figma)` : ''}; spec matches Figma on every checked field: ${rep.specMatches}; contract: ${rep.contractMatches}; both: ${rep.bothMatch}`);
+    for (const r of results) for (const k of ['spec', 'contract']) if (r[k]) all.push(...r[k].rows.map((x) => ({ library: label, readAt: r.readAt, ...x })));
+    const line = (s) => `${s.matched} match, ${s.differing} differ, ${s.notChecked} not checked (${s.checked} fields checked, ${s.skipped} skipped)`;
+    console.log(`${label}: ${rep.components} components${rep.unread ? ` (${rep.unread} not in Figma)` : ''}; spec: ${line(rep.spec)}; contract: ${line(rep.contract)}; both match: ${rep.both}`);
     for (const k of rep.top) console.log(`  ${k.kind}: ${k.components} components, ${k.rows} rows — e.g. ${k.example.component} ${k.example.variant || ''} ${k.example.path}: figma ${JSON.stringify(k.example.figma)} ours ${JSON.stringify(k.example.ours)}`);
   }
   if (opt.out) fs.writeFileSync(opt.out, JSON.stringify({ reports, notCheckable: NOT_CHECKABLE, rows: all }, null, 1) + '\n');
