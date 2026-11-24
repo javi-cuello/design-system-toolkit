@@ -1,6 +1,13 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.87.0] - 2026-11-24
+### Added
+- **Cancel, while a run reads the file.** It stops the run before the next component, icon set, graphic or frame, removes the temporary page and says "Cancelled". Once the snapshot is sending, it can no longer be taken back, so the button goes.
+
+### Changed
+- **The Export icons switch is off limits during a run.** The run took its value at the press, so flipping it changed nothing.
+
 ## [0.86.0] - 2026-11-23
 ### Added
 - **A vector records its paths** (`paths`: Figma's own `vectorPaths`, numbers at two decimals), so a drawing draws the dot it was given and not its box. Not inside an instance, whose drawing is its component's, and not past 1000 characters of path data (a glyph): there only `outline` is kept, and a drawing still draws the box.

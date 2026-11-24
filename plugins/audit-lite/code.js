@@ -1304,7 +1304,7 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
 function snapshotFacts() {
 const __html__ = undefined;
 const FACTS = true;
-// Design system snapshot — v0.86.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.87.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -1421,7 +1421,13 @@ function fileId() {
 /** @param {string} text @param {string=} kind */
 /* A step, and where it has a count, how far through it is: the window draws
    a bar that fills (knowledge/ui/patterns/feedback.md, *Loading*). */
-const say = (text, done, total) => { if (!HEADLESS) figma.ui.postMessage({ type: 'progress', text, done, total }); };
+/* Cancel, pressed in the window, is checked here: each step and each component, icon set,
+   graphic and frame says where it is first, so a run stops between two of them, never inside one. */
+let cancelled = false;
+const say = (text, done, total) => {
+  if (cancelled) throw new Cancelled('cancelled');
+  if (!HEADLESS) figma.ui.postMessage({ type: 'progress', text, done, total });
+};
 
 // ---- helpers ---------------------------------------------------------------
 /** @param {RGB | RGBA} c @param {number=} opacity */
@@ -2054,7 +2060,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.86.0';
+const VERSION = '0.87.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -3104,6 +3110,7 @@ const bare = (k) => k.replace(/#\d+:\d+$/, '');
 const message = (e) => String((e && typeof e === 'object' && /** @type {{message?: unknown}} */ (e).message) || e);
 /** The router refused the code: the window asks for it again. */
 class Unpaired extends Error {}
+class Cancelled extends Error {}
 
 // ---- the window and the headless entry: everything below runs from the UI or a bridge, never from use_figma's run,
 // which calls collectLibrary itself and is cut here to stay under its size cap (tools/snapshot/mcp.mjs, CUT).
@@ -3122,13 +3129,17 @@ if (!HEADLESS) {
         await figma.clientStorage.setAsync('pairingCode', pairingCode);
         await ready();
       }
+      // read by the walk's next step (say); the run is stopped there, and its temporary page removed below
+      if (msg.type === 'cancel') cancelled = true;
       if (msg.type === 'snapshot') {
+        cancelled = false;
         figma.skipInvisibleInstanceChildren = true;
         const mode = await kind();
         /** @type {any} */ let payload;
         try {
           payload = mode === 'library' ? await collectLibrary(msg.icons !== false) : await collectScreens();
         } catch (e) {
+          if (e instanceof Cancelled) throw e;
           // Figma's own message alone ("Cannot read properties of null") names no
           // cause a designer can act on; where it stopped does.
           throw new Error(`the snapshot stopped while reading the file, so nothing was sent (${message(e)}). Snapshot again; if it stops at the same place, reload the plugin (Plugins › Development › Reload).`);
@@ -3161,7 +3172,7 @@ if (!HEADLESS) {
       if (msg.type === 'close') figma.closePlugin();
     } catch (e) {
       // the window says it beside the button; a toast as well said it twice
-      figma.ui.postMessage({ type: 'failed', text: message(e), unreachable: e instanceof Unreachable, unpaired: e instanceof Unpaired });
+      figma.ui.postMessage({ type: 'failed', text: message(e), unreachable: e instanceof Unreachable, unpaired: e instanceof Unpaired, cancelled: e instanceof Cancelled });
     }
   };
 }

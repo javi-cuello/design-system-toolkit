@@ -9,7 +9,8 @@ import { fileURLToPath } from "node:url";
 
 const src = readFileSync(fileURLToPath(new URL("../code.js", import.meta.url)), "utf8");
 const figma = { variables: { getVariableByIdAsync: async () => null }, getStyleByIdAsync: async () => null };
-const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, unescaped, VERSION } = vm.runInContext(src + "\n;({ walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, unescaped, VERSION })", vm.createContext({ figma, console, setTimeout, clearTimeout }));
+const ctx = vm.createContext({ figma, console, setTimeout, clearTimeout });
+const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, unescaped, VERSION } = vm.runInContext(src + "\n;({ walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, unescaped, VERSION })", ctx);
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log("ok", name); };
@@ -334,6 +335,18 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("a text with no style records its size and face", bare.textStyle === "literal" && bare.fontSize === 12 && bare.fontFamily === "Inter" && bare.fontStyle === "Semi Bold");
   const several = await walk({ ...text(Symbol("mixed")), fontSize: Symbol("mixed"), fontName: Symbol("mixed") }, 1);
   ok("…a text of several styles records none", several.textStyle === "mixed" && !("fontSize" in several) && !("fontFamily" in several));
+}
+
+// 2026-11-24: a run could not be stopped. Cancel sets a flag the walk reads at
+// each component's step; the run stops there, before the next is read.
+{
+  let reads = 0;
+  const comp = (name) => ({ name, type: "COMPONENT", id: name, parent: { type: "PAGE" }, get componentPropertyDefinitions() { reads++; return {}; } });
+  figma.root = { children: [{ name: "Chip", type: "PAGE", findAll: (f) => [comp("A"), comp("B")].filter(f) }] };
+  vm.runInContext("cancelled = true", ctx);
+  const stopped = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] }).then(() => null, (e) => e);
+  vm.runInContext("cancelled = false", ctx);
+  ok("a cancelled run stops before the next component, and says it was cancelled", stopped && stopped.constructor.name === "Cancelled" && reads === 0);
 }
 
 console.log(n + "/" + n + " passed");
