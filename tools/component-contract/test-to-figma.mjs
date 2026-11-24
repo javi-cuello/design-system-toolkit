@@ -261,6 +261,9 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     '5. Responsive type': { modes: ['Desktop', 'Mobile'], hidden: ['Heading/size'], keys: { 'Heading/size': 'k5', 'Body/size': 'k3' } }, '1. Global': { modes: ['Mode 1'], keys: { 'S/1': 'k4' } } } });
   ok('each axis names its collections, a published variable of each, and its modes by the contract\'s spelling',
     m.theme.map((x) => x.key).join() === 'k1,k2' && m.theme[0].names.dark === 'Dark' && m['5-responsive-type'][0].names.mobile === 'Mobile' && m['5-responsive-type'][0].key === 'k3' && Object.keys(m).length === 2);
+  const hid = { collections: { '5. Responsive type': { modes: ['Desktop', 'Mobile'], hidden: ['Heading/size', 'Body/size'], keys: { 'Heading/size': 'k5', 'Body/size': 'k3' } } } };
+  ok('…a collection all hidden from publishing has no key another file could import; in the library\'s own file it has one, with its name',
+    modeSets(hid)['5-responsive-type'][0].key === undefined && modeSets(hid, { ownFile: true })['5-responsive-type'][0].key === 'k5' && modeSets(hid, { ownFile: true })['5-responsive-type'][0].name === 'Heading/size');
 }
 
 // a part turned a quarter is sized on the parent's axes in Figma: its own width by the vertical sizing, as derive reads it
@@ -300,6 +303,37 @@ root = file(['Alpha']);
 root = file(['Alpha']);
 const given = await run(BEFORE('Chip', 123) + 'return String(__token);');
 ok('the runner chooses the run\'s token, so it can take back its own and leave a newer run\'s alone', given === '123' && root.getPluginData('to-figma-running') === '123');
+{ // a drawing in the library's own file: its component binds a variable of another library, hidden from publishing, whose
+  // name the snapshot keys to another variable of the same name (two remote collections of one name); the one bound is
+  // taken from the file by name, never the snapshot's key imported (which fails, and left the padding a raw number)
+  const calls = [];
+  const v = (id, key, name, col) => ({ id, key, name, variableCollectionId: col, remote: true, hiddenFromPublishing: true });
+  const byId = { 'V:pad': v('V:pad', 'k-bound', 'Space/150', 'C:space'), 'V:mode': v('V:mode', 'k-mode-bound', 'Tone/fg', 'C:tone') };
+  const comp = { type: 'COMPONENT_SET', name: 'Chip', parent: { type: 'PAGE', getPluginData: () => '' }, boundVariables: { paddingLeft: { type: 'VARIABLE_ALIAS', id: 'V:pad' }, itemSpacing: { type: 'VARIABLE_ALIAS', id: 'V:mode' } }, fills: [], strokes: [], findAll: () => [] };
+  const stand = (ownFile) => {
+    const root = { children: [], ...data(), findAllWithCriteria: () => [comp] };
+    root.setPluginData('to-figma-running', '1');
+    globalThis.figma = { root, currentPage: page('Chip'), mixed: Symbol('mixed'), getLocalTextStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getStyleByIdAsync: async () => null,
+      // the drawing is stopped once its imports are made: what it asked for is the finding
+      loadFontAsync: async () => { root.setPluginData('to-figma-running', 'stop'); },
+      variables: { getLocalVariablesAsync: async () => [], getVariableByIdAsync: async (id) => byId[id] || null,
+        importVariableByKeyAsync: async (k) => { calls.push(`import ${k}`); throw new Error('hidden from publishing'); },
+        getVariableCollectionByIdAsync: async (id) => { calls.push(`collection ${id}`); return { id, modes: [{ name: 'Dark', modeId: 'm2' }] }; } } };
+    return pluginCode({ contract: 1, component: 'Chip', props: {}, anatomy: { root: { kind: 'container', modes: { tone: 'dark' }, layout: { direction: 'row', padding: { start: 'Space/150' }, gap: 'Space/other' } } }, variants: [] },
+      { ownFile, vars: { 'Space/150': 'k-snapshot', 'Space/other': 'k-other' }, values: { 'Space/150': 12 }, modes: { tone: [{ collection: 'Tone', key: 'k-mode-snapshot', name: 'Tone/fg', names: { dark: 'Dark' } }] } });
+  };
+  const quiet = globalThis.setTimeout;
+  globalThis.setTimeout = (f, ms) => { const t = quiet(f, ms); if (t && t.unref) t.unref(); return t; };
+  try {
+    await run('const __token = 1;\n' + stand(true)).catch(() => null);
+    ok('in the library\'s own file, a variable its component binds is taken by name, its snapshot key never imported; one it does not bind is still imported by key',
+      !calls.includes('import k-snapshot') && calls.includes('import k-other'));
+    ok('…and a mode\'s collection is reached by the variable of it the component binds, hidden as it is', calls.includes('collection C:tone') && !calls.includes('import k-mode-snapshot'));
+    calls.length = 0;
+    await run('const __token = 1;\n' + stand(false)).catch(() => null);
+    ok('…in another file, the snapshot key is imported as before', calls.includes('import k-snapshot') && calls.includes('import k-mode-snapshot'));
+  } finally { globalThis.setTimeout = quiet; }
+}
 delete globalThis.figma;
 
 // a drawing compared with the component it was derived from, field by field: what it named otherwise or left out

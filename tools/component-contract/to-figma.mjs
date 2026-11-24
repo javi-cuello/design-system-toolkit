@@ -634,6 +634,13 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // hundreds of calls one after another took minutes
   // variables by the keys the runner looked up in the library file (listing a library's variables from
   // here hung for a minute at a time)
+  const els = P.variants.flatMap((v) => Object.values(v.anatomy));
+  const names = new Set();
+  for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (typeof t === 'string' && (t.includes('/') || (K.vars && t in K.vars))) names.add(t);
+  // in the library's own file, each variable its own component binds, by name: the one to draw with, over the snapshot's
+  // key, which can name another variable of that name (two collections of one name, from two copies of a library)
+  // and, where it is hidden from publishing, one no import reaches
+  const bound = new Map();
   if (K.ownFile) {
     // each kind on its own, so one listing that stalls or fails (listing a library's variables has hung) costs only
     // its own keys, which are then imported as before
@@ -654,11 +661,13 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       const want = new Set([K.styles, K.fillStyles, K.icons, K.vars, K.effects, K.sets, ...Object.values(K.variants || {})].flatMap((m) => Object.values(m || {})).concat(K.iconContainer || []).filter((k) => k && !ownKeys.has(k)));
       // each found copy kept as it comes (a scan cut short keeps what it found), and the scan stops once every key
       // asked for is found or 25 s have gone, its walk included, which runs before any timer could fire
-      const until = Date.now() + 25000, done = () => !want.size || Date.now() > until;
+      const wantNames = new Set([...names, ...Object.values(K.modes || {}).flat().map((m) => m.name)].filter(Boolean));
+      const until = Date.now() + 25000, done = () => (!want.size && !wantNames.size) || Date.now() > until;
       const take = (x) => { if (x && want.has(x.key)) { ownKeys.set(x.key, x); want.delete(x.key); } };
+      const takeBound = (x) => { if (x && wantNames.has(x.name)) { bound.set(x.name, x); wantNames.delete(x.name); } };
       // (a set named under its page, Page/Set, is found by its own name)
       const drawnPage = (n) => { while (n && n.type !== 'PAGE') n = n.parent; return !!(n && n.getPluginData('drawings')); };
-      const roots = want.size ? figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).filter((n) => (n.name === P.name || P.name.endsWith('/' + n.name)) && !drawnPage(n)) : [];
+      const roots = !done() ? figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }).filter((n) => (n.name === P.name || P.name.endsWith('/' + n.name)) && !drawnPage(n)) : [];
       const styleIds = new Set(), varIds = new Set(), insts = [], textFont = new Map();
       const alias = (v) => { if (!v) return; if (Array.isArray(v)) v.forEach(alias); else if (typeof v === 'object') { if (v.type === 'VARIABLE_ALIAS' && v.id) varIds.add(v.id); else Object.values(v).forEach(alias); } };
       walk: for (const r of roots) for (const n of [r, ...r.findAll(() => true)]) {
@@ -673,24 +682,21 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       }
       const settle = async (xs, get) => { for (let k = 0; k < xs.length && !done(); k += 100) { figma.root.setPluginData('to-figma-beat', String(Date.now())); for (const x of await Promise.all(xs.slice(k, k + 100).map((v) => get(v).catch(() => null)))) for (const y of [].concat(x || [])) take(y); } };
       await settle([...styleIds], async (id) => { const st = await figma.getStyleByIdAsync(id); if (st && typeof st.fontName === 'symbol' && textFont.has(id)) lentFont.set(st.key, textFont.get(id)); return st; });
-      await settle([...varIds], (id) => figma.variables.getVariableByIdAsync(id));
+      await settle([...varIds], async (id) => { const v = await figma.variables.getVariableByIdAsync(id); takeBound(v); return v; });
       await settle(insts, async (n) => { const m = await n.getMainComponentAsync(); return m ? [m, m.parent && m.parent.type === 'COMPONENT_SET' ? m.parent : null] : null; });
       return [];
     }, 30000);
   }
   const lib = K.vars || {};
-  const els = P.variants.flatMap((v) => Object.values(v.anatomy));
-  const names = new Set();
-  for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (typeof t === 'string' && (t.includes('/') || (K.vars && t in K.vars))) names.add(t);
   const vars = {};
   // side by side, then once more one at a time for any that went unanswered side by side
-  const imp = (n) => own(lib[n], () => figma.variables.importVariableByKeyAsync(lib[n]));
-  await Promise.all([...names].map(async (n) => { vars[n] = lib[n] ? await Promise.race([imp(n).catch(() => null), new Promise((r) => setTimeout(() => r(null), 8000))]) : null; }));
+  const imp = (n) => (bound.has(n) ? Promise.resolve(bound.get(n)) : own(lib[n], () => figma.variables.importVariableByKeyAsync(lib[n])));
+  await Promise.all([...names].map(async (n) => { vars[n] = lib[n] || bound.has(n) ? await Promise.race([imp(n).catch(() => null), new Promise((r) => setTimeout(() => r(null), 8000))]) : null; }));
   // three in a row with no answer: the library is not answering this file, and each more would cost 16 s (a drawing of
   // thirty variables outran its nine minutes); the rest are said as not bound
   let silent = 0;
   for (const n of names) {
-    if (!lib[n] || vars[n]) continue;
+    if (!(lib[n] || bound.has(n)) || vars[n]) continue;
     if (silent >= 3) { missing.add(`${n} (no answer: the library answered none of the last three)`); continue; }
     vars[n] = await tried(n, () => imp(n));
     // (one that failed outright is that variable's, not the library's silence)
@@ -701,7 +707,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // `key` one variable of that collection, imported to reach it; `names` its modes by the contract's spelling)
   const cols = {};
   const modeSets = [...new Set(els.flatMap((e) => Object.keys(e.modes || {})))].flatMap((a) => (K.modes || {})[a] || []);
-  await Promise.all(modeSets.filter((m) => m.key).map(async (m) => { const v = await tried(`a variable of ${m.collection}`, () => own(m.key, () => figma.variables.importVariableByKeyAsync(m.key))); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
+  await Promise.all(modeSets.filter((m) => m.key).map(async (m) => { const v = await tried(`a variable of ${m.collection}`, () => (bound.has(m.name) ? bound.get(m.name) : own(m.key, () => figma.variables.importVariableByKeyAsync(m.key)))); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
   // (each collection on its own, a failure said and the rest still set; a layer that cannot hold a mode, said)
   const setModes = (n, e, id) => {
     if (!('setExplicitVariableModeForCollection' in n)) { missing.add(`${e.name || id} (its modes: a ${n.type} holds none)`); return; }
@@ -1455,14 +1461,14 @@ export function needs(p, isVar = varNamer()) {
    named, found where the library uses them (a text node in that style, an
    instance of that icon), since a style or icon another library owns is not
    among this file's own. Passed to the service's /exec. */
-/** Each mode axis's collections, as the drawing sets a layer's mode on them: { axis: [{ collection, key, names }] },
- *  `key` one variable of the collection, imported to reach it (one hidden from publishing cannot be), `names` its modes
- *  by the contract's spelling. */
-export function modeSets(tokenFile) {
+/** Each mode axis's collections, as the drawing sets a layer's mode on them: { axis: [{ collection, key, name, names }] },
+ *  `key` (and `name`) one variable of the collection, imported to reach it (one hidden from publishing cannot be, but
+ *  in the library's own file, `ownFile`, it is taken from the file), `names` its modes by the contract's spelling. */
+export function modeSets(tokenFile, { ownFile = false } = {}) {
   const MODES = createRequire(import.meta.url)('../tokens/modes.cjs');
   const cols = Object.entries((tokenFile && tokenFile.collections) || {});
   return Object.fromEntries(MODES.axesOfTokens(tokenFile).map((a) => [a.key, cols.filter(([n]) => (a.names || []).includes(n) || a.members.includes(MODES.slug(n)))
-    .map(([n, col]) => ({ collection: n, key: (Object.entries(col.keys || {}).find(([v]) => !(col.hidden || []).includes(v)) || [])[1], names: Object.fromEntries((col.modes || []).map((m) => [MODES.slug(m), m])) }))
+    .map(([n, col]) => { const ks = Object.entries(col.keys || {}), [name, key] = ks.find(([v]) => !(col.hidden || []).includes(v)) || (ownFile && ks[0]) || []; return { collection: n, key, ...(name && { name }), names: Object.fromEntries((col.modes || []).map((m) => [MODES.slug(m), m])) }; })
     ]));
 }
 
@@ -2050,12 +2056,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // an effect style's key from the snapshot, which has always recorded it
   keys.effects = Object.fromEntries((tokenFile.effects || []).filter((fx) => fx.key && want.effects.includes(fx.name)).map((fx) => [fx.name, fx.key]));
   keys.values = Object.fromEntries(want.vars.map((n) => [n, valueOf(tokenFile, n, map.mode)]).filter(([, v]) => v != null));
-  keys.modes = modeSets(tokenFile);
+  // the scratch file is the library's own file: what it holds is taken from it (RUNTIME's ownKeys), published or not
+  keys.ownFile = !!libKey && into === libKey;
+  keys.modes = modeSets(tokenFile, { ownFile: keys.ownFile });
   // each component's variants as the snapshot met them (an instance's `instanceOfKey`): no library file needs to be open
   keys.variants = variantKeys(where.paths.components, want.components, want.swaps);
   missing.swaps = (want.swaps || []).filter((t) => !Object.keys(keys.variants).some((n) => n === t || n.endsWith('/' + t)));
-  // the scratch file is the library's own file: what it holds is taken from it (RUNTIME's ownKeys), published or not
-  keys.ownFile = !!libKey && into === libKey;
   const notOpen = [];
   if (libKey) {
     // the rest where the library uses them, in the library file itself, which must be open with the Desktop Bridge
