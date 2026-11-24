@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1110,4 +1110,10 @@ ok('codeFigma: the design component a generated module names, read from its text
   ok('axisNames: a one-value enum takes the axis that moves nothing whose option is its value', one.arrow.figma === 'Arrow');
   ok('axisNames: an enum takes the name of the one mapping axis that moves its arg alone; one moved beside another arg, or already named, keeps its own',
     props.appearance.figma === 'appearance' && props.state.figma === 'State' && props.size.figma === undefined && props.kept.figma === 'Own'); }
+// a padding the code writes as 0 (to-code's `padding: 0`, or a zero token) is said, as the code says it; one it leaves
+// unset is not, and a padding read already is kept
+ok('paddingSaid: a 0 padding the code writes is four sides of 0; one it leaves unset, or one already read, is none',
+  JSON.stringify(paddingSaid(undefined, { top: '0', end: null, bottom: null, start: null })) === JSON.stringify({ top: 0, end: 0, bottom: 0, start: 0 })
+  && paddingSaid(undefined, { top: null, end: null, bottom: null, start: null }) === null
+  && paddingSaid({ top: 4, end: 0, bottom: 0, start: 0 }, { top: '4px', end: '0', bottom: '0', start: '0' }) === null);
 console.log(`${n}/${n} passed`);

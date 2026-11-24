@@ -901,6 +901,14 @@ export function axisNames(props, axes) {
   return props;
 }
 
+/* A padding the code writes (to-code's `padding: 0`, or a token that holds 0), which the computed style cannot tell from
+   one left unset: its four sides of 0 where any side is written (`authored`, each side's value as written, or null) and
+   none was read already. Its tokens are then read as the code wrote them. Tested by test-from-code.mjs. */
+export function paddingSaid(read, authored) {
+  if (read) return null;
+  return Object.values(authored || {}).some((v) => v != null && String(v).trim() !== '') ? { top: 0, end: 0, bottom: 0, start: 0 } : null;
+}
+
 /* What a generated module says it draws (to-markup's `export const figma = {…}`): the design component's name, read from
    the code's text, or null where it says nothing. Tested by test-from-code.mjs. */
 export function codeFigma(js) {
@@ -2505,6 +2513,8 @@ async function main() {
         drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box, layers: !!x.paint };
         delete x.box;
         if (x.layout) {
+          // a 0 padding the code writes is said, as it writes it (paddingSaid)
+          if (!x.layout.padding) { const sides = {}; for (const [k, p] of Object.entries(paddingCss(x.rtl))) sides[k] = await authoredValue(L.tab, `[data-contract-id="${id}"]`, p, styles); const said = paddingSaid(x.layout.padding, sides); if (said) x.layout.padding = said; }
           // a gap below 0 was written as the second child's pull back: its token is there
           const pulled = pulledBy[id];
           if ('gap' in x.layout) x.layout.gap = pulled ? await tok('space', x.layout.gap, `${id}.gap`, pulled.props, pulled.from) : await tok('space', x.layout.gap, `${id}.gap`, ['row-gap', 'column-gap', 'gap']);
