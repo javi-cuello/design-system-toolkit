@@ -352,6 +352,9 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("…a variable font's text, read as mixed in one face, records that face", variable.fontFamily === "IBM Plex Sans" && variable.fontStyle === "Regular");
   const two = await walk({ ...text(""), fontName: Symbol("mixed"), getStyledTextSegments: () => [seg("Inter", "Regular", 0, 2), seg("Inter", "Bold", 2, 5)] }, 1);
   ok("…one truly in two faces still records none", !("fontFamily" in two) && !("fontStyle" in two));
+  const axes = (wght, start, end) => ({ start, end, fontName: { family: "Inter", style: "Regular", variationSettings: { wght } } });
+  const weights = await walk({ ...text(""), fontName: Symbol("mixed"), getStyledTextSegments: () => [axes(400, 0, 2), axes(700, 2, 5)] }, 1);
+  ok("…one face at two weights of its axes is two faces, and records none", !("fontFamily" in weights) && !("fontStyle" in weights));
 }
 
 // 2026-11-24, the Figma oracle: a text past 400 characters (Carbon's multi-line code snippet, 648) was cut there, and

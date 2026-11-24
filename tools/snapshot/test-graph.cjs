@@ -88,6 +88,10 @@ expect('and falls back to the first segment when nothing is known', nameOf('Thin
 expect('a name with no variant after it is the whole name when nothing is known', nameOf('Code parts / <TopNavStart>', []), 'Code parts / <TopNavStart>');
 expect('and a set named with " / " keeps all of it, its variant cut', nameOf('Table - Cell / Fill / Size=md, State=Rest', []), 'Table - Cell / Fill');
 expect('…a variant whose value holds " / " cut whole', nameOf('Chip / Size=S / M', []), 'Chip');
+expect('a non-Latin name outside a set is whole', nameOf('アイコン / 検索', []), 'アイコン / 検索');
+expect('a non-Latin set\'s variant is cut off', nameOf('ボタン / サイズ=大', []), 'ボタン');
+expect('a name with "X=…" after " / " reads as a variant when nothing is known, the cut a known name overrides', nameOf('Formula / a=b', []), 'Formula');
+expect('…and a stored name keeps it whole', nameOf('Formula / a=b', ['Formula / a=b']), 'Formula / a=b');
 
 // ---- the relation in the shape a skill can take ------------------------
 // A skill may not require this file, so it takes the relation as INPUT. Keyed

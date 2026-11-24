@@ -227,6 +227,17 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const rb = bridge(renamed);
   ok('one part under two spellings of its name is at both paths, and the two are said as a clash',
     JSON.stringify(rb.paths.textOverflow) === '["Text Overflow","Text overflow"]' && JSON.stringify(rb.paths['textOverflow/label']) === '["Text Overflow > Label","Text overflow > Label"]' && rb.clashes.length === 2);
+  // only a difference of case or surrounding space is one layer: other punctuation, or names no letter of which
+  // camel-cases (two scripts folding to `layer`), are two layers that share an id, and keep the first path alone
+  const two = (a, b) => bridge({ name: 'Pair', id: '4:1', key: 'k4', props: { Size: ['Sm', 'Md'] }, variants: [
+    { name: 'Size=Sm', type: 'COMPONENT', children: [{ name: a, type: 'FRAME' }] },
+    { name: 'Size=Md', type: 'COMPONENT', children: [{ name: b, type: 'FRAME' }] }] });
+  const trimmed = two('Accordion content', 'Accordion content ');
+  ok('…a name with a trailing space is the same layer', Object.values(trimmed.paths).some((ps) => ps.length === 2));
+  const punct = two('Text-overflow', 'Text overflow');
+  ok('…a name that differs by punctuation is another layer, its path not merged', Object.values(punct.paths).every((ps) => ps.length === 1) && punct.clashes.length === 1);
+  const scripts = two('标签', 'ラベル');
+  ok('…two non-Latin names that fold to one id are two layers, their paths not merged', Object.values(scripts.paths).every((ps) => ps.length === 1) && scripts.clashes.length === 1);
 }
 
 // what the drawing compared with its original found lost on the way (a drawing pushed back to Figma, field by field):

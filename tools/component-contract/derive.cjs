@@ -1027,6 +1027,7 @@ function selfCheck(stored, contract, known = [], options = {}) {
  * Figma name and options under the contract's own spelling of them. `clashes`
  * lists an id two different addresses take, which no translation can undo.
  */
+const loose = (key) => key.split(SEP).map((s) => s.trim().toLowerCase()).join(SEP);
 function bridge(stored) {
   const { trees } = read(stored);
   const paths = {}, ids = {}, owner = {}, clashes = [];
@@ -1037,10 +1038,13 @@ function bridge(stored) {
     for (const e of t.list) {
       const id = idOf(e.segs);
       const key = keyOf(e.segs.map((s) => s.replace(/#.*$/s, '')));
-      // two names one id (`Text overflow`, `Text Overflow`; a trailing space) are one part, at both paths: said as a clash,
-      // since the id cannot say which name, and kept, since the part is drawn at each
-      if (owner[id] !== undefined && owner[id] !== key) clashes.push(`${id}: ${owner[id].split(SEP).join(' > ')} and ${key.split(SEP).join(' > ')}`);
-      else owner[id] = key;
+      // two names one id are said as a clash, since the id cannot say which name; where they differ only in case or
+      // surrounding space (`Text overflow`, `Text Overflow`, `Accordion content `) they are one part, kept at both paths;
+      // otherwise (`Text-overflow`; two scripts that fold to `layer`) two layers, the second path left out
+      if (owner[id] !== undefined && owner[id] !== key) {
+        clashes.push(`${id}: ${owner[id].split(SEP).join(' > ')} and ${key.split(SEP).join(' > ')}`);
+        if (loose(owner[id]) !== loose(key)) continue;
+      } else owner[id] = key;
       const p = at.get(e.node);
       if (p == null) continue;
       add(paths, id, p);

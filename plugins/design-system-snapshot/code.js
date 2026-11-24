@@ -1052,7 +1052,8 @@ async function walk(n, depth, at, inInstance = false) {
       // where they all agree on it.
       let f = n.fontName;
       if (typeof f === 'symbol' && typeof n.getStyledTextSegments === 'function') {
-        const faces = [...new Set(n.getStyledTextSegments(['fontName']).map((s) => JSON.stringify([s.fontName.family, s.fontName.style])))];
+        // (a face at another weight of its axes is another face)
+        const faces = [...new Set(n.getStyledTextSegments(['fontName']).map((s) => JSON.stringify([s.fontName.family, s.fontName.style, s.fontName.variationSettings || null])))];
         f = faces.length === 1 ? { family: JSON.parse(faces[0])[0], style: JSON.parse(faces[0])[1] } : null;
       }
       if (f && typeof f === 'object') { o.fontFamily = f.family; o.fontStyle = f.style; }
