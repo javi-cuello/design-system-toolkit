@@ -15,11 +15,30 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const rel = (f) => path.relative(REPO, f);
 const SCRIPT = /\.(?:mjs|cjs|js|sh|py)$/;
 // a write: a call that writes a file, or git changing a repo (its worktrees, branches, refs or config)
-const GIT_WRITE = /\b(?:worktree|branch|prune|remove|clone|reset|commit|config|stash|checkout|init|merge|rebase|push|tag|update-ref)\b/;
 const WRITES = /\b(?:writeFileSync|appendFileSync|mkdirSync|rmSync|renameSync|symlinkSync|copyFileSync|cpSync|unlinkSync|rmdirSync|createWriteStream|writeFile|appendFile|mkdir|rm|rename|unlink)\s*\(/;
-const JS_GIT = /(?:['"`]git['"`]|\bgit\s*\()[^\n]*['"`](?:worktree|branch|prune|remove|clone|reset|commit|config|stash|checkout|init|merge|rebase|push|tag|update-ref)['"`]/;
 const SH_WRITES = />>?\s*"?\$|(?:^|[;&|{(]\s*)(?:rm|mkdir|cp|mv|ln|touch)\s/m;
-const SH_GIT = /\bgit\s+(?:-[Cc]\s+\S+\s+)*(?:worktree|branch|prune|clone|reset|commit|config|stash|checkout|init|merge|rebase|push|tag|update-ref)\b/;
+/* git changing a repo, read from its subcommand and the words after it; a read (config with only a key, worktree list,
+   stash list, branch --list) is not a write */
+const GIT_SUBS = /^(?:worktree|branch|prune|clone|reset|commit|config|stash|checkout|init|merge|rebase|push|tag|update-ref)$/;
+function gitWrites(words) {
+  const at = words.findIndex((w) => GIT_SUBS.test(w));
+  if (at < 0) return false;
+  const [sub, ...a] = words.slice(at);
+  const plain = a.filter((w) => !w.startsWith('-'));
+  if (sub === 'worktree') return /^(?:add|remove|prune|move|repair)$/.test(a[0] || '');
+  if (sub === 'stash') return !/^(?:list|show)$/.test(a[0] || '');
+  if (sub === 'config') return a.some((w) => /^--(?:unset|add|replace-all|remove-section|rename-section)/.test(w)) || plain.length >= 2;
+  if (sub === 'branch') return a.some((w) => /^(?:-[dDfmMcC]|--delete|--force|--move|--copy)$/.test(w)) || plain.length > 0;
+  if (sub === 'tag') return plain.length > 0;
+  return true;
+}
+// each git call's words, up to the end of its argument list (the first ] or ) after them)
+const jsGit = (l) => [...l.matchAll(/['"`]git['"`]|\bgit\s*\(/g)].some((m) => {
+  const rest = l.slice(m.index + m[0].length).replace(/^[\s,[]*/, '');
+  const args = rest.slice(0, rest.search(/[\])]|$/));
+  return gitWrites([...args.matchAll(/(['"`])([^'"`]*)\1/g)].map((x) => x[2]));
+});
+const shGit = (l) => [...l.matchAll(/\bgit\s+([^;&|)\n]*)/g)].some((m) => gitWrites(m[1].replace(/^(?:-[Cc]\s+\S+\s+)+/, '').split(/\s+/).map((w) => w.replace(/^["']|["']$/g, ''))));
 const TEMP = /mkdtemp|tmpdir\(\)|\$\{?TMPDIR\b|process\.env\.TMPDIR|mktemp/;
 const STARTS = /\b(?:spawn|spawnSync|fork|execFile|execFileSync|exec|execSync)\s*\(|new Worker\(|^\s*(?:node|sh|python3)\s/m;
 const HOME = /\bhomedir\(\)|process\.env\.HOME\b|\$\{?HOME\b|['"`]~\//;
@@ -177,7 +196,7 @@ export function uses(name, src, { entry: tree = false, whole = true } = {}) {
   if (shell && /^\s*(?:[^'"#]*(?:&&|\|\||;|\{)\s*)?launchctl\s/m.test(c)) need.push('launchd unless PATH');
   if (!whole) return need;
   const { homeIn, tmpIn } = names(c, shell);
-  const writes = (l) => (shell ? SH_WRITES.test(l) || SH_GIT.test(l) : WRITES.test(l) || JS_GIT.test(l));
+  const writes = (l) => (shell ? SH_WRITES.test(l) || shGit(l) : WRITES.test(l) || jsGit(l));
   // a shell that moves into a temp folder (cd "$SP/t", a clone) writes there from then on, not in the tree it was in
   if (shell && [...c.matchAll(/\bcd\s+("?[^\s;&|)]+)/g)].some((m) => tmpIn(m[1]))) entry = false;
   // each statement on its own (a line may hold several): one into a temp folder is the step's own
@@ -219,6 +238,9 @@ assert.deepEqual(uses('t.mjs', "function repo() {\n  const d = fs.mkdtempSync('x
 assert.deepEqual(uses('t.mjs', "const steps = fs.mkdtempSync('x');\nspawn('node', [R], { env: { STEP_DIR: steps } });\nfs.writeFileSync(process.env.STEP_DIR + '/a', '');", { entry: true }), [], "an environment key set to a temp folder is one"); // not-shared: a fixture
 assert.deepEqual(uses('t.mjs', "const seen = path.join(os.tmpdir(), `x-rules-${id}`);\nconst rules = path.join(os.homedir(), '.claude');\nfs.writeFileSync(seen, '');", {}), [], 'a temp path whose text holds a home name is temp'); // not-shared: a fixture
 assert.deepEqual(uses('t.mjs', "const f = path.join(os.homedir(), '.key');\nconst text = readIf(f);\nfs.writeFileSync(out, text);", {}), [], 'what a call returns from a home path is not the path'); // not-shared: a fixture
+assert.deepEqual(uses('t.mjs', "const set = execFileSync('git', ['-C', repo, 'config', 'core.hooksPath']);\ngit(repo, ['worktree', 'list', '--porcelain']);\ngit(repo, ['stash', 'list']);", { entry: true }), [], 'git reading its config, worktrees or stashes is no write'); // not-shared: a fixture
+assert.deepEqual(uses('t.mjs', "git(repo, ['config', 'core.hooksPath', '.githooks']);", { entry: true }), ['tree'], 'git setting its config is a write'); // not-shared: a fixture
+assert.deepEqual(uses('bin/check', 'X=$(git -C "$REPO" config --bool core.x)', { entry: true }), [], "a shell's git config read is no write"); // not-shared: a fixture
 assert.deepEqual(uses('t.mjs', "git(repo, ['worktree', 'remove', p]);", { entry: true }), ['tree'], 'git removing a worktree of the repo is a write to it'); // not-shared: a fixture
 assert.deepEqual(uses('bin/check', 'SP=$(mktemp -d)\nOUT=$(git clone -q "file://$REPO" "$SP/t" \\\n  && cp "$REPO/x" x)\nrm -rf "$SP"', { entry: true }), [], 'a shell statement working in a temp folder is not the tree'); // not-shared: a fixture
 assert.deepEqual(uses('bin/check', 'git -C "$REPO" worktree prune', { entry: true }), ['tree'], "a shell's git prune is a write"); // not-shared: a fixture
@@ -266,6 +288,10 @@ const suites = new Set(list.filter((s) => s.fn === 's_suite').map((s) => s.args[
 const stale = table[1].trim().split('\n').filter((l) => !l.startsWith('#')).map((l) => l.split(/\s+/)[0]).filter((p) => !suites.has(p));
 assert.deepEqual(stale, [], 'no line in SUITE_SHARES names a suite that is gone');
 
+// Declared by hand, past what the grep reads: the editor test on a project can reach a sync, which writes that
+// project's official contracts (serve.mjs), so it never runs beside the steps reading that project's home.
+for (const e of list.filter((x) => x.fn === 's_editor')) for (const r of list.filter((x) => (x.fn === 's_specs' || x.fn === 's_mcp') && x.args[0] === e.args[0]))
+  assert.ok(e.shares.includes(`project:${e.args[0]}`) && r.shares.includes(`project:${e.args[0]}`), `s_editor ${e.args[0]} and ${r.fn} share project:${e.args[0]}`);
 // Declared by hand, past what the grep reads: test-serve starts the editor with the real HOME (only the router and
 // the stranger get another), and the editor's project list sweeps the kept snapshots under ~/.toolkit.
 assert.ok(list.find((x) => x.args[0] === 'tools/contract-editor/test-serve.mjs').shares.includes('home:toolkit'), 'test-serve declares the home folder it shares');

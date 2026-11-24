@@ -450,6 +450,7 @@ s_suite() {
 #   home:<what>          another path under the home folder, named by its first folder there (~/.toolkit: home:toolkit)
 #   lockdir              the measuring lock's folder (tools/shared/lock.mjs) and the read cache kept in it (pruned)
 #   launchd              the running services and ~/Library/LaunchAgents
+#   project:<label>      a project's home, which its editor test can write (a sync: serve.mjs) and others read
 #   tree                 writes into this repo's tree, its worktrees or its branches
 #   alone                nothing runs beside it, nor after it before it ends
 #   -                    nothing
@@ -691,12 +692,12 @@ steps_list() {
     while IFS="$TAB" read -r label home; do
         [ -f "$home/site/index.html" ] || continue
         l chrome s_structure "$label" "$home"
-        l -      s_mcp "$label" "$home"
+        l "project:$label" s_mcp "$label" "$home"
     done <<EOF
 $HOMES
 EOF
     while IFS="$TAB" read -r label home; do
-        [ -d "$home/snapshot/components" ] && l - s_specs "$label" "$home"
+        [ -d "$home/snapshot/components" ] && l "project:$label" s_specs "$label" "$home"
     done <<EOF
 $HOMES
 EOF
@@ -705,7 +706,7 @@ EOF
     l -      s_every_skill
     while IFS="$TAB" read -r label home; do
         # no project: the list is empty, and the here-document still gives one empty line
-        [ -n "$label" ] && l chrome,home:downloads s_editor "$label"
+        [ -n "$label" ] && l "chrome,home:downloads,project:$label" s_editor "$label"
     done <<EOF
 $HOMES
 EOF
