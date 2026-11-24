@@ -666,7 +666,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // (a name the component does not bind is never found: it keeps the walk going, not the key lookups' waits)
       const until = Date.now() + 25000, keysDone = () => !want.size || Date.now() > until, done = () => (keysDone() && !wantNames.size) || Date.now() > until;
       const take = (x) => { if (x && want.has(x.key)) { ownKeys.set(x.key, x); want.delete(x.key); } };
-      // (each name's candidates among the component's own layers, never a placed instance's insides, which can bind
+      // (each name's candidates among the component's own layers, never a placed instance or its insides, which can bind
       // another library's variable of that name; two of one name is one the snapshot's key decides, else left to it)
       const seen = boundAll;
       const takeBound = (x) => { if (x && ownVarIds.has(x.id) && wantNames.has(x.name)) { seen.set(x.name, new Map([...(seen.get(x.name) || []), [x.id, x]])); } };
@@ -682,7 +682,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         try {
           for (const id of styleIdsOf(n)) styleIds.add(id);
           if (n.type === 'TEXT' && typeof n.textStyleId === 'string' && n.textStyleId && typeof n.fontName !== 'symbol' && !textFont.has(n.textStyleId)) textFont.set(n.textStyleId, n.fontName);
-          // (a placed instance's own bindings are its main component's, another library's, unless overridden: not the component's)
+          // (a placed instance's own bindings are its main component's, another library's: never the component's; one the
+          // component overrides on the instance is not told apart from them, so it falls back to the snapshot's key)
           mine = n.type !== 'INSTANCE' && !inside(n, r);
           alias(n.boundVariables);
           for (const paint of [].concat(Array.isArray(n.fills) ? n.fills : [], Array.isArray(n.strokes) ? n.strokes : [])) alias(paint.boundVariables);
@@ -717,8 +718,10 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // `key` one variable of that collection, imported to reach it; `names` its modes by the contract's spelling)
   const cols = {};
   const modeSets = [...new Set(els.flatMap((e) => Object.keys(e.modes || {})))].flatMap((a) => (K.modes || {})[a] || []);
-  // (a bound variable of that name reaches it only where it is of that collection: a name is unique within one alone)
-  const ofCollection = async (m) => { for (const v of (boundAll.get(m.name) || new Map()).values()) { const c = await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(() => null); if (c && c.name === m.collection) return c; } return null; };
+  // (a bound variable of that name reaches it only where it is of that collection: a name is unique within one alone;
+  // the one the snapshot's key names first, then the one bound alone, then any, so two copies of a library each with a
+  // collection of that name set the modes on the copy the variables come from)
+  const ofCollection = async (m) => { const vs = [...(boundAll.get(m.name) || new Map()).values()], pick = bound.get(m.name); for (const v of [...vs.filter((x) => x.key === m.key), ...(pick ? [pick] : []), ...vs]) { const c = await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(() => null); if (c && c.name === m.collection) return c; } return null; };
   await Promise.all(modeSets.filter((m) => m.key).map(async (m) => { const c = await ofCollection(m); if (c) { cols[m.key] = c; return; } const v = await tried(`a variable of ${m.collection}`, () => own(m.key, () => figma.variables.importVariableByKeyAsync(m.key))); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
   // (each collection on its own, a failure said and the rest still set; a layer that cannot hold a mode, said)
   const setModes = (n, e, id) => {

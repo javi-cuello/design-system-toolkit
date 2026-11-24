@@ -308,8 +308,9 @@ ok('the runner chooses the run\'s token, so it can take back its own and leave a
   // taken from the file by name, never the snapshot's key imported (which fails, and left the padding a raw number)
   const calls = [];
   const v = (id, key, name, col) => ({ id, key, name, variableCollectionId: col, remote: true, hiddenFromPublishing: true });
-  const byId = { 'V:pad': v('V:pad', 'k-bound', 'Space/150', 'C:space'), 'V:mode': v('V:mode', 'k-mode-bound', 'Tone/fg', 'C:tone'), 'V:nested': v('V:nested', 'k-nested', 'Tone/fg', 'C:nested'), 'V:elsewhere': v('V:elsewhere', 'k-elsewhere', 'Tone/fg', 'C:other') };
-  const collections = { 'C:tone': 'Tone', 'C:nested': 'Tone', 'C:other': 'Size' };
+  const byId = { 'V:pad': v('V:pad', 'k-bound', 'Space/150', 'C:space'), 'V:mode': v('V:mode', 'k-mode-bound', 'Tone/fg', 'C:tone'), 'V:nested': v('V:nested', 'k-nested', 'Tone/fg', 'C:nested'), 'V:elsewhere': v('V:elsewhere', 'k-elsewhere', 'Tone/fg', 'C:other'),
+    'V:copyA': v('V:copyA', 'k-mode-snapshot', 'Tone/fg', 'C:toneA'), 'V:copyB': v('V:copyB', 'k-copyB', 'Tone/fg', 'C:toneB') };
+  const collections = { 'C:tone': 'Tone', 'C:nested': 'Tone', 'C:other': 'Size', 'C:toneA': 'Tone', 'C:toneB': 'Tone' };
   const alias = (id) => ({ type: 'VARIABLE_ALIAS', id });
   // walked first: a placed instance whose insides bind another library's variable of the same name
   const comp = { type: 'COMPONENT_SET', name: 'Chip', parent: { type: 'PAGE', getPluginData: () => '' }, fills: [], strokes: [] };
@@ -347,6 +348,9 @@ ok('the runner chooses the run\'s token, so it can take back its own and leave a
     calls.length = 0;
     await run('const __token = 1;\n' + stand(true, ['V:elsewhere', 'V:mode'])).catch(() => null);
     ok('…two bound of the mode\'s name, in two collections: the one of the mode\'s collection reaches it', calls.includes('collection C:tone') && !calls.includes('import k-mode-snapshot'));
+    calls.length = 0;
+    await run('const __token = 1;\n' + stand(true, ['V:copyB', 'V:copyA'])).catch(() => null);
+    ok('…two copies of a library, each with its collection of the mode\'s name: the copy the snapshot\'s key names reaches it', calls.includes('collection C:toneA') && !calls.includes('collection C:toneB'));
     calls.length = 0;
     await run('const __token = 1;\n' + stand(true, ['V:mode'], true)).catch(() => null);
     ok('…a variable bound on a placed instance itself (its main component\'s, another library\'s) is not the component\'s own: the snapshot key is imported', calls.includes('import k-snapshot'));
