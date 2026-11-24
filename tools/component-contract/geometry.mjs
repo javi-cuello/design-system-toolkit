@@ -4,7 +4,7 @@
  * laid out the other way, a variant out of its place and a set of another size are what it drops, so a drawing that
  * looked broken came out "the same" (2026-11-23). Rows are `{ at, library, drawn, why? }` (why: a known reason, such as a vector past the walk's cap drawn as its box), eval's mechanisms() ranks them:
  *
- *   <variant>.<field>             a variant's own field (its size, layout, place in the set from the set's own corner)
+ *   <variant>.<field>             a variant's own field (its size, layout, x and y in its set as recorded)
  *   <variant>/<layer>/….<field>   a layer's field, the path as spec.cjs's layerPaths names it, `/` between layers
  *   <variant>/<layer>/…           a layer only one side has, its side `{ kind: <type> }`
  *   <variant>                     a variant only one side has
@@ -69,19 +69,12 @@ export function geometry(library, drawn, { known = null, tolerance = TOLERANCE }
   const byAxes = new Map(dv.map((v) => [axes(v.name), v]));
   // (a single component, or a set of one, is its one variant whatever each side names it)
   const one = lv.length === 1 && dv.length === 1;
-  // a variant's place is held to the library's from its set's own corner (the least x and y any variant takes): a set
-  // padded otherwise moves every variant alike, one fact its size says, not a row per variant
-  const corner = (vs) => { const ps = vs.map((v) => v.place).filter(Boolean); return ps.length ? { x: Math.min(...ps.map((q) => q.x)), y: Math.min(...ps.map((q) => q.y)) } : null; };
-  const lc = corner(lv), dc = corner(dv);
-  const inSet = (q, c) => (q && c ? { x: q.x - c.x, y: q.y - c.y } : q);
   const met = new Set();
   for (const a of lv) {
     const vk = seg(axes(a.name) || a.name), b = one ? dv[0] : byAxes.get(axes(a.name));
     if (!b) { row(vk, { kind: 'variant' }, null); continue; }
     met.add(b);
-    const { place: pa0, ...a0 } = a, { place: pb0, ...b0 } = b;
-    fields(a0, b0, vk);
-    if (!(known && !known.has('place') && pa0 === undefined) && !same(inSet(pa0, lc), inSet(pb0, dc), tolerance)) row(`${vk}.place`, pa0, pb0);
+    fields(a, b, vk);
     const pa = paths(a), pb = paths(b);
     // (a layer inside an instance is its component's drawing: no paths recorded there, by design)
     const loose = (p) => !p.split(' > ').slice(0, -1).some((_, i, s) => (pa.get(s.slice(0, i + 1).join(' > ')) || {}).type === 'INSTANCE');

@@ -136,7 +136,13 @@ ok('the plugin code carries each variant\'s cell', /"cell":\[1,2\]/.test(pluginC
   placeVariants(set, comps, { w: 420, h: 160 });
   ok('…and the drawing puts each variant at its place in a set laid out by hand, at the library\'s size',
     set.layoutMode === 'NONE' && comps[1].node.x === 300 && comps[1].node.y === 100 && set.width === 420 && set.height === 160
-    && /const placeVariants = /.test(code)); }
+    && /const placeVariants = /.test(code));
+  ok('a spec whose variants cannot be read gives no arrangement: the grid draws them all',
+    arrangementOf({ set: { w: 1, h: 1 }, get variants() { throw new Error('a broken delta'); } }, names) === null);
+  // the walk records no fill, stroke or corner of a set (only its size): the set's own look is the drawing's, in either
+  // arrangement
+  const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
+  ok('…and the set drawn at the library\'s places is styled as the grid\'s is', /\n  if \(!single\) \{ set\.fills = \[\];/.test(src) && (src.match(/set\.dashPattern = /g) || []).length === 1); }
 // a component with no axes is one variant: drawn as a component, read back as one
 const one = plan({ contract: 1, component: 'divider', props: {}, anatomy: { root: { kind: 'container', background: 'C/line' } }, variants: [] }, {});
 ok('a component with no axes is one variant, at the grid\'s one cell', one.variants.length === 1 && one.rows === 1 && one.cols === 1 && JSON.stringify(one.variants[0].cell) === '[0,0]');

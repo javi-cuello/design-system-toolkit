@@ -1262,8 +1262,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     for (const c of comps) { c.node.x = at(w, c.cell[1]); c.node.y = at(h, c.cell[0]); }
     set.resizeWithoutConstraints(Math.max(...comps.map((c) => c.node.x + c.node.width)) + 24, Math.max(...comps.map((c) => c.node.y + c.node.height)) + 24);
   }
-  set.fills = []; set.strokes = [{ type: 'SOLID', color: { r: 0.59, g: 0.28, b: 1 } }]; set.dashPattern = [10, 5]; set.cornerRadius = 5;
   }
+  // a set's own look, in either arrangement: the walk records none of a set's fills, strokes or corners (its size only)
+  if (!single) { set.fills = []; set.strokes = [{ type: 'SOLID', color: { r: 0.59, g: 0.28, b: 1 } }]; set.dashPattern = [10, 5]; set.cornerRadius = 5; }
   // properties in the contract's order, which the panel keeps (figma-standard rules 1 and 5: a boolean, then what it
   // reveals); a variant axis is placed by Figma, and only a drag in its panel moves one
   const refs = {};
@@ -1349,8 +1350,10 @@ export function variantKeys(dir, names, tails = []) {
 export function arrangementOf(stored, names) {
   if (!stored || !stored.set) return null;
   const axes = (n) => String(n).split(',').map((x) => x.trim()).filter((x) => x.includes('=')).sort().join(', ');
+  // (a spec whose variants cannot be read, a broken delta, places nothing)
+  let vs; try { vs = req('../snapshot/spec.cjs').resolve(stored).variants || []; } catch { return null; }
   const at = new Map();
-  for (const v of req('../snapshot/spec.cjs').resolve(stored).variants || []) if (v.place) at.set(axes(v.name), v.place);
+  for (const v of vs) if (v.place) at.set(axes(v.name), v.place);
   const places = {};
   for (const n of names) { const pl = at.get(axes(n)); if (!pl) return null; places[n] = pl; }
   return { set: stored.set, places };
