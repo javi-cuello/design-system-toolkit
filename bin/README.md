@@ -17,7 +17,7 @@ Every command needs Node 22.12 or later. `bin/deploy` also needs `npx wrangler l
 |---|---|
 | `bin/check` | The toolkit's own check: the standards, the scanners and every test a skill or tool ships. Run it before and after a change. The pre-push hook runs it too, so a push cannot carry a red toolkit. |
 | `bin/worktree <work>` | Makes or reopens the worktree for one piece of work, and prints its folder. Work is done there, never in the main checkout, which other sessions share. |
-| `bin/land [<branch or folder>]` | Lands a worktree's branch on main, through one queue that is checked and pushed as a batch. |
+| `bin/land [<branch or folder>]` | Lands a worktree's branch on main: a quick check first (red: not queued), then one queue that is checked and pushed as a batch. |
 | `bin/check-lib.sh` | Sourced by `bin/check`, not run: its step helpers and the closing summary. |
 | `bin/get [--list] <folder>` | Takes one tool from the toolkit, for someone who wants only it, with every toolkit folder it uses. |
 | `bin/closing` | The end-of-work pass: what is left uncommitted or unpushed, and the questions no script can answer. |

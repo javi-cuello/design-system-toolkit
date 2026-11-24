@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /*
  * Landing: the one way work reaches main. A session commits on its own branch (a worktree per piece of work,
- * worktree.mjs) and runs bin/land; the branch joins a queue, and whoever holds the measuring lock lands every queued
- * branch together: their new commits replayed onto origin/main in an integration worktree, one full check of the
+ * worktree.mjs) and runs bin/land; a quick check of the commit runs first (red: not queued), then the branch joins a
+ * queue, and whoever holds the measuring lock lands every queued branch together: their new commits replayed onto origin/main in an integration worktree, one full check of the
  * result, and a push from there. N sessions landing at once cost one check, not N (the bors model: test main with the
  * change applied, then move main; github.com/bors-ng/bors-ng). A branch whose commits do not apply is dropped and told;
  * a red batch is split in half until the red branch is alone (step()). The lock is held for one check at a time, with a
@@ -17,11 +17,11 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { hold, release, lockLost } from './lock.mjs';
 import { run as check } from './check-cache.mjs';
-import { mainOf, link } from './worktree.mjs';
+import { mainOf, link, temp } from './worktree.mjs';
 
 const git = (dir, ...a) => execFileSync('git', ['-C', dir, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const tryGit = (dir, ...a) => { try { return { ok: true, out: git(dir, ...a) }; } catch (e) { return { ok: false, out: String(e.stderr || e.message).trim() }; } };
@@ -198,6 +198,26 @@ async function step(main, me, state) {
   return null;
 }
 
+/* bin/check --quick --no-fix on a commit, through check-cache (a tree checked before answers at once): its exit code,
+   its output, and the steps its closing summary names as failed. */
+async function quickCheck(main, sha) {
+  const t = temp(main, sha);
+  try {
+    return await new Promise((resolve) => {
+      let out = '';
+      const c = spawn(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), 'check-cache.mjs'), t.dir, '--quick', '--no-fix'], { stdio: ['ignore', 'pipe', 'pipe'] });
+      c.stdout.setEncoding('utf8'); c.stderr.setEncoding('utf8');
+      c.stdout.on('data', (d) => { out += d; }); c.stderr.on('data', (d) => { out += d; });
+      c.on('error', (e) => resolve({ code: 1, out: String(e.message), failed: [] }));
+      c.on('close', (code) => {
+        const sum = out.split('\n'), at = sum.findIndex((l) => /^== \d+ FAILED/.test(l));
+        const failed = at < 0 ? [] : sum.slice(at + 1).filter((l) => /^ {2}- /.test(l)).map((l) => l.slice(4));
+        resolve({ code: code ?? 1, out, failed });
+      });
+    });
+  } finally { t.remove(); }
+}
+
 export async function land(from, target) {
   const main = mainOf(from);
   const asDir = target && fs.existsSync(target) ? path.resolve(target) : null;
@@ -212,6 +232,14 @@ export async function land(from, target) {
   // red on main at this very commit: another try checks the same tree for the same answer
   const was = readJSON(path.join(outcomes(main), `${encodeURIComponent(branch)}@${sha}`));
   if (was?.outcome === 'red') { say(`${branch} at ${sha.slice(0, 8)} was red on main at ${new Date(was.at).toTimeString().slice(0, 5)}: commit a fix, or rebase on origin/main, then land again`); return 1; }
+  // the quick check first, on the commit as committed (a temporary worktree of it), with no lock: a branch it finds red
+  // never waits for the lock and a full check to be told so (2026-11-24: two lands red on quick steps after 13 minutes each)
+  const quick = await quickCheck(main, sha);
+  if (quick.code !== 0) {
+    say(`${branch} at ${sha.slice(0, 8)}: the quick check's run:\n${quick.out.trimEnd().split('\n').map((l) => `  ${l}`).join('\n')}`);
+    say(`${branch} not queued: the quick check is red: ${quick.failed.join(', ') || 'see its run above'}. Fix it, commit, then land again`);
+    return 1;
+  }
   fs.mkdirSync(queueDir(main), { recursive: true });
   writeJSON(qfile(main, branch), { branch, sha, at: Date.now() });
   say(`${branch} queued at ${sha.slice(0, 8)}`);

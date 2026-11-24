@@ -23,7 +23,8 @@ execFileSync('git', ['init', '-q', '--bare', '-b', 'main', remote]);
 execFileSync('git', ['clone', '-q', remote, main], { stdio: 'ignore' });
 fs.mkdirSync(path.join(main, 'bin'));
 // the fake check counts its runs and is red when any tracked file says BAD
-fs.writeFileSync(path.join(main, 'bin', 'check'), `#!/bin/sh\ncd "$(dirname "$0")/.."\necho "run $(sed 's/.*"at":\\([0-9]*\\).*/\\1/' "$TOOLKIT_LOCK_DIR/toolkit-measure.holder.json" 2>/dev/null)" >> "${count}"\nif [ -n "$LAND_MOVE" ] && [ -f "$LAND_MOVE" ]; then rm "$LAND_MOVE"; echo moved > moved.txt; git add moved.txt; git commit -qm moved; fi\nif [ -n "$LAND_KILL" ] && [ -f "$LAND_KILL" ]; then rm "$LAND_KILL"; pkill -f "$TOOLKIT_LOCK_DIR/toolkit-measure.flock"; sleep 0.3; fi\nif git grep -q BAD -- ':!bin'; then echo "== 1 FAILED (BAD)"; exit 1; fi\necho "green"\n`, { mode: 0o755 });
+// a quick run (bin/land's before queuing) is counted apart, and red when a tracked file says QUICKBAD
+fs.writeFileSync(path.join(main, 'bin', 'check'), `#!/bin/sh\ncd "$(dirname "$0")/.."\ncase " $* " in *" --quick "*) echo quick >> "${count}.quick"; if git grep -q QUICKBAD -- ':!bin'; then echo "every README and skill reads plainly   FAIL (0s)"; echo "  t.md: too long"; echo "== 1 FAILED (detail above each):"; echo "  - every README and skill reads plainly"; exit 1; fi; echo "green (quick)"; exit 0;; esac\necho "run $(sed 's/.*"at":\\([0-9]*\\).*/\\1/' "$TOOLKIT_LOCK_DIR/toolkit-measure.holder.json" 2>/dev/null)" >> "${count}"\nif [ -n "$LAND_MOVE" ] && [ -f "$LAND_MOVE" ]; then rm "$LAND_MOVE"; echo moved > moved.txt; git add moved.txt; git commit -qm moved; fi\nif [ -n "$LAND_KILL" ] && [ -f "$LAND_KILL" ]; then rm "$LAND_KILL"; pkill -f "$TOOLKIT_LOCK_DIR/toolkit-measure.flock"; sleep 0.3; fi\nif git grep -q BAD -- ':!bin'; then echo "== 1 FAILED (BAD)"; exit 1; fi\necho "green"\n`, { mode: 0o755 });
 fs.writeFileSync(path.join(main, '.gitignore'), '.claude/\n');
 for (const f of ['a', 'b', 'c', 'd', 'e']) fs.writeFileSync(path.join(main, `${f}.txt`), `${f}\n`);
 git(main, 'add', '.'); git(main, 'commit', '-qm', 'base'); git(main, 'push', '-q', 'origin', 'main');
@@ -226,6 +227,24 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /lock was lost during the check: not pushed/, r.out);
   assert.equal(remoteHas('n10.txt'), 'n10'); }
+
+// (r) a red quick check refuses to queue, naming what failed, before any wait for the lock or a full check
+// (2026-11-24: two lands went red on quick-check steps after 13 minutes each)
+{ const H = wt('n11'); fs.writeFileSync(path.join(H, 'n11.txt'), 'QUICKBAD\n'); git(H, 'add', '.'); git(H, 'commit', '-qm', 'n11');
+  const n0 = runs(), quick = () => fs.readFileSync(`${count}.quick`, 'utf8').split('\n').filter(Boolean).length, q0 = quick();
+  r = await quiet(() => land(H));
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /not queued: the quick check is red: every README and skill reads plainly/, r.out);
+  assert.match(r.out, /t\.md: too long/, `the failure's detail is shown: ${r.out}`);
+  assert.equal(runs(), n0, 'no full check');
+  assert.equal(quick() - q0, 1, 'one quick check');
+  assert.equal(queued(main).some((q) => q.branch === 'worktree-n11'), false, 'not queued');
+  // fixed, it is checked quick again and lands
+  fs.writeFileSync(path.join(H, 'n11.txt'), 'n11\n'); git(H, 'commit', '-qam', 'n11 fixed');
+  r = await quiet(() => land(H));
+  assert.equal(r.code, 0, r.out);
+  assert.equal(remoteHas('n11.txt'), 'n11');
+  assert.equal(fs.readdirSync(path.join(main, '.claude', 'worktrees')).filter((f) => f.startsWith('.at-')).length, 0, 'no temporary worktree left'); }
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');
