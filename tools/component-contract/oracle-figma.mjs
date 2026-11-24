@@ -167,8 +167,9 @@ function placeOf(n) {
     const deg = r2(Math.atan2(b, -a) * 180 / Math.PI) + 0;
     out.flip = Math.abs(deg) === 180 ? 'y' : 'x';
     if (deg && Math.abs(deg) !== 180) out.rotation = deg;
-  } else if (Math.abs(turn) > 1e-9) out.rotation = r2(turn);
-  out.turned = Math.abs(turn) > 1e-9;
+  } else if (r2(turn)) out.rotation = r2(turn);
+  // (a turn under a hundredth of a degree is the matrix's rounding, none)
+  out.turned = !!r2(turn);
   return out;
 }
 const sizeOf = (n) => (n.size ? { w: r2(n.size.x), h: r2(n.size.y) } : n.absoluteBoundingBox ? { w: r2(n.absoluteBoundingBox.width), h: r2(n.absoluteBoundingBox.height) } : {});
@@ -206,22 +207,27 @@ function mainOf(ctx, n) {
   const set = c.componentSetId && ctx.componentSets[c.componentSetId];
   return { name: set ? `${set.name} / ${c.name}` : c.name, owner: set ? set.name : c.name, key: set ? set.key : c.key, id: c.componentSetId || n.componentId };
 }
-const swapName = (ctx, id) => { const c = ctx.components[id]; if (!c) return id; const s = c.componentSetId && ctx.componentSets[c.componentSetId]; return s ? s.name : c.name; };
+// a swap whose component the response does not name is not checkable
+export const UNNAMED = '@unnamed';
+const swapName = (ctx, id) => { const c = ctx.components[id]; if (!c) return UNNAMED; const s = c.componentSetId && ctx.componentSets[c.componentSetId]; return s ? s.name : c.name; };
 const instanceProps = (ctx, n) => Object.fromEntries(Object.entries(n.componentProperties || {}).map(([k, p]) => [bare(k), p.type === 'INSTANCE_SWAP' && typeof p.value === 'string' ? swapName(ctx, p.value) : p.value]));
 // REST's names for an overridden field where the plugin API's differ
-const OVERRIDE_NAME = { preserveRatio: 'constrainProportions' };
+const OVERRIDE_NAME = { preserveRatio: 'constrainProportions', transitionNodeID: 'reactions', transitionDuration: 'reactions', transitionEasing: 'reactions' };
 const overridesOf = (n) => (n.overrides || []).filter((ov) => ov.overriddenFields.some((f) => !['componentProperties', 'name', 'visible'].includes(f)));
 
 /*
  * One REST node in the stored walk's words (plugins/design-system-snapshot walk()), read from Figma's JSON: the fields
  * the walk writes, under the same conditions, with a bound value as BOUND. `parent` is the REST parent.
  */
-export function restWalk(n, ctx, depth = 0, parent = null, at, inInstance = false) {
+// a group's (or boolean's) children are placed in the frame that holds the group by the plugin API, in the group by
+// REST: `origin` is that group's place, added back
+const GROUPS = new Set(['GROUP', 'BOOLEAN_OPERATION']);
+export function restWalk(n, ctx, depth = 0, parent = null, at, inInstance = false, origin = { x: 0, y: 0 }) {
   const { w, h } = sizeOf(n);
   const o = { name: n.name, type: n.type, w, h };
   const p = placeOf(n);
   if (depth > 0) {
-    o.x = p.x; o.y = p.y;
+    o.x = r2(p.x + origin.x); o.y = r2(p.y + origin.y);
     if (typeof at === 'number') o.index = at;
     const img = (n.fills || []).find((f) => f.type === 'IMAGE' && f.imageTransform);
     if (img) { const [[a, b]] = img.imageTransform; const deg = Math.round(Math.atan2(b, a) * 180 / Math.PI); if (deg) o.fillRotation = deg; }
@@ -297,6 +303,7 @@ export function restWalk(n, ctx, depth = 0, parent = null, at, inInstance = fals
     if (st.letterSpacing) o.letterSpacing = r2(st.letterSpacing);
     o.lineHeight = lineHeightOf(st);
   }
+  const inner = GROUPS.has(n.type) && depth > 0 ? { x: o.x, y: o.y } : { x: 0, y: 0 };
   if (n.type === 'INSTANCE') {
     const m = mainOf(ctx, n);
     o.instanceOf = m ? m.name : null;
@@ -306,14 +313,14 @@ export function restWalk(n, ctx, depth = 0, parent = null, at, inInstance = fals
     const ov = overridesOf(n);
     if (ov.length && depth < 12) {
       // REST names a style override inheritFillStyleId where the plugin API says fillStyleId
-      o.overrides = ov.map((x) => x.overriddenFields.map((f) => (OVERRIDE_NAME[f] || f.replace(/^inherit(\w)(\w*StyleId)$/, (_, a, b) => a.toLowerCase() + b))).join(','));
-      o.children = (n.children || []).filter((c) => c.visible !== false).map((c) => restWalk(c, ctx, depth + 1, n, undefined, true));
+      o.overrides = ov.map((x) => [...new Set(x.overriddenFields.map((f) => (OVERRIDE_NAME[f] || f.replace(/^inherit(\w)(\w*StyleId)$/, (_, a, b) => a.toLowerCase() + b))))].join(','));
+      o.children = (n.children || []).filter((c) => c.visible !== false).map((c) => restWalk(c, ctx, depth + 1, n, undefined, true, inner));
     }
     return o;
   }
   if (n.children && depth < 12) {
     o.children = [];
-    for (const [i, c] of n.children.entries()) if (c.visible !== false) o.children.push(restWalk(c, ctx, depth + 1, n, inInstance ? undefined : i, inInstance));
+    for (const [i, c] of n.children.entries()) if (c.visible !== false) o.children.push(restWalk(c, ctx, depth + 1, n, inInstance ? undefined : i, inInstance, inner));
   }
   return o;
 }
@@ -329,6 +336,8 @@ export function specOurs(s, figmaNode) {
   delete o.children; delete o.paths; delete o.outline; delete o.notes; delete o.unrecorded;
   if (o.bindings) o.bindings = bindingsOurs(o.bindings);
   if (o.modes) o.modes = BOUND;
+  // a turn the walk rounded to 0 is none, and its visual box the layer's own
+  if (o.rotation === 0) { delete o.rotation; delete o.visual; }
   if (o.fills && Array.isArray(o.fills)) o.fills = o.fills.map(paintOurs);
   if (o.strokes && Array.isArray(o.strokes)) o.strokes = o.strokes.map(paintOurs);
   const size = figmaNode && figmaNode.style && figmaNode.style.fontSize;
@@ -379,7 +388,7 @@ export function compareSpec(component, setNode, spec, ctx) {
     if (!same(want, got)) add(null, 'defaultVariant', 'defaultVariant', want, got);
   }
   const meta = isSet ? ctx.componentSets[setNode.id] : ctx.components[setNode.id];
-  if (meta && (meta.description || '') !== (spec.description || '')) add(null, 'description', 'description', meta.description || '', spec.description || '');
+  if (meta && plainText(meta.description) !== plainText(spec.description)) add(null, 'description', 'description', meta.description || '', spec.description || '');
   if (isSet && setNode.size && spec.set && !same({ w: r2(setNode.size.x), h: r2(setNode.size.y) }, spec.set)) add(null, 'set', 'set', { w: r2(setNode.size.x), h: r2(setNode.size.y) }, spec.set);
   const links = linksOf(variants);
   for (const k of new Set([...Object.keys(links), ...Object.keys(spec.links || {})])) if (!same(links[k], (spec.links || {})[k])) add(null, `links.${k}`, 'links', links[k], (spec.links || {})[k]);
@@ -398,6 +407,10 @@ export function compareSpec(component, setNode, spec, ctx) {
   for (const name of stored.keys()) if (!figmaNames.has(name) && !booleans.some((b) => new RegExp(`, ${b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=(True|False)$`).test(name))) add(name, '$root', 'variant', 'missing', 'stored');
   return rows;
 }
+// a description as words: REST gives it plain, the walk as markdown (a link's text, emphasis, blank lines)
+// (REST also drops the line a bold heading ends, so the words are held with no space between them)
+export const plainText = (t) => String(t || '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/&#(\d+);/g, (_, c) => String.fromCodePoint(+c)).replace(/(\*\*|__|\*|_|`)(\S(?:.*?\S)?)\1/g, '$2').replace(/\\([\\`*_{}[\]()#+\-.!])/g, '$1').replace(/[\s\uFEFF\u200B]+/g, '');
+
 function diffTree(walked, stored, restRoot, say) {
   const fig = new Map([['$root', walked]]); layerPaths(walked, (n, p) => { fig.set(p, n); });
   const ours = new Map([['$root', stored]]); layerPaths(stored, (n, p) => { ours.set(p, n); });
@@ -411,8 +424,11 @@ function diffTree(walked, stored, restRoot, say) {
       if ((k === 'strokesInLayout' || k === 'sizing') && !(k in a)) continue; // where-stated: REST leaves these out on some layers
       if (k === 'textStyle' && (a[k] === 'mixed' || b[k] === 'mixed')) continue; // not checkable
       // the walk keeps an instance's first eight overrides, in the plugin's order: each of those is one Figma lists
-      if (k === 'overrides' && Array.isArray(a[k]) && Array.isArray(b[k])) { if (b[k].length !== Math.min(8, a[k].length) || b[k].some((x) => !a[k].includes(x))) say(p, k, a[k], b[k]); continue; }
+      // how many layers an instance overrides; the fields' names are REST's own (individualStrokeWeights for
+      // strokeBottomWeight, fontFamily for fontName), not checkable
+      if (k === 'overrides' && Array.isArray(a[k]) && Array.isArray(b[k])) { if (b[k].length !== Math.min(8, a[k].length)) say(p, k, a[k].length, b[k].length); continue; }
       if (k === 'instanceOf' && typeof a[k] === 'string' && typeof b[k] === 'string') { if (!(b[k] === a[k] || b[k].endsWith('/' + a[k]))) say(p, k, a[k], b[k]); continue; }
+      if (k === 'props') dropUnnamed(a[k], b[k]);
       if (!same(a[k], b[k])) say(p, k, a[k], b[k]);
     }
   }
@@ -457,8 +473,11 @@ export function restPart(n, parent, ctx, propIds) {
   const { w, h } = sizeOf(n);
   const p = placeOf(n);
   const word = { FILL: 'fill', HUG: 'hug' };
-  e.width = bv.width ? BOUND : word[n.layoutSizingHorizontal] || w;
-  e.height = bv.height ? BOUND : word[n.layoutSizingVertical] || h;
+  // a quarter-turned layer's sizing is said on its parent's axes, its size on its own
+  const quarter = p.rotation != null && Math.abs(Math.abs(p.rotation) - 90) < 0.01;
+  const [sh, sv] = quarter ? [n.layoutSizingVertical, n.layoutSizingHorizontal] : [n.layoutSizingHorizontal, n.layoutSizingVertical];
+  e.width = bv.width ? BOUND : word[sh] || w;
+  e.height = bv.height ? BOUND : word[sv] || h;
   if (n.layoutMode && n.layoutMode !== 'NONE') {
     const val = (k) => (bv[k] ? BOUND : n[k] || 0);
     e.layout = { direction: n.layoutMode === 'HORIZONTAL' ? 'row' : 'column', gap: val('itemSpacing'), align: ALIGN[n.primaryAxisAlignItems || 'MIN'], crossAlign: ALIGN[n.counterAxisAlignItems || 'MIN'],
@@ -493,10 +512,11 @@ export function restPart(n, parent, ctx, propIds) {
   if (n.layoutPositioning === 'ABSOLUTE') e.position = 'absolute';
   const placed = n.layoutPositioning === 'ABSOLUTE' || (parent && !(parent.layoutMode && parent.layoutMode !== 'NONE'));
   if (parent && placed) {
-    // the near edge (a mirrored or turned layer's, the box the eye sees)
-    const box = (p.flip || p.turned) && n.absoluteBoundingBox && parent.absoluteBoundingBox
-      ? { x: r2(n.absoluteBoundingBox.x - parent.absoluteBoundingBox.x), y: r2(n.absoluteBoundingBox.y - parent.absoluteBoundingBox.y), w: r2(n.absoluteBoundingBox.width), h: r2(n.absoluteBoundingBox.height) }
-      : { x: p.x, y: p.y, w, h };
+    // the contract's place (REFERENCE, the shape): x and y, except a mirrored layer's on its mirrored axis, its near
+    // edge, which is the box the eye sees where it is turned too, else its matrix origin less its size
+    const bb = n.absoluteBoundingBox, pb = parent.absoluteBoundingBox;
+    const near = (axis, size) => (p.turned && bb && pb ? r2(bb[axis] - pb[axis]) : r2(p[axis] - size));
+    const box = { x: p.flip === 'x' ? near('x', w) : p.x, y: p.flip === 'y' ? near('y', h) : p.y, w, h };
     const ps = sizeOf(parent);
     e.absolute = { x: box.x, y: box.y, end: r2(ps.w - box.x - box.w), bottom: r2(ps.h - box.y - box.h) };
     if (n.constraints) {
@@ -561,6 +581,8 @@ export function partOurs(e) {
     } else if (k === 'border') {
       const wd = Array.isArray(v.width) ? v.width.map(num) : v.width == null ? undefined : [num(v.width), num(v.width), num(v.width), num(v.width)];
       o.border = { ...v, color: Array.isArray(v.color) ? v.color.map(paintOurs) : paintOurs(v.color), width: wd };
+      // a width per side is said as `sides` where none is bound
+      if (v.sides && o.border.width == null) o.border.width = [v.sides.top, v.sides.end, v.sides.bottom, v.sides.start];
       delete o.border.sides;
     } else if (k === 'radius') o.radius = radiusList(v);
     else if (k === 'opacity' || /^(min|max)(Width|Height)$/.test(k)) o[k] = num(v);
@@ -635,17 +657,22 @@ export function compareContract(component, setNode, stored, contract, ctx) {
       // an instance, and a layer inside one, says only what differs from its component (derive's ownStyling): there
       // each field is held where the contract states it, the instance's identity always
       if (n.type === 'INSTANCE' || insideInstance(at)) for (const k of Object.keys(a)) if (!(k in b) && !['kind', 'component', 'key', 'with', 'swappedBy'].includes(k)) delete a[k];
+      // a layer stretched on an axis is sized by its place (absolute x and end, y and bottom), said where stated
+      if (a.constraints && a.constraints.horizontal === 'stretch' && !('width' in b)) delete a.width;
+      if (a.constraints && a.constraints.vertical === 'stretch' && !('height' in b)) delete a.height;
+      for (const f of part.whileEmpty || []) if (!(f in a)) delete b[f];
       if (a.typography === 'mixed') { delete a.typography; delete b.typography; }
       // a styled text's letter spacing is its style's, said by the contract only where the layer sets its own
       if (typeof a.typography === 'string' && !('letterSpacing' in b)) delete a.letterSpacing;
       for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
         if (k === 'absolute') {
+          // x and y wherever either side places the layer, end and bottom where the contract states them
+          if (!b.absolute) { add(v.name, id, 'absolute', a.absolute, undefined); continue; }
           for (const f of ['x', 'y', 'end', 'bottom']) {
-            const where = f === 'x' || f === 'y' ? a.absolute && b.absolute || b.absolute : b.absolute && f in b.absolute;
-            if (!where || !(b.absolute && f in b.absolute) && (f === 'end' || f === 'bottom')) continue;
-            if (!same(a.absolute && a.absolute[f], b.absolute && b.absolute[f], 0.51)) add(v.name, id, `absolute.${f}`, a.absolute && a.absolute[f], b.absolute && b.absolute[f]);
+            if ((f === 'end' || f === 'bottom') && !(f in b.absolute)) continue;
+            const fa = a.absolute && a.absolute[f];
+            if (!same(fa, b.absolute[f], 0.51)) add(v.name, id, `absolute.${f}`, fa, b.absolute[f]);
           }
-          if (a.absolute && !b.absolute) add(v.name, id, 'absolute', a.absolute, undefined);
           continue;
         }
         if (k === 'border' && a.border && b.border) {
@@ -660,6 +687,9 @@ export function compareContract(component, setNode, stored, contract, ctx) {
           continue;
         }
         if (k === 'component' && typeof a[k] === 'string' && typeof b[k] === 'string') { if (!(b[k] === a[k] || b[k].endsWith('/' + a[k]) || b[k].endsWith(' / ' + a[k]))) add(v.name, id, k, a[k], b[k]); continue; }
+        // a swap the property makes everywhere is the prop's `swaps`; `swappedBy` says one that holds in some variants
+        if (k === 'swappedBy' && !b[k]) { const p = cprops[a[k]]; if (!(p && (p.swaps || []).includes(id))) add(v.name, id, k, a[k], undefined); continue; }
+        if (k === 'with') dropUnnamed(a[k], b[k]);
         if (!same(a[k], b[k])) add(v.name, id, k, a[k], b[k]);
       }
     }
@@ -668,6 +698,8 @@ export function compareContract(component, setNode, stored, contract, ctx) {
   }
   return rows;
 }
+// a swap REST does not name is held by neither side
+function dropUnnamed(a, b) { if (a && typeof a === 'object') for (const [k, v] of Object.entries(a)) if (v === UNNAMED) { delete a[k]; if (b && typeof b === 'object') delete b[k]; } }
 const sortKeys = (o) => Object.fromEntries(Object.entries(o).sort(([a], [b]) => (a < b ? -1 : 1)));
 
 /* ------------------------------------------------------------- reading Figma */

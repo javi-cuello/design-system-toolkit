@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { BOUND, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
+import { BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
 
 const require = createRequire(import.meta.url);
 const { compact, resolve } = require('../snapshot/spec.cjs');
@@ -75,6 +75,27 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   assert.deepEqual(w.overrides, ['fillStyleId,fills,constrainProportions'], 'REST\'s override names in the plugin API\'s');
   const e = restPart(inst, null, ctx, { 'Icon swap': 'iconSwap' });
   assert.deepEqual([e.kind, e.component, e.key, e.swappedBy], ['instance', 'Icon', 'kset-icon', 'iconSwap']);
+}
+
+/* ---- where REST and the plugin API word the same fact differently (each met on a real library) */
+{
+  // a group's child: REST places it in the group, the plugin API in the frame holding the group
+  const group = { name: 'G', type: 'GROUP', size: { x: 10, y: 10 }, relativeTransform: T(3, 4), children: [{ name: 'V', type: 'VECTOR', size: { x: 2, y: 2 }, relativeTransform: T(1, 1) }] };
+  const w = restWalk({ name: 'F', type: 'FRAME', size: { x: 20, y: 20 }, relativeTransform: T(0, 0), children: [group] }, ctx);
+  assert.deepEqual([w.children[0].children[0].x, w.children[0].children[0].y], [4, 5]);
+  // a prototype link overridden: REST's transition fields, the plugin API's reactions
+  const inst = { name: 'I', type: 'INSTANCE', componentId: 'C:9', size: { x: 1, y: 1 }, relativeTransform: T(0, 0), overrides: [{ id: 'a', overriddenFields: ['transitionNodeID', 'transitionDuration', 'width'] }], children: [] };
+  assert.deepEqual(restWalk(inst, ctx).overrides, ['reactions,width']);
+  // a swap to a component the response does not name is held by neither side
+  const unnamed = restWalk({ ...inst, componentProperties: { 'Icon#1:1': { type: 'INSTANCE_SWAP', value: '99:99' } } }, ctx);
+  assert.equal(unnamed.props.Icon, UNNAMED);
+  // a quarter-turned layer's sizing words are on its parent's axes
+  const line = restPart({ name: 'L', type: 'LINE', size: { x: 0, y: 20 }, relativeTransform: [[0, 1, 0], [-1, 0, 20]], layoutSizingHorizontal: 'FILL', layoutSizingVertical: 'FIXED' }, { type: 'FRAME', layoutMode: 'HORIZONTAL' }, ctx, {});
+  assert.deepEqual([line.width, line.height], [0, 'fill']);
+  // a description: REST plain, the walk markdown
+  assert.equal(plainText('**Size**\nChoose one. [Guide](https://x)'), plainText('SizeChoose one. Guide'));
+  // a border's per-side widths said as `sides`
+  assert.deepEqual(partOurs({ kind: 'container', border: { color: '#000000', sides: { top: 0, end: 0, bottom: 1, start: 0 } } }).border.width, [0, 0, 1, 0]);
 }
 
 /* ---- the table: every field the mapping writes is a row of FIELDS; nothing not checkable is also compared */
