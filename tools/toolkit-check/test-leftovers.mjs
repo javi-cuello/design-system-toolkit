@@ -150,9 +150,12 @@ assert.match(git(side, 'branch', '--list', 'main'), /main/, 'and main with it');
     `  701   700 ${DAYS2} ${HELP} --user-data-dir=${prof('orphan')}`,                                                // its helper: reaped
     `  702   701 ${NOW} ${HELP}`,                                                                                    // a helper's child: reaped
     `  800   999 ${NOW} ${CH} --user-data-dir=${prof('dead')}`,                                                      // ours, young, parent gone: reaped
+    `  690     1 ${DAYS2} /usr/bin/python3 tool.py --user-data-dir=${prof('impostor')}`,                         // not a Chrome, orphaned: never
+    `  905     1 ${DAYS2} /usr/bin/python3 tool.py --user-data-dir=${prof('live')}`,                             // not a Chrome, sorted first in live's group
     `  900   100 ${NOW} /usr/local/bin/node tools/parity/run.mjs`,
     `  910   900 ${NOW} ${CH} --user-data-dir=${prof('live')}`,                                                      // ours, live run: kept
     `  911   910 ${NOW} ${HELP} --user-data-dir=${prof('live')}`,
+    `  912     1 ${NOW} ${CH} --user-data-dir=${prof('live')}`,                                                      // a second browser, orphaned: the live one keeps it
     `  920   100 ${HOURS2} bun tools/ui-check/check.mjs`,
     `  930   920 ${HOURS2} ${CH} --user-data-dir=${prof('bun')}`,                                                    // ours, 2h, a bun runner: kept, unsaid
     `  940   100 ${DAYS2} /bin/zsh -c bin/check`,
@@ -160,21 +163,28 @@ assert.match(git(side, 'branch', '--list', 'main'), /main/, 'and main with it');
   ].join('\n');
   assert.deepEqual(toolkitChromes(ps, [T], now).map((c) => c.dir.split('-').pop()).sort(), ['bun', 'dead', 'live', 'orphan', 'stuck'], 'only parity-chrome-* under tmpdir is the toolkit\'s');
   const killed = [];
-  const { reaped, left } = reapChromes({ ps, tmp: [T], now, kill: (pid) => killed.push(pid) });
+  const { reaped, left } = reapChromes({ ps, tmp: [T], now, kill: (pid) => killed.push(pid), again: () => ps });
   assert.deepEqual(killed.sort((a, b) => a - b), [700, 701, 702, 800], 'only the parentless, at any age, with their helpers');
   assert.equal(reaped.length, 2);
   for (const id of ['orphan', 'dead']) assert.ok(!fs.existsSync(path.join(T, `parity-chrome-${id}`)), `${id}'s profile removed`);
   for (const id of ['live', 'bun', 'stuck']) assert.ok(fs.existsSync(path.join(T, `parity-chrome-${id}`)), `${id}'s profile kept`);
   assert.deepEqual(left.map((c) => c.main), [910, 930, 950], 'a living parent keeps its Chrome, whatever runs it and however old');
+  assert.ok(fs.existsSync(path.join(T, 'parity-chrome-impostor')), 'an orphan that is not a Chrome, carrying the profile, kills nothing');
   // the Stop hook's item: one over a day under a living parent, worded to ask, never to kill, and the same line an hour later
+  // a pid whose command changed between the look and the kill (reused) is left
+  const moved = [];
+  reapChromes({ ps: `  700     1 ${DAYS2} ${CH} --user-data-dir=${prof('reused')}\n  701   700 ${DAYS2} ${HELP}`, tmp: [T], now, kill: (pid) => moved.push(pid),
+    again: () => `  700     1 ${DAYS2} ${CH} --user-data-dir=${T}/parity-chrome-reused\n  701     1 ${NOW} /usr/bin/vim notes.txt` });
+  assert.deepEqual(moved, [700], 'a pid whose command changed since the snapshot is not killed');
+  // keyed by the parent's pid and its start, never its command text (a process title can change)
   const items = chromeItems(left);
-  assert.deepEqual(items, [`a toolkit Chrome under pid 940 (/bin/zsh -c bin/check) has run since 2026-11-22 09:00; check whether that run is still wanted`]);
-  const later = reapChromes({ ps, tmp: [T], now: now + 36e5, kill: () => {} }).left;
+  assert.deepEqual(items, [`a toolkit Chrome under pid 940 (started 2026-11-22 09:00) has run since 2026-11-22 09:00; check whether that run is still wanted`]);
+  const later = reapChromes({ ps, tmp: [T], now: now + 36e5, kill: () => {}, again: () => ps }).left;
   assert.deepEqual(chromeItems(later), items, 'its key does not move with the hours');
   // brief mode (the Stop hook): a reap is a note on stderr, never a stdout line that would read as open
   const { chromeOutput } = await import('./closing.mjs');
   const ps2 = `  700     1 ${DAYS2} ${CH} --user-data-dir=${prof("orphan2")}\n${ps.split("\n").filter((l) => / 9[45]0 /.test(l)).join("\n")}`;
-  const brief = chromeOutput({ brief: true, ps: ps2, tmp: [T], now, kill: () => {} });
+  const brief = chromeOutput({ brief: true, ps: ps2, tmp: [T], now, kill: () => {}, again: () => ps2 });
   assert.deepEqual(brief.out, [], 'nothing reaped is said on stdout in brief mode');
   assert.match(brief.err.join('\n'), /reaped 1 headless Chrome/);
   assert.deepEqual(brief.items, items);
@@ -183,4 +193,4 @@ assert.match(git(side, 'branch', '--list', 'main'), /main/, 'and main with it');
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log('test-leftovers: 33 assertions passed');
+console.log('test-leftovers: 35 assertions passed');

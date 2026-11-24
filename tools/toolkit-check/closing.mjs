@@ -305,7 +305,7 @@ if ((process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); 
       } else if (p && p.lessons && p.lessons.error) say(`  (the parity facts could not be read: ${p.lessons.error.split('\n')[0]})`);
     }
     if (name === 'toolkit') for (const l of cadence(repo)) flag(l);
-    // headless Chromes the toolkit left go here too; one a live run has held over an hour is said, never silent
+    // headless Chromes the toolkit left go here too; one a live run has held over 24 hours is said, never silent
     if (name === 'toolkit') {
       const c = chromeOutput({ brief: BRIEF });
       for (const l of c.out) console.log(l);
