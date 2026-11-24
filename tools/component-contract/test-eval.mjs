@@ -449,6 +449,10 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
     const said = measure(where, [], { figma: b }).legs.figma.tag.stale;
     ok('one drawn before the store was recorded says so, not that the store changed', said === 'taken before the stored snapshot was recorded', said);
     taken({ drawnFrom: b.tag }); }
+  { const { settings, ...old } = b.tag; taken({ drawnFrom: old });
+    ok('one drawn before the drawing settings were recorded says so, with what else changed', measure(where, [], { figma: b }).legs.figma.tag.stale === 'taken before the drawing settings were recorded'
+      && measure(where, [], { figma: { tag: { ...b.tag, walk: 'other' } } }).legs.figma.tag.stale === 'taken before the drawing settings were recorded; the walk changed since', measure(where, [], { figma: b }).legs.figma.tag.stale);
+    taken({ drawnFrom: b.tag }); }
   ok('one drawn from another spec, walk or code is stale, said which', /^its stored figma\.json, the stored snapshot changed since$/.test(measure(where, [], { figma: a }).legs.figma.tag.stale)
     && /the walk changed since/.test(measure(where, [], { figma: { tag: { ...b.tag, walk: 'other' } } }).legs.figma.tag.stale)
     && /the drawing's code changed since/.test(measure(where, [], { figma: { tag: { ...b.tag, code: 'other' } } }).legs.figma.tag.stale)
@@ -507,7 +511,12 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
     const m = measure(where, [], { figma: figmaInputs(where, [], drawSettings({ libKey: 'L', lib })) });
     ok(`measure: a Figma reading drawn under another ${what} is stale, said why`, /the project's drawing settings changed since/.test(m.legs.figma.tag.stale || ''), m.legs.figma.tag);
   }
-  ok('measure: and one under the same settings is not', !measure(where, [], { figma: figmaInputs(where, [], S) }).legs.figma.tag.stale);
+  { // the state axis and pointer states each component's read-back is derived under: its own library's (deriveOptionsFor)
+    const of = (axis) => (f) => (f === 'chip' ? { stateAxis: axis, pointerStates: ['Hover'], mains: { big: 1 } } : {});
+    const a = figmaInputs(where, [], S, of('State')), b = figmaInputs(where, [], S, of('Interaction'));
+    ok('figmaInputs: a component\'s read-back settings, from its own library, move its key and no other\'s', a.chip.settings !== b.chip.settings && a.tag.settings === b.tag.settings
+      && a.chip.settings === figmaInputs(where, [], S, (f) => ({ ...of('State')(f), mains: { other: 2 } })).chip.settings); }
+  ok('measure: and one under the same settings is not',!measure(where, [], { figma: figmaInputs(where, [], S) }).legs.figma.tag.stale);
   ok('measure: nor under another library file', /drawing settings/.test(measure(where, [], { figma: figmaInputs(where, [], drawSettings({ libKey: 'M', lib: {} })) }).legs.figma.tag.stale || ''));
   retake((t) => { t.figma.chip.kept = true; });
   go({ keepUnchanged: true });

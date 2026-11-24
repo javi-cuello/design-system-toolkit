@@ -1547,11 +1547,10 @@ export const LOOKUP = async (want) => {
 
 const LISTS = ['styles', 'fillStyles', 'icons', 'vars', 'components', 'swaps'];
 /* What a drawing takes from the project's settings (libraryOf's): the library file, its Icon container, the mode its
-   code is compared in (code.parity's first tier), and its axis order and size axis; and the state axis and pointer
-   states its read-back is derived under (deriveOptions). A Figma reading is keyed on them (eval.mjs figmaInputs). */
+   code is compared in (code.parity's first tier), and its axis order and size axis. A Figma reading is keyed on them
+   (eval.mjs figmaInputs). */
 export const drawSettings = ({ libKey = null, lib = {} } = {}) => ({ libKey: libKey || null, iconContainer: ((lib || {}).draw || {}).iconContainer || null,
-  mode: ((((lib || {}).code || {}).parity || {}).tiers || [])[0] || null, axisOrder: ((lib || {}).tokens || {}).axisOrder || [], sizeAxis: ((lib || {}).tokens || {}).sizeAxis || null,
-  stateAxis: ((lib || {}).tokens || {}).stateAxis || null, pointerStates: ((lib || {}).tokens || {}).pointerStates || null });
+  mode: ((((lib || {}).code || {}).parity || {}).tiers || [])[0] || null, axisOrder: ((lib || {}).tokens || {}).axisOrder || [], sizeAxis: ((lib || {}).tokens || {}).sizeAxis || null });
 /* A run's wants, every component's in one: each list's names once; the icon container is the library's, one for all. */
 export const lookupWants = (wants) => ({ ...Object.fromEntries(LISTS.map((k) => [k, [...new Set(wants.flatMap((w) => w[k] || []))]])), container: (wants.find((w) => w.container) || {}).container || null });
 /* Whether a run's lookup was made for everything this component wants. */

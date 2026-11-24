@@ -260,9 +260,12 @@ export function unknownNames(names, folders, panel = []) {
 const drawnMoved = (was, today) => {
   if (!today) return null;
   if (!was) return 'taken before its spec, walk and code were recorded';
-  if (was.store === undefined && today.store !== undefined) return 'taken before the stored snapshot was recorded';
-  const said = [['spec', 'its stored figma.json'], ['store', 'the stored snapshot'], ['walk', 'the walk'], ['code', 'the drawing\'s code'], ['settings', 'the project\'s drawing settings']].filter(([k]) => was[k] !== today[k]).map(([, w]) => w);
-  return said.length ? `${said.join(', ')} changed since` : null;
+  // (what it was drawn before was recorded is said so, never as a change, beside what did change)
+  const unrecorded = (k) => was[k] === undefined && today[k] !== undefined;
+  const before = [['store', 'the stored snapshot was'], ['settings', 'the drawing settings were']].filter(([k]) => unrecorded(k)).map(([, w]) => `taken before ${w} recorded`);
+  const changed = [['spec', 'its stored figma.json'], ['store', 'the stored snapshot'], ['walk', 'the walk'], ['code', 'the drawing\'s code'], ['settings', 'the project\'s drawing settings']].filter(([k]) => !unrecorded(k) && was[k] !== today[k]).map(([, w]) => w);
+  const said = [...before, ...(changed.length ? [`${changed.join(', ')} changed since`] : [])];
+  return said.length ? said.join('; ') : null;
 };
 
 export function measure(where, only = [], now = {}) {
@@ -527,7 +530,7 @@ export function draw(where, label, into, only, { retry = true, keepUnchanged = f
 /* What each Figma reading is drawn from, per component: its stored figma.json (the geometry rows' side, and the
    arrangement to-figma draws to), the whole stored snapshot (`store`), the snapshot walk's VERSION (the reading's reader) and the drawing's code (to-figma.mjs
    and geometry.mjs, with what they import). { folder: { spec, store, walk, code } }, each a hash or the version. */
-export function figmaInputs(where, only = [], settings = drawSettings()) {
+export function figmaInputs(where, only = [], settings = drawSettings(), deriveOf = req('../snapshot/projects.cjs').deriveOptionsFor(where.paths.components)) {
   const sha = (x) => createHash('sha1').update(x).digest('hex');
   const tools = path.join(HERE, '..'), h = createHash('sha1');
   for (const f of importClosure([path.join(HERE, 'to-figma.mjs'), path.join(HERE, 'geometry.mjs')])) h.update(path.relative(tools, f)).update('\0').update(fs.readFileSync(f)).update('\0');
@@ -542,9 +545,11 @@ export function figmaInputs(where, only = [], settings = drawSettings()) {
   let all = []; try { all = fs.readdirSync(where.paths.components).sort(); } catch { /* no store */ }
   for (const f of all) add(f, path.join(where.paths.components, f, 'figma.json'));
   const store = s.digest('hex');
-  // (and the project's settings the drawing and its read-back take: to-figma's drawSettings)
-  const set = sha(JSON.stringify(settings));
-  return Object.fromEntries(folders.filter((f) => !only.length || only.includes(f)).map((f) => [f, { spec: spec(f), store, walk, code, settings: set }]));
+  // (and the project's settings the drawing takes, to-figma's drawSettings, with the state axis and pointer states its
+  // read-back is derived under, its own library's (deriveOptionsFor, as to-figma --verify derives it); its mode axes
+  // come from the tokens, in the store's hash)
+  const set = (f) => { const o = deriveOf(f) || {}; return sha(JSON.stringify([settings, o.stateAxis ?? null, o.pointerStates ?? null])); };
+  return Object.fromEntries(folders.filter((f) => !only.length || only.includes(f)).map((f) => [f, { spec: spec(f), store, walk, code, settings: set(f) }]));
 }
 
 /* The reader's own code: every file a self reading runs through (from-code.mjs and what it imports), but to-markup's and
