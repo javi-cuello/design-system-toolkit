@@ -227,6 +227,27 @@ export function centredEdges(at, constraints, inset) {
 /* The design's name for each layer the mapping places (none where its id spells it), for nameInside: from the contract
    the markup was drawn from (`drawnFrom`: on --second, the first reading, so a name the first trip changed shows as the
    drift it is, and a layer only that reading has is named), else the design's. Tested by test-from-code.mjs. */
+/* The leaves two values differ at, as dotted paths (a key or an index added or gone is one: a variant's set field is variants.3.set.label.radius). */
+export function changedPaths(a, b, at = '', out = []) {
+  if (JSON.stringify(a) === JSON.stringify(b)) return out;
+  const obj = (x) => x && typeof x === 'object';
+  if (obj(a) && obj(b) && Array.isArray(a) === Array.isArray(b)) { for (const k of [...new Set([...Object.keys(a), ...Object.keys(b)])]) changedPaths(a[k], b[k], at ? `${at}.${k}` : k, out); return out; }
+  out.push(at);
+  return out;
+}
+
+/* What a reading takes from the design it is compared against, by the rule that takes it: `take(rule, reading, step)`
+   tags every field the step changed (none where the code already said the same), `add(rule, path)` one named by hand.
+   eval.mjs counts a component holding any as the same only as assisted, never strictly: a field copied was not compared.
+   `out()` { rule: [path] }, sorted. */
+export function assistsOf() {
+  const by = new Map();
+  const add = (rule, ...ats) => { for (const at of ats) { if (!by.has(rule)) by.set(rule, new Set()); by.get(rule).add(at); } };
+  const take = (rule, reading, step) => { const was = JSON.parse(JSON.stringify(reading)); const r = step(); add(rule, ...changedPaths(was, JSON.parse(JSON.stringify(reading)))); return r; };
+  const out = () => Object.fromEntries([...by].sort(([a], [b]) => a.localeCompare(b)).map(([r, s]) => [r, [...s].sort()]));
+  return { add, take, out };
+}
+
 export function layerNames(ids, design, drawnFrom = null) {
   const c = drawnFrom || design;
   if (!c) return null;
@@ -1736,6 +1757,8 @@ async function main() {
   const kindIn = (c, id) => (c.anatomy[id] || (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean) || {}).kind;
   for (const x of m.elements.skipped || []) if (!figmaContract || kindIn(figmaContract, x.up) !== 'instance') { console.error(`${name}'s mapping: the layer ${x.path} is no layer of the design`); process.exit(2); }
   const layered = new Set(), ownIcon = new Set();
+  // every field this reading takes from the design, by the rule that takes it (eval.mjs: the same only as assisted)
+  const A = assistsOf();
   const ties = [], notes = (m.elements.skipped || []).map((x) => `${x.path}: inside another component's instance (${x.up}), which is compared in its own audit`);
   // the library's other components, by the name the code's markup gives them (a framework's, or the
   // project's instance pattern), where one name is one component (a framework's TextField is five inputs: none)
@@ -1821,7 +1844,7 @@ async function main() {
     const setStates = asArg ? asArg.values.filter((v) => v !== asArg.default && v !== 'rest' && !(v in L.pseudoOf)) : [];
     if (asArg && Object.keys(L.pseudoOf).length) { L.stateArg = asArg.code; delete props[stateKey]; }
     if (Object.keys(L.pseudoOf).length) props.state = { type: 'enum', values: ['rest', ...Object.keys(L.pseudoOf), ...setStates], default: 'rest', role: 'interaction', pointer: Object.keys(L.pseudoOf), code: '__state' };
-    if (L.governed && figmaContract) emptyShows(props, figmaContract.props, joinedProps, story.args, (L.joins(figmaContract, story.argTypes) || {}).twice);
+    if (L.governed && figmaContract) A.take('empty-shows', { props }, () => emptyShows(props, figmaContract.props, joinedProps, story.args, (L.joins(figmaContract, story.argTypes) || {}).twice));
     const textsOnlyInCode = onlyInCode(props, figmaContract && figmaContract.props, joinedProps);
     let defaults = Object.fromEntries(Object.entries(props).filter(([, p]) => p.type !== 'string').map(([, p]) => [p.code, p.type === 'slot' && !p.placed ? slotMark(p.code) : p.default]));
     // each slot's stand-in, by the prop it stands in for: the element it lands in is the slot
@@ -2270,6 +2293,7 @@ async function main() {
               // part hugs on that axis: else the size it renders at, so one drawn at the wrong size still shows)
               const designHugs = e.kind === 'instance' && figmaContract && [figmaContract.anatomy || {}, ...(figmaContract.variants || []).map((w) => w.add || {})].some((a) => a[e.id] && a[e.id][axis] === 'hug');
               e[axis] = (!v || /^(auto|fit-content|max-content|min-content)$/.test(v)) && (e.layout || e.kind === 'text' || designHugs) ? 'hug' : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
+              if (designHugs && !e.layout && e.kind !== 'text' && e[axis] === 'hug') A.add('design-hug', `anatomy.${e.id}.${axis}`);
             }
             if (e.kind === 'text') await readCut(e, !(e.id in shown));
             continue;
@@ -2377,7 +2401,7 @@ async function main() {
         // it draws an ellipse
         // (in the base anatomy, or added at some props: a divider an action bar draws only with two actions)
         const fa = L.governed && figmaContract && figmaContract.anatomy && (figmaContract.anatomy[id] || (figmaContract.variants || []).map((v) => (v.add || {})[id]).find(Boolean));
-        if (x.kind === 'slot' && x.asText && fa && fa.kind === 'text') { x.kind = 'text'; x.color = x.asText.color; x.type = x.asText.type; x.textAlign = x.asText.textAlign; x.autoResize = autoResizeOf(x.width, x.height); }
+        if (x.kind === 'slot' && x.asText && fa && fa.kind === 'text') { A.add('design-text-kind', `anatomy.${id}.kind`); x.kind = 'text'; x.color = x.asText.color; x.type = x.asText.type; x.textAlign = x.asText.textAlign; x.autoResize = autoResizeOf(x.width, x.height); }
         delete x.asText;
         // another component's instance at the props its markup shows: each axis of that component's mapping at the value
         // whose args the markup carries (an attribute with that value, or one named for a true flag), else the value
@@ -2501,7 +2525,10 @@ async function main() {
         // keeps it: there the outline is no stroke of the design's)
         // (inside a placed component's insides, an outline is that part's own stroke at any state: insidePlaced)
         // (a design that keeps a ring there keeps it a ring: outlineIsOwn)
-        if (outlineIsOwn(x, focused, insidePlaced(raw, id, mark), keepsRing(L.drawnFrom || figmaContract, id, settings))) { x.ownOutline = x.outline; delete x.outline; }
+        { const inPlaced = insidePlaced(raw, id, mark), ringed = keepsRing(L.drawnFrom || figmaContract, id, settings), own = outlineIsOwn(x, focused, inPlaced, ringed);
+          // (a ring the design keeps decides it: taken from the design)
+          if (own !== outlineIsOwn(x, focused, inPlaced, false)) A.add('design-keeps-ring', `anatomy.${id}.outline`);
+          if (own) { x.ownOutline = x.outline; delete x.outline; } }
         if (x.ownOutline) {
           const o = x.ownOutline, align = o.offset <= -o.width + 0.01 ? 'inside' : o.offset < -0.01 ? 'center' : 'outside';
           x.border = { color: await tok('stroke', o.color, `${id}.outline`, ['outline-color', 'outline']), width: await tok('width', o.width, `${id}.outline-width`, ['outline-width', 'outline']), ...(align !== 'inside' && { align }), ...(o.dashed && { dash: 'dashed' }) };
@@ -2559,13 +2586,16 @@ async function main() {
           Object.assign(x, fields); delete x.type;
         }
         // (two props holding the same words, a value's and a suffix's "Label": the one the design has set this layer first)
-        if (x.kind === 'text') { const k = boundText(x.content, id, props, args, figmaContract, joinedProps); if (k) x.content = `{${k}}`; }
+        if (x.kind === 'text') { const k = boundText(x.content, id, props, args, figmaContract, joinedProps); if (k && figmaContract && k !== boundText(x.content, id, props, args, null, joinedProps)) A.add('design-bound-text', `anatomy.${id}.content`); if (k) x.content = `{${k}}`; }
         anatomy[id] = x;
       }
       // (as the design's own ring layer where it draws one: ringKeyOf)
       // (the rings and the combination both in the contract the markup was drawn from: drawnFrom is set only on --second,
       // which runs beside a design, from-code exiting without one; code-only reads have neither, and no combination)
-      placeRings(anatomy, ring, L.drawnFrom || figmaContract, figmaContract ? comboOf(asked, L.drawnFrom || figmaContract) : null, settings);
+      // (the ring as the design keys, names and places it, against what the reading alone would place: taken from the design)
+      { const alone = ring.length && (L.drawnFrom || figmaContract) ? placeRings(JSON.parse(JSON.stringify(anatomy)), ring, null, null, settings) : null;
+        placeRings(anatomy, ring, L.drawnFrom || figmaContract, figmaContract ? comboOf(asked, L.drawnFrom || figmaContract) : null, settings);
+        if (alone) A.add('design-ring-layer', ...changedPaths(alone, JSON.parse(JSON.stringify(anatomy))).map((p) => `anatomy.${p}`)); }
       // a placed component not opened (its insides its own audit's) that draws one graphic, coloured by the colour the
       // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
       // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
@@ -2839,6 +2869,7 @@ async function main() {
       const kids = (o, id) => Object.entries(o).filter(([, e]) => e.parent === id);
       // a code prop the mapping joins to a design prop of another name (checked to Selected, chevron to Show chevron)
       // takes the design's key and name, and its values the design's: the join is the person's, not a guess
+      A.take('joined-prop', fromCode, () => {
       for (const [fk, fp] of Object.entries(figmaContract.props)) {
         const j = ((side.map || {}).props || {})[fk];
         if (fp.role === 'interaction' || !j || typeof j !== 'object' || !j.arg || fromCode.props[fk]) continue;
@@ -2867,10 +2898,12 @@ async function main() {
         fromCode.props = Object.fromEntries(Object.entries(fromCode.props).map(([x, q]) => (x === k ? [fk, np] : [x, q])));
         for (const v of fromCode.variants) if (k in v.when) { const w = to(v.when[k]); v.when = Object.fromEntries(Object.entries(v.when).map(([x, y]) => (x === k ? [fk, w === undefined ? y : w] : [x, y]))); }
       }
+      });
       // a code boolean that is a value of one of the design's enums (a button's Loading, which the design draws as
       // State=Loading): the enum takes the value, and the boolean goes; a combination the design cannot draw (loading
       // while hovered) goes with it. Matched by name, where the code's enum lacks the value and nothing else is named so
       const squash = (x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '');
+      A.take('boolean-as-enum-value', fromCode, () => {
       for (const [bk, bp] of Object.entries(fromCode.props)) {
         if (bp.type !== 'boolean' || figmaContract.props[bk]) continue;
         const hits = Object.entries(figmaContract.props).filter(([, fp]) => fp.type === 'enum' && fp.values.some((v) => squash(v) === squash(bp.figma || bk)));
@@ -2890,9 +2923,11 @@ async function main() {
           return [{ ...v, when: { ...rest, [ck]: value } }];
         });
       }
+      });
       const said = (id) => fromCode.variants.some((v) => Object.keys(v.set || {}).some((k) => k.split('.')[0] === id) || Object.values(v.set || {}).includes(id) || (v.add || {})[id] || Object.values(v.add || {}).some((c) => c && c.parent === id) || (v.remove || []).includes(id));
       // a wrapper the markup needs (a list's li) that the design does not draw, holding one layer at that layer's
       // size and styling nothing: drawn the same without it, so its layer sits where it sits
+      A.take('dropped-wrapper', fromCode, () => {
       for (const [id, e] of Object.entries(fromCode.anatomy)) {
         if (e.kind !== 'container' || figmaContract.anatomy[id] || !e.parent || !figmaContract.anatomy[e.parent] || said(id)) continue;
         if (Object.keys(e).some((k) => !['kind', 'parent', 'order', 'width', 'height', 'name'].includes(k))) continue;
@@ -2902,8 +2937,10 @@ async function main() {
         delete fromCode.anatomy[id];
         fromCode.anatomy[cid] = { ...ce, parent: e.parent, order: e.order };
       }
+      });
       // another component's instance the markup named by its component (sidebarMenuItem), where the design holds the
       // same number of that component's instances under the same parent: each takes the design's id, in order
+      A.take('instance-ids-in-order', fromCode, () => {
       const groups = {};
       // (one already under a design id counts too: button and button2 against the design's button and button_2)
       for (const [id, e] of Object.entries(fromCode.anatomy)) if (e.kind === 'instance' && e.component && e.parent) (groups[`${e.parent}\u0000${e.component}`] = groups[`${e.parent}\u0000${e.component}`] || []).push(id);
@@ -2917,6 +2954,8 @@ async function main() {
         ours.forEach((k, i) => { if (k !== theirs[i]) map[k] = theirs[i]; });
       }
       if (Object.keys(map).length) renameIds(map);
+      });
+      A.take('design-prop-for-words', fromCode, () => {
       for (const [k, p] of Object.entries({ ...fromCode.props })) {
         // a slot of words, or a word prop under the code's name (button's children, the design's Label)
         if (p.type !== 'slot' && p.type !== 'string') continue;
@@ -2944,9 +2983,11 @@ async function main() {
         const swap = (x) => JSON.parse(JSON.stringify(x).split(`"{${k}}"`).join(`"{${fk}}"`));
         fromCode.anatomy = swap(fromCode.anatomy); fromCode.variants = swap(fromCode.variants);
       }
+      });
       // a slot holds the design's sample (its Context menu items), as a text prop holds the design's sample words: the
       // code's slot holds whatever its caller passes, so a reading has nothing of its own to put there
       const under = (o, top) => Object.keys(o).filter((id) => { let x = o[id] && o[id].parent, n = 0; while (x && x !== top && n++ < 50) x = o[x] && o[x].parent; return x === top; });
+      A.take('slot-sample', fromCode, () => {
       for (const [id, e] of Object.entries(fromCode.anatomy)) {
         const fe = figmaContract.anatomy[id];
         const sample = fe && under(figmaContract.anatomy, id);
@@ -2961,6 +3002,7 @@ async function main() {
           fromCode.anatomy[k] = c;
         }
       }
+      });
       // a glyph the code draws where the design draws an icon component's instance (Icon/house): that component at the
       // code's glyph, sized as the code sizes it, so the drawing places the library's icon, not a frame
       const figmaEl = (id) => figmaContract.anatomy[id] || (figmaContract.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
@@ -2997,9 +3039,12 @@ async function main() {
         // held to the component it places)
         dropOwnGlyph(id, e, fromCode.variants, mainsOfAll);
       };
+      A.take('icon-as-instance', fromCode, () => {
       for (const [id, e] of Object.entries(fromCode.anatomy)) asIcon(id, e);
       for (const v of fromCode.variants) for (const [id, e] of Object.entries(v.add || {})) asIcon(id, e);
+      });
       // a swap that shows a layer the design shows and swaps: the design's boolean and swap names
+      A.take('swap-names', fromCode, () => {
       for (const p of Object.values(fromCode.props)) {
         if (p.type !== 'swap' || !p.shows) continue;
         // only a design prop that covers this swap alone: one that also shows another of the code's swaps names neither
@@ -3014,13 +3059,18 @@ async function main() {
         const g = at && at.component.split('/').pop();
         if (g && p.glyph) p.glyph = g;
       }
+      });
       // a text that hugs its words aligns them nowhere: it takes the design's alignment, as it renders the same
+      A.take('text-align', fromCode, () => {
       for (const [id, e] of Object.entries(fromCode.anatomy)) {
         const fe = figmaContract.anatomy[id];
         if (e.kind === 'text' && fe && fe.kind === 'text' && fe.textAlign && e.textAlign !== fe.textAlign && (e.width == null || e.width === 'hug')) e.textAlign = fe.textAlign;
       }
+      });
       // the design's name for the component, not the code folder's (Board card, not Board-card)
+      A.take('component-name', fromCode, () => {
       fromCode.component = figmaContract.component;
+      });
       // a value the code draws as the design does, written raw or left unset (a 0 padding, no radius), takes the
       // design's token for it: the drawing binds what the design binds. The compare above keeps what the code wrote
       const val = (t) => (isToken(t, L.value) ? L.value(t) : t);
@@ -3033,6 +3083,7 @@ async function main() {
       // a size the design states that the code renders the same: hug or fill where the code sets no size of its own
       // (an instance hugs what it holds), a number where the code's box is that number
       const boxes = boxesBy;
+      A.take('design-size', fromCode, () => {
       for (const [id, e] of Object.entries(fromCode.anatomy)) {
         const fe = figmaContract.anatomy[id], box = boxes[id] && boxes[id].box;
         if (!fe || fe.kind !== e.kind) continue;
@@ -3052,11 +3103,14 @@ async function main() {
           if (typeof want === 'number' && box && Math.abs(box[i] - want) < 0.5 && (have == null || have === 'hug' || typeof have === 'number')) e[dim] = want;
         }
       }
+      });
       const zeroFill = (e, fe) => zeroTokens(e, fe, L.value);
+      A.take('design-zero-token', fromCode, () => {
       for (const [id, e] of Object.entries(fromCode.anatomy)) {
         const fe = figmaContract.anatomy[id];
         if (fe && fe.kind === e.kind) zeroFill(e, fe);
       }
+      });
       // and what a variant layer adds or sets whole (a layout set in one variant), held to the design's same part
       // the design's same part in its variant of the same props where it has one (its own tokens there), else its base
       const sameWhen = (a, b) => JSON.stringify(Object.entries(a || {}).sort()) === JSON.stringify(Object.entries(b || {}).sort());
@@ -3067,6 +3121,7 @@ async function main() {
         const layout = dv && (dv.set || {})[`${id}.layout`];
         return base && layout && typeof layout === 'object' ? { ...base, layout } : base;
       };
+      A.take('design-zero-token', fromCode, () => {
       for (const v of fromCode.variants || []) {
         for (const [id, e] of Object.entries(v.add || {})) { const fe = designOf(id, v.when); if (fe && fe.kind === e.kind) zeroFill(e, fe); }
         for (const [k, val] of Object.entries(v.set || {})) {
@@ -3078,8 +3133,11 @@ async function main() {
           if (fe) { zeroFill(holder, fe); v.set[k] = holder.layout; }
         }
       }
+      });
       // stacking first on top, as the design does, at each combination, where the children cannot overlap
+      A.take('stack-like-design', fromCode, () => {
       stackLikeDesign(fromCode, figmaContract, L.value);
+      });
       // an opacity the code writes raw (0.5 when disabled) takes the design's opacity token that holds it, where exactly
       // one the design uses does (its tokens hold percentages: 50 is 0.5, never 0.5%)
       const opacities = new Set();
@@ -3087,11 +3145,14 @@ async function main() {
       seek(figmaContract.anatomy); seek(figmaContract.variants);
       const opacityToken = (n) => { const hit = [...opacities].filter((t) => { const v = Number(val(t)); return v === +(n * 100).toFixed(3); }); return hit.length === 1 ? hit[0] : null; };
       const adopt = (o, key) => { if (typeof o[key] === 'number') { const t = opacityToken(o[key]); if (t) o[key] = t; } };
+      A.take('opacity-token', fromCode, () => {
       for (const e of Object.values(fromCode.anatomy)) adopt(e, 'opacity');
       for (const v of fromCode.variants) {
         for (const k of Object.keys(v.set || {})) if (/\.opacity$/.test(k)) adopt(v.set, k);
         for (const e of Object.values(v.add || {})) adopt(e, 'opacity');
       }
+      });
+      A.take('design-enum-order', fromCode, () => {
       for (const p of Object.values(fromCode.props)) {
         if (p.type !== 'enum') continue;
         const low = (v) => String(v).toLowerCase();
@@ -3106,11 +3167,15 @@ async function main() {
         // and its name: the design's Hierarchy for the code's variant, where the values are the same words
         if (fp && fp.figma) p.figma = fp.figma;
       }
+      });
       // and every other prop the mapping joins to a design prop of its kind: under the design's own name (isBold, ✏️ label),
       // never one made up by convention for the code's
+      A.take('joined-names', fromCode, () => {
       joinedNames(fromCode.props, figmaContract.props, (side.map || {}).props);
+      });
       // a fill or colour the code draws as nothing where the design binds a token that draws the same (a tertiary
       // button's ghost-rest, which is see-through): the design's token, at that combination and every one that holds it
+      A.take('see-through-fill', fromCode, () => {
       for (const r of compare) {
         const seeThrough = (t) => seeThroughIn(L.value, t);
         if (r.codeValue != null || typeof r.figmaValue !== 'string' || !['background', 'color'].includes(r.field)) continue;
@@ -3134,6 +3199,7 @@ async function main() {
         for (const v of fromCode.variants) if (inWhen(v) && v.set && f in v.set && v.set[f] === null) { v.set[f] = r.figmaValue; hit = true; }
         if (!hit && !fromCode.variants.some((v) => JSON.stringify(v.when) === JSON.stringify(r.when))) fromCode.variants.push({ when: { ...r.when }, set: { [f]: r.figmaValue } });
       }
+      });
     }
     // (a size a mark said that did not become an instance's is no field of a graphic's, with a design or without one;
     // a variant's change of it, none)
@@ -3147,7 +3213,9 @@ async function main() {
     // code's own names, and none is the code's alone for having another name. A prop the mapping joins, or one
     // sharing its code prop with one the design has (a swap's half beside its boolean), is the design's too
     if (L.governed && figmaContract) {
+      A.take('design-swaps', shaped.contract, () => {
       asDesignSwaps(shaped.contract.props, figmaContract.props, shaped.contract);
+      });
     }
     // (a slot read at its placed default that no design swap took is a slot: the mark is the reading's, never the contract's)
     // (from the reading as written too: asFigma copies each prop, so both carry it)
@@ -3159,7 +3227,9 @@ async function main() {
       const all = Object.entries(shaped.contract.props);
       const matched = new Set(all.filter(([k, p]) => theirs.has(k) || theirs.has(sq(p.figma || k))).map(([, p]) => p.code).filter(Boolean));
       // (a text a boolean of the design's speaks for by being empty shares its code prop, and is still the code's alone)
+      A.take('only-in-code', shaped.contract, () => {
       for (const [k, p] of all) if (p.role !== 'interaction' && !theirs.has(k) && !theirs.has(sq(p.figma || k)) && ((!joined.has(p.code) && !matched.has(p.code)) || (p.type === 'string' && textsOnlyInCode.has(p.code)))) p.only = 'code';
+      });
     }
     const propsCompare = figmaContract ? compareProps(figmaContract, side.map, side.code, side.framework, side.fw || {}) : [];
     // a check that read nothing the layers were not built from cannot fail: said, not passed
@@ -3167,7 +3237,9 @@ async function main() {
     const report = { at: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000), ...(figmaContract && { of: (await import('./official.mjs')).hashOf(figmaContract) }), chrome: (await import('../shared/cdp.mjs')).chromeMajor(),
       // (the combinations of five props or more left unread, as a number: eval.mjs holds them predicted, never measured)
       unread: skipped, selfCheck: bad.length ? { notRebuilt: bad } : heldOut ? `every render rebuilt, ${heldOut} combination(s) of four props or more among them: ${heldOut - fourLayers} predicted by the layers, ${fourLayers} kept as layers of their own, each from one read${skipped ? `; ${skipped} of five props or more left unread, no three or more of their props building a layer together` : ''}` : 'every render rebuilt, but fewer than four props vary: nothing was left unread to check the layers against',
-      ...(notes.length && { notes }), ties, compare, propsCompare, structure, renamed: shaped.renamed, contract: fromCode, asFigma: shaped.contract };
+      ...(notes.length && { notes }), ties, compare, propsCompare, structure, renamed: shaped.renamed,
+      // (every field taken from the design, by rule: eval.mjs counts a component holding one the same only as assisted)
+      assisted: A.out(), contract: fromCode, asFigma: shaped.contract };
     const out = path.join(L.out, 'from-code', `${name}.json`);
     fs.mkdirSync(path.dirname(out), { recursive: true });
     // the same code reads back to the same file: a run that found nothing new leaves it as it was

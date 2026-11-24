@@ -133,11 +133,29 @@ export function mechanisms(by) {
    and what a slot holds in the design (its sample content: the slot's filler is the caller's). The self legs count the
    rows of these apart (`left`), never among the differences, and never dropped. `settings`: the library's, as the sheet
    is written under (which pointer state is focus, so which part is a ring). */
-export function leftToCode(contract, mainOf = null, settings = undefined, { ownSheet = true } = {}) {
+export const GAPS = {
+  'pointer-only-part': 'a part drawn only at a pointer state (a menu open at focus): no markup holds it',
+  'slot-sample': 'what a slot holds in the design, its sample: the slot\'s filler is the caller\'s',
+  'unexposed-override': 'an override inside a placed component that no prop of it carries',
+  'pointer-words': 'words only a pointer state changes (a field\'s "Search" at focus)',
+  'pointer-with': 'a placed instance\'s props only a pointer state gives',
+  'unwritten-scale': 'a scale constraint the sheet never writes (to-code sharesNeverWritten)',
+  'path-radius': 'a radius the design holds only as mixed on a path, which no box\'s corners say',
+  'icon-own-colour': 'a placed icon\'s colour where the design leaves it the icon set\'s own',
+  'placed-own-look': 'a placed component\'s own look the design overrides on the instance',
+  'inside-foreign': 'the insides of a component the library does not hold',
+  'foreign-own': 'the props, layout and clipping of a component the library does not hold',
+  'swapped-own': 'the key, modes and look of a swapped-in component no prop passes',
+  'carries-override': 'a placed component\'s part kept only as the way down to an override',
+};
+/* Which gap of GAPS excuses a row (at, row), or null where it is a difference: leftToCode, by name. */
+export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true } = {}) {
   // (a slot of a placed component is filled by the markup, its parts drawn: only the component's own slot is a sample;
   // and a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
   const parts = partsOf(contract, settings);
-  const ids = [...parts.values()].filter((p) => (p.pointerOnly && !p.ring) || (p.slotted && !(parts.get(p.slotted) || {}).inside) || (mainOf && !!unexposed(contract, p.id, mainOf))).map((p) => p.id);
+  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : p.slotted && !(parts.get(p.slotted) || {}).inside ? 'slot-sample' : mainOf && !!unexposed(contract, p.id, mainOf) ? 'unexposed-override' : null);
+  const reasons = new Map([...parts.values()].map((p) => [p.id, reasonOf(p)]).filter(([, r]) => r));
+  const ids = [...reasons.keys()];
   // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them
   // (per text, the words its pointer states draw: a row is theirs only where the design side holds one of them, as rows
   // merge every combination under one place; and only where no other state sets them, or where a pointer state's variant
@@ -209,7 +227,7 @@ export function leftToCode(contract, mainOf = null, settings = undefined, { ownS
   // unread). A box's mixed (an older snapshot's), or a part some layer makes or keeps a box, stays a difference
   const vs = contract.variants || [];
   const onPath = (el) => { const rs = [contract.anatomy?.[el], ...vs.map((v) => (v.add || {})[el])].filter(Boolean); return rs.length > 0 && rs.every((e) => e.kind === 'graphic' && !e.shape) && !vs.some((v) => [`${el}.kind`, `${el}.shape`].some((k) => k in (v.set || {}))); };
-  const unwritten = (at, row) => !!row && ((row.library === 'scale' && unscaled.has(at)) || (row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length))));
+  const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) ? 'path-radius' : null);
   // a placed instance's props only a pointer state gives: one of its own (a definition drawn hovered, its State Hover), or
   // the props this component's pointer state alone sets on it (a slider's item Active at hover): no markup holds either,
   // to-markup's gap. Only where every prop the design's side names there is such a one
@@ -234,9 +252,20 @@ export function leftToCode(contract, mainOf = null, settings = undefined, { ownS
       && (words.get(`${el}.with`) || []).some((w) => w && typeof w === 'object' && Object.entries(lib).every(([k, v]) => same(w[k], v)));
     return byMine || Object.entries(lib).every(([k, v]) => ownPointer(el, k, v));
   };
-  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || pointerWith(el, field, row) || unwritten(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field, row) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
+  return (at, row) => {
+    const el = at.split('.')[0], field = at.slice(el.length + 1);
+    const id = ids.find((x) => (el === x || el.startsWith(`${x}/`)) && !(over.has(x) && !((el !== x && over.get(x) === 'part') || passed.has(field) || (field.startsWith('with.') && el === x))));
+    return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) ? 'inside-foreign'
+      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? reasons.get(id) : null);
+  };
 }
-const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
+/* What the toolkit's own markup leaves to code (gapOf), as yes or no. */
+export function leftToCode(...args) { const g = gapOf(...args); return (at, row) => !!g(at, row); }
+// (each row left to code carries the gap that excuses it)
+const splitLeft = (rows, gap) => { const out = { rows: [], left: [] }; for (const r of rows) { const g = gap(r.at, r); if (g) out.left.push({ ...r, gap: g }); else out.rows.push(r); } return out; };
+/* A reading's tags of what it took from the design (from-code's `assisted`): { assisted } where it carries them, else
+   { untagged }, a reading taken before the tags, never known strictly. */
+const tagsOf = (r) => (r && r.assisted && typeof r.assisted === 'object' ? { assisted: r.assisted } : { untagged: true });
 
 /* The components whose stored contract.json is missing, or not what derive.cjs makes of their spec today (check-specs' own test). */
 export function staleContracts(dir) {
@@ -297,10 +326,10 @@ export function measure(where, only = [], now = {}) {
     const code = read(path.join(readings, `${folder}.json`));
     if (!code || !code.asFigma) legs.browser[folder] = { skipped: 'no reading from code (from-code.mjs has not read it)' };
     // from-code fingerprints a reading from code with the contract it read against (`of`)
-    else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, ...tagsOf(code), combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder))), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder))), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
@@ -310,13 +339,13 @@ export function measure(where, only = [], now = {}) {
       const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
-      legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder), { ownSheet: false })), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
+      legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     // a reading whose geometry was not compared (taken before it was kept, or with no stored figma.json) is stale, as one
     // taken before fingerprints is, and never the same (isSame) by the geometry it lacks
     const st = back && [!back.geometry && 'taken before geometry was compared, draw again', stale('figma', folder, contract)].filter(Boolean).join('; ');
-    legs.figma[folder] = back ? { rows: [...back.rows, ...(back.geometry || [])], combinations: back.combinations, ...(back.cut && { cut: back.cut }), ...(st && { stale: st }), ...(!back.geometry && { lacks: 'geometry' }) } : { skipped: 'not drawn and read back (eval.mjs --draw)' };
+    legs.figma[folder] = back ? { rows: [...back.rows, ...(back.geometry || [])], untagged: true, combinations: back.combinations, ...(back.cut && { cut: back.cut }), ...(st && { stale: st }), ...(!back.geometry && { lacks: 'geometry' }) } : { skipped: 'not drawn and read back (eval.mjs --draw)' };
   }
   return { home, legs };
 }
@@ -325,6 +354,13 @@ export function measure(where, only = [], now = {}) {
    not shown the same), no combination predicted instead of read, none cut, and nothing it was not compared on (a Figma
    reading with no geometry). */
 export const isSame = (x) => !!x.rows && !x.rows.length && !x.lacks && !(x.left && x.left.length) && !x.predicted && !x.cut;
+/* The same strictly: the same, and no field taken from the design (from-code's `assisted`), so every field was compared.
+   A reading not tagged (taken before the tags; the Figma leg, whose drawer's copies are not tagged yet) is not known
+   strictly, so never strictly the same. */
+export const isStrict = (x) => isSame(x) && !!x.assisted && !Object.keys(x.assisted).length;
+/* A component's strict count: its rows, its rows left to code and its fields taken from the design. */
+const assistedFields = (x) => Object.values(x.assisted || {}).reduce((a, l) => a + l.length, 0);
+const strictCount = (x) => x.rows.length + (x.left || []).length + assistedFields(x);
 
 /* The counts a measure stands at, and what rose or went against the accepted ones. */
 // (what is left to code is held too, as its own leg: a part that comes to be drawn only at a pointer state moves its rows
@@ -338,6 +374,9 @@ export const counts = (legs) => Object.fromEntries(Object.entries(legs).flatMap(
   // full since its accept is a count that fell, never a reading gone)
   const said = Object.entries(cs).filter(([, x]) => x.rows && typeof x.predicted === 'number');
   if (said.length) out.push([`${leg} predicted`, Object.fromEntries(said.map(([c, x]) => [c, x.predicted]))]);
+  // (and the strict count of every tagged reading: rows, rows left to code, fields assisted)
+  const tagged = Object.entries(cs).filter(([, x]) => x.rows && x.assisted);
+  if (tagged.length) out.push([`${leg} strict`, Object.fromEntries(tagged.map(([c, x]) => [c, strictCount(x)]))]);
   return out;
 }));
 export function worse(now, accepted) {
@@ -381,7 +420,12 @@ export const readPanel = (home) => { if (!fs.existsSync(panelFile(home))) return
 export const causesOf = (legs) => Object.fromEntries(Object.entries(legs).flatMap(([leg, cs]) => {
   const out = [[leg, Object.fromEntries(Object.entries(cs).filter(([, x]) => x.rows).map(([c, x]) => [c, causes(x.rows, x.combinations)]))]];
   const left = Object.entries(cs).filter(([, x]) => x.rows && x.left);
-  return left.length ? [...out, [`${leg} left`, Object.fromEntries(left.map(([c, x]) => [c, causes(x.left, x.combinations)]))]] : out;
+  if (left.length) out.push([`${leg} left`, Object.fromEntries(left.map(([c, x]) => [c, causes(x.left, x.combinations)]))]);
+  // the strict count's causes: the rows', each gap's rows left to code, each rule's fields assisted
+  const tagged = Object.entries(cs).filter(([, x]) => x.rows && x.assisted);
+  const strictOf = (x) => { const o = causes(x.rows, x.combinations); for (const r of x.left || []) o[`left to code: ${r.gap}`] = (o[`left to code: ${r.gap}`] || 0) + 1; for (const [rule, l] of Object.entries(x.assisted || {})) o[`assisted: ${rule}`] = l.length; return o; };
+  if (tagged.length) out.push([`${leg} strict`, Object.fromEntries(tagged.map(([c, x]) => [c, strictOf(x)]))]);
+  return out;
 }));
 
 /* The measure now against the accepted one, component by component: every count that moved, either way, largest first,
@@ -417,7 +461,16 @@ export function report(label, { legs }, fields, byCause) {
     const m = Object.entries(cs).filter(([, x]) => x.rows), skipped = Object.entries(cs).filter(([, x]) => x.skipped);
     const rows = m.flatMap(([, x]) => x.rows);
     const all = Object.keys(cs).length, old = m.filter(([, x]) => x.stale), nc = m.reduce((a, [, x]) => a + Object.keys(causes(x.rows, x.combinations)).length, 0);
-    console.log(`${label} ${leg}: ${m.filter(([, x]) => isSame(x)).length} of ${all} the same; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (drawn only at a pointer state, slot samples, or overrides a placed component has no prop for)` : ''}${m.some(([, x]) => typeof x.predicted === 'number' && x.predicted) ? `; ${m.reduce((a, [, x]) => a + (typeof x.predicted === 'number' ? x.predicted : 0), 0)} combinations predicted, not read (in ${m.filter(([, x]) => typeof x.predicted === 'number' && x.predicted).length})` : ''}${m.some(([, x]) => x.predicted === 'unknown') ? `; ${m.filter(([, x]) => x.predicted === 'unknown').length} not saying what was predicted (read before it was said, or a self-check that failed)` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
+    // strict beside assisted: the components the same only with a field taken from the design, by the rule that took it
+    // (a component under two rules is said under each), and those read before the tags, never known strictly
+    const assisted = {};
+    for (const [, x] of m.filter(([, y]) => isSame(y) && y.assisted)) for (const rule of Object.keys(x.assisted || {})) assisted[rule] = (assisted[rule] || 0) + 1;
+    const byRule = Object.entries(assisted).sort((p, q) => q[1] - p[1] || p[0].localeCompare(q[0])).map(([r, k]) => `${k} assisted by ${r}`);
+    const untagged = m.filter(([, x]) => x.untagged).length;
+    const gaps = {};
+    for (const [, x] of m) for (const r of x.left || []) gaps[r.gap] = (gaps[r.gap] || 0) + 1;
+    const byGap = Object.entries(gaps).sort((p, q) => q[1] - p[1] || p[0].localeCompare(q[0])).map(([g, k]) => `${g} ${k}`).join(', ');
+    console.log(`${label} ${leg}: ${m.filter(([, x]) => isSame(x)).length} of ${all} the same; strictly ${m.length && untagged === m.length ? 'not known' : m.filter(([, x]) => isStrict(x)).length}${byRule.length ? ` (${byRule.join(', ')})` : ''}${untagged ? `; ${untagged} untagged, not known strictly (read before assist tags, or the Figma leg, whose drawer is not tagged)` : ''}; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (${byGap})` : ''}${m.some(([, x]) => typeof x.predicted === 'number' && x.predicted) ? `; ${m.reduce((a, [, x]) => a + (typeof x.predicted === 'number' ? x.predicted : 0), 0)} combinations predicted, not read (in ${m.filter(([, x]) => typeof x.predicted === 'number' && x.predicted).length})` : ''}${m.some(([, x]) => x.predicted === 'unknown') ? `; ${m.filter(([, x]) => x.predicted === 'unknown').length} not saying what was predicted (read before it was said, or a self-check that failed)` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
     for (const [c, x] of m) if (x.cut) console.log(`  ${c}: ${x.cut} combination(s) past the first ${x.combinations} not compared`);
     if (byCause) for (const [c, k, n] of m.flatMap(([c, x]) => Object.entries(causes(x.rows, x.combinations)).map(([k, n]) => [c, k, n])).sort((a, b) => b[2] - a[2])) console.log(`  ${String(n).padStart(4)}  ${c}: ${k}`);
     if (!fields) continue;

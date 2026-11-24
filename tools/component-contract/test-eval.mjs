@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, gapOf, GAPS } from './eval.mjs';
 import { drawSettings } from './to-figma.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
@@ -540,4 +540,28 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   ok('draw: one placing a component drawn again is drawn again though it comes first', JSON.stringify(runs().sort()) === '["apple","zebra"]', calls);
   fs.rmSync(home, { recursive: true, force: true });
 }
+// strict beside assisted: a field from-code took from the design (the reading's `assisted`, rule → fields) was not
+// compared, so a component holding one is the same only as assisted; a reading taken before the tags is not known strictly
+{ ok('strict: the same with no field taken from the design; one with a taken field, or untagged, is the same only assisted',
+    isStrict({ rows: [], assisted: {} }) && !isStrict({ rows: [], assisted: { 'text-align': ['anatomy.label.textAlign'] } }) && isSame({ rows: [], assisted: { 'text-align': ['x'] } })
+    && !isStrict({ rows: [], untagged: true }) && !isStrict({ rows: [{ at: 'x' }], assisted: {} }) && !isStrict({ rows: [], left: [{ at: 'x' }], assisted: {} }));
+  const legsS = { self: { a: { rows: [{ at: 'x.width' }], left: [{ at: 's/t.content', gap: 'slot-sample' }], assisted: { 'text-align': ['anatomy.t.textAlign'], 'component-name': ['component'] } }, b: { rows: [], left: [], untagged: true }, c: { rows: [], left: [], assisted: {} } } };
+  const k = counts(legsS);
+  ok('--accept/--check: the strict count is the rows, those left to code and the fields assisted; an untagged reading has none',
+    k['self strict'].a === 4 && k['self strict'].c === 0 && !('b' in k['self strict']) && k.self.a === 1);
+  ok('--check: a strict count that rose is said', worse(counts(legsS), { ...k, 'self strict': { a: 3, c: 0 } }).some((w) => /self strict a: 3 → 4/.test(w)));
+  const cz = causesOf(legsS)['self strict'].a;
+  ok('--diff: the strict causes name each gap and each assisting rule', cz['x.width'] === 1 && cz['left to code: slot-sample'] === 1 && cz['assisted: text-align'] === 1 && cz['assisted: component-name'] === 1);
+  const said = []; const log = console.log; console.log = (l) => said.push(l);
+  try { (await import('./eval.mjs')).report('lib', { legs: { self: { ...legsS.self, d: { rows: [], left: [], assisted: { 'text-align': ['y'] } } } } }); } finally { console.log = log; }
+  ok('the verdict says strict beside assisted, the gap named by rule, and the readings not tagged', said.some((l) => /^lib self: 3 of 4 the same; strictly 1 \(1 assisted by text-align\); 1 untagged, not known strictly/.test(l)), said);
+  ok('the verdict lists the rows left to code by gap id', said.some((l) => /1 rows left to code \(slot-sample 1\)/.test(l)), said); }
+// each excuse of leftToCode is a named gap with an id
+{ const c = { contract: 1, component: 'Pick', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } },
+    anatomy: { root: { kind: 'container' }, slot: { kind: 'slot', parent: 'root' }, 'slot/sample': { kind: 'text', parent: 'slot', content: 'x' }, tip: { kind: 'graphic', parent: 'root', width: 15, height: 9, radius: 'mixed' } },
+    variants: [{ when: { state: 'focus' }, add: { menu: { kind: 'container', parent: 'root' } } }] };
+  const g = gapOf(c);
+  ok('gapOf names the branch that excuses a row, and none for a difference', g('menu') === 'pointer-only-part' && g('slot/sample.content') === 'slot-sample' && g('tip.radius', { library: 'mixed', drawn: null }) === 'path-radius' && g('root.width') === null);
+  ok('every gap id is described', ['pointer-only-part', 'slot-sample', 'path-radius', 'unexposed-override', 'pointer-words', 'pointer-with', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
+  ok('leftToCode is gapOf said as yes or no', leftToCode(c)('menu') === true && leftToCode(c)('root.width') === false); }
 console.log(`${n} passed`);

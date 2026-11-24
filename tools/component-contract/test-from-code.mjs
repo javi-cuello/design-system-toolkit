@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1052,4 +1052,13 @@ const el = (...xs) => ({ childNodes: xs.map((x) => (typeof x === 'string' ? { no
 ok('kept breaks keep a node of white space alone that holds a newline; an element child\'s words are its own, not this one\'s (a placed instance\'s texts read as the walk reads them)',
   wordsAsDrawn(el('a', '\n', 'b'), { whiteSpaceCollapse: 'preserve-breaks' }) === 'a\nb' && wordsAsDrawn(el('a', '  ', 'b'), { whiteSpaceCollapse: 'preserve-breaks' }) === 'a b'
   && wordsAsDrawn(el('x\n', {}, '  y'), { whiteSpaceCollapse: 'preserve' }) === 'x\n  y');
+
+// every field a reading takes from the design is tagged by the rule that took it: the paths a step changed, none where
+// the code already said the same
+ok('changedPaths: the leaves that differ, a key added or gone among them', JSON.stringify(changedPaths({ a: { b: 1, c: 2 }, d: [1] }, { a: { b: 1, c: 3, e: 0 }, d: [2] })) === JSON.stringify(['a.c', 'a.e', 'd.0']) && changedPaths({ a: 1 }, { a: 1 }).length === 0);
+{ const A = assistsOf(), r = { component: 'board-card', anatomy: { t: { textAlign: 'left' } } };
+  A.take('component-name', r, () => { r.component = 'Board card'; });
+  A.take('text-align', r, () => { r.anatomy.t.textAlign = 'left'; });
+  A.add('slot-sample', 'anatomy.s/x');
+  ok('assistsOf: a step that changed a field tags it by its rule; one that changed nothing tags none', JSON.stringify(A.out()) === JSON.stringify({ 'component-name': ['component'], 'slot-sample': ['anatomy.s/x'] })); }
 console.log(`${n}/${n} passed`);
