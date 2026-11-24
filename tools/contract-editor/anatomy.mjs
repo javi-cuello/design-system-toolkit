@@ -336,7 +336,8 @@ export function preview(parts, drafts, tokens = {}, { dark = false, nested = () 
     textStyle: (name) => {
       const t = (tokens.textStyleOf || {})[name];
       return t ? [['font-family', `"${t.family}", system-ui, sans-serif`], ['font-weight', figmaWeight(String(t.weight)) || 400], ['font-size', `${t.size}px`],
-        ['line-height', String(t.lineHeight)], ...(t.letterSpacing ? [['letter-spacing', `${t.letterSpacing}px`]] : [])] : [];
+        // (an Auto line height the snapshot could not measure, null: none set, the font's own stands)
+        ...(t.lineHeight == null ? [] : [['line-height', String(t.lineHeight)]]), ...(t.letterSpacing ? [['letter-spacing', `${t.letterSpacing}px`]] : [])] : [];
     },
   };
   // the page's style object: physical sides, as the drawing reads its width and places its layers

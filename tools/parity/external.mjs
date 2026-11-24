@@ -98,7 +98,8 @@ export function expected(element, fields, value, textStyle, effectOf = () => nul
     }
     if (f === 'typography' && element.typography) {
       const s = textStyle(element.typography);
-      if (s) for (const [k, v] of Object.entries({ 'font-size': s.size, 'font-weight': figmaWeight(String(s.weight)) ?? s.weight, 'line-height': +(s.lineHeight * s.size).toFixed(2), 'letter-spacing': +((s.letterSpacing || 0) * s.size).toFixed(2) })) out[k] = { want: v, token: element.typography };
+      // (an Auto line height the snapshot could not measure, null, is no expectation: code's is not held to a guess)
+      if (s) for (const [k, v] of Object.entries({ 'font-size': s.size, 'font-weight': figmaWeight(String(s.weight)) ?? s.weight, 'line-height': s.lineHeight == null ? null : +(s.lineHeight * s.size).toFixed(2), 'letter-spacing': +((s.letterSpacing || 0) * s.size).toFixed(2) })) if (v != null) out[k] = { want: v, token: element.typography };
     }
     // a shadow: the effect style's layers, as the key both sides are compared by (what they draw)
     if (f === 'shadow' && element.shadow) { const fx = effectOf(element.shadow); if (fx) out.shadow = { want: shadowKey((fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color }))), token: element.shadow }; }
@@ -661,7 +662,10 @@ export function compareTokens(ours, theirs) {
     const G = g(t.group); G.checked++;
     if (!c) { G.missing++; G.rows.push({ verdict: 'missing', name: t.name, design: t.show ?? t.value }); continue; }
     used.add(c);
-    const v = typeof t.value === 'object' && t.value ? (Object.keys(t.value).every((k) => judge(t.value[k], c.value[k]) === 'same') ? 'same' : 'differs') : judge(typeof t.value === 'string' && parseColour(t.value) ? { color: t.value } : t.value, c.value);
+    // (a field the design leaves unmeasured, null, is not compared, and the token is said under `unmeasured`)
+    const unsaid = typeof t.value === 'object' && t.value ? Object.keys(t.value).filter((k) => t.value[k] === null) : [];
+    if (unsaid.length) (G.unmeasured = G.unmeasured || []).push(t.name);
+    const v = typeof t.value === 'object' && t.value ? (Object.keys(t.value).every((k) => t.value[k] === null || judge(t.value[k], c.value[k]) === 'same') ? 'same' : 'differs') : judge(typeof t.value === 'string' && parseColour(t.value) ? { color: t.value } : t.value, c.value);
     if (v === 'same') G.same++; else { G.differs++; G.rows.push({ verdict: v, name: t.name, code: c.name, design: t.show ?? t.value, got: c.show ?? c.value }); }
   }
   for (const c of theirs) if (!used.has(c)) { const G = g(c.group); G.onlyInCode++; G.rows.push({ verdict: 'only-in-code', code: c.name, got: c.show ?? c.value }); }
@@ -700,7 +704,7 @@ export async function tokenSides(snapshot, repo, spec, valueOf) {
     for (const s of snapshot.textStyles || []) {
       if (t.prefix && !s.name.startsWith(t.prefix)) continue;
       ours.push({ group: 'type', name: s.name, sorted: true, words: tokenWords(s.name.slice((t.prefix || '').length)).filter((w) => !drop.has(w)),
-        value: { fontSize: s.size, fontWeight: figmaWeight(String(s.weight)) ?? s.weight, lineHeight: +(+s.lineHeight).toFixed(3), letterSpacing: +(+(s.letterSpacing || 0)).toFixed(3) } });
+        value: { fontSize: s.size, fontWeight: figmaWeight(String(s.weight)) ?? s.weight, lineHeight: s.lineHeight == null ? null : +(+s.lineHeight).toFixed(3), letterSpacing: +(+(s.letterSpacing || 0)).toFixed(3) } });
     }
     for (const [k, v] of Object.entries((await mod(t.file))[t.export] || {})) theirs.push({ group: 'type', name: k, sorted: true, words: tokenWords(k),
       value: { fontSize: v.fontSize, fontWeight: v.fontWeight, lineHeight: +(+v.lineHeight).toFixed(3), letterSpacing: +(parseFloat(v.letterSpacing) || 0).toFixed(3) } });
@@ -1265,7 +1269,7 @@ async function main() {
   if (map.tokens) {
     const { ours, theirs } = await tokenSides(tokens, repo, map.tokens, valueOf);
     report.tokens = compareTokens(ours, theirs);
-    console.log(`tokens: ${Object.entries(report.tokens).map(([g, x]) => `${g} ${x.checked} checked, ${x.differs} differ, ${x.missing} missing in code, ${x.onlyInCode} only in code`).join('; ')}`);
+    console.log(`tokens: ${Object.entries(report.tokens).map(([g, x]) => `${g} ${x.checked} checked, ${x.differs} differ, ${x.missing} missing in code, ${x.onlyInCode} only in code${x.unmeasured ? `, ${x.unmeasured.length} with a line height unmeasured in the design` : ''}`).join('; ')}`);
   }
   report.seconds = Math.round((Date.now() - t0) / 1000);
   // the same code reads back to the same file: a run that found nothing new leaves it as it was

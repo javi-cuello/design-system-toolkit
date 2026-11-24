@@ -1924,8 +1924,8 @@ export function heldTo(index, name, { folder, library, libraryKey, key, keyAt, f
 
 /* The live walk as the stored snapshot recorded it, so the same library is never a change: a field a later walk began
    to record is left out of the live read where the stored snapshot does not record it. Which fields it records is the
-   store's one version gate (store.cjs knownFor, as geometry's knownOf asks it), per component: every field where its own
-   file was snapshotted by the walk's own release, else those its own spec records. The fields: a text with no style's size and
+   store's one version gate (store.cjs knownFor, as geometry's knownOf asks it), per file: every field where the
+   component's own file was snapshotted by the walk's own release, else those any spec of that file records. The fields: a text with no style's size and
    face (0.82.0 on; derive then says its values, spacing and case), each layer's place among all its parent's children
    (`index`, 0.83.0 on; derive orders two layers two booleans show by it), a vector's outline and paths (0.85.0, 0.86.0).
    `comp` is the walk's, its variants whole; `known` null (no stored snapshot to ask) leaves nothing out. */
@@ -2028,8 +2028,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
         // which fields the geometry holds it to
         const { geometry, knownOf } = await import('./geometry.mjs');
         const specs = Object.fromEntries(req('../snapshot/store.cjs').readSpecs(where.paths.components, { compact: true }).map((x) => [x.folder, x.spec]));
-        // (per component: the release that recorded its own file, over its own spec)
-        const known = snap && knownOf(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), { ...specs, [folder]: compact(snap) }, (walk.match(/const VERSION = '([^']+)'/) || [])[1], { file: (index[folder] || {}).file, folder });
+        // (per file: the release that recorded this component's own file, over every spec that file recorded)
+        const known = snap && knownOf(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), { ...specs, [folder]: compact(snap) }, (walk.match(/const VERSION = '([^']+)'/) || [])[1], { file: (index[folder] || {}).file, fileOf: (k) => (index[k] || {}).file });
         // derived under the library's own settings (its stateAxis, pointerStates), as its contract was, never the file
         // drawn into's
         const now = derive(compact(walkedAs(comp, known)), Object.values(index).map((x) => x.name), contractRouter.deriveOptionsFor(where.paths.components)(folder));
@@ -2102,8 +2102,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index: only its own name is known */ }
     const at = entryOf(index, comp.name, { file: into, key: comp.key, keyAt }), entry = index[at] || {};
     let snap = null; try { snap = JSON.parse(fs.readFileSync(path.join(where.paths.components, at, 'figma.json'), 'utf8')); } catch { /* none stored: the walk as read */ }
-    // (per component: the release that recorded its own file, over its own spec)
-    const known = snap && (await import('./geometry.mjs')).knownOf(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), { [at]: compact(snap) }, (walk.match(/const VERSION = '([^']+)'/) || [])[1], { file: entry.file, folder: at });
+    // (per file: the release that recorded this component's own file, over every spec that file recorded)
+    const known = snap && (await import('./geometry.mjs')).knownOf(JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')), { ...Object.fromEntries(req('../snapshot/store.cjs').readSpecs(where.paths.components, { compact: true }).map((x) => [x.folder, x.spec])), [at]: compact(snap) }, (walk.match(/const VERSION = '([^']+)'/) || [])[1], { file: entry.file, fileOf: (k) => (index[k] || {}).file });
     const walked = compact(walkedAs(comp, known)), spec = entry.platform ? { ...walked, platform: entry.platform } : walked;
     const base = JSON.parse(fs.readFileSync(baseFile, 'utf8'));
     const now = derive(spec, [...Object.values(index).map((x) => x.name), comp.name], contractRouter.deriveOptionsFor(where.paths.components)(at));

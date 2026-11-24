@@ -32,5 +32,9 @@ ok('a 12% black wash the drawing omits differs', compare(wash, none).share === 1
 ok('two pixels nothing shows of are the same, whatever their colour', compare(img(1, 1, () => [255, 255, 255, 0]), img(1, 1, () => [0, 0, 0, 0])).share === 0);
 ok('within the library\'s area (a set that clips cut it), only that area is compared', compare(white, taller, { within: true }).share === 0);
 
+// (review 2026-11-24, third) both sides export with the same bounds: every export takes the one setting, render bounds
+const src = (await import('node:fs')).readFileSync(new URL('./looks.mjs', import.meta.url), 'utf8');
+ok('every export, the library\'s and the drawing\'s, takes the one setting, render bounds with effects', (src.match(/exportAsync\(/g) || []).length === 3 && (src.match(/exportAsync\(\$\{PNG\}\)/g) || []).length === 3 && /useAbsoluteBounds: false/.test(src));
+
 console.log(failed ? `${failed} of ${n} failed` : `${n}/${n} passed`);
 process.exit(failed ? 1 : 0);

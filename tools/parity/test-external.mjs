@@ -130,6 +130,13 @@ const tg = compareTokens(
    { group: 'type', name: 'Label/Emphasis/md', sorted: true, words: ['label', 'emphasis', 'md'], value: { fontSize: 16, fontWeight: 600 } }],
   [{ group: 'colour', name: 'a', words: ['a'], value: '#FFFFFF' }, { group: 'colour', name: 'b', words: ['b'], value: '#000000' }, { group: 'colour', name: 'z', words: ['z'], value: '#123456' },
    { group: 'type', name: 'labelMdEmphasis', sorted: true, words: ['label', 'md', 'emphasis'], value: { fontSize: 16, fontWeight: 600 } }]);
+// (review 2026-11-24) an Auto line height the snapshot could not measure is no expectation: no row, said as unmeasured
+const unmeasured = expected({ kind: 'text', typography: 'Body/md' }, ['typography'], value, () => ({ size: 16, lineHeight: null, lineHeightSource: 'unmeasured', weight: 'Regular' }));
+ok('an unmeasured line height expects nothing of code', !('line-height' in unmeasured) && unmeasured['font-size'].want === 16, JSON.stringify(unmeasured));
+const tu = compareTokens([{ group: 'type', name: 'Body/md', sorted: true, words: ['body', 'md'], value: { fontSize: 16, lineHeight: null } }],
+  [{ group: 'type', name: 'bodyMd', sorted: true, words: ['body', 'md'], value: { fontSize: 16, lineHeight: 1.5 } }]);
+ok('…and a text style token with one is the same on what it says, its line height said unmeasured', tu.type.same === 1 && tu.type.differs === 0 && JSON.stringify(tu.type.unmeasured) === '["Body/md"]', JSON.stringify(tu.type));
+
 ok('tokens matched by their words: the same value is the same in any case, another value differs, one side alone is missing or only in code; a type style\'s words in any order',
   tg.colour.same === 1 && tg.colour.differs === 1 && tg.colour.missing === 1 && tg.colour.onlyInCode === 1 && tg.type.same === 1);
 

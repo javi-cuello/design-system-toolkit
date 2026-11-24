@@ -122,6 +122,12 @@ ok('the preview resolves each token to its value, fills the words, and draws the
   assert.deepEqual(preview([r, { ...content, background: 'Colour/Missing' }], [], tokens).children[0].style.background, undefined, 'a token not in the snapshot stays unset');
 });
 
+ok('a text style whose Auto line height the snapshot could not measure sets no line height', () => {
+  const tokens = { textStyleOf: { 'Label/md': { family: 'Sans', weight: 'Regular', size: 14, lineHeight: null, lineHeightSource: 'unmeasured' } } };
+  const pv = preview([r, content, label], [], tokens);
+  assert.equal(pv.children[0].children[0].style.lineHeight, undefined);
+});
+
 ok('the preview draws a gradient, an image fill, and a slot with what it holds', () => {
   const tokens = { colours: [{ name: 'C/pink', value: '#f0c' }, { name: 'C/blue', value: '#00f' }] };
   const parts = fromAnatomy({ root: { kind: 'container' },

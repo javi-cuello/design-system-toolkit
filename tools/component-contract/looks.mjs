@@ -99,7 +99,9 @@ export function compare(a, b, { within = false, threshold = JND } = {}) {
 /* Each variant exported at 1×: the drawn set's in the scratch file, as an instance, and the library's by the same names, as an
    instance of its published component imported by key into the scratch file, else from the library file itself where
    the bridge has it open (a private component, or an import that does not answer). */
-const PNG = "{ format: 'PNG', constraint: { type: 'SCALE', value: 1 } }";
+// One export setting for both sides, the library's and the drawing's: each image is its node's render bounds (effects
+// included, `useAbsoluteBounds: false`), so a shadow's tail is cut by one rule on both and differs only where the shadows do
+const PNG = "{ format: 'PNG', useAbsoluteBounds: false, constraint: { type: 'SCALE', value: 1 } }";
 const DRAWN = (name, pageName = name) => `
 await figma.loadAllPagesAsync();
 const page = figma.root.children.find((p) => p.name === ${JSON.stringify(pageName)});

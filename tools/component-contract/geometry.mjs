@@ -40,13 +40,13 @@ const same = (a, b, tol) => {
 /* The fields to compare, as the store's grade picks them (knownFor): every one where the library's snapshot was taken by
    the walk's own release, since the walk leaves a default out and a field no library layer sets is recorded nowhere;
    else only those it records anywhere. tokens: the snapshot's tokens file (its _meta), specs: { folder: spec }. */
-// `file`, `folder`: one component's gate, as the release that recorded its own file decides it (a two-file library
-// snapshotted by two releases: a field only the newer records is unknown for the older file's components), over its own
-// spec, as the absence rule read it per component
-export const knownOf = (tokens, specs, walkVersion, { file = null, folder = null } = {}) => {
+// `file`, `fileOf`: one file's gate, a component's own, as the release that recorded that file decides it (a two-file
+// library snapshotted by two releases: a field only the newer file records is unknown for the older file's
+// components), over every spec that file recorded (`fileOf(folder)`), library-wide within the file
+export const knownOf = (tokens, specs, walkVersion, { file = null, fileOf = null } = {}) => {
   const own = file && tokens && tokens._meta && tokens._meta.sources && tokens._meta.sources[file];
   const t = own ? { _meta: { plugin: own.plugin || null } } : tokens;
-  const s = folder ? { [folder]: specs[folder] } : specs;
+  const s = file && fileOf ? Object.fromEntries(Object.entries(specs).filter(([f]) => fileOf(f) === file)) : specs;
   return knownFor({ tokens: t, specs: s }, { tokens: { _meta: { plugin: walkVersion } } });
 };
 
