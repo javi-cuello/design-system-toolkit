@@ -94,6 +94,13 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   assert.deepEqual([line.width, line.height], [0, 'fill']);
   // a description: REST plain, the walk markdown
   assert.equal(plainText('**Size**\nChoose one. [Guide](https://x)'), plainText('SizeChoose one. Guide'));
+  assert.equal(plainText('Intro\n\n- Focus on it'), plainText('Intro\n\n\nFocus on it'), 'a list marker is markdown');
+  // a bound size is size.x and size.y in REST
+  assert.deepEqual(restWalk({ name: 'S', type: 'FRAME', size: { x: 14, y: 14 }, relativeTransform: T(0, 0), boundVariables: { size: { x: { id: 'v' }, y: { id: 'v' } }, rectangleCornerRadii: { RECTANGLE_TOP_LEFT_CORNER_RADIUS: { id: 'v' } } } }, ctx).bindings, { radius: [BOUND, null, null, null], w: BOUND, h: BOUND });
+  // a part inside a group is placed in the frame holding the group
+  const frame = { type: 'FRAME', size: { x: 50, y: 50 }, absoluteBoundingBox: { x: 0, y: 0, width: 50, height: 50 } };
+  const grp = { type: 'GROUP', size: { x: 20, y: 20 }, absoluteBoundingBox: { x: 10, y: 10, width: 20, height: 20 } };
+  assert.deepEqual(restPart({ name: 'V', type: 'VECTOR', size: { x: 4, y: 4 }, relativeTransform: T(2, 2) }, grp, ctx, {}, frame).absolute.x, 12);
   // a border's per-side widths said as `sides`
   assert.deepEqual(partOurs({ kind: 'container', border: { color: '#000000', sides: { top: 0, end: 0, bottom: 1, start: 0 } } }).border.width, [0, 0, 1, 0]);
 }

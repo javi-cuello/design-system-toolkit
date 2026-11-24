@@ -115,6 +115,7 @@ export const NOT_CHECKABLE = [
   { reason: 'not in the response', field: 'slots (settings, preferred)', why: 'the plugin\'s slot runtime keys are not in componentPropertyDefinitions' },
   { reason: 'inference', field: 'contract whileEmpty, canvas, when, shows', why: 'inferences across variants (and flipped trees), not a field Figma stores' },
   { reason: 'named otherwise', field: 'overridden style ids (fillStyleId, strokeStyleId…)', why: 'REST names them inherit…StyleId and leaves some out where the plugin API lists them; the other overridden fields are held' },
+  { reason: 'not in the response', field: 'smoothing of an instance, radius of an ellipse', why: 'REST leaves them out where the plugin API reads an instance\'s through to its component and gives an ellipse one; held where REST states them' },
   { reason: 'not in the response', field: 'variantProperties', why: 'not in the nodes response; each variant\'s props are read from its name' },
 ];
 
@@ -175,8 +176,23 @@ function placeOf(n) {
 const sizeOf = (n) => (n.size ? { w: r2(n.size.x), h: r2(n.size.y) } : n.absoluteBoundingBox ? { w: r2(n.absoluteBoundingBox.width), h: r2(n.absoluteBoundingBox.height) } : {});
 const four = (bv, keys) => { const r = keys.map((k) => (bv[k] ? BOUND : null)); return r.some(Boolean) ? r : null; };
 
+/* A node's bound fields under the plugin API's names: REST nests a corner's and a side's under rectangleCornerRadii
+   (RECTANGLE_TOP_LEFT_CORNER_RADIUS) and individualStrokeWeights (BORDER_TOP_WEIGHT). */
+const NESTED = { RECTANGLE_TOP_LEFT_CORNER_RADIUS: 'topLeftRadius', RECTANGLE_TOP_RIGHT_CORNER_RADIUS: 'topRightRadius', RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS: 'bottomRightRadius', RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS: 'bottomLeftRadius',
+  BORDER_TOP_WEIGHT: 'strokeTopWeight', BORDER_RIGHT_WEIGHT: 'strokeRightWeight', BORDER_BOTTOM_WEIGHT: 'strokeBottomWeight', BORDER_LEFT_WEIGHT: 'strokeLeftWeight' };
+export function boundOf(n) {
+  const out = { ...(n.boundVariables || {}) };
+  for (const k of ['rectangleCornerRadii', 'individualStrokeWeights']) {
+    const nest = out[k];
+    delete out[k];
+    if (nest && typeof nest === 'object') for (const [x, v] of Object.entries(nest)) out[NESTED[x] || x] = v;
+  }
+  // a size bound as size.x and size.y
+  if (out.size && typeof out.size === 'object') { if (out.size.x) out.width = out.size.x; if (out.size.y) out.height = out.size.y; delete out.size; }
+  return out;
+}
 function bindingsOf(n) {
-  const bv = n.boundVariables || {}, out = {};
+  const bv = boundOf(n), out = {};
   const pad = four(bv, ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft']); if (pad) out.pad = pad;
   if (bv.itemSpacing) out.gap = BOUND;
   if (bv.counterAxisSpacing) out.crossGap = BOUND;
@@ -210,7 +226,7 @@ function mainOf(ctx, n) {
 // a swap whose component the response does not name is not checkable
 export const UNNAMED = '@unnamed';
 const swapName = (ctx, id) => { const c = ctx.components[id]; if (!c) return UNNAMED; const s = c.componentSetId && ctx.componentSets[c.componentSetId]; return s ? s.name : c.name; };
-const instanceProps = (ctx, n) => Object.fromEntries(Object.entries(n.componentProperties || {}).map(([k, p]) => [bare(k), p.type === 'INSTANCE_SWAP' && typeof p.value === 'string' ? swapName(ctx, p.value) : p.value]));
+const instanceProps = (ctx, n) => Object.fromEntries(Object.entries(n.componentProperties || {}).map(([k, p]) => [bare(k), p.type === 'INSTANCE_SWAP' && typeof p.value === 'string' ? swapName(ctx, p.value) : p.value && typeof p.value === 'object' ? UNNAMED : p.value]));
 // REST's names for an overridden field where the plugin API's differ
 const OVERRIDE_NAME = { preserveRatio: 'constrainProportions', transitionNodeID: 'reactions', transitionDuration: 'reactions', transitionEasing: 'reactions' };
 const overridesOf = (n) => (n.overrides || []).filter((ov) => ov.overriddenFields.some((f) => !['componentProperties', 'name', 'visible'].includes(f)));
@@ -246,7 +262,7 @@ export function restWalk(n, ctx, depth = 0, parent = null, at, inInstance = fals
   if (n.layoutSizingHorizontal) o.sizing = n.layoutSizingHorizontal + '/' + n.layoutSizingVertical;
   if (n.layoutPositioning === 'ABSOLUTE') o.absolute = true;
   const placed = o.absolute || !(parent && parent.layoutMode && parent.layoutMode !== 'NONE');
-  if (placed && n.type !== 'COMPONENT' && n.constraints) {
+  if (placed && n.type !== 'COMPONENT' && n.type !== 'GROUP' && n.constraints) {
     const c = `${H[n.constraints.horizontal] || n.constraints.horizontal}/${V[n.constraints.vertical] || n.constraints.vertical}`;
     if (c !== 'MIN/MIN') o.constraints = c;
   }
@@ -409,7 +425,7 @@ export function compareSpec(component, setNode, spec, ctx) {
 }
 // a description as words: REST gives it plain, the walk as markdown (a link's text, emphasis, blank lines)
 // (REST also drops the line a bold heading ends, so the words are held with no space between them)
-export const plainText = (t) => String(t || '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/&#(\d+);/g, (_, c) => String.fromCodePoint(+c)).replace(/(\*\*|__|\*|_|`)(\S(?:.*?\S)?)\1/g, '$2').replace(/\\([\\`*_{}[\]()#+\-.!])/g, '$1').replace(/[\s\uFEFF\u200B]+/g, '');
+export const plainText = (t) => String(t || '').replace(/^[ \t]*(?:[-*+]|\d+\.)[ \t]+/gm, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/&#(\d+);/g, (_, c) => String.fromCodePoint(+c)).replace(/(\*\*|__|\*|_|`)(\S(?:.*?\S)?)\1/g, '$2').replace(/\\([\\`*_{}[\]()#+\-.!])/g, '$1').replace(/[\s\uFEFF\u200B]+/g, '');
 
 function diffTree(walked, stored, restRoot, say) {
   const fig = new Map([['$root', walked]]); layerPaths(walked, (n, p) => { fig.set(p, n); });
@@ -421,7 +437,11 @@ function diffTree(walked, stored, restRoot, say) {
     const a = restOurs(f), b = specOurs(o, rest.get(p));
     if (p === '$root') { delete a.name; delete b.name; }
     for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
-      if ((k === 'strokesInLayout' || k === 'sizing') && !(k in a)) continue; // where-stated: REST leaves these out on some layers
+      // where-stated: REST leaves these out on some layers (an instance's corner smoothing, which the plugin API reads
+      // through to its component)
+      if ((k === 'strokesInLayout' || k === 'sizing' || (k === 'smoothing' && f.type === 'INSTANCE')) && !(k in a)) continue;
+      // an ellipse's corner radius is the plugin API's alone, and draws nothing
+      if (k === 'radius' && f.type === 'ELLIPSE' && !(k in a)) continue;
       if (k === 'textStyle' && (a[k] === 'mixed' || b[k] === 'mixed')) continue; // not checkable
       // the walk keeps an instance's first eight overrides, in the plugin's order: each of those is one Figma lists
       // how many layers an instance overrides; the fields' names are REST's own (individualStrokeWeights for
@@ -467,9 +487,9 @@ const radiusList = (v) => (v == null ? undefined : Array.isArray(v) ? v.map(num)
 const one = (list) => (!list || !list.length ? undefined : list.length === 1 ? list[0] : list);
 
 /* One REST node as a contract part says it, the parts ours states where-stated only (absolute.end/bottom). */
-export function restPart(n, parent, ctx, propIds) {
+export function restPart(n, parent, ctx, propIds, frame = parent) {
   const e = { kind: KIND[n.type] || 'graphic' };
-  const bv = n.boundVariables || {};
+  const bv = boundOf(n);
   const { w, h } = sizeOf(n);
   const p = placeOf(n);
   const word = { FILL: 'fill', HUG: 'hug' };
@@ -517,9 +537,11 @@ export function restPart(n, parent, ctx, propIds) {
     const bb = n.absoluteBoundingBox, pb = parent.absoluteBoundingBox;
     const near = (axis, size) => (p.turned && bb && pb ? r2(bb[axis] - pb[axis]) : r2(p[axis] - size));
     const box = { x: p.flip === 'x' ? near('x', w) : p.x, y: p.flip === 'y' ? near('y', h) : p.y, w, h };
+    // inside a group, placed in the frame that holds it (as the plugin API places it); `frame` is that frame
+    if (frame && frame !== parent && frame.absoluteBoundingBox && pb) { box.x = r2(box.x + pb.x - frame.absoluteBoundingBox.x); box.y = r2(box.y + pb.y - frame.absoluteBoundingBox.y); }
     const ps = sizeOf(parent);
     e.absolute = { x: box.x, y: box.y, end: r2(ps.w - box.x - box.w), bottom: r2(ps.h - box.y - box.h) };
-    if (n.constraints) {
+    if (n.constraints && n.type !== 'GROUP') {
       const c = { horizontal: (H[n.constraints.horizontal] || '').toLowerCase(), vertical: (V[n.constraints.vertical] || '').toLowerCase() };
       if (!(c.horizontal === 'min' && c.vertical === 'min')) e.constraints = c;
     }
@@ -535,6 +557,9 @@ export function restPart(n, parent, ctx, propIds) {
   }
   const es = styleName(ctx, n, 'effect');
   if (es) e.shadow = es; else if ((n.effects || []).some((x) => x.visible !== false)) e.shadow = 'literal';
+  // a slot holds what its property gives it
+  const slot = n.componentPropertyReferences && n.componentPropertyReferences.slotContentId;
+  if (slot && propIds[bare(slot)]) e.content = `{${propIds[bare(slot)]}}`;
   if (n.type === 'TEXT') {
     const st = n.style || {};
     const ref = n.componentPropertyReferences && n.componentPropertyReferences.characters;
@@ -653,7 +678,9 @@ export function compareContract(component, setNode, stored, contract, ctx) {
       if (!at) { add(v.name, id, 'part', 'missing', 'present'); continue; }
       seen.add(at);
       const n = rest.get(at), parent = at === '$root' ? null : rest.get(parentPath(at));
-      const a = restPart(n, parent, ctx, idOfProp), b = partOurs(part);
+      let fr = at;
+      do fr = parentPath(fr); while (fr !== '$root' && rest.get(fr) && GROUPS.has(rest.get(fr).type));
+      const a = restPart(n, parent, ctx, idOfProp, at === '$root' ? null : rest.get(fr)), b = partOurs(part);
       // an instance, and a layer inside one, says only what differs from its component (derive's ownStyling): there
       // each field is held where the contract states it, the instance's identity always
       if (n.type === 'INSTANCE' || insideInstance(at)) for (const k of Object.keys(a)) if (!(k in b) && !['kind', 'component', 'key', 'with', 'swappedBy'].includes(k)) delete a[k];
@@ -661,6 +688,8 @@ export function compareContract(component, setNode, stored, contract, ctx) {
       if (a.constraints && a.constraints.horizontal === 'stretch' && !('width' in b)) delete a.width;
       if (a.constraints && a.constraints.vertical === 'stretch' && !('height' in b)) delete a.height;
       for (const f of part.whileEmpty || []) if (!(f in a)) delete b[f];
+      if (n.type === 'INSTANCE' && !('smoothing' in a)) delete b.smoothing;
+      if (n.type === 'ELLIPSE' && !('radius' in a)) delete b.radius;
       if (a.typography === 'mixed') { delete a.typography; delete b.typography; }
       // a styled text's letter spacing is its style's, said by the contract only where the layer sets its own
       if (typeof a.typography === 'string' && !('letterSpacing' in b)) delete a.letterSpacing;
