@@ -379,6 +379,20 @@ ok('the runner chooses the run\'s token, so it can take back its own and leave a
     const stalled = await run('const __token = 1;\n' + hung).then(() => null, (e) => e);
     globalThis.setTimeout = (f, ms) => { const t = quiet(f, ms); if (t && t.unref) t.unref(); return t; };
     ok('…a listing Figma never answers fails the drawing, naming the listing', stalled && /this file's variables/.test(stalled.message) && /no answer/.test(stalled.message));
+    // the stall bound is on each answer, never the whole scan: a big component in a slow Figma, every answer well inside
+    // the bound and the scan as a whole past it, still draws with what it binds (the bound scaled to 100 ms, each
+    // batch of answers 40 ms, four batches)
+    calls.length = 0;
+    const slow = stand(true), wide = Array.from({ length: 250 }, (_, i) => ({ type: 'FRAME', parent: comp, boundVariables: { itemSpacing: alias(`V:wide${i}`) }, fills: [], strokes: [] }));
+    const narrow = comp.findAll, kept = [...comp.findAll()]; comp.findAll = () => [...kept, ...wide];
+    const later = (v) => new Promise((r) => quiet(() => r(v), 40));
+    figma.variables.getVariableByIdAsync = (id) => later(byId[id] || null);
+    globalThis.setTimeout = (f, ms) => quiet(f, ms >= 60000 ? 100 : ms);
+    const slowRun = await run('const __token = 1;\n' + slow).then(() => null, (e) => e);
+    globalThis.setTimeout = (f, ms) => { const t = quiet(f, ms); if (t && t.unref) t.unref(); return t; };
+    comp.findAll = narrow;
+    ok('…the stall bound is on each answer, never the scan as a whole: a slow Figma with a big component still binds by name',
+      !(slowRun && /no answer/.test(slowRun.message)) && !calls.includes('import k-snapshot') && calls.includes('collection C:tone'));
   } finally { globalThis.setTimeout = quiet; }
 }
 delete globalThis.figma;

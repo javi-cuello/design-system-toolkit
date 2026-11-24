@@ -649,10 +649,11 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     // not under `tried`: a listing is never a token unbound, which refuses a patch. Each runs to its end: one cut short at
     // a time drew with what it had reached, which a slower machine reached less of (two copies of a variable, a mode's
     // collection, chosen by machine speed). One that fails, or that Figma leaves unanswered for a minute, stops the
-    // drawing and names itself. The beat is kept and a given-up drawing still stops
+    // drawing and names itself. The beat is kept and a given-up drawing still stops. (`whole` false: a listing made of
+    // many calls, each batch bound on its own, never the whole: a big component in a slow Figma is no stall)
     const STALL = 60000;
     const answered = (what, p) => new Promise((ok, no) => { const t = setTimeout(() => no(new Error(`${what}: Figma gave no answer in ${STALL / 1000} s, so the drawing stopped rather than bind from part of it`)), STALL); Promise.resolve(p).then((v) => { clearTimeout(t); ok(v); }, (e) => { clearTimeout(t); no(new Error(`${what} failed: ${e && e.message || e}`)); }); });
-    const listing = async (what, f) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); keep(await answered(what, Promise.resolve().then(f))); };
+    const listing = async (what, f, whole = true) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); keep(await (whole ? answered(what, Promise.resolve().then(f)) : f())); };
     await listing("this file's components", () => figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] }));
     await listing("this file's text styles", () => figma.getLocalTextStylesAsync());
     await listing("this file's effect styles", () => figma.getLocalEffectStylesAsync());
@@ -701,7 +702,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       for (const [n, xs] of seen) { const vs = [...xs.values()], one = vs.length === 1 ? vs[0] : vs.find((v) => v.key === (K.vars || {})[n]); if (one) bound.set(n, one); }
       await settle("its own component's placed components", insts, async (n) => { const m = await n.getMainComponentAsync(); return m ? [m, m.parent && m.parent.type === 'COMPONENT_SET' ? m.parent : null] : null; });
       return [];
-    });
+    }, false);
   }
   const lib = K.vars || {};
   const vars = {};
