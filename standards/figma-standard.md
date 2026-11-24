@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.33.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.34.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -498,15 +498,15 @@ Cite a rule as `figma-standard rule N`.
     |---|---|
     | Property | `Background`, `Surface`, `Control`, `Text`, `Icon`, `Stroke`, `Shadow` |
     | Role | `Neutral`, `Brand`, `Danger`, `Info`, `Success`, `Warning` |
-    | Level | `softer`, `soft`, `default`, `emphasis`; `on-emphasis` on an `emphasis` fill |
+    | Level | `softer`, `soft`, `default`, `emphasis`; `on-emphasis` on an `emphasis` fill; `ghost` for a control with no fill |
     | State | `rest`, `hover`, `press` |
-    | Surface layer | `page`, `raised`, `overlay`, `scrim` |
+    | Surface layer | `sunken`, `page`, `raised`, `overlay`, `scrim` |
 
     So `Colour/Background/Danger/soft`, `Colour/Control/Brand/emphasis-hover`, `Colour/Text/Neutral/on-emphasis`. Component tokens are rule 49's.
 
     *Why:* code takes the path as its name (code-standard rule 52), and at the picker the name is all there is. A fixed order and closed lists let anyone derive name from use and use from name, where a word with two meanings turns every pick into a lookup; a new need adds a word, never a new shape.
 
-    *Evidence:* 2026-11-18, one project's 102 semantic tokens: a `Feedback` segment over every status, `medium` on text where backgrounds used `soft`, a solid and its text both `inverse`, numbered surfaces, descriptions copied across roles. Renamed, bindings kept. Systems back each slot as strongly as the KB shows: [token taxonomy](../knowledge/code/token-taxonomy.md#name-grammar-and-segment-order) (grammar, roles, levels, on-colour, what lasts) and [surfaces](../knowledge/ui/design/visual.md#surfaces-and-elevation-levels). The house words are the maintainer's choice that day among words in wide use (`danger` beside `critical`; `Stroke`, Figma's word, over code's `border`), and a named middle `default`.
+    *Evidence:* 2026-11-18, one project's 102 semantic tokens: a `Feedback` segment over every status, `medium` on text where backgrounds used `soft`, a solid and its text both `inverse`, numbered surfaces, descriptions copied across roles. Renamed, bindings kept. Systems back each slot as strongly as the KB shows: [token taxonomy](../knowledge/code/token-taxonomy.md#name-grammar-and-segment-order) (grammar, roles, levels, on-colour, what lasts) and [surfaces](../knowledge/ui/design/visual.md#surfaces-and-elevation-levels). The house words are the maintainer's choice that day among words in wide use (`danger` beside `critical`; `Stroke`, Figma's word, over code's `border`), and a named middle `default`. `sunken` and `ghost` joined 2026-11-25, when a project's light-grey app base and its unfilled chips needed them: the KB already names both ([surfaces](../knowledge/ui/design/visual.md#surfaces-and-elevation-levels) lists `surface-sunken`; [button](../knowledge/ui/components/button.md) lists the `ghost` appearance).
 
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — whenever a semantic token is added or renamed: whether its words come from the house's lists or the project's is read in the session.
 

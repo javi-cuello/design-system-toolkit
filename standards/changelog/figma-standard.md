@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.34.0 (2026-11-25): rule 55's house words add `sunken` (surface layer) and `ghost` (level, a control with no fill), both already named by the KB.
 - 2.33.0 (2026-11-23): rule 1 names the emphasis axis `Appearance` (code `appearance`), never `Variant`, `Type`, `Role` or `Style`. The house `emphasisAxes` default and `codeProps.sameJob` follow.
 - 2.32.0 (2026-11-23): rule 1 drops "props/booleans first", which Figma cannot show: variant axes sit above every other property type ([Figma help](https://help.figma.com/hc/en-us/articles/5579474826519-Explore-component-properties)). Rule 5 orders the rest by layer, top to bottom.
 - 2.31.2 (2026-11-21): rule 47's *Reviewed:* points at oklch-color-scale-system's references/contrast.md, where `solidForeground` now lives. No rule changes.
