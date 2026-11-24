@@ -12,7 +12,7 @@
  *                    branch first, saying so; its folder goes, its branch stays, and bin/worktree <work> reopens it
  *   leftovers(repo)  bin/check (--warn): what is over a day old and cannot go that way — a worktree or branch with
  *                    unmerged commits or uncommitted files, and every stash — with its age and its session when known
- *   reapChromes()    bin/check, bin/closing and every cdp.mjs launch(): kills the headless Chromes the toolkit started
+ *   reapChromes()    (re-exported from tools/shared/chromes.mjs) bin/check, bin/closing and every cdp.mjs launch(): kills the headless Chromes the toolkit started
  *                    whose parent is gone (ppid 1, or no such pid), at any age, with their helpers, and removes their
  *                    profiles; one under a living parent is never killed, and bin/closing names it past a day. 25 were found on 2026-11-24, up to three days old, at a load of 59.
  *
@@ -20,7 +20,6 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 

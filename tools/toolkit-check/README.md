@@ -20,7 +20,7 @@ bin/closing                                            # what is open across the
 | `check-parallel.mjs` | Runs `bin/check`'s steps a few at a time and keeps apart steps that share a resource. Its flags are `--workers`, `--limit` and `--state`. The output reads as a serial run's. |
 | `check-runs.mjs` | Every assertion a skill's `tests/cases.md` says it runs still exists in the test it names. |
 | `owned-check.mjs` + `owned.json` | Fails a repo that writes again a job the toolkit owns, instead of calling the toolkit. |
-| `leftovers.mjs` | Worktrees, branches and stashes left behind. It removes what is clean, old and merged, and parks work left untouched for a week. It also kills the headless Chromes the toolkit started that outlived their run, and removes their profiles. |
+| `leftovers.mjs` | Worktrees, branches and stashes left behind. It removes what is clean, old and merged, and parks work left untouched for a week. It also runs `tools/shared/chromes.mjs`, which kills the headless Chromes the toolkit started whose run is gone. |
 | `twins.mjs` | Warns when two projects each wrote the same job, before the toolkit owns it. |
 | `readability.mjs` + `readability.json` | Every README and skill reads plainly (§D 22, skill-standard §A clause I). |
 | `readmes.mjs` | Every folder has a README in the agreed shape (§D 22). |
