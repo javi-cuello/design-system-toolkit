@@ -883,6 +883,14 @@ export function dropOwnGlyph(id, e, variants, mains) {
   }
 }
 
+/* What a generated module says it draws (to-markup's `export const figma = {…}`): the design component's name, read from
+   the code's text, or null where it says nothing. Tested by test-from-code.mjs. */
+export function codeFigma(js) {
+  const m = /^export const figma = (\{.*\});$/m.exec(String(js || ''));
+  if (!m) return null;
+  try { return JSON.parse(m[1]); } catch { return null; }
+}
+
 /* The key a reading's icon instance takes: the design's own, from the instance it places at that layer (or, for another
    glyph of the set, any instance of that name the design places). An instance named without its key resolves by name,
    so an icon that shares a component's name (Carbon's Checkbox glyph inside the Checkbox set) would become that
@@ -1635,6 +1643,8 @@ async function selfSource(project, name, { second = false } = {}) {
     value: (x) => (typeof x === 'string' ? valueOf(tokens, x, tier) ?? x : x),
     textStyle: (n) => (tokens.textStyles || []).find((x) => x.name === n),
     components: project.paths.components, story: t.mapping.storyId, container, m: { story: t.mapping.storyId }, root: t.mapping.root, pseudoOf: G.pseudoOf,
+    // what each served module says it draws (to-markup's export): the code's own word for the component
+    figmaOf: (folder) => codeFigma(files[`components/${folder}/${folder}.js`]),
     instanceOf: (slug) => `ds-${slug}`,
     instancePattern: rootPattern('ds-{slug}'),
     partsOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); if (!x) return null; try { return Object.fromEntries(Object.entries(governedReading(targetOf(x), bridge(store.readSpec(project.paths.components, slug, { compact: true }))).elements()).map(([id, e]) => [id, e.selector])); } catch { return null; } },
@@ -2726,7 +2736,7 @@ async function main() {
 
     // what two props do together that each alone does not explain: read every pair of
     // non-default values, and where expand() mispredicts it, a pair layer (as derive.cjs has)
-    const fromCode = { contract: 1, component: name, code: { story: m.story, from: 'code' }, props: Object.fromEntries(Object.entries(props).map(([k, p]) => { const { sample, emptied, ...rest } = p; return [k, rest]; })), anatomy: base, variants };
+    const fromCode = { contract: 1, component: (L.figmaOf && (L.figmaOf(name) || {}).component) || name, code: { story: m.story, from: 'code' }, props: Object.fromEntries(Object.entries(props).map(([k, p]) => { const { sample, emptied, ...rest } = p; return [k, rest]; })), anatomy: base, variants };
     const valuesOf = (p) => (p.type === 'enum' ? p.values.filter((v) => v !== p.default) : p.type === 'boolean' ? [!p.default] : p.type === 'swap' && p.shows ? [p.glyph || 'none'] : []);
     const argOf = (p, v) => (p.type === 'boolean' ? v : String(v));
     const keys = Object.keys(props);

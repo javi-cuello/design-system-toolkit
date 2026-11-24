@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1095,4 +1095,9 @@ ok('nameBorrowed: a name only the design gives, or a markup name the design drop
   colourKept(B, b, mains, { partial: true, whole: new Set(['card']), coloured: null, reading: true });
   ok('colourKept: a colour the reading drops because the design states none there is tagged; with no design, nothing is',
     JSON.stringify(Object.keys(A.out())) === JSON.stringify(['design-colour-kept']) && !Object.keys(B.out()).length, A.out()); }
+// what the generated module says it draws (to-markup's `export const figma`), read from the code's text: the
+// component's name, so the reading names it as the code does; none where the module says nothing
+ok('codeFigma: the design component a generated module names, read from its text; null where it names none',
+  codeFigma('export function renderX() {}\nexport const figma = {"component":"Button/❖ Button"};\n').component === 'Button/❖ Button'
+  && codeFigma('export function renderX() {}') === null && codeFigma(undefined) === null);
 console.log(`${n}/${n} passed`);

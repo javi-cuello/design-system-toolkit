@@ -73,6 +73,9 @@ const lead = { component: 'Chip', props: { lead: { type: 'boolean', default: fal
 ok('a part a variant adds before the rest is drawn there, not after them', /"data-part": "mark"[^]*"data-part": "label"/.test(toElement(lead, 'chip', { naming: ELEMENT, library: {} })));
 const pill = { component: 'Pill', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon'] }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon'] } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/plus', swappedBy: 'icon20' } }, variants: [{ when: { size: 'xs' }, set: { 'icon.swappedBy': 'icon16' } }], folder: 'pill' };
 const holder = { component: 'Row', props: {}, anatomy: { root: { kind: 'container' }, pill: { kind: 'instance', parent: 'root', component: 'Pill', with: { 'Icon (20)': 'plus', 'Icon (16)': 'x', Size: 'xs' } } }, variants: [], folder: 'row' };
+// the web component's module says which design component it draws, by the design's own name, so a reading names it from
+// the code (from-code's component) and never from the design it is compared with
+ok('a web component\'s module exports the design component it draws, by its exact name', /^export const figma = \{"component":"Pill"\};$/m.test(toElement(pill, 'pill', { naming: ELEMENT, library: { Pill: pill } })));
 ok('a placed component with a swap per size is given the one its size draws (xs: Icon (16))', /renderPill\(\{ icon: "x"/.test(toElement(holder, 'row', { naming: ELEMENT, library: { Pill: pill, Row: holder } })));
 // two swaps over two glyph layers (Material 3's nav item: Icon and Icon (selected), each linked to icon and icon_2), the
 // instance stating only the second layer's glyph: it is given the swap whose value that glyph is
