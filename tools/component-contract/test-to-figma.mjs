@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf } from './to-figma.mjs';
+import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf, arrangementOf, placeVariants } from './to-figma.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -113,6 +113,30 @@ const gp = plan({ contract: 1, component: 'g', props: { a: { type: 'enum', value
 ok('each variant has its cell in the set\'s grid; one not drawn leaves its cell empty, the rest of its row in their columns',
   gp.rows === 2 && gp.cols === 3 && JSON.stringify(gp.variants.find((v) => v.name === 'A=Q, B=T').cell) === '[1,2]' && gp.variants.length === 5);
 ok('the plugin code carries each variant\'s cell', /"cell":\[1,2\]/.test(pluginCode({ ...gp, contract: 1, component: 'g', props: { a: { type: 'enum', values: ['p', 'q'], default: 'p', figma: 'A' }, b: { type: 'enum', values: ['r', 's', 't'], default: 'r', figma: 'B' } }, anatomy: { root: { kind: 'container' } }, variants: [], invalid: [{ a: 'q', b: 's' }] }, {})));
+// the library's own arrangement: each variant at the place its stored spec records in its set, the set at its size
+{ const gc = { contract: 1, component: 'g', props: { a: { type: 'enum', values: ['p', 'q'], default: 'p', figma: 'A' }, b: { type: 'enum', values: ['r', 's', 't'], default: 'r', figma: 'B' } },
+    anatomy: { root: { kind: 'container' } }, variants: [], invalid: [{ a: 'q', b: 's' }] };
+  const names = plan(gc, {}).variants.map((v) => v.name);
+  // a made-up stored spec: the library names its axes in its own order, a boolean's flip (no place: not a child of
+  // the set) beside them
+  const at = { 'A=P, B=R': [20, 20], 'A=P, B=S': [160, 20], 'A=P, B=T': [300, 20], 'A=Q, B=R': [20, 100], 'A=Q, B=T': [300, 100] };
+  const stored = { name: 'G', set: { w: 420, h: 160 }, variants: [...Object.entries(at).map(([n, [x, y]]) => ({ name: n.split(', ').reverse().join(', '), type: 'COMPONENT', w: 100, h: 40, place: { x, y } })), { name: 'B=R, A=P, Icon=False', type: 'COMPONENT', w: 100, h: 40 }] };
+  const arr = arrangementOf(stored, names);
+  ok('each variant\'s place is read from the stored spec by its axis values, whatever order either names them in, and the set\'s size with them',
+    arr && JSON.stringify(arr.set) === '{"w":420,"h":160}' && names.every((n) => arr.places[n]) && JSON.stringify(arr.places['A=Q, B=T']) === '{"x":300,"y":100}');
+  const short = { ...stored, variants: stored.variants.filter((v) => v.name !== 'B=T, A=Q') };
+  ok('a spec that places only some of the drawn variants, or records no set, gives no arrangement: the grid draws them all',
+    arrangementOf(short, names) === null && arrangementOf({ ...stored, set: undefined }, names) === null && arrangementOf(null, names) === null);
+  const code = pluginCode(gc, {}, { arrangement: arr });
+  ok('the plugin code carries each variant\'s place and the set\'s size; none without an arrangement',
+    /"place":\{"x":300,"y":100\}/.test(code) && /"setSize":\{"w":420,"h":160\}/.test(code) && !/"place":|"setSize":/.test(pluginCode(gc, {})));
+  const node = () => ({ x: 0, y: 0 });
+  const set = { layoutMode: 'GRID', width: 0, height: 0, resizeWithoutConstraints(w, h) { this.width = w; this.height = h; } };
+  const comps = [{ node: node(), place: { x: 20, y: 20 } }, { node: node(), place: { x: 300, y: 100 } }];
+  placeVariants(set, comps, { w: 420, h: 160 });
+  ok('…and the drawing puts each variant at its place in a set laid out by hand, at the library\'s size',
+    set.layoutMode === 'NONE' && comps[1].node.x === 300 && comps[1].node.y === 100 && set.width === 420 && set.height === 160
+    && /const placeVariants = /.test(code)); }
 // a component with no axes is one variant: drawn as a component, read back as one
 const one = plan({ contract: 1, component: 'divider', props: {}, anatomy: { root: { kind: 'container', background: 'C/line' } }, variants: [] }, {});
 ok('a component with no axes is one variant, at the grid\'s one cell', one.variants.length === 1 && one.rows === 1 && one.cols === 1 && JSON.stringify(one.variants[0].cell) === '[0,0]');

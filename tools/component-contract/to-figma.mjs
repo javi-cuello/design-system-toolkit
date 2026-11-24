@@ -1175,7 +1175,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (id === 'root' || inner.has(id) || e.absolute || e.position !== 'absolute' || n === up || !up.layoutMode || up.layoutMode === 'NONE') continue;
       up.appendChild(n); n.layoutPositioning = 'ABSOLUTE'; toCentre.push([n, up]);
     }
-    comps.push({ node: nodes.root, anatomy: variant.anatomy, nodes, inner, cell: variant.cell });
+    comps.push({ node: nodes.root, anatomy: variant.anatomy, nodes, inner, cell: variant.cell, place: variant.place });
   }
   await Promise.all([...toStyle.map(([n, st, t]) => tried(t, () => n.setTextStyleIdAsync(st.id))), ...toEffect.map(([n, st, t]) => tried(t, () => n.setEffectStyleIdAsync(st.id))), ...toFill.map(([n, st, t]) => tried(t, () => n.setFillStyleIdAsync(st.id)))]);
   // where it stands in its parent: pinned to the end or bottom, from there; centred, as code read it (centred within
@@ -1216,20 +1216,27 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   const set = single ? comps[0].node : figma.combineAsVariants(comps.map((c) => c.node), page);
   set.name = P.name;
   mine(set.id);
-  // the grid the plan placed each variant in, as Figma's grid auto layout lays it out, 24 apart and 24 in; a Figma
-  // without grid layout gets the same grid by hand, and the result says which, and why
+  // the library's own arrangement where its stored spec records one for every variant (placeVariants); else the grid
+  // the plan placed each variant in, as Figma's grid auto layout lays it out, 24 apart and 24 in; a Figma without grid
+  // layout gets the same grid by hand, and the result says which, and why
   let layout = 'one variant';
-  // one variant that fills the room it is given: fixed at that room (its canvas), as a set's track would hold it
-  if (single) for (const [k, axis] of [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']]) {
-    const room = comps[0].anatomy.root[k] === 'fill' && (comps[0].anatomy.root.canvas || {})[k];
+  // a variant that fills the room it is given, where no auto layout gives it: fixed at that room (its canvas), as a
+  // set's track would hold it
+  const fitRoom = (n, root) => { for (const [k, axis] of [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']]) {
+    const room = root[k] === 'fill' && (root.canvas || {})[k];
     if (!room) continue;
-    const other = k === 'width' ? 'layoutSizingVertical' : 'layoutSizingHorizontal', was = set.layoutMode && set.layoutMode !== 'NONE' ? set[other] : null;
-    if (was) set[axis] = 'FIXED';
-    set.resize(k === 'width' ? room : set.width, k === 'height' ? room : set.height);
+    const other = k === 'width' ? 'layoutSizingVertical' : 'layoutSizingHorizontal', was = n.layoutMode && n.layoutMode !== 'NONE' ? n[other] : null;
+    if (was) n[axis] = 'FIXED';
+    n.resize(k === 'width' ? room : n.width, k === 'height' ? room : n.height);
     // a resize fixes both axes: the other goes back to what it was (a hug stays a hug)
-    if (was) set[other] = was;
-  }
-  if (!single) {
+    if (was) n[other] = was;
+  } };
+  if (single) fitRoom(set, comps[0].anatomy.root);
+  if (!single && P.setSize) {
+    for (const c of comps) fitRoom(c.node, c.anatomy.root);
+    placeVariants(set, comps, P.setSize);
+    layout = 'as the library arranges it';
+  } else if (!single) {
   try {
     set.layoutMode = 'GRID';
     set.gridRowCount = P.rows; set.gridColumnCount = P.cols;
@@ -1333,6 +1340,29 @@ export function variantKeys(dir, names, tails = []) {
   return out;
 }
 
+/* The library's own arrangement of a set, from its stored figma.json (snapshot 0.84.0 on): each variant's place in the
+   set and the set's size, by the drawn variant's name (`names`, the plan's), matched by its sorted axis values. A
+   drawing fact, not a contract one: it is how designers find a variant in the library, and code has no set to place,
+   so it is read from the spec at draw time as the update in place keeps the library's set as it stands. null where
+   the spec records no set or leaves any drawn variant unplaced (a contract from the editor, a value the library lacks):
+   the plan's grid then places them all, never part on one arrangement and part on another. */
+export function arrangementOf(stored, names) {
+  if (!stored || !stored.set) return null;
+  const axes = (n) => String(n).split(',').map((x) => x.trim()).filter((x) => x.includes('=')).sort().join(', ');
+  const at = new Map();
+  for (const v of req('../snapshot/spec.cjs').resolve(stored).variants || []) if (v.place) at.set(axes(v.name), v.place);
+  const places = {};
+  for (const n of names) { const pl = at.get(axes(n)); if (!pl) return null; places[n] = pl; }
+  return { set: stored.set, places };
+}
+
+/* Each variant at its place, in a set laid out by hand at the library's size: the plugin's own, written into its code. */
+export const placeVariants = (set, comps, size) => {
+  set.layoutMode = 'NONE';
+  for (const c of comps) { c.node.x = c.place.x; c.node.y = c.place.y; }
+  set.resizeWithoutConstraints(size.w, size.h);
+};
+
 /* The instances whose insides a contract keeps whole: derive lists an instance's layers that equal its component's
    own only where one of the component's layers is hidden there (a layer not listed is then hidden); elsewhere it keeps
    only the overrides, and a layer not listed is the component's own, showing. Told apart by trimming again: the insides
@@ -1343,12 +1373,14 @@ export function keptWhole(anatomy, mains) {
 }
 
 /* The plan as the plugin gets it: each distinct element once, a variant's anatomy its indices. */
-export function pluginCode(contract, keys, { before = '', after = '', failed = '', axisOrder = [], sizeAxis = null, mains = null, whole = null } = {}) {
+export function pluginCode(contract, keys, { before = '', after = '', failed = '', axisOrder = [], sizeAxis = null, mains = null, whole = null, arrangement = null } = {}) {
   const p = plan(contract, { axisOrder }), table = [], at = new Map();
+  // the library's arrangement (arrangementOf) only where it places every variant drawn: else the grid places them all
+  const placed = arrangement && p.variants.length > 1 && p.variants.every((v) => arrangement.places[v.name]) ? arrangement : null;
   const norm = (n) => String(n).split(',').map((x) => x.trim()).sort().join(', ');
   const ref = (e) => { const j = JSON.stringify(e); if (!at.has(j)) { at.set(j, table.length); table.push(e); } return at.get(j); };
   // the size axis by the library's settings' name (sizeAxis), carried to the drawing; none named, no variant is picked by size
-  const packed = { ...p, sizeAxis, turned: [...turnedParts(contract)], elements: table, variants: p.variants.map((v) => ({ name: v.name, cell: v.cell, ...(whole && whole[norm(v.name)] ? { whole: whole[norm(v.name)] } : mains && { whole: keptWhole(v.anatomy, mains) }), anatomy: Object.fromEntries(Object.entries(v.anatomy).map(([id, e]) => [id, ref(e)])) })) };
+  const packed = { ...p, sizeAxis, turned: [...turnedParts(contract)], elements: table, ...(placed && { setSize: placed.set }), variants: p.variants.map((v) => ({ name: v.name, cell: v.cell, ...(placed && { place: placed.places[v.name] }), ...(whole && whole[norm(v.name)] ? { whole: whole[norm(v.name)] } : mains && { whole: keptWhole(v.anatomy, mains) }), anatomy: Object.fromEntries(Object.entries(v.anatomy).map(([id, e]) => [id, ref(e)])) })) };
   // a layer hidden inside an instance is one to draw and match too: the snapshot's walk, run in the same plugin
   // before (the update's live read, the audit), leaves Figma skipping them
   return `figma.skipInvisibleInstanceChildren = false;\n${before}const P = ${JSON.stringify(packed)}; for (const v of P.variants) for (const id in v.anatomy) v.anatomy[id] = P.elements[v.anatomy[id]];\nconst parseColour = ${parseColour.toString()};
@@ -1357,6 +1389,7 @@ const bareProp = ${bareProp.toString()};
 const styleIdsOf = ${styleIdsOf.toString()};
 const keyMatches = ${keyMatches.toString()};
 const sizingAxes = ${sizingAxes.toString()};
+const placeVariants = ${placeVariants.toString()};
 let __res; try { __res = await (${RUNTIME.toString()})(P, ${JSON.stringify(keys)}${before ? ', __page, typeof __given !== \'undefined\' ? __given : [], typeof __started !== \'undefined\' ? __started : globalThis.__drawingStarted' : ''});\n${after}} catch (e) { ${failed} throw e; }\nreturn __res;`;
 }
 
@@ -2056,12 +2089,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // this run's token, chosen here so the runner can take back its own and no other
   const token = Date.now();
   const mainsOf = req('./derive.cjs').byComponentName((await import('./official.mjs')).contracts(where).map(({ contract }) => contract));
+  // the library's component of this name: its folder, and a file read from it
+  let index = {}; try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index */ }
+  const folder = libraryFolder || entryOf(index, p.name, { key: (c.figma || {}).key, keyAt });
+  const read = (f) => { try { return folder && JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, f), 'utf8')); } catch { return null; } };
   // the instances the library's own spec keeps whole (a layer hidden in them), as derive found them reading it: where
   // the component has a spec, the drawing hides what the contract does not list there and nowhere else
   const wholeFrom = (() => {
-    let index = {}; try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index */ }
-    const folder = libraryFolder || entryOf(index, p.name, { key: (c.figma || {}).key, keyAt });
-    const read = (f) => { try { return folder && JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, f), 'utf8')); } catch { return null; } };
     const stored = read('figma.json'), own = read('contract.json');
     // only for the library's own contract: another (a report from code) names its parts its own way
     if (!stored || !own || JSON.stringify(own) !== JSON.stringify(c)) return null;
@@ -2070,7 +2104,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     // by the variant's name as the plan gives it (Breakpoint=md, State=Initial)
     return Object.fromEntries([...found].map(([when, ids]) => [Object.entries(JSON.parse(when)).map(([k, v]) => `${k}=${v}`).sort().join(', '), ids]));
   })();
-  const code = target ? pluginCode(c, keys, { before: PATCH_BEFORE(target), after: PATCH_AFTER, failed: PATCH_FAILED, axisOrder, sizeAxis, mains: mainsOf, whole: wholeFrom }) : pluginCode(c, keys, { before: BEFORE(pageName, token), after: AFTER(p.name), failed: FAILED, axisOrder, sizeAxis, mains: mainsOf, whole: wholeFrom });
+  // a new drawing takes the library's arrangement of the set where its stored spec places every variant (an update in
+  // place keeps the set's own)
+  const arrangement = target ? null : arrangementOf(read('figma.json'), p.variants.map((v) => v.name));
+  const code = target ? pluginCode(c, keys, { before: PATCH_BEFORE(target), after: PATCH_AFTER, failed: PATCH_FAILED, axisOrder, sizeAxis, mains: mainsOf, whole: wholeFrom }) : pluginCode(c, keys, { before: BEFORE(pageName, token), after: AFTER(p.name), failed: FAILED, axisOrder, sizeAxis, mains: mainsOf, whole: wholeFrom, arrangement });
   // nine minutes for either: a drawing of 300 variants that import their graphics outran two in a background Figma, and a
   // run the runner gives up on goes on in Figma, holding the file; one that times out here may still be changing it
   const res = await exec(code, into, 540000).catch(async (e) => {

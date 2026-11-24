@@ -43,6 +43,8 @@ seeded('a hidden layer', (d) => { d.variants[1].children.splice(2, 1); }, { at: 
 seeded('a wrong size', (d) => { d.variants[0].children[2].w = 24; }, { at: 'Size=md, State=rest/Badge.w', library: 12, drawn: 24 });
 seeded('a variant\'s place in its set', (d) => { d.variants[1].place = { x: 0, y: 60 }; }, { at: 'Size=md, State=hover.place', library: { x: 140, y: 0 }, drawn: { x: 0, y: 60 } });
 seeded('the set\'s size', (d) => { d.set = { w: 260, h: 100 }; }, { at: 'Button.set', library: { w: 300, h: 40 }, drawn: { w: 260, h: 100 } });
+// a set padded otherwise moves every variant alike: one fact, the set's size, not a row per variant
+seeded('a set padded otherwise', (d) => { for (const v of d.variants) v.place = { x: v.place.x + 24, y: v.place.y + 24 }; d.set = { w: 348, h: 88 }; }, { at: 'Button.set', library: { w: 300, h: 40 }, drawn: { w: 348, h: 88 } });
 seeded('a variant the drawing lacks', (d) => { d.variants.pop(); }, { at: 'Size=md, State=hover', library: { kind: 'variant' }, drawn: null });
 
 // a vector's outline (snapshot 0.85.0): a dot drawn back square, at its size, is a row
