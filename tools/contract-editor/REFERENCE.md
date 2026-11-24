@@ -138,7 +138,7 @@ On Variants, the grid is the page. A header is a button: its value alone, at the
 Three prop fields a contract made here sets by hand; a derived one carries `axis` and `figmaValues` already:
 - `axis`: a boolean drawn as a False/True variant, rather than a boolean property;
 - `only`: `figma` or `code`, for a prop one side has and the other does not. Number and Event are always `code`; interaction states are always `figma`;
-- `figmaValues`: an enum's options as Figma spells them, which the kebab-case `values` lose or the house's sentence case would change (`lg`, not `Lg`).
+- `figmaValues`: an enum's options as Figma spells them, which the kebab-case `values` lose or the house's sentence case would change (`lg`, not `Lg`); a False/True axis's two options as Figma spells and orders them (`false`, `true`), kept through the editor.
 
 `anatomy` is written in the derived contract's shape: an id per part from its path, `parent`, `order`, `layout`, tokens by name, and `content` as `{prop}`. Each prop gains the `shows`, `sets` or `swaps` its parts name, so a link follows a prop through a rename. A part read from a contract keeps what the editor does not set (alignment, fill, maximum sizes, per-side borders, overflow) and writes it back unchanged. An instance's own layers ride inside it, and are not parts of this component. A part takes its name from its id, and carries its own `name` where the id cannot say it back (a repeat, a layer a boolean shows, "UI note" as `uINote`); its id stays. A new contract starts with `variants` and `invalid` empty; one opened keeps Figma's, shown in the Variants tab, carried through renames and pruned with a deleted prop.
 

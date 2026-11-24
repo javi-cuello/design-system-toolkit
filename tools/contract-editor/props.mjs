@@ -10,7 +10,7 @@
  * two to it). Three fields the derived contract does not carry, because a
  * drawing already shows them: `axis`, a boolean drawn as a False/True variant
  * rather than a boolean property; `only`, a prop one side has and the
- * other does not; and `figmaValues`, an enum's options as Figma spells them.
+ * other does not; and `figmaValues`, an enum's (or a False/True axis's) options as Figma spells them.
  */
 
 import { toAnatomy, KINDS } from './anatomy.mjs';
@@ -172,7 +172,12 @@ export function toContract(component, drafts, base = {}, parts = null) {
     else if (d.type === 'string' && d.default) p.default = d.default;
     else if (d.type === 'number' && d.default != null && d.default !== '') p.default = Number(d.default);
     else if (d.type === 'instance' && d.default) p.default = d.default;
-    if (d.type === 'boolean' && d.axis && d.only !== 'code') p.axis = true;
+    if (d.type === 'boolean' && d.axis && d.only !== 'code') {
+      p.axis = true;
+      // a False/True axis's spelling and order, as derive.cjs keeps it (isDisabled=false)
+      const vs = (d.values || []).map((v) => String(v).trim());
+      if (vs.length === 2 && vs.map((v) => v.toLowerCase()).sort().join() === 'false,true') p.figmaValues = vs;
+    }
     if (d.type === 'enum' && d.role) { p.role = d.role; p.pointer = (d.pointer || []).map((x) => p.values[d.values.indexOf(x)] ?? kebab(x)).filter((v) => p.values.includes(v)); }
     const only = CODE_ONLY.has(d.type) ? 'code' : d.only;
     // (the name as Figma keeps it, a trailing space and all, where the draft still says it: the library addresses it so)

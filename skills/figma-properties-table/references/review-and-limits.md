@@ -26,7 +26,7 @@ Also surface to the person any note that reads oddly, and any component whose mi
 
 The rows' sources:
 
-- A False/True variant axis's option order and spelling are not in the contract: `derive.cjs` keeps `figmaValues` for enums only. So they are read from the spec the contract was derived from, in the same walk. Once `derive.cjs` writes `figmaValues` for such an axis, `contract-rows.mjs` reads it first.
+- A contract derived before `derive.cjs` kept a False/True axis's `figmaValues` has no order or spelling for it, so they are read from the spec the contract was derived from, in the same walk.
 - A component no contract can be derived for gets no table. `derive.cjs` refuses it, as it does on a snapshot, and `--live` names it.
 - The rows need the audit service and the Desktop Bridge. With either missing, `--live` says which and the table waits. The stored snapshot is never read instead, since it can be older than the file.
 

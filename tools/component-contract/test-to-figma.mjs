@@ -143,6 +143,22 @@ ok('the plugin code carries each variant\'s cell', /"cell":\[1,2\]/.test(pluginC
   // arrangement
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
   ok('…and the set drawn at the library\'s places is styled as the grid\'s is', /\n  if \(!single\) \{ set\.fills = \[\];/.test(src) && (src.match(/set\.dashPattern = /g) || []).length === 1); }
+// a False/True axis the library spells its own way (lower case, true first): derived, drawn and placed by that
+// spelling, so the drawn names find the library's places
+{ const { createRequire } = await import('node:module');
+  const { derive } = createRequire(import.meta.url)('./derive.cjs');
+  const box = (size, off, x, y) => ({ name: `size=${size}, isOff=${off}`, type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', w: 40, h: 20, place: { x, y },
+    children: [{ name: 'Mark', type: 'RECTANGLE', sizing: 'FIXED/FIXED', w: size === 'sm' ? 8 : 16, h: 8, fills: [off === 'true' ? 'Grey' : 'Ink'] }] });
+  const stored = { name: 'Flagged', id: '9:1', set: { w: 200, h: 100 }, props: { size: ['sm', 'lg'], isOff: ['true', 'false'] },
+    variants: [box('sm', 'false', 20, 20), box('lg', 'false', 100, 20), box('sm', 'true', 20, 60), box('lg', 'true', 100, 60)] };
+  const c = derive(stored);
+  ok('a False/True axis keeps the library\'s spelling and order of its options, as an enum does',
+    c.props.isOff.axis === true && JSON.stringify(c.props.isOff.figmaValues) === '["true","false"]');
+  const names = plan(c, {}).variants.map((v) => v.name);
+  ok('…and is drawn by it: isOff=false, not isOff=False',
+    names.includes('isOff=false, size=sm') && names.includes('isOff=true, size=lg') && !names.some((n) => /=(True|False)\b/.test(n)));
+  const arr = arrangementOf(stored, names);
+  ok('…so every drawn variant finds its place in the library\'s set', arr && names.every((n) => arr.places[n]) && JSON.stringify(arr.places['isOff=true, size=lg']) === '{"x":100,"y":60}'); }
 // a component with no axes is one variant: drawn as a component, read back as one
 const one = plan({ contract: 1, component: 'divider', props: {}, anatomy: { root: { kind: 'container', background: 'C/line' } }, variants: [] }, {});
 ok('a component with no axes is one variant, at the grid\'s one cell', one.variants.length === 1 && one.rows === 1 && one.cols === 1 && JSON.stringify(one.variants[0].cell) === '[0,0]');

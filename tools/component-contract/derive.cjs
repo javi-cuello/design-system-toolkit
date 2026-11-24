@@ -917,7 +917,8 @@ function deriveWith(stored, known, { stateAxis = HOUSE.stateAxis || null, pointe
   for (const [p, t] of Object.entries(figmaProps)) {
     const id = propId(figmaProps, p);
     // drawn as False/True variants, said so: the invalid list, folded, need not name it
-    if (isFlag(t)) props[id] = { type: 'boolean', default: valueFor(figmaProps, p, base.when[p] ?? 'False'), axis: true };
+    // (and Figma's spelling and order of its two options, which True/False would change: isDisabled=false)
+    if (isFlag(t)) props[id] = { type: 'boolean', default: valueFor(figmaProps, p, base.when[p] ?? 'False'), axis: true, figmaValues: [...t] };
     else if (Array.isArray(t)) {
       props[id] = { type: 'enum', values: valueIds(t), default: valueFor(figmaProps, p, base.when[p] ?? t[0]) };
       // Figma's spelling of each, which the kebab-case values lose (Primary, Icon only) or the house's would change (lg)

@@ -562,7 +562,8 @@ export function plan(contract, { axisOrder = [] } = {}) {
   // that lists it (the drawing links it to the one whose default is its component)
   const swaps = Object.entries(props).filter(([, p]) => p.type === 'instance' && p.figma).map(([k, p]) => ({ key: k, figma: p.figma, parts: p.swaps || [] }));
   // a value as the library writes it: its own spelling where the contract keeps one, else the house's
-  const show = (a, v) => { const q = props[a.key]; return q.figmaValues && q.values ? q.figmaValues[q.values.indexOf(v)] ?? figmaWord(v) : figmaWord(v); };
+  // (a False/True axis's by its word: its figmaValues are the library's two, in its order)
+  const show = (a, v) => { const q = props[a.key]; return q.figmaValues && q.values ? q.figmaValues[q.values.indexOf(v)] ?? figmaWord(v) : (a.boolean && (q.figmaValues || []).find((x) => x.toLowerCase() === String(v))) || figmaWord(v); };
   // every combination of the axes, less those the contract says are not drawn (its invalid list, a canvas fact)
   const notDrawn = Array.isArray(contract.invalid) ? contract.invalid : [];
   const grid = axes.reduce((acc, a) => acc.flatMap((w) => a.values.map((v) => ({ ...w, [a.key]: v }))), [{}])

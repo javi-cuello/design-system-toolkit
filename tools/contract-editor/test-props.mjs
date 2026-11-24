@@ -40,6 +40,12 @@ ok('a contract round-trips through the editor: order, defaults, axis and side al
   assert.notEqual(draft({ uid: 'p1' }).uid, 'p1', 'a draft always gets its own uid');
 });
 
+ok('a derived False/True axis keeps its Figma spelling through the editor', () => {
+  const c = { contract: 1, component: 'Button', props: { isDisabled: { type: 'boolean', default: false, axis: true, figmaValues: ['true', 'false'], figma: 'isDisabled' } } };
+  assert.deepEqual(toContract('Button', fromContract(c).drafts).props.isDisabled.figmaValues, ['true', 'false']);
+  assert.equal(toContract('Button', [draft({ name: 'On', type: 'boolean', default: false, axis: true, values: ['Off', 'On'] })]).props.on.figmaValues, undefined, 'only a False/True pair is a spelling');
+});
+
 ok('every problem names its prop and field; a sound contract has none', () => {
   const good = [draft({ name: 'Size', type: 'enum', values: ['lg', 'md'], default: 'md' })];
   assert.deepEqual(problems('Button', good), []);
