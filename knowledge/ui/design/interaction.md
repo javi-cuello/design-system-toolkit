@@ -459,7 +459,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 - [required] Content shown on hover or focus can be dismissed, hovered over, and persists (WCAG 1.4.13).
 
 **How:**
-- Row actions, at rest or on hover, are [tables: *Row actions*](../patterns/tables.md#row-actions); keyboard and touch have no hover.
+- [weak] Row actions, at rest or on hover, are [tables: *Row actions*](../patterns/tables.md#row-actions); keyboard and touch have no hover.
 - [moderate] A tooltip repeats or explains, and is never the only reason for a disabled state; what hover shows, focus shows. How tooltips behave, and how one names an icon button, is [tooltips](../components/tooltip.md#tooltips).
 - [required] Hover or focus content: Escape dismisses it without moving pointer or focus; the pointer can move onto it; it stays until trigger leaves, dismissal, or invalidity (WCAG 1.4.13).
 - [moderate] Menus open on click; truncated text has its full value reachable another way.
