@@ -115,7 +115,7 @@ A search input is the one-line field a person types a query into, to search a si
 
 **Properties**
 - [required] `Value`, `Placeholder` and `Label` are text properties (figma-standard rules 21 and 37); the clear and submit buttons' names are text properties or annotations, since they are icon-only (figma-standard rule 40).
-- [required] `Has value` shows `Value` or `Placeholder`, as on the text input, and drives the clear button: `True` shows it, `False` hides it, so there is no separate `Show clear button` that could show a clear button on an empty field (figma-standard rule 30).
+- [weak] `Has value` shows `Value` or `Placeholder`, as on the text input, and drives the clear button: `True` shows it, `False` hides it, so there is no separate `Show clear button` that could show a clear button on an empty field; figma-standard rule 30 has the property drive the layers it names.
 - [weak] `Show submit button` where the project has both submitted and instant searches; `Show label` where it shows a visible label in some places.
 
 **Variants and states**

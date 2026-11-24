@@ -105,7 +105,7 @@ An accordion stacks headed sections whose content the person opens and closes in
 - [required] `Accordion` holds `Accordion item` parts in an `Items slot`: an item has an Open variant, and per-item text in a nested instance is dropped when it switches (figma-standard rules 9, 21 and 38).
 - [required] Auto layout throughout; the item's layers are named for their role, `Header` holding `Title` and `Chevron`, then `Panel` (figma-standard rules 10 and 33).
 - [required] The `Chevron` sits at the header's trailing end by auto layout. A library that also offers Carbon's start alignment draws the side as a `Chevron position` variant, `Trailing` first, then `Leading`, never `Left` or `Right` (figma-standard rules 1 and 21).
-- [required] The panel's content is a slot, `Slot`, since a panel holds anything (figma-standard rules 21 and 38).
+- [required] The panel's content is a slot, `Slot`, since a panel holds anything (figma-standard rule 21).
 
 **Properties**
 - [required] `Title` is a text property, the `title` prop of Carbon (figma-standard rules 21 and 37).

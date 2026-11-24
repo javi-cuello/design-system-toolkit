@@ -60,7 +60,7 @@ A switch turns one setting on or off, and the change takes effect the moment it 
 - [required] The thumb's position comes from the track's auto-layout alignment (start for off, end for on), never a fixed x, so a right-to-left page mirrors which end means on, where the project mirrors (figma-standard rule 50).
 
 **Properties**
-- [required] `Switch field` has `Label` as a text property and `Show description` directly above a `Description` text property (figma-standard rules 5, 21 and 37);
+- [required] `Switch field` has `Label` as a text property and `Show description` directly above a `Description` text property (figma-standard rules 5, 21 and 37).
 - [required] The state text, where the library draws it, sits on `Switch field`, revealed by a `Show state text` boolean directly above two text properties, `On label` and `Off label`, in sentence case for the code's props (Primer's `buttonLabelOn` and `buttonLabelOff`, Carbon's `labelB` and `labelA`), so a project can say "Show" and "Hide" (figma-standard rules 5, 18, 21 and 37).
 
 **Variants and states**
