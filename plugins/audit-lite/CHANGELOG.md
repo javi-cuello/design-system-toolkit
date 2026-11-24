@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.11] - 2026-11-24
+### Fixed
+- **Carries the snapshot plugin's walk at 0.89.0**: a text with no style in a variable font records its face (0.88.1), and a text is recorded whole, no longer cut at 400 characters.
+
 ## [0.14.10] - 2026-11-24
 ### Fixed
 - **Carries the snapshot plugin's walk at 0.88.0 and the components audit's probes at 2.54.1**: each collection records its default mode; an alias into a collection with no mode of that name reads the target's default mode, not its first.
