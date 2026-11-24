@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1116,4 +1116,8 @@ ok('paddingSaid: a 0 padding the code writes is four sides of 0; one it leaves u
   JSON.stringify(paddingSaid(undefined, { top: '0', end: null, bottom: null, start: null })) === JSON.stringify({ top: 0, end: 0, bottom: 0, start: 0 })
   && paddingSaid(undefined, { top: null, end: null, bottom: null, start: null }) === null
   && paddingSaid({ top: 4, end: 0, bottom: 0, start: 0 }, { top: '4px', end: '0', bottom: '0', start: '0' }) === null);
+// a placed component's key from what the code places: each module's own word for the component it draws, by the name
+// the reading gives the instance; none where the module says no key
+ok('codeKeys: the key each placed module says it draws, by the instance\'s name; none where it says none',
+  JSON.stringify(codeKeys({ 'radio-radio': 'Radio/❖ Radio', 'icon-x': 'Icon' }, (f) => ({ 'radio-radio': { component: 'Radio/❖ Radio', key: 'k9' }, 'icon-x': { component: 'Icon' } })[f])) === JSON.stringify({ 'Radio/❖ Radio': 'k9' }));
 console.log(`${n}/${n} passed`);

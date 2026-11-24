@@ -703,8 +703,9 @@ export function toElement(c, folder, { naming, library = {}, settings = HOUSE } 
     `export function ${fnOf(c)}({ ${[...own.map((x) => (x.type === 'event' ? `${x.name}: _${x.name}` : litOf(x) == null ? x.name : `${x.name} = ${litOf(x)}`)), ...(t.control ? ['type = "button"'] : []), ...(guard.length ? ['onClick'] : []), '...rest'].join(', ')} } = {}, host = {}) {`,
     `  return ${hOf(host, 1).trimStart()};`,
     `}`, '',
-    // which design component it draws, by the design's own name: what a reading of the code names it (from-code codeFigma)
-    `export const figma = ${str({ component: c.component })};`, ''].join('\n');
+    // which design component it draws, by the design's own name and key: what a reading of the code names it, and an
+    // instance of it (from-code codeFigma, codeKeys)
+    `export const figma = ${str({ component: c.component, ...(c.figma && c.figma.key && { key: c.figma.key }) })};`, ''].join('\n');
 }
 
 /* The one helper every component's markup is built with: an element, its attributes and its children, nothing parsed

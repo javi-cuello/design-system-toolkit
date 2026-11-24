@@ -76,6 +76,7 @@ const holder = { component: 'Row', props: {}, anatomy: { root: { kind: 'containe
 // the web component's module says which design component it draws, by the design's own name, so a reading names it from
 // the code (from-code's component) and never from the design it is compared with
 ok('a web component\'s module exports the design component it draws, by its exact name', /^export const figma = \{"component":"Pill"\};$/m.test(toElement(pill, 'pill', { naming: ELEMENT, library: { Pill: pill } })));
+ok('the module says the design component\'s key too, where the contract holds one', /^export const figma = \{"component":"Pill","key":"k1"\};$/m.test(toElement({ ...pill, figma: { key: 'k1' } }, 'pill', { naming: ELEMENT, library: { Pill: pill } })));
 ok('a placed component with a swap per size is given the one its size draws (xs: Icon (16))', /renderPill\(\{ icon: "x"/.test(toElement(holder, 'row', { naming: ELEMENT, library: { Pill: pill, Row: holder } })));
 // two swaps over two glyph layers (Material 3's nav item: Icon and Icon (selected), each linked to icon and icon_2), the
 // instance stating only the second layer's glyph: it is given the swap whose value that glyph is

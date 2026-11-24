@@ -909,6 +909,15 @@ export function paddingSaid(read, authored) {
   return Object.values(authored || {}).some((v) => v != null && String(v).trim() !== '') ? { top: 0, end: 0, bottom: 0, start: 0 } : null;
 }
 
+/* Each placed component's key from what the code places (`others`: the code's name for it, the module's folder, to the
+   name the reading gives the instance), as that module says it draws it (`figmaOf`, codeFigma); none where it says no
+   key. Tested by test-from-code.mjs. */
+export function codeKeys(others, figmaOf) {
+  const out = {};
+  for (const [code, fig] of Object.entries(others || {})) { const f = figmaOf && figmaOf(code); if (f && f.key) out[fig] = fig in out && out[fig] !== f.key ? null : f.key; }
+  return Object.fromEntries(Object.entries(out).filter(([, k]) => k));
+}
+
 /* What a generated module says it draws (to-markup's `export const figma = {…}`): the design component's name, read from
    the code's text, or null where it says nothing. Tested by test-from-code.mjs. */
 export function codeFigma(js) {
@@ -1838,6 +1847,7 @@ async function main() {
     const k = (c && c.figma && c.figma.key) || null;
     keyOfPlaced[fig] = fig in keyOfPlaced && keyOfPlaced[fig] !== k ? null : k;
   }
+  const keyFromCode = codeKeys(others, L.figmaOf);
   // how the markup names a part and an icon: the library's own (code.partClass, code.iconClass), else its framework's (audit-defaults frameworks)
   const partClass = (L.lib.code && L.lib.code.partClass) || L.lib.frameworkProfile?.partClass || null;
   const partModifiers = L.lib.frameworkProfile?.partModifiers || null;
@@ -2668,6 +2678,8 @@ async function main() {
       // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
       // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
       // one equal to its component's own is folded below
+      // (the key the placed module says it draws first, the code's own; else the library contract's, taken from the design)
+      for (const [hid, h] of Object.entries(anatomy)) if (h.kind === 'instance' && !h.key && keyFromCode[h.component]) h.key = keyFromCode[h.component];
       for (const [hid, h] of Object.entries(anatomy)) if (h.kind === 'instance' && !h.key && keyOfPlaced[h.component]) { h.key = keyOfPlaced[h.component]; A.add('placed-key', `anatomy.${hid}.key`); }
       for (const [hid, h] of Object.entries(anatomy)) {
         const hm = h.kind === 'instance' && mainOf(h.component, h.key);
