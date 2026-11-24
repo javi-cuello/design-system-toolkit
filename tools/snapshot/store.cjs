@@ -1053,7 +1053,7 @@ function recordOf(c, known, deriveWith = {}, platform = null) {
   catch (e) { return { spec, contract: null, error: e.message }; }
 }
 
-function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = [], files = [], deriveWith = {} } = {}) {
+function writeLibrary(p, P, { now = new Date(), platform = null, version, atOrAfter, ids = [], files = [], deriveWith = {} } = {}) {
   const problems = payload.library(p);
   if (problems.length) throw new Error(`malformed library payload:\n    ${problems.slice(0, 8).join('\n    ')}`);
   /*
@@ -1189,10 +1189,13 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   const hash = hashOf(JSON.stringify({ t: content, c: p.components, i: p.icons.map((x) => [x.name, x.size, attrsOrdered(x.svg)]), is: p.iconSets, ip: p.iconPage || null, ig: p.iconGroups || null, id: p.iconDescriptions || null }));
   // nothing moved, so neither does the day each file was taken (toolkit-standard §D 23)
   const was = tokensBefore && tokensBefore._meta && tokensBefore._meta.hash === hash && tokensBefore._meta.sources;
-  if (was) for (const [k, x] of Object.entries(m.sources || {})) { if (was[k] && was[k].at) x.at = was[k].at; if (was[k] && was[k].seq) x.seq = was[k].seq; }
+  if (was) for (const [k, x] of Object.entries(m.sources || {})) { if (was[k] && was[k].at) x.at = was[k].at; if (was[k] && was[k].seq) x.seq = was[k].seq; if (was[k] && was[k].atOrAfter) x.atOrAfter = was[k].atOrAfter; }
   // Each file's own release beside its entry: a project routes several library
   // files, and the top-level stamp is only the last writer's (deliver.cjs pinned).
   if (m.sources && m.sources[fileRef]) m.sources[fileRef].version = version || null;
+  // The file's newest version as this snapshot arrived (deliver.cjs): the snapshot is at or after it, so a reader of
+  // Figma's REST API reads the file there. Kept while nothing moved, as `at` is; absent from older snapshots.
+  if (m.sources && m.sources[fileRef] && atOrAfter && !m.sources[fileRef].atOrAfter) m.sources[fileRef].atOrAfter = { id: atOrAfter.id, at: atOrAfter.at };
   tokens._meta = {
     file: m.file, fileKey: m.fileKey, fileId: m.fileId,
     // nothing moved, so neither does the stamp

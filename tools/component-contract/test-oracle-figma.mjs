@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
+import { pinOf, readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
 
 const require = createRequire(import.meta.url);
 const { compact, resolve } = require('../snapshot/spec.cjs');
@@ -214,7 +214,44 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const c = contract(); c.anatomy.icon = { kind: 'instance', parent: 'root', order: 1, component: 'Icon', key: 'kset-icon', width: 16, height: 16 };
     const r = compareContract('chip', set, c, ctx);
     assert.ok(r.rows.some((x) => x.kind === 'contract:not stated' && x.path === 'icon.opacity'), 'the instance\'s own opacity, unsaid');
-    assert.ok(r.rows.some((x) => x.kind === 'contract:part' && /Glyph/.test(x.path)), 'a layer inside a walked instance that no part is');
+    assert.ok(r.rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'a layer inside a walked instance that no part is, its main without a contract');
+  }
+  // inside an instance whose main has a contract: the main's expansion, the host's overrides over it, held to Figma
+  {
+    const inst = (v) => ({ id: v.id + 'i', name: 'Icon', type: 'INSTANCE', componentId: 'C:9', size: { x: 16, y: 16 }, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', opacity: 0.5,
+      componentProperties: { Size: { type: 'VARIANT', value: '16' }, 'Tint#7:0': { type: 'TEXT', value: 'Go' }, 'Glyph#3:4': { type: 'INSTANCE_SWAP', value: 'C:8' } },
+      overrides: [{ id: 'x', overriddenFields: ['opacity'] }], children: [
+        { id: v.id + 'g', name: 'Glyph', type: 'VECTOR', size: { x: 12, y: 12 }, relativeTransform: T(2, 2) },
+        { id: v.id + 'b', name: 'Badge', type: 'INSTANCE', componentId: 'C:8', size: { x: 4, y: 4 }, relativeTransform: T(0, 0), componentPropertyReferences: { mainComponent: 'Glyph#3:4' } },
+        { id: v.id + 'n', name: 'Note', type: 'TEXT', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), characters: 'Go', componentPropertyReferences: { characters: 'Tint#7:0' }, styles: { text: 'S:1' }, style: { fontSize: 14, textAlignHorizontal: 'LEFT', textAutoResize: 'NONE' } },
+      ] });
+    const set = structuredClone(setNode); for (const v of set.children) v.children.push(inst(v));
+    const host = contract(); host.anatomy.icon = { kind: 'instance', parent: 'root', order: 1, component: 'Icon', key: 'kset-icon', with: { Size: '16', Tint: 'Go', Glyph: 'Star' }, width: 16, height: 16, opacity: 0.5 };
+    const icon = () => ({ contract: 1, component: 'Icon', figma: { name: 'Icon', key: 'kset-icon' }, props: { size: { type: 'enum', values: ['s16', 's24'], figmaValues: ['16', '24'], default: 's24', figma: 'Size' }, tint: { type: 'string', default: 'x', figma: 'Tint' }, glyph: { type: 'instance', figma: 'Glyph', swaps: ['badge'] } },
+      anatomy: { root: { kind: 'container', width: 24, height: 24 },
+        glyph: { kind: 'graphic', parent: 'root', order: 0, width: 20, height: 20, absolute: { x: 2, y: 2 } },
+        badge: { kind: 'instance', parent: 'root', order: 1, component: 'Dot', key: 'k-dot', width: 4, height: 4, absolute: { x: 0, y: 0 } },
+        note: { kind: 'text', parent: 'root', order: 2, width: 10, height: 10, absolute: { x: 0, y: 0 }, content: '{tint}', typography: 'Body/md', textAlign: 'start', autoResize: 'none' } },
+      variants: [{ when: { size: 's16' }, set: { 'root.width': 16, 'root.height': 16, 'glyph.width': 12, 'glyph.height': 12 } }] });
+    const mains = (key) => (key === 'kset-icon' ? icon() : null);
+    const r = compareContract('chip', set, host, { ...ctx, mains });
+    assert.deepEqual(r.rows, [], 'the main\'s own contract, at the instance\'s props, says what Figma draws');
+    const plain = compareContract('chip', set, host, ctx);
+    assert.ok(r.checked > plain.checked, 'the insides are checked, not skipped');
+    // a main that says otherwise is a real row, never "not stated"
+    const wrong = icon(); wrong.variants[0].set['glyph.width'] = 14;
+    const r2 = compareContract('chip', set, host, { ...ctx, mains: () => wrong });
+    assert.ok(r2.rows.some((x) => x.kind === 'contract:width' && /Glyph/.test(x.path)), 'the expansion differs from Figma: a row of the field');
+    assert.ok(!r2.rows.some((x) => x.kind === 'contract:not stated'));
+    // the host's override, unsaid, is a difference once the main says the field
+    const h2 = contract(); h2.anatomy.icon = { ...host.anatomy.icon }; delete h2.anatomy.icon.opacity;
+    assert.ok(compareContract('chip', set, h2, { ...ctx, mains }).rows.some((x) => x.kind === 'contract:opacity' && x.path === 'icon'));
+    // a layer Figma draws inside it that neither the host nor the main says is a part row
+    const set2 = structuredClone(set); for (const v of set2.children) v.children.find((c) => c.type === 'INSTANCE').children.push({ id: v.id + 'x', name: 'Extra', type: 'FRAME', size: { x: 1, y: 1 }, relativeTransform: T(0, 0) });
+    assert.ok(compareContract('chip', set2, host, { ...ctx, mains }).rows.some((x) => x.kind === 'contract:part' && /Extra/.test(x.path)));
+    // no contract for the main: the fields stay "not stated"
+    const r3 = compareContract('chip', set, h2, { ...ctx, mains: () => null });
+    assert.ok(r3.rows.some((x) => x.kind === 'contract:not stated' && x.path === 'icon.opacity'));
   }
   // a layer stretched with neither width nor end said has its width held to Figma's box
   {
@@ -230,12 +267,30 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     { component: 'other', spec: R(10, [{ kind: 'spec:gap', against: 'spec', component: 'other' }]), contract: R(5) },
     { component: 'empty', spec: R(0, [], { 'textStyle of mixed text': 2 }), contract: R(0) },
     { component: 'gone', missing: true },
+    { component: 'unsaid', spec: R(4), contract: R(3, [{ kind: 'contract:not stated', against: 'contract', component: 'unsaid' }, { kind: 'contract:not stated', against: 'contract', component: 'unsaid' }]) },
   ]);
-  assert.deepEqual(rep.spec, { matched: 1, differing: 1, notChecked: 2, checked: 20, skipped: 2 });
-  assert.deepEqual(rep.contract, { matched: 2, differing: 0, notChecked: 2, checked: 10, skipped: 0 });
-  assert.deepEqual([rep.components, rep.unread, rep.both], [4, 1, 1]);
+  assert.deepEqual(rep.spec, { matched: 2, differing: 1, notStated: 0, notChecked: 2, checked: 24, skipped: 2, differences: 1, unstated: 0 });
+  // "not stated" is its own column: a component with only those is neither a match nor a difference
+  assert.deepEqual(rep.contract, { matched: 2, differing: 0, notStated: 1, notChecked: 2, checked: 13, skipped: 0, differences: 0, unstated: 2 });
+  assert.deepEqual([rep.components, rep.unread, rep.both], [5, 1, 1]);
   assert.equal(rep.top[0].kind, 'spec:gap');
+  assert.ok(!rep.top.some((k) => k.kind === 'contract:not stated'), 'the top kinds are differences only');
   assert.ok(resolve(compact(storedFull())).variants.length === 2);
+}
+
+/* ---- two readings of REST's that faked differences, each on a real layer's fields as the cache holds them */
+{
+  // REST leaves individualStrokeWeights out when the four sides are equal; their bindings are still per side
+  const ring = { type: 'INSTANCE', name: 'Focus ring', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), strokes: [{ blendMode: 'NORMAL', type: 'SOLID', color: { r: 0.2745, g: 0.5333, b: 0.9255, a: 1 }, boundVariables: { color: { type: 'VARIABLE_ALIAS', id: 'VariableID:c' } } }], strokeWeight: 2, strokeAlign: 'OUTSIDE',
+    boundVariables: { individualStrokeWeights: { BORDER_TOP_WEIGHT: { type: 'VARIABLE_ALIAS', id: 'VariableID:w' }, BORDER_BOTTOM_WEIGHT: { type: 'VARIABLE_ALIAS', id: 'VariableID:w' }, BORDER_LEFT_WEIGHT: { type: 'VARIABLE_ALIAS', id: 'VariableID:w' }, BORDER_RIGHT_WEIGHT: { type: 'VARIABLE_ALIAS', id: 'VariableID:w' } }, strokes: [{ type: 'VARIABLE_ALIAS', id: 'VariableID:c' }] } };
+  assert.deepEqual(restPart(ring, null, ctx, {}).border.width, [BOUND, BOUND, BOUND, BOUND], 'four sides bound, the weights unsaid because equal');
+  // the plugin API's `textStyleId` override is REST's `inheritTextStyleId,text`: an entry still, so the counts agree
+  const inst = (overrides) => ({ id: 'i', name: 'Item', type: 'INSTANCE', componentId: 'C:9', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), overrides, children: [] });
+  const host = { id: 'h', name: 'Host', type: 'COMPONENT', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), children: [inst([{ id: 'i', overriddenFields: ['height', 'width'] }, { id: 'I;t', overriddenFields: ['inheritTextStyleId', 'text'] }])] };
+  const stored = (ov) => ({ name: 'Host', id: 'h', key: 'kh', props: {}, variants: [{ name: 'Host', type: 'COMPONENT', w: 10, h: 10, children: [{ ...restWalk(host.children[0], ctx, 1, host), overrides: ov }] }] });
+  const ovRows = (ov) => compareSpec('host', host, stored(ov), ctx).rows.filter((x) => x.kind === 'spec:overrides');
+  assert.deepEqual(ovRows(['height,width', 'textStyleId']), [], 'one text-style override each side');
+  assert.equal(ovRows(['height,width']).length, 1, 'one fewer is still a row');
 }
 
 /* ---- one real pair: a small component as Figma's REST and the snapshot gave it (names of its library scrubbed) */
@@ -292,6 +347,14 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
   // each result says which version it read and that it is unpinned
   assert.match(readAt({ id: 'v2', at: '2026-11-24T09:00:00Z', pinned: false }, '2026-11-24T08:30:00Z'), /read at v2, 2026-11-24T09:00:00Z.*unpinned: may include later edits/);
   assert.match(readAt(null, '2026-11-24T08:30:00Z'), /read at latest.*unpinned: may include later edits/);
+  // pinned: the version the router recorded when the snapshot arrived ("at or after" it), read and said so
+  const pin = pinOf({ sources: { K: { at: '2026-11-24', atOrAfter: { id: 'v7', at: '2026-11-24T08:20:00Z' } } } }, 'K');
+  assert.deepEqual(pin, { id: 'v7', at: '2026-11-24T08:20:00Z', pinned: true });
+  assert.equal(pinOf({ sources: { K: { at: '2026-11-24' } } }, 'K'), null, 'an older snapshot records none: unpinned');
+  assert.equal(pinOf(undefined, 'K'), null);
+  const said = readAt(pin, '2026-11-24T08:30:00Z');
+  assert.match(said, /read at v7, 2026-11-24T08:20:00Z; pinned/);
+  assert.ok(!/unpinned/.test(said));
   // fetchSets: batched, cached by file and version, read back without a request
   const cache = fs.mkdtempSync(path.join(os.tmpdir(), 'oracle-figma-'));
   const asked = [];

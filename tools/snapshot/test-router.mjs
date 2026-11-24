@@ -593,6 +593,9 @@ test('each library file a project routes is pinned to its own publish and checke
     const sources = JSON.parse(fs.readFileSync(P.tokens, 'utf8'))._meta.sources;
     assert.equal(sources.KEYC.version.at, published.KEYC, 'the components file carries its own publish');
     assert.equal(sources.KEYT.version.at, published.KEYT);
+    // and the newest version id when the snapshot arrived: the snapshot is at or after it (oracle-figma reads it pinned)
+    assert.deepEqual(sources.KEYC.atOrAfter, { id: 'KEYC-0', at: '2026-10-01' });
+    assert.deepEqual(sources.KEYT.atOrAfter, { id: 'KEYT-0', at: '2026-10-01' });
     assert.deepEqual((await pinned(project)).stale, [], 'both files at their release');
     published.KEYC = '2026-10-29T00:00:00Z';
     assert.deepEqual((await pinned(project)).stale.map((l) => l.split(':')[0]), ['library "Components"'], 'only the file that moved is stale');

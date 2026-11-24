@@ -17,10 +17,12 @@
  * passing; a bound value whose token name is not checkable is still held to being bound (`@bound`).
  *
  * Rows: { component, variant, path, figma, ours, kind } where kind is `<against>:<field>` (`spec:fills`,
- * `contract:layout.padding`, `contract:part`, `contract:not stated` for a field Figma has inside an instance that the
- * contract leaves unsaid). Every field compared is counted, and every field skipped (REST silent, mixed text, a swap
- * REST does not name) is counted apart, never as passing. A library's report, per side: the components that match on
- * every field checked, that differ, and that had nothing checked; and the kinds that differ most.
+ * `contract:layout.padding`, `contract:part`). A placed instance is held to its main's own contract, expanded at the
+ * instance's props, with the host's word over it; where a main has no contract, a field Figma has there that the host
+ * leaves unsaid is `contract:not stated`, counted apart, never a difference. Every field compared is counted, and every
+ * field skipped (REST silent, mixed text, a swap REST does not name) is counted apart, never as passing. A library's
+ * report, per side: the components that match on every field checked, that differ, that differ only by `not stated`,
+ * and that had nothing checked; the differences and the `not stated` rows; and the kinds that differ most.
  *
  *   node tools/component-contract/oracle-figma.mjs --project <label>[,<label>…] [--cache <dir>] [--out <file>]
  *        [--version snapshot|latest] [--interval <s>] [--offline] [--top <n>] [components…]
@@ -29,8 +31,9 @@
  * sent to api.figma.com only, never printed or written. Requests go one at a time, --interval seconds apart (7 unless
  * said), a 429 waits its Retry-After; four failures in a row stop the run. Responses are cached under --cache
  * (<project home>/round-trip/oracle-figma/cache unless said), keyed by file and version, geometry stripped. The file
- * version read is the first saved at or after the project's last snapshot of that file (changes.json); a snapshot
- * stores no version id, so every result says `read at <version, its date>; unpinned: may include later edits`.
+ * version read is the one the router recorded as the snapshot arrived (tokens.json sources[file].atOrAfter,
+ * deliver.cjs), said `pinned`; a snapshot older than that record is read at the first version saved at or after it
+ * (changes.json), said `unpinned: may include later edits`.
  * --version latest reads the file as it is. --offline reads the cache alone, and the version its fetch recorded.
  * Exits 2 on a usage error, 1 when a fetch fails, else 0.
  */
@@ -365,8 +368,9 @@ export function specOurs(s, figmaNode) {
   if (Array.isArray(o.overrides)) o.overrides = overrideFields(o.overrides);
   return o;
 }
-// an override's fields, sorted, a style id's left out (REST lists a fill style's override and not always a stroke's)
-const overrideFields = (list) => list.map((x) => x.split(',').filter((f) => !/StyleId$/.test(f)).sort().join(',')).filter(Boolean).sort();
+// an override's fields, sorted, a style id's left out (REST lists a fill style's override and not always a stroke's); an
+// entry left empty is kept: the plugin API's `textStyleId` is REST's `inheritTextStyleId,text`, one layer overridden either way
+const overrideFields = (list) => list.map((x) => x.split(',').filter((f) => !/StyleId$/.test(f)).sort().join(',')).sort();
 function restOurs(o) {
   const out = { ...o };
   delete out.children;
@@ -531,7 +535,8 @@ export function restPart(n, parent, ctx, propIds, frame = parent) {
   if (strokes.length || sw) {
     const s = n.individualStrokeWeights;
     const side = (k, x) => (bv[k] || bv.strokeWeight ? BOUND : x);
-    const widths = s ? [side('strokeTopWeight', s.top), side('strokeRightWeight', s.right), side('strokeBottomWeight', s.bottom), side('strokeLeftWeight', s.left)] : [side('', n.strokeWeight), side('', n.strokeWeight), side('', n.strokeWeight), side('', n.strokeWeight)];
+    // each side's binding said whether or not REST gives the sides' weights (it leaves them out when all four are equal)
+    const widths = [side('strokeTopWeight', s ? s.top : n.strokeWeight), side('strokeRightWeight', s ? s.right : n.strokeWeight), side('strokeBottomWeight', s ? s.bottom : n.strokeWeight), side('strokeLeftWeight', s ? s.left : n.strokeWeight)];
     e.border = { color: one(strokes), width: widths };
     if (n.strokeAlign === 'CENTER') e.border.align = 'center'; else if (n.strokeAlign === 'OUTSIDE') e.border.align = 'outside';
     if (Array.isArray(n.strokeDashes) && n.strokeDashes.length) e.border.dash = n.strokeDashes.map(r2);
@@ -731,6 +736,29 @@ export function compareContract(component, setNode, contract, ctx) {
     } else t.skip('invalid: over 4,096 combinations');
   } else if (isSet) t.skip('invalid: the contract lists none');
   // part by part, each variant Figma draws
+  // a placed instance's main, expanded at the instance's props by its own contract (ctx.mains: its key → the contract)
+  const expansions = new Map();
+  const expansion = (inst) => {
+    if (expansions.has(inst)) return expansions.get(inst);
+    const m = mainOf(ctx, inst), main = m && ctx.mains ? ctx.mains(m.key, m.owner) : null;
+    let x = null;
+    if (main) {
+      const ip = Object.fromEntries(Object.entries(main.props || {}).map(([id, p]) => [p.figma, id]));
+      const when = whenOfProps(main, ip, instanceProps(ctx, inst));
+      const mflat = expand(main, when);
+      const { found } = addressParts(mflat, inst, ip);
+      // a text a string prop fills says the instance's value for it; a part an instance prop swaps, the component it names
+      const part = (id) => {
+        const o = partOurs(mflat[id]); const r = /^\{(\w+)\}$/.exec(o.content || '');
+        if (r && typeof when[r[1]] === 'string') o.content = when[r[1]];
+        for (const [pid, p] of Object.entries(main.props || {})) if (p.type === 'instance' && (p.swaps || []).includes(id) && typeof when[pid] === 'string') { o.component = when[pid]; delete o.key; o.$swapped = true; }
+        return o;
+      };
+      x = { byNode: new Map([...found].map(([id, n]) => [n, id])), part };
+    }
+    expansions.set(inst, x);
+    return x;
+  };
   for (const v of variants) {
     const flat = expand(contract, whenOf(v.name));
     const { found, ambiguous, taken } = addressParts(flat, v, idOfProp);
@@ -740,63 +768,107 @@ export function compareContract(component, setNode, contract, ctx) {
     const index = (n) => { for (const c of n.children || []) { parentOf.set(c, n); index(c); } };
     index(v);
     const inInstance = (n) => { for (let q = parentOf.get(n); q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') return true; return false; };
+    // what the mains' own contracts say of a layer: each instance around it (itself first) expanded at its props, the
+    // innermost said first and each outer main over it (null where none says it); `whole` where every one of those
+    // instances has a contract, so a field none says is a difference, else it is `not stated`
+    const mainSays = (n) => {
+      const said = [];
+      let whole = true;
+      for (let q = n; q && q !== v; q = parentOf.get(q)) {
+        if (q.type !== 'INSTANCE') continue;
+        const x = expansion(q);
+        if (!x) { whole = false; continue; }
+        if (x.byNode.has(n)) said.push(x.part(x.byNode.get(n)));
+      }
+      return { said: said.length ? Object.assign({}, ...said) : null, whole };
+    };
+    const unstated = (vname, id, a, b) => { for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; } };
+    const frameOf = (n) => { let f = parentOf.get(n) || null; while (f && GROUPS.has(f.type)) f = parentOf.get(f); return f; };
     for (const [id, part] of Object.entries(flat)) {
       if (ambiguous.has(id)) { t.differ(v.name, id, 'ambiguous', ambiguous.get(id), 'one part'); continue; }
       const n = found.get(id);
       if (!n) { t.differ(v.name, id, 'part', 'missing', 'present'); continue; }
       t.check(v.name, id, 'part', true, true);
       const parent = parentOf.get(n) || null;
-      let frame = parent;
-      while (frame && GROUPS.has(frame.type)) frame = parentOf.get(frame);
-      const a = restPart(n, n === v ? null : parent, ctx, idOfProp, n === v ? null : frame), b = partOurs(part);
-      // an instance, and a layer inside one, says what differs from its component (derive's ownStyling); a field Figma
-      // has there that the contract leaves unsaid is a row of its own, `not stated`
+      const a = restPart(n, n === v ? null : parent, ctx, idOfProp, n === v ? null : frameOf(n));
+      let b = partOurs(part);
+      // an instance, and a layer inside one, says what differs from its component (derive's ownStyling): what it leaves
+      // unsaid is its main's, read from the main's own contract expanded at the instance's props, the host's word over
+      // it; with no contract for the main, a field Figma has there is a row of its own, `not stated`, never a difference
       if (n.type === 'INSTANCE' || inInstance(n)) {
-        for (const k of Object.keys(a)) if (!(k in b) && !['kind', 'component', 'key', 'with', 'swappedBy'].includes(k)) { t.differ(v.name, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; }
+        const { said, whole } = mainSays(n);
+        if (said) { b = { ...said, ...b }; for (const k of OWN) if (k in said && !(k in part)) delete b[k]; }
+        if (!whole) unstated(v.name, id, a, b);
       }
-      // a layer stretched on an axis is sized by its place where the contract says its end (or bottom); with neither
-      // that nor a width, its width is held to Figma's box
-      const abs = b.absolute || {};
-      if (a.constraints && a.constraints.horizontal === 'stretch' && !('width' in b)) { if ('end' in abs) { delete a.width; t.skip('width: said by the stretched layer\'s end'); } else a.width = sizeOf(n).w; }
-      if (a.constraints && a.constraints.vertical === 'stretch' && !('height' in b)) { if ('bottom' in abs) { delete a.height; t.skip('height: said by the stretched layer\'s bottom'); } else a.height = sizeOf(n).h; }
-      for (const f of part.whileEmpty || []) if (!(f in a)) { delete b[f]; t.skip(`${f}: an empty frame's minimum (whileEmpty)`); }
-      if (n.type === 'INSTANCE' && !('smoothing' in a) && 'smoothing' in b) { delete b.smoothing; t.skip('smoothing: REST silent'); }
-      if (n.type === 'ELLIPSE' && !('radius' in a) && 'radius' in b) { delete b.radius; t.skip('radius: REST silent'); }
-      if (a.typography === 'mixed') { delete a.typography; delete b.typography; t.skip('textStyle of mixed text'); }
-      // a styled text's letter spacing is its style's, said by the contract only where the layer sets its own
-      if (typeof a.typography === 'string' && 'letterSpacing' in a && !('letterSpacing' in b)) { delete a.letterSpacing; t.skip('letterSpacing: a styled text\'s, unsaid'); }
-      for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
-        if (k === 'absolute') {
-          // x and y wherever either side places the layer, end and bottom where the contract states them
-          if (!b.absolute) { t.differ(v.name, id, 'absolute', a.absolute, undefined); continue; }
-          for (const f of ['x', 'y', 'end', 'bottom']) {
-            if ((f === 'end' || f === 'bottom') && !(f in b.absolute)) { if (a.absolute && f in a.absolute) t.skip(`absolute.${f}: unsaid`); continue; }
-            t.check(v.name, id, `absolute.${f}`, a.absolute && a.absolute[f], b.absolute[f], (x, y) => same(x, y, 0.51));
-          }
-          continue;
-        }
-        if (k === 'border' && a.border && b.border) {
-          for (const f of new Set([...Object.keys(a.border), ...Object.keys(b.border)])) {
-            if (f === 'inLayout' && !('inLayout' in a.border)) { t.skip('border.inLayout: REST silent'); continue; }
-            t.check(v.name, id, `border.${f}`, a.border[f], b.border[f]);
-          }
-          continue;
-        }
-        if (k === 'layout' && a.layout && b.layout) {
-          for (const f of new Set([...Object.keys(a.layout), ...Object.keys(b.layout)])) t.check(v.name, id, `layout.${f}`, a.layout[f], b.layout[f]);
-          continue;
-        }
-        if (k === 'component' && typeof a[k] === 'string' && typeof b[k] === 'string') { t.check(v.name, id, k, a[k], b[k], (x, y) => y === x || y.endsWith('/' + x) || y.endsWith(' / ' + x)); continue; }
-        // a swap the property makes everywhere is the prop's `swaps`; `swappedBy` says one that holds in some variants
-        if (k === 'swappedBy' && !b[k]) { const p = cprops[a[k]]; t.check(v.name, id, k, a[k], p && (p.swaps || []).includes(id) ? a[k] : undefined); continue; }
-        if (k === 'with') { const n2 = dropUnnamed(a[k], b[k]); if (n2) t.skip('swap REST does not name', n2); }
-        t.check(v.name, id, k, a[k], b[k]);
-      }
+      fields(v.name, id, n, a, b, part);
     }
-    // a layer Figma draws that no part is
-    for (const { path: p } of untaken(v, taken)) t.differ(v.name, p, 'part', 'present', 'missing');
+    // a layer Figma draws that no part is: inside an instance whose main's contract says it, held to that; else a row
+    for (const { path: p, node } of untaken(v, taken)) {
+      const { said, whole } = inInstance(node) ? mainSays(node) : { said: null, whole: true };
+      if (!said) { if (whole) t.differ(v.name, p, 'part', 'present', 'missing'); else t.differ(v.name, p, 'not stated', 'present', undefined); continue; }
+      t.check(v.name, p, 'part', true, true);
+      const a = restPart(node, parentOf.get(node) || null, ctx, idOfProp, frameOf(node));
+      if (!whole) unstated(v.name, p, a, said);
+      fields(v.name, p, node, a, said, {});
+    }
   }
   return result(t);
+
+  function fields(vname, id, n, a, b, part) {
+    // a part an instance prop swaps is named by the prop's value; the key of what it swaps to no contract holds
+    if (b.$swapped) { b = { ...b }; delete b.$swapped; if ('key' in a && !('key' in b)) { delete a.key; t.skip('key: a swap the contract names by its component'); } }
+    // a layer stretched on an axis is sized by its place where the contract says its end (or bottom); with neither
+    // that nor a width, its width is held to Figma's box
+    const abs = b.absolute || {};
+    if (a.constraints && a.constraints.horizontal === 'stretch' && !('width' in b)) { if ('end' in abs) { delete a.width; t.skip('width: said by the stretched layer\'s end'); } else a.width = sizeOf(n).w; }
+    if (a.constraints && a.constraints.vertical === 'stretch' && !('height' in b)) { if ('bottom' in abs) { delete a.height; t.skip('height: said by the stretched layer\'s bottom'); } else a.height = sizeOf(n).h; }
+    for (const f of part.whileEmpty || []) if (!(f in a)) { delete b[f]; t.skip(`${f}: an empty frame's minimum (whileEmpty)`); }
+    if (n.type === 'INSTANCE' && !('smoothing' in a) && 'smoothing' in b) { delete b.smoothing; t.skip('smoothing: REST silent'); }
+    if (n.type === 'ELLIPSE' && !('radius' in a) && 'radius' in b) { delete b.radius; t.skip('radius: REST silent'); }
+    if (a.typography === 'mixed') { delete a.typography; delete b.typography; t.skip('textStyle of mixed text'); }
+    // a styled text's letter spacing is its style's, said by the contract only where the layer sets its own
+    if (typeof a.typography === 'string' && 'letterSpacing' in a && !('letterSpacing' in b)) { delete a.letterSpacing; t.skip('letterSpacing: a styled text\'s, unsaid'); }
+    for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+      if (k === 'absolute') {
+        // x and y wherever either side places the layer, end and bottom where the contract states them
+        if (!b.absolute) { t.differ(vname, id, 'absolute', a.absolute, undefined); continue; }
+        for (const f of ['x', 'y', 'end', 'bottom']) {
+          if ((f === 'end' || f === 'bottom') && !(f in b.absolute)) { if (a.absolute && f in a.absolute) t.skip(`absolute.${f}: unsaid`); continue; }
+          t.check(vname, id, `absolute.${f}`, a.absolute && a.absolute[f], b.absolute[f], (x, y) => same(x, y, 0.51));
+        }
+        continue;
+      }
+      if (k === 'border' && a.border && b.border) {
+        for (const f of new Set([...Object.keys(a.border), ...Object.keys(b.border)])) {
+          if (f === 'inLayout' && !('inLayout' in a.border)) { t.skip('border.inLayout: REST silent'); continue; }
+          t.check(vname, id, `border.${f}`, a.border[f], b.border[f]);
+        }
+        continue;
+      }
+      if (k === 'layout' && a.layout && b.layout) {
+        for (const f of new Set([...Object.keys(a.layout), ...Object.keys(b.layout)])) t.check(vname, id, `layout.${f}`, a.layout[f], b.layout[f]);
+        continue;
+      }
+      if (k === 'component' && typeof a[k] === 'string' && typeof b[k] === 'string') { t.check(vname, id, k, a[k], b[k], (x, y) => y === x || y.endsWith('/' + x) || y.endsWith(' / ' + x)); continue; }
+      // a swap the property makes everywhere is the prop's `swaps`; `swappedBy` says one that holds in some variants
+      if (k === 'swappedBy' && !b[k]) { const p = cprops[a[k]]; t.check(vname, id, k, a[k], p && (p.swaps || []).includes(id) ? a[k] : undefined); continue; }
+      if (k === 'with') { const n2 = dropUnnamed(a[k], b[k]); if (n2) t.skip('swap REST does not name', n2); }
+      t.check(vname, id, k, a[k], b[k]);
+    }
+    }
+}
+// the fields a placed instance says of itself, never its main's
+const OWN = ['kind', 'component', 'key', 'with', 'swappedBy'];
+// an instance's props (Figma's names and values) in its main's contract's spelling
+function whenOfProps(main, ip, given) {
+  const when = {};
+  for (const [fp, fv] of Object.entries(given)) {
+    const id = ip[fp], p = id && main.props[id];
+    if (!p || fv === UNNAMED) continue;
+    if (p.type === 'boolean') when[id] = typeof fv === 'boolean' ? fv : /^true$/i.test(fv);
+    else if (p.type === 'enum') { const i = (p.figmaValues || []).indexOf(fv); when[id] = p.values && i >= 0 ? p.values[i] : fv; } else when[id] = fv;
+  }
+  return when;
 }
 // a swap REST does not name is held by neither side; how many were dropped
 function dropUnnamed(a, b) { let n = 0; if (a && typeof a === 'object') for (const [k, v] of Object.entries(a)) if (v === UNNAMED) { n++; delete a[k]; if (b && typeof b === 'object') delete b[k]; } return n; }
@@ -846,7 +918,13 @@ export async function versionAt(get, fileKey, at) {
   return after && { id: after.id, at: after.created_at, pinned: false };
 }
 /* What a result says it read. */
-export const readAt = (version, snapshotAt) => `read at ${version && version.id ? `${version.id}, ${version.at || 'its date unknown'}` : 'latest'}${version && version.pinned ? '' : `; unpinned: may include later edits than the snapshot of ${snapshotAt || 'an unknown time'}`}`;
+export const readAt = (version, snapshotAt) => `read at ${version && version.id ? `${version.id}, ${version.at || 'its date unknown'}` : 'latest'}${version && version.pinned ? '; pinned: the newest version when the snapshot arrived, which the snapshot is at or after' : `; unpinned: may include later edits than the snapshot of ${snapshotAt || 'an unknown time'}`}`;
+/* The version the router recorded for file `file` when its snapshot arrived (tokens.json _meta.sources[file].atOrAfter,
+   deliver.cjs): the snapshot is at or after it, so it is read pinned. An older snapshot records none: null. */
+export function pinOf(meta, file) {
+  const x = meta && meta.sources && meta.sources[file] && meta.sources[file].atOrAfter;
+  return x && x.id ? { id: x.id, at: x.at || null, pinned: true } : null;
+}
 
 /* Every set's REST node, cached per file and version, fetched in batches no bigger than `per` ids or `variants` variants. */
 export async function fetchSets(get, fileKey, sets, { version, cache, offline = false, per = 20, variants = 150, log = () => {} }) {
@@ -877,20 +955,24 @@ export async function fetchSets(get, fileKey, sets, { version, cache, offline = 
 
 /* Per side: components that match on every field checked (at least one), that differ, and that had nothing checked
    (or are not in Figma); the fields checked and skipped. `both`: matched on both sides. */
+// a field the contract leaves to a main it has no contract for: counted apart, never a difference
+const UNSTATED = (x) => /:not stated$/.test(x.kind);
 export function report(label, results, top = 5) {
   const side = (k) => {
-    const out = { matched: 0, differing: 0, notChecked: 0, checked: 0, skipped: 0 };
+    const out = { matched: 0, differing: 0, notStated: 0, notChecked: 0, checked: 0, skipped: 0, differences: 0, unstated: 0 };
     for (const r of results) {
       const s = !r.missing && r[k];
       if (!s || !s.checked) { out.notChecked++; if (s) out.skipped += Object.values(s.skipped || {}).reduce((a, b) => a + b, 0); continue; }
       out.checked += s.checked; out.skipped += Object.values(s.skipped || {}).reduce((a, b) => a + b, 0);
-      if (s.rows.length) out.differing++; else out.matched++;
+      const unsaid = s.rows.filter(UNSTATED).length;
+      out.differences += s.rows.length - unsaid; out.unstated += unsaid;
+      if (s.rows.length > unsaid) out.differing++; else if (unsaid) out.notStated++; else out.matched++;
     }
     return out;
   };
   const ok = (s) => s && s.checked > 0 && !s.rows.length;
   const kinds = {};
-  for (const r of results) for (const x of [...((r.spec || {}).rows || []), ...((r.contract || {}).rows || [])]) { const k = kinds[x.kind] || (kinds[x.kind] = { kind: x.kind, rows: 0, components: new Set(), example: x }); k.rows++; k.components.add(r.component); }
+  for (const r of results) for (const x of [...((r.spec || {}).rows || []), ...((r.contract || {}).rows || [])].filter((y) => !UNSTATED(y))) { const k = kinds[x.kind] || (kinds[x.kind] = { kind: x.kind, rows: 0, components: new Set(), example: x }); k.rows++; k.components.add(r.component); }
   const ranked = Object.values(kinds).sort((a, b) => b.components.size - a.components.size || b.rows - a.rows).slice(0, top).map((k) => ({ kind: k.kind, components: k.components.size, rows: k.rows, example: k.example }));
   const skippedBy = {};
   for (const r of results) for (const k of ['spec', 'contract']) for (const [why, n] of Object.entries((r[k] || {}).skipped || {})) skippedBy[`${k}: ${why}`] = (skippedBy[`${k}: ${why}`] || 0) + n;
@@ -932,6 +1014,14 @@ async function main(argv) {
     try { changes = JSON.parse(fs.readFileSync(w.paths.changes, 'utf8')); } catch { /* no snapshot time: the file as it is */ }
     const folders = fs.readdirSync(w.paths.components).filter((f) => fs.existsSync(path.join(w.paths.components, f, 'figma.json')) && (!opt.only.length || opt.only.includes(f)));
     const keys = projects.libraryRoles(w.doc).components;
+    let meta = null;
+    try { meta = JSON.parse(fs.readFileSync(w.paths.tokens, 'utf8'))._meta; } catch { /* no pin recorded */ }
+    // every contract the project keeps, by its component's key: a placed instance is expanded through its main's
+    const byKey = {};
+    for (const f of fs.readdirSync(w.paths.components)) {
+      try { const c = JSON.parse(fs.readFileSync(path.join(w.paths.components, f, 'contract.json'), 'utf8')); if (c.figma && c.figma.key) byKey[c.figma.key] = c; } catch { /* no contract */ }
+    }
+    const mains = (key) => byKey[key] || null;
     const byFile = {};
     for (const f of folders) {
       const stored = JSON.parse(fs.readFileSync(path.join(w.paths.components, f, 'figma.json'), 'utf8'));
@@ -949,17 +1039,19 @@ async function main(argv) {
         if (vs.length !== 1) { console.error(`${label}: ${file}: ${vs.length ? 'more than one version cached' : 'nothing cached'}; name one with --cache`); return 2; }
         try { version = JSON.parse(fs.readFileSync(path.join(d, vs[0], 'version.json'), 'utf8')); } catch { version = vs[0] === 'latest' ? null : { id: vs[0], pinned: false }; }
       } else if (opt.version === 'snapshot') {
-        try { version = await versionAt(get, file, at); } catch (e) { console.error(e.message); return 1; }
+        // the version the router recorded when the snapshot arrived, else the first saved after it, unpinned
+        version = pinOf(meta, file);
+        if (!version) try { version = await versionAt(get, file, at); } catch (e) { console.error(e.message); return 1; }
       }
       const said = readAt(version, at);
       console.log(`${label}: ${file} ${said}; ${sets.length} components`);
       let got;
       try { got = await fetchSets(get, file, sets, { version: version && version.id, cache, offline: opt.offline, log: (s) => console.error(s) }); } catch (e) { console.error(e.message); return 1; }
-      if (!opt.offline) fs.writeFileSync(path.join(cache, file, (version && version.id) || 'latest', 'version.json'), JSON.stringify({ ...(version || { id: null }), pinned: false, snapshotAt: at || null }) + '\n');
+      if (!opt.offline) fs.writeFileSync(path.join(cache, file, (version && version.id) || 'latest', 'version.json'), JSON.stringify({ ...(version || { id: null, pinned: false }), snapshotAt: at || null }) + '\n');
       for (const s of sets) {
         const r = got[s.id];
         if (!r || r.missing || !r.document) { results.push({ component: s.folder, missing: true, readAt: said }); continue; }
-        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {} };
+        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains };
         const spec = resolveSpec(s.stored);
         let contract = null;
         try { contract = JSON.parse(fs.readFileSync(path.join(w.paths.components, s.folder, 'contract.json'), 'utf8')); } catch { /* no contract: the spec alone */ }
@@ -969,7 +1061,7 @@ async function main(argv) {
     const rep = report(label, results, opt.top);
     reports.push(rep);
     for (const r of results) for (const k of ['spec', 'contract']) if (r[k]) all.push(...r[k].rows.map((x) => ({ library: label, readAt: r.readAt, ...x })));
-    const line = (s) => `${s.matched} match, ${s.differing} differ, ${s.notChecked} not checked (${s.checked} fields checked, ${s.skipped} skipped)`;
+    const line = (s) => `${s.matched} match, ${s.differing} differ, ${s.notStated} only not stated, ${s.notChecked} not checked (${s.checked} fields checked, ${s.differences} differences, ${s.unstated} not stated, ${s.skipped} skipped)`;
     console.log(`${label}: ${rep.components} components${rep.unread ? ` (${rep.unread} not in Figma)` : ''}; spec: ${line(rep.spec)}; contract: ${line(rep.contract)}; both match: ${rep.both}`);
     for (const k of rep.top) console.log(`  ${k.kind}: ${k.components} components, ${k.rows} rows — e.g. ${k.example.component} ${k.example.variant || ''} ${k.example.path}: figma ${JSON.stringify(k.example.figma)} ours ${JSON.stringify(k.example.ours)}`);
   }

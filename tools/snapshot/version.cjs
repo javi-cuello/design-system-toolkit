@@ -89,13 +89,25 @@ function tokenFor(repo, config) {
  * is marked "snapshot again". Null for a file with no versions.
  */
 async function lastEdit(fileKey, token, { timeout = TIMEOUT } = {}) {
+  const v = await newest(fileKey, token, { timeout });
+  return v ? v.at : null;
+}
+
+/**
+ * The file's newest version, { id, at }, or null for a file with none. Asked
+ * when a snapshot arrives, it is the version the snapshot is at or after: the
+ * router records it, so a reader of Figma's REST API (oracle-figma) reads the
+ * file at that version. No version is saved for it: a saved one adds an entry
+ * to the history of the project's own file.
+ */
+async function newest(fileKey, token, { timeout = TIMEOUT } = {}) {
   const v = await get(`/v1/files/${fileKey}/versions?page_size=1`, token, timeout);
   if (v.status === 404) throw new Error("Not found — a wrong key, or the token's Figma account cannot open the file");
   if (!v.versions) throw new Error(v.err || v.message || 'no versions');
-  return v.versions[0] ? v.versions[0].created_at : null;
+  return v.versions[0] ? { id: v.versions[0].id, at: v.versions[0].created_at } : null;
 }
 
-module.exports = { released, tokenFor, lastEdit };
+module.exports = { released, tokenFor, lastEdit, newest };
 
 /* `node version.cjs <fileKey> published|named` — for a check that wants the
    live answer (FIGMA_TOKEN in the environment). */

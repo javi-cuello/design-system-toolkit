@@ -74,6 +74,13 @@ async function pin(project, kind, config, { version }, say, key) {
   try { return await version.released(key, kind === 'library' ? 'published' : 'named', token); } catch (e) { say('pinned', `unavailable: ${e.message}`); return null; }
 }
 
+/** The newest version of file `key` ({ id, at }), or undefined: without a token or a key, or when Figma will not say. */
+async function newestOf(project, config, { version }, say, key) {
+  const token = version.tokenFor(project.repo, config);
+  if (!token || !key) return undefined;
+  try { return (await version.newest(key, token)) || undefined; } catch (e) { say('pinned', `newest version unavailable: ${e.message}`); return undefined; }
+}
+
 /**
  * Write, pin, run the project's steps. `say(label, text)` and `under(text)`
  * print. Resolves to { result: 'written' | 'refused' | 'failed', why }, where
@@ -97,8 +104,10 @@ async function deliver(project, kind, payload, { say, under } = {}) {
   // stamped a components file's snapshot with the tokens file's publish.
   const meta = ((kind === 'library' ? (payload || {}).tokens : payload) || {})._meta || {};
   const version = await pin(project, kind, config, mods, say, entry.key || meta.fileKey || null);
+  // the newest version the file has as its snapshot arrives: the snapshot is at or after it
+  const atOrAfter = kind === 'library' ? await newestOf(project, config, mods, say, entry.key || meta.fileKey || null) : undefined;
   const r = kind === 'library'
-    ? store.writeLibrary(payload, P, { platform: entry.platform || null, version, deriveWith: contract.deriveOptions(contract.auditContext(project.doc), entry.key), ids: [entry.key, entry.id].filter(Boolean), files: Object.values(project.files).flatMap((f) => contract.entries(f)).map((e) => [e.key, e.id].filter(Boolean)) })
+    ? store.writeLibrary(payload, P, { platform: entry.platform || null, version, atOrAfter, deriveWith: contract.deriveOptions(contract.auditContext(project.doc), entry.key), ids: [entry.key, entry.id].filter(Boolean), files: Object.values(project.files).flatMap((f) => contract.entries(f)).map((e) => [e.key, e.id].filter(Boolean)) })
     : store.writeScreens(payload, P, { version, states: (config.screens || {}).states || [], ids: [entry.key, entry.id].filter(Boolean) });
   for (const l of r.lines) { say(l.label, l.text); for (const d of l.detail || []) under(d); }
   if (r.refused) { say('refused', r.refused); return { result: 'refused', why: r.refused }; }
