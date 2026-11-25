@@ -592,13 +592,13 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const dial = { name: 'Dial', id: '9:14', props: {}, variants: [{ name: 'Dial', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
     { name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fillStyleId,fills'], children: [
       { name: 'Glyph', type: 'INSTANCE', instanceOf: 'Glyph', w: 16, h: 16, sizing: 'FIXED/FIXED', overrides: ['fillStyleId,fills'], children: [] }] }] }] };
-  const panel = (own) => ({ name: 'Panel', id: '9:15', props: {}, variants: [{ name: 'Panel', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+  const panelOf = (own) => ({ name: 'Panel', id: '9:15', props: {}, variants: [{ name: 'Panel', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
     { name: 'Dial', type: 'INSTANCE', instanceOf: 'Dial', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fillStyleId'], children: [
       { name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fillStyleId'], children: [
         { name: 'Glyph', type: 'INSTANCE', instanceOf: 'Glyph', w: 16, h: 16, sizing: 'FIXED/FIXED', ...own, children: [] }] }] }] }] });
   const dm = mainsFrom({ Knob: knob, Dial: dial });
-  const restored = derive(panel({ fillStyle: 'Clear/Clear', overrides: ['fillStyleId'] }), ['Dial', 'Knob'], { mains: dm }).anatomy;
-  const left = derive(panel({}), ['Dial', 'Knob'], { mains: dm }).anatomy;
+  const restored = derive(panelOf({ fillStyle: 'Clear/Clear', overrides: ['fillStyleId'] }), ['Dial', 'Knob'], { mains: dm }).anatomy;
+  const left = derive(panelOf({}), ['Dial', 'Knob'], { mains: dm }).anatomy;
   ok('a nested icon whose style the host restores over its placed component\'s none is kept with it; one left cleared is not kept',
     restored['dial/knob/glyph'] && restored['dial/knob/glyph'].fillStyle === 'Clear/Clear' && !('dial/knob/glyph' in left));
 }
