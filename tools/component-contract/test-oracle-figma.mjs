@@ -414,7 +414,13 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
       const star = { contract: 1, component: 'Star', figma: { name: 'Star', key: 'k-swap' }, props: {}, anatomy: { root: { kind: 'container', width: 4, height: 4 } }, variants: [] };
       const radii = (m) => compareContract('chip', set, host, { ...ctx, mains: m }).rows.filter((x) => x.kind === 'contract:radius');
       assert.deepEqual(radii((key) => (key === 'kset-icon' ? out : key === 'k-swap' ? star : null)), [], 'the swap target\'s own main says its styling');
-      assert.ok(radii((key) => (key === 'kset-icon' ? out : null)).length > 0, 'no contract for the target: the outer\'s word, a row'); }
+      assert.ok(radii((key) => (key === 'kset-icon' ? out : null)).length > 0, 'no contract for the target: the outer\'s word, a row');
+      // the outer main's own override on the slot (an opacity its swapped-out component's root does not state) survives
+      // the swap: still compared, so Figma's drawing without it is a row; the swapped-out root's own radius goes
+      const own = icon(); own.anatomy.badge.radius = 2; own.anatomy.badge.opacity = 0.5;
+      const dot = { contract: 1, component: 'Dot', figma: { name: 'Dot', key: 'k-dot' }, props: {}, anatomy: { root: { kind: 'container', radius: 2 } }, variants: [] };
+      const kinds = compareContract('chip', set, host, { ...ctx, mains: (key) => (key === 'kset-icon' ? own : key === 'k-swap' ? star : key === 'k-dot' ? dot : null) }).rows.map((x) => x.kind);
+      assert.ok(kinds.includes('contract:opacity') && !kinds.includes('contract:radius'), 'the outer main\'s own override on the slot is compared; the old root\'s radius is not: ' + kinds); }
     // a slot the main fills from its own slot property: what the instance puts there is the instance's, no row at the host
     { const sl = icon(); sl.props.items = { type: 'slot', figma: 'Items' }; sl.anatomy.items = { kind: 'slot', parent: 'root', order: 3, width: 10, height: 10, absolute: { x: 0, y: 0 }, content: '{items}' };
       const withSlot = structuredClone(set); for (const v of withSlot.children) v.children.find((x) => x.type === 'INSTANCE').children.push({ id: v.id + 's', name: 'Items', type: 'SLOT', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), componentPropertyReferences: { slotContentId: 'Items#1:1' } });

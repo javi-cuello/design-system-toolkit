@@ -877,9 +877,13 @@ export function compareContract(component, setNode, contract, ctx) {
         if (mflat[id].radius === 'mixed') { delete o.radius; t.skip('radius: mixed per vertex, REST silent'); }
         // (the main's own swap property is the main's to say, checked against its own set; at the host it drives nothing)
         if (o.swappedBy !== undefined) { delete o.swappedBy; t.skip('swappedBy: the main\'s own property'); }
-        // (a part swapped to another component: its styling here is the swapped-out one's, `$out`, mainSays)
+        // (a part swapped to another component: the styling here that is the swapped-out one's own root's, `$out`, mainSays;
+        // every field where that component has no contract to tell its own from this main's overrides, which stay)
         for (const [pid, p] of Object.entries(main.props || {})) if (p.type === 'instance' && (p.swaps || []).includes(id) && typeof when[pid] === 'string') {
-          if (!sameComponent(o.component, when[pid])) o.$out = true;
+          if (!sameComponent(o.component, when[pid])) {
+            const old = o.key && ctx.mains ? ctx.mains(o.key) : null, R = old ? partOurs(atProps(old, o.with || {}).root || {}) : null;
+            o.$out = STYLED.filter((f) => f in o && (!R || sortedJson(o[f]) === sortedJson(R[f])));
+          }
           o.component = when[pid]; delete o.key; o.$swapped = true;
         }
         return o;
@@ -917,7 +921,7 @@ export function compareContract(component, setNode, contract, ctx) {
       }
       // (an outer main's part swapped to another component states the swapped-out one's styling: where the instance's
       // own main says its root, that styling is the target's, its own main's word, never the outer's)
-      for (const o of said) if (o.$out) { delete o.$out; if (selfSaid) for (const f of STYLED) if (f in o) { delete o[f]; t.skip('a swapped-out component\'s styling: the swap target\'s own main says it'); } }
+      for (const o of said) if (o.$out) { const out = o.$out; delete o.$out; if (selfSaid) for (const f of out) { delete o[f]; t.skip('a swapped-out component\'s styling: the swap target\'s own main says it'); } }
       // (a size any instance around the layer lists as overridden on it, an outer one's too: a stated value)
       if (geo) { geo.listed = new Set(); for (let q = parentOf.get(n); q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') for (const o of q.overrides || []) if (o.id === n.id) for (const f of o.overriddenFields || []) geo.listed.add(f); }
       // (`self`: the layer is such an instance, its presence and place another main's or the host's to say, unless one
@@ -1145,7 +1149,9 @@ const SPELL = "an instance's props its main's contract cannot spell";
 // the fields a placed instance says of itself, never its main's
 const OWN = ['kind', 'component', 'key', 'with', 'swappedBy'];
 // an instance's styling, unsaid where it is its own component's root's (derive's ownStyling)
-const { OWN: STYLED } = require('./derive.cjs');
+const { OWN: STYLED, atProps } = require('./derive.cjs');
+// a value as JSON with every object's keys in order
+const sortedJson = (v) => JSON.stringify(v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : 1))) : w));
 // one component named by its set or by its folder (Icon, Icons/Icon, Set / Icon)
 const sameComponent = (x, y) => { if (typeof x !== 'string' || typeof y !== 'string') return x === y; const [a, b] = x.length < y.length ? [x, y] : [y, x]; return a === b || b.endsWith(`/${a}`) || b.endsWith(` / ${a}`); };
 // a placed instance's own place and size: the host's to say, never its main's
