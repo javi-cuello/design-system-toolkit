@@ -29,7 +29,7 @@ export function supervise({ children, logs, review = null, hour = 3, every = 600
   fs.mkdirSync(logs, { recursive: true });
   const kids = new Set();
   let stopping = false, reviewing = null;
-  const out = (name) => [fs.openSync(path.join(logs, `${name}.log`), 'a'), fs.openSync(path.join(logs, `${name}.err`), 'a')];
+  const out = (name) => { const a = fs.openSync(path.join(logs, `${name}.log`), 'a'); try { return [a, fs.openSync(path.join(logs, `${name}.err`), 'a')]; } catch (e) { fs.closeSync(a); throw e; } };
   const start = (c, delay) => {
     const fds = out(c.name);
     const child = fork(c.script, c.args || [], { stdio: ['ignore', ...fds, 'ipc'] });
@@ -58,13 +58,13 @@ export function supervise({ children, logs, review = null, hour = 3, every = 600
     due = nextAt(now(), hour);
     let last = null; try { last = fs.readFileSync(tried, 'utf8'); } catch {}
     if (last === day(now())) return;
-    // unwritable (disk full, a folder in the way): that day's review is skipped, never retried unmarked, and a
-    // throw here would take both children down and crash-loop under KeepAlive
-    let fds;
-    try { fs.writeFileSync(tried, day(now())); fds = out('review'); }
-    catch (e) { log(`review: skipped today, ${e.message}`); return; }
-    reviewing = spawn(review[0], review.slice(1), { stdio: ['ignore', ...fds] });
-    for (const fd of fds) fs.closeSync(fd);
+    // unwritable (disk full, a folder in the way) or unstartable: this run's review is skipped until the next 03:00
+    // (a restart may try once more that day, the marker unwritten); a throw here would take both children down and
+    // crash-loop under KeepAlive
+    let fds = [];
+    try { fs.writeFileSync(tried, day(now())); fds = out('review'); reviewing = spawn(review[0], review.slice(1), { stdio: ['ignore', ...fds] }); }
+    catch (e) { log(`review: skipped today, ${e.message}`); reviewing = null; return; }
+    finally { for (const fd of fds) fs.closeSync(fd); }
     log('review: started');
     reviewing.on('error', (e) => { log(`review: ${e.message}`); reviewing = null; });
     reviewing.on('exit', (code, signal) => { log(`review: exited (${signal || code})`); reviewing = null; });

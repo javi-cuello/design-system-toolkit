@@ -67,18 +67,19 @@ test('an unwritable review marker skips the review and leaves the supervisor run
   fs.mkdirSync(path.join(dir, 'review.tried'));
   const review = script(dir, 'review.mjs', '');
   const stay = script(dir, 'stay.mjs', 'setInterval(() => {}, 1000);\n');
-  const s = supervise({ logs: dir, children: [{ name: 'stay', script: stay }], review: [process.execPath, review], every: 10, log: (m) => said.push(m) });
+  const s = supervise({ logs: dir, children: [{ name: 'stay', script: stay }], review: [process.execPath, review], every: 10, now: () => new Date(2026, 0, 5, 9, 0), log: (m) => said.push(m) });
+  await until(() => s.kids.size === 1);
   await until(() => said.some((m) => /^review: skipped today, .*EISDIR/.test(m)));
   await new Promise((r) => setTimeout(r, 50));
   assert.ok(!said.includes('review: started'), said.join('\n'));
-  assert.ok([...s.kids].every((k) => k.exitCode === null), 'the child is still up');
+  assert.ok(s.kids.size === 1 && [...s.kids].every((k) => k.exitCode === null), 'the child is still up');
   s.stop();
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('a missing review is logged, not fatal', async () => {
   const dir = tmp(), said = [];
-  const s = supervise({ logs: path.join(dir, 'new-logs'), children: [], review: [path.join(dir, 'no-such-review')], every: 10, log: (m) => said.push(m) });
+  const s = supervise({ logs: path.join(dir, 'new-logs'), children: [], review: [path.join(dir, 'no-such-review')], every: 10, now: () => new Date(2026, 0, 5, 9, 0), log: (m) => said.push(m) });
   await until(() => said.some((m) => /^review: .*ENOENT/.test(m)));
   s.stop();
   fs.rmSync(dir, { recursive: true, force: true });

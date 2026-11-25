@@ -92,7 +92,7 @@ async function serving(projectsDir, body) {
   try { return await body({ post, port, banner }); } finally { server.kill(); }
 }
 
-test('forked, the router exits when its parent goes, even before it has started; run plainly, it stays up', async () => {
+test('forked, the router exits when its parent goes; run plainly, it stays up', async () => {
   const { fork } = await import('node:child_process');
   const { projectsDir } = two();
   const env = { ...process.env, SNAPSHOT_QUIET: '1', TOOLKIT_UNCLAIMED: `${projectsDir}-unclaimed`, TOOLKIT_PAIRING: PAIRING };
