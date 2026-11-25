@@ -266,14 +266,19 @@ export const clearValue = (v) => {
   const t = v.trim().toLowerCase();
   if (t === 'transparent' || /^#([0-9a-f]{3}0|[0-9a-f]{6}00)$/.test(t)) return true;
   // the alpha, a fourth comma value or one after a slash: rgb(255, 0, 0) has none
-  const m = /^(?:rgba?|hsla?)\((?:[^,/)]+,){3}\s*([^,/)]+)\)$/.exec(t) || /^(?:rgba?|hsla?)\([^/)]*\/\s*([^/)]+)\)$/.exec(t);
+  const m = /^(?:rgba?|hsla?)\((?:[^,/)]+,){3}\s*([^,/)]+)\)$/.exec(t) || /^[a-z-]+\([^/)]*\/\s*([^/)]+)\)$/.exec(t);
   return !!m && parseFloat(m[1]) === 0;
 };
 /* Whether a computed box-shadow draws no shadow: none, or only the rings a stroke is drawn in (each layer unblurred, as
    css.mjs writes a stroke; an effect style's shadow blurs). Run in the page too, as its source. */
 export function shadowOnlyRings(bs) {
   if (!bs || bs === 'none') return true;
-  return bs.split(/,(?![^(]*\))/).every((l) => { const n = l.replace(/(rgba?|hsla?|color)\([^)]*\)/g, '').match(/-?[\d.]+px/g) || []; return n.length >= 2 && parseFloat(n[2] || '0') === 0; });
+  // (a ring: unblurred, unmoved and spread all round; a side's edge: unblurred, unspread, moved along one axis only)
+  return bs.split(/,(?![^(]*\))/).every((l) => {
+    const [x, y, blur, spread] = (l.replace(/[a-z-]+\([^)]*\)/g, '').match(/-?[\d.]+px/g) || []).map(parseFloat);
+    if (x === undefined || y === undefined || (blur || 0) !== 0) return false;
+    return (spread || 0) !== 0 ? x === 0 && y === 0 : (x === 0) !== (y === 0);
+  });
 }
 export function readCleared(anatomy, mains, valueOf = () => undefined) {
   const { atProps } = req('./derive.cjs');

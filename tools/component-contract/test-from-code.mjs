@@ -852,9 +852,9 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   { const { shadowOnlyRings, clearValue } = await import('./from-code.mjs');
     ok('a box-shadow of stroke rings alone is no shadow; a blurred one is',
       shadowOnlyRings('none') && shadowOnlyRings('rgb(0, 0, 0) 0px 0px 0px 1px inset') && shadowOnlyRings('rgb(1, 2, 3) 0px -1px 0px 0px inset, rgb(1, 2, 3) 0px 1px 0px 0px inset')
-      && !shadowOnlyRings('rgba(0, 0, 0, 0.3) 0px 2px 6px 0px') && !shadowOnlyRings('rgb(0, 0, 0) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0.3) 0px 2px 6px 0px'));
+      && !shadowOnlyRings('rgba(0, 0, 0, 0.3) 0px 2px 6px 0px') && !shadowOnlyRings('rgb(0, 0, 0) 4px 4px 0px 0px') && !shadowOnlyRings('rgb(0, 0, 0) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0.3) 0px 2px 6px 0px'));
     ok('a colour value is clear by its alpha only: an opaque rgb with a 0 channel is not',
-      ['transparent', '#0000', '#00000000', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.0)', 'rgb(0 0 0 / 0)', 'rgba(0,0,0,0%)'].every(clearValue)
+      ['transparent', '#0000', '#00000000', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.0)', 'rgb(0 0 0 / 0)', 'rgba(0,0,0,0%)', 'oklch(0 0 0 / 0)', 'color(srgb 0 0 0 / 0)'].every(clearValue)
       && !['rgb(255, 0, 0)', 'rgb(10, 20, 0)', '#ff0000', 'rgba(0,0,0,0.5)', 'rgb(0 0 0 / 50%)'].some(clearValue)); }
   ok('a placed component drawing no shadow its component draws reads as the shadow cleared; one unread says nothing',
     sh.a.shadow === 'none' && sh.b.shadow === undefined && !('shadowless' in sh.a) && src.includes('if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true;'));
