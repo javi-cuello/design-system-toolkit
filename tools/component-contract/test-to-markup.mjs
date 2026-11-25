@@ -211,8 +211,9 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   const swap = row({ 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Badge', with: { Count: '7' } } });
   { const d = await run(swap), b = find(d, (x) => x.tag === 'ds-badge');
     ok('parts: another component swapped in where no prop swaps it is drawn in the part\'s place, given its own props', !!b && b.attrs['data-part'] === 'trail' && b.textContent === '7' && !find(d, (x) => x.tag === 'ds-trail')); }
-  { const d = await run(row({ 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Icons/star' } })), x = find(d, (y) => y.attrs['data-part'] === 'trail');
-    ok('parts: a component the library does not hold, in place of one it does, is marked where it goes as an icon is', x && x.tag === 'span' && x.attrs['data-icon'] === 'Icons/star' && !find(d, (y) => y.tag === 'ds-trail')); }
+  { const d = await run(row({ 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Icons/star', background: 'Fill/accent', radius: 4, modes: { tone: 'bold' } } })), x = find(d, (y) => y.attrs['data-part'] === 'trail');
+    ok('parts: a component the library does not hold, in place of one it does, is marked where it goes as an icon is, with the look and modes it draws of its own',
+      x && x.tag === 'span' && x.attrs['data-icon'] === 'Icons/star' && !find(d, (y) => y.tag === 'ds-trail') && /background: var\(--fill-accent\)/.test(x.attrs.style || '') && /border-radius: 4px/.test(x.attrs.style || '') && Object.values(x.attrs).includes('bold'), JSON.stringify(x && x.attrs)); }
   { const two = { ...item, anatomy: { ...item.anatomy, trail_2: { ...item.anatomy.trail, order: 2 } } };
     const r = row({ 'item/trail_2': { kind: 'instance', parent: 'item', order: 2, component: 'Trail', with: { Tone: 'Loud' } } }), L = { ...lib(r), Item: two };
     const dir = path.join(tmp, 'copies'); fs.mkdirSync(dir); fs.writeFileSync(path.join(dir, 'dom.js'), DOM);
@@ -242,6 +243,10 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   const byProp = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'B' } }, { big: { type: 'boolean', default: false, figma: 'Big' } }, [{ when: { big: true }, set: { 'item/label.content': 'C' } }]);
   { const a = find(await run(byProp), (x) => x.attrs['data-part'] === 'label').textContent, b = find(await run(byProp, { big: true }), (x) => x.attrs['data-part'] === 'label').textContent;
     ok('parts: what they carry follows this component\'s own props, as each variant draws it', a === 'B' && b === 'C', `${a} ${b}`); }
+  { const both = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'B' } }, { big: { type: 'boolean', default: false, figma: 'Big' }, loud: { type: 'boolean', default: false, figma: 'Loud' } },
+      [{ when: { big: true }, set: { 'item/label.content': 'C' } }, { when: { loud: true }, add: { 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Trail', with: { Tone: 'Loud' } } } }]);
+    const d = await run(both, { big: true, loud: true }), l = find(d, (x) => x.attrs['data-part'] === 'label').textContent, t = find(d, (x) => x.tag === 'ds-trail').attrs.tone;
+    ok('parts: where two variants hold together, the combination draws what each sets, never only the first one\'s', l === 'C' && t === 'loud', `${l} ${t}`); }
   { const d = (await import(path.join(tmp, '0', 'item', 'item.js'))).renderItem();
     ok('parts: a call without them draws the component as it always did', find(d, (x) => x.attrs['data-part'] === 'label').textContent === 'A' && find(d, (x) => x.tag === 'ds-trail').attrs.tone === 'plain'); }
   delete globalThis.document; fs.rmSync(tmp, { recursive: true, force: true });

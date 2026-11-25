@@ -548,6 +548,17 @@ else console.log('skip: no stored contracts on this machine');
     nestedSelector(split, namer('split'), 'btn/ring', mains) === '.split > .split__btn > .ib__ring');
 }
 
+// a part inside a numbered copy the placed component draws, which shares its first's hook (copyOf): named by that hook,
+// counted among the copies, as the placed component's markup draws it, never by a number no markup writes
+{
+  const day = { contract: 1, component: 'Day', props: {}, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: '1' } }, variants: [] };
+  const week = { contract: 1, component: 'Week', props: {}, anatomy: { root: { kind: 'container' }, day: { kind: 'instance', parent: 'root', order: 0, component: 'Day' }, day_2: { kind: 'instance', parent: 'root', order: 1, component: 'Day' } }, variants: [] };
+  const cal = { contract: 1, component: 'Cal', props: {}, anatomy: { root: { kind: 'container' }, week: { kind: 'instance', parent: 'root', component: 'Week' }, 'week/day_2': { kind: 'instance', parent: 'week', order: 1, component: 'Day' }, 'week/day_2/label': { kind: 'text', parent: 'week/day_2', content: '9' } }, variants: [] };
+  const mains = (n) => ({ Day: { ...day, folder: 'day' }, Week: { ...week, folder: 'week' } })[n] || null;
+  ok('a part inside a placed component\'s numbered copy is named by the hook the copies share, counted among them',
+    nestedSelector(cal, namer('cal'), 'week/day_2', mains) === '.cal > .cal__week > .week__day:nth-child(2 of .week__day)', nestedSelector(cal, namer('cal'), 'week/day_2', mains));
+}
+
 // a placed icon whose lone glyph a variant fades (material3's disabled chip: 0.38 on the glyph, the instance faded too where
 // it is elevated): code colours the instance, so the glyph's opacity is written there, times the instance's own
 {

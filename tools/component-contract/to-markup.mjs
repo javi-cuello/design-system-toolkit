@@ -225,9 +225,9 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
         if (Object.keys(props).length) entry.props = props;
       }
       if (Object.keys(nested).length) entry.parts = nested;
-    } else if (L.kind === 'instance' && X.kind === 'instance' && !Xm && L.component && L.component !== X.component) entry.attrs = { 'data-icon': L.component };
+    } else if (L.kind === 'instance' && X.kind === 'instance' && !Xm && L.component && L.component !== X.component) entry.attrs = { 'data-icon': L.component, ...swappedLook(L, inner, rel, e) };
     // (one the library does not hold, in place of one it does: marked where it goes, as this component marks its own)
-    else if (L.kind === 'instance' && Xm && L.component) entry.render = { icon: L.component };
+    else if (L.kind === 'instance' && Xm && L.component) entry.render = { icon: L.component, attrs: swappedLook(L, inner, rel, e) };
     else if (L.kind === 'text' && X.kind === 'text' && typeof L.content === 'string' && !/^\{.*\}$/.test(L.content) && L.content !== X.content) entry.content = L.content;
     // its look, where no sheet reaches it (inside a component placed in the placed one, `sheet` false: to-code writes an
     // override one placed component deep): what the design draws there that the placed component's part does not
@@ -261,6 +261,16 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     for (const mk of Object.keys(M)) if (own(mk) && !shown.has(back[mk] || mk) && !drawn.has(mk) && (!M[mk].parent || M[mk].parent === 'root' || drawn.has(M[mk].parent))) put(mk, { hidden: true });
   }
   return out;
+}
+
+/* What a component the library does not hold, swapped in where no prop swaps it, draws of its own that its mark does not
+   (no sheet names it, no prop passes it): its look as an inline style, as its sheet would say it, and its modes, as this
+   component's markup says a mode (modeAttrs). */
+function swappedLook(L, inner, rel, host) {
+  const par = inner[rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : ''] || host;
+  const style = declarations({ ...L, kind: 'container' }, { holds: true, row: !par.layout || par.layout.direction !== 'column', words: null }, tokenNames).decls
+    .filter(([k]) => /^(background|border|box-shadow|outline|opacity)/.test(k)).map(([k, v]) => `${k}: ${v}`).join('; ');
+  return { ...(style && { style }), ...Object.fromEntries(Object.entries(L.modes || {}).map(([k, v]) => [MODES.attribute(k), v])) };
 }
 
 /* A layer added inside a placed instance (insideOf), as a tree to draw: its element, its name, its look as an inline
@@ -479,8 +489,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const withParts = !jsx && !lang.php;
   const carried = new Set(), mainOf = (name, key) => placedOf(library, { component: name, key });
   const D = variantDefaults(c), vs0 = c.variants || [];
+  const expanded = new Map(), expandAt = (w) => { const k = JSON.stringify(w); if (!expanded.has(k)) expanded.set(k, expand(c, w)); return expanded.get(k); };
   const insideAt = (id, e, when) => {
-    const a = expand(c, { ...D, ...when });
+    const a = expandAt({ ...D, ...when });
     if (!a[id] || a[id].kind !== 'instance' || placedOf(library, a[id]) !== placedOf(library, e)) return {};
     // (a numbered copy's look too: no sheet rule reaches inside one, to-code's copySelector)
     const copied = !!copyOf(c, id) || Object.keys(a).some((k) => k !== id && copyOf(c, k) === id);
@@ -493,7 +504,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   };
   const partsLit = (x) => `{ ${Object.entries(x).map(([k, v]) => `${str(k)}: { ${[
     ...(v.hidden ? ['hidden: true'] : []),
-    ...(v.render && v.render.icon ? [`render: (_, host) => h("span", { ...host, "data-icon": ${str(v.render.icon)}, "aria-hidden": "true" })`] : []),
+    ...(v.render && v.render.icon ? [`render: (_, host) => h("span", { ...host, "data-icon": ${str(v.render.icon)}, ${Object.entries(v.render.attrs || {}).map(([k, x]) => `${str(k)}: ${str(x)}, `).join('')}"aria-hidden": "true" })`] : []),
     ...(v.render && !v.render.icon ? (() => { const name = Object.keys(library).find((k2) => library[k2] === v.render) || v.render.component; if (v.render.component !== c.component) used.add(name); return [`render: ${fnOf(v.render)}`]; })() : []),
     ...(v.props ? [`props: { ${Object.entries(v.props).map(([p, l]) => `${IDENT.test(p) ? p : str(p)}: ${str(l)}`).join(', ')} }`] : []),
     ...(v.parts ? [`parts: ${partsLit(v.parts)}`] : []),
@@ -503,10 +514,34 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   ].join(', ')} }`).join(', ')} }`;
   // (the most particular variant that holds first, each as the whole combination draws there; the defaults' last; never a
   // pointer state's, which no markup holds)
+  // every combination of the props a variant names, where they are few enough (a pointer state's values left out, which
+  // no markup holds): each combination as it draws, since variants that hold together draw what neither does alone
+  const axesOf = (() => {
+    const keys = [...new Set(vs0.flatMap((v) => Object.keys(v.when || {})))].filter((k) => props.some((y) => y.key === k));
+    const vals = (k) => { const p = c.props[k] || {}; return p.type === 'boolean' ? [false, true] : p.type === 'enum' ? (p.values || []).filter((v) => !(p.pointer || []).includes(v)) : null; };
+    if (keys.some((k) => !vals(k))) return null;
+    let combos = [{}];
+    for (const k of keys) { combos = combos.flatMap((x) => vals(k).map((v) => ({ ...x, [k]: v }))); if (combos.length > 1024) return null; }
+    return { keys, combos };
+  })();
   const partsCode = (id, e) => {
     const base = insideAt(id, e, {});
-    let alts = [...vs0].sort((x, y) => Object.keys(y.when || {}).length - Object.keys(x.when || {}).length).filter((v) => !pointerWords(c, v.when)).map((v) => [testOf(v.when || {}), v]).filter(([t]) => t && t !== 'true' && t !== 'false').map(([t, v]) => [t, insideAt(id, e, v.when || {})]);
     const same = (x, y) => JSON.stringify(x, (k, v) => (k === 'render' ? v.component || v.icon : v)) === JSON.stringify(y, (k, v) => (k === 'render' ? v.component || v.icon : v));
+    if (axesOf) {
+      // (looked up by the combination, the one most combinations draw the fallback)
+      const got = axesOf.combos.map((w) => [w, insideAt(id, e, w)]), counts = new Map();
+      for (const [, x] of got) { const k = JSON.stringify(x, (k2, v) => (k2 === 'render' ? v.component || v.icon : v)); counts.set(k, (counts.get(k) || 0) + 1); }
+      const top = [...counts].sort((x, y) => y[1] - x[1])[0][0], most = got.find(([, x]) => JSON.stringify(x, (k2, v) => (k2 === 'render' ? v.component || v.icon : v)) === top)[1];
+      const rest = got.filter(([, x]) => !same(x, most));
+      if (!rest.length) return Object.keys(most).length ? partsLit(most) : null;
+      const names = axesOf.keys.map((k) => ref(props.find((y) => y.key === k).name));
+      // (each different one written once, the combinations naming it by its place)
+      const kinds = [most];
+      const at = (x) => { let i = kinds.findIndex((y) => same(x, y)); if (i < 0) { kinds.push(x); i = kinds.length - 1; } return i; };
+      const table = rest.map(([w, x]) => `${lang.str(axesOf.keys.map((k) => String(w[k])).join('|'))}: ${at(x)}`).join(', ');
+      return `[${kinds.map(partsLit).join(', ')}][({ ${table} })[[${names.join(', ')}].join("|")] ?? 0]`;
+    }
+    let alts = [...vs0].sort((x, y) => Object.keys(y.when || {}).length - Object.keys(x.when || {}).length).filter((v) => !pointerWords(c, v.when)).map((v) => [testOf(v.when || {}), v]).filter(([t]) => t && t !== 'true' && t !== 'false').map(([t, v]) => [t, insideAt(id, e, v.when || {})]);
     alts = alts.filter(([, x], k) => !same(x, base) || alts.slice(k + 1).some(([, y]) => !same(y, base)));
     if (!alts.length && !Object.keys(base).length) return null;
     return alts.reduceRight((acc, [t, x]) => `${/^[\w$!.]+$/.test(t) ? t : `(${t})`} ? ${partsLit(x)} : ${acc}`, partsLit(base));

@@ -1147,7 +1147,9 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
       const { M, back } = placedAs(all, h, hm, mains), match = placedOf(all, h, M), own = (s) => back[match[s.slice(h.length + 1)]] || s.slice(h.length + 1);
       const next = rest.slice(0, -1).findIndex((s) => all[s] && all[s].kind === 'instance' && mains(all[s].component, all[s].key));
       const take = next >= 0 ? rest.slice(0, next + 1) : rest;
-      inner.push(...take.map((s, i) => n2.part(partSeg(hm, own(s))) + (i === next ? through(n, all[s].component, heldIn(hm, own(s), mains)) : '')));
+      // (a numbered copy of the placed component's, which shares its first's hook, counted among those: partSelector's)
+      const ownSeg = (k) => { const first = copyOf(hm, k), p = n2.part(partSeg(hm, first || k)); return first ? `${p}:nth-child(${Number(/_(\d+)$/.exec(k)[1])} of ${p})` : p; };
+      inner.push(...take.map((s, i) => ownSeg(own(s)) + (i === next ? through(n, all[s].component, heldIn(hm, own(s), mains)) : '')));
       rest = rest.slice(take.length);
       if (rest.length) { h = take[take.length - 1]; hm = mains(all[h].component, all[h].key); }
     }
