@@ -423,9 +423,9 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
 
 // 0.89.4: a variable lookup Figma never answers is given up, and after three the rest are not asked
 {
-  let asked = 0;
+  let asked = 0; const posted = [];
   const fw = { ...figma, root: { name: "Lib", children: [], getPluginData: () => "", setPluginData() {} },
-    showUI() {}, ui: { postMessage() {}, onmessage: null }, clientStorage: { getAsync: async () => "", setAsync: async () => {} },
+    showUI() {}, ui: { postMessage: (m) => posted.push(m), onmessage: null }, clientStorage: { getAsync: async () => "", setAsync: async () => {} },
     getNodeByIdAsync: async () => null, variables: { getVariableByIdAsync: () => { asked++; return new Promise(() => {}); } } };
   const now = (f) => { f(); return 0; };   // the wait elapses at once
   const v = vm.runInContext(src + "\n;variable", vm.createContext({ figma: fw, console, __html__: "", fetch: () => new Promise(() => {}), setTimeout: now, clearTimeout() {} }));
@@ -433,6 +433,7 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   for (const id of ["a", "b", "c", "d", "e"]) got.push(await v(id));
   ok("a variable Figma never returns reads as none, and the run goes on", got.every((x) => x === null));
   ok("…and after three unanswered the rest are not asked", asked === 3);
+  ok("…and a wait past a second says so, a step with no count (a bar that runs)", posted.some((m) => m.type === "progress" && /waiting for Figma/.test(m.text) && m.total === undefined));
 }
 
 console.log(n + "/" + n + " passed");

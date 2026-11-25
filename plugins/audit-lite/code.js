@@ -1305,7 +1305,7 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
 function snapshotFacts() {
 const __html__ = undefined;
 const FACTS = true;
-// Design system snapshot — v0.90.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.90.1 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -1474,14 +1474,24 @@ const varCache = {};
 /** @param {string} id */
 // A lookup Figma never answers (a library variable it cannot fetch: on one large library the first of 171 hung the
 // run for good, Cancel included, 2026-11-25) is given up after a while; after three, the rest are not asked, and the
-// tokens say how many went unread.
-const VARIABLE_WAIT = 15000;
+// tokens say how many went unread. A collection's lookup likewise (`answered`, null when it never comes).
+const VARIABLE_WAIT = 5000;
 let unanswered = 0;
+/** @template T @param {() => Promise<T>} ask @returns {Promise<T | null>} */
+async function answered(ask) {
+  if (unanswered > 2) return null;
+  const p = ask();
+  // (past a second, the window says so with a bar that runs without a count: the run is waiting, not hung)
+  let t, slow; const L = {}, got = await Promise.race([p, new Promise((r) => {
+    t = setTimeout(() => r(L), VARIABLE_WAIT);
+    slow = setTimeout(() => { if (!HEADLESS) figma.ui.postMessage({ type: 'progress', text: 'waiting for Figma to return a library variable' }); }, 1000);
+  })]).finally(() => { clearTimeout(t); clearTimeout(slow); });
+  return got === L ? (unanswered++, null) : /** @type {T} */ (got);
+}
 async function variable(id) {
   if (id in varCache) return varCache[id];
-  if (unanswered > 2) return null;
-  let t; const L = {}, got = await Promise.race([figma.variables.getVariableByIdAsync(id), new Promise((r) => { t = setTimeout(() => r(L), VARIABLE_WAIT); })]).finally(() => clearTimeout(t));
-  return got === L ? (unanswered++, null) : (varCache[id] = got);
+  const before = unanswered, got = await answered(() => figma.variables.getVariableByIdAsync(id));
+  return unanswered > before || unanswered > 2 ? null : (varCache[id] = got);
 }
 /** @param {unknown} id */
 async function styleName(id) {
@@ -1950,9 +1960,10 @@ async function collectTokens() {
   let n = 0;
   for (const i of ids) {
     // counted: a large library binds thousands, each fetched on its own, and a still window reads as hung
-    if (n++ % 25 === 0) say('reading the variables the components use', n - 1, ids.size);
+    // (each one: a lookup Figma is slow to answer waits a few seconds, and the count says which)
+    say('reading the variables the components use', n++, ids.size);
     const v = await variable(i).catch(() => null);
-    const c = v && v.remote && await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(() => null);
+    const c = v && v.remote && await answered(() => figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId)).catch(() => null);
     if (c && !here.has(c.name)) others.set(c.name, c);
   }
   for (const c of [...collections, ...others.values()]) {
@@ -2123,7 +2134,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.90.0';
+const VERSION = '0.90.1';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

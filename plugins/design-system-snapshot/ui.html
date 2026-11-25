@@ -76,6 +76,8 @@ fig-checkbox:not(:has(>:disabled))>label,fig-switch:not(:has(>:disabled))>label{
 .status[data-tone="done"] .status-icon{stroke:var(--figma-color-icon-success)}
 .status[data-tone="error"] .status-icon{stroke:var(--figma-color-icon-danger)}
 .status-title{flex:1;min-width:0}
+/* while it runs, one line: a long page name never moves the bar (the whole text in the tooltip) */
+.status:not([data-tone]) .status-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .status[data-tone="done"] .status-title{font-weight:var(--fw-semibold)}
 .status[data-tone="error"] .status-title{color:var(--figma-color-text-danger)}
 .status-count{flex:none;color:var(--figma-color-text-tertiary);font-variant-numeric:tabular-nums}
@@ -338,7 +340,7 @@ function show(o) {
   if (o.tone) box.dataset.tone = o.tone; else delete box.dataset.tone;
   // an svg has no `hidden` property, only the attribute
   $('icon-done').toggleAttribute('hidden', o.tone !== 'done'); $('icon-error').toggleAttribute('hidden', o.tone !== 'error');
-  $('status-title').textContent = o.title;
+  $('status-title').textContent = o.title; $('status-title').title = o.title;
   $('status-count').textContent = o.count || '';
   $('bar').hidden = !o.bar;
   if (o.bar) { if (o.bar.total) { $('bar').max = o.bar.total; $('bar').value = o.bar.done; } else $('bar').removeAttribute('value'); }

@@ -1,6 +1,12 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.90.1] - 2026-11-25
+### Fixed
+- **The status stays on one line while it runs**: a long page name no longer moves the bar (the whole text is the tooltip).
+- **Reading the variables counts each one**, and a lookup Figma does not answer waits 5 s (was 15 s), a collection's too, so a stalled library no longer sits at "1 of 171" for most of a minute.
+- **A lookup still unanswered after a second says so**, "Waiting for Figma to return a library variable…", over a bar that runs without a count.
+
 ## [0.90.0] - 2026-11-25
 ### Added
 - **A property's links say each layer's own variants** (`layerVariants`) when its layers sit in different variants, so two swaps driving one icon in turn each name where they drive it.
