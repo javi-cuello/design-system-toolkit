@@ -688,7 +688,12 @@ export function addressParts(flat, variant, propIds) {
     if (!fit.length) continue;
     // the parts of this parent that the same layers would fit
     const siblings = ids.filter((x) => (flat[x].parent || 'root') === (part.parent || 'root') && baseOf(x).base === base && (flat[x].name || null) === (part.name || null));
-    const c = fit.length === 1 ? fit[0] : siblings.length === fit.length ? fit[nth - 1] : null;
+    // (fewer parts than layers, each numbered within the layers' count: a contract keeps only some of an instance's rows,
+    // and a part's number is its place among every layer of that name, hidden ones too, as derive's paths() counts)
+    const every = (parent.children || []).filter((c) => fits(part, base, c));
+    // (the file read is the version the snapshot read, so no twin is new; a number past the layers' count stays ambiguous)
+    const numbered = siblings.length < fit.length && siblings.every((x) => baseOf(x).nth <= every.length);
+    const c = fit.length === 1 ? fit[0] : siblings.length === fit.length ? fit[nth - 1] : numbered && every[nth - 1].visible !== false ? every[nth - 1] : null;
     if (c && !taken.has(c)) { found.set(id, c); taken.add(c); continue; }
     ambiguous.set(id, fit.map((x) => `${x.name} (#${kids(parent).indexOf(x) + 1})`));
   }
