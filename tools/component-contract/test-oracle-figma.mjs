@@ -252,6 +252,10 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     assert.deepEqual(inner(null), [], 'nothing overridden: the glyph is its library\'s');
     assert.deepEqual(inner(['fills', 'exportSettings']), [], 'a colour override and an ignored one leave its opacity the main\'s');
     assert.ok(inner(['opacity']).includes('opacity'), 'its opacity, overridden here, unsaid: a row');
+    // a text inside the instance tied to a property is tied to its component's, though the host has one of that name
+    { const s = structuredClone(set); for (const v of s.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.children.push({ id: v.id + 'c', name: 'Caption', type: 'TEXT', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), characters: 'Go', componentPropertyReferences: { characters: 'Label#1:0' } }); }
+      const c5 = structuredClone(c); c5.anatomy['icon/caption'] = { kind: 'text', parent: 'icon', order: 1, name: 'Caption', content: 'Go' };
+      assert.ok(!compareContract('chip', s, c5, ctx).rows.some((x) => x.kind === 'contract:content'), 'its words are what it draws, not the host\'s {label}'); }
     // a chain with a contract-less main that is neither another library's nor an icon keeps its rows
     const chain = structuredClone(set); for (const v of chain.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.children[0] = { id: v.id + 'n', name: 'Nested', type: 'INSTANCE', componentId: 'C:4', size: { x: 12, y: 12 }, relativeTransform: T(2, 2), overrides: [{ id: v.id + 'nv', overriddenFields: ['fills'] }], children: [{ id: v.id + 'nv', name: 'Dot', type: 'VECTOR', size: { x: 4, y: 4 }, relativeTransform: T(0, 0) }] }; }
     const cx4 = { ...remote, components: { ...remote.components, 'C:4': { key: 'k-local', name: 'Local' } } };

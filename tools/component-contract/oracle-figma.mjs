@@ -803,6 +803,7 @@ export function compareContract(component, setNode, contract, ctx) {
     const index = (n) => { for (const c of n.children || []) { parentOf.set(c, n); index(c); } };
     index(v);
     const inInstance = (n) => { for (let q = parentOf.get(n); q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') return true; return false; };
+    const ownProps = (n) => (inInstance(n) ? {} : idOfProp);
     // what the mains' own contracts say of a layer: each instance around it (itself first) expanded at its props, the
     // innermost said first and each outer main over it (null where none says it); `whole` where every one of those
     // instances has a contract, so a field none says is a difference, else it is `not stated`
@@ -847,7 +848,8 @@ export function compareContract(component, setNode, contract, ctx) {
       const says = n.type === 'INSTANCE' || inInstance(n) ? mainSays(n) : null;
       // turned on its own axes by the contract that says its size: the host's, else the main's that does
       const turnedHere = turned.has(id) || (!!says && says.turned && !('width' in part) && !('height' in part));
-      const a = restPart(n, n === v ? null : parent, ctx, idOfProp, n === v ? null : frameOf(n), { turned: turnedHere });
+      // (a layer inside a placed instance names that instance's component's properties, never this one's: ownProps)
+      const a = restPart(n, n === v ? null : parent, ctx, ownProps(n), n === v ? null : frameOf(n), { turned: turnedHere });
       let b = partOurs(part);
       // an instance, and a layer inside one, says what differs from its component (derive's ownStyling): what it leaves
       // unsaid is its main's, read from the main's own contract expanded at the instance's props, the host's word over
@@ -871,7 +873,7 @@ export function compareContract(component, setNode, contract, ctx) {
       if (!said && away && away.inside && !away.overridden.size && !away.shown) { t.skip(away.why); continue; }
       if (!said) { if (whole) t.differ(v.name, p, 'part', 'present', 'missing'); else t.differ(v.name, p, 'not stated', 'present', undefined); continue; }
       t.check(v.name, p, 'part', true, true);
-      const a = restPart(node, parentOf.get(node) || null, ctx, idOfProp, frameOf(node), { turned: !!mainTurned });
+      const a = restPart(node, parentOf.get(node) || null, ctx, ownProps(node), frameOf(node), { turned: !!mainTurned });
       if (!whole) { if (away) aside(v.name, p, a, said, away); else unstated(v.name, p, a, said); }
       fields(v.name, p, node, a, said, {}, constrained(node, parentOf.get(node), geo, {}));
     }
