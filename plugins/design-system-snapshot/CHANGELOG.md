@@ -1,6 +1,11 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.90.2] - 2026-11-25
+### Fixed
+- **Snapshots are fast again.** 0.90.0 read every placed instance's layers in every variant to find a property the set exposes inside one; the walk now looks inside instances only for a property no outer layer takes.
+- **Reading components names the one it is on**, so a large component holding the count says which it is.
+
 ## [0.90.1] - 2026-11-25
 ### Fixed
 - **The status stays on one line while it runs**: a long page name no longer moves the bar (the whole text is the tooltip).

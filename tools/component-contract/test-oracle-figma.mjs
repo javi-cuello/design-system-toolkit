@@ -163,6 +163,10 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const roots = [v('Size=Large', [inst({ characters: 'Label#1:1' })]), v('Size=Small', [inst({ characters: 'Own#9:9' })])];
     assert.deepEqual(linksOf(roots, new Set(['Label#1:1'])), { Label: { kind: 'characters', layers: [['Label'], ['Menu', 'Text']], layerVariants: [['Size=Large', 'Size=Small'], ['Size=Large']] } });
     assert.deepEqual(linksOf(roots), { Label: { kind: 'characters', layers: [['Label']] } }); }
+  // 0.90.2 (narrow): inside instances only for a key no outer layer takes
+  { const inst = (refs) => ({ name: 'Menu', type: 'INSTANCE', children: [{ name: 'Text', type: 'TEXT', componentPropertyReferences: refs }] });
+    const roots = [{ name: 'V', children: [{ name: 'Label', type: 'TEXT', componentPropertyReferences: { characters: 'Title#1:1' } }, inst({ characters: 'Badge#2:2', visible: 'Title#1:1' })] }];
+    assert.deepEqual(linksOf(roots, new Set(['Title#1:1', 'Badge#2:2']), true), { Title: { kind: 'characters', layers: [['Label']] }, Badge: { kind: 'characters', layers: [['Menu', 'Text']] } }); }
   const sp = compareSpec('chip', setNode, storedFull(), ctx);
   assert.deepEqual(sp.rows, [], 'a spec that says what Figma says has no row');
   assert.ok(sp.checked > 20, 'and its fields were checked, each counted');

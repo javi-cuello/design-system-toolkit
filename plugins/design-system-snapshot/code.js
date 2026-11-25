@@ -1,4 +1,4 @@
-// Design system snapshot — v0.90.1 · plugin-standard v1.1.0
+// Design system snapshot — v0.90.2 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -827,7 +827,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.90.1';
+const VERSION = '0.90.2';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1500,8 +1500,9 @@ function propLinks(roots, keys) {
   // (per property, per layer, the variants it is driven in)
   const by = /** @type {Record<string, Set<string>[]>} */ ({});
   let root = '';
-  /** @param {any} node @param {string[]} at @param {boolean} [inside] */
-  const walk = (node, at, inside = false) => {
+  // (`only`: the set's keys no layer outside a placed instance takes, looked for inside them; null, not inside at all)
+  /** @param {any} node @param {string[]} at @param {Set<string> | null} only @param {boolean} [inside] */
+  const walk = (node, at, only, inside = false) => {
     const seen = /** @type {Record<string, number>} */ ({});
     for (const c of node.children || []) {
       const n = c.visible === false ? (seen[c.name] || 0) + 1 : (seen[c.name] = (seen[c.name] || 0) + 1);
@@ -1510,16 +1511,20 @@ function propLinks(roots, keys) {
         const ref = refs[kind];
         // (inside a placed instance a reference is its component's own, unless it is one of this set's keys: a
         // property the set exposes on a nested layer)
-        if (!ref || (inside && !(keys && keys.has(ref)))) continue;
+        if (!ref || (only ? !only.has(ref) : inside)) continue;
         const prop = bare(ref), l = links[prop] || (links[prop] = { kind, layers: [] }), per = by[prop] || (by[prop] = []);
         let i = l.layers.findIndex((x) => JSON.stringify(x) === JSON.stringify(here));
         if (i < 0) i = l.layers.push(here) - 1;
         (per[i] || (per[i] = new Set())).add(root);
       }
-      walk(c, here, inside || c.type === 'INSTANCE');
+      if (c.type !== 'INSTANCE' || only) walk(c, here, only, inside || c.type === 'INSTANCE');
     }
   };
-  for (const v of roots) { root = v.name; walk(v, []); }
+  for (const v of roots) { root = v.name; walk(v, [], null); }
+  // a placed instance's insides are read only for a key no outer layer takes (walk 0.90.2): read whole, every instance
+  // in every variant, they made a large library's snapshot many times slower
+  const only = new Set([...(keys || [])].filter((k) => k.includes('#') && !(bare(k) in links)));
+  if (only.size) for (const v of roots) { root = v.name; walk(v, [], only); }
   const names = (/** @type {Set<string>} */ w) => roots.map((v) => v.name).filter((n) => w.has(n));
   for (const [prop, l] of Object.entries(links)) {
     const all = new Set(by[prop].flatMap((x) => [...x]));
@@ -1602,7 +1607,8 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
   for (const [i, list] of sets.entries()) {
     const page = wanted[i];
     for (const s of list) {
-      say('reading components', read++, count);
+      // (its name too: a large one holds the count a while, and the window says which)
+      say(`reading components: ${s.name}`, read++, count);
       /** @type {Record<string, unknown>} */ const props = {};
       let defs;
       try { defs = s.componentPropertyDefinitions; } catch (e) { unreadable.push({ name: s.name, page: page.name, reason: message(e) }); continue; }

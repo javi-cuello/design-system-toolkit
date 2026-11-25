@@ -442,9 +442,9 @@ export function compareSpec(component, setNode, spec, ctx) {
   if (meta) t.check(null, 'description', 'description', meta.description || '', spec.description || '', (a, b) => plainText(a) === plainText(b));
   else t.skip('description: the set is not in the response');
   if (isSet && setNode.size) t.check(null, 'set', 'set', { w: r2(setNode.size.x), h: r2(setNode.size.y) }, spec.set);
-  // (as the walk that stored it read them: 0.90.0 on, into instances and per layer; the file's stamp, else a store's
+  // (as the walk that stored it read them: 0.90.0 on, into instances and per layer, 0.90.2 on only for keys no outer layer takes; the file's stamp, else a store's
   // single stamp from before files were stamped; none at all is the newest)
-  const links = linksOf(variants, !ctx.walk || atLeast(ctx.walk, '0.90.0') ? new Set(Object.keys(defs)) : null);
+  const links = linksOf(variants, !ctx.walk || atLeast(ctx.walk, '0.90.0') ? new Set(Object.keys(defs)) : null, !ctx.walk || atLeast(ctx.walk, '0.90.2'));
   for (const k of new Set([...Object.keys(links), ...Object.keys(spec.links || {})])) t.check(null, `links.${k}`, 'links', links[k], (spec.links || {})[k]);
   // variant by variant
   const stored = new Map((spec.variants || []).map((v) => [v.name, v]));
@@ -504,11 +504,12 @@ const atLeast = (v, w) => { const a = String(v).split('.').map(Number), b = w.sp
 /* The plugin's propLinks, read off REST: which layers each property drives, hidden ones counted. From walk 0.90.0 on
    (`keys`, the set's own property keys) it also reads inside placed instances, a reference there being the set's only by
    one of its keys, and says each layer's own variants where they are fewer than the property's; before, not into
-   instances, as the walk that stored the snapshot read them. */
-export function linksOf(roots, keys) {
+   instances, as the walk that stored the snapshot read them. From 0.90.2 (`narrow`) it reads inside instances only for
+   the keys no outer layer takes. */
+export function linksOf(roots, keys, narrow = false) {
   const links = {}, where = {}, byLayer = {};
   let root = '';
-  const walk = (node, at, inside = false) => {
+  const walk = (node, at, keys, inside = false) => {
     const seen = {};
     for (const c of node.children || []) {
       const k = c.visible === false ? (seen[c.name] || 0) + 1 : (seen[c.name] = (seen[c.name] || 0) + 1);
@@ -525,11 +526,16 @@ export function linksOf(roots, keys) {
         const per = byLayer[prop] || (byLayer[prop] = []);
         (per[i] || (per[i] = new Set())).add(root);
       }
-      if (c.type !== 'INSTANCE') walk(c, here, inside);
-      else if (keys) walk(c, here, true);
+      if (c.type !== 'INSTANCE') walk(c, here, keys, inside);
+      else if (keys) walk(c, here, keys, true);
     }
   };
-  for (const v of roots) { root = v.name; walk(v, []); }
+  if (!narrow || !keys) for (const v of roots) { root = v.name; walk(v, [], keys); }
+  else {
+    for (const v of roots) { root = v.name; walk(v, [], null); }
+    const only = new Set([...keys].filter((k) => k.includes('#') && !(bare(k) in links)));
+    if (only.size) for (const v of roots) { root = v.name; walk(v, [], only); }
+  }
   for (const [prop, l] of Object.entries(links)) {
     if (where[prop].size < roots.length) l.variants = roots.map((v) => v.name).filter((n) => where[prop].has(n));
     if (keys && byLayer[prop].some((x) => x.size < where[prop].size)) l.layerVariants = byLayer[prop].map((x) => roots.map((v) => v.name).filter((n) => x.has(n)));

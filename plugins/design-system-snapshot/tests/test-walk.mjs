@@ -89,8 +89,10 @@ ok("each property names the layers it drives, as lists of names numbered among v
 ok("…and a reference inside a nested instance is the inner component's, not recorded", !links.Title.layers.some((l) => l.includes("Glyph")));
 // 0.90.0: a property the set exposes on a layer inside a placed instance is recorded by its own key; two swaps driving one
 // layer in turn (an icon, and another when selected) each name the variants they drive it in
-{ const deep = propLinks([v1, v2], new Set(["Title#1:2", "Title#9:9"]));
-  ok("…unless the reference is by one of the set's own keys: then it is the set's", deep.Title.layers.some((l) => l.join("/") === "Content/Icon/Glyph"));
+{ const inner = (refs) => node("Menu", [node("Text", [], refs)], undefined, { type: "INSTANCE" });
+  const deep = propLinks([node("V", [node("Label", [], { characters: "Title#1:2" }), inner({ characters: "Badge#9:9", visible: "Title#1:2" }), inner({ characters: "Own#5:5" })])], new Set(["Title#1:2", "Badge#9:9"]));
+  ok("…unless the reference is by one of the set's own keys that no outer layer takes: then it is the set's (0.90.2: read only then)",
+    JSON.stringify(deep.Badge.layers) === JSON.stringify([["Menu", "Text"]]) && JSON.stringify(deep.Title.layers) === JSON.stringify([["Label"]]) && !deep.Own);
   const on = (sel) => node(`Selected=${sel}`, [node("Icon", [], { mainComponent: sel ? "Icon selected#2:2" : "Icon#1:1" }, { type: "INSTANCE" }), node("Lead", [], { mainComponent: "Icon#1:1" }, { type: "INSTANCE" })]);
   const turn = propLinks([on(false), on(true)]);
   ok("…and a layer two swaps drive in turn names its variants under each",
