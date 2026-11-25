@@ -422,6 +422,18 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     && 'chip/text' in derive(holder('Text/strong', 'Save'), ['Chip']).anatomy && selfCheck(holder('Text/danger', 'Save'), over, ['Chip'], { mains }).length === 0);
 }
 {
+  // a slot inside a placed instance is that instance's component's property: the host names no placeholder for it (it has
+  // no such property), and one its component draws the same is its component's, left out
+  const item = { name: 'Item', id: '9:7', props: { Content: 'SLOT' }, variants: [{ name: 'Item', type: 'COMPONENT', layout: 'VERTICAL', sizing: 'FIXED/HUG', w: 200, children: [
+    { name: 'Content', type: 'SLOT', layout: 'VERTICAL', gap: 0, sizing: 'FILL/HUG' }] }] };
+  const list = (gap) => ({ name: 'List', id: '9:8', props: {}, variants: [{ name: 'List', type: 'COMPONENT', layout: 'VERTICAL', sizing: 'FIXED/HUG', w: 200, children: [
+    { name: 'Item', type: 'INSTANCE', instanceOf: 'Item', layout: 'VERTICAL', sizing: 'FILL/HUG', children: [{ name: 'Content', type: 'SLOT', layout: 'VERTICAL', gap, sizing: 'FILL/HUG' }] }] }] });
+  const mains = mainsFrom({ Item: item });
+  const same = derive(list(0), ['Item'], { mains }).anatomy, over = derive(list(8), ['Item'], { mains }).anatomy, bare = derive(list(0), ['Item']).anatomy;
+  ok('a slot inside a placed instance names no property of the host\'s; drawn as its component draws it, it is left to that component',
+    derive(item).anatomy.content.content === '{content}' && !('item/content' in same) && over['item/content'] && over['item/content'].content === undefined && bare['item/content'].content === undefined);
+}
+{
   // an instance that clears its component's colour style or stroke says so, `none`: left unsaid, it would be its component's
   const box = { name: 'Box', id: '9:5', props: {}, variants: [{ name: 'Box', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', fills: ['Bg/clear'], fillStyle: 'Clear/Clear', strokes: ['Line/strong'], strokeSides: [1, 1, 1, 1], children: [] }] };
   const row = (own) => ({ name: 'Row', id: '9:6', props: {}, variants: [{ name: 'Row', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [

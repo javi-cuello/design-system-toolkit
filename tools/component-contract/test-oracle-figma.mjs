@@ -362,6 +362,12 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     // the main's own swap property on one of its parts is the main's to say: at the host it is no row
     { const sw = icon(); sw.anatomy.badge.swappedBy = 'tint';
       assert.ok(!compareContract('chip', set, host, { ...ctx, mains: () => sw }).rows.some((x) => x.kind === 'contract:swappedBy'), 'the main\'s swap: not the host\'s'); }
+    // a slot the main fills from its own slot property: what the instance puts there is the instance's, no row at the host
+    { const sl = icon(); sl.props.items = { type: 'slot', figma: 'Items' }; sl.anatomy.items = { kind: 'slot', parent: 'root', order: 3, width: 10, height: 10, absolute: { x: 0, y: 0 }, content: '{items}' };
+      const withSlot = structuredClone(set); for (const v of withSlot.children) v.children.find((x) => x.type === 'INSTANCE').children.push({ id: v.id + 's', name: 'Items', type: 'SLOT', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), componentPropertyReferences: { slotContentId: 'Items#1:1' } });
+      const rs = compareContract('chip', withSlot, host, { ...ctx, mains: () => sl });
+      assert.ok(!rs.rows.some((x) => x.kind === 'contract:content'), 'the main\'s slot property: not the host\'s');
+      assert.ok(rs.rows.length === 0, 'and the slot itself is held to the main: ' + JSON.stringify(rs.rows)); }
     // a main that says otherwise is a real row, never "not stated"
     const wrong = icon(); wrong.variants[0].set['glyph.width'] = 14;
     const r2 = compareContract('chip', set, host, { ...ctx, mains: () => wrong });

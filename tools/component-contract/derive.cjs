@@ -418,8 +418,9 @@ function flatten(list, characters = new Map(), known = [], axes = [], turned = n
     if (parent != null) e.order = order;
     const prop = characters.get(keyOf(segs)) || characters.get(plain(segs));
     if (prop && node.type === 'TEXT') e.content = `{${prop}}`;
-    // a slot is its prop's: Figma names the property after the slot layer
-    if (node.type === 'SLOT') e.content = `{${camel(node.name)}}`;
+    // a slot is its prop's: Figma names the property after the slot layer (one inside a placed instance is that
+    // instance's component's property, never this one's: what fills it is the instance's, as REST says it)
+    if (node.type === 'SLOT' && !inInstance) e.content = `{${camel(node.name)}}`;
     const id = idOf(segs);
     // the layer's own name where its id cannot say it back (a repeat, a boolean's link folded in)
     if (parent != null && partName(id) !== node.name) e.name = node.name;
@@ -801,7 +802,8 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     const own = (k) => {
       // (a vector's paths are its component's: the walk records none inside an instance, snapshot 0.86.0, so a placed
       // layer is held to its part without them where it states none)
-      const mk = match[k.slice(id.length + 1)], x1 = mk && M[mk], x0 = x1 && emptyless(x1), x = x0 && x0.paths && !anatomy[k].paths ? (({ paths: _, ...r }) => r)(x0) : x0;
+      // (and a slot's placeholder is its component's own property, which a layer inside the instance never names: flatten)
+      const mk = match[k.slice(id.length + 1)], x1 = mk && M[mk], x2 = x1 && emptyless(x1), x0 = x2 && x2.kind === 'slot' && anatomy[k].content === undefined ? (({ content: _, ...r }) => r)(x2) : x2, x = x0 && x0.paths && !anatomy[k].paths ? (({ paths: _, ...r }) => r)(x0) : x0;
       // (a key is no look, but two that differ are two components: a swap to another library's Icon of one name)
       if (!x || !keyMatches(anatomy[k].key, x.key)) return false;
       // (a layer of an instance nested in this one has its position-less constraints left out at that instance's own
