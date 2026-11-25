@@ -68,6 +68,21 @@ ok("a path the walk did not reach marks nothing", markSlots({ name: "x", type: "
     icon.index === 1 && icon.children.length === 1 && !("index" in icon.children[0]) && !("index" in icon.children[0].children[0]));
 }
 
+// 2026-11-25: an overridden instance Figma had not built yet handed over no children while skipInvisibleInstanceChildren
+// was on (live: [] with it on, its layer with it off, then with it on again), so a placed icon was recorded empty though
+// REST lists its layer. One read with the flag off builds them, the flag put back, the hidden ones still dropped.
+{
+  const kids = [box("Glyph", "VECTOR"), box("Hidden", "FRAME", [], false)];
+  const lazy = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }] };
+  Object.defineProperty(lazy, "children", { get: () => (figma.skipInvisibleInstanceChildren ? [] : kids) });
+  figma.skipInvisibleInstanceChildren = true;
+  const walked = await walk(lazy, 1);
+  ok("an instance handing over no children with the flag on is read once with it off: its visible layers recorded",
+    JSON.stringify(walked.children.map((c) => c.name)) === '["Glyph"]');
+  ok("…and the flag put back on", figma.skipInvisibleInstanceChildren === true);
+  delete figma.skipInvisibleInstanceChildren;
+}
+
 // Round 4: the release is stamped on every payload, so the store can tell a
 // field the plugin began to record from one a library began to use.
 const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"));

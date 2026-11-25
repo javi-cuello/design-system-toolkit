@@ -927,7 +927,7 @@ async function componentNotesOf(n) {
       const owner = c && c.parent && c.parent.type === 'COMPONENT_SET' ? c.parent : c;
       const own = src && owner && !owner.remote && (await notesOf(src));
       if (own) {
-        const from = c ? componentName(c.parent && c.parent.type === 'COMPONENT_SET' ? c.parent : c) : null;
+        const from = c ? componentName(owner) : null;
         notes = own.map((x) => (from ? { ...x, from } : x));
       }
       sourceSeen.set(id, src ? { name: src.name, notes } : null);
@@ -939,6 +939,17 @@ async function componentNotesOf(n) {
   return got.length ? got : null;
 }
 
+// An instance Figma has not built yet hands over no children while skipInvisibleInstanceChildren is on, visible ones
+// included: a placed icon and switch were recorded empty in some variants though REST lists their layers. One read with
+// the flag off builds them; it is put back at once, and the walk drops the hidden ones as everywhere.
+/** @param {any} n */
+const kidsOf = (n, f = figma) => {
+  if (n.children.length || !f.skipInvisibleInstanceChildren) return n.children;
+  f.skipInvisibleInstanceChildren = false;
+  const kids = n.children;
+  f.skipInvisibleInstanceChildren = true;
+  return kids;
+};
 /** @param {SceneNode} n @param {number} depth @param {number} [at] its place among all its parent's children, none inside an instance @param {boolean} [inInstance] @returns {Promise<Record<string, unknown>>} */
 async function walk(n, depth, at, inInstance = false) {
   /** @type {Record<string, unknown>} */
@@ -1165,7 +1176,8 @@ async function walk(n, depth, at, inInstance = false) {
     const mc = await n.getMainComponentAsync();
     // named as the library names the component (page namespace included),
     // so an instance of Graphic/Switch is not read as the Switch control
-    o.instanceOf = mc ? componentName(mc.parent && mc.parent.type === 'COMPONENT_SET' ? mc.parent : mc) + (mc.parent && mc.parent.type === 'COMPONENT_SET' ? ' / ' + mc.name : '') : null;
+    const owner = mc && mc.parent && mc.parent.type === 'COMPONENT_SET' ? mc.parent : mc;
+    o.instanceOf = mc ? componentName(owner) + (owner !== mc ? ' / ' + mc.name : '') : null;
     /*
      * The component's IDENTITY, beside its name.
      *
@@ -1183,7 +1195,6 @@ async function walk(n, depth, at, inInstance = false) {
      * is the variant's own. A local-only component has no key, so the id is
      * kept as the within-file fallback.
      */
-    const owner = mc && mc.parent && mc.parent.type === 'COMPONENT_SET' ? mc.parent : mc;
     if (mc) {
       if (owner.key) o.instanceOfKey = owner.key;
       o.instanceOfId = owner.id;
@@ -1207,7 +1218,7 @@ async function walk(n, depth, at, inInstance = false) {
     if ((overrides.length || walkWhole) && depth < 12) {
       o.overrides = overrides.map((ov) => ov.overriddenFields.join(',')).slice(0, 8);
       const kids = [];
-      for (const c of n.children) if (c.visible !== false) kids.push(await walk(c, depth + 1, undefined, true));
+      for (const c of kidsOf(n)) if (c.visible !== false) kids.push(await walk(c, depth + 1, undefined, true));
       o.children = kids;
     }
     return o;
@@ -1718,13 +1729,14 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
        * beside `props` for the same reason `slots` is. A layer is its path
        * of names below the variant, the address the trees use.
        */
-      const links = propLinks(s.type === 'COMPONENT_SET' ? s.children : [s], new Set(Object.keys(s.componentPropertyDefinitions || {})));
+      const members = s.type === 'COMPONENT_SET' ? s.children : [s];
+      const links = propLinks(members, new Set(Object.keys(s.componentPropertyDefinitions || {})));
       const variants = [];
       // Each variant's place in its set, beside its tree (never its x and
       // y, which readers add up as a layer's place in its parent): the set's
       // arrangement is the library's, and a drawing that invents a grid of
       // boxes overlaps what paints outside them (a tooltip's bubbles).
-      for (const v of s.type === 'COMPONENT_SET' ? s.children : [s]) {
+      for (const v of members) {
         const t = await walk(v, 0);
         if (s.type === 'COMPONENT_SET') t.place = { x: round(v.x), y: round(v.y) };
         variants.push(t);
@@ -1739,7 +1751,7 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
       const booleans = Object.keys(defs).filter((k) => defs[k].type === 'BOOLEAN');
       for (const k of booleans) {
         const flipped = !defs[k].defaultValue;
-        for (const v of s.type === 'COMPONENT_SET' ? s.children : [s]) {
+        for (const v of members) {
           const inst = /** @type {ComponentNode} */ (v).createInstance();
           // where it could not move to the temporary page it sits on a real one, so it goes whatever is thrown
           /** @type {SceneNode} */ let made = inst;
@@ -1809,9 +1821,9 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
             // An asset library's variants, each an asset of its own, in both
             // modes: a logo bound to the theme vanished on the docs' dark
             // ground when only its light render was sent.
-            if (assetLibrary && s.type === 'COMPONENT_SET' && s.children.length > 1) {
+            if (assetLibrary && members.length > 1) {
               preview.variants = [];
-              for (const v of s.children) {
+              for (const v of members) {
                 try {
                   const vd = d ? await darkOf(/** @type {ComponentNode} */ (v)) : null;
                   preview.variants.push({ name: v.name, png: figma.base64Encode(await v.exportAsync({ format: 'PNG', constraint: { type: 'SCALE', value: 2 } })), ...(vd && { dark: vd }) });
