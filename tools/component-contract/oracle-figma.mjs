@@ -889,13 +889,23 @@ export function compareContract(component, setNode, contract, ctx) {
     const aside = (vname, id, a, b, away) => {
       const unknown = [...away.overridden].some((f) => !OVERRIDE_KNOWN.has(f) && !OVERRIDE_IGNORED.has(f));
       const held = (k) => unknown || !(k in OVERRIDDEN_AS) || OVERRIDDEN_AS[k].some((f) => away.overridden.has(f)) || (away.self && PLACE.includes(k));
-      for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k) && !byPlace(a, b, k)) { if (held(k)) t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); else t.skip(away.why); delete a[k]; }
+      // (a styled text's field an instance overrides here stays a row though fields() would skip it as its style's: derive
+      // never states a styled text's decoration, so that row is the override's only signal)
+      for (const k of Object.keys(a)) {
+        if (k in b || OWN.includes(k) || stretched(a, b, k)) continue;
+        if (held(k)) t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined);
+        else if (byPlace(a, b, k)) continue;
+        else t.skip(away.why);
+        delete a[k];
+      }
     };
     // (what fields() skips as said otherwise: a size a layer stretched on its axis has from its place, where the part says
     // its end (or bottom); a styled text's spacing, case and decoration, its style's where the part names the style)
-    const byPlace = (a, b, k) => { const c = a.constraints || {}, abs = b.absolute || {};
-      if (['letterSpacing', 'textCase', 'textDecoration'].includes(k)) return typeof a.typography === 'string' && typeof b.typography === 'string';
-      return (k === 'width' && c.horizontal === 'stretch' && 'end' in abs) || (k === 'height' && c.vertical === 'stretch' && 'bottom' in abs); };
+    // (a stretched size is its place's whether or not an instance lists it overridden, resizing being what stretching does;
+    // fields() holds the place's end and bottom)
+    const stretched = (a, b, k) => { const c = a.constraints || {}, abs = b.absolute || {}; return (k === 'width' && c.horizontal === 'stretch' && 'end' in abs) || (k === 'height' && c.vertical === 'stretch' && 'bottom' in abs); };
+    const styledOwn = (a, b, k) => ['letterSpacing', 'textCase', 'textDecoration'].includes(k) && typeof a.typography === 'string' && typeof b.typography === 'string';
+    const byPlace = (a, b, k) => stretched(a, b, k) || styledOwn(a, b, k);
     const unstated = (vname, id, a, b) => { for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k) && !byPlace(a, b, k)) { t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; } };
     const frameOf = (n) => { let f = parentOf.get(n) || null; while (f && GROUPS.has(f.type)) f = parentOf.get(f); return f; };
     // a glyph folded into its icon (derive's ownGlyph): where an instance whose main holds no contract draws one layer,

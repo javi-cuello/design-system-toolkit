@@ -461,6 +461,13 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const tr = compareContract('chip', tagged, tc, { ...ctx, components: { ...ctx.components, 'C:7': { key: 'k-tag', name: 'Tag' } }, mains: () => null });
     assert.ok(tr.rows.some((x) => x.path.startsWith('tag/name.')), 'the text\'s other unstated fields stay rows');
     assert.ok(!tr.rows.some((x) => x.path === 'tag/name.letterSpacing'), 'a styled text\'s spacing is not unstated ' + JSON.stringify(tr.rows.filter((x) => /letter/.test(x.path))));
+    // inside another library's component: its styled text's decoration is that library's to say, unless the instance
+    // overrides it here, when it stays a row (derive never states it, so the row is the override's only signal)
+    const remote = (ov) => { const s2 = structuredClone(tagged); for (const v of s2.children) { const g = v.children.find((c) => c.name === 'Tag'); g.children[0].style.textDecoration = 'UNDERLINE'; if (ov) g.overrides = [{ id: g.children[0].id, overriddenFields: ['textDecoration'] }]; } return s2; };
+    const rcx = { ...ctx, components: { ...ctx.components, 'C:7': { key: 'k-tag', name: 'Tag', remote: true } }, mains: () => null };
+    const deco = (ov) => compareContract('chip', remote(ov), tc, rcx).rows.filter((x) => x.path === 'tag/name.textDecoration');
+    assert.equal(deco(false).length, 0, 'not overridden: left to its library');
+    assert.ok(deco(true).length > 0, 'overridden here: a row');
   }
   // an instance whose fill the host overrides (its own paint, the style detached) keeps none of its main's fill style
   {

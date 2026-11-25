@@ -564,6 +564,15 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const whole = derive(form({ strokes: ['Line/subtle'], strokeSides: [0, 0, 1, 0] }), ['Field'], { mains: mainsFrom({ Field: field2 }) }).anatomy['field/background'];
   ok('a layer of an instance kept whole that draws no fill where its component\'s has one says none',
     !!whole && whole.background === 'none');
+  // and the none survives the contract's variant deltas: a variant clearing what its base draws, and two clearing alike
+  const fv = (name, inner) => ({ ...form(inner).variants[0], name });
+  const setOf = (vs) => ({ name: 'Form', id: '9:16', props: { State: vs.map((v) => v[0]) }, variants: vs.map(([s, inner]) => fv(`State=${s}`, inner)) });
+  const drawn = { fills: ['Field/bg'], strokes: ['Line/subtle'], strokeSides: [0, 0, 1, 0] }, bare = { strokes: ['Line/subtle'], strokeSides: [0, 0, 1, 0] };
+  const fm2 = mainsFrom({ Field: field2 });
+  const mixed = derive(setOf([['On', drawn], ['Off', bare], ['Idle', bare]]), ['Field'], { mains: fm2 });
+  const bgAt = (c, s) => (expand(c, { state: s })['field/background'] || {}).background;
+  ok('a variant clearing the fill its base draws keeps its none through the deltas, as does a second clearing alike',
+    bgAt(mixed, 'on') === 'Field/bg' && bgAt(mixed, 'off') === 'none' && bgAt(mixed, 'idle') === 'none');
   // a nested instance that draws no colour style where the placed component's has one says none (its own component
   // drawing none either): unsaid, it would read as the placed component's
   const tray = { name: 'Tray', id: '9:11', props: {}, variants: [{ name: 'Tray', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
