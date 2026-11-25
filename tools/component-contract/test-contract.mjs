@@ -426,6 +426,19 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const still2 = derive(page({ overrides: ['fillStyleId,fills,strokes'] }), ['Holder', 'Box'], { mains: stored2 }).anatomy;
   ok('a stored component whose mains did not hold its Box keeps that Box\'s clear: drawn with its style again on a page it is kept, still cleared it is not',
     Object.keys(back2).sort().join() === 'holder,holder/box,root' && Object.keys(still2).sort().join() === 'holder,root');
+  // a swap target's parts are held to its own contract's list; and a part walked as one component in one variant is not
+  // read as walked where another variant names a component its mains resolved
+  const Bx = { component: 'Box', props: {}, anatomy: { root: { kind: 'container', fillStyle: 'Clear/Clear' } }, variants: [] };
+  const wrap = (asWalked) => ({ component: 'Icon/Wrap', props: {}, anatomy: { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Box' } }, variants: [], ...(asWalked && { asWalked }) });
+  const btn = { component: 'Button', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['i'] } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/check' } }, variants: [] };
+  const swapIn = (w) => placedAs({ x: { kind: 'instance', component: 'Button', with: { Icon: 'Wrap' } } }, 'x', btn, byComponentName([btn, w, Bx])).M['i/b'];
+  const two = { component: 'Two', props: { kind: { type: 'enum', values: ['a', 'b'], default: 'a', figma: 'Kind' } }, anatomy: { root: { kind: 'container' }, box: { kind: 'instance', parent: 'root', component: 'Other' } },
+    variants: [{ when: { kind: 'b' }, set: { 'box.component': 'Box' } }], asWalked: { box: ['Other'] } };
+  const at = (kind) => placedAs({ x: { kind: 'instance', component: 'Two', with: { Kind: kind } } }, 'x', two, byComponentName([two, Bx])).M.box;
+  ok('a swap target\'s instance its own contract lists as walked reads its unsaid style as cleared; one it does not list, not',
+    swapIn(wrap({ b: ['Box'] })).fillStyle === 'none' && swapIn(wrap(null)).fillStyle === undefined);
+  ok('a part walked as another library\'s component in one variant is not cleared where a variant names one the mains resolved',
+    at('b').component === 'Box' && at('b').fillStyle === undefined);
 }
 {
   // an instance that hides a layer of its component (the walk records what shows) is kept whole: nothing here could say the hiding

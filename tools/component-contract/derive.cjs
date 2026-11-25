@@ -625,6 +625,10 @@ function glyphColour(m, withProps) {
 function placedAs(anatomy, id, m, mains) {
 const e = anatomy[id];
 let M = { ...atProps(m, e.with) };
+  // the parts whose styling stays as walked (asWalked, below), by key here: each to the components it was walked as
+  const walked = new Map();
+  const walkedOf = (c, at = (k) => k) => { const A = RAW.has(c) ? null : c.asWalked || {}; return (k, x) => (A ? (A[k] || []).includes(x.component) : true) && walked.set(at(k), true); };
+  { const w = walkedOf(m); for (const [k, x] of Object.entries(M)) if (x && x.kind === 'instance') w(k, x); }
   // a swap the instance states (Icon: folder) draws that component where the swap points: compared so, its glyph
   // the swapped icon's own drawing, so only what an instance can override there (its colour) is compared
   const low = (x) => String(x).toLowerCase(), swapped = [];
@@ -646,7 +650,10 @@ let M = { ...atProps(m, e.with) };
       if (T) {
         const tA = atProps(T, M[sid].with);
         for (const k of Object.keys(M)) if (k.startsWith(`${sid}/`)) delete M[k];
+        for (const k of walked.keys()) if (k.startsWith(`${sid}/`)) walked.delete(k);
         for (const [tk, te] of Object.entries(tA)) if (tk !== 'root') M[`${sid}/${tk}`] = { ...te, parent: !te.parent || te.parent === 'root' ? sid : `${sid}/${te.parent}` };
+        // (its parts as walked by its own contract's word)
+        { const w = walkedOf(T, (k) => `${sid}/${k}`); for (const [tk, te] of Object.entries(tA)) if (tk !== 'root' && te && te.kind === 'instance') w(tk, te); }
         continue;
       }
       swapped.push(sid);
@@ -663,9 +670,9 @@ let M = { ...atProps(m, e.with) };
   // it. One read with mains, as a store keeps it, already says none where an instance cleared, and an unsaid style there
   // is its component's, left out by ownStyling: read as cleared, it was a none no instance said)
   // A contract read with mains lists the instances its mains did not resolve (asWalked: another library's, or one whose
-  // main threw), which keep their style as walked too, so they are cleared here as well)
-  if (RAW.has(m)) cleared(M, mains);
-  else if ((m.asWalked || []).length) { const walked = new Set(m.asWalked), own = Object.fromEntries(Object.entries(M).filter(([k]) => walked.has(placed.back[k] || k))); cleared(own, mains); }
+  // main threw), each with the components it was walked as there, which keep their style as walked too, so they are
+  // cleared here as well; a swap target's parts by its own contract's list)
+  if (walked.size) cleared(Object.fromEntries(Object.entries(M).filter(([k]) => walked.has(placed.back[k] || k))), mains);
   ownStyling(M, mains);
   return { M, swapped, back: placed.back };
 }
@@ -1036,9 +1043,10 @@ function deriveWith(stored, known, { stateAxis = HOUSE.stateAxis || null, pointe
   // them and their styling stays as walked, so a reader placing this component reads their unsaid style as cleared
   // (placedAs); every other instance's none is already said, and an unsaid style there is its component's
   if (mains) {
-    const walked = new Set();
-    for (const f of flat) for (const [id, e] of Object.entries(f.anatomy)) if (e && e.kind === 'instance' && e.component && (e.fillStyle === undefined || e.border === undefined)) { const m = mains(e.component, e.key); if (!m || !atProps(m, e.with).root) walked.add(id); }
-    if (walked.size) contract.asWalked = [...walked].sort();
+    // (each with the components it was walked as: a variant whose part names a component mains resolved is not walked)
+    const walked = {};
+    for (const f of flat) for (const [id, e] of Object.entries(f.anatomy)) if (e && e.kind === 'instance' && e.component && (e.fillStyle === undefined || e.border === undefined)) { const m = mains(e.component, e.key); if (!m || !atProps(m, e.with).root) walked[id] = [...new Set([...(walked[id] || []), e.component])].sort(); }
+    if (Object.keys(walked).length) contract.asWalked = Object.fromEntries(Object.entries(walked).sort(([a], [b]) => (a < b ? -1 : 1)));
   }
   return contract;
 }

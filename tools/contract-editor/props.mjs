@@ -214,6 +214,11 @@ export function toContract(component, drafts, base = {}, parts = null) {
       .filter(([at, c]) => Object.keys(c).length && (!anatomy || at in anatomy || !read.has(at))));
     if (Object.keys(when).length) rest.when = when; else delete rest.when;
   }
+  // the instances derive kept as walked (derive.cjs asWalked) follow their part through a rename or a move; one removed goes
+  if (rest.asWalked && typeof rest.asWalked === 'object') {
+    const walked = Object.fromEntries(Object.entries(rest.asWalked).map(([at, c]) => [renamed(at), c]).filter(([at]) => !anatomy || at in anatomy || !read.has(at)));
+    if (Object.keys(walked).length) rest.asWalked = walked; else delete rest.asWalked;
+  }
   // a new contract says it has no variants and no invalid combinations yet; one opened keeps what it had
   return { contract: 1, component: component.trim(), props, anatomy: {}, ...(Object.keys(base).length ? {} : { variants: [], invalid: [] }), ...rest, ...(anatomy && (Object.keys(anatomy).length > 1 || JSON.stringify(anatomy.root) !== BARE) ? { anatomy } : {}) };
 }

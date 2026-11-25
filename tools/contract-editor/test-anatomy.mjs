@@ -373,6 +373,14 @@ ok('a renamed part carries its condition and the variants that change it; a remo
   assert.equal(toContract('Chip', [sel], base, parts.filter((p) => p.name !== 'Icon')).when, undefined);
 });
 
+ok('a renamed instance carries derive\'s asWalked to its new id; a removed one takes it', () => {
+  const anatomy = { root: { kind: 'container', layout: { direction: 'row' } }, box: { kind: 'instance', parent: 'root', order: 0, component: 'Box' } };
+  const base = { asWalked: { box: ['Box'] } };
+  const parts = fromAnatomy(anatomy, [], {});
+  assert.deepEqual(toContract('Chip', [], base, parts.map((p) => (p.name === 'Box' ? { ...p, name: 'Frame' } : p))).asWalked, { frame: ['Box'] });
+  assert.equal(toContract('Chip', [], base, parts.filter((p) => p.name !== 'Box')).asWalked, undefined);
+});
+
 ok('a part renamed inside a renamed container carries its variants to its own new id', () => {
   const anatomy = { root: { kind: 'container', layout: { direction: 'row' } }, box: { kind: 'container', parent: 'root', order: 0, layout: { direction: 'row' } }, 'box/label': { kind: 'text', parent: 'box', order: 0, content: 'Hi', color: 'C/a' } };
   const size = draft({ name: 'Size', type: 'enum', values: ['sm', 'lg'], default: 'sm' });
