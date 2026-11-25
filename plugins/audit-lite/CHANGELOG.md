@@ -1,6 +1,11 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.18] - 2026-11-25
+### Changed
+- Carries snapshot walk 0.90.0: per-layer variants on property links, and exposed nested references.
+
+
 ## [0.14.17] - 2026-11-25
 ### Fixed
 - Carries snapshot walk 0.89.6: a gradient a hair short of upright is recorded at 0°, never 360°.

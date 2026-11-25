@@ -1,6 +1,12 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.90.0] - 2026-11-25
+### Added
+- **A property's links say each layer's own variants** (`layerVariants`) when its layers sit in different variants, so two swaps driving one icon in turn each name where they drive it.
+- **A reference inside a placed instance is recorded when it names one of the set's own keys**: a property the set exposes on a nested layer.
+
+
 ## [0.89.6] - 2026-11-25
 ### Fixed
 - **A gradient a hair short of upright is recorded at 0°, never 360°.** The angle was rounded after it was wrapped, so 359.6° read 360.

@@ -503,12 +503,15 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
   });
   // a property that drives its layer in some variants only (snapshot 0.61.0 on): a swap names its instance there, so a
   // set giving each size its own icon swap on the one layer keeps which is whose; elsewhere a text keeps its own words
-  for (const [p, l] of Object.entries(L)) if (l.variants && l.kind !== 'visible') {
-    const want = new Set(l.layers.map((at) => keyOf([].concat(at))));
-    const ws = l.variants.map((n) => valuesIn(figmaProps, n));
+  // (each layer by its own variants where the walk says them, snapshot 0.90.0 on: two swaps driving one layer in turn)
+  for (const [p, l] of Object.entries(L)) if ((l.variants || l.layerVariants) && l.kind !== 'visible') {
+    const keys = l.layers.map((at) => keyOf([].concat(at)));
+    const wsAt = keys.map((_, j) => (l.layerVariants ? l.layerVariants[j] : l.variants).map((n) => valuesIn(figmaProps, n)));
     trees.forEach((t, i) => {
-      const holds = ws.some((w) => Object.entries(w).every(([k, v]) => t.when[k] === v));
-      for (const e of t.list) if (want.has(keyOf(e.segs)) || want.has(plain(e.segs))) {
+      for (const e of t.list) {
+        let j = keys.indexOf(keyOf(e.segs)); if (j < 0) j = keys.indexOf(plain(e.segs));
+        if (j < 0) continue;
+        const holds = wsAt[j].some((w) => Object.entries(w).every(([k, v]) => t.when[k] === v));
         const a = flat[i].anatomy[idOf(e.segs)];
         if (!a) continue;
         if (l.kind === 'mainComponent' && holds && a.kind === 'instance') a.swappedBy = propId(figmaProps, p);

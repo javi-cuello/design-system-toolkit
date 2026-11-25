@@ -85,8 +85,16 @@ const v2 = node("Size=Small", [node("Content", [node("Hidden", [], undefined, { 
 const links = propLinks([v1, v2]);
 ok("each property names the layers it drives, as lists of names numbered among visible siblings, once across variants; one driving them in some variants only names those",
   JSON.stringify(links) === JSON.stringify({ Title: { kind: "characters", layers: [["Content", "Label"]] }, Subtitle: { kind: "characters", layers: [["Content", "Label[2]"]], variants: ["Size=Large"] },
-    "Left icon": { kind: "visible", layers: [["Content", "Icon"], ["Badge"]] }, Icon: { kind: "mainComponent", layers: [["Content", "Icon"]], variants: ["Size=Large"] } }));
+    "Left icon": { kind: "visible", layers: [["Content", "Icon"], ["Badge"]], layerVariants: [["Size=Large"], ["Size=Small"]] }, Icon: { kind: "mainComponent", layers: [["Content", "Icon"]], variants: ["Size=Large"] } }));
 ok("…and a reference inside a nested instance is the inner component's, not recorded", !links.Title.layers.some((l) => l.includes("Glyph")));
+// 0.90.0: a property the set exposes on a layer inside a placed instance is recorded by its own key; two swaps driving one
+// layer in turn (an icon, and another when selected) each name the variants they drive it in
+{ const deep = propLinks([v1, v2], new Set(["Title#1:2", "Title#9:9"]));
+  ok("…unless the reference is by one of the set's own keys: then it is the set's", deep.Title.layers.some((l) => l.join("/") === "Content/Icon/Glyph"));
+  const on = (sel) => node(`Selected=${sel}`, [node("Icon", [], { mainComponent: sel ? "Icon selected#2:2" : "Icon#1:1" }, { type: "INSTANCE" }), node("Lead", [], { mainComponent: "Icon#1:1" }, { type: "INSTANCE" })]);
+  const turn = propLinks([on(false), on(true)]);
+  ok("…and a layer two swaps drive in turn names its variants under each",
+    JSON.stringify(turn.Icon.layerVariants) === JSON.stringify([["Selected=false"], ["Selected=false", "Selected=true"]]) && JSON.stringify(turn["Icon selected"].variants) === JSON.stringify(["Selected=true"]) && !turn["Icon selected"].layerVariants); }
 
 // 0.61.0: a layer placed out of the flow keeps how it follows its parent; one in the flow, or pinned top left, says nothing
 const ring = await walk({ ...box("Focus ring", "RECTANGLE"), layoutPositioning: "ABSOLUTE", constraints: { horizontal: "STRETCH", vertical: "STRETCH" }, parent: { layoutMode: "HORIZONTAL" } }, 1);

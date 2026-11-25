@@ -1,4 +1,4 @@
-// Design system snapshot — v0.89.6 · plugin-standard v1.1.0
+// Design system snapshot — v0.90.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -816,7 +816,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.89.6';
+const VERSION = '0.90.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1549,12 +1549,13 @@ async function kind() {
  * set may give each size its own icon swap, both on the one Icon layer.
  * @param {any[]} roots
  */
-function propLinks(roots) {
-  /** @type {Record<string, { kind: string, layers: string[][], variants?: string[] }>} */ const links = {};
+function propLinks(roots, keys) {
+  /** @type {Record<string, { kind: string, layers: string[][], variants?: string[], layerVariants?: string[][] }>} */ const links = {};
   /** @type {Record<string, Set<string>>} */ const where = {};
+  /** @type {Record<string, Set<string>[]>} */ const byLayer = {};
   let root = '';
-  /** @param {any} node @param {string[]} at */
-  const walk = (node, at) => {
+  /** @param {any} node @param {string[]} at @param {boolean} [inside] */
+  const walk = (node, at, inside = false) => {
     /** @type {Record<string, number>} */ const seen = {};
     for (const c of node.children || []) {
       const n = c.visible === false ? (seen[c.name] || 0) + 1 : (seen[c.name] = (seen[c.name] || 0) + 1);
@@ -1562,16 +1563,27 @@ function propLinks(roots) {
       const refs = c.componentPropertyReferences;
       if (refs) for (const kind of ['characters', 'visible', 'mainComponent']) {
         if (!refs[kind]) continue;
+        // (inside a placed instance a reference is its component's own, unless it names one of this set's keys: a
+        // property the set exposes on a nested layer)
+        if (inside && !(keys && keys.has(refs[kind]))) continue;
         const prop = bare(refs[kind]);
         const l = links[prop] || (links[prop] = { kind, layers: [] });
-        if (!l.layers.some((x) => x.join('/') === here.join('/') && x.length === here.length)) l.layers.push(here);
+        let i = l.layers.findIndex((x) => x.join('/') === here.join('/') && x.length === here.length);
+        if (i < 0) { l.layers.push(here); i = l.layers.length - 1; }
         (where[prop] || (where[prop] = new Set())).add(root);
+        const per = byLayer[prop] || (byLayer[prop] = []);
+        (per[i] || (per[i] = new Set())).add(root);
       }
-      if (c.type !== 'INSTANCE') walk(c, here);
+      walk(c, here, inside || c.type === 'INSTANCE');
     }
   };
   for (const v of roots) { root = v.name; walk(v, []); }
-  for (const [prop, l] of Object.entries(links)) if (where[prop].size < roots.length) l.variants = roots.map((v) => v.name).filter((n) => where[prop].has(n));
+  for (const [prop, l] of Object.entries(links)) {
+    if (where[prop].size < roots.length) l.variants = roots.map((v) => v.name).filter((n) => where[prop].has(n));
+    // (each layer's own variants where they are not the property's: two swaps driving one layer in turn, one per state)
+    const per = byLayer[prop];
+    if (per.some((x) => x.size < where[prop].size)) l.layerVariants = per.map((x) => roots.map((v) => v.name).filter((n) => x.has(n)));
+  }
   return links;
 }
 
@@ -1733,7 +1745,7 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
        * beside `props` for the same reason `slots` is. A layer is its path
        * of names below the variant, the address the trees use.
        */
-      const links = propLinks(s.type === 'COMPONENT_SET' ? s.children : [s]);
+      const links = propLinks(s.type === 'COMPONENT_SET' ? s.children : [s], new Set(Object.keys(s.componentPropertyDefinitions || {})));
       const variants = [];
       // Each variant's place in its set, beside its tree (never its x and
       // y, which readers add up as a layer's place in its parent): the set's

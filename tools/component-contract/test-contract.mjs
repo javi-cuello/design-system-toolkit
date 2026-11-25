@@ -348,6 +348,12 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const words = derive({ ...spec, links: { 'Label text': { kind: 'characters', layers: [['Content', 'Label']], variants: names('Large') } } });
   ok('a text its property drives in some variants only keeps its own words in the rest', words.anatomy['content/label'].content === '{labelText}' && expand(words, { size: 'small' })['content/label'].content === 'Label');
   ok('an icon swapped by one property per size names its own at each size', expand(sw, { leftIcon: true })[id].swappedBy === 'icon20' && expand(sw, { leftIcon: true, size: 'small' })[id].swappedBy === 'icon16');
+  // (snapshot 0.90.0) one property everywhere, but its layers each in their own variants: the icon layer is the large
+  // swap's only at large; another property drives it at small
+  const per = derive({ ...spec, props: { ...spec.props, 'Icon (20)': 'INSTANCE_SWAP', 'Icon (16)': 'INSTANCE_SWAP' },
+    links: { ...spec.links, 'Icon (16)': { kind: 'mainComponent', layers: [['Content', 'Icon container']], variants: names('Small') },
+      'Icon (20)': { kind: 'mainComponent', layers: [['Content', 'Icon container'], ['Elsewhere']], variants: [...names('Large'), ...names('Small')], layerVariants: [names('Large'), [...names('Large'), ...names('Small')]] } } });
+  ok('…and a layer two properties drive in turn names each in the variants the walk gives that layer', expand(per, { leftIcon: true })[id].swappedBy === 'icon20' && expand(per, { leftIcon: true, size: 'small' })[id].swappedBy === 'icon16');
 }
 
 // a boolean hiding the first of two same-named buttons hides that one: the second, left, is still the primary
