@@ -27,7 +27,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
+import { declarations } from './css.mjs';
+import { tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp } from './layers.mjs';
 
@@ -198,7 +199,7 @@ export function givenOf(placed, w, library = {}, lang = JS, settings = HOUSE) {
    only where the design keeps the instance whole, so a part it does not list is not drawn). `a` is one combination's
    anatomy (expand), `hid` the instance there, `whole` the instances it keeps whole (derive's wholeIn); `seen` collects
    each layer so carried. Tested by test-to-markup.mjs. */
-export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), library = {}, lang = JS, settings = HOUSE } = {}) {
+export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), library = {}, lang = JS, settings = HOUSE, sheet = true } = {}) {
   const e = a[hid], m = e && e.kind === 'instance' && mainOf(e.component, e.key);
   if (!m) return {};
   const { M, back } = placedAs(a, hid, m, mainOf);
@@ -216,7 +217,7 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     const L = inner[rel], X = M[mk], at = `${hid}/${rel}`, entry = {};
     const Lm = L.kind === 'instance' && mainOf(L.component, L.key), Xm = X.kind === 'instance' && mainOf(X.component, X.key);
     if (Lm) {
-      const nested = insideOf(a, at, mainOf, { whole, seen, library, lang, settings });
+      const nested = insideOf(a, at, mainOf, { whole, seen, library, lang, settings, sheet: false });
       if (Lm !== Xm) Object.assign(entry, { render: Lm, props: givenOf(Lm, L.with, library, lang, settings) });
       else {
         const w = Object.fromEntries(Object.entries(L.with || {}).filter(([k, v]) => !same(v, (X.with || {})[k])));
@@ -228,8 +229,30 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     // (one the library does not hold, in place of one it does: marked where it goes, as this component marks its own)
     else if (L.kind === 'instance' && Xm && L.component) entry.render = { icon: L.component };
     else if (L.kind === 'text' && X.kind === 'text' && typeof L.content === 'string' && !/^\{.*\}$/.test(L.content) && L.content !== X.content) entry.content = L.content;
+    // its look, where no sheet reaches it (inside a component placed in the placed one, `sheet` false: to-code writes an
+    // override one placed component deep): what the design draws there that the placed component's part does not
+    if (!sheet && L.kind !== 'instance' && L.kind === X.kind) {
+      const up = (k) => inner[k.includes('/') ? k.slice(0, k.lastIndexOf('/')) : ''] || e;
+      const css = (y, par) => new Map(declarations(y, { holds: y.kind === 'container', row: !par.layout || par.layout.direction !== 'column', words: y.kind === 'text' ? y.content : null }, tokenNames).decls.map(([k, v]) => [k, v]));
+      const mine = css(L, up(rel)), theirs = css(X, M[X.parent] || M.root || {});
+      const style = [...mine].filter(([k, v]) => theirs.get(k) !== v && !/^(position|inset|top|right|bottom|left|order|z-index|translate)/.test(k)).map(([k, v]) => `${k}: ${v}`).join('; ');
+      if (style) entry.attrs = { ...entry.attrs, style };
+    }
     if (Object.keys(entry).length) seen.add(at);
     put(mk, entry);
+  }
+  // a layer the placed component has no part for, under one of its own parts (a state layer over a handle, a headline
+  // an app bar shows): drawn into that part at its place, with the look the design gives it (no sheet names it)
+  for (const rel of Object.keys(inner)) {
+    if (match[rel]) continue;
+    // (one directly under the instance goes into its root, the entry named '')
+    const up = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : 'root', mk = up === 'root' ? 'root' : match[up];
+    if (!mk || (mk !== 'root' && !own(mk)) || ['instance', 'slot'].includes((M[mk] || {}).kind)) continue;
+    const node = addedOf(a, `${hid}/${rel}`, mainOf, { library, lang, settings });
+    if (!node) continue;
+    for (const k of Object.keys(a)) if (k === `${hid}/${rel}` || k.startsWith(`${hid}/${rel}/`)) seen.add(k);
+    const key = mk === 'root' ? '' : segOf(mk), was = out[key] || {};
+    out[key] = { ...was, add: [...(was.add || []), { at: inner[rel].order ?? 0, node }] };
   }
   if (whole.has(hid)) {
     // (not a part a prop of it shows that the instance says is shown: hidden, a reading takes that prop to be off,
@@ -238,6 +261,23 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     for (const mk of Object.keys(M)) if (own(mk) && !shown.has(back[mk] || mk) && !drawn.has(mk) && (!M[mk].parent || M[mk].parent === 'root' || drawn.has(M[mk].parent))) put(mk, { hidden: true });
   }
   return out;
+}
+
+/* A layer added inside a placed instance (insideOf), as a tree to draw: its element, its name, its look as an inline
+   style (css.mjs declarations, as its sheet would say it), its words, its own layers; a component of the library's
+   its render function at its props, one it does not hold an icon's mark. */
+function addedOf(a, id, mainOf, { library, lang, settings }) {
+  const e = a[id], up = a[e.parent] || {};
+  const name = camel(id.split('/').pop()).replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`);
+  const attrs = { 'data-part': name, ...(e.name && { 'data-figma-name': e.name }) };
+  if (e.kind === 'instance') {
+    const m = mainOf(e.component, e.key);
+    return m ? { render: m, props: givenOf(m, e.with, library, lang, settings), attrs } : { tag: 'span', attrs: { ...attrs, 'data-icon': e.component, 'aria-hidden': 'true' } };
+  }
+  const { decls } = declarations(e, { holds: e.kind === 'container', row: !up.layout || up.layout.direction !== 'column', words: e.kind === 'text' ? e.content : null }, tokenNames);
+  const style = decls.map(([k, v]) => `${k}: ${v}`).join('; ');
+  const kids = Object.keys(a).filter((k) => a[k].parent === id).sort((x, y) => (a[x].order ?? 0) - (a[y].order ?? 0)).map((k) => addedOf(a, k, mainOf, { library, lang, settings })).filter(Boolean);
+  return { tag: e.kind === 'container' ? 'div' : 'span', attrs: { ...attrs, ...(style && { style }), ...(e.kind === 'graphic' && { 'aria-hidden': 'true' }) }, text: e.kind === 'text' && typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) ? e.content : undefined, kids };
 }
 
 /* A swap: among icons (a component the library does not hold), the icon's name; of a part inside a placed component,
@@ -444,6 +484,11 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     if (!a[id] || a[id].kind !== 'instance' || placedOf(library, a[id]) !== placedOf(library, e)) return {};
     return insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), seen: carried, library, lang, settings });
   };
+  const nodeLit = (x) => {
+    const attrs = `{ ${Object.entries(x.attrs || {}).map(([k, v]) => `${str(k)}: ${str(v)}`).join(', ')} }`;
+    if (x.render) { const name = Object.keys(library).find((k2) => library[k2] === x.render) || x.render.component; if (x.render.component !== c.component) used.add(name); return `${fnOf(x.render)}({ ${Object.entries(x.props || {}).map(([p, l]) => `${IDENT.test(p) ? p : str(p)}: ${str(l)}`).join(', ')} }, ${attrs})`; }
+    return `h(${str(x.tag)}, ${attrs}${x.text !== undefined ? `, ${str(x.text)}` : ''}${(x.kids || []).map((k) => `, ${nodeLit(k)}`).join('')})`;
+  };
   const partsLit = (x) => `{ ${Object.entries(x).map(([k, v]) => `${str(k)}: { ${[
     ...(v.hidden ? ['hidden: true'] : []),
     ...(v.render && v.render.icon ? [`render: (_, host) => h("span", { ...host, "data-icon": ${str(v.render.icon)}, "aria-hidden": "true" })`] : []),
@@ -451,12 +496,14 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     ...(v.props ? [`props: { ${Object.entries(v.props).map(([p, l]) => `${IDENT.test(p) ? p : str(p)}: ${str(l)}`).join(', ')} }`] : []),
     ...(v.parts ? [`parts: ${partsLit(v.parts)}`] : []),
     ...(v.content !== undefined ? [`content: ${str(v.content)}`] : []),
+    ...(v.add ? [`add: [${v.add.map((x) => `{ at: ${x.at}, node: ${nodeLit(x.node)} }`).join(', ')}]`] : []),
     ...(v.attrs ? [`attrs: { ${Object.entries(v.attrs).map(([p, l]) => `${str(p)}: ${str(l)}`).join(', ')} }`] : []),
   ].join(', ')} }`).join(', ')} }`;
-  // (the most particular variant that holds first, each as the whole combination draws there; the defaults' last)
+  // (the most particular variant that holds first, each as the whole combination draws there; the defaults' last; never a
+  // pointer state's, which no markup holds)
   const partsCode = (id, e) => {
     const base = insideAt(id, e, {});
-    let alts = [...vs0].sort((x, y) => Object.keys(y.when || {}).length - Object.keys(x.when || {}).length).map((v) => [testOf(v.when || {}), v]).filter(([t]) => t && t !== 'true' && t !== 'false').map(([t, v]) => [t, insideAt(id, e, v.when || {})]);
+    let alts = [...vs0].sort((x, y) => Object.keys(y.when || {}).length - Object.keys(x.when || {}).length).filter((v) => !pointerWords(c, v.when)).map((v) => [testOf(v.when || {}), v]).filter(([t]) => t && t !== 'true' && t !== 'false').map(([t, v]) => [t, insideAt(id, e, v.when || {})]);
     const same = (x, y) => JSON.stringify(x, (k, v) => (k === 'render' ? v.component || v.icon : v)) === JSON.stringify(y, (k, v) => (k === 'render' ? v.component || v.icon : v));
     alts = alts.filter(([, x], k) => !same(x, base) || alts.slice(k + 1).some(([, y]) => !same(y, base)));
     if (!alts.length && !Object.keys(base).length) return null;
@@ -822,10 +869,12 @@ export function h(tag, attrs = {}, ...children) {
 
 /* A component's parts as its holder sets them (its render function's third argument, \`parts\`, by data-part name), on
    the element it built: each part taken away (hidden), another component drawn in its place (render, given props and
-   parts), its words (content), attributes added (attrs). Not inside a placed component (an element of its own, ds-x),
+   parts), its words (content), attributes added (attrs), layers it has no part for added (add: each at its place). Not inside a placed component (an element of its own, ds-x),
    which takes its entry where it is placed (placed), nor a slot's content, the caller's. */
 export function dressed(parts, root) {
   if (!parts || !Object.keys(parts).length) return root;
+  // (its own root, by the name '')
+  if (parts['']) dress(parts[''], root);
   const walk = (e) => {
     for (const k of [...e.children]) {
       const p = parts[k.getAttribute('data-part')];
@@ -848,6 +897,7 @@ export function placed(p, render, props, host, own = {}) {
 }
 function dress(p, e) {
   if (p.content !== undefined) e.textContent = p.content;
+  for (const { at, node } of p.add || []) e.insertBefore(node, e.children[at] || null);
   for (const [k, v] of Object.entries(p.attrs || {})) if (v == null || v === false) e.removeAttribute(k); else e.setAttribute(k, v === true ? '' : String(v));
   return e;
 }

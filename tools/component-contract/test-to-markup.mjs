@@ -176,11 +176,14 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     const swapped = toElement({ ...cb, props: { glyph: { type: 'instance', figma: 'Glyph', swaps: ['mark'] } } }, 'check', { naming: ELEMENT, library: { Check: cb } });
     ok('a glyph drawn at another size than its own, in any combination, says its own (data-icon-size); one drawn at its own, or an icon a prop swaps, does not',
       /"data-icon-size": "16"/.test(out) && !/data-icon-size/.test(even) && /"data-icon-size": "16"/.test(smaller) && !/data-icon-size/.test(swapped)); }
-  ok('an override a placed component has no prop for is named as a gap, never dropped without a word', /Icon: drawn here inside Sw, which has no prop for it/i.test(toElement(org, 'org', { naming: ELEMENT, library: { Switcher: sw, Org: org } }))); }
+  { const el = toElement(org, 'org', { naming: ELEMENT, library: { Switcher: sw, Org: org } });
+    ok('an override a placed component has no prop for is drawn through its parts by a web component, and named as a gap where React cannot pass it, never dropped without a word',
+      /Icon: drawn here inside Sw, which has no prop for it/i.test(toReact(org, 'org', { naming: CLASS, library: { Switcher: sw, Org: org } })) && !/drawn here inside/.test(el) && /"": \{ add: \[\{ at: 0, node: h\("span", \{ "data-part": "icon", "data-icon": "Icon\/case"/.test(el), el); } }
 /* ── parts: what a holder sets inside a placed component that no prop of it carries (renderX's third argument) ── */
 { // a tiny document, enough for dom.js: the generated modules run here as they run in Chrome
   const el = (tag) => ({ tag, tagName: tag.toUpperCase(), attrs: {}, kids: [], up: null, setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }, hasAttribute(k) { return k in this.attrs; }, removeAttribute(k) { delete this.attrs[k]; },
     addEventListener() {}, append(...xs) { for (const x of xs) { if (typeof x === 'object') x.up = this; this.kids.push(x); } }, get children() { return this.kids.filter((x) => typeof x === 'object'); },
+    insertBefore(x, r) { x.up = this; const i = r ? this.kids.indexOf(r) : -1; if (i < 0) this.kids.push(x); else this.kids.splice(i, 0, x); },
     remove() { this.up.kids.splice(this.up.kids.indexOf(this), 1); }, replaceWith(x) { x.up = this.up; this.up.kids.splice(this.up.kids.indexOf(this), 1, x); },
     get textContent() { return this.kids.map((x) => (typeof x === 'string' ? x : x.textContent)).join(''); }, set textContent(s) { this.kids = [String(s)]; } });
   globalThis.document = { createElement: el };
@@ -222,6 +225,13 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   { const shown = { ...item, props: { showTrail: { type: 'boolean', default: true, figma: 'Show trail', shows: ['trail'] } } };
     const r = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'A' } }), out = toElement(r, 'row', { naming: ELEMENT, library: { ...lib(r), Item: shown } });
     ok('parts: a part a prop of it shows, which the instance says is shown, is not taken away (a reading would take the prop off)', !/hidden: true/.test(out), out); }
+  { const boxed = { component: 'Boxed', folder: 'boxed', props: {}, anatomy: { root: { kind: 'container' }, box: { kind: 'container', parent: 'root', order: 0, layout: { direction: 'row', gap: 4 } }, 'box/label': { kind: 'text', parent: 'box', order: 0, content: 'A' } }, variants: [] };
+    const r = { component: 'Row', folder: 'row', props: {}, variants: [], anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Boxed', with: {} }, 'item/box': { kind: 'container', parent: 'item', order: 0, layout: { direction: 'row', gap: 4 } }, 'item/box/note': { kind: 'text', parent: 'item/box', order: 1, content: 'N', color: 'Text/strong' } } };
+    const L = { Boxed: boxed, Row: r }, dir = path.join(tmp, 'added'); fs.mkdirSync(dir); fs.writeFileSync(path.join(dir, 'dom.js'), DOM);
+    for (const c of Object.values(L)) { fs.mkdirSync(path.join(dir, c.folder)); fs.writeFileSync(path.join(dir, c.folder, `${c.folder}.js`), toElement(c, c.folder, { naming: ELEMENT, library: L })); }
+    const out = toElement(r, 'row', { naming: ELEMENT, library: L }), d = (await import(path.join(dir, 'row', 'row.js'))).renderRow(), box = find(d, (x) => x.attrs['data-part'] === 'box');
+    const note = box && box.kids[1];
+    ok('parts: a layer the placed component has no part for is drawn into the part it sits in, at its place, its look said on it', !!note && note.attrs['data-part'] === 'note' && note.textContent === 'N' && /color: var\(--text-strong\)/.test(note.attrs.style || '') && !/Note: drawn here/.test(out), out); }
   const byProp = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'B' } }, { big: { type: 'boolean', default: false, figma: 'Big' } }, [{ when: { big: true }, set: { 'item/label.content': 'C' } }]);
   { const a = find(await run(byProp), (x) => x.attrs['data-part'] === 'label').textContent, b = find(await run(byProp, { big: true }), (x) => x.attrs['data-part'] === 'label').textContent;
     ok('parts: what they carry follows this component\'s own props, as each variant draws it', a === 'B' && b === 'C', `${a} ${b}`); }
