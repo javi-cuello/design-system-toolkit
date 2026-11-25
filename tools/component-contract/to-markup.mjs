@@ -225,6 +225,8 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
       }
       if (Object.keys(nested).length) entry.parts = nested;
     } else if (L.kind === 'instance' && X.kind === 'instance' && !Xm && L.component && L.component !== X.component) entry.attrs = { 'data-icon': L.component };
+    // (one the library does not hold, in place of one it does: marked where it goes, as this component marks its own)
+    else if (L.kind === 'instance' && Xm && L.component) entry.render = { icon: L.component };
     else if (L.kind === 'text' && X.kind === 'text' && typeof L.content === 'string' && !/^\{.*\}$/.test(L.content) && L.content !== X.content) entry.content = L.content;
     if (Object.keys(entry).length) seen.add(at);
     put(mk, entry);
@@ -442,7 +444,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   };
   const partsLit = (x) => `{ ${Object.entries(x).map(([k, v]) => `${str(k)}: { ${[
     ...(v.hidden ? ['hidden: true'] : []),
-    ...(v.render ? (() => { const name = Object.keys(library).find((k2) => library[k2] === v.render) || v.render.component; if (v.render.component !== c.component) used.add(name); return [`render: ${fnOf(v.render)}`]; })() : []),
+    ...(v.render && v.render.icon ? [`render: (_, host) => h("span", { ...host, "data-icon": ${str(v.render.icon)}, "aria-hidden": "true" })`] : []),
+    ...(v.render && !v.render.icon ? (() => { const name = Object.keys(library).find((k2) => library[k2] === v.render) || v.render.component; if (v.render.component !== c.component) used.add(name); return [`render: ${fnOf(v.render)}`]; })() : []),
     ...(v.props ? [`props: { ${Object.entries(v.props).map(([p, l]) => `${IDENT.test(p) ? p : str(p)}: ${str(l)}`).join(', ')} }`] : []),
     ...(v.parts ? [`parts: ${partsLit(v.parts)}`] : []),
     ...(v.content !== undefined ? [`content: ${str(v.content)}`] : []),
@@ -452,7 +455,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const partsCode = (id, e) => {
     const base = insideAt(id, e, {});
     let alts = [...vs0].sort((x, y) => Object.keys(y.when || {}).length - Object.keys(x.when || {}).length).map((v) => [testOf(v.when || {}), v]).filter(([t]) => t && t !== 'true' && t !== 'false').map(([t, v]) => [t, insideAt(id, e, v.when || {})]);
-    const same = (x, y) => JSON.stringify(x, (k, v) => (k === 'render' ? v.component : v)) === JSON.stringify(y, (k, v) => (k === 'render' ? v.component : v));
+    const same = (x, y) => JSON.stringify(x, (k, v) => (k === 'render' ? v.component || v.icon : v)) === JSON.stringify(y, (k, v) => (k === 'render' ? v.component || v.icon : v));
     alts = alts.filter(([, x], k) => !same(x, base) || alts.slice(k + 1).some(([, y]) => !same(y, base)));
     if (!alts.length && !Object.keys(base).length) return null;
     return alts.reduceRight((acc, [t, x]) => `${/^[\w$!.]+$/.test(t) ? t : `(${t})`} ? ${partsLit(x)} : ${acc}`, partsLit(base));

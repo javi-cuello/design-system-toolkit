@@ -208,6 +208,8 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   const swap = row({ 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Badge', with: { Count: '7' } } });
   { const d = await run(swap), b = find(d, (x) => x.tag === 'ds-badge');
     ok('parts: another component swapped in where no prop swaps it is drawn in the part\'s place, given its own props', !!b && b.attrs['data-part'] === 'trail' && b.textContent === '7' && !find(d, (x) => x.tag === 'ds-trail')); }
+  { const d = await run(row({ 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Icons/star' } })), x = find(d, (y) => y.attrs['data-part'] === 'trail');
+    ok('parts: a component the library does not hold, in place of one it does, is marked where it goes as an icon is', x && x.tag === 'span' && x.attrs['data-icon'] === 'Icons/star' && !find(d, (y) => y.tag === 'ds-trail')); }
   { const two = { ...item, anatomy: { ...item.anatomy, trail_2: { ...item.anatomy.trail, order: 2 } } };
     const r = row({ 'item/trail_2': { kind: 'instance', parent: 'item', order: 2, component: 'Trail', with: { Tone: 'Loud' } } }), L = { ...lib(r), Item: two };
     const dir = path.join(tmp, 'copies'); fs.mkdirSync(dir); fs.writeFileSync(path.join(dir, 'dom.js'), DOM);
