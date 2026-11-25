@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { derive, expand, selfCheck, bridge, fold, mainsFrom, ownStyling, normalForm, ownGlyph, byComponentName, ownInsides } = require('./derive.cjs');
+const { derive, expand, selfCheck, bridge, fold, mainsFrom, ownStyling, normalForm, ownGlyph, byComponentName, ownInsides, placedAs } = require('./derive.cjs');
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
 
@@ -411,6 +411,14 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const still = derive(page({ overrides: ['fillStyleId,fills,strokes'] }), ['Holder', 'Box'], { mains: both }).anatomy;
   ok('a Box its holder clears, drawn with its style and stroke again inside it, says them; one still cleared says nothing',
     back['holder/box'] && back['holder/box'].fillStyle === 'Clear/Clear' && back['holder/box'].border && back['holder/box'].border.color === 'Line/strong' && !('holder/box' in still));
+  // read with mains, as a store keeps it, a component whose Box keeps its style and stroke has them left out as the Box's
+  // own: placed, that Box clears nothing, and a page drawing it unchanged keeps no part of it
+  const keeps = { ...holder, variants: [{ ...holder.variants[0], children: [{ name: 'Box', type: 'INSTANCE', instanceOf: 'Box', layout: 'HORIZONTAL', sizing: 'HUG/HUG', fills: ['Bg/clear'], fillStyle: 'Clear/Clear', strokes: ['Line/strong'], strokeSides: [1, 1, 1, 1], children: [] }] }] };
+  const B = derive(box, []), H = derive(keeps, ['Box'], { mains: mainsFrom({ Box: box }) }), stored = byComponentName([B, H]);
+  const placedBox = placedAs({ holder: { kind: 'instance', component: 'Holder', with: {} } }, 'holder', H, stored).M.box;
+  const onPage = derive(page({ fills: ['Bg/clear'], fillStyle: 'Clear/Clear', strokes: ['Line/strong'], strokeSides: [1, 1, 1, 1] }), ['Holder', 'Box'], { mains: stored }).anatomy;
+  ok('a stored component\'s Box that keeps its style and stroke, placed, says neither cleared; drawn unchanged on a page, no part of it is kept',
+    placedBox.fillStyle === undefined && placedBox.border === undefined && Object.keys(onPage).sort().join() === 'holder,root');
 }
 {
   // an instance that hides a layer of its component (the walk records what shows) is kept whole: nothing here could say the hiding

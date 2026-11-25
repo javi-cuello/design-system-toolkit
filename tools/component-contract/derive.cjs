@@ -658,8 +658,12 @@ let M = { ...atProps(m, e.with) };
   const placed = asPlaced(M), keyOf = Object.fromEntries(Object.entries(placed.back).map(([k, v]) => [v, k]));
   M = placed.M;
   for (let i = 0; i < swapped.length; i++) swapped[i] = keyOf[swapped[i]] || swapped[i];
-  // (an instance of it that clears its own component's style or stroke says none, as derive says it of a host's: cleared)
-  cleared(M, mains); ownStyling(M, mains);
+  // (an instance of it that clears its own component's style or stroke says none, as derive says it of a host's: cleared;
+  // only where the component was read without mains, whose instances keep the style they draw, so one with none cleared
+  // it. One read with mains, as a store keeps it, already says none where an instance cleared, and an unsaid style there
+  // is its component's, left out by ownStyling: read as cleared, it was a none no instance said)
+  if (RAW.has(m)) cleared(M, mains);
+  ownStyling(M, mains);
   return { M, swapped, back: placed.back };
 }
 
@@ -903,12 +907,17 @@ function mainsFrom(specs, known = [], optionsOf = () => ({})) {
 
 /* `known` is every stored component name, so an instance of `Table - Cell / Fill`
    resolves to that set and not to `Table - Cell` (graph.cjs nameOf). */
+// the contracts derived here without `mains` (mainsFrom's): their instances' styling is as walked, never pruned to
+// their components' (placedAs)
+const RAW = new WeakSet();
 function derive(stored, known = [], options = {}) {
   // a part turned a quarter is said in its own axes only where code draws it in a wrapper (to-code.mjs turnedParts, one
   // rule for the contract, the code and the drawing): found on the contract said without the swap, then said again
   const first = deriveWith(stored, known, options, null);
   const turned = turnedOf(first);
-  return turned.size ? deriveWith(stored, known, options, turned) : first;
+  const out = turned.size ? deriveWith(stored, known, options, turned) : first;
+  if (!options.mains) RAW.add(out);
+  return out;
 }
 const turnedOf = (contract) => require('./to-code.mjs').turnedParts(contract);
 function deriveWith(stored, known, { stateAxis = HOUSE.stateAxis || null, pointerStates = HOUSE.pointerStates || [], mains = null, found = null, modeAxes = [] } = {}, turned = null) {
