@@ -696,6 +696,11 @@ else console.log('skip: no stored contracts on this machine');
   const p = placeFromCss({ position: 'absolute', 'inset-block-start': 'unset', 'inset-block-end': '0px', 'inset-inline-start': '0px' });
   ok('an inset a variant sets to unset is no pin: the part is pinned by the other edge', p && p.constraints && p.constraints.vertical === 'max'); }
 ok('a root with no auto layout is a box: a custom element is inline and 0 wide', decl({ kind: 'container', width: 40, height: 40 }, { root: true }).display === 'block');
+ok('an instance that stops its component\'s clip is overflow visible, a clip is hidden, and neither paints a box of its own',
+  decl({ kind: 'instance', overflow: 'visible' }, { row: true }).overflow === 'visible' && decl({ kind: 'container', overflow: 'hidden' }, { row: true }).overflow === 'hidden'
+  && !('overflow' in decl({ kind: 'container' }, { row: true }))
+  && !paintsAny({ anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', overflow: 'visible' } }, variants: [] }, 'a')
+  && paintsAny({ anatomy: { root: { kind: 'container' }, a: { kind: 'container', parent: 'root', overflow: 'hidden' } }, variants: [] }, 'a'));
 ok('a shadow an instance clears is box-shadow none; a ring it draws stays, and none is never a token', decl({ kind: 'instance', shadow: 'none' }, { row: true })['box-shadow'] === 'none'
   && !/var\(--none/.test(JSON.stringify(decl({ kind: 'instance', shadow: 'none', border: { color: 'Line', width: 1, align: 'outside' } }, { row: true }))));
 ok('a placed component that hugs keeps its own size against its main\'s sheet', decl({ kind: 'instance', width: 'hug' }, { row: true })['inline-size'] === 'fit-content' && decl({ kind: 'instance', width: 'hug' }, { row: true }).flex === 'none');

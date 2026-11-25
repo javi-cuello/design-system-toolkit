@@ -865,6 +865,17 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     && readCleared({ c: { kind: 'instance', component: 'Card', fillless: true } }, () => F, (t) => (t === 'Bg/card' ? 'rgba(0, 0, 0, 0)' : undefined)).c.background === undefined
     && src.includes("if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true;"));
 }
+{
+  // a placed component computing no clip where its component's root clips reads back as the clip stopped, `visible`
+  // (rules.mjs UNCLIPPED, as css.mjs writes it); one whose component does not clip, or one that clips, reads nothing of it
+  const C = { component: 'Card', props: {}, anatomy: { root: { kind: 'container', overflow: 'hidden' } }, variants: [] };
+  const P = { component: 'Plain', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const a = readCleared({ root: { kind: 'container' }, c: { kind: 'instance', component: 'Card', clipless: true }, p: { kind: 'instance', component: 'Plain', clipless: true }, h: { kind: 'instance', component: 'Card', overflow: 'hidden' } }, (n) => (n === 'Card' ? C : n === 'Plain' ? P : null));
+  const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
+  ok('a placed component computing no clip its component draws reads as the clip stopped; nothing else does, and the mark is gone',
+    a.c.overflow === 'visible' && a.p.overflow === undefined && a.h.overflow === 'hidden' && !Object.values(a).some((x) => 'clipless' in x)
+    && src.includes("if (cs.overflow === 'visible') ie.clipless = true;"));
+}
 { const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
   ok('the reading declares its layered set once', (src.match(/\b(const|let|var)\s+layered\b/g) || []).length === 1); }
 // the self page (site.mjs selfSiteFiles, from-code's render): what it serves and when it loads again

@@ -397,6 +397,14 @@ ok('the runner chooses the run\'s token, so it can take back its own and leave a
   } finally { globalThis.setTimeout = quiet; }
 }
 delete globalThis.figma;
+{
+  // an instance that stops its component's clip (rules.mjs UNCLIPPED, `visible`) reaches the drawing as said, where the
+  // placed layer's look sets clipsContent to whether the contract says hidden: false for visible
+  const drawnB = plan({ contract: 1, component: 'Row', props: {}, anatomy: { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Box', overflow: 'visible' } }, variants: [] }).variants[0].anatomy.b;
+  const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
+  ok('an instance said unclipped is planned so, and its look sets clipsContent off where it clips',
+    drawnB.overflow === 'visible' && src.includes("if (e.overflow != null && 'clipsContent' in n && n.clipsContent !== (e.overflow === 'hidden')) n.clipsContent = e.overflow === 'hidden';"));
+}
 
 // a drawing compared with the component it was derived from, field by field: what it named otherwise or left out
 {

@@ -34,7 +34,7 @@ const { variantValues: valuesOf } = require('../shared/names.js');
 
 const KIND = { TEXT: 'text', INSTANCE: 'instance', SLOT: 'slot', FRAME: 'container', GROUP: 'container', COMPONENT: 'container', COMPONENT_SET: 'container', SECTION: 'container' };
 // alignment and sizing words, from the one table every direction reads
-const { alignFromFigma, sizeFromFigma, typeFromFigma, spacingFromFigma, CLEARED } = require('./rules.mjs');
+const { alignFromFigma, sizeFromFigma, typeFromFigma, spacingFromFigma, CLEARED, UNCLIPPED } = require('./rules.mjs');
 // a long-running process (the snapshot router) reads this file fresh and keeps the rules.mjs it first loaded, which
 // clearing require.cache never reloads: one without these helpers derives as before them, never a throw (store.cjs
 // deletes a contract whose derive threw)
@@ -637,6 +637,9 @@ function cleared(anatomy, mains) {
     if (cornered(root.radius) && e.radius === undefined) e.radius = 0;
     // (and a shadow: the walk records an instance's effect wherever it has one, so none where its root has one cleared it)
     if (typeof root.shadow === 'string' && root.shadow !== CLEARED && e.shadow === undefined) e.shadow = CLEARED;
+    // (and clipping: the walk records a clip wherever a frame has one, so none where its root clips stopped it, said
+    // `visible` (UNCLIPPED, rules.mjs): unsaid, it would be its component's clip)
+    if (root.overflow === 'hidden' && e.overflow === undefined) e.overflow = UNCLIPPED;
   }
   return anatomy;
 }
@@ -838,6 +841,13 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (e && x && e.kind !== 'instance' && e.background === undefined && paintOf(x.background)) e.background = CLEARED;
     }
+    // and one kept that does not clip where its component's part does has stopped it (an override): said `visible`
+    // (UNCLIPPED), or a reader would take the part's clip as its component's. Both readings: each reads a clip wherever
+    // one is drawn (the walk's clips, code's computed overflow), so none read is none drawn
+    for (const k of kept) {
+      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+      if (e && x && e.kind !== 'instance' && e.kind !== 'text' && e.overflow === undefined && x.overflow === 'hidden') e.overflow = UNCLIPPED;
+    }
     // a placed layer this component clears the style or stroke of (none) that draws its own component's again: its own
     // styling, left out above as that component's, is said, or it would read as this one's none (a reading from code
     // reads no colour style, so only Figma's)
@@ -846,6 +856,8 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       const R = x && e && e.kind === 'instance' && e.component && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
       if (R) for (const f of ['fillStyle', 'border', 'background', 'shadow']) if (x[f] === CLEARED && e[f] === undefined && R[f] !== undefined) e[f] = R[f];
       if (R && x.radius === 0 && e.radius === undefined && cornered(R.radius)) e.radius = R.radius;
+      // (and a clip this component stops that the placed layer draws again, its own component's, left out above: said)
+      if (R && x.overflow === UNCLIPPED && e.overflow === undefined && R.overflow === 'hidden') e.overflow = 'hidden';
     }
     inherit();
   }

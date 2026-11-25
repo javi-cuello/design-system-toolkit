@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED } from './rules.mjs';
+import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
@@ -174,7 +174,9 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
 
   const opacity = take('opacity');
   if (opacity !== undefined) put('opacity', typeof opacity === 'string' ? names.token(opacity) : String(opacity), literal(opacity));
-  if (take('overflow') === 'hidden') put('overflow', 'hidden');
+  // (a clip, or one an instance stops where its component clips: UNCLIPPED, rules.mjs, over the component's `hidden`)
+  const overflow = take('overflow');
+  if (overflow === 'hidden' || overflow === UNCLIPPED) put('overflow', overflow);
   const blend = take('blend');
   if (blend) put('mix-blend-mode', String(blend).replace(/_/g, '-'));
   const rotation = take('rotation');

@@ -479,6 +479,20 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
       return { rows: r.rows.filter((x) => x.path === 'anim/bar'), skipped: r.skipped["absolute: the main's, moved by its constraints in a resized instance"] || 0 };
     };
     const clean = (r, why) => { assert.deepEqual(r.rows, [], why); assert.equal(r.skipped, 0, why + ': checked, not skipped'); };
+    // an instance that stops its main's clip says so (rules.mjs UNCLIPPED): held to Figma's no clip, and a clip there a row;
+    // one that says nothing is its main's clip, and Figma's none there a row
+    {
+      const clipRows = (clips, said) => {
+        const set = structuredClone(setNode); for (const v of set.children) { const x = anim(v, 160, 'FIXED', { c: 'min', x: 0, w: 160 }); x.clipsContent = clips; v.children.push(x); }
+        const c = contract(); c.anatomy.anim = { kind: 'instance', parent: 'root', order: 1, component: 'Anim', key: 'k-anim', width: 160, height: 16, ...(said && { overflow: said }) };
+        const M = mainOf(160, { c: 'min', x: 0, w: 160 });
+        return compareContract('chip', set, c, { ...ctx, components: { ...ctx.components, 'C:5': { key: 'k-anim', name: 'Anim' } }, mains: (key) => (key === 'k-anim' ? M : null) }).rows.filter((x) => x.path === 'anim' && x.kind === 'contract:overflow');
+      };
+      assert.deepEqual(clipRows(false, 'visible'), [], 'a clip said stopped, none in Figma: no row');
+      assert.ok(clipRows(true, 'visible').length > 0, 'a clip said stopped, Figma clipping: a row');
+      assert.deepEqual(clipRows(true, undefined), [], 'nothing said, its main\'s clip, Figma clipping: no row');
+      assert.ok(clipRows(false, undefined).length > 0, 'nothing said, its main\'s clip, none in Figma: a row');
+    }
     clean(run({ w: 80, main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -80, w: 80 } }), 'scaled with the instance');
     assert.ok(run({ w: 80, main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -60, w: 80 } }).rows.some((x) => x.kind === 'contract:absolute.x'), 'scaled elsewhere than the constraint puts it: a row');
     assert.ok(run({ w: 80, main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -80, w: 60 } }).rows.some((x) => x.kind === 'contract:width'), 'scaled to another size: a row');

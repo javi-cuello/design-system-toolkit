@@ -465,6 +465,34 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('an instance with no radius where its component rounds its corners says 0; one that keeps them says nothing',
     derive(row({}), ['Box'], { mains: rm }).anatomy.box.radius === 0 && derive(row({ radius: [16, 2, 2, 16] }), ['Box'], { mains: rm }).anatomy.box.radius === undefined
     && derive(row({}), ['Box'], { mains }).anatomy.box.radius === undefined);
+  // clipping likewise: the walk records a clip wherever a frame has one, so an instance with none where its component
+  // clips has stopped it, `visible` (rules.mjs UNCLIPPED); unsaid, it would be its component's clip
+  const clips = { ...box, variants: [{ ...box.variants[0], clips: true }] }, cm = mainsFrom({ Box: clips });
+  ok('an instance that does not clip where its component does says visible; one that clips says nothing, nor one whose component does not clip',
+    derive(row({}), ['Box'], { mains: cm }).anatomy.box.overflow === 'visible' && derive(row({ clips: true }), ['Box'], { mains: cm }).anatomy.box.overflow === undefined
+    && derive(row({}), ['Box'], { mains }).anatomy.box.overflow === undefined && derive(row({ clips: true }), ['Box'], { mains }).anatomy.box.overflow === 'hidden');
+  // and a layer inside an opened instance that does not clip where its component's layer does
+  const panel = { name: 'Panel', id: '9:9', props: {}, variants: [{ name: 'Panel', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Track', type: 'FRAME', layout: 'HORIZONTAL', sizing: 'FIXED/FIXED', w: 40, h: 4, clips: true, children: [] }] }] };
+  const slider = (inner) => ({ name: 'Slider', id: '9:10', props: {}, variants: [{ name: 'Slider', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Panel', type: 'INSTANCE', instanceOf: 'Panel', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['clipsContent'], children: [
+      { name: 'Track', type: 'FRAME', layout: 'HORIZONTAL', sizing: 'FIXED/FIXED', w: 40, h: 4, ...inner, children: [] }] }] }] });
+  const pm = mainsFrom({ Panel: panel });
+  const unclipped = derive(slider({ fills: ['Track/bg'] }), ['Panel'], { mains: pm }).anatomy['panel/track'];
+  const stillClips = derive(slider({ fills: ['Track/bg'], clips: true }), ['Panel'], { mains: pm }).anatomy['panel/track'];
+  ok('a layer an instance overrides that does not clip where its component\'s does says visible; one that clips keeps its clip',
+    !!unclipped && unclipped.overflow === 'visible' && !!stillClips && stillClips.overflow === 'hidden');
+  // placed inside a component that stops its clip, a Box drawn clipping again says so: unsaid, it would be the holder's visible
+  const clipBox = { name: 'Box', id: '9:5', props: {}, variants: [{ name: 'Box', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', clips: true, children: [] }] };
+  const opener = { name: 'Holder', id: '9:7', props: {}, variants: [{ name: 'Holder', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Box', type: 'INSTANCE', instanceOf: 'Box', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['clipsContent'], children: [] }] }] };
+  const onSheet = (own) => ({ name: 'Page', id: '9:8', props: {}, variants: [{ name: 'Page', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Holder', type: 'INSTANCE', instanceOf: 'Holder', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['clipsContent'], children: [
+      { name: 'Box', type: 'INSTANCE', instanceOf: 'Box', layout: 'HORIZONTAL', sizing: 'HUG/HUG', ...own, children: [] }] }] }] });
+  const om = mainsFrom({ Box: clipBox, Holder: opener });
+  ok('a Box its holder stops clipping, drawn clipping again inside it, says hidden; one still unclipped is left to the holder',
+    derive(opener, ['Box'], { mains: mainsFrom({ Box: clipBox }) }).anatomy.box.overflow === 'visible'
+    && derive(onSheet({ clips: true }), ['Holder', 'Box'], { mains: om }).anatomy['holder/box'].overflow === 'hidden' && !('holder/box' in derive(onSheet({}), ['Holder', 'Box'], { mains: om }).anatomy));
   // a layer inside an opened instance that draws no fill where its component's layer has one: none, else it reads as the component's
   const field = { name: 'Field', id: '9:7', props: {}, variants: [{ name: 'Field', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
     { name: 'Background', type: 'RECTANGLE', w: 40, h: 20, absolute: true, constraints: 'STRETCH/STRETCH', sizing: 'FIXED/FIXED', fills: ['Field/bg'], strokes: ['Line/strong'], strokeSides: [0, 0, 1, 0] }] }] };

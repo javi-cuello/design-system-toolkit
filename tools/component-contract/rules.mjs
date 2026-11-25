@@ -29,6 +29,13 @@ import { stopPositions } from '../parity/schema.mjs';
    root has one (from-code readCleared). */
 export const CLEARED = 'none';
 
+/* Unclipped: an instance, or a layer kept inside one, that does not clip where its component's root (or part) does says
+   `overflow: visible` (derive's cleared; Figma's clipsContent overridden off). The contract says a clip as `hidden`
+   and its absence as nothing, so only where a component's clip would otherwise reach it. Figma: clipsContent false
+   (to-figma). CSS: `overflow: visible` over the component's `hidden` (css.mjs); read back from a placed component
+   that computes `visible` where its component's root clips (from-code readCleared). */
+export const UNCLIPPED = 'visible';
+
 /* A colour written as itself (no variable): css.mjs writes it so, and the editor's preview draws it so. */
 export const rawColour = (f) => typeof f === 'string' && /^(#|rgba?\(|hsla?\()/.test(f);
 

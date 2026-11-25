@@ -35,7 +35,7 @@ import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel, placedOf as heldBy } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
-import { negative, heldOpacity, heldGlyph, siblingOrder, liftsAlone, CLEARED } from './rules.mjs';
+import { negative, heldOpacity, heldGlyph, siblingOrder, liftsAlone, CLEARED, UNCLIPPED } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
 import { cssName } from '../tokens/names.mjs';
@@ -505,8 +505,8 @@ function ownable(c, id) {
   const strokes = [(c.anatomy[id] || {}).border, ...adds.filter(([j]) => j === id).map(([, e]) => e.border), ...vs.map((v) => (v.set || {})[`${id}.border`])].filter(Boolean);
   return paintsAny(c, id) && (R.some((r) => Q.some((q) => q !== r)) || strokes.some((b) => strokeOutline({ border: b })));
 }
-// (a stroke or style an instance clears, `none` (rules.mjs CLEARED), paints nothing)
-const paints = (v) => !!v && v !== CLEARED;
+// (a stroke or style an instance clears, `none` (rules.mjs CLEARED), paints nothing; nor does a clip it stops, UNCLIPPED)
+const paints = (v) => !!v && v !== CLEARED && v !== UNCLIPPED;
 export const paintsAny = (c, id) => PAINTS.some((k) => [c.anatomy[id], ...(c.variants || []).map((v) => (v.add || {})[id])].some((e) => e && paints(e[k])) || (c.variants || []).some((v) => v.set && paints(v.set[`${id}.${k}`])));
 
 // the boxes whose gap is below 0 in the base or any variant (rules.mjs: CSS says it as pull-backs)
