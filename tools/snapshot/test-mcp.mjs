@@ -73,6 +73,7 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   const page = (name, comps) => { const p = frame('PAGE', name); for (const [nm, id, variants = 0] of comps) { const c = Object.assign(frame(variants ? 'COMPONENT_SET' : 'COMPONENT', nm), { id, width: 40, height: 20, componentPropertyDefinitions: {}, boundVariables: {} }); p.appendChild(c); } return p; };
   const pages = [page('Cover', []), page('Button', [['Button', '1:1'], ['Link', '1:2']]), page('Table', [['Table', '2:1']]), page('Icons', [['Arrow', '3:1']]), page('Chip', [['Chip', '4:1'], ['Tag', '4:2'], ['Badge', '4:3']]), page('Button', [['Card', '5:1']])];
   pages[3].children[0].description = 'arrow, direction';
+  Object.assign(pages[4].children[1], { paragraphSpacing: 5, listSpacing: 3 });
   globalThis.figma = { root: { name: 'Document', children: pages }, fileKey: 'K', skipInvisibleInstanceChildren: false, variables: { getVariableByIdAsync: async () => null, getLocalVariableCollectionsAsync: async () => [] },
     getLocalTextStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getStyleByIdAsync: async () => null,
     loadAllPagesAsync: async () => {}, createFrame: () => frame('FRAME', ''), createPage() { const p = frame('PAGE', ''); pages.push(p); return p; } };
@@ -96,7 +97,8 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   const whole = join([top, ...found]);
   const ref = await vm.runInContext(readFileSync(PLUGIN, 'utf8') + '\n;collectComponents({ withIcons: false, previews: [], darkModes: async () => [] })', vm.createContext({ figma: globalThis.figma, console, setTimeout, clearTimeout }));
   ok('the parts, run in any order, join into what one whole walk gives, in its order, the icons named; two pages of one name each walked once', JSON.stringify(whole.components) === JSON.stringify(ref) && whole.components.length === 7 && steps[0].scope === null && whole.iconSets.join() === 'Arrow' && whole.icons.length === 0);
-  ok('each part starts from the count of variables left unanswered so far, and leaves its own for the next', found.every((f) => f.unanswered === 2) && tmp.getSharedPluginData(NS, 'unanswered') === '2' && whole.tokens._meta.variablesUnanswered === 2);
+  ok('a part returns what each node left unrecorded as that node\'s group, which the join keeps as the whole walk does', found.some((f) => JSON.stringify(f.unrecorded) === '[["Tag.paragraphSpacing","Tag.listSpacing"]]') && whole.tokens._meta.unrecorded.join() === 'Tag.paragraphSpacing,Tag.listSpacing' && ref.length === 7);
+  ok('each part starts from the count of variables left unanswered so far, leaves its own for the next, and says what it added', found.every((f) => f.unanswered === 0) && tmp.getSharedPluginData(NS, 'unanswered') === '2');
   const head = top;
   assert.throws(() => join([head, ...found.slice(1)]), /no part walked 2 planned sets \(1:1, 1:2\)/); n++; console.log('ok a part not collected is refused, its sets named');
   assert.throws(() => join([head, ...found, found[1]]), /walked more than once/); n++; console.log('ok a part collected twice is refused');
@@ -107,12 +109,12 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
 {
   const head = { tokens: { _meta: {} }, unanswered: 1, sets: ['a', 'b'] };
   const part = (id, more) => ({ sets: [id], components: [], unrecorded: [], unreadable: [], unanswered: 1, ...more });
-  const a = part('a', { unrecorded: Array.from({ length: 200 }, (_, i) => `x${i % 3}`), unreadable: [{ name: 'Bad', reason: 'r' }], unanswered: 3 });
-  const b = part('b', { unrecorded: ['late'], unreadable: [{ name: 'Bad', reason: 'r' }, { name: 'Worse', reason: 'r' }], unanswered: 5 });
+  const a = part('a', { unrecorded: [...Array.from({ length: 199 }, (_, i) => [`x${i % 3}`]), ['over1', 'over2']], unreadable: [{ name: 'Bad', reason: 'r' }, { name: 'Set', page: 'P', reason: 'r' }], unanswered: 2 });
+  const b = part('b', { unrecorded: [['late']], unreadable: [{ name: 'Bad', reason: 'r' }, { name: 'Worse', reason: 'r' }, { name: 'Set', page: 'P', reason: 'r' }], unanswered: 1 });
   const j = join([head, b, a]);
-  ok('the unrecorded are kept as the whole walk keeps them: in plan order, stopped at 200, then the first 40 kinds', j.tokens._meta.unrecorded.join() === 'x0,x1,x2');
-  ok('the run\'s unanswered count is the last call\'s, never a sum', j.tokens._meta.variablesUnanswered === 5);
-  ok('a set unreadable in two parts is listed once, as the walk lists it', j.unreadable.map((x) => x.name).join() === 'Bad,Worse');
+  ok('the unrecorded are kept as the whole walk keeps them: a node\'s all while fewer than 200 are kept, in plan order, then the first 40 kinds', j.tokens._meta.unrecorded.join() === 'x0,x1,x2,over1,over2');
+  ok('the run\'s unanswered count is the tokens call\'s plus what each part added, so parts run side by side lose none', j.tokens._meta.variablesUnanswered === 4);
+  ok('a variant unreadable in two parts is listed once, as the walk lists it; a set\'s entry, which says its page, each time', j.unreadable.map((x) => x.name).join() === 'Bad,Set,Worse,Set');
   assert.throws(() => payloadOf([head]), /no part walked 2 planned sets/); n++; console.log('ok a tokens holder collected alone is refused, never delivered as a whole run');
   assert.throws(() => payloadOf([a]), /0 of the holders hold the tokens/); n++; console.log('ok a part holder collected alone is refused, never delivered as a whole run');
   ok('one whole run\'s holder is delivered as it is', payloadOf([{ tokens: {}, components: [] }]).components.length === 0);

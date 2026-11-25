@@ -194,12 +194,14 @@ const PART = `
 figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
-unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0;
+const __from = unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0;
+const __groups = [];
+unrecordedSeen.push = function (...xs) { if (xs.length) __groups.push(xs); return Array.prototype.push.apply(this, xs); };
 const __names = new Set(__PAGES.map((i) => figma.root.children[i].name));
 const __sets = ${PLANNED}.filter((pg) => __PAGES.includes(pg.index)).flatMap((pg) => pg.sets.filter((s) => !__SCOPE || __SCOPE.includes(s.id)).map((s) => s.id));
 const __components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], pages: { test: (n) => __names.has(n) }, scope: new Set(__sets) });
 scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered));
-${written('{ components: __components, sets: __sets, unrecorded: unrecordedSeen, unreadable, unanswered }', ', components: __components.length')}`;
+${written('{ components: __components, sets: __sets, unrecorded: __groups, unreadable, unanswered: unanswered - __from }', ', components: __components.length')}`;
 
 /* The tokens call: the plugin's collectTokens, the icon names by collectLibrary's own expressions, and the sets the
    parts must cover. */
@@ -262,13 +264,15 @@ export function join(found) {
   if (unplanned.length) throw new Error(`${list(unplanned)} walked but not in the file the tokens call read: run the plan and its calls again`);
   if (walked.some((id, i) => at.get(id) !== i)) throw new Error('the parts do not follow the plan\'s order: make the calls `parts <plan.json>` gives');
   const { tokens } = head;
-  // as the whole walk keeps them: what it met, in its order, stopped at 200, then the first 40 kinds
-  tokens._meta.unrecorded = [...new Set(parts.flatMap((p) => p.unrecorded).slice(0, 200))].slice(0, 40);
-  // one count across the run: each call starts from the last one's, so the last is the run's
-  const unanswered = Math.max(head.unanswered, ...parts.map((p) => p.unanswered));
+  // as the whole walk keeps them: each node's in its order while fewer than 200 are kept, then the first 40 kinds
+  const kept = [];
+  for (const group of parts.flatMap((p) => p.unrecorded)) if (kept.length < 200) kept.push(...group);
+  tokens._meta.unrecorded = [...new Set(kept)].slice(0, 40);
+  // each part says how many it added, from the count the calls before it left: parts run side by side all add
+  const unanswered = parts.reduce((n, p) => n + p.unanswered, head.unanswered);
   if (unanswered) tokens._meta.variablesUnanswered = unanswered;
-  // a set is listed once, as the walk lists it
-  const unreadable = parts.flatMap((p) => p.unreadable).filter((x, i, all) => all.findIndex((y) => y.name === x.name) === i);
+  // a variant's unreadable entry is listed once by name, as the walk lists it; a set's, which says its page, each time
+  const unreadable = parts.flatMap((p) => p.unreadable).filter((x, i, all) => x.page !== undefined || all.findIndex((y) => y.page === undefined && y.name === x.name) === i);
   return { tokens, components: parts.flatMap((p) => p.components), icons: [], iconSets: head.iconSets, iconPage: head.iconPage, ...(head.iconGroups && { iconGroups: head.iconGroups }), ...(head.iconDescriptions && { iconDescriptions: head.iconDescriptions }), graphics: [], previews: [], ...(unreadable.length && { unreadable }) };
 }
 

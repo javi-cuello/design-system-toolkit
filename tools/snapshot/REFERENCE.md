@@ -70,6 +70,7 @@ A part holds about 1,500 walks, and a set over that goes alone. Collect every
 holder the calls return, the tokens one included, in one `collect`. It refuses
 unless the parts walked every set the tokens call found, each once, in its
 order. The parts send no icon files, graphics or previews.
+In order is exact; in parallel each part may wait up to 3×15 s more.
 `test-mcp.mjs` holds every call to the cap, the read-back to its chunks, and
 the parts, run on a stand-in file, to what one whole walk gives.
 
