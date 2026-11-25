@@ -271,6 +271,28 @@ export function smoothingFromCss(v) {
   return s > 0.005 ? +s.toFixed(2) : null;
 }
 
+/* A vector's own outline (derive's paths: Figma's vectorPaths, snapshot 0.86.0 on) as clip-path: path(), the box's fill
+   cut to it (css-masking-1 §5.1, path() from css-shapes-1, in the box's own pixels as Figma's are the vector's). Its fill
+   rule is the path's: nonzero by default, evenodd said. Only one closed-or-filled path: an open one (windingRule NONE,
+   a stroke's line) has no fill rule, and several paths each with its own rule are no one clip; both stay unread. */
+export function pathsToCss(paths) {
+  if (!Array.isArray(paths) || paths.length !== 1) return null;
+  const [{ windingRule: rule, data }] = paths;
+  if (typeof data !== 'string' || !data || /"/.test(data) || !['NONZERO', 'EVENODD'].includes(rule)) return null;
+  return `path(${rule === 'EVENODD' ? 'evenodd, ' : ''}"${data}")`;
+}
+/* The paths a reading takes off a box: only a vector's as the markup draws one (an empty element hidden from readers,
+   to-markup's graphic), never a clip a project puts on a container or on words. `box`: { clipPath, ariaHidden,
+   children, text }, as the page read it. */
+export function pathsOfBox(box) {
+  if (!box || !box.ariaHidden || box.children || String(box.text || '').trim()) return null;
+  return pathsFromCss(box.clipPath);
+}
+export function pathsFromCss(v) {
+  const m = /^\s*path\(\s*(?:(nonzero|evenodd)\s*,\s*)?"([^"]*)"\s*\)\s*$/i.exec(String(v || ''));
+  return m && m[2] ? [{ windingRule: (m[1] || 'nonzero').toUpperCase(), data: m[2] }] : null;
+}
+
 export const share = (part, whole) => `${+((100 * part) / whole).toFixed(4)}%`;
 export function placeFromCss(own) {
   if (!/^(absolute|fixed)$/.test(word(own.position))) return null;

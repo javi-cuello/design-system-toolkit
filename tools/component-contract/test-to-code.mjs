@@ -735,6 +735,15 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('an arc is a conic mask from Figma\'s start, a ring cut at its inner ratio, and nothing left unread',
     R.mask === 'conic-gradient(from 0deg, #000 90deg, #0000 0), radial-gradient(closest-side, #0000 75%, #000 75%)' && R['mask-composite'] === 'intersect'
     && !ring.unread.some((f) => /arc/.test(f)) && pie.mask === 'conic-gradient(from 0deg, #000 180deg, #0000 0)' && !('mask-composite' in pie)); }
+// a vector's own outline (derive's paths) as a clip of its filled box, its fill rule said; an open path stays unread
+{ const v = declarations({ kind: 'graphic', background: 'C/s', paths: [{ windingRule: 'EVENODD', data: 'M 0 0 L 4 0 L 4 4 Z' }] }, {}, names), open = declarations({ kind: 'graphic', paths: [{ windingRule: 'NONE', data: 'M 0 0 L 4 4' }] }, {}, names);
+  ok('a vector\'s one path is its box\'s clip-path, nothing unread; an open one is unread, never dropped', Object.fromEntries(v.decls)['clip-path'] === 'path(evenodd, "M 0 0 L 4 0 L 4 4 Z")' && !v.unread.length
+    && !open.decls.some(([p]) => p === 'clip-path') && open.unread.some((f) => /^paths/.test(f))); }
+// (a clip is fixed pixels: a vector that scales, stretches, fills or hugs, or one with a stroke or a shadow the clip
+// would cut, keeps its box and says its paths unread)
+{ const P = [{ windingRule: 'NONZERO', data: 'M 0 0 L 4 0 L 4 4 Z' }], none = (e) => { const d = declarations({ kind: 'graphic', background: 'C/s', width: 4, height: 4, paths: P, ...e }, {}, names); return !d.decls.some(([p]) => p === 'clip-path') && d.unread.some((f) => /^paths/.test(f)); };
+  ok('a vector drawn at another size than its paths\' (scaled, stretched, filled, hugging) is never clipped to them', none({ constraints: { horizontal: 'scale', vertical: 'min' }, absolute: { x: 0, y: 0 } }) && none({ constraints: { horizontal: 'min', vertical: 'stretch' }, absolute: { x: 0, y: 0 } }) && none({ width: 'fill' }) && none({ height: 'hug' }));
+  ok('…nor one whose stroke or shadow the clip would cut', none({ border: { color: 'C/s', width: 1, align: 'outside' } }) && none({ border: { color: 'C/s', width: 1, align: 'center' } }) && none({ shadow: 'Elevation/1' })); }
 // a dashed stroke all round: an outline dashed, pulled in by an inside stroke's width; on some sides, named, not dropped
 { const d = declarations({ kind: 'container', border: { color: 'C/s', width: 1, dash: [2, 2] } }, {}, names), D = Object.fromEntries(d.decls.map(([p, v]) => [p, v]));
   const side = declarations({ kind: 'container', border: { color: 'C/s', width: [1, 0, 0, 0], dash: [2, 2] } }, {}, names);

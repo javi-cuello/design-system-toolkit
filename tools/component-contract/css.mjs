@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
+import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, pathsToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
@@ -122,6 +122,19 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     const sweep = turn(arc.end - arc.start) || 360, inner = +(100 * (arc.inner || 0)).toFixed(2);
     put('mask', [`conic-gradient(from ${turn(arc.start + 90)}deg, #000 ${sweep}deg, #0000 0)`, ...(inner > 0 ? [`radial-gradient(closest-side, #0000 ${inner}%, #000 ${inner}%)`] : [])].join(', '));
     if (inner > 0) put('mask-composite', 'intersect');
+  }
+
+  // a vector's own outline as a clip of its box (rules.mjs pathsToCss): its fill drawn in the shape Figma draws; an open
+  // path, or several, no clip says (unread)
+  // (a clip is in fixed pixels: only on a vector drawn at its own size on both axes, and with no stroke or shadow the clip
+  // would cut; elsewhere its box stays and the paths are said unread)
+  const paths = take('paths');
+  if (paths !== undefined) {
+    const sized = ['width', 'height'].every((k) => e[k] === undefined || typeof e[k] === 'number') && !['horizontal', 'vertical'].some((k) => /^(scale|stretch)$/.test((e.constraints || {})[k] || ''));
+    const painted = (e.border && e.border !== CLEARED) || (e.shadow && e.shadow !== CLEARED);
+    const clip = sized && !painted ? pathsToCss(paths) : null;
+    if (clip) put('clip-path', clip);
+    else unread.push(`paths (${!sized ? 'drawn at another size than its own: a clip does not scale' : painted ? 'a clip would cut its stroke or shadow' : 'an open path, or several: no one clip-path says them'})`);
   }
 
   // a stroke in the channel that takes the room Figma's takes (code-standard rule 63)

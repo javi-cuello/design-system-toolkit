@@ -2,7 +2,7 @@
 // tools/component-contract/rules.mjs: the translation table, each row read both ways.
 import assert from 'node:assert/strict';
 import { declarations } from './css.mjs';
-import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, writtenNowrap, linesFromCss, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss, typeValue, typeOfValue, familyToCss, firstFamily, typeFromFigma, spacingToCss, spacingFromCss, spacingFromFigma, CASE_ROWS, DECORATION_ROWS, textToCss, textFromCss } from './rules.mjs';
+import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, writtenNowrap, linesFromCss, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss, pathsToCss, pathsFromCss, pathsOfBox, typeValue, typeOfValue, familyToCss, firstFamily, typeFromFigma, spacingToCss, spacingFromCss, spacingFromFigma, CASE_ROWS, DECORATION_ROWS, textToCss, textFromCss } from './rules.mjs';
 import { tokenNames } from './to-code.mjs';
 
 let n = 0;
@@ -114,6 +114,14 @@ ok('a text written never to wrap grows both ways whatever size it states (a WIDT
 ok('corner smoothing goes to corner-shape and back the same, 0.1 to 1; none, 0 and the plain circle say no smoothing',
   [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].every((v) => smoothingFromCss(smoothingToCss(v)) === v)
   && smoothingToCss(0) === null && smoothingToCss(undefined) === null && smoothingFromCss('round') === null && smoothingFromCss('superellipse(1)') === null && smoothingFromCss('squircle') === smoothingFromCss('superellipse(2)') && smoothingFromCss('superellipse(2e0)') === smoothingFromCss('superellipse(2)'));
+
+{ // a vector's own outline (derive's paths) as a clip-path, its fill rule kept, read back as Chrome computes it
+  const one = [{ windingRule: 'NONZERO', data: 'M 84 3.12 L 84 28 L 0 28 C 0 12.54 25.77 0 57.56 0 Z' }], odd = [{ windingRule: 'EVENODD', data: 'M 0 0 L 4 0 L 4 4 Z' }];
+  ok('a vector\'s one path is a clip-path, even-odd said, and reads back the same', pathsToCss(one) === 'path("M 84 3.12 L 84 28 L 0 28 C 0 12.54 25.77 0 57.56 0 Z")' && pathsToCss(odd) === 'path(evenodd, "M 0 0 L 4 0 L 4 4 Z")'
+    && JSON.stringify(pathsFromCss(pathsToCss(one))) === JSON.stringify(one) && JSON.stringify(pathsFromCss(pathsToCss(odd))) === JSON.stringify(odd) && JSON.stringify(pathsFromCss('path(nonzero, "M 0 0 Z")')) === '[{"windingRule":"NONZERO","data":"M 0 0 Z"}]');
+  ok('…read only off a vector\'s box as the markup draws one (empty, hidden from readers), never a container a project clips', JSON.stringify(pathsOfBox({ clipPath: pathsToCss(one), ariaHidden: true, children: 0, text: '' })) === JSON.stringify(one)
+    && pathsOfBox({ clipPath: pathsToCss(one), ariaHidden: false, children: 0, text: '' }) === null && pathsOfBox({ clipPath: pathsToCss(one), ariaHidden: true, children: 2, text: '' }) === null && pathsOfBox({ clipPath: pathsToCss(one), ariaHidden: true, children: 0, text: 'Hi' }) === null && pathsOfBox(undefined) === null);
+  ok('…an open path (no fill rule) or several none: no one clip says them; none and an inset read as no path', pathsToCss([{ windingRule: 'NONE', data: 'M 0 0 L 1 1' }]) === null && pathsToCss([...one, ...odd]) === null && pathsToCss([]) === null && pathsFromCss('none') === null && pathsFromCss('inset(0px)') === null); }
 
 { // a mirror (the snapshot's flip) is its own property, scale, as rotate is
   const d = (flip) => JSON.stringify(declarations({ kind: 'container', flip }, { holds: false, row: true }).decls);

@@ -47,7 +47,7 @@ export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
 import { inWordsOf } from './to-figma.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -2209,7 +2209,7 @@ async function main() {
             // (no arc, focus ring or outline: those are its component's drawing, or the ring rule's, never an override read here)
             // (off the box it draws: a host that draws none, display: contents, draws it through its control, where to-code
             // writes this component's override on it, `> button`)
-            { const ie = out[out.length - 1], bx = ownBox(n, getComputedStyle); boxStyling(ie, bx); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(bx); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true; if (cs.overflow === 'visible') ie.clipless = true; if (cs.mixBlendMode === 'normal') ie.blendless = true; } delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
+            { const ie = out[out.length - 1], bx = ownBox(n, getComputedStyle); boxStyling(ie, bx); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(bx); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true; if (cs.overflow === 'visible') ie.clipless = true; if (cs.mixBlendMode === 'normal') ie.blendless = true; } delete ie.arc; delete ie.clipBox; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
             // the layers the mapping names inside it, where the mapping names it too, at any depth of placing (opensPlaced; an
             // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
             // (each at its place among the component's own drawn children, which this reading does not all read)
@@ -2255,6 +2255,9 @@ async function main() {
               const c = m.match(/conic-gradient\((?:from (-?[\d.]+)deg,\s*)?C (-?[\d.]+)deg/);
               if (c) { const turn = (a) => +((((a % 360) + 360) % 360).toFixed(2)), from = +(c[1] || 0), r = m.match(/radial-gradient\([^,]*,\s*C ([\d.]+)%/);
                 e.arc = { start: turn(from - 90), end: +(turn(from - 90) + +c[2]).toFixed(2), inner: r ? +(+r[1] / 100).toFixed(4) : 0 }; } }
+            // a vector's own outline drawn as the box's clip (css.mjs, rules.mjs pathsToCss), read back below as its paths
+            // (where the box is one the markup draws a vector as: empty, hidden from readers; rules.mjs pathsOfBox)
+            if (/^path\(/.test(String(s.clipPath || ''))) e.clipBox = { clipPath: s.clipPath, ariaHidden: n.getAttribute('aria-hidden') === 'true', children: n.children.length, text: n.textContent };
             // a focus ring drawn as the box's outline (taking no room; the browser's own, style auto, is not the design's): read, and drawn below as the layer the design has
             if (!['none', 'auto'].includes(s.outlineStyle) && px(s.outlineWidth) > 0) e[s.outlineStyle === 'dashed' ? 'ownOutline' : 'outline'] = { color: s.outlineColor, width: px(s.outlineWidth), offset: px(s.outlineOffset), ...(s.outlineStyle === 'dashed' && { dashed: true }), ...(() => { const r = n.getBoundingClientRect(), c = corner(s.borderTopLeftRadius, r.width, r.height); return { radius: c.radius, full: !!c.full }; })() };
             // or as the outline of a box of its own over this one (::after, to-code's ring where this box keeps its corners):
@@ -2648,6 +2651,7 @@ async function main() {
         } else if (x.radius) x.radius = x.full ? (await fullRadius(id)) || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
+        if (x.clipBox) { const p = pathsOfBox(x.clipBox); if (p) x.paths = p; delete x.clipBox; }
         if (x.border) {
           const clearRing = x.border.clearRing;
           const raw0 = x.border.width;
