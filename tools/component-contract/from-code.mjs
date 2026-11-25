@@ -430,31 +430,15 @@ export function combinationsToRead(keys, valuesOf, draws = null, from = 4) {
 /* A combination's key, its [prop, value] pairs in one order. */
 export const comboKey = (list) => list.map(([k, v]) => `${k}=${String(v)}`).sort().join('&');
 
-/* Whether a combination of five props or more is worth reading: some three or more of its props, fewer than all,
-   already build a layer together (`layered`, comboKey's keys). One whose props do nothing together beyond pairs is
-   predicted by the layers (Carbon's radio button: of 1,071, the 290 this reads hold every layer the rest would add).
+/* Reads the combinations combinationsToRead gave, fewest props first, every one: the round trip compares every
+   combination the design draws, and one left to the layers was a guess it counts as not the same (eval.mjs isSame),
+   even where no three of its props build a layer together (Carbon's checkbox left 1,360 so). `readOne(list)` reads it.
+   { read }: the count, said in the self-check.
    Tested by test-from-code.mjs. */
-export function worthReading(list, layered) {
-  const go = (i, acc) => {
-    if (acc.length >= 3 && acc.length < list.length && layered.has(comboKey(acc))) return true;
-    for (let j = i; j < list.length; j++) if (go(j + 1, [...acc, list[j]])) return true;
-    return false;
-  };
-  return go(0, []);
-}
-
-/* Reads the combinations combinationsToRead gave, fewest props first: every one of four, and one of more only where
-   worthReading says so; `readOne(list)` reads it and says whether it kept a layer of its own, which then counts as a
-   layer its larger combinations can build on. { read, skipped }: the count of each, said in the self-check.
-   Tested by test-from-code.mjs. */
-export async function readCombinations(lists, layered, readOne) {
-  let read = 0, skipped = 0;
-  for (const list of [...lists].sort((a, b) => a.length - b.length)) {
-    if (list.length > 4 && !worthReading(list, layered)) { skipped++; continue; }
-    read++;
-    if (await readOne(list)) layered.add(comboKey(list));
-  }
-  return { read, skipped };
+export async function readCombinations(lists, readOne) {
+  let read = 0;
+  for (const list of [...lists].sort((a, b) => a.length - b.length)) { read++; await readOne(list); }
+  return { read };
 }
 
 /* The layers a design states a colour for, in its base or any variant (an add's background, or a set of one). */
@@ -2906,13 +2890,7 @@ async function main() {
     });
     const beyond = combinationsToRead(keys, (k) => valuesOf(props[k]), drawsIt);
     let fourLayers = 0;
-    // (one of five props or more is read only where some three or more of them already build a layer together: on
-    // every panel component measured, each such combination that kept a layer of its own had one, and the rest, three
-    // in four on Carbon's radio button, were predicted by the layers; `worthReading`)
-    // (its own name: `layered` is the reading's set of parts whose background lays a layer over the colour, which read
-    // adds to and the compare with Figma asks; one name shadowing it threw before its line, cards-horizontal-card)
-    const layerKeys = new Set(variants.filter((x) => !x.combination && Object.keys(x.when).length >= 3).map((x) => comboKey(Object.entries(x.when))));
-    const { read: readBeyond, skipped } = await readCombinations(beyond, layerKeys, async (four) => {
+    const { read: readBeyond } = await readCombinations(beyond, async (four) => {
       const when = Object.fromEntries(four.map(([k, v]) => [k, argOf(props[k], v)]));
       const got = await read({ ...defaults, ...Object.fromEntries(four.map(([k, v]) => [props[k].code, v])) });
       const d = delta(expand(fromCode, { ...allDefaults, ...when }), got, base);
@@ -3417,8 +3395,8 @@ async function main() {
     // a check that read nothing the layers were not built from cannot fail: said, not passed
     const heldOut = readBeyond;
     const report = { at: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000), ...(figmaContract && { of: (await import('./official.mjs')).hashOf(figmaContract) }), chrome: (await import('../shared/cdp.mjs')).chromeMajor(),
-      // (the combinations of five props or more left unread, as a number: eval.mjs holds them predicted, never measured)
-      unread: skipped, selfCheck: bad.length ? { notRebuilt: bad } : heldOut ? `every render rebuilt, ${heldOut} combination(s) of four props or more among them: ${heldOut - fourLayers} predicted by the layers, ${fourLayers} kept as layers of their own, each from one read${skipped ? `; ${skipped} of five props or more left unread, no three or more of their props building a layer together` : ''}` : 'every render rebuilt, but fewer than four props vary: nothing was left unread to check the layers against',
+      // (the combinations left unread, as a number: none now, every one the design draws is read; eval.mjs holds any predicted)
+      unread: 0, selfCheck: bad.length ? { notRebuilt: bad } : heldOut ? `every render rebuilt, ${heldOut} combination(s) of four props or more among them, each read: ${heldOut - fourLayers} rebuilt by the layers, ${fourLayers} kept as layers of their own, each from one read` : 'every render rebuilt, but fewer than four props vary: nothing was left unread to check the layers against',
       ...(notes.length && { notes }), ties, compare, propsCompare, structure, renamed: shaped.renamed,
       // (every field taken from the design, by rule: eval.mjs counts a component holding one the same only as assisted)
       assisted: A.out(), declared: [...declared].sort(), contract: fromCode, asFigma: shaped.contract };

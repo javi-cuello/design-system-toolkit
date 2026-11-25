@@ -814,18 +814,15 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('after the pairs and triples: every four-prop combination, and every larger one the design draws; a reading only in code stops at four',
     sizes(all) === [...Array(15).fill(4), ...Array(6).fill(5), 6].join() && sizes(none) === Array(15).fill(4).join() && sizes(code) === sizes(none)
     && combinationsToRead(keys, vals, (l) => !l.some(([k]) => k === 'f')).filter((x) => x.length > 4).map((x) => x.map(([k]) => k).join('')).join() === 'abcde'); }
-{ const { worthReading, comboKey } = await import('./from-code.mjs');
-  const five = [['a', 1], ['b', 1], ['c', 1], ['d', 1], ['e', 1]];
-  ok('one of five props or more is read where three or more of its props build a layer together, and not where none does, nor where only all of them do',
-    worthReading(five, new Set([comboKey([['c', 1], ['a', 1], ['e', 1]])])) && worthReading(five, new Set([comboKey(five.slice(0, 4))]))
-    && !worthReading(five, new Set([comboKey(five.slice(0, 2)), comboKey(five), comboKey([['a', 2], ['b', 1], ['c', 1]])]))); }
-{ const { readCombinations, comboKey } = await import('./from-code.mjs');
+// every combination of five props or more the design draws is read, none predicted: the round trip counts a predicted
+// one as not the same (eval.mjs isSame), and one whose props build no layer together was still a guess (Carbon's
+// checkbox left 1,360 unread)
+{ const { readCombinations } = await import('./from-code.mjs');
   const L = (s) => s.split('').map((k) => [k, true]);
-  // abcde rests on the three-prop layer abc; abdef rests on abde, a layer one read keeps; cdefg rests on nothing
   const seen = [];
-  const got = await readCombinations([L('cdefg'), L('abdef'), L('abde'), L('abcde')], new Set([comboKey(L('abc'))]), async (l) => { const k = l.map(([x]) => x).join(''); seen.push(k); return k === 'abde'; });
-  ok('a combination of five props or more is read where three or more of its props build a layer (one a smaller read kept, too), and skipped and counted where none does; four-prop ones always read, first',
-    seen.join() === 'abde,abdef,abcde' && got.read === 3 && got.skipped === 1); }
+  const got = await readCombinations([L('cdefg'), L('abdef'), L('abde'), L('abcde')], async (l) => { seen.push(l.map(([x]) => x).join('')); return false; });
+  ok('every combination is read, fewest props first, whether or not three of its props build a layer; none is left unread',
+    seen.join() === 'abde,cdefg,abdef,abcde' && got.read === 4 && got.skipped === undefined); }
 { // an instance the design keeps whole, its glyph's place and constraints unstated as derive keeps none inside an instance
   // (Carbon's Status notification in a slider's error state), is kept whole by the reading: the reading's cut drops that
   // glyph as its component's, so it is one that cut drops something from; one the design keeps a different glyph in is not
