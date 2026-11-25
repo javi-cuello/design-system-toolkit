@@ -373,7 +373,7 @@ function partConditions(rows, props) {
 
 /* The place (position, constraints) flatten leaves out of a layer inside an instance, by part id, per flat anatomy: the
    component's, which its contract states, unless that contract has no such layer (one hidden in the component, shown by
-   the instance), when ownInsides gives it back, as nothing else says where it sits. */
+   the instance; one the instance fills a slot with), when ownInsides gives it back, as nothing else says where it sits. */
 const PLACE_ASIDE = new WeakMap();
 
 function flatten(list, characters = new Map(), known = [], axes = [], turned = null) {
@@ -512,7 +512,12 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
   trees.forEach((t, i) => {
     if (t.from == null || t.from < 0) return;
     const was = flat[t.from].anatomy, now = flat[i].anatomy;
-    for (const id of Object.keys(now)) if (was[id]) now[id] = { ...was[id], ...(now[id].order != null ? { order: now[id].order } : {}) };
+    // (its place set aside too, PLACE_ASIDE: the variant's, or none where the variant sets none aside)
+    const wasAside = PLACE_ASIDE.get(was), nowAside = PLACE_ASIDE.get(now);
+    for (const id of Object.keys(now)) if (was[id]) {
+      now[id] = { ...was[id], ...(now[id].order != null ? { order: now[id].order } : {}) };
+      if (wasAside && wasAside.has(id)) nowAside.set(id, wasAside.get(id)); else nowAside.delete(id);
+    }
   });
   // a property that drives its layer in some variants only (snapshot 0.61.0 on): a swap names its instance there, so a
   // set giving each size its own icon swap on the one layer keeps which is whose; elsewhere a text keeps its own words
@@ -780,8 +785,8 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     // (`whole`: instances the design keeps whole, so a reading keeps what it reads there too)
     // (`found`: where given, collects the instances kept whole for a layer they hide, so a drawing hides there what
     // the contract does not list, and nowhere else)
-    // a layer its component's contract does not state (hidden there, shown here) has its place given back (PLACE_ASIDE):
-    // the component's, which no contract says otherwise (a state layer stretched over its handle)
+    // a layer its component's contract does not state (hidden there, shown here; a slot's fill) has its place given back
+    // (PLACE_ASIDE), which no contract says otherwise (a state layer stretched over its handle, a bar's fourth segment)
     const asideOf = PLACE_ASIDE.get(anatomy);
     if (asideOf) for (const k of inner) {
       const p = asideOf.get(k);

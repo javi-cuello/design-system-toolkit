@@ -263,7 +263,20 @@ ok('combinations too many to list are said to be unlisted, never left to read as
       { name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', w: 4, h: 44, sizing: 'FIXED/FIXED', fills: ['C/x'], children: [bar] }] }] }, ['Knob'], { mains: mainsFrom({ Knob: knob }) }).anatomy['knob/layer'];
     const hid = shown({ name: 'Layer', type: 'RECTANGLE', x: 0, y: 0, w: 4, h: 44, sizing: 'FIXED/FIXED', constraints: 'STRETCH/STRETCH', fills: ['C/y'] });
     ok('…but one its component\'s contract does not state keeps its place: stretched, at 0 from every edge, no size of its own',
-      !!hid && JSON.stringify(hid.constraints) === JSON.stringify({ horizontal: 'stretch', vertical: 'stretch' }) && JSON.stringify(hid.absolute) === JSON.stringify({ x: 0, y: 0, end: 0, bottom: 0 }) && hid.width === undefined && hid.height === undefined); }
+      !!hid && JSON.stringify(hid.constraints) === JSON.stringify({ horizontal: 'stretch', vertical: 'stretch' }) && JSON.stringify(hid.absolute) === JSON.stringify({ x: 0, y: 0, end: 0, bottom: 0 }) && hid.width === undefined && hid.height === undefined);
+    // one its component's contract does state is that component's, place and all: none given back
+    const knobL = { ...knob, variants: [{ ...knob.variants[0], children: [{ name: 'Layer', type: 'RECTANGLE', x: 0, y: 0, w: 4, h: 44, sizing: 'FIXED/FIXED', constraints: 'STRETCH/STRETCH', fills: ['C/y'] }] }] };
+    const stated = derive({ name: 'Shown', props: {}, variants: [{ name: 'Shown', type: 'COMPONENT', layout: 'VERTICAL', children: [
+      { name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', w: 4, h: 44, sizing: 'FIXED/FIXED', fills: ['C/x'], children: [{ name: 'Layer', type: 'RECTANGLE', x: 0, y: 0, w: 4, h: 44, sizing: 'FIXED/FIXED', constraints: 'STRETCH/STRETCH', fills: ['C/y'] }] }] }] }, ['Knob'], { mains: mainsFrom({ Knob: knobL }) }).anatomy['knob/layer'];
+    ok('…and one its component\'s contract states gets no place back', !stated || (stated.absolute === undefined && stated.constraints === undefined));
+    // a boolean's flip, walked from a detached instance at its own sizes, keeps the variant's place for such a layer:
+    // no per-boolean difference in where it sits
+    const knobAt = (w, x) => ({ name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', x: 100, y: 0, w, h: 44, sizing: 'FIXED/FIXED', fills: ['C/x'], children: [{ name: 'Layer', type: 'RECTANGLE', x, y: 0, w: w - x, h: 44, sizing: 'FIXED/FIXED', constraints: 'STRETCH/STRETCH', fills: ['C/y'] }] });
+    const flipC = derive({ name: 'Bar', id: '9:8', props: { 'Show label': 'BOOLEAN' }, links: { 'Show label': { kind: 'visible', layers: [['Label']] } },
+      variants: [{ name: 'Bar', type: 'COMPONENT', w: 400, h: 44, children: [knobAt(4, 0), { name: 'Label', type: 'TEXT', text: 'Hi', x: 0, y: 0 }] },
+        { name: 'Bar, Show label=False', type: 'COMPONENT', w: 420, h: 44, children: [knobAt(6, 1)] }] }, ['Knob'], { mains: mainsFrom({ Knob: knob }) });
+    const offL = expand(flipC, { showLabel: false })['knob/layer'];
+    ok('…and a boolean\'s flip keeps the variant\'s place for it, not its detached copy\'s', !!offL && offL.absolute.x === 0 && offL.absolute.end === 0 && !JSON.stringify(flipC.variants || []).includes('knob/layer')); }
   // a quarter turn: Figma keeps the node's own width and height (169 by 16) and lays out its turned box, 16 by 169, so its
   // sizing words name the parent's axes (FIXED across a column, FILL down it): said in its own axes, its width fills
   { const turned = (rotation, sizing) => derive({ name: 'Q', props: {}, variants: [{ name: 'Q', type: 'COMPONENT', layout: 'VERTICAL', sizing: 'FIXED/FIXED', w: 44, h: 354, children: [
