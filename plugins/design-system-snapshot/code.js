@@ -1,4 +1,4 @@
-// Design system snapshot — v0.90.3 · plugin-standard v1.1.0
+// Design system snapshot — v0.90.4 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -851,7 +851,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.90.3';
+const VERSION = '0.90.4';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

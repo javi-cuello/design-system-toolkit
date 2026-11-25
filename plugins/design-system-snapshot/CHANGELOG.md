@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.90.4] - 2026-11-25
+### Fixed
+- **A placed instance Figma had not built yet is read whole.** With invisible children skipped, Figma returned no children for such an instance, visible ones included, so a variant's swapped icon or switch was recorded empty; the walk now reads that instance's children once with the skip off (hidden ones still left out).
+
 ## [0.90.3] - 2026-11-25
 ### Fixed
 - **Before asking for a variable of another library, the window says Figma will pause**: Figma loads that library first and stops, this window with it, until it has; nothing can be said during, so it is said before, once per library, with a moment for the window to show it.
