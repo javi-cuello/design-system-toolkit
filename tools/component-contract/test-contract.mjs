@@ -493,6 +493,23 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('a Box its holder stops clipping, drawn clipping again inside it, says hidden; one still unclipped is left to the holder',
     derive(opener, ['Box'], { mains: mainsFrom({ Box: clipBox }) }).anatomy.box.overflow === 'visible'
     && derive(onSheet({ clips: true }), ['Holder', 'Box'], { mains: om }).anatomy['holder/box'].overflow === 'hidden' && !('holder/box' in derive(onSheet({}), ['Holder', 'Box'], { mains: om }).anatomy));
+  // blending likewise: the walk records a blend mode wherever it is not pass-through or normal, so an instance with none
+  // where its component blends has set it back, `normal` (rules.mjs UNBLENDED); unsaid, it would be its component's blend
+  const darkBox = { ...box, variants: [{ ...box.variants[0], blendMode: 'DARKEN' }] }, bm = mainsFrom({ Box: darkBox });
+  ok('an instance that draws no blend where its component does says normal; one that blends says nothing, nor one whose component does not blend',
+    derive(row({}), ['Box'], { mains: bm }).anatomy.box.blend === 'normal' && derive(row({ blendMode: 'DARKEN' }), ['Box'], { mains: bm }).anatomy.box.blend === 'darken'
+    && derive(row({}), ['Box'], { mains }).anatomy.box.blend === undefined);
+  // and a layer inside an opened instance that draws no blend where its component's layer does (Carbon's number input
+  // action item's divider, darkened in its component, set back in the input)
+  const item = { name: 'Item', id: '9:11', props: {}, variants: [{ name: 'Item', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Divider', type: 'FRAME', sizing: 'FIXED/FIXED', w: 1, h: 20, fills: ['Line/subtle'], blendMode: 'DARKEN', children: [] }] }] };
+  const input = (inner) => ({ name: 'Input', id: '9:12', props: {}, variants: [{ name: 'Input', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Item', type: 'INSTANCE', instanceOf: 'Item', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['blendMode'], children: [
+      { name: 'Divider', type: 'FRAME', sizing: 'FIXED/FIXED', w: 1, h: 20, fills: ['Line/subtle'], ...inner, children: [] }] }] }] });
+  const im = mainsFrom({ Item: item });
+  const setBack = derive(input({}), ['Item'], { mains: im }).anatomy['item/divider'];
+  ok('a layer an instance sets back to no blend where its component\'s blends says normal; one that blends as its component\'s is left to it',
+    !!setBack && setBack.blend === 'normal' && !('item/divider' in derive(input({ blendMode: 'DARKEN' }), ['Item'], { mains: im }).anatomy));
   // a layer inside an opened instance that draws no fill where its component's layer has one: none, else it reads as the component's
   const field = { name: 'Field', id: '9:7', props: {}, variants: [{ name: 'Field', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
     { name: 'Background', type: 'RECTANGLE', w: 40, h: 20, absolute: true, constraints: 'STRETCH/STRETCH', sizing: 'FIXED/FIXED', fills: ['Field/bg'], strokes: ['Line/strong'], strokeSides: [0, 0, 1, 0] }] }] };

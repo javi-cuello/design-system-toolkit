@@ -696,6 +696,9 @@ else console.log('skip: no stored contracts on this machine');
   const p = placeFromCss({ position: 'absolute', 'inset-block-start': 'unset', 'inset-block-end': '0px', 'inset-inline-start': '0px' });
   ok('an inset a variant sets to unset is no pin: the part is pinned by the other edge', p && p.constraints && p.constraints.vertical === 'max'); }
 ok('a root with no auto layout is a box: a custom element is inline and 0 wide', decl({ kind: 'container', width: 40, height: 40 }, { root: true }).display === 'block');
+ok('an instance that sets its component\'s blend back is mix-blend-mode normal, and a blend is its mode',
+  decl({ kind: 'instance', blend: 'normal' }, { row: true })['mix-blend-mode'] === 'normal' && decl({ kind: 'container', blend: 'color_burn' }, { row: true })['mix-blend-mode'] === 'color-burn'
+  && !('mix-blend-mode' in decl({ kind: 'container' }, { row: true })));
 ok('an instance that stops its component\'s clip is overflow visible, a clip is hidden, and neither paints a box of its own',
   decl({ kind: 'instance', overflow: 'visible' }, { row: true }).overflow === 'visible' && decl({ kind: 'container', overflow: 'hidden' }, { row: true }).overflow === 'hidden'
   && !('overflow' in decl({ kind: 'container' }, { row: true }))

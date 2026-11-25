@@ -36,6 +36,14 @@ export const CLEARED = 'none';
    that computes `visible` where its component's root clips (from-code readCleared). */
 export const UNCLIPPED = 'visible';
 
+/* Unblended: an instance, or a layer kept inside one, that draws no blend mode where its component's root (or part)
+   has one says `blend: normal` (derive's cleared; Figma's blendMode overridden back to pass-through or normal, which
+   the walk records as nothing). The contract says a blend by its mode and its absence as nothing, so only where a
+   component's blend would otherwise reach it. Figma: blendMode NORMAL (to-figma). CSS: `mix-blend-mode: normal` over
+   the component's mode (css.mjs); read back from a placed component that computes `normal` where its component's root
+   blends (from-code readCleared). */
+export const UNBLENDED = 'normal';
+
 /* A colour written as itself (no variable): css.mjs writes it so, and the editor's preview draws it so. */
 export const rawColour = (f) => typeof f === 'string' && /^(#|rgba?\(|hsla?\()/.test(f);
 

@@ -34,7 +34,7 @@ const { variantValues: valuesOf } = require('../shared/names.js');
 
 const KIND = { TEXT: 'text', INSTANCE: 'instance', SLOT: 'slot', FRAME: 'container', GROUP: 'container', COMPONENT: 'container', COMPONENT_SET: 'container', SECTION: 'container' };
 // alignment and sizing words, from the one table every direction reads
-const { alignFromFigma, sizeFromFigma, typeFromFigma, spacingFromFigma, CLEARED, UNCLIPPED } = require('./rules.mjs');
+const { alignFromFigma, sizeFromFigma, typeFromFigma, spacingFromFigma, CLEARED, UNCLIPPED, UNBLENDED } = require('./rules.mjs');
 // a long-running process (the snapshot router) reads this file fresh and keeps the rules.mjs it first loaded, which
 // clearing require.cache never reloads: one without these helpers derives as before them, never a throw (store.cjs
 // deletes a contract whose derive threw)
@@ -640,9 +640,14 @@ function cleared(anatomy, mains) {
     // (and clipping: the walk records a clip wherever a frame has one, so none where its root clips stopped it, said
     // `visible` (UNCLIPPED, rules.mjs): unsaid, it would be its component's clip)
     if (root.overflow === 'hidden' && e.overflow === undefined) e.overflow = UNCLIPPED;
+    // (and a blend: the walk records one wherever a layer's mode is not pass-through or normal, so none where its root
+    // has one set it back, said `normal` (UNBLENDED, rules.mjs): unsaid, it would be its component's blend)
+    if (blends(root.blend) && e.blend === undefined) e.blend = UNBLENDED;
   }
   return anatomy;
 }
+// a blend mode a part draws (normal, UNBLENDED, draws none)
+const blends = (v) => v != null && v !== UNBLENDED;
 // a radius that rounds a corner (0, or four zeros, rounds none)
 const cornered = (v) => v != null && v !== 0 && !(Array.isArray(v) && v.every((x) => x === 0));
 // a paint a part draws (a cleared one, none, draws nothing)
@@ -887,6 +892,15 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       const R = x && e && e.kind === 'instance' && e.component && x.overflow === UNCLIPPED && e.overflow === undefined && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
       if (R && R.overflow === 'hidden') e.overflow = 'hidden';
+    }
+    // and a blend: one kept that draws none where its component's part has one has set it back, said `normal`
+    // (UNBLENDED); a placed layer this component sets back that draws its own component's again, said. Figma's reading
+    // only: one from code reads no blend mode but a placed component's root computing normal (readCleared)
+    if (!reading) for (const k of kept) {
+      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+      if (e && x && e.kind !== 'instance' && e.blend === undefined && blends(x.blend)) e.blend = UNBLENDED;
+      const R = x && e && e.kind === 'instance' && e.component && x.blend === UNBLENDED && e.blend === undefined && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
+      if (R && blends(R.blend)) e.blend = R.blend;
     }
     inherit();
   }

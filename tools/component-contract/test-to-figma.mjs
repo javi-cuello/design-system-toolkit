@@ -414,6 +414,18 @@ delete globalThis.figma;
     src.includes("if (e.kind !== 'text' && P.fromCode) clipOver(n, e);\n    if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);")
     && src.includes("else if (P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') clipOver(n, e);"));
 }
+{
+  // a layer kept inside an instance that sets its component's blend back (rules.mjs UNBLENDED, `normal`) has its blend
+  // mode set where it differs, pass-through counting as normal, in the override every kept layer takes
+  const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
+  const line = src.split('\n').find((l) => /^\s*const blendOver = \(n, e\) =>/.test(l));
+  const blendOver = line && new Function(`${line.trim()} return blendOver;`)();
+  const after = (m, e) => { const n = { name: 'Divider', blendMode: m }; blendOver(n, e); return n.blendMode; };
+  ok('a kept layer said unblended has its blend mode set back; pass-through is left as normal; unsaid leaves it; a mode is set',
+    !!blendOver && after('DARKEN', { blend: 'normal' }) === 'NORMAL' && after('PASS_THROUGH', { blend: 'normal' }) === 'PASS_THROUGH' && after('DARKEN', {}) === 'DARKEN'
+    && after('PASS_THROUGH', { blend: 'multiply' }) === 'MULTIPLY'
+    && /const override = async \(n, e\) => \{[\s\S]{0,2000}?blendOver\(n, e\);/.test(src));
+}
 
 // a drawing compared with the component it was derived from, field by field: what it named otherwise or left out
 {

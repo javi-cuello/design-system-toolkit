@@ -947,6 +947,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // whether a placed layer clips, where the contract says (hidden, or UNCLIPPED's visible) and it differs: a reading from
   // code states it too, as it read it
   const clipOver = (n, e) => { if (e.overflow != null && 'clipsContent' in n && n.clipsContent !== (e.overflow === 'hidden')) n.clipsContent = e.overflow === 'hidden'; };
+  // its blend mode, where the contract says one (UNBLENDED's normal over its component's) and it differs: pass-through is
+  // normal, as the walk reads both
+  const blendOver = (n, e) => { const was = n.blendMode === 'PASS_THROUGH' ? 'NORMAL' : n.blendMode; if (e.blend && 'blendMode' in n && was !== e.blend.toUpperCase()) n.blendMode = e.blend.toUpperCase(); };
   const lookOver = async (n, e) => {
     const b = e.border;
     clearedLook(n, { border: b }, P.cleared);
@@ -975,6 +978,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     } else if (e.kind === 'graphic' && n.type === 'VECTOR') await paintIf(n, n.strokes.length && e.background !== P.cleared ? 'strokes' : 'fills', e.background, true);
     else if (e.kind !== 'text') await paintIf(n, 'fills', e.background);
     styleFill(n, e, e.kind === 'text' ? e.color : e.background);
+    blendOver(n, e);
     // (a reading from code states what it read, not Figma's defaults: only its stroke's colour, as before)
     if (e.kind !== 'text' && P.fromCode) clipOver(n, e);
     if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e); else if (e.border === P.cleared) clearedLook(n, { border: e.border }, P.cleared); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);

@@ -553,6 +553,22 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
       assert.deepEqual(clipRows(true, undefined), [], 'nothing said, its main\'s clip, Figma clipping: no row');
       assert.ok(clipRows(false, undefined).length > 0, 'nothing said, its main\'s clip, none in Figma: a row');
     }
+    // a layer inside an instance that sets its main's blend back says so (rules.mjs UNBLENDED): held to Figma's none, and a
+    // blend there a row; one that says nothing is its main's blend, and Figma's none there a row
+    {
+      const blendRows = (mode, said) => {
+        const set = structuredClone(setNode); for (const v of set.children) { const x = anim(v, 160, 'FIXED', { c: 'min', x: 0, w: 160 }); x.children[0].blendMode = mode; v.children.push(x); }
+        const c = contract(); c.anatomy.anim = { kind: 'instance', parent: 'root', order: 1, component: 'Anim', key: 'k-anim', width: 160, height: 16 };
+        c.anatomy['anim/bar'] = { kind: 'graphic', parent: 'anim', order: 0, shape: 'rectangle', ...(said && { blend: said }) };
+        const M = mainOf(160, { c: 'min', x: 0, w: 160 }); M.anatomy.bar.blend = 'darken';
+        return compareContract('chip', set, c, { ...ctx, components: { ...ctx.components, 'C:5': { key: 'k-anim', name: 'Anim' } }, mains: (key) => (key === 'k-anim' ? M : null) }).rows.filter((x) => x.path === 'anim/bar' && x.kind === 'contract:blend');
+      };
+      assert.deepEqual(blendRows('PASS_THROUGH', 'normal'), [], 'a blend said set back, none in Figma: no row');
+      assert.deepEqual(blendRows('NORMAL', 'normal'), [], 'a blend said set back, Figma normal: no row');
+      assert.ok(blendRows('DARKEN', 'normal').length > 0, 'a blend said set back, Figma blending: a row');
+      assert.deepEqual(blendRows('DARKEN', undefined), [], 'nothing said, its main\'s blend, Figma blending: no row');
+      assert.ok(blendRows('PASS_THROUGH', undefined).length > 0, 'nothing said, its main\'s blend, none in Figma: a row');
+    }
     clean(run({ w: 80, main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -80, w: 80 } }), 'scaled with the instance');
     assert.ok(run({ w: 80, main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -60, w: 80 } }).rows.some((x) => x.kind === 'contract:absolute.x'), 'scaled elsewhere than the constraint puts it: a row');
     assert.ok(run({ w: 80, main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -80, w: 60 } }).rows.some((x) => x.kind === 'contract:width'), 'scaled to another size: a row');

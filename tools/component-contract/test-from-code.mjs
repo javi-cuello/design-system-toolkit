@@ -877,6 +877,17 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     && src.includes("if (cs.overflow === 'visible') ie.clipless = true;"));
 }
 {
+  // a placed component computing no blend where its component's root blends reads back as the blend set back, `normal`
+  // (rules.mjs UNBLENDED, as css.mjs writes it); one whose component does not blend reads nothing of it
+  const C = { component: 'Item', props: {}, anatomy: { root: { kind: 'container', blend: 'darken' } }, variants: [] };
+  const P = { component: 'Plain', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const a = readCleared({ root: { kind: 'container' }, c: { kind: 'instance', component: 'Item', blendless: true }, p: { kind: 'instance', component: 'Plain', blendless: true }, d: { kind: 'instance', component: 'Item' } }, (n) => (n === 'Item' ? C : n === 'Plain' ? P : null));
+  const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
+  ok('a placed component computing no blend its component draws reads as the blend set back; nothing else does, and the mark is gone',
+    a.c.blend === 'normal' && a.p.blend === undefined && a.d.blend === undefined && !Object.values(a).some((x) => 'blendless' in x)
+    && src.includes("if (cs.mixBlendMode === 'normal') ie.blendless = true;"));
+}
+{
   // a reading of a page whose Box, placed in a Holder that stops its clip, clips again: said hidden, as derive says it of a
   // drawing; unsaid, it would read as the Holder's visible. One still unclipped is the Holder's own
   const { colourKept } = await import('./from-code.mjs');

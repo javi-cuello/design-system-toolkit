@@ -47,7 +47,7 @@ export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
 import { inWordsOf } from './to-figma.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -283,9 +283,9 @@ export function shadowOnlyRings(bs) {
 export function readCleared(anatomy, mains, valueOf = () => undefined) {
   const { atProps } = req('./derive.cjs');
   for (const e of Object.values(anatomy)) {
-    if (!e || (!e.strokeless && !e.fillless && !e.shadowless && !e.clipless)) continue;
-    const stroke = !!e.strokeless, fill = !!e.fillless, shade = !!e.shadowless, clip = !!e.clipless;
-    delete e.strokeless; delete e.fillless; delete e.shadowless; delete e.clipless;
+    if (!e || (!e.strokeless && !e.fillless && !e.shadowless && !e.clipless && !e.blendless)) continue;
+    const stroke = !!e.strokeless, fill = !!e.fillless, shade = !!e.shadowless, clip = !!e.clipless, blend = !!e.blendless;
+    delete e.strokeless; delete e.fillless; delete e.shadowless; delete e.clipless; delete e.blendless;
     const m = e.kind === 'instance' && e.component && mains(e.component, e.key), R = m && atProps(m, e.with || {}).root;
     if (stroke && R && R.border && typeof R.border === 'object' && R.border.color != null && e.border === undefined) e.border = CLEARED;
     // (and a fill the page paints clear, `fillless`, where its root has one: cleared too, as to-code writes a contract's
@@ -295,6 +295,9 @@ export function readCleared(anatomy, mains, valueOf = () => undefined) {
     if (shade && R && typeof R.shadow === 'string' && R.shadow !== CLEARED && e.shadow === undefined) e.shadow = CLEARED;
     // (and a clip the page draws none of, `clipless` (its computed overflow visible), where its root clips: stopped, UNCLIPPED)
     if (clip && R && R.overflow === 'hidden' && e.overflow === undefined) e.overflow = UNCLIPPED;
+    // (and a blend the page draws none of, `blendless` (its computed mix-blend-mode normal), where its root has one: set
+    // back, UNBLENDED)
+    if (blend && R && R.blend && R.blend !== UNBLENDED && e.blend === undefined) e.blend = UNBLENDED;
   }
   return anatomy;
 }
@@ -2211,7 +2214,7 @@ async function main() {
             // its own styling over its component's root (a toggle's fill on its toggle item), folded back where it is that root's
             // (ownStyling); drawn over its parent where it paints, as a box is
             // (no arc, focus ring or outline: those are its component's drawing, or the ring rule's, never an override read here)
-            { const ie = out[out.length - 1]; boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(n); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true; if (cs.overflow === 'visible') ie.clipless = true; } delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
+            { const ie = out[out.length - 1]; boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(n); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true; if (cs.overflow === 'visible') ie.clipless = true; if (cs.mixBlendMode === 'normal') ie.blendless = true; } delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
             // the layers the mapping names inside it, where the mapping names it too, at any depth of placing (opensPlaced; an
             // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
             // (each at its place among the component's own drawn children, which this reading does not all read)
