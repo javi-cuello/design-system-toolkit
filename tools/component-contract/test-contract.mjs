@@ -255,7 +255,15 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     ok('a text\'s vertical alignment is said as the design states it, a text that grows to its words too (a drawing that leaves it out is not the file)', t('HEIGHT') === 'center' && t('WIDTH_AND_HEIGHT') === 'center' && t('NONE') === 'center' && t(undefined) === 'center'); }
   { const held = derive({ name: 'Held', props: {}, variants: [{ name: 'Held', type: 'COMPONENT', layout: 'VERTICAL', children: [
       { name: 'Skel', type: 'INSTANCE', instanceOf: 'Skeleton', w: 40, h: 8, children: [{ name: 'Bar', type: 'RECTANGLE', x: 0, y: 0, w: 40, h: 8, constraints: 'STRETCH/STRETCH', fills: ['C/x'] }] }] }] }).anatomy;
-    ok('a layer inside an instance keeps no constraints, as no position: an instance cannot override them (figma-fact: no-nested-position-override)', !!held['skel/bar'] && held['skel/bar'].constraints === undefined); }
+    ok('a layer inside an instance keeps no constraints, as no position: an instance cannot override them (figma-fact: no-nested-position-override)', !!held['skel/bar'] && held['skel/bar'].constraints === undefined);
+    // …unless its component's contract has no such layer (hidden there, shown by the instance): then nothing else says
+    // where it sits, so it keeps its place, stretched over its parent with no size of its own
+    const knob = { name: 'Knob', id: '9:7', props: {}, variants: [{ name: 'Knob', type: 'COMPONENT', w: 4, h: 44, sizing: 'FIXED/FIXED', fills: ['C/x'], children: [] }] };
+    const shown = (bar) => derive({ name: 'Shown', props: {}, variants: [{ name: 'Shown', type: 'COMPONENT', layout: 'VERTICAL', children: [
+      { name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', w: 4, h: 44, sizing: 'FIXED/FIXED', fills: ['C/x'], children: [bar] }] }] }, ['Knob'], { mains: mainsFrom({ Knob: knob }) }).anatomy['knob/layer'];
+    const hid = shown({ name: 'Layer', type: 'RECTANGLE', x: 0, y: 0, w: 4, h: 44, sizing: 'FIXED/FIXED', constraints: 'STRETCH/STRETCH', fills: ['C/y'] });
+    ok('…but one its component\'s contract does not state keeps its place: stretched, at 0 from every edge, no size of its own',
+      !!hid && JSON.stringify(hid.constraints) === JSON.stringify({ horizontal: 'stretch', vertical: 'stretch' }) && JSON.stringify(hid.absolute) === JSON.stringify({ x: 0, y: 0, end: 0, bottom: 0 }) && hid.width === undefined && hid.height === undefined); }
   // a quarter turn: Figma keeps the node's own width and height (169 by 16) and lays out its turned box, 16 by 169, so its
   // sizing words name the parent's axes (FIXED across a column, FILL down it): said in its own axes, its width fills
   { const turned = (rotation, sizing) => derive({ name: 'Q', props: {}, variants: [{ name: 'Q', type: 'COMPONENT', layout: 'VERTICAL', sizing: 'FIXED/FIXED', w: 44, h: 354, children: [

@@ -371,33 +371,46 @@ function partConditions(rows, props) {
   return out;
 }
 
+/* The place (position, constraints) flatten leaves out of a layer inside an instance, by part id, per flat anatomy: the
+   component's, which its contract states, unless that contract has no such layer (one hidden in the component, shown by
+   the instance), when ownInsides gives it back, as nothing else says where it sits. */
+const PLACE_ASIDE = new WeakMap();
+
 function flatten(list, characters = new Map(), known = [], axes = [], turned = null) {
-  const out = {};
+  const out = {}, aside = new Map();
+  PLACE_ASIDE.set(out, aside);
   const nodeAt = new Map(list.map((x) => [keyOf(x.segs), x.node]));
   for (const { node, segs, parent, order } of list) {
     // in a box no auto layout places (nor an instance, whose own layers it are), a part is at its point in it
     const up = parent == null ? null : nodeAt.get(keyOf(parent));
     const e = element(node, parent == null ? null : idOf(parent), known, up, axes, !!turned && turned.has(idOf(segs)));
     const inInstance = segs.slice(0, -1).some((_, i) => (nodeAt.get(keyOf(segs.slice(0, i + 1))) || {}).type === 'INSTANCE');
-    if (up && !up.layout && !inInstance && !e.absolute && node.x != null) e.absolute = boxAt(node);
-    // and inside an instance, a layer its component places in a frame keeps no constraints either: like its position, an
-    // instance cannot override them (figma-fact: no-nested-position-override), so they are the component's, and code reads
-    // none there (one placed absolutely in an auto layout keeps them, with the position it states)
-    // (but a glyph's scale both ways, which ownGlyph reads after to fold an icon's insides into the icon)
-    if (inInstance && !e.absolute && !(e.constraints && e.constraints.horizontal === 'scale' && e.constraints.vertical === 'scale')) delete e.constraints;
-    // its far edges where it follows its parent's (a focus ring 4 outside its box, all round): how far from the
-    // parent's end and bottom, as CSS's right and bottom say it; stretched, its size is its parent's less both
-    // offsets, never a number measured at one label's width; centred, both edges say how far its centre stands from
-    // the parent's, (x - end) / 2, which no size code gives either box changes (an icon 0.3 off the middle of a box that fills)
-    if (e.absolute && e.constraints && up && up.w != null && node.w != null) {
-      const at = (v) => Math.round(v * 100) / 100;
-      for (const [axis, far, from, size, own] of [['horizontal', 'end', 'x', 'width', 'w'], ['vertical', 'bottom', 'y', 'height', 'h']]) {
-        const c = e.constraints[axis];
-        if (c !== 'stretch' && c !== 'max' && c !== 'center') continue;
-        e.absolute[far] = at(up[own] - e.absolute[from] - node[own]);
-        if (c === 'stretch' && typeof e[size] === 'number') delete e[size];
+    const place = (e, inInstance) => {
+      if (up && !up.layout && !inInstance && !e.absolute && node.x != null) e.absolute = boxAt(node);
+      // and inside an instance, a layer its component places in a frame keeps no constraints either: like its position, an
+      // instance cannot override them (figma-fact: no-nested-position-override), so they are the component's, and code reads
+      // none there (one placed absolutely in an auto layout keeps them, with the position it states)
+      // (but a glyph's scale both ways, which ownGlyph reads after to fold an icon's insides into the icon)
+      if (inInstance && !e.absolute && !(e.constraints && e.constraints.horizontal === 'scale' && e.constraints.vertical === 'scale')) delete e.constraints;
+      // its far edges where it follows its parent's (a focus ring 4 outside its box, all round): how far from the
+      // parent's end and bottom, as CSS's right and bottom say it; stretched, its size is its parent's less both
+      // offsets, never a number measured at one label's width; centred, both edges say how far its centre stands from
+      // the parent's, (x - end) / 2, which no size code gives either box changes (an icon 0.3 off the middle of a box that fills)
+      if (e.absolute && e.constraints && up && up.w != null && node.w != null) {
+        const at = (v) => Math.round(v * 100) / 100;
+        for (const [axis, far, from, size, own] of [['horizontal', 'end', 'x', 'width', 'w'], ['vertical', 'bottom', 'y', 'height', 'h']]) {
+          const c = e.constraints[axis];
+          if (c !== 'stretch' && c !== 'max' && c !== 'center') continue;
+          e.absolute[far] = at(up[own] - e.absolute[from] - node[own]);
+          if (c === 'stretch' && typeof e[size] === 'number') delete e[size];
+        }
       }
-    }
+      return e;
+    };
+    // (the place it would have outside an instance, set aside: PLACE_ASIDE)
+    const outside = inInstance && !e.absolute ? place({ ...e }, false) : null;
+    place(e, inInstance);
+    if (outside && (outside.absolute || outside.constraints)) aside.set(idOf(segs), outside);
     // a line along its box (a divider, spec.cjs boxOnly) carries no paths where to-figma draws it as its line (a graphic
     // of no height, or no width, along that axis, that no icon names): the box and its stroke say it, as before 0.86.0,
     // and code has no path to write. Anywhere else (stretched both ways) the paths stay, so it is never drawn a frame
@@ -767,6 +780,17 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     // (`whole`: instances the design keeps whole, so a reading keeps what it reads there too)
     // (`found`: where given, collects the instances kept whole for a layer they hide, so a drawing hides there what
     // the contract does not list, and nowhere else)
+    // a layer its component's contract does not state (hidden there, shown here) has its place given back (PLACE_ASIDE):
+    // the component's, which no contract says otherwise (a state layer stretched over its handle)
+    const asideOf = PLACE_ASIDE.get(anatomy);
+    if (asideOf) for (const k of inner) {
+      const p = asideOf.get(k);
+      if (!p || !anatomy[k] || host(k) !== id || match[k.slice(id.length + 1)]) continue;
+      const r = { ...anatomy[k] };
+      for (const f of ['absolute', 'constraints']) if (p[f] !== undefined) r[f] = p[f];
+      for (const f of ['width', 'height']) if (!(f in p)) delete r[f];
+      anatomy[k] = r;
+    }
     if (whole.has(id)) { inherit(); continue; }
     if (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk))) { if (found) found.add(id); inherit(); continue; }
     const own = (k) => {
