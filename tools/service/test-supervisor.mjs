@@ -62,6 +62,20 @@ test('a supervisor started after 03:00 runs that day\'s review at once, and not 
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('an unwritable review marker skips the review and leaves the supervisor running', async () => {
+  const dir = tmp(), said = [];
+  fs.mkdirSync(path.join(dir, 'review.tried'));
+  const review = script(dir, 'review.mjs', '');
+  const stay = script(dir, 'stay.mjs', 'setInterval(() => {}, 1000);\n');
+  const s = supervise({ logs: dir, children: [{ name: 'stay', script: stay }], review: [process.execPath, review], every: 10, log: (m) => said.push(m) });
+  await until(() => said.some((m) => /^review: skipped today, .*EISDIR/.test(m)));
+  await new Promise((r) => setTimeout(r, 50));
+  assert.ok(!said.includes('review: started'), said.join('\n'));
+  assert.ok([...s.kids].every((k) => k.exitCode === null), 'the child is still up');
+  s.stop();
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('a missing review is logged, not fatal', async () => {
   const dir = tmp(), said = [];
   const s = supervise({ logs: path.join(dir, 'new-logs'), children: [], review: [path.join(dir, 'no-such-review')], every: 10, log: (m) => said.push(m) });

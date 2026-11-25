@@ -92,6 +92,25 @@ async function serving(projectsDir, body) {
   try { return await body({ post, port, banner }); } finally { server.kill(); }
 }
 
+test('forked, the router exits when its parent goes, even before it has started; run plainly, it stays up', async () => {
+  const { fork } = await import('node:child_process');
+  const { projectsDir } = two();
+  const env = { ...process.env, SNAPSHOT_QUIET: '1', TOOLKIT_UNCLAIMED: `${projectsDir}-unclaimed`, TOOLKIT_PAIRING: PAIRING };
+  const args = (port) => ['--projects', projectsDir, '--port', String(port)];
+  const child = fork(path.join(HERE, 'router.mjs'), args(9400 + Math.floor(Math.random() * 500)), { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], env });
+  const exited = new Promise((done) => child.on('exit', (code) => done(code)));
+  child.disconnect();
+  const code = await Promise.race([exited, new Promise((r) => setTimeout(() => r('still running'), 8000))]);
+  if (code === 'still running') child.kill();
+  assert.equal(code, 0, 'an orphaned router would keep its port from the next one');
+  const plain = spawn('node', [path.join(HERE, 'router.mjs'), ...args(9400 + Math.floor(Math.random() * 500))], { stdio: ['ignore', 'pipe', 'pipe'], env });
+  let banner = '';
+  await new Promise((done, fail) => { plain.stdout.on('data', (c) => { banner += c; if (banner.includes('In Figma')) done(); }); setTimeout(() => fail(new Error(`never started: ${banner}`)), 8000); });
+  await new Promise((r) => setTimeout(r, 300));
+  assert.equal(plain.exitCode, null, 'with no channel there is no parent to follow');
+  plain.kill();
+});
+
 test('only the plugin and local tools reach the router: a web page, a look-alike host and a rebound Host are refused, and no answer names a project', async () => {
   const { projectsDir } = two();
   const http = await import('node:http');

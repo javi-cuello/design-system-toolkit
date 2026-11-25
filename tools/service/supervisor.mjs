@@ -58,8 +58,11 @@ export function supervise({ children, logs, review = null, hour = 3, every = 600
     due = nextAt(now(), hour);
     let last = null; try { last = fs.readFileSync(tried, 'utf8'); } catch {}
     if (last === day(now())) return;
-    fs.writeFileSync(tried, day(now()));
-    const fds = out('review');
+    // unwritable (disk full, a folder in the way): that day's review is skipped, never retried unmarked, and a
+    // throw here would take both children down and crash-loop under KeepAlive
+    let fds;
+    try { fs.writeFileSync(tried, day(now())); fds = out('review'); }
+    catch (e) { log(`review: skipped today, ${e.message}`); return; }
     reviewing = spawn(review[0], review.slice(1), { stdio: ['ignore', ...fds] });
     for (const fd of fds) fs.closeSync(fd);
     log('review: started');
