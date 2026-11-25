@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { recordedOf, readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, paintOurs, restWalk, restPart, compareSpec, compareContract, linksOf, addressParts, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
+import { recordedOf, readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, paintOurs, clearVariables, restWalk, restPart, compareSpec, compareContract, linksOf, addressParts, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
 
 const require = createRequire(import.meta.url);
 const { compact, resolve } = require('../snapshot/spec.cjs');
@@ -27,6 +27,28 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   assert.equal(g.angle, 180, 'top to bottom is 180°, as CSS says it');
   assert.deepEqual(g.stops.map((s) => s.color), ['#ffffff', '#000000']);
   // a hair short of upright rounds to 0°, never 360°; a contract an older snapshot wrote at 360 reads as 0
+  // a paint bound to a variable the stored tokens hold clear in every mode paints nothing, though REST's cached colour
+  // for it is opaque (Carbon's Transparent: REST white at 1, the walk none); the id named through a paint style the node
+  // draws, and a variable another style names, opaque in one mode, aliased, or named two ways, still drawn
+  { const tokens = { collections: {
+      Theme: { modes: ['Light', 'Dark'], values: { Light: { Transparent: 'rgb(255 255 255 / 0)', Half: 'rgb(255 255 255 / 0)', Via: 'rgb(0 0 0 / 0)', Solid: '#ffffff' }, Dark: { Transparent: 'rgb(0 0 0 / 0)', Half: '#000000', Via: 'rgb(0 0 0 / 0)', Solid: '#000000' } }, alias: { Light: { Via: 'Transparent' }, Dark: {} } } },
+      paintStyles: [{ name: 'Clear', paints: [{ type: 'SOLID', color: 'Transparent' }] }, { name: 'Half', paints: [{ type: 'SOLID', color: 'Half' }] }, { name: 'Via', paints: [{ type: 'SOLID', color: 'Via' }] }, { name: 'Solid', paints: [{ type: 'SOLID', color: 'Solid' }] }, { name: 'Twice', paints: [{ type: 'SOLID', color: 'Solid' }] }] };
+    const b = (id, opacity = 1) => ({ type: 'SOLID', color: white, opacity, boundVariables: { color: { type: 'VARIABLE_ALIAS', id } } });
+    const doc = { id: '0', type: 'COMPONENT_SET', children: [
+      { id: '1', type: 'FRAME', fills: [b('V:clear', 0.00001)], styles: { fill: 'S:clear' } },
+      { id: '2', type: 'FRAME', fills: [b('V:half')], styles: { fills: 'S:half' } },
+      { id: '3', type: 'FRAME', fills: [b('V:via')], styles: { fill: 'S:via' } },
+      { id: '4', type: 'FRAME', fills: [b('V:twice')], styles: { fill: 'S:twice' } },
+      { id: '5', type: 'FRAME', strokes: [b('V:twice')], styles: { stroke: 'S:clear' } }] };
+    const styles = { 'S:clear': { name: 'Clear' }, 'S:half': { name: 'Half' }, 'S:via': { name: 'Via' }, 'S:twice': { name: 'Twice' } };
+    const ids = clearVariables(tokens, [{ document: doc, styles }]);
+    assert.deepEqual([...ids], ['V:clear'], 'clear in every mode, no alias, one name');
+    assert.deepEqual(paintsOf([b('V:clear')], false, ids), [], 'bound clear: none, whatever REST cached');
+    assert.deepEqual(paintsOf([b('V:clear')], true, ids), [BOUND], "a stroke's or a style's is kept");
+    assert.deepEqual(paintsOf([b('V:half')], false, ids), [BOUND], 'another variable: still bound');
+    assert.deepEqual(paintsOf([b('V:clear')]), [BOUND], 'no tokens: as before');
+    assert.equal(restPart({ id: 'r', name: 'R', type: 'FRAME', size: { x: 1, y: 1 }, relativeTransform: [[1, 0, 0], [0, 1, 0]], fills: [b('V:clear')] }, null, { styles: {}, components: {}, componentSets: {}, clearIds: ids }, {}).background, undefined, 'the contract side: no background');
+    assert.equal(restWalk({ id: 'r', name: 'R', type: 'FRAME', size: { x: 1, y: 1 }, relativeTransform: [[1, 0, 0], [0, 1, 0]], fills: [b('V:clear')] }, { styles: {}, components: {}, componentSets: {}, clearIds: ids }).fills, undefined, 'the spec side: no fills'); }
   const up = paintsOf([{ type: 'GRADIENT_LINEAR', gradientHandlePositions: [{ x: 0.5, y: 1 }, { x: 0.497, y: 0 }, { x: 0, y: 0 }], gradientStops: [] }])[0];
   assert.equal(up.angle, 0);
   assert.equal(paintOurs({ type: 'GRADIENT_LINEAR', angle: 360, stops: [] }).angle, 0);

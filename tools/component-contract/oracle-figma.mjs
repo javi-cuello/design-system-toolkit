@@ -149,16 +149,17 @@ const gradient = (p) => {
   return { type: 'GRADIENT_LINEAR', angle, stops: (p.gradientStops || []).map((st) => ({ position: +st.position.toFixed(4), color: st.boundVariables && st.boundVariables.color ? BOUND : colour(st.color, p.opacity ?? 1) })) };
 };
 /* Figma's paints as the walk names them, a bound one as BOUND (a paint at no opacity is none, unless `all`: a style's
-   or a stroke's; a bound paint whose resolved colour is clear is taken as clear, the walk's "clear in every mode" being
-   the variables' to say) */
-export function paintsOf(list, all = false) {
+   or a stroke's; a bound paint whose resolved colour is clear is taken as clear, and so is one bound to a variable in
+   `clearIds`, the ones the stored tokens hold clear in every mode (clearVariables): REST's colour for a bound paint
+   is the one it cached, which can be a stale opaque one where the variable now resolves clear) */
+export function paintsOf(list, all = false, clearIds = null) {
   const out = [];
   for (const p of list || []) {
     if (p.visible === false) continue;
     const op = p.opacity ?? 1;
     if (!all && clear(op)) continue;
     const bound = p.boundVariables && p.boundVariables.color;
-    if (bound && !all && p.color && clear((p.color.a ?? 1) * op)) continue;
+    if (bound && !all && ((p.color && clear((p.color.a ?? 1) * op)) || (clearIds && clearIds.has(bound.id)))) continue;
     if (bound) out.push(BOUND);
     else if (p.type === 'SOLID') out.push(colour(p.color, op));
     else if (p.type === 'GRADIENT_LINEAR') out.push(gradient(p));
@@ -167,6 +168,42 @@ export function paintsOf(list, all = false) {
     else out.push(p.type);
   }
   return out;
+}
+/* The variables REST binds that the walk drops as clear in every mode, by REST's id. A node gives a variable's id only
+   (its name needs file_variables:read), so an id is named where a node draws a paint style: the style's paint i, as the
+   stored tokens hold it (paintStyles, a token's name for a bound one), is the node's paint i, whose binding REST gives
+   by id. An id named two ways is named neither. A name is clear where every collection holding it holds, in every
+   mode, a colour under half an 8-bit step and no alias (the walk reads an alias as a value, never as clear). */
+const alphaOf = (v) => { if (typeof v !== 'string') return null; if (/^#[0-9a-f]{6}$/i.test(v)) return 1; if (/^#[0-9a-f]{8}$/i.test(v)) return parseInt(v.slice(7), 16) / 255; const m = /^rgba?\(.*\/\s*([\d.e+-]+)\s*\)$/.exec(v); return m ? +m[1] : /^rgba?\(/.test(v) ? 1 : null; };
+export function clearVariables(tokens, docs) {
+  const ids = new Set();
+  if (!tokens) return ids;
+  const verdict = new Map();
+  for (const c of Object.values(tokens.collections || {})) {
+    for (const [mode, values] of Object.entries(c.values || {})) for (const [name, v] of Object.entries(values || {})) {
+      const a = alphaOf(v), aliased = !!(c.alias && c.alias[mode] && c.alias[mode][name]);
+      verdict.set(name, verdict.get(name) !== false && a != null && clear(a) && !aliased);
+    }
+  }
+  const styles = new Map((tokens.paintStyles || []).map((s) => [s.name, s.paints || []]));
+  const named = new Map();
+  const visit = (n, styleNames) => {
+    for (const [k, list] of [['fill', n.fills], ['stroke', n.strokes]]) {
+      const id = n.styles && (n.styles[k] || n.styles[k + 's']);
+      const paints = id && styleNames[id] && styles.get(styleNames[id].name);
+      const rest = Array.isArray(list) ? list.filter((p) => p.visible !== false) : [];
+      if (!paints || paints.length !== rest.length) continue;
+      rest.forEach((p, i) => {
+        const b = p.boundVariables && p.boundVariables.color, name = paints[i] && paints[i].color;
+        if (!b || !b.id || typeof name !== 'string' || LITERAL.test(name)) return;
+        (named.get(b.id) || named.set(b.id, new Set()).get(b.id)).add(name);
+      });
+    }
+    for (const c of n.children || []) visit(c, styleNames);
+  };
+  for (const { document, styles: s } of docs || []) if (document) visit(document, s || {});
+  for (const [id, names] of named) if (names.size === 1 && verdict.get([...names][0]) === true) ids.add(id);
+  return ids;
 }
 // a value as ours writes it, a token's name as BOUND: a colour literal, an image, a paint type or a gradient stay
 const LITERAL = /^(#|rgb\(|IMAGE:|GRADIENT_|SOLID$|VIDEO$|PATTERN$|EMOJI$)/;
@@ -305,7 +342,7 @@ export function restWalk(n, ctx, depth = 0, parent = null, at, inInstance = fals
   }
   if (p.flip) o.flip = p.flip;
   if (p.rotation != null) o.rotation = p.rotation;
-  if (Array.isArray(n.fills) && n.fills.length) { const f = paintsOf(n.fills); if (f.length) o.fills = f; }
+  if (Array.isArray(n.fills) && n.fills.length) { const f = paintsOf(n.fills, false, ctx.clearIds); if (f.length) o.fills = f; }
   const fs = styleName(ctx, n, 'fill'); if (fs) o.fillStyle = fs;
   if (strokes.length) {
     o.strokes = paintsOf(strokes, true);
@@ -573,7 +610,7 @@ export function restPart(n, parent, ctx, propIds, frame = parent, { turned = fal
     if (n.layoutWrap === 'WRAP') { e.layout.wrap = true; e.layout.crossGap = bv.counterAxisSpacing ? BOUND : typeof n.counterAxisSpacing === 'number' ? n.counterAxisSpacing : e.layout.gap; }
     if (n.itemReverseZIndex) e.layout.firstOnTop = true;
   }
-  const fills = Array.isArray(n.fills) ? paintsOf(n.fills) : [];
+  const fills = Array.isArray(n.fills) ? paintsOf(n.fills, false, ctx.clearIds) : [];
   if (fills.length) e[n.type === 'TEXT' ? 'color' : 'background'] = one(fills);
   const fs = styleName(ctx, n, 'fill'); if (fs) e.fillStyle = fs;
   const strokes = Array.isArray(n.strokes) ? paintsOf(n.strokes, true) : [];
@@ -1282,8 +1319,8 @@ async function main(argv) {
     const specs = fs.readdirSync(w.paths.components).filter((f) => fs.existsSync(path.join(w.paths.components, f, 'figma.json')));
     const folders = specs.filter((f) => !opt.only.length || opt.only.includes(f));
     const keys = projects.libraryRoles(w.doc).components;
-    let meta = null;
-    try { meta = JSON.parse(fs.readFileSync(w.paths.tokens, 'utf8'))._meta; } catch { /* no pin recorded */ }
+    let meta = null, tokens = null;
+    try { tokens = JSON.parse(fs.readFileSync(w.paths.tokens, 'utf8')); meta = tokens._meta; } catch { /* no pin recorded */ }
     // every contract the project keeps, by its component's key: a placed instance is expanded through its main's
     const byKey = {};
     for (const f of fs.readdirSync(w.paths.components)) {
@@ -1323,10 +1360,12 @@ async function main(argv) {
       let got;
       try { got = await fetchSets(get, file, sets, { version: version && version.id, cache, offline: opt.offline, log: (s) => console.error(s) }); } catch (e) { console.error(e.message); return 1; }
       if (!opt.offline) fs.writeFileSync(path.join(cache, file, (version && version.id) || 'latest', 'version.json'), JSON.stringify({ ...(version || { id: null, pinned: false }), snapshotAt: at || null }) + '\n');
+      // (the variables the walk drops as clear in every mode, named through every set's paint styles)
+      const clearIds = clearVariables(tokens, sets.map((s) => got[s.id]).filter((r) => r && !r.missing));
       for (const s of sets) {
         const r = got[s.id];
         if (!r || r.missing || !r.document) { results.push({ component: s.folder, missing: true, readAt: said }); continue; }
-        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains, icons: new Set((meta && meta.icons) || []), own, ownKeys, walk: meta && ((meta.sources && meta.sources[file] && meta.sources[file].plugin) || (!meta.sources && meta.plugin)) };
+        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains, icons: new Set((meta && meta.icons) || []), own, ownKeys, clearIds, walk: meta && ((meta.sources && meta.sources[file] && meta.sources[file].plugin) || (!meta.sources && meta.plugin)) };
         const spec = resolveSpec(s.stored);
         let contract = null;
         try { contract = JSON.parse(fs.readFileSync(path.join(w.paths.components, s.folder, 'contract.json'), 'utf8')); } catch { /* no contract: the spec alone */ }
