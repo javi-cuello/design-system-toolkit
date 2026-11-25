@@ -333,6 +333,29 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     }
     // a main with no contract that is neither: still "not stated"
     assert.ok(compareContract('chip', set, c, { ...ctx, icons: new Set(['Other']) }).rows.some((x) => x.kind === 'contract:not stated'));
+    // a glyph folded into its icon (derive's ownGlyph): the one graphic a contract-less instance draws, scaled both ways,
+    // has its size, place and constraints from the icon's drawing, and the icon's clipping is its own; nothing a host
+    // says, though the main is neither another library's nor an icon (and, deeper, inside one that is neither too)
+    {
+      const glyphed = (s0, f) => { const s = structuredClone(s0); for (const v of s.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.clipsContent = true; i.overrides = []; f(i, v); } return s; };
+      const scaled = (i) => { i.children[0].constraints = { horizontal: 'SCALE', vertical: 'SCALE' }; };
+      const c7 = structuredClone(c); c7.anatomy['icon/glyph'] = { kind: 'graphic', parent: 'icon', order: 0, name: 'Glyph' }; delete c7.anatomy.icon.opacity;
+      const unsaid = (s, cx = ctx, cc = c7) => compareContract('chip', s, cc, cx).rows.filter((x) => x.kind === 'contract:not stated' && /glyph\.|icon\.overflow/.test(x.path)).map((x) => x.path).sort();
+      const r8 = compareContract('chip', glyphed(set, scaled), c7, ctx);
+      assert.deepEqual(unsaid(glyphed(set, scaled)), [], 'the glyph\'s place and the icon\'s clipping: the icon\'s');
+      assert.ok(Object.keys(r8.skipped).some((k) => /folded into its icon/.test(k)), 'counted as a named skip');
+      assert.ok(unsaid(glyphed(set, () => {})).includes('icon/glyph.width'), 'a glyph not scaled both ways is placed by someone: a row');
+      assert.ok(unsaid(glyphed(set, (i, v) => { scaled(i); i.children.push({ id: v.id + 'g2', name: 'Dot', type: 'VECTOR', size: { x: 2, y: 2 }, relativeTransform: T(0, 0) }); })).includes('icon/glyph.width'), 'one of two layers is no glyph folded: a row');
+      const c8 = structuredClone(c7); c8.anatomy['icon/glyph'].width = 99;
+      assert.ok(compareContract('chip', glyphed(set, scaled), c8, ctx).rows.some((x) => x.kind === 'contract:width' && x.path === 'icon/glyph'), 'a size the contract states is still compared');
+      // the icon inside a contract-less, local main the host places: the same
+      const deep = structuredClone(set); for (const v of deep.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); v.children[v.children.indexOf(i)] = { id: v.id + 'w', name: 'Wrap', type: 'INSTANCE', componentId: 'C:4', size: { x: 16, y: 16 }, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', overrides: [], children: [i] }; }
+      const cx9 = { ...ctx, components: { ...ctx.components, 'C:4': { key: 'k-wrap', name: 'Wrap' } } };
+      const c9 = structuredClone(c7); c9.anatomy.wrap = { kind: 'instance', parent: 'root', order: 1, component: 'Wrap', key: 'k-wrap', width: 16, height: 16 };
+      c9.anatomy['wrap/icon'] = { ...c7.anatomy.icon, parent: 'wrap', order: 0 }; c9.anatomy['wrap/icon/glyph'] = { ...c7.anatomy['icon/glyph'], parent: 'wrap/icon' }; delete c9.anatomy.icon; delete c9.anatomy['icon/glyph'];
+      const dr = compareContract('chip', glyphed(deep, (w) => { w.clipsContent = false; const i = w.children[0]; i.clipsContent = true; scaled(i); }), c9, cx9).rows.filter((x) => x.kind === 'contract:not stated');
+      assert.ok(!dr.some((x) => /glyph\.|icon\.overflow/.test(x.path)), 'inside a local main: the icon\'s too');
+    }
   }
   // inside an instance whose main has a contract: the main's expansion, the host's overrides over it, held to Figma
   {
