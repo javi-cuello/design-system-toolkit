@@ -798,6 +798,8 @@ export function compareContract(component, setNode, contract, ctx) {
         // an instance's own size is its placement's (fill, hug, a fixed width, or its place where stretched), never its main's root's
         if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; } if (!said.length) { inner = x.turned.has(x.byNode.get(n)); if (q !== n) geo = { q, x }; } said.push(o); }
       }
+      // (a size any instance around the layer lists as overridden on it, an outer one's too: a stated value)
+      if (geo) { geo.listed = new Set(); for (let q = parentOf.get(n); q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') for (const o of q.overrides || []) if (o.id === n.id) for (const f of o.overriddenFields || []) geo.listed.add(f); }
       return { said: said.length ? Object.assign({}, ...said) : null, whole, turned: inner, geo };
     };
     const unstated = (vname, id, a, b) => { for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; } };
@@ -913,14 +915,14 @@ function constrained(n, parent, geo, part) {
   const { q, x } = geo, id = x.byNode.get(n), pid = parent === q ? 'root' : x.byNode.get(parent);
   const e = id && x.flat[id];
   if (!e) return null;
-  const listed = ((q.overrides || []).find((o) => o.id === n.id) || {}).overriddenFields || [];
+  const listed = geo.listed || new Set();
   const at = {}, skip = [];
   for (const [axis, from, far, size, C, own] of [['horizontal', 'x', 'end', 'width', H, 'w'], ['vertical', 'y', 'bottom', 'height', V, 'h']]) {
     const c = C[n.constraints[axis]] || 'MIN';
     if (c === 'MIN') continue;
     const moves = { STRETCH: [size], MAX: [from], CENTER: [from, far], SCALE: [from, far, size] }[c] || [];
     // (what the host states, and a size Figma lists as overridden, are held as said)
-    const free = moves.filter((f) => (f === size ? !(size in part) && !listed.includes(size) : !('absolute' in part)));
+    const free = moves.filter((f) => (f === size ? !(size in part) && !listed.has(size) : !('absolute' in part)));
     if (!free.length) continue;
     // (a turned layer's place is its turned box's, which the constraints move about its own axes: not predicted)
     const was = placeOf(n).rotation ? null : mainSize(x.flat, pid, axis, q), now = sizeOf(parent)[own];

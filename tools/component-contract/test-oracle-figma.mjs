@@ -342,6 +342,48 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
       return compareContract('chip', set, c, { ...ctx, components: { ...ctx.components, 'C:5': { key: 'k-anim', name: 'Anim' } }, mains: (key) => (key === 'k-anim' ? M : null) }); })();
     assert.ok(!turned.rows.some((x) => x.path === "anim/bar" && /absolute/.test(x.kind)) && turned.skipped["absolute: the main's, moved by its constraints in a resized instance"] > 0, 'a turned layer: skipped, counted');
   }
+  // the same, on the vertical axis; through a stretched frame whose size its main says by its edges alone; and a size an
+  // instance around the layer, an outer one too, lists as overridden: a stated value, held as said, never predicted
+  {
+    const cx2 = (M, W) => ({ ...ctx, components: { ...ctx.components, 'C:5': { key: 'k-anim', name: 'Anim' }, 'C:7': { key: 'k-wrap', name: 'Wrap' } }, mains: (key) => (key === 'k-anim' ? M : key === 'k-wrap' ? W : null) });
+    const W = { contract: 1, component: 'Wrap', figma: { name: 'Wrap', key: 'k-wrap' }, props: {}, anatomy: { root: { kind: 'container', width: 160, height: 16 }, anim: { kind: 'instance', parent: 'root', order: 0, component: 'Anim', key: 'k-anim', width: 160, height: 16 } }, variants: [] };
+    const run = ({ M, inst, parts, wrap = null }) => {
+      const set = structuredClone(setNode);
+      for (const v of set.children) { const a = inst(v); v.children.push(wrap ? { id: v.id + 'w', name: 'Wrap', type: 'INSTANCE', componentId: 'C:7', size: a.size, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', overrides: wrap(v), children: [{ ...a, relativeTransform: T(0, 0) }] } : a); }
+      const c = contract(); const pre = wrap ? 'wrap/' : '';
+      if (wrap) c.anatomy.wrap = { kind: 'instance', parent: 'root', order: 1, component: 'Wrap', key: 'k-wrap', width: inst({ id: 'x' }).size.x, height: inst({ id: 'x' }).size.y };
+      for (const [k, e] of Object.entries(parts)) c.anatomy[pre + k] = { ...e, parent: e.parent === 'root' ? (wrap ? 'wrap' : 'root') : pre + e.parent };
+      return compareContract('chip', set, c, cx2(M, W)).rows.filter((x) => x.path.startsWith(pre + 'anim/'));
+    };
+    // vertical: at the bottom edge of a box 16 tall drawn 8 tall, moved up by 8
+    const Mv = { contract: 1, component: 'Anim', figma: { name: 'Anim', key: 'k-anim' }, props: {}, anatomy: { root: { kind: 'container', width: 160, height: 16 }, bar: { kind: 'graphic', parent: 'root', order: 0, width: 160, height: 4, shape: 'rectangle', constraints: { horizontal: 'min', vertical: 'max' }, absolute: { x: 0, y: 12 } } }, variants: [] };
+    const vInst = (y) => (v) => ({ id: v.id + 'a', name: 'Anim', type: 'INSTANCE', componentId: 'C:5', size: { x: 160, y: 8 }, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', overrides: [{ id: v.id + 'a', overriddenFields: ['height'] }],
+      children: [{ id: v.id + 'ab', name: 'Bar', type: 'RECTANGLE', size: { x: 160, y: 4 }, relativeTransform: T(0, y), constraints: { horizontal: 'LEFT', vertical: 'BOTTOM' } }] });
+    const vParts = { anim: { kind: 'instance', parent: 'root', order: 1, component: 'Anim', key: 'k-anim', width: 160, height: 8 }, 'anim/bar': { kind: 'graphic', parent: 'anim', order: 0, shape: 'rectangle' } };
+    assert.deepEqual(run({ M: Mv, inst: vInst(4), parts: vParts }), [], 'vertical: at the bottom edge, moved with it');
+    assert.ok(run({ M: Mv, inst: vInst(12), parts: vParts }).some((x) => x.kind === 'contract:absolute.y'), 'vertical: left at the main\'s y, a row');
+    // nested: a box stretched 10 in from each side (no width of its own), its bar at its far edge
+    const Mn = { contract: 1, component: 'Anim', figma: { name: 'Anim', key: 'k-anim' }, props: {}, anatomy: { root: { kind: 'container', width: 160, height: 16 },
+      box: { kind: 'container', parent: 'root', order: 0, height: 16, constraints: { horizontal: 'stretch', vertical: 'min' }, absolute: { x: 10, y: 0, end: 10 } },
+      'box/bar': { kind: 'graphic', parent: 'box', order: 0, width: 20, height: 16, shape: 'rectangle', constraints: { horizontal: 'max', vertical: 'min' }, absolute: { x: 120, y: 0 } } }, variants: [] };
+    const nInst = (bx) => (v) => ({ id: v.id + 'a', name: 'Anim', type: 'INSTANCE', componentId: 'C:5', size: { x: 80, y: 16 }, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', overrides: [{ id: v.id + 'a', overriddenFields: ['width'] }],
+      children: [{ id: v.id + 'ab', name: 'Box', type: 'FRAME', size: { x: 60, y: 16 }, relativeTransform: T(10, 0), constraints: { horizontal: 'LEFT_RIGHT', vertical: 'TOP' },
+        children: [{ id: v.id + 'abc', name: 'Bar', type: 'RECTANGLE', size: { x: 20, y: 16 }, relativeTransform: T(bx, 0), constraints: { horizontal: 'RIGHT', vertical: 'TOP' } }] }] });
+    const nParts = { anim: { kind: 'instance', parent: 'root', order: 1, component: 'Anim', key: 'k-anim', width: 80, height: 16 }, 'anim/box': { kind: 'container', parent: 'anim', order: 0 }, 'anim/box/bar': { kind: 'graphic', parent: 'anim/box', order: 0, shape: 'rectangle' } };
+    assert.deepEqual(run({ M: Mn, inst: nInst(40), parts: nParts }).filter((x) => x.path === 'anim/box/bar'), [], 'nested: the box\'s size its main says by its edges, the bar moved with its far edge');
+    assert.ok(run({ M: Mn, inst: nInst(120), parts: nParts }).some((x) => x.path === 'anim/box/bar' && x.kind === 'contract:absolute.x'), 'nested: left at the main\'s x, a row');
+    // listed: the bar drawn 50 wide where scaling would make it 80, its width listed as overridden (on the instance, or on
+    // an instance around it): the main's width compared, never the prediction; the host saying 50 holds it
+    const Ms = { contract: 1, component: 'Anim', figma: { name: 'Anim', key: 'k-anim' }, props: {}, anatomy: { root: { kind: 'container', width: 160, height: 16 }, bar: { kind: 'graphic', parent: 'root', order: 0, width: 160, height: 16, shape: 'rectangle', constraints: { horizontal: 'scale', vertical: 'min' }, absolute: { x: 0, y: 0 } } }, variants: [] };
+    const sInst = (own) => (v) => ({ id: v.id + 'a', name: 'Anim', type: 'INSTANCE', componentId: 'C:5', size: { x: 80, y: 16 }, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', overrides: [{ id: v.id + 'a', overriddenFields: ['width'] }, ...(own ? [{ id: v.id + 'ab', overriddenFields: ['width'] }] : [])],
+      children: [{ id: v.id + 'ab', name: 'Bar', type: 'RECTANGLE', size: { x: 50, y: 16 }, relativeTransform: T(0, 0), constraints: { horizontal: 'SCALE', vertical: 'TOP' } }] });
+    const sParts = (w) => ({ anim: { kind: 'instance', parent: 'root', order: 1, component: 'Anim', key: 'k-anim', width: 80, height: 16 }, 'anim/bar': { kind: 'graphic', parent: 'anim', order: 0, shape: 'rectangle', ...(w && { width: w }) } });
+    const width = (rows) => rows.find((x) => x.kind === 'contract:width');
+    assert.equal((width(run({ M: Ms, inst: sInst(false), parts: sParts() })) || {}).ours, 80, 'unlisted: the scaled width predicted');
+    assert.equal((width(run({ M: Ms, inst: sInst(true), parts: sParts() })) || {}).ours, 160, 'listed on the instance: the main\'s width, as said');
+    assert.equal((width(run({ M: Ms, inst: sInst(false), parts: sParts(), wrap: (v) => [{ id: v.id + 'ab', overriddenFields: ['width'] }] })) || {}).ours, 160, 'listed on an instance around it: the main\'s width, as said');
+    assert.equal(width(run({ M: Ms, inst: sInst(true), parts: sParts(50) })), undefined, 'listed and said by the host: held');
+  }
   // an instance that clears its main's colour style or stroke says `none`: held to Figma's having neither
   {
     const box = (v, strokes) => ({ id: v.id + 'b', name: 'Box', type: 'INSTANCE', componentId: 'C:6', size: { x: 10, y: 10 }, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', fills: [], strokes, strokeWeight: 1, children: [] });
