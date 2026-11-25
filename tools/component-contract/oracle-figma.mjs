@@ -761,7 +761,7 @@ export function compareContract(component, setNode, contract, ctx) {
         for (const [pid, p] of Object.entries(main.props || {})) if (p.type === 'instance' && (p.swaps || []).includes(id) && typeof when[pid] === 'string') { o.component = when[pid]; delete o.key; o.$swapped = true; }
         return o;
       };
-      x = { byNode: new Map([...found].map(([id, n]) => [n, id])), part, turned: turnedParts(main) };
+      x = { byNode: new Map([...found].map(([id, n]) => [n, id])), part, turned: turnedParts(main), root: mflat.root || {} };
     }
     expansions.set(inst, x);
     return x;
@@ -780,16 +780,16 @@ export function compareContract(component, setNode, contract, ctx) {
     // instances has a contract, so a field none says is a difference, else it is `not stated`
     const mainSays = (n) => {
       const said = [];
-      let whole = true, inner = false;
+      let whole = true, inner = false, resized = null;
       for (let q = n; q && q !== v; q = parentOf.get(q)) {
         if (q.type !== 'INSTANCE') continue;
         const x = expansion(q);
         if (x === UNSPELT) return { unspelt: true };
         if (!x) { whole = false; continue; }
         // an instance's own size is its placement's (fill, hug, a fixed width, or its place where stretched), never its main's root's
-        if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; } if (!said.length) inner = x.turned.has(x.byNode.get(n)); said.push(o); }
+        if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; } if (!said.length) { inner = x.turned.has(x.byNode.get(n)); if (q !== n) resized = resizedOf(q, x.root); } said.push(o); }
       }
-      return { said: said.length ? Object.assign({}, ...said) : null, whole, turned: inner };
+      return { said: said.length ? Object.assign({}, ...said) : null, whole, turned: inner, resized };
     };
     const unstated = (vname, id, a, b) => { for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; } };
     const frameOf = (n) => { let f = parentOf.get(n) || null; while (f && GROUPS.has(f.type)) f = parentOf.get(f); return f; };
@@ -817,22 +817,22 @@ export function compareContract(component, setNode, contract, ctx) {
         }
         if (!whole) unstated(v.name, id, a, b);
       }
-      fields(v.name, id, n, a, b, part);
+      fields(v.name, id, n, a, b, part, says ? moved(n, parent, says.resized, part) : []);
     }
     // a layer Figma draws that no part is: inside an instance whose main's contract says it, held to that; else a row
     for (const { path: p, node } of untaken(v, taken)) {
-      const { said, whole, unspelt, turned: mainTurned } = inInstance(node) ? mainSays(node) : { said: null, whole: true };
+      const { said, whole, unspelt, turned: mainTurned, resized } = inInstance(node) ? mainSays(node) : { said: null, whole: true };
       if (unspelt) { t.skip(SPELL); continue; }
       if (!said) { if (whole) t.differ(v.name, p, 'part', 'present', 'missing'); else t.differ(v.name, p, 'not stated', 'present', undefined); continue; }
       t.check(v.name, p, 'part', true, true);
       const a = restPart(node, parentOf.get(node) || null, ctx, idOfProp, frameOf(node), { turned: !!mainTurned });
       if (!whole) unstated(v.name, p, a, said);
-      fields(v.name, p, node, a, said, {});
+      fields(v.name, p, node, a, said, {}, moved(node, parentOf.get(node), resized, {}));
     }
   }
   return result(t);
 
-  function fields(vname, id, n, a, b, part) {
+  function fields(vname, id, n, a, b, part, drop = []) {
     // a part an instance prop swaps is named by the prop's value; the key of what it swaps to no contract holds
     if (b.$swapped) { b = { ...b }; delete b.$swapped; if ('key' in a && !('key' in b)) { delete a.key; t.skip('key: a swap the contract names by its component'); } }
     // a layer stretched on an axis is sized by its place where the contract says its end (or bottom); with neither
@@ -846,12 +846,20 @@ export function compareContract(component, setNode, contract, ctx) {
     if (a.typography === 'mixed') { delete a.typography; delete b.typography; t.skip('textStyle of mixed text'); }
     // a styled text's letter spacing is its style's, said by the contract only where the layer sets its own
     if (typeof a.typography === 'string' && 'letterSpacing' in a && !('letterSpacing' in b)) { delete a.letterSpacing; t.skip('letterSpacing: a styled text\'s, unsaid'); }
+    // the fields a resized instance moves off its main's numbers (moved, below), where Figma or the main has them
+    for (const f of drop) {
+      const [k, sub] = f.split('.');
+      if (sub) { const had = (a[k] && sub in a[k]) || (b[k] && sub in b[k]); if (a[k]) { a[k] = { ...a[k] }; delete a[k][sub]; } if (b[k]) { b[k] = { ...b[k] }; delete b[k][sub]; } if (had) t.skip(MOVED); }
+      else if (k in a || k in b) { delete a[k]; delete b[k]; t.skip(MOVED); }
+    }
     for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
       if (k === 'absolute') {
         // x and y wherever either side places the layer, end and bottom where the contract states them
         if (!b.absolute) { t.differ(vname, id, 'absolute', a.absolute, undefined); continue; }
         for (const f of ['x', 'y', 'end', 'bottom']) {
           if ((f === 'end' || f === 'bottom') && !(f in b.absolute)) { if (a.absolute && f in a.absolute) t.skip(`absolute.${f}: unsaid`); continue; }
+          // (an axis neither side has left, skipped above: no check counted)
+          if (!(f in b.absolute) && !(a.absolute && f in a.absolute)) continue;
           t.check(vname, id, `absolute.${f}`, a.absolute && a.absolute[f], b.absolute[f], (x, y) => same(x, y, 0.51));
         }
         continue;
@@ -874,6 +882,30 @@ export function compareContract(component, setNode, contract, ctx) {
       t.check(vname, id, k, a[k], b[k]);
     }
     }
+}
+/* An instance drawn at another size than its main's root (each axis, true where the main's is a word, not a number). */
+function resizedOf(q, root) {
+  const { w, h } = sizeOf(q);
+  const off = (said, got) => typeof said !== 'number' || got == null || Math.abs(said - got) > 0.5;
+  return { horizontal: off(root.width, w), vertical: off(root.height, h) };
+}
+/* Inside a resized instance, a layer its constraints move with the instance's box (any but min on an axis) is not at
+   its main's numbers there: where the host leaves that axis to the main, its place and size on it are skipped, counted */
+const MOVED = "absolute: the main's, moved by its constraints in a resized instance";
+function moved(n, parent, resized, part) {
+  const out = [];
+  // (constraints place only a layer no auto layout places)
+  const flows = parent && parent.layoutMode && parent.layoutMode !== 'NONE' && n.layoutPositioning !== 'ABSOLUTE';
+  if (!resized || !n.constraints || flows) return out;
+  for (const [axis, from, far, size, C] of [['horizontal', 'x', 'end', 'width', H], ['vertical', 'y', 'bottom', 'height', V]]) {
+    // what each constraint moves: stretched, the size (both edges kept); at the far edge, the near one; centred, both
+    // edges (the size kept); scaled, all three
+    const c = C[n.constraints[axis]] || 'MIN';
+    if (!resized[axis] || c === 'MIN') continue;
+    const goes = { STRETCH: [size], MAX: [from], CENTER: [from, far], SCALE: [from, far, size] }[c] || [];
+    for (const f of goes) if (f === size ? !(size in part) : !('absolute' in part)) out.push(f === size ? size : `absolute.${f}`);
+  }
+  return out;
 }
 // an instance whose props its main's contract cannot spell is not expanded: its insides are skipped, never guessed
 const UNSPELT = { unspelt: true };
