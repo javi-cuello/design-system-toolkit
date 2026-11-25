@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.12] - 2026-11-25
+### Fixed
+- **Carries the snapshot plugin's walk at 0.89.1**: loading the pages and reading the variables each say so first, and the page-by-page fallback counts the pages.
+
 ## [0.14.11] - 2026-11-24
 ### Fixed
 - **Carries the snapshot plugin's walk at 0.89.0**: a text with no style in a variable font records its face (0.88.1), and a text is recorded whole, no longer cut at 400 characters.

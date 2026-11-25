@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.89.1] - 2026-11-25
+### Fixed
+- **The window says what it is doing while a large file loads.** Loading every page and reading the variables ran before the first progress message, so a large library sat on "Starting…" for minutes and read as hung. Each now says so first, and the page-by-page fallback counts the pages.
+
 ## [0.89.0] - 2026-11-24
 ### Changed
 - **A text is recorded whole.** It was cut at 400 characters, and the contract kept the cut copy as the layer's content (Carbon's multi-line code snippet runs to 648). The three libraries measured hold eight texts past 400, the longest 1520, so a snapshot grows by a few kilobytes. Stored snapshots gain it when retaken.

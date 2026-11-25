@@ -211,6 +211,20 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
   let all = 0; figma.loadAllPagesAsync = async () => { all++; }; loaded.length = 0;
   await loadPages();
   ok("…and all at once where it is not", all === 1 && loaded.length === 0);
+  // 0.89.1: a large file loads its pages for minutes before the first step, and a window on "Starting…" read as hung
+  {
+    const events = [];
+    const fw = { ...figma, root: { name: "Lib", children: [{ loadAsync: async () => events.push("page") }, { loadAsync: async () => events.push("page") }], getPluginData: () => "", setPluginData() {} },
+      showUI() {}, ui: { postMessage: (m) => m.type === "progress" && events.push(m.text + (m.total ? ` ${m.done}/${m.total}` : "")), onmessage: null },
+      clientStorage: { getAsync: async () => "", setAsync: async () => {} }, getNodeByIdAsync: async () => null,
+      loadAllPagesAsync: async () => { events.push("loadAll"); } };
+    const lp = vm.runInContext(src + "\n;loadPages", vm.createContext({ figma: fw, console, __html__: "", fetch: () => new Promise(() => {}), setTimeout, clearTimeout }));
+    await lp();
+    ok("the window says pages are loading before loadAllPagesAsync is awaited", events[0].startsWith("loading every page") && events[1] === "loadAll");
+    events.length = 0; fw.loadAllPagesAsync = async () => { throw new Error("not supported"); };
+    await lp();
+    ok("…and counts the pages where they load one by one", events.join() === "loading every page of the file (a large file takes minutes),loading pages 0/2,page,loading pages 1/2,page");
+  }
   const text = (id, chars, auto, h) => ({ textStyleId: id, characters: chars, textAutoResize: auto, height: h });
   const page = (name, texts) => ({ name, findAllWithCriteria: () => texts });
   figma.root = { children: [page("Snapshot (temporary)", [text("S:1", "Hg", "WIDTH_AND_HEIGHT", 99)]), page("Button", [text("S:1", "two\nlines", "WIDTH_AND_HEIGHT", 40), text("S:1", "Wide", "HEIGHT", 30), text("S:1", "Label", "WIDTH_AND_HEIGHT", 20)])] };

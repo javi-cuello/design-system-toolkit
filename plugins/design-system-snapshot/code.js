@@ -1,4 +1,4 @@
-// Design system snapshot — v0.89.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.89.1 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -246,8 +246,13 @@ const scratch = () => scratchPage
 const place = (parent, node) => {
   try { parent.appendChild(node); return true; } catch (e) { if (/unloaded font/.test(message(e))) return false; throw e; }
 };
+// Said before it starts: on a large file loading every page takes minutes, and a window still on "Starting…" reads as hung.
 const loadPages = async () => {
-  try { await figma.loadAllPagesAsync(); } catch (e) { for (const p of figma.root.children) await p.loadAsync(); }
+  say('loading every page of the file (a large file takes minutes)');
+  try { await figma.loadAllPagesAsync(); } catch (e) {
+    const all = figma.root.children;
+    for (let i = 0; i < all.length; i++) { say('loading pages', i, all.length); await all[i].loadAsync(); }
+  }
 };
 
 async function anatomyOf(set, shown) {
@@ -794,7 +799,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.89.0';
+const VERSION = '0.89.1';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1257,6 +1262,7 @@ const componentSets = (scope) => /** @type {(ComponentSetNode | ComponentNode)[]
 async function collectLibrary(withIcons) {
   walkWhole = false;
   await loadPages();
+  say('reading the variables and styles');
   const tokens = await collectTokens();
 
   // Filled after the closures below exist: the loop is `collectComponents`.
@@ -1930,6 +1936,7 @@ if (!HEADLESS) {
  */
 async function collectFacts() {
   await loadPages();
+  say('reading the variables and styles');
   const tokens = await collectTokens();
   const iconPage = figma.root.children.find(isIconPage);
   const iconSets = iconPage ? componentSets(iconPage) : [];
