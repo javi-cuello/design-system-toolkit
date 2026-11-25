@@ -365,6 +365,8 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
   const ring = { type: 'INSTANCE', name: 'Focus ring', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), strokes: [{ blendMode: 'NORMAL', type: 'SOLID', color: { r: 0.2745, g: 0.5333, b: 0.9255, a: 1 }, boundVariables: { color: { type: 'VARIABLE_ALIAS', id: 'VariableID:c' } } }], strokeWeight: 2, strokeAlign: 'OUTSIDE',
     boundVariables: { individualStrokeWeights: { BORDER_TOP_WEIGHT: { type: 'VARIABLE_ALIAS', id: 'VariableID:w' }, BORDER_BOTTOM_WEIGHT: { type: 'VARIABLE_ALIAS', id: 'VariableID:w' }, BORDER_LEFT_WEIGHT: { type: 'VARIABLE_ALIAS', id: 'VariableID:w' }, BORDER_RIGHT_WEIGHT: { type: 'VARIABLE_ALIAS', id: 'VariableID:w' } }, strokes: [{ type: 'VARIABLE_ALIAS', id: 'VariableID:c' }] } };
   assert.deepEqual(restPart(ring, null, ctx, {}).border.width, [BOUND, BOUND, BOUND, BOUND], 'four sides bound, the weights unsaid because equal');
+  // a weight with no paint draws no stroke (derive's normalForm says none): bound sides and no paint are no border
+  assert.equal(restPart({ ...ring, strokes: [] }, null, ctx, {}).border, undefined, 'no paint, no border');
   // the plugin API's `textStyleId` override is REST's `inheritTextStyleId,text`: an entry still, so the counts agree
   const inst = (overrides) => ({ id: 'i', name: 'Item', type: 'INSTANCE', componentId: 'C:9', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), overrides, children: [] });
   const host = { id: 'h', name: 'Host', type: 'COMPONENT', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), children: [inst([{ id: 'i', overriddenFields: ['height', 'width'] }, { id: 'I;t', overriddenFields: ['inheritTextStyleId', 'text'] }])] };

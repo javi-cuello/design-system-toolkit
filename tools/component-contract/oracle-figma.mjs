@@ -540,8 +540,8 @@ export function restPart(n, parent, ctx, propIds, frame = parent, { turned = fal
   if (fills.length) e[n.type === 'TEXT' ? 'color' : 'background'] = one(fills);
   const fs = styleName(ctx, n, 'fill'); if (fs) e.fillStyle = fs;
   const strokes = Array.isArray(n.strokes) ? paintsOf(n.strokes, true) : [];
-  const sw = bv.strokeWeight || bv.strokeTopWeight || bv.strokeRightWeight || bv.strokeBottomWeight || bv.strokeLeftWeight;
-  if (strokes.length || sw) {
+  // a weight, bound or not, with no paint draws no stroke: no border (derive's normalForm, as code and the drawing read it)
+  if (strokes.length) {
     const s = n.individualStrokeWeights;
     const side = (k, x) => (bv[k] || bv.strokeWeight ? BOUND : x);
     // each side's binding said whether or not REST gives the sides' weights (it leaves them out when all four are equal)
