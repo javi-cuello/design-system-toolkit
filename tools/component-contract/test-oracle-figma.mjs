@@ -328,6 +328,9 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     assert.deepEqual(r.rows, [], 'the main\'s own contract, at the instance\'s props, says what Figma draws');
     const plain = compareContract('chip', set, host, ctx);
     assert.ok(r.checked > plain.checked, 'the insides are checked, not skipped');
+    // a vector the main's contract says is rounded per vertex (mixed), REST silent: a skip, never a row
+    { const mx = icon(); mx.anatomy.glyph.radius = 'mixed';
+      assert.ok(!compareContract('chip', set, host, { ...ctx, mains: () => mx }).rows.some((x) => x.kind === 'contract:radius'), 'the main\'s mixed: skipped'); }
     // a main that says otherwise is a real row, never "not stated"
     const wrong = icon(); wrong.variants[0].set['glyph.width'] = 14;
     const r2 = compareContract('chip', set, host, { ...ctx, mains: () => wrong });

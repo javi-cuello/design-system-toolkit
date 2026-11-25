@@ -2959,8 +2959,8 @@ async function main() {
             // a border is compared by its colour and width, as Figma's is read: where it sits (inLayout) is drawing, not paint
             const cv = k === 'border' && c[cid].border ? { color: c[cid].border.color, width: c[cid].border.width } : c[cid][k] ?? null;
             let verdict = JSON.stringify(fv) === JSON.stringify(cv) ? 'same token' : 'differs';
-            // (a fill, ring or shadow Figma says cleared, `none`, and code draws none of: both draw nothing)
-            if (verdict === 'differs' && fv === CLEARED && cv == null && (k === 'background' || k === 'border' || k === 'shadow')) verdict = 'same token';
+            // (a fill or ring Figma says cleared, `none`, and code draws none of: both draw nothing)
+            if (verdict === 'differs' && f[fid][k] === CLEARED && cv == null && (k === 'background' || k === 'border')) verdict = 'same token';
             // another token, or none, that draws the same colour
             // (only a fill read whole: a layer laid over the colour changes what shows, which the colour alone does not say)
             if (verdict === 'differs' && (k === 'background' || k === 'color') && fv && typeof cv === 'string' && !(k === 'background' && layered.has(cid))) {

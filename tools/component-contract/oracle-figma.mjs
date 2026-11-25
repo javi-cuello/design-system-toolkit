@@ -801,6 +801,8 @@ export function compareContract(component, setNode, contract, ctx) {
         const o = partOurs(mflat[id]); const r = /^\{(\w+)\}$/.exec(o.content || '');
         for (const f of mflat[id].whileEmpty || []) if (f in o) { delete o[f]; t.skip(`${f}: an empty main's minimum (whileEmpty), an instance's keeps none`); }
         if (r && typeof when[r[1]] === 'string') o.content = when[r[1]];
+        // (a vector the main rounds per vertex, mixed: no one radius REST states, as for a host's own part)
+        if (mflat[id].radius === 'mixed') { delete o.radius; t.skip('radius: mixed per vertex, REST silent'); }
         for (const [pid, p] of Object.entries(main.props || {})) if (p.type === 'instance' && (p.swaps || []).includes(id) && typeof when[pid] === 'string') { o.component = when[pid]; delete o.key; o.$swapped = true; }
         return o;
       };
