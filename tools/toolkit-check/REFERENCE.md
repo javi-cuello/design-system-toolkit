@@ -111,7 +111,7 @@ The periodic review run without the maintainer (§D 11), behind `bin/review`:
 4. `bin/check` again on what it committed;
 5. a fresh read-only reviewer agent. With no High issue, the merge is checked and pushed to `main`. A hold lands nothing and says why to the next run. There is one notification either way.
 
-It runs one at a time. `com.toolkit.review.plist` is its daily launch agent, installed only by `REVIEW=on ./install.sh`.
+It runs one at a time. The toolkit's login agent runs it daily at 03:00 ([tools/service](../service/README.md)), only once installed by `REVIEW=on ./install.sh`.
 
 ## `route-probe.mjs`
 

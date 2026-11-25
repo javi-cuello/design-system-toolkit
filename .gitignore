@@ -20,5 +20,4 @@ skills/*/systems/
 .claude/worktrees/
 
 # Links to node the services run through, made by install.sh for this machine.
-tools/figma-audit/figma-audit
-tools/snapshot/figma-snapshot
+tools/service/toolkit

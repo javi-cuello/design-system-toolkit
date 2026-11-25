@@ -4,7 +4,7 @@ The detail behind [README.md](README.md), moved here word for word. The README i
 
 ## Install and needs
 
-`install.sh` at the repo root installs it as a login item (macOS launchd agent `com.toolkit.figma-audit`), together with the snapshot router. It serves every project whose context document states a `port`. By hand, from the repo root: the `server.mjs` commands in the [README](README.md).
+`install.sh` at the repo root installs it as part of the toolkit's one login item (macOS launchd agent `com.toolkit`, [tools/service](../service/README.md)), together with the snapshot router. It serves every project whose context document states a `port`. By hand, from the repo root: the `server.mjs` commands in the [README](README.md).
 
 **Needs:** Node 22.23.4+ (Astro's floor for the docs site it builds), the docs engine's packages (`(cd tools/docs-site && pnpm install --frozen-lockfile)` once; pnpm 12 first if it is not installed, as `docs/setup.md` says), Figma's desktop app with the [Desktop Bridge plugin](https://github.com/southleft/figma-console-mcp) for audits, and, for the chat and the audit's judgement pass, an Anthropic key in `~/.figma-dashboard-key` (see [Running it](#running-it) below).
 
@@ -16,7 +16,7 @@ Give the project's context document a port in its project block, one the other p
 {"name": "Acme", "phase": "design", "port": 9232}
 ```
 
-The service picks it up within a minute; nothing else changes. Then open `http://127.0.0.1:9232/audits/`. A project removed, or a port changed, takes effect at the service's next restart (`launchctl kickstart -k gui/$(id -u)/com.toolkit.figma-audit`).
+The service picks it up within a minute; nothing else changes. Then open `http://127.0.0.1:9232/audits/`. A project removed, or a port changed, takes effect at the service's next restart (`launchctl kickstart -k gui/$(id -u)/com.toolkit`).
 
 ## Use from a session
 
@@ -203,11 +203,11 @@ running as a login agent removes it entirely: the service is up before Figma is.
 
 ### As a login agent
 
-`install.sh` writes `com.toolkit.figma-audit.plist` (this folder's template, with this checkout's paths) to `~/Library/LaunchAgents/` and loads it: no terminal window, starts with the Mac. It runs node through a `figma-audit` link beside this file, so Login Items names the service rather than "node". Restart it after a change to `server.mjs` with `launchctl kickstart -k gui/$(id -u)/com.toolkit.figma-audit`. Its output goes to `~/Library/Logs/toolkit/figma-audit.log`, and errors to `figma-audit.err` beside it, a folder only you can read.
+`install.sh` writes `com.toolkit.plist` ([tools/service](../service/README.md)'s template, with this checkout's paths) to `~/Library/LaunchAgents/` and loads it: no terminal window, starts with the Mac. Its supervisor runs this service with `--all` and starts it again when it exits; after a change to `server.mjs` it restarts itself once idle, and `launchctl kickstart -k gui/$(id -u)/com.toolkit` restarts it at once (the snapshot router with it). Its output goes to `~/Library/Logs/toolkit/figma-audit.log`, and errors to `figma-audit.err` beside it, a folder only you can read.
 
 ### Changing how the service is launched
 
-Edit the template, `com.toolkit.figma-audit.plist` in this folder, and re-run
+Edit the template, `com.toolkit.plist` in `tools/service/`, and re-run
 `./install.sh`: it rewrites the agent and reloads it. `launchctl kickstart -k`
 alone restarts an agent with the definition **launchd already holds**, not the
 file on disk, so an edited plist takes effect only after that reload.

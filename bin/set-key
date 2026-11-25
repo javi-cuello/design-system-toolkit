@@ -184,8 +184,8 @@ while [ $# -gt 0 ]; do
         if (env && "FIGMA_ACCESS_TOKEN" in env) { env.FIGMA_ACCESS_TOKEN = process.env.K; fs.writeFileSync(f, JSON.stringify(j, null, 2)); }' \
         && echo "figma-console's copy updated: reconnect it in /mcp" || true ;;
     audit-service)
-      launchctl list com.toolkit.figma-audit >/dev/null 2>&1 \
-        && launchctl kickstart -k "gui/$(id -u)/com.toolkit.figma-audit" && echo "audit service restarted" || true ;;
+      launchctl list com.toolkit >/dev/null 2>&1 \
+        && launchctl kickstart -k "gui/$(id -u)/com.toolkit" && echo "audit service restarted (with the snapshot router)" || true ;;
     run)
       # the line after its first `run`, as written: word splitting would lose the command's quoting
       cmd=$(printf '%s\n' "$line" | awk '{ for (i = 3; i <= NF; i++) if ($i == "run") { s = $0

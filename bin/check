@@ -592,6 +592,7 @@ tools/project-check/test-check.mjs                               -
 tools/project-check/test-init.mjs                                -
 tools/project-check/test-loop.mjs                                -
 tools/project-check/test-pre-push.mjs                            -
+tools/service/test-supervisor.mjs                                -
 tools/shared/test-cdp.mjs                                        chrome
 tools/shared/test-check-cache.mjs                                -
 tools/shared/test-code-inventory.mjs                             -

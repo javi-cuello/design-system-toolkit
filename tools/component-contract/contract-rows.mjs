@@ -200,7 +200,7 @@ if (isMain && process.argv[2] === '--live') {
   try { r = await call(svc, '/table-rows', { fileKey: lib.key, pages }); }
   catch (e) {
     // a service started before /table-rows existed answers its plain-text 404, which is not JSON
-    const old = e instanceof SyntaxError ? ' The audit service runs an older server.mjs: launchctl kickstart -k gui/$UID/com.toolkit.figma-audit, then run this again.' : '';
+    const old = e instanceof SyntaxError ? ' The audit service runs an older server.mjs: launchctl kickstart -k gui/$UID/com.toolkit, then run this again.' : '';
     console.error(`${label}: ${e.message}${old}`); process.exit(1);
   }
   // a failed read answers ok:false, with or without its reason

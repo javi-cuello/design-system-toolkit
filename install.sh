@@ -5,7 +5,7 @@
 #   ./install.sh                   the standards guard, the skills, the push hook and (macOS) the services
 #   SKIP_CHECKS=1 ./install.sh     link even though the standards guard fails
 #   SKIP_SERVICES=1 ./install.sh   leave the launchd services alone
-#   REVIEW=on ./install.sh         also the daily periodic review (bin/review, the maintainer's: it spends API credit)
+#   REVIEW=on ./install.sh         also the daily periodic review (bin/review, the maintainer's: it spends API credit); kept on re-runs
 set -e
 
 # the path as the disk spells it: a shell entered through ~/projects would write that case into the services
@@ -51,42 +51,46 @@ for s in "$repo"/skills/*/; do
   echo "linked: $name"
 done
 # The services, installed or refreshed here so a new machine gets them with
-# the skills: the snapshot router and the figma-audit service (every project
-# with a `port`). macOS only; elsewhere, run `node tools/snapshot/router.mjs`
-# and `node tools/figma-audit/server.mjs --all` yourself.
+# the skills: one launch agent, com.toolkit, runs the snapshot router and the
+# figma-audit service (every project with a `port`). macOS only; elsewhere, run
+# `node tools/service/supervisor.mjs` yourself.
 # SKIP_SERVICES=1 leaves them alone.
-[ "$(uname)" = "Darwin" ] || echo "Services not installed: they install as launchd agents, a Mac's. Run node tools/snapshot/router.mjs and node tools/figma-audit/server.mjs --all yourself (docs/setup.md)."
+[ "$(uname)" = "Darwin" ] || echo "Services not installed: they install as launchd agents, a Mac's. Run node tools/service/supervisor.mjs yourself (docs/setup.md)."
 if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" != true ]; then
-  # the services run node through a link named for them, so Login Items says what each is
-  ln -sfn "$node_bin" "$repo/tools/figma-audit/figma-audit"
-  ln -sfn "$node_bin" "$repo/tools/snapshot/figma-snapshot"
+  # the one login item runs node through a link named for it, so Login Items says "toolkit"
+  ln -sfn "$node_bin" "$repo/tools/service/toolkit"
   # their output names projects, files and keys, so it goes where only this user reads it, never /tmp
   logs="$HOME/Library/Logs/toolkit"
   mkdir -p "$logs" && chmod 700 "$logs"
-  install_agent() {
-    label="$1"; template="$2"; by_hand="$3"; plist="$HOME/Library/LaunchAgents/$label.plist"
-    mkdir -p "$HOME/Library/LaunchAgents"
-    sed -e "s|TOOLKIT|$repo|g" -e "s|NODE_DIR|$(dirname "$node_bin")|g" -e "s|LOGS|$logs|g" -e "s|USERHOME|$HOME|g" "$template" > "$plist.new"
-    if ! cmp -s "$plist.new" "$plist" 2>/dev/null; then
-      mv "$plist.new" "$plist"
-      launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true  # not loaded yet is fine; set -e would stop here
-      # bootout returns before the service is gone: wait, or the check below sees it and never loads the new one
-      for _ in 1 2 3 4 5 6 7 8 9 10; do launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 || break; sleep 0.5; done
-      launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 && echo "warn: $label did not stop in 5 s, so its new plist is not loaded: run install.sh again" >&2
-    else rm -f "$plist.new"; fi
-    # loaded whenever it is not, so a failed first load does not stick
-    launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 ||
-      { launchctl bootstrap "gui/$(id -u)" "$plist" && echo "service: $label" || echo "warn: could not load $label (launchctl bootstrap failed): read $logs/${label#com.toolkit.}.err, fix what it says and run ./install.sh again; until then, start it by hand: $by_hand" >&2; }
+  agents="$HOME/Library/LaunchAgents"
+  mkdir -p "$agents"
+  stop_agent() {
+    launchctl bootout "gui/$(id -u)/$1" 2>/dev/null || true  # not loaded is fine; set -e would stop here
+    # bootout returns before the service is gone: wait, or what follows sees it still there
+    for _ in 1 2 3 4 5 6 7 8 9 10; do launchctl print "gui/$(id -u)/$1" >/dev/null 2>&1 || break; sleep 0.5; done
+    launchctl print "gui/$(id -u)/$1" >/dev/null 2>&1 && echo "warn: $1 did not stop in 5 s: run install.sh again" >&2 || true
   }
-  install_agent com.toolkit.figma-snapshot "$repo/tools/snapshot/com.toolkit.figma-snapshot.plist" "node $repo/tools/snapshot/router.mjs"
-  install_agent com.toolkit.figma-audit "$repo/tools/figma-audit/com.toolkit.figma-audit.plist" "node $repo/tools/figma-audit/server.mjs --all"
-  if [ "${REVIEW:-}" = on ]; then install_agent com.toolkit.review "$repo/tools/toolkit-check/com.toolkit.review.plist" "$repo/bin/review"; fi
+  # the review stays as installed: REVIEW=on adds it, and a re-run without it keeps one already there
+  review=off
+  if [ "${REVIEW:-}" = on ] || [ -e "$agents/com.toolkit.review.plist" ] || grep -q -- '--review' "$agents/com.toolkit.plist" 2>/dev/null; then review=on; fi
+  # retired 2026-11-25 for com.toolkit, which runs all three: stopped first, so their ports are free for it
+  # (com.toolkit.maintain retired 2026-10-26: the daily pass repeated what every session's bin/check runs)
+  for old in com.toolkit.figma-snapshot com.toolkit.figma-audit com.toolkit.review com.toolkit.maintain; do
+    [ -e "$agents/$old.plist" ] || continue
+    stop_agent "$old"; rm -f "$agents/$old.plist"; echo "retired: $old"
+  done
+  rm -f "$repo/tools/figma-audit/figma-audit" "$repo/tools/snapshot/figma-snapshot"
+  plist="$agents/com.toolkit.plist"
+  if [ "$review" = on ]; then reviewarg='s|REVIEWARG|--review|'; else reviewarg='/REVIEWARG/d'; fi
+  sed -e "s|TOOLKIT|$repo|g" -e "s|NODE_DIR|$(dirname "$node_bin")|g" -e "s|LOGS|$logs|g" -e "s|USERHOME|$HOME|g" -e "$reviewarg" \
+    "$repo/tools/service/com.toolkit.plist" > "$plist.new"
+  if ! cmp -s "$plist.new" "$plist" 2>/dev/null; then mv "$plist.new" "$plist"; stop_agent com.toolkit; else rm -f "$plist.new"; fi
+  # loaded whenever it is not, so a failed first load does not stick
+  launchctl print "gui/$(id -u)/com.toolkit" >/dev/null 2>&1 ||
+    { launchctl bootstrap "gui/$(id -u)" "$plist" && echo "service: com.toolkit (review $review)" || echo "warn: could not load com.toolkit (launchctl bootstrap failed): read $logs/toolkit.err, fix what it says and run ./install.sh again; until then, start it by hand: node $repo/tools/service/supervisor.mjs" >&2; }
   echo "logs: $logs"
   # the snapshot plugin asks once for this machine's pairing code; made here so it is there to print
   "$node_bin" "$repo/tools/snapshot/pairing.cjs" >/dev/null && echo "pairing: the snapshot plugin asks once for this machine's code; node $repo/tools/snapshot/pairing.cjs prints it"
-  # retired 2026-10-26: the daily pass repeated what every session's bin/check runs
-  launchctl bootout "gui/$(id -u)/com.toolkit.maintain" 2>/dev/null || true
-  rm -f "$HOME/Library/LaunchAgents/com.toolkit.maintain.plist"
 fi
 # a sparse checkout says what it left out, and how to start each by hand once its folder is taken
 if [ "$sparse" = true ]; then

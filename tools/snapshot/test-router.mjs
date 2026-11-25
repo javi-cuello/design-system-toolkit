@@ -156,9 +156,9 @@ test('the pairing code is made once, for this user alone, and printed by its com
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('the login agents log where only this user reads, never the shared temp folder', () => {
+test('the login agent logs where only this user reads, never the shared temp folder', () => {
   const install = fs.readFileSync(path.join(HERE, '..', '..', 'install.sh'), 'utf8');
-  for (const plist of [path.join(HERE, 'com.toolkit.figma-snapshot.plist'), path.join(HERE, '..', 'figma-audit', 'com.toolkit.figma-audit.plist')]) {
+  for (const plist of [path.join(HERE, '..', 'service', 'com.toolkit.plist')]) {
     const text = fs.readFileSync(plist, 'utf8');
     assert.doesNotMatch(text, /<string>\/tmp\//, `${path.basename(plist)} logs to /tmp`);
     const logs = [...text.matchAll(/<key>Standard(?:Out|Error)Path<\/key>\s*<string>([^<]+)<\/string>/g)].map((m) => m[1]);

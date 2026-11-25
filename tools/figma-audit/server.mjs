@@ -144,9 +144,9 @@ if (pairs.length > 1 || ALL) {
     child.on("exit", (code) => { kids.delete(child); console.error(`dashboard on ${p.port} exited (${code}); restarting in 5s`); setTimeout(() => run(p), 5000); });
   };
   // this parent binds the same files (discover, the ports, the re-fork): stale, it keeps serving and re-forking
-  // until every child says nothing is in progress (askIdle), then stops them and exits, launchd starting the whole
-  // service again on the files on disk; meanwhile each child restarts itself on its own once idle
-  restartWhenStale(boundBy(HERE), { busy: askIdle(kids), label: "com.toolkit.figma-audit",
+  // until every child says nothing is in progress (askIdle), then stops them and exits, the supervisor
+  // (tools/service) starting it again on the files on disk; meanwhile each child restarts itself on its own once idle
+  restartWhenStale(boundBy(HERE), { busy: askIdle(kids),
     exit: (code) => { for (const c of kids) c.kill(); process.exit(code); } });
   for (const p of pairs) run(p);
   if (ALL) {
@@ -1312,7 +1312,7 @@ server.on("error", (e) => {
     console.error("Port " + PORT + " is already in use — most likely an earlier copy of this service.");
     // a login agent killed by hand is started again by launchd at once: it is stopped through launchctl
     console.error("What holds it:  lsof -nP -iTCP:" + PORT + " -sTCP:LISTEN");
-    console.error("The login agent (install.sh):  launchctl bootout gui/$(id -u)/com.toolkit.figma-audit    (./install.sh loads it again)");
+    console.error("The login agent (install.sh):  launchctl bootout gui/$(id -u)/com.toolkit    (the snapshot router too; ./install.sh loads it again)");
     console.error("A copy started by hand:  pkill -f 'figma-audit/server.mjs'    (then run this again)");
   } else console.error(e.message);
   process.exit(1);
@@ -1328,7 +1328,7 @@ server.headersTimeout = 60000;
 // progress and no plugin is connected (a dropped plugin is reopened in Figma by hand: REFERENCE.md), the parent
 // bringing it back with what is on disk; check-services.mjs names one still waiting
 const plugged = () => [...plugins.values()].some((e) => !e.socket.destroyed);
-const selfRestart = restartWhenStale(boundBy(HERE), { servers: [server], label: "com.toolkit.figma-audit", busy: () => pending.size > 0 || plugged() });
+const selfRestart = restartWhenStale(boundBy(HERE), { servers: [server], busy: () => pending.size > 0 || plugged() });
 server.listen(PORT, "127.0.0.1", () => {
   console.log("figma audit      http://127.0.0.1:" + PORT);
   console.log("records          " + AUDIT_DIR + (LEGACY ? " (single record: audit.json)" : "/<library>.json"));

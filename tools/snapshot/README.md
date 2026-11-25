@@ -17,7 +17,7 @@ Working, and run as a macOS login agent. The repo's `install.sh` sets that up, s
 ```sh
 node tools/snapshot/router.mjs                      # listens on port 9317 [--projects <dir>] [--port <n>]
 node tools/snapshot/pairing.cjs                     # print this machine's pairing code for the plugin
-launchctl kickstart -k gui/$(id -u)/com.toolkit.figma-snapshot   # restart the login agent
+launchctl kickstart -k gui/$(id -u)/com.toolkit   # restart the login agent (the audit service too)
 ```
 
 Then, in any project's Figma file, choose **Plugins › Development › Design system snapshot › Take design snapshot**. The first time, paste the pairing code into the plugin's window. The router refuses any snapshot without that code, because any web page can reach `localhost`.

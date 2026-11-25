@@ -31,7 +31,7 @@ bin/closing                                            # what is open across the
 | `research-index.mjs` | `research/index.html` lists every article in `research/`, in step with its text. |
 | `review.md` | What the fourteen-day independent review checks (§D 11), point by point. |
 | `closing.mjs` | The end-of-work pass (§D 13). `--queue` prints, as JSON, what was left for later since the last periodic review. |
-| `review-run.mjs` + `com.toolkit.review.plist` | The periodic review run without the maintainer (§D 11), behind `bin/review`. |
+| `review-run.mjs` | The periodic review run without the maintainer (§D 11), behind `bin/review`. |
 | `route-probe.mjs` | Which skill a request reaches (`review.md` point 22). |
 | `test-*.mjs` | Each script's tests, and a few checks of their own, such as `test-missing-input.mjs`, `test-sandbox-paste.mjs`, `test-content-is-data.mjs`, `test-dependabot.mjs` and `test-paste-hash.mjs`. |
 

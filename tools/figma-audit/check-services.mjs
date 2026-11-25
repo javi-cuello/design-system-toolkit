@@ -143,7 +143,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   if (bad.length) {
     console.log(`dashboards: ${bad.length} service(s) serving something the projects do not have`);
     for (const b of bad) console.log('  ' + b);
-    console.log('  A stale process: `launchctl kickstart -k gui/$UID/com.toolkit.figma-audit`. A wrong --data: reload the agent from disk — `launchctl bootout` then `bootstrap`; `kickstart` restarts the definition launchd already holds.');
+    console.log('  A stale process: `launchctl kickstart -k gui/$UID/com.toolkit`. A wrong --data: reload the agent from disk — `launchctl bootout` then `bootstrap`; `kickstart` restarts the definition launchd already holds.');
     process.exit(1);
   }
   console.log(found.length

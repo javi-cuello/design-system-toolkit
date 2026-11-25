@@ -12,6 +12,7 @@ The code every project shares, one copy each. Some are services that take a Figm
 | [tokens](tokens/README.md) | Turns the snapshot's tokens into DTCG files, then CSS and Sass, and checks a project's are current. | a CLI each project's `bin/tokens` calls |
 | [docs-site](docs-site/README.md) | Builds a project's documentation site from its snapshot (Astro). | built by the figma-audit service; `bin/deploy` publishes it |
 | [figma-audit](figma-audit/README.md) | Serves a project's docs site locally with its audit dashboard, drives Figma through the Desktop Bridge plugin, and rebuilds the site when anything changes. | a local service (launchd), one port per project in 9223–9232 |
+| [service](service/README.md) | Runs the snapshot router and the figma-audit service as the toolkit's one login item, starting each again when it stops, and the daily review where installed. | a local service (launchd), `com.toolkit` |
 | [system-mcp](system-mcp/README.md) | An MCP server that gives an agent one project's design system: components, contracts, tokens, guidance, and a check of the code it wrote. | registered in Claude's config |
 | [parity](parity/README.md) | Measures rendered components against their Figma spec, in a headless Chrome. | a CLI each project's `bin/parity` calls |
 | [css-lint](css-lint/README.md) | Checks a project's stylesheets against the code standard (tokens over literals, component boundaries). | a gate in project-check |
