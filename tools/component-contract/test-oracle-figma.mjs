@@ -368,6 +368,12 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
       const rs = compareContract('chip', withSlot, host, { ...ctx, mains: () => sl });
       assert.ok(!rs.rows.some((x) => x.kind === 'contract:content'), 'the main\'s slot property: not the host\'s');
       assert.ok(rs.rows.length === 0, 'and the slot itself is held to the main: ' + JSON.stringify(rs.rows)); }
+    // …whatever value the instance gives the slot property, a string one included: never taken as the slot's words
+    { const sl = icon(); sl.props.items = { type: 'slot', figma: 'Items' }; sl.anatomy.items = { kind: 'slot', parent: 'root', order: 3, width: 10, height: 10, absolute: { x: 0, y: 0 }, content: '{items}' };
+      const withSlot = structuredClone(set); for (const v of withSlot.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.componentProperties = { ...i.componentProperties, 'Items#1:1': { type: 'SLOT', value: 'Filled' } };
+        i.children.push({ id: v.id + 's', name: 'Items', type: 'SLOT', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), componentPropertyReferences: { slotContentId: 'Items#1:1' } }); }
+      const rs = compareContract('chip', withSlot, host, { ...ctx, mains: () => sl });
+      assert.ok(!rs.rows.some((x) => x.kind === 'contract:content'), 'a string slot value: no content row ' + JSON.stringify(rs.rows)); }
     // a main that says otherwise is a real row, never "not stated"
     const wrong = icon(); wrong.variants[0].set['glyph.width'] = 14;
     const r2 = compareContract('chip', set, host, { ...ctx, mains: () => wrong });

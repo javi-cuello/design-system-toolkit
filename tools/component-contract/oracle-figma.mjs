@@ -829,10 +829,11 @@ export function compareContract(component, setNode, contract, ctx) {
       const part = (id) => {
         const o = partOurs(mflat[id]); const r = /^\{(\w+)\}$/.exec(o.content || '');
         for (const f of mflat[id].whileEmpty || []) if (f in o) { delete o[f]; t.skip(`${f}: an empty main's minimum (whileEmpty), an instance's keeps none`); }
-        if (r && typeof when[r[1]] === 'string') o.content = when[r[1]];
         // (a slot's placeholder is the main's own slot property, checked against its own set: what fills it at the host
-        // is the instance's, never a property of the host's that REST names on the layer)
-        else if (r && mflat[id].kind === 'slot' && (main.props || {})[r[1]] && main.props[r[1]].type === 'slot') { delete o.content; t.skip('content: the main\'s own slot property'); }
+        // is the instance's, never a property of the host's that REST names on the layer, whatever value the instance
+        // gives that property; a text's placeholder takes the instance's words)
+        if (r && mflat[id].kind === 'slot' && (main.props || {})[r[1]] && main.props[r[1]].type === 'slot') { delete o.content; t.skip('content: the main\'s own slot property'); }
+        else if (r && typeof when[r[1]] === 'string') o.content = when[r[1]];
         // (a vector the main rounds per vertex, mixed: no one radius REST states, as for a host's own part)
         if (mflat[id].radius === 'mixed') { delete o.radius; t.skip('radius: mixed per vertex, REST silent'); }
         // (the main's own swap property is the main's to say, checked against its own set; at the host it drives nothing)

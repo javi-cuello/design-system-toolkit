@@ -432,6 +432,14 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const same = derive(list(0), ['Item'], { mains }).anatomy, over = derive(list(8), ['Item'], { mains }).anatomy, bare = derive(list(0), ['Item']).anatomy;
   ok('a slot inside a placed instance names no property of the host\'s; drawn as its component draws it, it is left to that component',
     derive(item).anatomy.content.content === '{content}' && !('item/content' in same) && over['item/content'] && over['item/content'].content === undefined && bare['item/content'].content === undefined);
+  // …while a slot the host set owns keeps its placeholder, beside a placed instance whose own slot has the same name (that
+  // one is the instance's component's: REST binds a nested slot to its own component's property, never the host's)
+  const owner = { name: 'Layer', id: '9:9', props: { Content: 'SLOT' }, variants: [{ name: 'Layer', type: 'COMPONENT', layout: 'VERTICAL', sizing: 'FIXED/HUG', w: 200, children: [
+    { name: 'Item', type: 'INSTANCE', instanceOf: 'Item', layout: 'VERTICAL', sizing: 'FILL/HUG', children: [{ name: 'Content', type: 'SLOT', layout: 'VERTICAL', gap: 8, sizing: 'FILL/HUG' }] },
+    { name: 'Content', type: 'SLOT', layout: 'VERTICAL', sizing: 'FILL/HUG' }] }] };
+  const held = derive(owner, ['Item'], { mains }).anatomy;
+  ok('a slot the host owns keeps its placeholder; a placed instance\'s slot of the same name names none',
+    held.content && held.content.content === '{content}' && held['item/content'] && held['item/content'].content === undefined);
 }
 {
   // an instance that clears its component's colour style or stroke says so, `none`: left unsaid, it would be its component's
