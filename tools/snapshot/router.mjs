@@ -325,8 +325,10 @@ await Promise.all(['127.0.0.1', '::1'].map((host) => new Promise((done) => {
   s.listen(PORT, host, () => done(host));
 })));
 // what load() cannot make fresh (an .mjs, this file) makes the router restart itself once no snapshot is being
-// read or delivered, launchd bringing it back with the files on disk; a router run by hand only says so
+// read or delivered, the supervisor bringing it back with the files on disk; a router run by hand only says so
 restartWhenStale([fileURLToPath(import.meta.url)], { servers, busy: () => held > 0 });
+// forked by the supervisor, it ends with it: an orphan keeps its port from the next one
+if (process.send) process.on('disconnect', () => process.exit(0));
 
 console.log(`figma-snapshot router on http://localhost:${PORT} (both loopback stacks) — ${list.length} project(s)`);
 for (const p of list) {

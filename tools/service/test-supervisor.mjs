@@ -5,7 +5,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { supervise, nextAt } from './supervisor.mjs';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'supervisor-'));
 const until = async (ok, ms = 5000) => { const end = Date.now() + ms; while (!ok()) { if (Date.now() > end) throw new Error('timed out'); await new Promise((r) => setTimeout(r, 10)); } };
@@ -38,6 +42,50 @@ test('a child that ran past steady comes back after the first wait; one that sta
   s.stop();
   await until(() => kids.every((k) => k.exitCode !== null || k.signalCode !== null));
   assert.ok(!said.some((m) => m.startsWith('stay')), said.join('\n'));
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('a supervisor started after 03:00 runs that day\'s review at once, and not again that day', async () => {
+  const dir = tmp(), said = [];
+  const review = script(dir, 'review.mjs', '');
+  let clock = new Date(2026, 0, 5, 9, 0);
+  const s = supervise({ logs: dir, children: [], review: [process.execPath, review], every: 10, now: () => clock, log: (m) => said.push(m) });
+  await until(() => said.includes('review: exited (0)'));
+  clock = new Date(2026, 0, 5, 23, 0);
+  await new Promise((r) => setTimeout(r, 50));
+  s.stop();
+  assert.equal(said.filter((m) => m === 'review: started').length, 1);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('a missing review is logged, not fatal', async () => {
+  const dir = tmp(), said = [];
+  const s = supervise({ logs: path.join(dir, 'new-logs'), children: [], review: [path.join(dir, 'no-such-review')], every: 10, log: (m) => said.push(m) });
+  await until(() => said.some((m) => /^review: .*ENOENT/.test(m)));
+  s.stop();
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('install.sh: the review stays off over two runs without REVIEW, on once asked, and the old agents go', { skip: process.platform !== 'darwin' }, () => {
+  const dir = tmp(), repo = path.join(dir, 'repo'), home = path.join(dir, 'home'), fake = path.join(dir, 'fake');
+  for (const d of ['skills/one', 'tools/service', 'tools/snapshot', 'home/Library/LaunchAgents', 'fake']) fs.mkdirSync(path.join(dir, d.startsWith('home') || d === 'fake' ? '' : 'repo', d), { recursive: true });
+  fs.copyFileSync(path.join(HERE, '..', '..', 'install.sh'), path.join(repo, 'install.sh'));
+  fs.copyFileSync(path.join(HERE, 'com.toolkit.plist'), path.join(repo, 'tools/service/com.toolkit.plist'));
+  fs.writeFileSync(path.join(repo, 'tools/snapshot/pairing.cjs'), '');
+  execFileSync('git', ['init', '-q', repo]);
+  // launchctl records each call and fails, as for an agent not loaded: nothing reaches the real launchd
+  fs.writeFileSync(path.join(fake, 'launchctl'), `#!/bin/sh\necho "$@" >> ${JSON.stringify(path.join(dir, 'launchctl.log'))}\nexit 1\n`, { mode: 0o755 });
+  const agents = path.join(home, 'Library/LaunchAgents');
+  fs.writeFileSync(path.join(agents, 'com.toolkit.figma-audit.plist'), '');
+  const install = (env = {}) => { execFileSync(path.join(repo, 'install.sh'), { env: { ...process.env, HOME: home, PATH: `${fake}:${process.env.PATH}`, SKIP_CHECKS: '1', REVIEW: '', ...env }, stdio: 'pipe' }); return fs.readFileSync(path.join(agents, 'com.toolkit.plist'), 'utf8'); };
+  const on = (plist) => plist.includes('<string>--review</string>');
+  assert.equal(on(install()), false, 'first run');
+  assert.equal(on(install()), false, 'second run: the template\'s own words do not turn it on');
+  assert.equal(on(install({ REVIEW: 'on' })), true, 'REVIEW=on');
+  assert.equal(on(install()), true, 'kept on a later run');
+  assert.ok(!fs.existsSync(path.join(agents, 'com.toolkit.figma-audit.plist')), 'an old agent is deleted');
+  const calls = fs.readFileSync(path.join(dir, 'launchctl.log'), 'utf8');
+  for (const old of ['figma-snapshot', 'figma-audit', 'review', 'maintain']) assert.match(calls, new RegExp(`bootout gui/\\d+/com\\.toolkit\\.${old}\n`), old);
   fs.rmSync(dir, { recursive: true, force: true });
 });
 

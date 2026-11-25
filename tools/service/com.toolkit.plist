@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- The toolkit's one login item: supervisor.mjs, which runs the snapshot router and the figma-audit service
-     (and, with --review, the daily periodic review). install.sh writes it to ~/Library/LaunchAgents with the
+     (and, where installed, the daily periodic review). install.sh writes it to ~/Library/LaunchAgents with the
      checkout, node's folder, the logs folder (~/Library/Logs/toolkit) and the home folder filled in, and the
      review line kept only when the review is on. launchd starts with a bare PATH: a project's after-snapshot steps
      call node, sass and pnpm, bin/check calls python3, and the review calls claude, in ~/.local/bin. `toolkit` is

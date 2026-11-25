@@ -72,12 +72,11 @@ if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" !=
   }
   # the review stays as installed: REVIEW=on adds it, and a re-run without it keeps one already there
   review=off
-  if [ "${REVIEW:-}" = on ] || [ -e "$agents/com.toolkit.review.plist" ] || grep -q -- '--review' "$agents/com.toolkit.plist" 2>/dev/null; then review=on; fi
+  if [ "${REVIEW:-}" = on ] || [ -e "$agents/com.toolkit.review.plist" ] || grep -q '<string>--review</string>' "$agents/com.toolkit.plist" 2>/dev/null; then review=on; fi
   # retired 2026-11-25 for com.toolkit, which runs all three: stopped first, so their ports are free for it
   # (com.toolkit.maintain retired 2026-10-26: the daily pass repeated what every session's bin/check runs)
   for old in com.toolkit.figma-snapshot com.toolkit.figma-audit com.toolkit.review com.toolkit.maintain; do
-    [ -e "$agents/$old.plist" ] || continue
-    stop_agent "$old"; rm -f "$agents/$old.plist"; echo "retired: $old"
+    stop_agent "$old"; [ -e "$agents/$old.plist" ] && echo "retired: $old"; rm -f "$agents/$old.plist"
   done
   rm -f "$repo/tools/figma-audit/figma-audit" "$repo/tools/snapshot/figma-snapshot"
   plist="$agents/com.toolkit.plist"

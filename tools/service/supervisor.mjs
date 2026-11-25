@@ -16,15 +16,17 @@ import { restartWhenStale, askIdle } from '../shared/stale-self.mjs';
 
 // the next `hour`:00 after `d`, local time; a Mac asleep then runs it on waking, as launchd's calendar interval did
 export function nextAt(d, hour) {
-  const t = new Date(d); t.setHours(hour, 0, 0, 0);
+  const t = today(d, hour);
   if (t <= d) t.setDate(t.getDate() + 1);
   return t;
 }
+const today = (d, hour) => { const t = new Date(d); t.setHours(hour, 0, 0, 0); return t; };
 
 // `children`: [{ name, script, args }], forked with an IPC channel; output to `logs`/<name>.log and .err.
 // A child that dies again within `steady` of its start waits twice as long as last time, up to `most`.
 export function supervise({ children, logs, review = null, hour = 3, every = 60000, wait = 1000, most = 60000,
   steady = 60000, now = () => new Date(), log = console.log }) {
+  fs.mkdirSync(logs, { recursive: true });
   const kids = new Set();
   let stopping = false, reviewing = null;
   const out = (name) => [fs.openSync(path.join(logs, `${name}.log`), 'a'), fs.openSync(path.join(logs, `${name}.err`), 'a')];
@@ -33,6 +35,8 @@ export function supervise({ children, logs, review = null, hour = 3, every = 600
     const child = fork(c.script, c.args || [], { stdio: ['ignore', ...fds, 'ipc'] });
     for (const fd of fds) fs.closeSync(fd);
     kids.add(child);
+    // a fork that cannot start, or a send to a closed channel, is an 'error' event: unheard it ends the supervisor
+    child.on('error', (e) => log(`${c.name}: ${e.message}`));
     const began = Date.now();
     child.on('exit', (code, signal) => {
       kids.delete(child);
@@ -44,7 +48,8 @@ export function supervise({ children, logs, review = null, hour = 3, every = 600
   };
   for (const c of children) start(c, wait);
 
-  let due = nextAt(now(), hour);
+  // today's, if already past: a supervisor started after 03:00 still runs that day's review (--if-owed acts once)
+  let due = today(now(), hour);
   const timer = review && setInterval(() => {
     if (now() < due || reviewing) return;
     due = nextAt(now(), hour);
@@ -52,6 +57,7 @@ export function supervise({ children, logs, review = null, hour = 3, every = 600
     reviewing = spawn(review[0], review.slice(1), { stdio: ['ignore', ...fds] });
     for (const fd of fds) fs.closeSync(fd);
     log('review: started');
+    reviewing.on('error', (e) => { log(`review: ${e.message}`); reviewing = null; });
     reviewing.on('exit', (code, signal) => { log(`review: exited (${signal || code})`); reviewing = null; });
   }, every);
 

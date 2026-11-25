@@ -104,6 +104,8 @@ for (let i = 0; i < args.length; i++) {
   if (args[i] === "--data") pairs.push({ data: args[i + 1], port: null });
   else if (args[i] === "--port" && pairs.length) pairs[pairs.length - 1].port = Number(args[i + 1]);
 }
+// forked (by the supervisor, or by --all), it ends with its parent: an orphan keeps its port from the next one
+if (process.send) process.on("disconnect", () => process.exit(0));
 /*
  * `--all`: every project that states a `port` in its project block, found the
  * way every tool finds a project (contract.homes), so a new project is served
@@ -147,7 +149,10 @@ if (pairs.length > 1 || ALL) {
   // until every child says nothing is in progress (askIdle), then stops them and exits, the supervisor
   // (tools/service) starting it again on the files on disk; meanwhile each child restarts itself on its own once idle
   restartWhenStale(boundBy(HERE), { busy: askIdle(kids),
-    exit: (code) => { for (const c of kids) c.kill(); process.exit(code); } });
+    exit: (code) => process.exit(code) });
+  // a dashboard outliving this parent keeps its port, and the next parent's dashboards fail on it for ever
+  process.on("exit", () => { for (const c of kids) c.kill(); });
+  process.on("SIGTERM", () => process.exit(0));
   for (const p of pairs) run(p);
   if (ALL) {
     const serving = new Set(pairs.map((p) => p.data));
