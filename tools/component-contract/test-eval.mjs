@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, gapOf, GAPS, leftToCode as leftToCode0, unaccepted, identifiedNote } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, isSameApartFromForeign, gapOf, GAPS, leftToCode as leftToCode0, unaccepted, identifiedNote } from './eval.mjs';
 import { drawSettings } from './to-figma.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
@@ -559,6 +559,15 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   try { (await import('./eval.mjs')).report('lib', { legs: { self: { ...legsS.self, d: { rows: [], left: [], assisted: { 'text-align': ['y'] } } } } }); } finally { console.log = log; }
   ok('the verdict says strict beside assisted, the gap named by rule, and the readings not tagged', said.some((l) => /^lib self: 3 of 4 the same; strictly 1 \(1 assisted by text-align\); 1 untagged, not known strictly/.test(l)), said);
   ok('the verdict lists the rows left to code by gap id', said.some((l) => /1 rows left to code \(slot-sample 1\)/.test(l)), said); }
+// a weaker tier said beside the same, never instead: the same but for rows another library's component leaves to code
+{ const f = (gap) => ({ at: 'x/y', gap });
+  ok('apart from foreign: the same, or blocked only by inside-foreign and foreign-own rows; isSame unchanged',
+    isSameApartFromForeign({ rows: [] }) && isSameApartFromForeign({ rows: [], left: [f('inside-foreign'), f('foreign-own')] }) && !isSame({ rows: [], left: [f('inside-foreign')] })
+    && !isSameApartFromForeign({ rows: [], left: [f('inside-foreign'), f('slot-sample')] }) && !isSameApartFromForeign({ rows: [{ at: 'x' }], left: [f('inside-foreign')] })
+    && !isSameApartFromForeign({ rows: [], left: [f('foreign-own')], predicted: 2 }) && !isSameApartFromForeign({ rows: [], left: [f('foreign-own')], cut: 1 }) && !isSameApartFromForeign({ rows: [], lacks: true }) && !isSameApartFromForeign({ skipped: 'x' }));
+  const said = []; const log = console.log; console.log = (l) => said.push(l);
+  try { (await import('./eval.mjs')).report('lib', { legs: { self: { a: { rows: [], left: [f('inside-foreign')], assisted: {} }, b: { rows: [], assisted: {} }, c: { rows: [], left: [f('slot-sample')], assisted: {} } } } }); } finally { console.log = log; }
+  ok('the headline says the weaker tier beside the same and the strict', said.some((l) => /^lib self: 1 of 3 the same; strictly 1; 2 the same apart from another library's insides; measured/.test(l)), said); }
 // each excuse of leftToCode is a named gap with an id
 { const c = { contract: 1, component: 'Pick', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } },
     anatomy: { root: { kind: 'container' }, slot: { kind: 'slot', parent: 'root' }, 'slot/sample': { kind: 'text', parent: 'slot', content: 'x' }, tip: { kind: 'graphic', parent: 'root', width: 15, height: 9, radius: 'mixed' } },
