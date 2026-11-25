@@ -29,11 +29,11 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
-import { partName, figmaWord, camel, placedOf } from './layers.mjs';
+import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp } from './layers.mjs';
 
 const require = createRequire(import.meta.url);
 const MODES = require('../tokens/modes.cjs');
-const { atProps, asPlaced } = require('./derive.cjs');
+const { atProps, asPlaced, placedAs, placedMatch, wholeIn } = require('./derive.cjs');
 export const BANNER = "Generated from the component's contract by the toolkit's to-markup. A gap marked frontend-build: is that skill's to fill; once filled, take this line out and the file is the project's.";
 export const FRAMEWORKS = ['react', 'web-components', 'kirby'];
 // the naming each framework's markup is written to: a React root is the native element, a class its hook; a web
@@ -174,6 +174,65 @@ export function unexposed(c, id, mainOf) {
   const unreached = Object.keys(mine).some((k) => JSON.stringify(mine[k]) !== JSON.stringify(theirs[k] ?? null) && !reached(k));
   if (differs('with') && (!varied('with') || unreached) && !props.some((q) => [...(q.sets || []), ...(q.swaps || [])].some((l) => l.startsWith(`${rel}/`) || l === rel))) return 'field';
   return false;
+}
+
+/* A placed instance's props by its own names in code, from the design's (Figma's names and words): each the placed
+   component takes as a value in code (a pointer state's, a field's value, a slot's, none). */
+export function givenOf(placed, w, library = {}, lang = JS, settings = HOUSE) {
+  const theirs = propsOf(placed, library, lang, settings), low = (v) => String(v).toLowerCase(), out = {};
+  for (const [fig, v] of Object.entries(w || {})) {
+    const x = theirs.find((y) => (y.figmas || [y.p.figma]).some((f) => f && low(f) === low(bareProp(fig))));
+    if (!x || ['value', 'node', 'event'].includes(x.type)) continue;
+    if (x.type === 'boolean') { out[x.name] = v === true || /^true$/i.test(String(v)); continue; }
+    const i = (x.p.figmaValues || []).map(low).indexOf(low(v)), lit = i >= 0 ? x.p.values[i] : v;
+    if (x.type === 'enum' && !x.values.includes(lit)) continue;
+    out[x.name] = x.type === 'number' ? Number(lit) : lit;
+  }
+  return out;
+}
+
+/* What this component sets inside a placed instance that no prop of it carries, as the instance's render function takes
+   it (its third argument, `parts`): by the placed component's own part names (data-part), each part's words (content),
+   the props a nested instance is given (props) and what it sets inside that one (parts), another component swapped in
+   where no prop swaps it (render: its contract), another icon (attrs: data-icon), and a part the instance hides (hidden:
+   only where the design keeps the instance whole, so a part it does not list is not drawn). `a` is one combination's
+   anatomy (expand), `hid` the instance there, `whole` the instances it keeps whole (derive's wholeIn); `seen` collects
+   each layer so carried. Tested by test-to-markup.mjs. */
+export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), library = {}, lang = JS, settings = HOUSE } = {}) {
+  const e = a[hid], m = e && e.kind === 'instance' && mainOf(e.component, e.key);
+  if (!m) return {};
+  const { M, back } = placedAs(a, hid, m, mainOf);
+  const inner = Object.fromEntries(Object.keys(a).filter((k) => k.startsWith(`${hid}/`)).map((k) => [k.slice(hid.length + 1), a[k]]));
+  const match = placedMatch(M, inner);
+  // (a part of the component's own, not one inside a nested instance, which that instance's entry carries, nor a slot's
+  // sample, which the slot's filler draws)
+  const own = (mk) => { for (let up = (M[mk] || {}).parent; up && up !== 'root'; up = (M[up] || {}).parent) if (['instance', 'slot'].includes((M[up] || {}).kind)) return false; const id = back[mk] || mk; return mk !== 'root' && !!(m.anatomy[id] || (m.variants || []).some((v) => (v.add || {})[id])); };
+  const segOf = (mk) => { const id = back[mk] || mk; return partSeg(m, copyOf(m, id) || id); };
+  const same = (x, y) => JSON.stringify(x ?? null) === JSON.stringify(y ?? null);
+  const out = {}, put = (mk, entry) => { if (Object.keys(entry).length) out[segOf(mk)] = { ...out[segOf(mk)], ...entry }; };
+  for (const [rel, mk] of Object.entries(match)) {
+    if (!own(mk)) continue;
+    const L = inner[rel], X = M[mk], at = `${hid}/${rel}`, entry = {};
+    const Lm = L.kind === 'instance' && mainOf(L.component, L.key), Xm = X.kind === 'instance' && mainOf(X.component, X.key);
+    if (Lm) {
+      const nested = insideOf(a, at, mainOf, { whole, seen, library, lang, settings });
+      if (Lm !== Xm) Object.assign(entry, { render: Lm, props: givenOf(Lm, L.with, library, lang, settings) });
+      else {
+        const w = Object.fromEntries(Object.entries(L.with || {}).filter(([k, v]) => !same(v, (X.with || {})[k])));
+        const props = givenOf(Lm, w, library, lang, settings);
+        if (Object.keys(props).length) entry.props = props;
+      }
+      if (Object.keys(nested).length) entry.parts = nested;
+    } else if (L.kind === 'instance' && X.kind === 'instance' && !Xm && L.component && L.component !== X.component) entry.attrs = { 'data-icon': L.component };
+    else if (L.kind === 'text' && X.kind === 'text' && typeof L.content === 'string' && !/^\{.*\}$/.test(L.content) && L.content !== X.content) entry.content = L.content;
+    if (Object.keys(entry).length) seen.add(at);
+    put(mk, entry);
+  }
+  if (whole.has(hid)) {
+    const drawn = new Set(Object.values(match));
+    for (const mk of Object.keys(M)) if (own(mk) && !drawn.has(mk) && (!M[mk].parent || M[mk].parent === 'root' || drawn.has(M[mk].parent))) put(mk, { hidden: true });
+  }
+  return out;
 }
 
 /* A swap: among icons (a component the library does not hold), the icon's name; of a part inside a placed component,
@@ -370,6 +429,33 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       return [MODES.attribute(k), code ? { code } : { lit: (e.modes || {})[k] || '' }];
     });
   };
+  // what this component sets inside a placed instance that no prop of it carries (insideOf), as each combination draws
+  // it: the placed component's third argument, `parts` (a web component's alone: React and a snippet keep the gap)
+  const withParts = !jsx && !lang.php;
+  const carried = new Set(), mainOf = (name, key) => placedOf(library, { component: name, key });
+  const D = variantDefaults(c), vs0 = c.variants || [];
+  const insideAt = (id, e, when) => {
+    const a = expand(c, { ...D, ...when });
+    if (!a[id] || a[id].kind !== 'instance' || placedOf(library, a[id]) !== placedOf(library, e)) return {};
+    return insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), seen: carried, library, lang, settings });
+  };
+  const partsLit = (x) => `{ ${Object.entries(x).map(([k, v]) => `${str(k)}: { ${[
+    ...(v.hidden ? ['hidden: true'] : []),
+    ...(v.render ? (() => { const name = Object.keys(library).find((k2) => library[k2] === v.render) || v.render.component; if (v.render.component !== c.component) used.add(name); return [`render: ${fnOf(v.render)}`]; })() : []),
+    ...(v.props ? [`props: { ${Object.entries(v.props).map(([p, l]) => `${IDENT.test(p) ? p : str(p)}: ${str(l)}`).join(', ')} }`] : []),
+    ...(v.parts ? [`parts: ${partsLit(v.parts)}`] : []),
+    ...(v.content !== undefined ? [`content: ${str(v.content)}`] : []),
+    ...(v.attrs ? [`attrs: { ${Object.entries(v.attrs).map(([p, l]) => `${str(p)}: ${str(l)}`).join(', ')} }`] : []),
+  ].join(', ')} }`).join(', ')} }`;
+  // (the most particular variant that holds first, each as the whole combination draws there; the defaults' last)
+  const partsCode = (id, e) => {
+    const base = insideAt(id, e, {});
+    let alts = [...vs0].sort((x, y) => Object.keys(y.when || {}).length - Object.keys(x.when || {}).length).map((v) => [testOf(v.when || {}), v]).filter(([t]) => t && t !== 'true' && t !== 'false').map(([t, v]) => [t, insideAt(id, e, v.when || {})]);
+    const same = (x, y) => JSON.stringify(x, (k, v) => (k === 'render' ? v.component : v)) === JSON.stringify(y, (k, v) => (k === 'render' ? v.component : v));
+    alts = alts.filter(([, x], k) => !same(x, base) || alts.slice(k + 1).some(([, y]) => !same(y, base)));
+    if (!alts.length && !Object.keys(base).length) return null;
+    return alts.reduceRight((acc, [t, x]) => `${/^[\w$!.]+$/.test(t) ? t : `(${t})`} ? ${partsLit(x)} : ${acc}`, partsLit(base));
+  };
   const busy = props.find((x) => x.busy && x.busy.length);
   const busyCode = busy && busy.busy.map((v) => `${ref(busy.name)} === ${lang.str(v)}`).join(' || ');
   // a part turned a quarter in some combination (to-code turnedParts) is drawn inside its wrapper, the box its turn is
@@ -548,7 +634,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       if (ownAt(e.with) || [...combos, ...varied].some(({ w }) => ownAt(w)) || byMine) gaps.push(`${partName(id)} is given props only a pointer state draws: the stylesheet's, or frontend-build's to add`);
       for (const x of props.filter((y) => y.pass && y.pass.part === id && y.type !== 'value')) { const i = given.findIndex(([k]) => k === x.pass.to); if (i >= 0) given.splice(i, 1); given.push([x.pass.to, { code: ref(x.name) }]); }
       used.add(placed.component);
-      return { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id), own: theirs.map((x) => x.name) };
+      return { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id), own: theirs.map((x) => x.name), ...(withParts && { parts: partsCode(id, e) }) };
     }
   };
   // a text entry: one input, its own value the Value text and its ::placeholder the Placeholder (to-code's entryOf)
@@ -575,7 +661,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const children = (kids.get('root') || []).flatMap((k) => node(k)).filter(Boolean);
   // an override a placed component has no prop for: the markup cannot pass it (only the outermost such part is named)
   const ancestors = (id) => { const out = []; for (let up = (at(c, id) || {}).parent; up && up !== 'root'; up = (at(c, up) || {}).parent) out.push(up); return out; };
-  for (const part of partsOf(c).values()) if (unexposed(c, part.id, (name, key) => placedOf(library, { component: name, key })) && !ancestors(part.id).some((up) => unexposed(c, up, (name, key) => placedOf(library, { component: name, key })) === 'part')) gaps.push(`${partName(part.id)}: drawn here inside ${partName(overrideHost(c, part.id))}, which has no prop for it — an override frontend-build adds, or a prop to give that component`);
+  for (const part of partsOf(c).values()) if (!carried.has(part.id) && unexposed(c, part.id, (name, key) => placedOf(library, { component: name, key })) && !ancestors(part.id).some((up) => unexposed(c, up, (name, key) => placedOf(library, { component: name, key })) === 'part')) gaps.push(`${partName(part.id)}: drawn here inside ${partName(overrideHost(c, part.id))}, which has no prop for it — an override frontend-build adds, or a prop to give that component`);
   if (!control && !entry) gaps.push(`its element and role: a ${n.element ? 'custom element' : inline ? 'span' : 'div'} until frontend-build says what it is (code-standard rule 8)`);
   if (!entry && props.some((x) => /^placeholder$/i.test(x.key))) gaps.push('a field drawn with a Placeholder and no Value text: its <input>, and its text the input\'s ::placeholder (to-code reads a text entry from the two texts)');
   for (const x of props) if (x.type === 'event') gaps.push(`${x.name}: when it fires, frontend-build's to wire (taken here, so it reaches no element)`);
@@ -665,7 +751,10 @@ function hOf(item, depth) {
   if (item.code !== undefined) return `${pad}${item.code}`;
   if (item.lit !== undefined) return `${pad}${str(item.lit)}`;
   const obj = (list) => `{ ${list.map(([k, v]) => `${IDENT.test(k) ? k : str(k)}: ${v.nodes ? `[${v.nodes.map((x) => hOf(x, 0)).join(', ')}]` : v.lit !== undefined ? str(v.lit) : v.code}`).join(', ')} }`;
-  if (item.placed) return `${pad}${fnOf(item.placed)}(${obj(item.attrs)}, ${obj(item.hook)})`;
+  // (a placed part as its holder sets it, `parts` by its data-part name: dom.js placed; the rest, dressed)
+  const seg = (list) => (list.find(([k]) => k === 'data-part') || [])[1];
+  const key = (list) => `parts[${str(seg(list).lit)}]`;
+  if (item.placed) return seg(item.hook) ? `${pad}placed(${key(item.hook)}, ${fnOf(item.placed)}, ${obj(item.attrs)}, ${obj(item.hook)}${item.parts ? `, ${item.parts}` : ''})` : `${pad}${fnOf(item.placed)}(${obj(item.attrs)}, ${obj(item.hook)}${item.parts ? `, ${item.parts}` : ''})`;
   const attrs = item.spread ? `{ ${item.spread}${item.attrs.length ? `, ${obj(item.attrs).slice(2, -2)}` : ''} }` : obj(item.attrs);
   if (!item.children.length) return `${pad}h(${str(item.tag)}, ${attrs})`;
   return `${pad}h(${str(item.tag)}, ${attrs},\n${item.children.map((x) => hOf(x, depth + 1)).join(',\n')})`;
@@ -690,18 +779,19 @@ export function toElement(c, folder, { naming, library = {}, settings = HOUSE } 
     host.children.forEach(fill);
   } else host = { tag, attrs: t.hooks, spread: '...rest, ...host', children: t.children };
   const attrsSaid = own.filter((x) => x.attr).map((x) => `${t.n.attr(x.key)}${x.type === 'enum' ? ` (${x.values.map(str).join(' | ')}, default ${str(x.default)})` : ` ("true" | "false", default "${x.default}")`}`);
+  const body = `dressed(parts, ${hOf(host, 1).trimStart()})`;
   return [`/* ${BANNER} */`, ...(t.gaps.length ? ['/*', ...[...new Set(t.gaps)].map((g) => ` * frontend-build: ${said(g)}`), ' */'] : []),
-    `import { h } from '../dom.js';`,
+    `import { ${['h', 'dressed', ...['placed'].filter((f) => new RegExp(`\\b${f}\\(`).test(body))].join(', ')} } from '../dom.js';`,
     // (a variant that places a sibling of its own set calls this file's own function: no import of itself)
     ...placed.filter((p) => library[p].component !== c.component).map((p) => `import { ${fnOf(library[p])} } from '../${placedFolder(library[p])}/${placedFolder(library[p])}.js';`),
     '',
     `/**`,
     ` * ${said(`<${tag}>${attrsSaid.length ? `: ${attrsSaid.join('; ')}` : ''}.`)}`,
-    ` * The first argument's other values reach the ${t.control ? `<${t.control}>` : t.entry ? '<input>' : 'host'}; the second's, the host (a holder's hook).`,
+    ` * The first argument's other values reach the ${t.control ? `<${t.control}>` : t.entry ? '<input>' : 'host'}; the second's, the host (a holder's hook); the third, what a holder sets inside it, by part name (dom.js dressed and placed).`,
     ...(t.iconOnly ? [` * It draws no words: give it its name, its "aria-label" (code-standard rule 18).`] : []),
     ` */`,
-    `export function ${fnOf(c)}({ ${[...own.map((x) => (x.type === 'event' ? `${x.name}: _${x.name}` : litOf(x) == null ? x.name : `${x.name} = ${litOf(x)}`)), ...(t.control ? ['type = "button"'] : []), ...(guard.length ? ['onClick'] : []), '...rest'].join(', ')} } = {}, host = {}) {`,
-    `  return ${hOf(host, 1).trimStart()};`,
+    `export function ${fnOf(c)}({ ${[...own.map((x) => (x.type === 'event' ? `${x.name}: _${x.name}` : litOf(x) == null ? x.name : `${x.name} = ${litOf(x)}`)), ...(t.control ? ['type = "button"'] : []), ...(guard.length ? ['onClick'] : []), '...rest'].join(', ')} } = {}, host = {}, parts = {}) {`,
+    `  return ${body};`,
     `}`, '',
     // which design component it draws, by the design's own name and key: what a reading of the code names it, and an
     // instance of it (from-code codeFigma, codeKeys)
@@ -721,6 +811,43 @@ export function h(tag, attrs = {}, ...children) {
   }
   e.append(...children.flat(Infinity).filter((x) => x != null && x !== false && x !== true));
   return e;
+}
+
+/* A component's parts as its holder sets them (its render function's third argument, \`parts\`, by data-part name), on
+   the element it built: each part taken away (hidden), another component drawn in its place (render, given props and
+   parts), its words (content), attributes added (attrs). Not inside a placed component (an element of its own, ds-x),
+   which takes its entry where it is placed (placed), nor a slot's content, the caller's. */
+export function dressed(parts, root) {
+  if (!parts || !Object.keys(parts).length) return root;
+  const walk = (e) => {
+    for (const k of [...e.children]) {
+      const p = parts[k.getAttribute('data-part')];
+      if (k.tagName.includes('-')) continue;
+      if (p && p.hidden) { k.remove(); continue; }
+      if (p && p.render) { k.replaceWith(p.render(p.props || {}, { 'data-part': k.getAttribute('data-part') }, p.parts || {})); continue; }
+      if (p) dress(p, k);
+      if (!k.hasAttribute('data-slot')) walk(k);
+    }
+  };
+  walk(root);
+  return root;
+}
+/* A placed component's part the same, its own props and parts given to it over what this one gives (own). */
+export function placed(p, render, props, host, own = {}) {
+  if (!p) return render(props, host, own);
+  if (p.hidden) return null;
+  if (p.render) return p.render(p.props || {}, { ...host, ...p.host }, p.parts || {});
+  return dress(p, render({ ...props, ...p.props }, host, merge(own, p.parts)));
+}
+function dress(p, e) {
+  if (p.content !== undefined) e.textContent = p.content;
+  for (const [k, v] of Object.entries(p.attrs || {})) if (v == null || v === false) e.removeAttribute(k); else e.setAttribute(k, v === true ? '' : String(v));
+  return e;
+}
+function merge(a = {}, b = {}) {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) out[k] = out[k] && !v.render && !v.hidden ? { ...out[k], ...v, props: { ...out[k].props, ...v.props }, parts: merge(out[k].parts, v.parts) } : v;
+  return out;
 }
 `;
 

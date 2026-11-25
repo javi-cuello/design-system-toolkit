@@ -77,12 +77,12 @@ const holder = { component: 'Row', props: {}, anatomy: { root: { kind: 'containe
 // the code (from-code's component) and never from the design it is compared with
 ok('a web component\'s module exports the design component it draws, by its exact name', /^export const figma = \{"component":"Pill"\};$/m.test(toElement(pill, 'pill', { naming: ELEMENT, library: { Pill: pill } })));
 ok('the module says the design component\'s key too, where the contract holds one', /^export const figma = \{"component":"Pill","key":"k1"\};$/m.test(toElement({ ...pill, figma: { key: 'k1' } }, 'pill', { naming: ELEMENT, library: { Pill: pill } })));
-ok('a placed component with a swap per size is given the one its size draws (xs: Icon (16))', /renderPill\(\{ icon: "x"/.test(toElement(holder, 'row', { naming: ELEMENT, library: { Pill: pill, Row: holder } })));
+ok('a placed component with a swap per size is given the one its size draws (xs: Icon (16))', /placed\(parts\["[^"]*"\], renderPill, \{ icon: "x"/.test(toElement(holder, 'row', { naming: ELEMENT, library: { Pill: pill, Row: holder } })));
 // two swaps over two glyph layers (Material 3's nav item: Icon and Icon (selected), each linked to icon and icon_2), the
 // instance stating only the second layer's glyph: it is given the swap whose value that glyph is
 { const item = { component: 'Item', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['icon', 'icon_2'] }, iconSelected: { type: 'instance', figma: 'Icon (selected)', swaps: ['icon', 'icon_2'] } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icons/stars_filled', order: 0 }, icon_2: { kind: 'instance', parent: 'root', component: 'Icons/stars', order: 1 } }, variants: [], folder: 'item' };
   const rail = { component: 'Rail', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item', with: { Icon: 'stars', 'Icon (selected)': 'stars_filled' } }, 'item/icon_2': { kind: 'instance', parent: 'item', component: 'Icons/stars_filled', order: 1 } }, variants: [], folder: 'rail' };
-  ok('of two swaps over the same glyph layers, the one whose value the instance draws on any of them', /renderItem\(\{ icon\w*: "stars_filled"/.test(toElement(rail, 'rail', { naming: ELEMENT, library: { Item: item, Rail: rail } }))); }
+  ok('of two swaps over the same glyph layers, the one whose value the instance draws on any of them', /placed\(parts\["[^"]*"\], renderItem, \{ icon\w*: "stars_filled"/.test(toElement(rail, 'rail', { naming: ELEMENT, library: { Item: item, Rail: rail } }))); }
 // a swap of one of the library's components (Atlassian's button group, its <Button> 1): what the caller passes, else
 // the design's own instance at its values, so the code draws what Figma draws at the swap's default; a snippet keeps its slot
 { const btn = { component: 'Btn', props: { label: { type: 'string', figma: 'Label', sets: ['label'], default: 'Go' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: '{label}' } }, variants: [], folder: 'btn' };
@@ -90,26 +90,26 @@ ok('a placed component with a swap per size is given the one its size draws (xs:
   const lib = { Btn: btn, Group: group }, w = toElement(group, 'group', { naming: ELEMENT, library: lib }), r = toReact(group, 'group', { naming: CLASS, library: lib });
   const sw = propsOf(group, lib).find((x) => x.name === 'button1');
   ok('a swap of a library component draws the caller\'s content where given, the design\'s instance where not',
-    /\(button1 != null\) && h\("span", \{ "data-part": "button"/.test(w) && /\(button1 == null\) && renderBtn\(\{ label: "One" \}, \{ "data-part": "button"/.test(w) && /\{button1 == null && \(\s*<Btn className="ds-group__button" label="One"/.test(r)
+    /\(button1 != null\) && h\("span", \{ "data-part": "button"/.test(w) && /\(button1 == null\) && placed\(parts\["[^"]*"\], renderBtn, \{ label: "One" \}, \{ "data-part": "button"/.test(w) && /\{button1 == null && \(\s*<Btn className="ds-group__button" label="One"/.test(r)
     && sw.type === 'node' && JSON.stringify(sw.placed.parts) === '["button"]' && sw.placed.component === 'Btn', w);
   // a swap layer only a variant adds (its third button at count 3): the same, under that variant's condition
   const three = { ...group, props: { ...group.props, count: { type: 'enum', values: ['2', '3'], figmaValues: ['2', '3'], default: '2', figma: 'count' }, button3: { type: 'instance', figma: '<Button> 3', swaps: ['button_3'] } },
     variants: [{ when: { count: '3' }, add: { button_3: { kind: 'instance', parent: 'root', component: 'Btn', with: { Label: 'Three' }, order: 1 } } }] };
   const w3 = toElement(three, 'group', { naming: ELEMENT, library: { ...lib, Group: three } });
   ok('a swap of a layer only a variant adds draws the design\'s instance there, where that variant holds and nothing is passed',
-    /\(\(count === "3"\) && button3 == null\) && renderBtn\(\{ label: "Three" \}/.test(w3) && JSON.stringify(propsOf(three, { ...lib, Group: three }).find((x) => x.name === 'button3').placed.parts) === '["button_3"]', w3);
+    /\(\(count === "3"\) && button3 == null\) && placed\(parts\["[^"]*"\], renderBtn, \{ label: "Three" \}/.test(w3) && JSON.stringify(propsOf(three, { ...lib, Group: three }).find((x) => x.name === 'button3').placed.parts) === '["button_3"]', w3);
 }
 // a swap that drives two layers draws the design's instance in each where nothing is passed; a variant that swaps that
 // instance for another of the library's draws the other where it holds, the base's elsewhere (as the instance branch does)
 { const st = (name) => ({ component: name, props: { on: { type: 'boolean', default: false, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [], folder: name.toLowerCase() });
   const two = { component: 'Two', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['a', 'b'] } }, anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', order: 0, component: 'Pic' }, b: { kind: 'instance', parent: 'root', order: 1, component: 'Pic' } }, variants: [], folder: 'two' };
   const w2 = toElement(two, 'two', { naming: ELEMENT, library: { Pic: st('Pic'), Two: two } });
-  ok('a swap that drives two layers draws the design\'s instance in each where nothing is passed', (w2.match(/\(icon == null\) && renderPic\(/g) || []).length === 2, w2);
+  ok('a swap that drives two layers draws the design\'s instance in each where nothing is passed', (w2.match(/\(icon == null\) && placed\(parts\["[^"]*"\], renderPic, /g) || []).length === 2, w2);
   const sty = { component: 'Sty', props: { style: { type: 'enum', values: ['outlined', 'elevated'], figmaValues: ['Outlined', 'Elevated'], default: 'outlined', figma: 'Style' }, bgSwap: { type: 'instance', figma: 'Bg', swaps: ['bg'] } },
     anatomy: { root: { kind: 'container' }, bg: { kind: 'instance', parent: 'root', component: 'Outlined' } }, variants: [{ when: { style: 'elevated' }, set: { 'bg.component': 'Elevated' } }], folder: 'sty' };
   const w3 = toElement(sty, 'sty', { naming: ELEMENT, library: { Outlined: st('Outlined'), Elevated: st('Elevated'), Sty: sty } });
   ok('a swap whose instance a variant changes draws the variant\'s component where it holds, the base\'s elsewhere, where nothing is passed',
-    /bgSwap == null\) && \(styleOption === "elevated"\)\) && renderElevated\(/.test(w3) && /bgSwap == null\) && !\(styleOption === "elevated"\)\) && renderOutlined\(/.test(w3), w3);
+    /bgSwap == null\) && \(styleOption === "elevated"\)\) && placed\(parts\["[^"]*"\], renderElevated, /.test(w3) && /bgSwap == null\) && !\(styleOption === "elevated"\)\) && placed\(parts\["[^"]*"\], renderOutlined, /.test(w3), w3);
 }
 // a variant that places another of the library's components (Material 3's card: its Elevated state at Style Elevated, for
 // the base's Outlined): each where its variant holds, the base's where none does, in all three languages
@@ -121,7 +121,7 @@ ok('a placed component with a swap per size is given the one its size draws (xs:
   const r = toReact(card, 'card', { naming: CLASS, library: lib }), w = toElement(card, 'card', { naming: ELEMENT, library: lib }), k = toSnippet(card, 'card', { naming: KIRBY, library: lib });
   ok('a variant that swaps a placed component draws the one it swaps in where it holds, the base\'s elsewhere',
     /\{show && \(styleOption === "elevated"\) && \(\s*<Elevated/.test(r) && /\{show && \(styleOption === "filled"\) && \(\s*<Filled/.test(r) && /\{show && \(!\(styleOption === "elevated"\) && !\(styleOption === "filled"\)\) && \(\s*<Outlined/.test(r)
-    && /\(show && \(styleOption === "elevated"\)\) && renderElevated\(/.test(w) && /\(show && \(styleOption === "filled"\)\) && renderFilled\(/.test(w) && /\(show && \(!\(styleOption === "elevated"\) && !\(styleOption === "filled"\)\)\) && renderOutlined\(/.test(w)
+    && /\(show && \(styleOption === "elevated"\)\) && placed\(parts\["[^"]*"\], renderElevated, /.test(w) && /\(show && \(styleOption === "filled"\)\) && placed\(parts\["[^"]*"\], renderFilled, /.test(w) && /\(show && \(!\(styleOption === "elevated"\) && !\(styleOption === "filled"\)\)\) && placed\(parts\["[^"]*"\], renderOutlined, /.test(w)
     && /if \(\$show && \(\$styleOption === 'elevated'\)\): \?>\s*<\?php snippet\('ds\/elevated'/.test(k) && /if \(\$show && \(\$styleOption === 'filled'\)\): \?>\s*<\?php snippet\('ds\/filled'/.test(k) && /'filled'\)\)\): \?>\s*<\?php snippet\('ds\/outlined'/.test(k), r);
   const combos = { ...card, variants: [{ when: { style: 'elevated', show: true }, combination: true, set: { 'bg.component': 'Elevated', 'bg.key': 'k-Elevated' } }, { when: { style: 'elevated' }, combination: true, set: { 'bg.component': 'Filled', 'bg.key': 'k-Filled' } }] };
   const rc = toReact(combos, 'card', { naming: CLASS, library: { ...lib, Card: combos } });
@@ -138,7 +138,7 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   const sw2 = { ...sw, props: { st: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, box: { kind: 'text', parent: 'root' }, 'box/t': { kind: 'container', parent: 'box' }, 'box/t/x': { kind: 'text', parent: 'box/t', content: 'a' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/dot' } }, variants: [{ when: { st: 'hover' }, set: { 'icon.component': 'Icon/case' } }] };
   const org2 = { ...org, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switcher' }, 'sw/box': { kind: 'container', parent: 'sw' }, 'sw/box/t': { kind: 'container', parent: 'sw/box' }, 'sw/box/t/x': { kind: 'text', parent: 'sw/box/t', content: 'b' }, 'sw/icon': { kind: 'instance', parent: 'sw', component: 'Icon/case' } } };
   const out2 = toElement(org2, 'org', { naming: ELEMENT, library: { Switcher: sw2, Org: org2 } });
-  ok('an override under one already named is not named again, and a field only a hover state changes is still a gap', /Box: drawn here/.test(out2) && !/X: drawn here/.test(out2) && /Icon: drawn here/.test(out2));
+  ok('an override under one already named is not named again; a glyph only a hover state changes there is passed in parts, no gap', /Box: drawn here/.test(out2) && !/X: drawn here/.test(out2) && !/Icon: drawn here/.test(out2) && /"icon": \{ attrs: \{ "data-icon": "Icon\/case" \} \}/.test(out2), out2);
   { const sw3 = { ...sw, props: { size: { type: 'enum', values: ['s', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/dot' } }, variants: [{ when: { size: 'l' }, set: { 'icon.content': 'x' } }] };
     const org3 = { ...org, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switcher' }, 'sw/icon': { kind: 'instance', parent: 'sw', component: 'Icon/case' } } };
     ok('a variant that sets one field of a part passes that field only: another component there is still an override', unexposed(org3, 'sw/icon', (n) => (n === 'Switcher' ? sw3 : null)) === 'part'); }
@@ -177,6 +177,47 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     ok('a glyph drawn at another size than its own, in any combination, says its own (data-icon-size); one drawn at its own, or an icon a prop swaps, does not',
       /"data-icon-size": "16"/.test(out) && !/data-icon-size/.test(even) && /"data-icon-size": "16"/.test(smaller) && !/data-icon-size/.test(swapped)); }
   ok('an override a placed component has no prop for is named as a gap, never dropped without a word', /Icon: drawn here inside Sw, which has no prop for it/i.test(toElement(org, 'org', { naming: ELEMENT, library: { Switcher: sw, Org: org } }))); }
+/* ── parts: what a holder sets inside a placed component that no prop of it carries (renderX's third argument) ── */
+{ // a tiny document, enough for dom.js: the generated modules run here as they run in Chrome
+  const el = (tag) => ({ tag, tagName: tag.toUpperCase(), attrs: {}, kids: [], up: null, setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }, hasAttribute(k) { return k in this.attrs; }, removeAttribute(k) { delete this.attrs[k]; },
+    addEventListener() {}, append(...xs) { for (const x of xs) { if (typeof x === 'object') x.up = this; this.kids.push(x); } }, get children() { return this.kids.filter((x) => typeof x === 'object'); },
+    remove() { this.up.kids.splice(this.up.kids.indexOf(this), 1); }, replaceWith(x) { x.up = this.up; this.up.kids.splice(this.up.kids.indexOf(this), 1, x); },
+    get textContent() { return this.kids.map((x) => (typeof x === 'string' ? x : x.textContent)).join(''); }, set textContent(s) { this.kids = [String(s)]; } });
+  globalThis.document = { createElement: el };
+  const find = (root, f) => { if (f(root)) return root; for (const k of root.kids || []) if (typeof k !== 'string') { const x = find(k, f); if (x) return x; } return null; };
+  const trail = { component: 'Trail', folder: 'trail', props: { tone: { type: 'enum', values: ['plain', 'loud'], figmaValues: ['Plain', 'Loud'], default: 'plain', figma: 'Tone' } }, anatomy: { root: { kind: 'container' }, mark: { kind: 'text', parent: 'root', content: 'T' } }, variants: [] };
+  const badge = { component: 'Badge', folder: 'badge', props: { count: { type: 'string', default: '1', figma: 'Count', sets: ['n'] } }, anatomy: { root: { kind: 'container' }, n: { kind: 'text', parent: 'root', content: '{count}' } }, variants: [] };
+  const item = { component: 'Item', folder: 'item', props: {}, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', order: 0, content: 'A' }, trail: { kind: 'instance', parent: 'root', order: 1, component: 'Trail', with: { Tone: 'Plain' } } }, variants: [] };
+  const row = (inside, props = {}, variants = []) => ({ component: 'Row', folder: 'row', props, variants, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item', with: {} }, ...inside } });
+  const lib = (r) => ({ Trail: trail, Badge: badge, Item: item, Row: r });
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'parts-'));
+  let k = 0;
+  const run = async (r, args = {}) => {
+    const L = lib(r), dir = path.join(tmp, String(k++));
+    fs.mkdirSync(dir); fs.writeFileSync(path.join(dir, 'dom.js'), DOM);
+    for (const c of Object.values(L)) { fs.mkdirSync(path.join(dir, c.folder)); fs.writeFileSync(path.join(dir, c.folder, `${c.folder}.js`), toElement(c, c.folder, { naming: ELEMENT, library: L })); }
+    const mod = await import(path.join(dir, 'row', 'row.js'));
+    return mod.renderRow(args);
+  };
+  const words = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'B' }, 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Trail', with: { Tone: 'Loud' } } });
+  const out = toElement(words, 'row', { naming: ELEMENT, library: lib(words) });
+  ok('parts: every render function takes a third argument, what its holder sets inside it, by part name', /export function renderItem\(\{[^}]*\} = \{\}, host = \{\}, parts = \{\}\)/.test(toElement(item, 'item', { naming: ELEMENT, library: lib(words) })));
+  ok('parts: words and props a placed component has no prop for are passed to its parts by name, never a gap', /renderItem, [^\n]*"label": \{ content: "B" \}/.test(out) && /"trail": \{ props: \{ tone: "loud" \} \}/.test(out) && !/drawn here inside/.test(out), out);
+  { const d = await run(words), label = find(d, (x) => x.attrs['data-part'] === 'label'), t = find(d, (x) => x.tag === 'ds-trail');
+    ok('parts: the placed component draws them on its own parts, nested ones through the part placed there', label.textContent === 'B' && t.attrs.tone === 'loud'); }
+  const swap = row({ 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Badge', with: { Count: '7' } } });
+  { const d = await run(swap), b = find(d, (x) => x.tag === 'ds-badge');
+    ok('parts: another component swapped in where no prop swaps it is drawn in the part\'s place, given its own props', !!b && b.attrs['data-part'] === 'trail' && b.textContent === '7' && !find(d, (x) => x.tag === 'ds-trail')); }
+  const hid = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'A' } });
+  { const d = await run(hid);
+    ok('parts: a part the instance hides (kept whole, the part not drawn) is taken away', !find(d, (x) => x.tag === 'ds-trail') && find(d, (x) => x.attrs['data-part'] === 'label').textContent === 'A'); }
+  const byProp = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'B' } }, { big: { type: 'boolean', default: false, figma: 'Big' } }, [{ when: { big: true }, set: { 'item/label.content': 'C' } }]);
+  { const a = find(await run(byProp), (x) => x.attrs['data-part'] === 'label').textContent, b = find(await run(byProp, { big: true }), (x) => x.attrs['data-part'] === 'label').textContent;
+    ok('parts: what they carry follows this component\'s own props, as each variant draws it', a === 'B' && b === 'C', `${a} ${b}`); }
+  { const d = (await import(path.join(tmp, '0', 'item', 'item.js'))).renderItem();
+    ok('parts: a call without them draws the component as it always did', find(d, (x) => x.attrs['data-part'] === 'label').textContent === 'A' && find(d, (x) => x.tag === 'ds-trail').attrs.tone === 'plain'); }
+  delete globalThis.document; fs.rmSync(tmp, { recursive: true, force: true });
+}
 const renamed = { component: 'Tag', props: {}, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', name: 'Icon' } }, variants: [], folder: 'tag' };
 ok('a layer whose name its id does not give back carries the design\'s name (data-figma-name)', /"data-part": "mark", "data-figma-name": "Icon"/.test(toElement(renamed, 'tag', { naming: ELEMENT, library: {} })));
 { const flush = { ...renamed, props: { flush: { type: 'boolean', default: false, figma: 'Flush' } }, variants: [{ when: { flush: true }, set: { 'mark.name': null } }] };
@@ -324,7 +365,7 @@ ok('and to-code styles that input and its placeholder by the same selectors: the
     anatomy: { root: { kind: 'container' }, inner: { kind: 'instance', parent: 'root', component: 'Screen', with: { Size: 'narrow' } } },
     variants: [{ when: { size: 'narrow' }, remove: ['inner'] }] };
   const js = toElement(screen, 'screen', { naming: ELEMENT, library: { Screen: { ...screen, folder: 'screen' } } });
-  ok('a component placing a sibling of its own set does not import itself', !/import \{ renderScreen \}/.test(js) && /export function renderScreen\(/.test(js) && /renderScreen\(\{ size: "narrow"/.test(js));
+  ok('a component placing a sibling of its own set does not import itself', !/import \{ renderScreen \}/.test(js) && /export function renderScreen\(/.test(js) && /placed\(parts\["[^"]*"\], renderScreen, \{ size: "narrow"/.test(js));
 }
 
 /* ── what a component puts in a placed component's slot (a menu's items) ── */
@@ -334,12 +375,12 @@ ok('and to-code styles that input and its placeholder by the same selectors: the
   const bar = { contract: 1, component: 'Bar', props: {}, anatomy: { root: { kind: 'container' }, menu: { kind: 'instance', parent: 'root', component: 'Menu', with: {} }, 'menu/list': { kind: 'slot', parent: 'menu', content: '{items}' }, 'menu/list/item': { kind: 'instance', parent: 'menu/list', component: 'Item', with: { Label: 'One' }, order: 0 }, 'menu/list/item_2': { kind: 'instance', parent: 'menu/list', component: 'Item', with: { Label: 'Two' }, order: 1 } }, variants: [] };
   const lib = { Item: { ...item, folder: 'item' }, Menu: { ...menu, folder: 'menu' }, Bar: { ...bar, folder: 'bar' } };
   const el = toElement(bar, 'bar', { naming: ELEMENT, library: lib });
-  ok('what a component puts in a placed component\'s slot is that slot\'s content, each its own component', /renderMenu\(\{[^}]*items: \[renderItem\(\{ label: "One" \}[^\]]*renderItem\(\{ label: "Two" \}/.test(el) && /import \{ renderItem \}/.test(el));
+  ok('what a component puts in a placed component\'s slot is that slot\'s content, each its own component', /placed\(parts\["[^"]*"\], renderMenu, \{[^}]*items: \[placed\(parts\["[^"]*"\], renderItem, \{ label: "One" \}[^\]]*placed\(parts\["[^"]*"\], renderItem, \{ label: "Two" \}/.test(el) && /import \{ renderItem \}/.test(el));
   ok('and in React, the slot prop holds them', /<Menu[^>]*items=\{<>[\s\S]*<Item[^>]*label="One"[\s\S]*<\/>\}/.test(toReact(bar, 'bar', { naming: CLASS, library: lib })));
   const grouped = { ...bar, props: { big: { type: 'boolean', default: false, axis: true, figma: 'Big' } }, anatomy: { ...bar.anatomy, 'menu/list/group': { kind: 'container', parent: 'menu/list', order: 2 }, 'menu/list/group/item': { kind: 'instance', parent: 'menu/list/group', component: 'Item', with: { Label: 'Three' } } },
     variants: [{ when: { big: true }, add: {} }] };
   const g = toElement(grouped, 'bar', { naming: ELEMENT, library: lib });
-  ok('a box it puts there keeps what it holds', /h\("div", \{ "data-part": "group" \},\s*renderItem\(\{ label: "Three" \}/.test(g) && toParity(grouped, 'bar', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers['Menu > List > Group > Item'] === 'ds-bar > [data-part="menu"] > [data-part="list"] > [data-part="group"] > [data-part="menu-list-group-item"]');
+  ok('a box it puts there keeps what it holds', /h\("div", \{ "data-part": "group" \},\s*placed\(parts\["[^"]*"\], renderItem, \{ label: "Three" \}/.test(g) && toParity(grouped, 'bar', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers['Menu > List > Group > Item'] === 'ds-bar > [data-part="menu"] > [data-part="list"] > [data-part="group"] > [data-part="menu-list-group-item"]');
   const titled = { contract: 1, component: 'Panel', props: { title: { type: 'slot', figma: 'Title' } }, anatomy: { root: { kind: 'container' }, head: { kind: 'slot', parent: 'root', content: '{title}' } }, variants: [] };
   ok('a slot is marked by its contract name, whatever its name in code', /"data-slot": "title"/.test(toElement(titled, 'panel', { naming: ELEMENT, library: {} })));
   // a variant that draws the slot elsewhere (a dialog's content moved to the root when immersive): that part shows the slot too
@@ -658,7 +699,7 @@ else {
     variants: [{ when: { size: 'l' }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { state: 'hover' }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { on: true }, set: { 'check.with': { Selected: 'True', Tone: 'Plain' } } }] };
   const lib = { Check: { ...check, folder: 'check' }, Row: { ...row, folder: 'row' } };
   const r = toReact(lib.Row, 'row', { naming: CLASS, library: lib }), w = toElement(lib.Row, 'row', { naming: ELEMENT, library: lib });
-  ok('a flag a variant sets on a placed component follows the prop that sets it', /<Check [^>]*selected=\{on\}/.test(r) && /renderCheck\(\{ selected: on,/.test(w));
+  ok('a flag a variant sets on a placed component follows the prop that sets it', /<Check [^>]*selected=\{on\}/.test(r) && /placed\(parts\["[^"]*"\], renderCheck, \{ selected: on,/.test(w));
   ok('any other value a variant sets is a choice by the props, a later layer first, the base\'s elsewhere, and a pointer state\'s is not the markup\'s', /tone=\{on \? "plain" : \(\(size === "l"\) \? "loud" : "plain"\)\}/.test(r) && !/state ===/.test(r));
   // overlapping variants resolve as the props do: a later one over an earlier, so a pair outranks the one it narrows, and
   // one that gives back the base's value still outranks what it follows
