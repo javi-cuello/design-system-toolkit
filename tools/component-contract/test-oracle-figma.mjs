@@ -237,6 +237,16 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     assert.ok(!own(['fills']), 'a fill override is not an opacity one');
     assert.ok(own(['opacity']), 'an opacity override is the host\'s, unsaid');
     assert.ok(own(['someNewField']), 'a field no contract field maps keeps every row');
+    // an inner layer the contract names: only its overridden field stays a row
+    const c3 = structuredClone(c); c3.anatomy['icon/glyph'] = { kind: 'graphic', parent: 'icon', order: 0, name: 'Glyph' };
+    const inner = (fields) => { const s = structuredClone(set); for (const v of s.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.children[0].opacity = 0.5; i.overrides = fields ? [{ id: v.id + 'g', overriddenFields: fields }] : []; } return compareContract('chip', s, c3, remote).rows.filter((x) => x.kind === 'contract:not stated' && /glyph/i.test(x.path)).map((x) => x.path.split('.').pop()); };
+    assert.deepEqual(inner(null), [], 'nothing overridden: the glyph is its library\'s');
+    assert.deepEqual(inner(['fills', 'exportSettings']), [], 'a colour override and an ignored one leave its opacity the main\'s');
+    assert.ok(inner(['opacity']).includes('opacity'), 'its opacity, overridden here, unsaid: a row');
+    // a chain with a contract-less main that is neither another library's nor an icon keeps its rows
+    const chain = structuredClone(set); for (const v of chain.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.children[0] = { id: v.id + 'n', name: 'Nested', type: 'INSTANCE', componentId: 'C:4', size: { x: 12, y: 12 }, relativeTransform: T(2, 2), overrides: [{ id: v.id + 'nv', overriddenFields: ['fills'] }], children: [{ id: v.id + 'nv', name: 'Dot', type: 'VECTOR', size: { x: 4, y: 4 }, relativeTransform: T(0, 0) }] }; }
+    const cx4 = { ...remote, components: { ...remote.components, 'C:4': { key: 'k-local', name: 'Local' } } };
+    assert.ok(compareContract('chip', chain, c, cx4).rows.some((x) => x.kind === 'contract:not stated' && /Dot/.test(x.path)), 'a local main without a contract in the chain: not stated');
     // a main with no contract that is neither: still "not stated"
     assert.ok(compareContract('chip', set, c, { ...ctx, icons: new Set(['Other']) }).rows.some((x) => x.kind === 'contract:not stated'));
   }

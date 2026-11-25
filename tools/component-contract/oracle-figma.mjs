@@ -805,7 +805,7 @@ export function compareContract(component, setNode, contract, ctx) {
         if (q.type !== 'INSTANCE') continue;
         const x = expansion(q);
         if (x === UNSPELT) return { unspelt: true };
-        if (!x) { whole = false; const w = elsewhere(q); if (w) { why = why || w; if (q === n) self = true; } else plain = true; continue; }
+        if (!x) { whole = false; const w = elsewhere(q); if (w) { why = why || w; if (q === n && !inInstance(n)) self = true; } else plain = true; continue; }
         // an instance's own size is its placement's (fill, hug, a fixed width, or its place where stretched), never its main's root's
         if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; } if (!said.length) { inner = x.turned.has(x.byNode.get(n)); if (q !== n) geo = { q, x }; } said.push(o); }
       }
@@ -815,7 +815,7 @@ export function compareContract(component, setNode, contract, ctx) {
       return { said: said.length ? Object.assign({}, ...said) : null, whole, turned: inner, geo, away };
     };
     // the fields any instance around a layer (itself included) lists as overridden on it, in REST's names
-    const overriddenHere = (n) => { const out = new Set(); for (let q = n; q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') for (const o of overridesOf(q)) if (o.id === n.id) for (const f of o.overriddenFields) out.add(f); return out; };
+    const overriddenHere = (n) => { const out = new Set(); for (let q = n; q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') for (const o of overridesOf(q)) if (o.id === n.id) for (const f of o.overriddenFields) if (!OVERRIDE_IGNORED.has(f)) out.add(f); return out; };
     // a field left to a main said elsewhere: skipped, named, unless an instance overrides it here (a field REST names
     // that no contract field maps to keeps every field a row) or it is the placed instance's own place
     const aside = (vname, id, a, b, away) => {
@@ -983,7 +983,7 @@ const SPELL = "an instance's props its main's contract cannot spell";
 // the fields a placed instance says of itself, never its main's
 const OWN = ['kind', 'component', 'key', 'with', 'swappedBy'];
 // a placed instance's own place and size: the host's to say, never its main's
-const PLACE = ['width', 'height', 'absolute', 'constraints', 'flip', 'rotation'];
+const PLACE = ['width', 'height', 'absolute', 'position', 'constraints', 'flip', 'rotation'];
 // the overridden fields REST lists, by the contract field each one sets; a contract field not listed here, or an
 // overridden field none maps, keeps the row
 const TEXT_OVERRIDES = ['fontSize', 'fontFamily', 'fontPostScriptName', 'fontWeight', 'italic', 'letterSpacing', 'lineHeightPx', 'lineHeightPercent', 'lineHeightPercentFontSize', 'lineHeightUnit', 'textCase', 'textDecoration', 'inheritTextStyleId', 'openTypeFlags', 'paragraphSpacing', 'listSpacing', 'textAlignHorizontal', 'textAlignVertical', 'textAutoResize', 'characterStyleOverrides', 'styleOverrideTable', 'lineIndentations', 'lineTypes', 'hangingPunctuation', 'maxLines', 'boundVariables'];
