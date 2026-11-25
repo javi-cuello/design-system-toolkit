@@ -324,6 +324,23 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const st = (() => { const set = structuredClone(setNode); for (const v of set.children) { const x = anim(v, 80, 8, -100); x.children[0].constraints = { horizontal: 'LEFT_RIGHT', vertical: 'SCALE' }; v.children.push(x); } return compareContract('chip', set, host(80, 8), cx); })();
     assert.ok(st.rows.some((x) => x.path === 'anim/bar' && x.kind === 'contract:absolute.x'), 'a stretched layer\'s x, held');
   }
+  // the walk keeps an instance's first eight overrides, then a style's alone is left out: REST's list is cut the same way
+  {
+    const fields = [['inheritFillStyleId'], ['fills', 'inheritFillStyleId'], ['inheritFillStyleId'], ['fills'], ['inheritFillStyleId'], ['fills'], ['inheritFillStyleId'], ['inheritFillStyleId'], ['fills'], ['fills']];
+    const set = structuredClone(setNode);
+    for (const v of set.children) v.children.push({ id: v.id + 'i', name: 'Icon', type: 'INSTANCE', componentId: 'C:9', size: { x: 16, y: 16 }, relativeTransform: T(40, 8), overrides: fields.map((f, i) => ({ id: `${v.id}i;${i}`, overriddenFields: f })), children: [] });
+    const s = storedFull();
+    for (const v of s.variants) v.children.push({ name: 'Icon', type: 'INSTANCE', overrides: fields.slice(0, 8).map((f) => f.map((x) => x.replace('inheritFillStyleId', 'fillStyleId')).join(',')), children: [] });
+    assert.deepEqual(compareSpec('chip', set, s, ctx).rows.filter((x) => x.kind === 'spec:overrides'), [], 'three of the first eight, not four of ten');
+    // an effect style's override is REST's `effects` where the plugin API says effectStyleId
+    for (const v of set.children) v.children.at(-1).overrides[0].overriddenFields = ['effects', 'inheritFillStyleId'];
+    for (const v of s.variants) v.children.at(-1).overrides[0] = 'effectStyleId,fillStyleId';
+    assert.deepEqual(compareSpec('chip', set, s, ctx).rows.filter((x) => x.kind === 'spec:overrides'), [], 'one override, named two ways');
+    // and a stroke style's, REST's `strokes`
+    for (const v of set.children) v.children.at(-1).overrides[2].overriddenFields = ['strokes'];
+    for (const v of s.variants) v.children.at(-1).overrides[2] = 'strokeStyleId';
+    assert.deepEqual(compareSpec('chip', set, s, ctx).rows.filter((x) => x.kind === 'spec:overrides'), [], 'a stroke style\'s, named two ways');
+  }
   // the counts: a component nothing was checked on is not checked, never a match
   const R = (checked, rows = [], skipped = {}) => ({ rows, checked, skipped });
   const rep = report('lib', [
@@ -358,6 +375,9 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
   // a style-only override the plugin lists and REST does not (a stroke style's) fakes no row
   const host2 = structuredClone(host); host2.children[0].overrides = [{ id: 'i', overriddenFields: ['height', 'width'] }];
   assert.deepEqual(compareSpec('host', host2, stored(['height,width', 'strokeStyleId']), ctx).rows.filter((x) => x.kind === 'spec:overrides'), [], 'a plugin-only strokeStyleId');
+  // REST's `text` is always beside inheritTextStyleId: the text style's, wherever the entry has other styles too
+  const host3 = structuredClone(host); host3.children[0].overrides[1].overriddenFields = ['inheritFillStyleId', 'inheritTextStyleId', 'text'];
+  assert.deepEqual(compareSpec('host', host3, stored(['height,width', 'fillStyleId,textStyleId']), ctx).rows.filter((x) => x.kind === 'spec:overrides'), [], 'a fill and a text style, named two ways');
 }
 
 /* ---- one real pair: a small component as Figma's REST and the snapshot gave it (names of its library scrubbed) */

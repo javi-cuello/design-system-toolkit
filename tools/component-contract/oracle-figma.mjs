@@ -337,7 +337,8 @@ export function restWalk(n, ctx, depth = 0, parent = null, at, inInstance = fals
     if (ov.length && depth < 12) {
       // REST names a style override inheritFillStyleId where the plugin API says fillStyleId
       // the plugin API's `textStyleId` alone is REST's `inheritTextStyleId,text`
-      o.overrides = ov.map((x) => (x.overriddenFields.length === 2 && x.overriddenFields.includes('inheritTextStyleId') && x.overriddenFields.includes('text') ? { overriddenFields: ['textStyleId'] } : x)).map((x) => [...new Set(x.overriddenFields.map((f) => (OVERRIDE_NAME[f] || f.replace(/^inherit(\w)(\w*StyleId)$/, (_, a, b) => a.toLowerCase() + b))))].join(','));
+      // (REST's `text` is always beside inheritTextStyleId: the text style's override, the plugin API's textStyleId)
+      o.overrides = ov.map((x) => (x.overriddenFields.includes('inheritTextStyleId') && x.overriddenFields.includes('text') ? { overriddenFields: x.overriddenFields.filter((f) => f !== 'text') } : x)).map((x) => [...new Set(x.overriddenFields.map((f) => (OVERRIDE_NAME[f] || f.replace(/^inherit(\w)(\w*StyleId)$/, (_, a, b) => a.toLowerCase() + b))))].join(','));
       o.children = (n.children || []).filter((c) => c.visible !== false).map((c) => restWalk(c, ctx, depth + 1, n, undefined, true, inner));
     }
     return o;
@@ -371,12 +372,17 @@ export function specOurs(s, figmaNode) {
   if (Array.isArray(o.overrides)) o.overrides = overrideFields(o.overrides);
   return o;
 }
-// an override's fields, sorted, a style id's left out (REST lists a fill style's override and not always a stroke's)
-const overrideFields = (list) => list.map((x) => x.split(',').filter((f) => !/StyleId$/.test(f)).sort().join(',')).filter(Boolean).sort();
+// an override's fields, sorted, a style id's left out (REST lists a fill style's override and not always a stroke's),
+// and an entry of strokes or effects alone, either side's: REST has no inheritStrokeStyleId or inheritEffectStyleId, and
+// lists a stroke or effect style's override as `strokes` or `effects`, or not at all, where the plugin API says
+// strokeStyleId or effectStyleId (a count only: the fields' names are not checked)
+const PAINT_ONLY = new Set(['strokes', 'effects']);
+const overrideFields = (list) => list.map((x) => x.split(',').filter((f) => !/StyleId$/.test(f))).filter((fs) => fs.some((f) => !PAINT_ONLY.has(f))).map((fs) => fs.sort().join(',')).sort();
 function restOurs(o) {
   const out = { ...o };
   delete out.children;
-  if (Array.isArray(out.overrides)) out.overrides = overrideFields(out.overrides);
+  // the walk keeps an instance's first eight (code.js), then a style's alone is left out: cut the same way
+  if (Array.isArray(out.overrides)) out.overrides = overrideFields(out.overrides.slice(0, 8));
   return out;
 }
 const same = (a, b, tol = 0.011) => {
@@ -469,8 +475,8 @@ function diffTree(walked, stored, restRoot, t) {
       // reads through to its component; an ellipse's radius; whether strokes take room; sizing on a vector)
       if (!(k in a) && (k === 'strokesInLayout' || k === 'sizing' || (k === 'smoothing' && f.type === 'INSTANCE') || (k === 'radius' && f.type === 'ELLIPSE'))) { t.skip(`${k}: REST silent`); continue; }
       if (k === 'textStyle' && (a[k] === 'mixed' || b[k] === 'mixed')) { t.skip('textStyle of mixed text'); continue; }
-      // how many layers an instance overrides (the walk keeps eight); the fields' names are REST's own, not checkable
-      if (k === 'overrides' && Array.isArray(a[k]) && Array.isArray(b[k])) { t.check(variant, p, k, Math.min(8, a[k].length), b[k].length); continue; }
+      // how many layers an instance overrides (of the first eight, restOurs); the fields' names are REST's own, not checkable
+      if (k === 'overrides' && Array.isArray(a[k]) && Array.isArray(b[k])) { t.check(variant, p, k, a[k].length, b[k].length); continue; }
       if (k === 'instanceOf' && typeof a[k] === 'string' && typeof b[k] === 'string') { t.check(variant, p, k, a[k], b[k], (x, y) => y === x || y.endsWith('/' + x)); continue; }
       if (k === 'props') { const n = dropUnnamed(a[k], b[k]); if (n) t.skip('swap REST does not name', n); }
       t.check(variant, p, k, a[k], b[k]);
