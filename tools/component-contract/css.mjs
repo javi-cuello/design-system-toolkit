@@ -154,11 +154,12 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     const dash = !!b.dash && (!Array.isArray(b.dash) || b.dash.length > 0);
     // (a stroke that takes room in the layout is a border, which dashes as it is)
     const dashed = dash && !(align === 'inside' && b.inLayout) && on.every(Boolean) && widths.every((x) => x === widths[0]) && !(e.kind === 'graphic' && (e.width === 0 || e.height === 0));
-    if (dash && !dashed && !(align === 'inside' && b.inLayout)) unread.push('border.dash (on some sides: CSS dashes a whole outline only)');
     // a line (a layer no wide or no tall, a divider): its stroke is the one edge it draws, its leading one, as parity reads it
     const line = e.kind === 'graphic' && (e.width === 0 || e.height === 0);
+    // (a line dashes that one edge: a border dashes as it is)
+    if (dash && !dashed && !line && !(align === 'inside' && b.inLayout)) unread.push('border.dash (on some sides: CSS dashes a whole outline only)');
     if (dashed) { put('outline', `${w(0)} dashed ${c}`); put('outline-offset', align === 'inside' ? `calc(-1 * ${w(0)})` : align === 'center' ? `calc(${w(0)} / -2)` : '0'); }
-    else if (line) put(e.width === 0 ? 'border-left' : 'border-top', `${w(on.findIndex(Boolean) < 0 ? 0 : on.findIndex(Boolean))} solid ${c}`);
+    else if (line) put(e.width === 0 ? 'border-left' : 'border-top', `${w(on.findIndex(Boolean) < 0 ? 0 : on.findIndex(Boolean))} ${dash ? 'dashed' : 'solid'} ${c}`);
     else if (align === 'inside' && b.inLayout) {
       SIDES.forEach((s, i) => { if (on[i]) put(`border-${{ top: 'top', end: 'right', bottom: 'bottom', start: 'left' }[s]}`, `${w(i)} ${dash ? 'dashed' : 'solid'} ${c}`); });
     } else if (on.every(Boolean) && widths.every((x) => x === widths[0])) {

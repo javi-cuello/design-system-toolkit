@@ -744,6 +744,9 @@ ok('a placed component stretched by its insets takes no size from its main', dec
 { const P = [{ windingRule: 'NONZERO', data: 'M 0 0 L 4 0 L 4 4 Z' }], none = (e) => { const d = declarations({ kind: 'graphic', background: 'C/s', width: 4, height: 4, paths: P, ...e }, {}, names); return !d.decls.some(([p]) => p === 'clip-path') && d.unread.some((f) => /^paths/.test(f)); };
   ok('a vector drawn at another size than its paths\' (scaled, stretched, filled, hugging) is never clipped to them', none({ constraints: { horizontal: 'scale', vertical: 'min' }, absolute: { x: 0, y: 0 } }) && none({ constraints: { horizontal: 'min', vertical: 'stretch' }, absolute: { x: 0, y: 0 } }) && none({ width: 'fill' }) && none({ height: 'hug' }));
   ok('…nor one whose stroke or shadow the clip would cut', none({ border: { color: 'C/s', width: 1, align: 'outside' } }) && none({ border: { color: 'C/s', width: 1, align: 'center' } }) && none({ shadow: 'Elevation/1' })); }
+// a dashed line (a divider no tall): its one edge dashed, nothing unread
+{ const l = declarations({ kind: 'graphic', width: 160, height: 0, border: { color: 'C/s', align: 'center', dash: [2, 2], width: 1 } }, {}, names);
+  ok('a dashed line draws its one edge dashed, and leaves nothing unread', Object.fromEntries(l.decls)['border-top'] === '1px dashed var(--c-s)' && !l.unread.length); }
 // a dashed stroke all round: an outline dashed, pulled in by an inside stroke's width; on some sides, named, not dropped
 { const d = declarations({ kind: 'container', border: { color: 'C/s', width: 1, dash: [2, 2] } }, {}, names), D = Object.fromEntries(d.decls.map(([p, v]) => [p, v]));
   const side = declarations({ kind: 'container', border: { color: 'C/s', width: [1, 0, 0, 0], dash: [2, 2] } }, {}, names);

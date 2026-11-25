@@ -2275,6 +2275,8 @@ async function main() {
             if (bw.some(Boolean)) {
               const color = s[`border${EDGES[bw.findIndex(Boolean)]}Color`];
               e.border = bw.every((v) => v === bw[0]) ? { color, width: bw[0], inLayout: true } : { color, width: bw, sides: { top: bw[0], end: bw[1], bottom: bw[2], start: bw[3] }, inLayout: true };
+              // (dashed, as css.mjs dashes a line's one edge or a border that takes room)
+              if (s[`border${EDGES[bw.findIndex(Boolean)]}Style`] === 'dashed') e.border.dash = 'dashed';
               // (dashed, as css.mjs writes a dashed stroke that takes room)
               if (EDGES.some((k, i) => bw[i] && s[`border${k}Style`] === 'dashed')) e.border.dash = 'dashed';
             }
@@ -2671,7 +2673,7 @@ async function main() {
           // (no wide: 0, or the edge's own width where a border-box reset counts it in)
           const raw = Array.isArray(raw0) ? raw0 : [], thin = (n, i) => n === 0 || (typeof n === 'number' && n === raw[i]);
           const lead = thin(x.width, 3) ? 3 : thin(x.height, 0) ? 0 : -1;
-          if (x.kind === 'graphic' && lead >= 0 && Array.isArray(width) && width.every((v, i) => (i === lead) === !!v)) x.border = { color: x.border.color, width: width[lead] };
+          if (x.kind === 'graphic' && lead >= 0 && Array.isArray(width) && width.every((v, i) => (i === lead) === !!v)) x.border = { color: x.border.color, width: width[lead], ...(x.border.dash && { dash: x.border.dash }) };
         }
         // an outline is the design's focus ring: a stroke-only box stretched past this one by how far the outline's outer
         // edge clears it, its corners this box's own grown by as much, as to-code's ringOf writes it the other way
