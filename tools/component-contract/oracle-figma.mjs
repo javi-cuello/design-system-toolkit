@@ -154,7 +154,8 @@ export function paintsOf(list, all = false) {
     if (bound) out.push(BOUND);
     else if (p.type === 'SOLID') out.push(colour(p.color, op));
     else if (p.type === 'GRADIENT_LINEAR') out.push(gradient(p));
-    else if (p.type === 'IMAGE') out.push('IMAGE:' + p.scaleMode);
+    // (REST's STRETCH is the plugin API's CROP, the name the contract keeps: REST file-property-types, plugin typings)
+    else if (p.type === 'IMAGE') out.push('IMAGE:' + (p.scaleMode === 'STRETCH' ? 'CROP' : p.scaleMode));
     else out.push(p.type);
   }
   return out;

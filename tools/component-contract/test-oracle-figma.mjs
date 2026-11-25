@@ -22,6 +22,7 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   assert.deepEqual(paintsOf([{ type: 'SOLID', color: white, visible: false }]), []);
   assert.deepEqual(paintsOf([{ type: 'SOLID', color: white, boundVariables: { color: { id: 'VariableID:1' } } }]), [BOUND], 'a bound paint is bound, its name not checkable');
   assert.deepEqual(paintsOf([{ type: 'IMAGE', scaleMode: 'FILL' }]), ['IMAGE:FILL']);
+  assert.deepEqual(paintsOf([{ type: 'IMAGE', scaleMode: 'STRETCH' }]), ['IMAGE:CROP']);
   const g = paintsOf([{ type: 'GRADIENT_LINEAR', gradientHandlePositions: [{ x: 0.5, y: 0 }, { x: 0.5, y: 1 }, { x: 0, y: 0 }], gradientStops: [{ position: 0, color: white }, { position: 1, color: { r: 0, g: 0, b: 0, a: 1 } }] }])[0];
   assert.equal(g.angle, 180, 'top to bottom is 180°, as CSS says it');
   assert.deepEqual(g.stops.map((s) => s.color), ['#ffffff', '#000000']);
