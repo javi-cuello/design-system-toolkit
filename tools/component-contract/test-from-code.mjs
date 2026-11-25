@@ -844,6 +844,8 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
   ok('…its stroke read as drawn, before its outline is left to its component', src.includes("boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true;")
     && src.includes('readCleared(anatomy, mainOf, L.value); normalForm(anatomy); colourKept('));
+  ok('…and a part Figma says cleared that code draws nothing for is the same: both draw nothing',
+    src.includes("if (verdict === 'differs' && fv === CLEARED && cv == null && (k === 'background' || k === 'border' || k === 'shadow')) verdict = 'same token';"));
   // its fill likewise, only where the page paints it clear (fillless): a fill merely unread says nothing
   const F = { component: 'Card', props: {}, anatomy: { root: { kind: 'container', background: 'Bg/card' } }, variants: [] };
   const f = readCleared({ root: { kind: 'container' }, c: { kind: 'instance', component: 'Card', fillless: true }, u: { kind: 'instance', component: 'Card', strokeless: true }, k: { kind: 'instance', component: 'Card', fillless: true, background: 'Bg/other' } }, (n) => (n === 'Card' ? F : null));
