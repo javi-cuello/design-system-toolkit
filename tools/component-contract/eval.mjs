@@ -56,7 +56,7 @@ import { fileURLToPath } from 'node:url';
 import { contracts, hashOf } from './official.mjs';
 import { roundTrip, drawSettings } from './to-figma.mjs';
 import { libraryOf } from '../parity/project.mjs';
-import { partsOf, unexposed, pointerWords } from './to-markup.mjs';
+import { partsOf, unexposed, pointerWords, isDrawing } from './to-markup.mjs';
 import { sharesNeverWritten } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
@@ -194,11 +194,19 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const LOOK = new Set(['layout', 'radius', 'border', 'shadow', 'overflow', 'smoothing']);
   // (only where the design states one: a look the reading shows and the design leaves to the component is the
   // component's own sheet drifting, a difference)
-  const ownLook = (el, field, row) => !!mainOf && !!row && row.library != null && LOOK.has(field.split('.')[0]) && (all[el] || {}).kind === 'instance' && !!mainOf(all[el].component, all[el].key);
+  const ownLook = (el, field, row) => !!mainOf && !!row && row.library != null && LOOK.has(field.split('.')[0]) && (all[el] || {}).kind === 'instance' && !!mainOf(all[el].component, all[el].key) && !foreign(el);
   // a component the library does not hold (an icon set's, or one the snapshot never read): to-markup can only mark where
   // it goes (data-icon), so its insides, the props it is given and its own layout and clipping are its own component's,
   // which code draws; its size and place in this one are this one's, and stay measured
-  const foreign = (el) => !!mainOf && (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key);
+  // (and one the library holds that is a drawing alone, swapped by a prop, this component's or that of the placed
+  // component it sits in: to-markup draws it by name, as an icon's mark, so its own layout is its drawing's too)
+  const swapsOf = (x) => new Set(Object.values((x && x.props) || {}).flatMap((p) => p.swaps || []));
+  const swappedHere = (el) => {
+    if (swapsOf(contract).has(el)) return true;
+    for (let up = (all[el] || {}).parent; up && all[up]; up = all[up].parent) if (all[up].kind === 'instance') { const hm = mainOf(all[up].component, all[up].key); return !!hm && swapsOf(hm).has(el.slice(up.length + 1)); }
+    return false;
+  };
+  const foreign = (el) => { const e = all[el] || {}; if (!mainOf || e.kind !== 'instance') return false; const m = mainOf(e.component, e.key); return !m || (isDrawing(m) && swappedHere(el)); };
   const inForeign = (el) => el.split('/').some((_, i, s) => i < s.length - 1 && foreign(s.slice(0, i + 1).join('/')));
   // (but its Size: to-markup passes that one, data-icon-size, and from-code reads it back)
   // (nor a swap: the prop whose value names the component placed in it, its glyph, which code draws or does not, and

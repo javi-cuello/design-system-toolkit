@@ -296,6 +296,11 @@ function addedOf(a, id, mainOf, { library, lang, settings }) {
   return { tag: e.kind === 'container' ? 'div' : 'span', attrs: { ...attrs, ...(style && { style }), ...(e.kind === 'graphic' && { 'aria-hidden': 'true' }) }, text: e.kind === 'text' && typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) ? e.content : undefined, kids };
 }
 
+/* A main that is a drawing alone (no props, no words, nothing placed: an empty state's ghost, a slot's placeholder): a
+   swap of it is drawn by name, as an icon's mark (swapOf), so its own layout and clipping are its drawing's, as a
+   component the library does not hold (eval.mjs gapOf). */
+export const isDrawing = (m) => !!m && !Object.keys(m.props || {}).length && Object.values(m.anatomy || {}).every((x) => x && ['container', 'graphic'].includes(x.kind));
+
 /* A swap: among icons (a component the library does not hold), the icon's name; of a part inside a placed component,
    that component's own prop, passed to it; among the library's components, what is placed. */
 function swapOf(c, p, library, lang) {
@@ -314,9 +319,8 @@ function swapOf(c, p, library, lang) {
     return { type: theirs ? theirs.type : 'node', default: given ?? (theirs && theirs.default) ?? '', pass: { part: up, to: theirs ? theirs.name : to } };
   }
   // a swap of a drawing the code takes by name, as an icon is: one no main in the library draws, or one whose main is a
-  // drawing alone (no props, no words, nothing placed: an empty state's ghost), where a component is the caller's to place
-  const drawing = (m) => m && !Object.keys(m.props || {}).length && Object.values(m.anatomy || {}).every((x) => x && ['container', 'graphic'].includes(x.kind));
-  if (e && e.kind === 'instance' && (!placedOf(library, e) || drawing(placedOf(library, e)))) return { type: 'icon', default: e.component || '' };
+  // drawing alone (isDrawing), where a component is the caller's to place
+  if (e && e.kind === 'instance' && (!placedOf(library, e) || isDrawing(placedOf(library, e)))) return { type: 'icon', default: e.component || '' };
   // a component of the library's, swapped: content the caller passes, the design's own instance where it passes none
   // (`placed`: each part it swaps drawn so, and the first's component, which a reading of the code takes as its default)
   if (e && e.kind === 'instance' && placedOf(library, e)) {

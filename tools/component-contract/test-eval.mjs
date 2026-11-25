@@ -222,6 +222,16 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a placed component\'s own layout overridden on the instance is code\'s to say (its own sheet styles it); its size, its fill, and a look the design leaves to the component (its sheet drifting), are not',
     left('p.layout', { library: { align: 'center' } }) && left('p.layout.align', { library: 'center' }) && !left('p.width', { library: 'fill' }) && !left('p.background', { library: 'C/x' })
     && !left('p.layout', { library: null, drawn: { align: 'end' } })); }
+{ // a swap of a drawing alone (a slot's placeholder: no props, nothing but boxes and shapes) is drawn by name, as an
+  // icon's mark: its own layout is its drawing's, as a component the library does not hold; unswapped, it is placed
+  const slot = { contract: 1, component: 'Slot', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', align: 'start' } }, bg: { kind: 'graphic', parent: 'root' } }, variants: [] };
+  const c = { contract: 1, component: 'Bar', props: { middle: { type: 'instance', swaps: ['middle'] } }, anatomy: { root: { kind: 'container' }, middle: { kind: 'instance', parent: 'root', component: 'Slot', layout: { direction: 'row', align: 'center' } } }, variants: [] };
+  const g = gapOf(c, (n) => (n === 'Slot' ? slot : null)), g2 = gapOf({ ...c, props: {} }, (n) => (n === 'Slot' ? slot : null));
+  ok('a swapped drawing\'s own layout is its mark\'s (foreign-own); its size stays a difference', g('middle.layout', { library: { align: 'center' } }) === 'foreign-own' && !g('middle.width', { library: 'fill' })
+    && g2('middle.layout', { library: { align: 'center' } }) !== 'foreign-own');
+  // (and inside a placed component whose own prop swaps it: drawn as a mark there too)
+  const page = { contract: 1, component: 'Page', props: {}, anatomy: { root: { kind: 'container' }, bar: { kind: 'instance', parent: 'root', component: 'Bar' }, 'bar/middle': { kind: 'instance', parent: 'bar', component: 'Slot', layout: { direction: 'row', align: 'center' } } }, variants: [] };
+  ok('a drawing swapped by the placed component\'s own prop is its mark there too', gapOf(page, (n) => ({ Slot: slot, Bar: c })[n] || null)('bar/middle.layout', { library: { align: 'center' } }) === 'foreign-own'); }
 { const item = { contract: 1, component: 'Item', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
   const list = { contract: 1, component: 'List', props: { size: { type: 'enum', values: ['l', 's'], default: 'l' } }, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item', with: { Size: 'L' } } },
     variants: [{ when: { size: 's' }, set: { 'item.with': { Size: 'S' } } }] };
