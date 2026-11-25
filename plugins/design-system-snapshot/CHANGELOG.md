@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.89.4] - 2026-11-25
+### Fixed
+- **A variable Figma never returns no longer hangs the snapshot.** Each lookup is given up after 15 s; after three, the rest are not asked, and `tokens._meta.variablesUnanswered` says how many went unread. On one large library the first of 171 never answered and Cancel could not stop it.
+
 ## [0.89.3] - 2026-11-25
 ### Fixed
 - **Reading the variables the components use is counted.** A large library binds thousands, each fetched on its own; the window showed one still line.

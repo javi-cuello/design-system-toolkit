@@ -1,4 +1,4 @@
-// Design system snapshot — v0.89.3 · plugin-standard v1.1.0
+// Design system snapshot — v0.89.4 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -165,8 +165,22 @@ async function modesOf(n) {
 /** @type {Record<string, Variable | null>} */
 const varCache = {};
 /** @param {string} id */
+// A lookup Figma never answers (a library variable it cannot fetch: on one large library the first of 171 hung the
+// run for good, Cancel included, 2026-11-25) is given up after a while; after three, the rest are not asked, and the
+// tokens say how many went unread.
+const VARIABLE_WAIT = 15000;
+let unanswered = 0;
 async function variable(id) {
-  if (!(id in varCache)) varCache[id] = await figma.variables.getVariableByIdAsync(id);
+  if (!(id in varCache)) {
+    if (unanswered >= 3) return null;
+    const LATE = {};
+    let timer;
+    const late = new Promise((resolve) => { timer = setTimeout(() => resolve(LATE), VARIABLE_WAIT); });
+    const got = await Promise.race([figma.variables.getVariableByIdAsync(id), late]);
+    clearTimeout(timer);
+    if (got === LATE) { unanswered++; return null; }
+    varCache[id] = got;
+  }
   return varCache[id];
 }
 /** @param {unknown} id */
@@ -558,6 +572,7 @@ function boundVariableIds() { return boundIds || (boundIds = boundOn(storedPages
 
 async function collectTokens() {
   boundIds = null;   // a run reads the file as it is now: the window stays open between runs
+  unanswered = 0;
   const collections = await figma.variables.getLocalVariableCollectionsAsync();
   // Every collection under its own name, with its own modes: the payload
   // assumes no collection is called anything in particular (toolkit-standard
@@ -808,7 +823,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.89.3';
+const VERSION = '0.89.4';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1351,6 +1366,7 @@ async function collectLibrary(withIcons) {
   // for every library and the gate had nothing to read. Filled here rather
   // than in collectTokens, which runs before the walk that populates it.
   tokens._meta.unrecorded = [...new Set(unrecordedSeen)].slice(0, 40);
+  if (unanswered) tokens._meta.variablesUnanswered = unanswered;
   // The page the icons came from, by name. An icon page's components are
   // exported as SVGs and get no component spec — deliberately, since a spec
   // per glyph would swamp the store and give the docs a page per icon — but

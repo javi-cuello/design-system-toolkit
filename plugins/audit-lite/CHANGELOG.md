@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.15] - 2026-11-25
+### Fixed
+- Carries snapshot walk 0.89.4: a variable lookup Figma never answers no longer hangs the run.
+
 ## [0.14.14] - 2026-11-25
 ### Fixed
 - Carries snapshot walk 0.89.3: the variables the components use are counted as they are read.
