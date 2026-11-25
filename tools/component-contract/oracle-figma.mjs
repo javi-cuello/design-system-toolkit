@@ -442,7 +442,8 @@ export function compareSpec(component, setNode, spec, ctx) {
   if (meta) t.check(null, 'description', 'description', meta.description || '', spec.description || '', (a, b) => plainText(a) === plainText(b));
   else t.skip('description: the set is not in the response');
   if (isSet && setNode.size) t.check(null, 'set', 'set', { w: r2(setNode.size.x), h: r2(setNode.size.y) }, spec.set);
-  // (as the walk that stored it read them: 0.90.0 on, into instances and per layer; an unstamped snapshot is the newest)
+  // (as the walk that stored it read them: 0.90.0 on, into instances and per layer; the file's stamp, else a store's
+  // single stamp from before files were stamped; none at all is the newest)
   const links = linksOf(variants, !ctx.walk || atLeast(ctx.walk, '0.90.0') ? new Set(Object.keys(defs)) : null);
   for (const k of new Set([...Object.keys(links), ...Object.keys(spec.links || {})])) t.check(null, `links.${k}`, 'links', links[k], (spec.links || {})[k]);
   // variant by variant
@@ -1254,7 +1255,7 @@ async function main(argv) {
       for (const s of sets) {
         const r = got[s.id];
         if (!r || r.missing || !r.document) { results.push({ component: s.folder, missing: true, readAt: said }); continue; }
-        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains, icons: new Set((meta && meta.icons) || []), own, walk: meta && meta.sources && meta.sources[file] && meta.sources[file].plugin };
+        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains, icons: new Set((meta && meta.icons) || []), own, walk: meta && ((meta.sources && meta.sources[file] && meta.sources[file].plugin) || (!meta.sources && meta.plugin)) };
         const spec = resolveSpec(s.stored);
         let contract = null;
         try { contract = JSON.parse(fs.readFileSync(path.join(w.paths.components, s.folder, 'contract.json'), 'utf8')); } catch { /* no contract: the spec alone */ }
