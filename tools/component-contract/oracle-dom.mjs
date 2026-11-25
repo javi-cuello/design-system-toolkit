@@ -132,8 +132,10 @@ export function expected(c, combo, { value, tokens }) {
     }
     // (a stroke the contract clears, `none` (rules.mjs CLEARED): none drawn)
     if (e.border === CLEARED) x.stroke = [0, 0, 0, 0];
-    tok('background', e.background); if (e.border) tok('strokeColour', e.border.color); tok('color', e.color);
-    if (e.background !== undefined) { const v = col(e.background); if (v !== undefined) x.background = v; else skip(typeof e.background === 'object' ? (Array.isArray(e.background) ? 'background list' : 'background gradient') : 'background'); }
+    if (e.background !== CLEARED) tok('background', e.background); if (e.border) tok('strokeColour', e.border.color); tok('color', e.color);
+    // (a fill the contract clears, `none` (rules.mjs CLEARED): none drawn, transparent)
+    if (e.background === CLEARED) x.background = 'rgba(0, 0, 0, 0)';
+    else if (e.background !== undefined) { const v = col(e.background); if (v !== undefined) x.background = v; else skip(typeof e.background === 'object' ? (Array.isArray(e.background) ? 'background list' : 'background gradient') : 'background'); }
     if (e.border && e.border.color !== undefined) {
       const b = e.border, raw = Array.isArray(b.width) ? b.width : SIDES.map((s) => b.width ?? (b.sides && typeof b.sides[s] === 'number' ? b.sides[s] : 1));
       const widths = raw.map((w, i) => { const n = num(w); return n !== undefined ? n : b.sides && typeof b.sides[SIDES[i]] === 'number' ? b.sides[SIDES[i]] : undefined; });

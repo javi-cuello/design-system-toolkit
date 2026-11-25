@@ -399,6 +399,19 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('an instance that clears its component\'s colour style and stroke says none of each; one that keeps them says neither',
     cleared.fillStyle === 'none' && cleared.border === 'none' && kept.fillStyle === undefined && kept.border === undefined);
   ok('and with no contract for its component, nothing is said', derive(row({}), ['Box']).anatomy.box.fillStyle === undefined);
+  ok('an instance that draws no fill where its component has one says its fill none too; one that keeps it says nothing',
+    cleared.background === 'none' && kept.background === undefined);
+  // a layer inside an opened instance that draws no fill where its component's layer has one: none, else it reads as the component's
+  const field = { name: 'Field', id: '9:7', props: {}, variants: [{ name: 'Field', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Background', type: 'RECTANGLE', w: 40, h: 20, absolute: true, constraints: 'STRETCH/STRETCH', sizing: 'FIXED/FIXED', fills: ['Field/bg'], strokes: ['Line/strong'], strokeSides: [0, 0, 1, 0] }] }] };
+  const form = (inner) => ({ name: 'Form', id: '9:8', props: {}, variants: [{ name: 'Form', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Field', type: 'INSTANCE', instanceOf: 'Field', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills,strokes'], children: [
+      { name: 'Background', type: 'RECTANGLE', w: 40, h: 20, absolute: true, constraints: 'STRETCH/STRETCH', sizing: 'FIXED/FIXED', ...inner }] }] }] });
+  const fm = mainsFrom({ Field: field });
+  const inner = derive(form({ strokes: ['Line/subtle'], strokeSides: [0, 0, 1, 0] }), ['Field'], { mains: fm }).anatomy['field/background'];
+  const same = derive(form({ fills: ['Field/bg'], strokes: ['Line/subtle'], strokeSides: [0, 0, 1, 0] }), ['Field'], { mains: fm }).anatomy['field/background'];
+  ok('a layer an instance overrides that draws no fill where its component\'s has one says none; one that keeps it says its own',
+    !!inner && inner.background === 'none' && !!same && same.background === 'Field/bg');
   // placed inside another component that clears it, a Box drawn with its style and stroke again says them: unsaid, they
   // would be the clearing component's none
   const holder = { name: 'Holder', id: '9:7', props: {}, variants: [{ name: 'Holder', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [

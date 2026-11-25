@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss } from './rules.mjs';
+import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
@@ -95,7 +95,10 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
 
   // its fills, bottom up as Figma lists them, as CSS's background layers (rules.mjs fillCss): a colour with no variable
   // written as itself, said so; a name its token's
-  const bg = take('background');
+  const bg0 = take('background');
+  // (a fill an instance clears, `none` (rules.mjs CLEARED): none drawn over its component's)
+  if (bg0 === CLEARED) put('background', 'none');
+  const bg = bg0 === CLEARED ? undefined : bg0;
   // (a colour style is Figma's name for the colour beside it, which background or color writes: nothing of its own)
   take('fillStyle');
   const fill = fillCss(bg, { w: e.width, h: e.height }, (f) => (raw(f) ? f : names.token(f)));

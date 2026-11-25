@@ -259,7 +259,7 @@ export function roomTaken(e, room) {
    against without): one only the design gives, or the markup's own the design drops. */
 /* A placed component the page draws no stroke on (no border, ring or outline read: `strokeless`) where its component's
    root has one at its props has had it cleared, as to-code writes a contract's `none` (rules.mjs CLEARED): read back so.
-   The mark goes from every part. (A colour style code has none of: never read.) */
+   Its fill likewise. The mark goes from every part. (A colour style code has none of: never read.) */
 export function readCleared(anatomy, mains) {
   const { atProps } = req('./derive.cjs');
   for (const e of Object.values(anatomy)) {
@@ -267,6 +267,8 @@ export function readCleared(anatomy, mains) {
     delete e.strokeless;
     const m = e.kind === 'instance' && e.component && mains(e.component, e.key), R = m && atProps(m, e.with || {}).root;
     if (R && R.border && typeof R.border === 'object' && R.border.color != null && e.border === undefined) e.border = CLEARED;
+    // (and no fill where its root has one: cleared too, as to-code writes a contract's background none)
+    if (R && typeof R.background === 'string' && R.background !== CLEARED && e.background === undefined) e.background = CLEARED;
   }
   return anatomy;
 }

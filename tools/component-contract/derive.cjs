@@ -608,9 +608,12 @@ function cleared(anatomy, mains) {
     if (!root) continue;
     if (typeof root.fillStyle === 'string' && root.fillStyle !== CLEARED && e.fillStyle === undefined) e.fillStyle = CLEARED;
     if (root.border && typeof root.border === 'object' && root.border.color != null && e.border === undefined) e.border = CLEARED;
+    if (paintOf(root.background) && e.background === undefined) e.background = CLEARED;
   }
   return anatomy;
 }
+// a paint a part draws (a cleared one, none, draws nothing)
+const paintOf = (v) => v != null && v !== CLEARED && !(Array.isArray(v) && !v.length);
 /* The one colour a placed component draws its glyph in at the instance's props: the background of its root's graphic
    children, where they hold one colour (an icon's vector, a slot placeholder's fill), else null. to-code writes it on
    the instance (its color), so a reading that finds it there reads the component's own colour, no override (from-code). */
@@ -785,13 +788,20 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
+    // a layer kept that draws no fill where its component's part has one has cleared it (an instance's override: its
+    // fills emptied, or at no opacity, which the walk does not record): said none, or a reader would take the part's
+    // unsaid fill as its component's (Carbon's read-only time picker's field background)
+    for (const k of kept) {
+      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+      if (e && x && e.kind !== 'instance' && e.background === undefined && paintOf(x.background)) e.background = CLEARED;
+    }
     // a placed layer this component clears the style or stroke of (none) that draws its own component's again: its own
     // styling, left out above as that component's, is said, or it would read as this one's none (a reading from code
     // reads no colour style, so only Figma's)
     if (!reading) for (const k of kept) {
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       const R = x && e && e.kind === 'instance' && e.component && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
-      if (R) for (const f of ['fillStyle', 'border']) if (x[f] === CLEARED && e[f] === undefined && R[f] !== undefined) e[f] = R[f];
+      if (R) for (const f of ['fillStyle', 'border', 'background']) if (x[f] === CLEARED && e[f] === undefined && R[f] !== undefined) e[f] = R[f];
     }
     inherit();
   }

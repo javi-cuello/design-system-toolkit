@@ -921,7 +921,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     const said = [].concat(paint ?? []).map((q) => (typeof q === 'string' && /^IMAGE/.test(q) ? 'IMAGE' : q));
     if (rec && said.length && JSON.stringify(rec) !== JSON.stringify(said)) { missing.add(`colour style ${e.fillStyle} (it no longer matches its colour: the colour drawn)`); return; }
     const key = K.fillStyles && K.fillStyles[e.fillStyle], st = key && fillStyles[key]; if (!st) missing.add(`colour style ${e.fillStyle}`); else if (n.fillStyleId !== st.id) toFill.push([n, st, e.fillStyle]); };
-  const paintIf = async (n, field, token, force = false) => { if (typeof token !== 'string' || !(field in n)) return; const v = await V(token); if (v && boundTo(n[field]) === v.id) { if (!force) return; n[field] = [{ type: 'SOLID', color: { r: 1, g: 0, b: 1 } }]; } n[field] = [await solid(token)]; };
+  // (a paint an instance clears, `none` (P.cleared): emptied)
+  const paintIf = async (n, field, token, force = false) => { if (token === P.cleared) { if (field in n && n[field].length) n[field] = []; return; } if (typeof token !== 'string' || !(field in n)) return; const v = await V(token); if (v && boundTo(n[field]) === v.id) { if (!force) return; n[field] = [{ type: 'SOLID', color: { r: 1, g: 0, b: 1 } }]; } n[field] = [await solid(token)]; };
   // an instance's own layout where the design overrides it there (a pill's content centred in one block): its
   // alignment, gap and padding, on the auto layout its component gives it
   const layoutOver = async (n, e) => {
@@ -1127,7 +1128,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // does: the instance itself has no fill, and the code's colour went nowhere
       // read from code only (a Figma contract's instance background is its own fill override); a token, not a gradient;
       // only one with no fill of its own: another component's box fill (an avatar's circle) is its background, not its paths'
-      if (P.fromCode && e.kind === 'instance' && typeof e.background === 'string' && n.type === 'INSTANCE' && !(Array.isArray(n.fills) && n.fills.some((f) => f.visible !== false && (f.opacity ?? 1) > 0))) recolour(n, await solid(e.background));
+      if (P.fromCode && e.kind === 'instance' && typeof e.background === 'string' && e.background !== P.cleared && n.type === 'INSTANCE' && !(Array.isArray(n.fills) && n.fills.some((f) => f.visible !== false && (f.opacity ?? 1) > 0))) recolour(n, await solid(e.background));
       // a Figma contract's placed instance: its own fill, stroke, corners, shadow and clipping, where the design overrides
       // them (derive keeps on an instance only what differs from its component: ownStyling)
       if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e, e.background); await lookOver(n, e); }
@@ -1169,7 +1170,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         // a vector drawn with its own paths at a size that is not theirs (a variant's larger dot): sized to it, which
         // scales its paths
         else if (n.type === 'VECTOR' && e.paths && px(e.width) > 0 && px(e.height) > 0 && (Math.abs(px(e.width) - n.width) > 0.01 || Math.abs(px(e.height) - n.height) > 0.01)) n.resize(px(e.width), px(e.height));
-        n.fills = e.background ? await paints(e.background, id === 'root' ? 'root' : (e.name || id.slice(id.lastIndexOf('/') + 1))) : [];
+        n.fills = e.background && e.background !== P.cleared ? await paints(e.background, id === 'root' ? 'root' : (e.name || id.slice(id.lastIndexOf('/') + 1))) : [];
         styleFill(n, e, e.background);
         // one radius, or one per corner in Figma's order: top left, top right, bottom right, bottom left
         // an ellipse has no corners: a radius a variant kept from a rectangle is not drawn
