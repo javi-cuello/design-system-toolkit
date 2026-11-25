@@ -1,6 +1,11 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.89.5] - 2026-11-25
+### Fixed
+- **A variable lookup Figma rejects clears its timer too**, not only one it answers.
+- The MCP script never joins two words where it drops an inline comment (`let /* c */x` read `letx`).
+
 ## [0.89.4] - 2026-11-25
 ### Fixed
 - **A variable Figma never returns no longer hangs the snapshot.** Each lookup is given up after 15 s; after three, the rest are not asked, and `tokens._meta.variablesUnanswered` says how many went unread. On one large library the first of 171 never answered and Cancel could not stop it.

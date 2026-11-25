@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.16] - 2026-11-25
+### Fixed
+- Carries snapshot walk 0.89.5: a rejected variable lookup clears its timer.
+
 ## [0.14.15] - 2026-11-25
 ### Fixed
 - Carries snapshot walk 0.89.4: a variable lookup Figma never answers no longer hangs the run.

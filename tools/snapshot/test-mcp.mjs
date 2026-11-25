@@ -21,6 +21,7 @@ ok('the plugin holds no multi-line string, whose lines the stripping would trim'
 ok('a trailing comment is dropped where nothing before it can hold a //', stripped('a(b); // why') === 'a(b);');
 ok('…and kept where a string or a regex comes first', stripped("x = 'p'; // why") === "x = 'p'; // why" && stripped('r = /a/; // why') === 'r = /a/; // why');
 ok('an inline /* */ is dropped on the same guard', stripped('} catch (e) { /* why */ }') === '} catch (e) { }' && stripped("s = '/* k */';") === "s = '/* k */';");
+ok('an inline /* */ against a word never joins two words', stripped('let /* c */x = 1;') === 'let x = 1;' && stripped('return/* c */x;') === 'return x;');
 ok('an inline type note before a cast is dropped, the cast kept', stripped('const a = /** @type {X[]} */ (b);') === 'const a = (b);');
 ok('a comment is dropped, and a // inside a string kept', stripped("// note\nconst a = 'http://x';\n/* one\n two */\nb();") === "const a = 'http://x';\nb();");
 

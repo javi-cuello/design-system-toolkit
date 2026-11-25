@@ -50,8 +50,8 @@ export function stripped(source) {
     const at = t.indexOf(' // ');
     let kept = at > 0 && !/['"`/]/.test(t.slice(0, at)) ? t.slice(0, at).trimEnd() : t;
     // and a /* … */ inside the line, on the same guard: nothing before it a string or a regex
-    for (let i = kept.search(/\/\*.*?\*\//); i > 0 && !/['"`/]/.test(kept.slice(0, i)); i = kept.search(/\/\*.*?\*\//)) kept = kept.replace(/ ?\/\*.*?\*\//, '');
-    out.push(kept);
+    for (let i = kept.search(/\/\*.*?\*\//); i > 0 && !/['"`/]/.test(kept.slice(0, i)); i = kept.search(/\/\*.*?\*\//)) kept = kept.replace(/ ?\/\*.*?\*\/ ?/, ' ');
+    out.push(kept.trimEnd());
   }
   return out.join('\n').replace(/\/\*\* @[^*]*\*\/ ?/g, '');
 }
