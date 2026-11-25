@@ -1481,6 +1481,13 @@ const varCache = {};
 const VARIABLE_WAIT = 5000;
 let unanswered = 0, timedOut = 0;
 /** @type {Set<string>} */ const missed = new Set();
+/** @type {Map<string, any>} */ const collectionsAsked = new Map();
+// Each run (the window stays open between them) asks again what the last gave up on: its three tries are its own.
+function freshLookups() {
+  unanswered = 0; timedOut = 0;
+  for (const id of missed) delete varCache[id];
+  missed.clear(); collectionsAsked.clear();
+}
 const MISSED = Symbol('missed');
 /** @template T @param {() => Promise<T>} ask @returns {Promise<T | typeof MISSED>} */
 async function answered(ask) {
@@ -1892,10 +1899,7 @@ function boundVariableIds() { return boundIds || (boundIds = boundOn(storedPages
 
 async function collectTokens() {
   boundIds = null;   // a run reads the file as it is now: the window stays open between runs
-  // (and asks again what the last run gave up on: its three tries are this run's own)
-  unanswered = 0; timedOut = 0;
-  for (const id of missed) delete varCache[id];
-  missed.clear();
+  freshLookups();
   const collections = await figma.variables.getLocalVariableCollectionsAsync();
   // Every collection under its own name, with its own modes: the payload
   // assumes no collection is called anything in particular (toolkit-standard
@@ -1976,7 +1980,10 @@ async function collectTokens() {
     // (each one: a lookup Figma is slow to answer waits a few seconds, and the count says which)
     say('reading the variables the components use', n++, ids.size);
     const v = await variable(i).catch(() => null);
-    const c = v && v.remote && await answered(() => figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId)).then((x) => (x === MISSED ? (unanswered++, null) : x), () => null);
+    // (each collection asked once, and one never answered counted once)
+    const cid = v && v.remote ? v.variableCollectionId : null;
+    if (cid && !collectionsAsked.has(cid)) collectionsAsked.set(cid, await answered(() => figma.variables.getVariableCollectionByIdAsync(cid)).then((x) => (x === MISSED ? (unanswered++, null) : x), () => null));
+    const c = cid ? collectionsAsked.get(cid) : null;
     if (c && !here.has(c.name)) others.set(c.name, c);
   }
   for (const c of [...collections, ...others.values()]) {
@@ -3164,6 +3171,7 @@ class Cancelled extends Error {}
 // which calls collectLibrary itself and is cut here to stay under its size cap (tools/snapshot/mcp.mjs, CUT).
 
 async function collectScreens() {
+  freshLookups();
   walkWhole = true;
   sourceSeen.clear(); // a component's notes are read fresh each run
   await loadPages(true);
