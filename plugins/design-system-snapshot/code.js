@@ -1,4 +1,4 @@
-// Design system snapshot — v0.89.2 · plugin-standard v1.1.0
+// Design system snapshot — v0.89.3 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -632,7 +632,10 @@ async function collectTokens() {
   // and the collections of another library whose variables the components bind (a component file whose colours, spaces
   // and radii live in a foundations file has none local), marked remote: a name a local one holds is that one
   const ids = boundVariableIds(), others = new Map(), here = new Set(collections.map((c) => c.name));
+  let n = 0;
   for (const i of ids) {
+    // counted: a large library binds thousands, each fetched on its own, and a still window reads as hung
+    if (n++ % 25 === 0) say('reading the variables the components use', n - 1, ids.size ?? ids.length);
     const v = await variable(i).catch(() => null);
     const c = v && v.remote && await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(() => null);
     if (c && !here.has(c.name)) others.set(c.name, c);
@@ -805,7 +808,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.89.2';
+const VERSION = '0.89.3';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

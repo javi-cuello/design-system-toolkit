@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.14] - 2026-11-25
+### Fixed
+- Carries snapshot walk 0.89.3: the variables the components use are counted as they are read.
+
 ## [0.14.13] - 2026-11-25
 ### Fixed
 - Carries snapshot walk 0.89.2: a snapshot loads pages one by one, each named.

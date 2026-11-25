@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.89.3] - 2026-11-25
+### Fixed
+- **Reading the variables the components use is counted.** A large library binds thousands, each fetched on its own; the window showed one still line.
+
 ## [0.89.2] - 2026-11-25
 ### Fixed
 - **A snapshot loads the file page by page, each named.** On one large library Figma's load-every-page call never returned and Cancel could not stop it; one page at a time shows where it is and which page stalls.
