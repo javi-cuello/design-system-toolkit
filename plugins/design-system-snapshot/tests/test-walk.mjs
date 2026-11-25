@@ -220,7 +220,7 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
       loadAllPagesAsync: async () => { events.push("loadAll"); } };
     const lp = vm.runInContext(src + "\n;loadPages", vm.createContext({ figma: fw, console, __html__: "", fetch: () => new Promise(() => {}), setTimeout, clearTimeout }));
     await lp(true);
-    ok("a snapshot loads page by page, each named before it loads", events.join() === 'loading page "undefined" 0/2,page,loading page "undefined" 1/2,page' || /^loading page .* 0\/2,page,loading page .* 1\/2,page$/.test(events.join()));
+    ok("a snapshot loads page by page, each named before it loads", events.join() === 'loading page "undefined" 0/2,page,loading page "undefined" 1/2,page');
     events.length = 0; fw.loadAllPagesAsync = async () => { throw new Error("not supported"); };
     await lp(true);
     ok("…the same where loading them all is refused", /^loading page .* 0\/2,page,loading page .* 1\/2,page$/.test(events.join()));

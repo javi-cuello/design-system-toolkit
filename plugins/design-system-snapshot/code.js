@@ -673,7 +673,7 @@ async function collectTokens() {
   // file has no local style), marked remote: a name a local one holds is that one
   const local = await figma.getLocalTextStylesAsync(), names = new Set(local.map((s) => s.name));
   const inside = (n) => { for (let p = n.parent; p; p = p.parent) if (p.type === 'COMPONENT' || p.type === 'COMPONENT_SET') return true; return false; };
-  const at = new Map(figma.root.findAllWithCriteria({ types: ['TEXT'] }).filter((t) => typeof t.textStyleId === 'string' && t.textStyleId && inside(t)).map((t) => [t.textStyleId, t]));
+  const at = new Map(figma.root.children.flatMap((pg) => pg.findAllWithCriteria({ types: ['TEXT'] })).filter((t) => typeof t.textStyleId === 'string' && t.textStyleId && inside(t)).map((t) => [t.textStyleId, t]));
   const textOf = new Map();
   const remote = /** @type {TextStyle[]} */ ((await Promise.all([...at.keys()].map(async (i) => { const s = await figma.getStyleByIdAsync(i); if (s) textOf.set(s, at.get(i)); return s; }))).filter((s) => s && s.remote && !names.has(s.name) && names.add(s.name)));
   // (each family's metric read once a run, where a style needs it)
