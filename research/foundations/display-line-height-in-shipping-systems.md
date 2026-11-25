@@ -37,7 +37,6 @@ A display style is set large, in one to three lines, and its leading is usually 
 
 - **Lowest shipped is 1.00**, in Tailwind, Radix and GOV.UK desktop; Carbon reaches 1.05 at 156px. None of the systems read ships 0.9.
 - **Typical range is 1.0 to 1.25**, and larger sizes go tighter: Carbon's ratio falls from 1.19 to 1.05 as size rises.
-- **Red Bull's own site** sets `--cosmos-title-line-height` defaults of 1, 1.07, 1.10, 1.14, 1.33, 1.41 and 1.5 in its page CSS, and none could be tied to a font size.
 
 ---
 
@@ -68,5 +67,4 @@ A display style is set large, in one to three lines, and its leading is usually 
 - Fluent 2: [fonts](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/tokens/src/global/fonts.ts).
 - Bootstrap: [variables](https://raw.githubusercontent.com/twbs/bootstrap/v5.3.3/scss/_variables.scss).
 - Primer: [typography tokens](https://raw.githubusercontent.com/primer/primitives/main/src/tokens/functional/typography/typography.json5).
-- Red Bull: [redbull.com](https://www.redbull.com/) page CSS.
 - MyFonts: [display typography line spacing](https://myfonts.com/pages/fontscom-learning-fontology-level-2-display-typography-line-spacing).
