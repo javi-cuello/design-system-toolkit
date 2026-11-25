@@ -43,6 +43,8 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { expand, camel } from './layers.mjs';
 import { WEIGHTS } from '../parity/values.mjs';
+// which parts a contract says turned on their own axes: its convention, read, never a value computed
+import { turnedParts } from './to-code.mjs';
 
 const require = createRequire(import.meta.url);
 const { resolve: resolveSpec, layerPaths } = require('../snapshot/spec.cjs');
@@ -509,14 +511,15 @@ const radiusList = (v) => (v == null ? undefined : Array.isArray(v) ? v.map(num)
 const one = (list) => (!list || !list.length ? undefined : list.length === 1 ? list[0] : list);
 
 /* One REST node as a contract part says it, the parts ours states where-stated only (absolute.end/bottom). */
-export function restPart(n, parent, ctx, propIds, frame = parent) {
+export function restPart(n, parent, ctx, propIds, frame = parent, { turned = false } = {}) {
   const e = { kind: KIND[n.type] || 'graphic' };
   const bv = boundOf(n);
   const { w, h } = sizeOf(n);
   const p = placeOf(n);
   const word = { FILL: 'fill', HUG: 'hug' };
-  // a quarter-turned layer's sizing is said on its parent's axes, its size on its own
-  const quarter = p.rotation != null && Math.abs(Math.abs(p.rotation) - 90) < 0.01;
+  // a quarter-turned layer's sizing is said on its parent's axes, its size on its own: the contract says the words on
+  // its own axes only where code draws it turned in a wrapper (`turned`, to-code turnedParts), else in Figma's order
+  const quarter = turned && p.rotation != null && Math.abs(Math.abs(p.rotation) - 90) < 0.01;
   const [sh, sv] = quarter ? [n.layoutSizingVertical, n.layoutSizingHorizontal] : [n.layoutSizingHorizontal, n.layoutSizingVertical];
   e.width = bv.width ? BOUND : word[sh] || w;
   e.height = bv.height ? BOUND : word[sv] || h;
@@ -735,7 +738,8 @@ export function compareContract(component, setNode, contract, ctx) {
       t.check(null, name, 'invalid', isDrawn ? 'valid' : 'invalid', invalid ? 'invalid' : 'valid');
     } else t.skip('invalid: over 4,096 combinations');
   } else if (isSet) t.skip('invalid: the contract lists none');
-  // part by part, each variant Figma draws
+  // part by part, each variant Figma draws; the parts the contract says turned on their own axes
+  const turned = turnedParts(contract);
   // a placed instance's main, expanded at the instance's props by its own contract (ctx.mains: its key → the contract)
   const expansions = new Map();
   const expansion = (inst) => {
@@ -757,7 +761,7 @@ export function compareContract(component, setNode, contract, ctx) {
         for (const [pid, p] of Object.entries(main.props || {})) if (p.type === 'instance' && (p.swaps || []).includes(id) && typeof when[pid] === 'string') { o.component = when[pid]; delete o.key; o.$swapped = true; }
         return o;
       };
-      x = { byNode: new Map([...found].map(([id, n]) => [n, id])), part };
+      x = { byNode: new Map([...found].map(([id, n]) => [n, id])), part, turned: turnedParts(main) };
     }
     expansions.set(inst, x);
     return x;
@@ -776,16 +780,16 @@ export function compareContract(component, setNode, contract, ctx) {
     // instances has a contract, so a field none says is a difference, else it is `not stated`
     const mainSays = (n) => {
       const said = [];
-      let whole = true;
+      let whole = true, inner = false;
       for (let q = n; q && q !== v; q = parentOf.get(q)) {
         if (q.type !== 'INSTANCE') continue;
         const x = expansion(q);
         if (x === UNSPELT) return { unspelt: true };
         if (!x) { whole = false; continue; }
         // an instance's own size is its placement's (fill, hug, a fixed width, or its place where stretched), never its main's root's
-        if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; } said.push(o); }
+        if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; } if (!said.length) inner = x.turned.has(x.byNode.get(n)); said.push(o); }
       }
-      return { said: said.length ? Object.assign({}, ...said) : null, whole };
+      return { said: said.length ? Object.assign({}, ...said) : null, whole, turned: inner };
     };
     const unstated = (vname, id, a, b) => { for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; } };
     const frameOf = (n) => { let f = parentOf.get(n) || null; while (f && GROUPS.has(f.type)) f = parentOf.get(f); return f; };
@@ -795,13 +799,16 @@ export function compareContract(component, setNode, contract, ctx) {
       if (!n) { t.differ(v.name, id, 'part', 'missing', 'present'); continue; }
       t.check(v.name, id, 'part', true, true);
       const parent = parentOf.get(n) || null;
-      const a = restPart(n, n === v ? null : parent, ctx, idOfProp, n === v ? null : frameOf(n));
+      const says = n.type === 'INSTANCE' || inInstance(n) ? mainSays(n) : null;
+      // turned on its own axes by the contract that says its size: the host's, else the main's that does
+      const turnedHere = turned.has(id) || (!!says && says.turned && !('width' in part) && !('height' in part));
+      const a = restPart(n, n === v ? null : parent, ctx, idOfProp, n === v ? null : frameOf(n), { turned: turnedHere });
       let b = partOurs(part);
       // an instance, and a layer inside one, says what differs from its component (derive's ownStyling): what it leaves
       // unsaid is its main's, read from the main's own contract expanded at the instance's props, the host's word over
       // it; with no contract for the main, a field Figma has there is a row of its own, `not stated`, never a difference
-      if (n.type === 'INSTANCE' || inInstance(n)) {
-        const { said, whole, unspelt } = mainSays(n);
+      if (says) {
+        const { said, whole, unspelt } = says;
         if (unspelt) for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { delete a[k]; t.skip(SPELL); }
         if (said) {
           b = { ...said, ...b }; for (const k of OWN) if (k in said && !(k in part)) delete b[k];
@@ -814,11 +821,11 @@ export function compareContract(component, setNode, contract, ctx) {
     }
     // a layer Figma draws that no part is: inside an instance whose main's contract says it, held to that; else a row
     for (const { path: p, node } of untaken(v, taken)) {
-      const { said, whole, unspelt } = inInstance(node) ? mainSays(node) : { said: null, whole: true };
+      const { said, whole, unspelt, turned: mainTurned } = inInstance(node) ? mainSays(node) : { said: null, whole: true };
       if (unspelt) { t.skip(SPELL); continue; }
       if (!said) { if (whole) t.differ(v.name, p, 'part', 'present', 'missing'); else t.differ(v.name, p, 'not stated', 'present', undefined); continue; }
       t.check(v.name, p, 'part', true, true);
-      const a = restPart(node, parentOf.get(node) || null, ctx, idOfProp, frameOf(node));
+      const a = restPart(node, parentOf.get(node) || null, ctx, idOfProp, frameOf(node), { turned: !!mainTurned });
       if (!whole) unstated(v.name, p, a, said);
       fields(v.name, p, node, a, said, {});
     }

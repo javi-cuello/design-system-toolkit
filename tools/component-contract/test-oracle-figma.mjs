@@ -89,9 +89,13 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   // a swap to a component the response does not name is held by neither side
   const unnamed = restWalk({ ...inst, componentProperties: { 'Icon#1:1': { type: 'INSTANCE_SWAP', value: '99:99' } } }, ctx);
   assert.equal(unnamed.props.Icon, UNNAMED);
-  // a quarter-turned layer's sizing words are on its parent's axes
-  const line = restPart({ name: 'L', type: 'LINE', size: { x: 0, y: 20 }, relativeTransform: [[0, 1, 0], [-1, 0, 20]], layoutSizingHorizontal: 'FILL', layoutSizingVertical: 'FIXED' }, { type: 'FRAME', layoutMode: 'HORIZONTAL' }, ctx, {});
+  // a quarter-turned layer's sizing words are on its parent's axes: said on its own where the contract draws it turned
+  // in a wrapper (to-code turnedParts), else in Figma's order, its own size beside them, as derive says it
+  const ln = { name: 'L', type: 'LINE', size: { x: 0, y: 20 }, relativeTransform: [[0, 1, 0], [-1, 0, 20]], layoutSizingHorizontal: 'FILL', layoutSizingVertical: 'FIXED' };
+  const line = restPart(ln, { type: 'FRAME', layoutMode: 'HORIZONTAL' }, ctx, {}, undefined, { turned: true });
   assert.deepEqual([line.width, line.height], [0, 'fill']);
+  const inPlace = restPart(ln, { type: 'FRAME', layoutMode: 'HORIZONTAL' }, ctx, {});
+  assert.deepEqual([inPlace.width, inPlace.height], ['fill', 20]);
   // a description: REST plain, the walk markdown
   assert.equal(plainText('**Size**\nChoose one. [Guide](https://x)'), plainText('SizeChoose one. Guide'));
   assert.equal(plainText('Intro\n\n- Focus on it'), plainText('Intro\n\n\nFocus on it'), 'a list marker is markdown');
@@ -288,6 +292,17 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     // and one the host leaves its main's fill keeps the main's style, held
     const c2 = contract(); c2.anatomy.box = { ...c.anatomy.box }; delete c2.anatomy.box.background;
     assert.ok(compareContract('chip', set, c2, cx).rows.some((x) => x.path === 'box' && x.kind === 'contract:fillStyle'), 'the main\'s style, where Figma has none, a row');
+  }
+  // a part turned a quarter: its words swapped where the contract draws it in a wrapper, as it stands where it is placed
+  {
+    const turn = (v, abs) => ({ id: v.id + 'q', name: 'Spacer', type: 'LINE', size: { x: 16, y: 0 }, relativeTransform: [[0, -1, 40], [1, 0, 0]], layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FILL', ...(abs && { layoutPositioning: 'ABSOLUTE' }), children: [] });
+    const rowsOf = (abs, width, height) => {
+      const set = structuredClone(setNode); for (const v of set.children) v.children.push(turn(v, abs));
+      const c = contract(); c.anatomy.spacer = { kind: 'graphic', parent: 'root', order: 1, width, height, rotation: -90, ...(abs && { position: 'absolute', absolute: { x: 40, y: 0 } }) };
+      return compareContract('chip', set, c, ctx).rows.filter((x) => x.path === 'spacer' && /width|height/.test(x.kind));
+    };
+    assert.deepEqual(rowsOf(false, 'fill', 0), [], 'drawn in a wrapper: its own axes');
+    assert.deepEqual(rowsOf(true, 16, 'fill'), [], 'placed, turned in place: Figma\'s order, its own size');
   }
   // the counts: a component nothing was checked on is not checked, never a match
   const R = (checked, rows = [], skipped = {}) => ({ rows, checked, skipped });
