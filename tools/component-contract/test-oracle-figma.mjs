@@ -208,6 +208,11 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const c = contract(); change(c);
     assert.ok(kinds(compareContract('chip', setNode, c, ctx)).includes(kind), `a changed ${kind} is caught`);
   }
+  // a vector's per-vertex radius (mixed) is the walk's word, which REST never states: a named skip, not a row
+  { const c = contract(); c.anatomy.root.radius = 'mixed'; const square = structuredClone(setNode); for (const v of square.children) delete v.cornerRadius;
+    const r = compareContract('chip', square, c, ctx); assert.ok(!kinds(r).includes('contract:radius') && Object.keys(r.skipped).some((k) => /mixed/.test(k)), 'mixed: skipped by name'); }
+  { const st = storedFull(); for (const v of st.variants) v.radius = 'mixed'; const square = structuredClone(setNode); for (const v of square.children) delete v.cornerRadius;
+    assert.ok(!compareSpec('chip', square, st, ctx).rows.some((x) => x.kind === 'spec:radius'), 'and in the spec leg'); }
   // a radius of four zeros (an instance squaring off its component's corners) is what REST says by leaving it out
   { const c = contract(); c.anatomy.root.radius = 0; const square = structuredClone(setNode); for (const v of square.children) delete v.cornerRadius;
     assert.ok(!kinds(compareContract('chip', square, c, ctx)).includes('contract:radius'), 'a 0 radius is REST\'s none');

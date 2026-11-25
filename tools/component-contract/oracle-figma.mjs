@@ -483,6 +483,8 @@ function diffTree(walked, stored, restRoot, t) {
       // REST silent on a field the walk states: skipped, by name (an instance's corner smoothing, which the plugin API
       // reads through to its component; an ellipse's radius; whether strokes take room; sizing on a vector)
       if (!(k in a) && (k === 'strokesInLayout' || k === 'sizing' || (k === 'smoothing' && f.type === 'INSTANCE') || (k === 'radius' && f.type === 'ELLIPSE'))) { t.skip(`${k}: REST silent`); continue; }
+      // (a vector's corners rounded vertex by vertex, mixed: no one radius REST states)
+      if (!(k in a) && k === 'radius' && o.radius === 'mixed') { t.skip('radius: mixed per vertex, REST silent'); continue; }
       if (k === 'textStyle' && (a[k] === 'mixed' || b[k] === 'mixed')) { t.skip('textStyle of mixed text'); continue; }
       // how many layers an instance overrides (of the first eight, restOurs); the fields' names are REST's own, not checkable
       if (k === 'overrides' && Array.isArray(a[k]) && Array.isArray(b[k])) { t.check(variant, p, k, a[k].length, b[k].length); continue; }
@@ -909,6 +911,8 @@ export function compareContract(component, setNode, contract, ctx) {
     for (const f of part.whileEmpty || []) if (!(f in a)) { delete b[f]; t.skip(`${f}: an empty frame's minimum (whileEmpty)`); }
     if (n.type === 'INSTANCE' && !('smoothing' in a) && 'smoothing' in b) { delete b.smoothing; t.skip('smoothing: REST silent'); }
     if (n.type === 'ELLIPSE' && !('radius' in a) && 'radius' in b) { delete b.radius; t.skip('radius: REST silent'); }
+    // (a vector's corners rounded vertex by vertex, `mixed`: no one radius REST states, the walk's word only)
+    if (part.radius === 'mixed' && !('radius' in a)) { delete b.radius; t.skip('radius: mixed per vertex, REST silent'); }
     // (four zeros said, as an instance squaring off its component's corners says them: REST leaves zeros out, restPart)
     if (!('radius' in a) && Array.isArray(b.radius) && b.radius.every((x) => x === 0)) delete b.radius;
     if (a.typography === 'mixed') { delete a.typography; delete b.typography; t.skip('textStyle of mixed text'); }
