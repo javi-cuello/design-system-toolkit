@@ -293,6 +293,11 @@ export function pathsFromCss(v) {
   return m && m[2] ? [{ windingRule: (m[1] || 'nonzero').toUpperCase(), data: m[2] }] : null;
 }
 
+/* A blend mode: Figma's (the snapshot's, lower case, color_dodge) is CSS's mix-blend-mode with a hyphen (color-dodge);
+   normal draws none, as the walk records none. */
+export const blendToCss = (b) => String(b).replace(/_/g, '-');
+export const blendFromCss = (v) => (v && v !== 'normal' ? String(v).replace(/-/g, '_') : undefined);
+
 export const share = (part, whole) => `${+((100 * part) / whole).toFixed(4)}%`;
 export function placeFromCss(own) {
   if (!/^(absolute|fixed)$/.test(word(own.position))) return null;

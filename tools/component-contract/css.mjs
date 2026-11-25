@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, pathsToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
+import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, pathsToCss, blendToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
@@ -191,7 +191,7 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
   const overflow = take('overflow');
   if (overflow === 'hidden' || overflow === UNCLIPPED) put('overflow', overflow);
   const blend = take('blend');
-  if (blend) put('mix-blend-mode', String(blend).replace(/_/g, '-'));
+  if (blend) put('mix-blend-mode', blendToCss(blend));
   const rotation = take('rotation');
   // Figma's rotation turns counter-clockwise on screen (figma-fact:rotation-direction; the Plugin API: atan2(-m10, m00), y down) and CSS's rotate
   // clockwise: the same turn is its negative. (Figma turns about the layer's top-left, CSS about its centre: a limit)
