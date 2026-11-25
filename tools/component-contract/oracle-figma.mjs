@@ -889,9 +889,14 @@ export function compareContract(component, setNode, contract, ctx) {
     const aside = (vname, id, a, b, away) => {
       const unknown = [...away.overridden].some((f) => !OVERRIDE_KNOWN.has(f) && !OVERRIDE_IGNORED.has(f));
       const held = (k) => unknown || !(k in OVERRIDDEN_AS) || OVERRIDDEN_AS[k].some((f) => away.overridden.has(f)) || (away.self && PLACE.includes(k));
-      for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { if (held(k)) t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); else t.skip(away.why); delete a[k]; }
+      for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k) && !byPlace(a, b, k)) { if (held(k)) t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); else t.skip(away.why); delete a[k]; }
     };
-    const unstated = (vname, id, a, b) => { for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; } };
+    // (what fields() skips as said otherwise: a size a layer stretched on its axis has from its place, where the part says
+    // its end (or bottom); a styled text's spacing, case and decoration, its style's where the part names the style)
+    const byPlace = (a, b, k) => { const c = a.constraints || {}, abs = b.absolute || {};
+      if (['letterSpacing', 'textCase', 'textDecoration'].includes(k)) return typeof a.typography === 'string' && typeof b.typography === 'string';
+      return (k === 'width' && c.horizontal === 'stretch' && 'end' in abs) || (k === 'height' && c.vertical === 'stretch' && 'bottom' in abs); };
+    const unstated = (vname, id, a, b) => { for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k) && !byPlace(a, b, k)) { t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; } };
     const frameOf = (n) => { let f = parentOf.get(n) || null; while (f && GROUPS.has(f.type)) f = parentOf.get(f); return f; };
     // a glyph folded into its icon (derive's ownGlyph): where an instance whose main holds no contract draws one layer,
     // a graphic scaled both ways, and the contract names that one part inside it, the glyph's size, place and
@@ -980,6 +985,8 @@ export function compareContract(component, setNode, contract, ctx) {
     if (a.typography === 'mixed') { delete a.typography; delete b.typography; t.skip('textStyle of mixed text'); }
     // a styled text's letter spacing is its style's, said by the contract only where the layer sets its own
     if (typeof a.typography === 'string' && 'letterSpacing' in a && !('letterSpacing' in b)) { delete a.letterSpacing; t.skip('letterSpacing: a styled text\'s, unsaid'); }
+    // and its case and decoration, which derive leaves to the style a text names (Figma's text style holds both)
+    for (const k of ['textCase', 'textDecoration']) if (typeof a.typography === 'string' && typeof b.typography === 'string' && k in a && !(k in b)) { delete a[k]; t.skip(`${k}: a styled text's, unsaid`); }
     // the fields whose main's parent size is not known, where Figma or the main has them: skipped, counted
     for (const f of (moved && moved.skip) || []) {
       const [k, sub] = f.split('.');

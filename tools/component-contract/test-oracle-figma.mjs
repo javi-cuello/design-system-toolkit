@@ -435,6 +435,32 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const rows = compareContract('chip', set, c, cx).rows.filter((x) => x.path === 'ring');
     assert.deepEqual(rows, [], 'neither the main\'s hug nor its empty minimum is held to the placed ring');
     assert.ok(compareContract('chip', set, c, cx).skipped["minWidth: an empty main's minimum (whileEmpty), an instance's keeps none"] > 0, 'the minimum dropped is counted as skipped');
+    // with no contract for its main, its size is still its place's (end and bottom said): no "not stated" size, skipped
+    const none = compareContract('chip', set, c, { ...cx, mains: () => null });
+    assert.ok(!none.rows.some((x) => x.kind === 'contract:not stated' && /^ring\.(width|height)$/.test(x.path)), 'a stretched size its place says is not unstated ' + JSON.stringify(none.rows));
+    assert.ok(none.skipped["width: said by the stretched layer's end"] > 0, 'and counted as skipped');
+  }
+  // a styled text's decoration and case are its style's: unsaid by a contract that names the style, skipped
+  {
+    const set = structuredClone(setNode); for (const v of set.children) Object.assign(v.children[0].style, { textDecoration: 'UNDERLINE', textCase: 'UPPER' });
+    const r = compareContract('chip', set, contract(), ctx);
+    assert.ok(!r.rows.some((x) => /textDecoration|textCase/.test(x.kind)), 'no row for a styled text\'s decoration or case ' + JSON.stringify(r.rows));
+    assert.ok(r.skipped["textDecoration: a styled text's, unsaid"] > 0 && r.skipped["textCase: a styled text's, unsaid"] > 0, 'both counted as skipped');
+    // one the contract states is compared; a literal text's is held
+    const said = contract(); said.anatomy.label.textDecoration = 'strikethrough';
+    assert.ok(compareContract('chip', set, said, ctx).rows.some((x) => x.kind === 'contract:textDecoration'), 'a stated decoration is held');
+    const lit = structuredClone(set); for (const v of lit.children) delete v.children[0].styles;
+    assert.ok(compareContract('chip', lit, contract(), ctx).rows.some((x) => x.kind === 'contract:textDecoration'), 'a literal text\'s decoration is held');
+    // and inside an instance whose main has no contract: a styled text's spacing the part leaves to the style it names is
+    // no "not stated" row
+    const tagged = structuredClone(setNode);
+    for (const v of tagged.children) v.children.push({ id: v.id + 'g', name: 'Tag', type: 'INSTANCE', componentId: 'C:7', size: { x: 30, y: 20 }, relativeTransform: T(40, 6), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', children: [
+      { id: v.id + 'gt', name: 'Name', type: 'TEXT', size: { x: 30, y: 20 }, relativeTransform: T(0, 0), characters: 'Tag', styles: { text: 'S:1' }, fills: [{ type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 1 } }], style: { ...v.children[0].style, letterSpacing: 0.5 } }] });
+    const tc = contract(); tc.anatomy.tag = { kind: 'instance', parent: 'root', order: 1, component: 'Tag', key: 'k-tag', width: 30, height: 20 };
+    tc.anatomy['tag/name'] = { kind: 'text', parent: 'tag', order: 0, typography: 'Body/md', content: 'Tag' };
+    const tr = compareContract('chip', tagged, tc, { ...ctx, components: { ...ctx.components, 'C:7': { key: 'k-tag', name: 'Tag' } }, mains: () => null });
+    assert.ok(tr.rows.some((x) => x.path.startsWith('tag/name.')), 'the text\'s other unstated fields stay rows');
+    assert.ok(!tr.rows.some((x) => x.path === 'tag/name.letterSpacing'), 'a styled text\'s spacing is not unstated ' + JSON.stringify(tr.rows.filter((x) => /letter/.test(x.path))));
   }
   // an instance whose fill the host overrides (its own paint, the style detached) keeps none of its main's fill style
   {
