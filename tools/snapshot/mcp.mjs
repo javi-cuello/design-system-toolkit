@@ -114,7 +114,7 @@ export const LIMIT = 1500;
 /* A top-level declaration of the plugin, from the line that opens it at column 0 to the line that closes it there
    (a `{` block to its `}`, anything else to the first line that ends with `;`). */
 function span(lines, name) {
-  const start = lines.findIndex((l) => l.startsWith(`async function ${name}(`) || l.startsWith(`function ${name}(`) || l.startsWith(`const ${name} = `));
+  const start = lines.findIndex((l) => l.startsWith(`async function ${name}(`) || l.startsWith(`function ${name}(`) || l.startsWith(`const ${name} = `) || l.startsWith(`let ${name} = `));
   if (start < 0) throw new Error(`the snapshot plugin no longer declares ${name} at the top level`);
   const end = lines[start].endsWith('{') ? lines.findIndex((l, i) => i > start && l.startsWith('}')) : lines.findIndex((l, i) => i >= start && l.endsWith(';'));
   return [start, end];
@@ -133,9 +133,23 @@ export function cut(source, names) {
   }
   return lines.join('\n');
 }
-// never reached by the tokens call or a part; the parts also never read the tokens
+/* The names a part of the plugin declares at the top level, in order: from the line declaring `from` to the one
+   closing `to`. */
+export function declared(source, from, to) {
+  const lines = source.split('\n');
+  const [a] = span(lines, from);
+  const [, b] = span(lines, to);
+  return lines.slice(a, b + 1).map((l) => /^(?:async function|function|const|let) ([A-Za-z_$][\w$]*)/.exec(l)).filter(Boolean).map((m) => m[1]);
+}
+// never reached by a part; the parts also never read the tokens
 const UNUSED = ['collectLibrary', 'collectScreens', 'iconFacts', 'glyphFill', 'anatomyOf'];
-export const DEAD = { tokens: UNUSED, parts: [...UNUSED, 'collectTokens'] };
+/* The tokens call reads no component: the walk and everything after it up to collectComponents goes, but the page
+   tests and componentSets that say which sets the parts must walk (proved on a 64-page library, 2026-11-25). */
+const KEPT = ['isIconPage', 'isScratchPage', 'componentSets'];
+export const DEAD = {
+  tokens: () => ['anatomyOf', ...declared(plugin(), 'slotPaths', 'collectComponents').filter((n) => !KEPT.includes(n))],
+  parts: () => [...UNUSED, 'collectTokens'],
+};
 
 /* The sets the walk takes, page by page in the file's order, each page by its index: collectComponents' own pages
    (no icon page, no scratch page) and its own componentSets. One expression for the plan, the tokens call (which
@@ -173,17 +187,19 @@ figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
 const tokens = await collectTokens();
+scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered));
 %ICONS%
 ${written(`{ tokens, unanswered, sets: ${PLANNED}.flatMap((pg) => pg.sets.map((s) => s.id)), iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, ...(Object.keys(iconGroups).length && { iconGroups }), ...(Object.keys(iconDescriptions).length && { iconDescriptions }) }`, ', sets: __payload.sets.length')}}`;
 const PART = `
 figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
+unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0;
 const __names = new Set(__PAGES.map((i) => figma.root.children[i].name));
-const __scope = __SCOPE ? new Set(__SCOPE) : null;
-const __components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], pages: { test: (n) => __names.has(n) }, scope: __scope });
-const __sets = ${PLANNED}.filter((pg) => __names.has(pg.name)).flatMap((pg) => pg.sets.filter((s) => !__scope || __scope.has(s.id)).map((s) => s.id));
-${written('{ components: __components, sets: __sets, unrecorded: [...new Set(unrecordedSeen)], unreadable, unanswered }', ', components: __components.length')}`;
+const __sets = ${PLANNED}.filter((pg) => __PAGES.includes(pg.index)).flatMap((pg) => pg.sets.filter((s) => !__SCOPE || __SCOPE.includes(s.id)).map((s) => s.id));
+const __components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], pages: { test: (n) => __names.has(n) }, scope: new Set(__sets) });
+scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered));
+${written('{ components: __components, sets: __sets, unrecorded: unrecordedSeen, unreadable, unanswered }', ', components: __components.length')}`;
 
 /* The tokens call: the plugin's collectTokens, the icon names by collectLibrary's own expressions, and the sets the
    parts must cover. */
@@ -197,13 +213,13 @@ export function tokensCode() {
     if (!line) throw new Error(`collectLibrary no longer reads ${n} on one line`);
     return line.trim();
   });
-  return capped(headless(cut(source, DEAD.tokens)) + '\n' + TOKENS.replace('%ICONS%', icons.join('\n')), 'tokens call');
+  return capped(headless(cut(source, DEAD.tokens())) + '\n' + TOKENS.replace('%ICONS%', icons.join('\n')), 'tokens call');
 }
 
 const args = (part) => `${JSON.stringify(part.pages)}, ${JSON.stringify(part.scope)}`;
 /* The store call: the walk as one function, kept as shared plugin data on the temporary page, and its first part. */
 export function storeCode(first) {
-  const fn = `async function __snap(__PAGES, __SCOPE) {\n${headless(cut(plugin(), DEAD.parts))}\n${PART}}`;
+  const fn = `async function __snap(__PAGES, __SCOPE) {\n${headless(cut(plugin(), DEAD.parts()))}\n${PART}}`;
   return capped(`${fn}
 const __page = figma.root.children.find((p) => p.name === ${JSON.stringify(SCRATCH)}) || Object.assign(figma.createPage(), { name: ${JSON.stringify(SCRATCH)} });
 __page.setSharedPluginData('${NS}', 'code', __snap.toString());
@@ -231,7 +247,7 @@ export function calls(plan) {
    tokens call found, each once, in its order. */
 export function join(found) {
   const heads = found.filter((p) => p.tokens);
-  if (heads.length !== 1) throw new Error(`${heads.length} of the holders hold the tokens: collect one tokens holder and every part's`);
+  if (heads.length !== 1) throw new Error(`${heads.length} of the holders hold the tokens: collect the tokens call's holder, once, with every part's`);
   const head = heads[0];
   const at = new Map(head.sets.map((id, i) => [id, i]));
   const parts = found.filter((p) => !p.tokens).sort((x, y) => (at.get(x.sets[0]) ?? Infinity) - (at.get(y.sets[0]) ?? Infinity));
@@ -246,12 +262,18 @@ export function join(found) {
   if (unplanned.length) throw new Error(`${list(unplanned)} walked but not in the file the tokens call read: run the plan and its calls again`);
   if (walked.some((id, i) => at.get(id) !== i)) throw new Error('the parts do not follow the plan\'s order: make the calls `parts <plan.json>` gives');
   const { tokens } = head;
-  tokens._meta.unrecorded = [...new Set(parts.flatMap((p) => p.unrecorded))].slice(0, 40);
-  const unanswered = parts.reduce((n, p) => n + p.unanswered, head.unanswered);
+  // as the whole walk keeps them: what it met, in its order, stopped at 200, then the first 40 kinds
+  tokens._meta.unrecorded = [...new Set(parts.flatMap((p) => p.unrecorded).slice(0, 200))].slice(0, 40);
+  // one count across the run: each call starts from the last one's, so the last is the run's
+  const unanswered = Math.max(head.unanswered, ...parts.map((p) => p.unanswered));
   if (unanswered) tokens._meta.variablesUnanswered = unanswered;
-  const unreadable = parts.flatMap((p) => p.unreadable);
+  // a set is listed once, as the walk lists it
+  const unreadable = parts.flatMap((p) => p.unreadable).filter((x, i, all) => all.findIndex((y) => y.name === x.name) === i);
   return { tokens, components: parts.flatMap((p) => p.components), icons: [], iconSets: head.iconSets, iconPage: head.iconPage, ...(head.iconGroups && { iconGroups: head.iconGroups }), ...(head.iconDescriptions && { iconDescriptions: head.iconDescriptions }), graphics: [], previews: [], ...(unreadable.length && { unreadable }) };
 }
+
+/* One whole run's holder as it is; a run in parts' holders (one alone too) joined, which refuses what is missing. */
+export const payloadOf = (found) => (found.length === 1 && !found[0].sets ? found[0] : join(found));
 
 /* The payload from a holder as REST gives it: its count, and each entry wherever under it it sits. */
 export function joined(node) {
@@ -295,7 +317,7 @@ async function holder(fileKey, id, token) {
 export async function read(fileKey, ids, token) {
   const found = [];
   for (const id of [].concat(ids)) found.push(await holder(fileKey, id, token));
-  const payload = named(found.length === 1 ? found[0].payload : join(found.map((f) => f.payload)), found[0].name);
+  const payload = named(payloadOf(found.map((f) => f.payload)), found[0].name);
   // the file read is the one the payload names, whether or not the cloud gave the run its key
   if (payload.tokens && payload.tokens._meta) payload.tokens._meta.fileKey ||= fileKey;
   return payload;

@@ -63,7 +63,7 @@ before running it again. Libraries only; screens are not served.
 A large library outlasts one call's time limit (a 64-page one did, 2026-11-25),
 so `parts` takes it in parts. Pass the plan code to `use_figma` and save what it
 returns as a file: each set's id and its walks, variants × (1 + booleans).
-`parts <plan.json>` then lists the calls in order. The tokens call reads the
+`parts <plan.json>` then lists the calls; make them in that order. The tokens call reads the
 variables, styles and icon names. The next call stores the walk on the
 temporary page and runs the first part; each later call runs what is stored.
 A part holds about 1,500 walks, and a set over that goes alone. Collect every
