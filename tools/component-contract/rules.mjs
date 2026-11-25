@@ -163,12 +163,16 @@ export function typeOfValue(v) {
 }
 // (a value in the form's shape, parsed or not: never a style's name, so never written as one)
 export const looksLikeValue = (v) => /^literal \d+(?:\.\d+)?\/\d/.test(word(v));
+/* A face's weight by its name, as the contract says it (a face may join its words, BoldItalic or Bold_Italic; an italic
+   alone, or Roman, is the regular weight's): never the font file's own weight class (Lucida Grande's Regular says 500). */
+export function faceWeight(style) {
+  const face = word(style).replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2'), slant = /\b(italic|oblique)\b/i.test(face);
+  const rest = face.replace(/\b(italic|oblique)\b/gi, '').trim();
+  return { weight: style ? figmaWeight(!rest || /^roman$/i.test(rest) ? 'Regular' : rest) : undefined, slant };
+}
 export function typeFromFigma(n) {
   const size = n.fontSize;
-  // (a face may join its words, BoldItalic or Bold_Italic; an italic alone, or Roman, is the regular weight's)
-  const face = word(n.fontStyle).replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2'), slant = /\b(italic|oblique)\b/i.test(face);
-  const rest = face.replace(/\b(italic|oblique)\b/gi, '').trim();
-  const w = n.fontStyle ? figmaWeight(!rest || /^roman$/i.test(rest) ? 'Regular' : rest) : undefined;
+  const { weight: w, slant } = faceWeight(n.fontStyle);
   if (typeof size !== 'number' || w === undefined || !n.fontFamily) return null;
   const lh = word(n.lineHeight);
   // (none recorded is several in one text, which no value says: only a recorded auto is Auto)

@@ -47,7 +47,7 @@ import { expand, camel } from './layers.mjs';
 import { WEIGHTS } from '../parity/values.mjs';
 // which parts a contract says turned on their own axes: its convention, read, never a value computed
 import { turnedParts } from './to-code.mjs';
-import { CLEARED } from './rules.mjs';
+import { CLEARED, faceWeight } from './rules.mjs';
 
 const require = createRequire(import.meta.url);
 const { resolve: resolveSpec, layerPaths } = require('../snapshot/spec.cjs');
@@ -609,7 +609,7 @@ export function restPart(n, parent, ctx, propIds, frame = parent, { turned = fal
     e.content = refId(propIds, ref) ? `{${refId(propIds, ref)}}` : String(n.characters || '');
     const mixed = (n.characterStyleOverrides || []).some(Boolean);
     const style = styleName(ctx, n, 'text');
-    e.typography = mixed ? 'mixed' : style || { size: st.fontSize, lineHeight: st.lineHeightUnit === 'INTRINSIC_%' || !st.lineHeightUnit ? 0 : r2(st.lineHeightPx), weight: st.fontWeight, italic: !!st.italic, family: st.fontFamily };
+    e.typography = mixed ? 'mixed' : style || { size: st.fontSize, lineHeight: st.lineHeightUnit === 'INTRINSIC_%' || !st.lineHeightUnit ? 0 : r2(st.lineHeightPx), weight: faceWeight(st.fontStyle).weight ?? st.fontWeight, italic: !!st.italic, family: st.fontFamily };
     e.textAlign = TEXT_ALIGN[st.textAlignHorizontal] || st.textAlignHorizontal;
     e.autoResize = String(st.textAutoResize || 'NONE').toLowerCase();
     if (st.textAlignVertical === 'CENTER') e.verticalAlign = 'center'; else if (st.textAlignVertical === 'BOTTOM') e.verticalAlign = 'end';

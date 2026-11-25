@@ -31,6 +31,9 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   assert.equal(up.angle, 0);
   assert.equal(paintOurs({ type: 'GRADIENT_LINEAR', angle: 360, stops: [] }).angle, 0);
   assert.equal(paintOurs({ type: 'GRADIENT_LINEAR', angle: -90, stops: [] }).angle, 270);
+  // a text's weight is its face's name, as the contract says it: Lucida Grande's Regular is 400 though its file says 500
+  { const tx = (fontStyle) => restPart({ id: 't', name: 'T', type: 'TEXT', size: { x: 10, y: 10 }, relativeTransform: [[1, 0, 0], [0, 1, 0]], characters: 'A', style: { fontFamily: 'Lucida Grande', fontStyle, fontWeight: 500, fontSize: 14, lineHeightPx: 18, lineHeightUnit: 'PIXELS' } }, null, { styles: {}, components: {}, componentSets: {} }, {}).typography.weight;
+    assert.equal(tx('Regular'), 400); assert.equal(tx('Bold'), 700); assert.equal(tx(undefined), 500); }
 }
 {
   const frame = { id: '1', name: 'Box', type: 'FRAME', size: { x: 100, y: 40 }, relativeTransform: T(4, 6), layoutMode: 'HORIZONTAL', paddingTop: 1, paddingRight: 2, paddingBottom: 3, paddingLeft: 4, itemSpacing: 8, primaryAxisAlignItems: 'SPACE_BETWEEN', counterAxisAlignItems: 'CENTER', layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'HUG', cornerRadius: 6, opacity: 0.5, clipsContent: true,
