@@ -843,7 +843,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     a.b.border === 'none' && a.p.border === undefined && a.s.border.color === 'x' && !Object.values(a).some((x) => 'strokeless' in x));
   const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
   ok('…its stroke read as drawn, before its outline is left to its component', src.includes("boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true;")
-    && src.includes('readCleared(anatomy, mainOf); normalForm(anatomy); colourKept('));
+    && src.includes('readCleared(anatomy, mainOf, L.value); normalForm(anatomy); colourKept('));
   // its fill likewise, only where the page paints it clear (fillless): a fill merely unread says nothing
   const F = { component: 'Card', props: {}, anatomy: { root: { kind: 'container', background: 'Bg/card' } }, variants: [] };
   const f = readCleared({ root: { kind: 'container' }, c: { kind: 'instance', component: 'Card', fillless: true }, u: { kind: 'instance', component: 'Card', strokeless: true }, k: { kind: 'instance', component: 'Card', fillless: true, background: 'Bg/other' } }, (n) => (n === 'Card' ? F : null));
@@ -853,6 +853,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     sh.a.shadow === 'none' && sh.b.shadow === undefined && !('shadowless' in sh.a) && src.includes("if (cs.boxShadow === 'none') ie.shadowless = true;"));
   ok('a placed component painting clear where its component has a fill reads as the fill cleared; one unread, or painted, says nothing',
     f.c.background === 'none' && f.u.background === undefined && f.k.background === 'Bg/other' && !Object.values(f).some((x) => 'fillless' in x)
+    && readCleared({ c: { kind: 'instance', component: 'Card', fillless: true } }, () => F, (t) => (t === 'Bg/card' ? 'rgba(0, 0, 0, 0)' : undefined)).c.background === undefined
     && src.includes("if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true;"));
 }
 { const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
@@ -1162,6 +1163,7 @@ ok('codeKeys: two modules saying different keys for one instance name say none',
   const { placedOver } = await import('./from-code.mjs');
   const f = { root: { kind: 'container' }, 'root/tag': { kind: 'instance' }, box: { kind: 'container' } };
   ok('a layer under a placed instance the design leaves out is its component\'s; one under a plain layer, or nothing, is not',
-    placedOver(f, 'root/tag/content/close') === true && placedOver(f, 'box/inner') === false && placedOver(f, 'gone/inner') === false);
+    placedOver(f, 'root/tag/content/close') === true && placedOver(f, 'box/inner') === false && placedOver(f, 'gone/inner') === false
+    && placedOver({ ...f, 'root/tag/label': { kind: 'text' } }, 'root/tag/icon') === false);
 }
 console.log(`${n}/${n} passed`);

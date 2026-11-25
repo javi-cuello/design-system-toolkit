@@ -593,7 +593,8 @@ function ownStyling(anatomy, mains) {
     const root = atProps(m, e.with).root;
     // (a layout with no padding and one of four zeros are one layout: a reading from code says no padding it finds none of)
     const one = (f, v) => (f === 'layout' && v && typeof v === 'object' && !v.padding ? { ...v, padding: { top: 0, end: 0, bottom: 0, start: 0 } } : v);
-    if (root) for (const f of OWN) if (e[f] !== undefined && sorted(one(f, e[f])) === sorted(one(f, root[f]))) delete e[f];
+    // (a stroke stays said beside a shadow cleared: to-code writes both in one box-shadow, so `none` alone would drop it)
+    if (root) for (const f of OWN) if (e[f] !== undefined && !(f === 'border' && e.shadow === CLEARED) && sorted(one(f, e[f])) === sorted(one(f, root[f]))) delete e[f];
   }
   return anatomy;
 }
@@ -798,7 +799,8 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     // a layer kept that draws no fill where its component's part has one has cleared it (an instance's override: its
     // fills emptied, or at no opacity, which the walk does not record): said none, or a reader would take the part's
     // unsaid fill as its component's (Carbon's read-only time picker's field background)
-    for (const k of kept) {
+    // (Figma's reading only: one from code says a fill cleared only where it saw one painted clear, readCleared)
+    if (!reading) for (const k of kept) {
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (e && x && e.kind !== 'instance' && e.background === undefined && paintOf(x.background)) e.background = CLEARED;
     }

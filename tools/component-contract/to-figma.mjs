@@ -969,7 +969,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       await paintIf(n, 'fills', e.color);
       const words = typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) ? e.content : null;
       if (words !== null && n.characters !== words && n.fontName !== figma.mixed) { await tried(`font of ${n.name}`, () => figma.loadFontAsync(n.fontName)); n.characters = words; }
-    } else if (e.kind === 'graphic' && n.type === 'VECTOR') await paintIf(n, n.strokes.length ? 'strokes' : 'fills', e.background, true);
+    } else if (e.kind === 'graphic' && n.type === 'VECTOR') await paintIf(n, n.strokes.length && e.background !== P.cleared ? 'strokes' : 'fills', e.background, true);
     else if (e.kind !== 'text') await paintIf(n, 'fills', e.background);
     styleFill(n, e, e.kind === 'text' ? e.color : e.background);
     // (a reading from code states what it read, not Figma's defaults: only its stroke's colour, as before)

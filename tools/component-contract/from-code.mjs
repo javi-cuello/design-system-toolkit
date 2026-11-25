@@ -260,7 +260,9 @@ export function roomTaken(e, room) {
 /* A placed component the page draws no stroke on (no border, ring or outline read: `strokeless`) where its component's
    root has one at its props has had it cleared, as to-code writes a contract's `none` (rules.mjs CLEARED): read back so.
    Its fill likewise. The mark goes from every part. (A colour style code has none of: never read.) */
-export function readCleared(anatomy, mains) {
+// a colour value that paints nothing (a transparent token: a ghost button's fill)
+const clearValue = (v) => typeof v === 'string' && /^(transparent|#[0-9a-f]{3}0|#[0-9a-f]{6}00|rgba?\([^)]*[,/]\s*0(\.0+)?\))$/i.test(v.trim());
+export function readCleared(anatomy, mains, valueOf = () => undefined) {
   const { atProps } = req('./derive.cjs');
   for (const e of Object.values(anatomy)) {
     if (!e || (!e.strokeless && !e.fillless && !e.shadowless)) continue;
@@ -270,7 +272,7 @@ export function readCleared(anatomy, mains) {
     if (stroke && R && R.border && typeof R.border === 'object' && R.border.color != null && e.border === undefined) e.border = CLEARED;
     // (and a fill the page paints clear, `fillless`, where its root has one: cleared too, as to-code writes a contract's
     // background none; never a fill merely left unread)
-    if (fill && R && typeof R.background === 'string' && R.background !== CLEARED && e.background === undefined) e.background = CLEARED;
+    if (fill && R && typeof R.background === 'string' && R.background !== CLEARED && !clearValue(valueOf(R.background)) && e.background === undefined) e.background = CLEARED;
     // (and a shadow the page draws none of, `shadowless`, where its root has one)
     if (shade && R && typeof R.shadow === 'string' && R.shadow !== CLEARED && e.shadow === undefined) e.shadow = CLEARED;
   }
@@ -957,8 +959,9 @@ export function keyInstances(anatomy, fromCode, fromLibrary, A) {
   return declared;
 }
 
-/* Whether a layer the expanded design `f` leaves out sits inside an instance it places: its component draws it. */
-export const placedOver = (f, id) => { for (let i = id.lastIndexOf('/'); i > 0; i = id.lastIndexOf('/', i - 1)) { const up = f[id.slice(0, i)]; if (up) return up.kind === 'instance'; } return false; };
+/* Whether a layer the expanded design `f` leaves out sits inside an instance it places and lists nothing inside: its
+   component draws it (one whose insides the design lists, kept whole, leaves out a layer it hides). */
+export const placedOver = (f, id) => { for (let i = id.lastIndexOf('/'); i > 0; i = id.lastIndexOf('/', i - 1)) { const at = id.slice(0, i), up = f[at]; if (up) return up.kind === 'instance' && !Object.keys(f).some((k) => k.startsWith(at + '/')); } return false; };
 /* What a generated module says it draws (to-markup's `export const figma = {…}`): the design component's name, read from
    the code's text, or null where it says nothing. Tested by test-from-code.mjs. */
 export function codeFigma(js) {
@@ -2748,7 +2751,7 @@ async function main() {
         const { M } = placedAs(anatomy, hid, hm, mainOf), match = placedMatch(M, inner);
         for (const [rel, e] of Object.entries(inner)) if (match[rel] && M[match[rel]].kind === e.kind) A.take('placed-main-token', { anatomy: { [`${hid}/${rel}`]: e } }, () => zeroTokens(e, M[match[rel]], L.value, { fill: true }));
       }
-      readCleared(anatomy, mainOf); normalForm(anatomy); colourKept(A, anatomy, mainOf, { partial: true, whole: wholeIn, coloured: colouredOf, reading: true });
+      readCleared(anatomy, mainOf, L.value); normalForm(anatomy); colourKept(A, anatomy, mainOf, { partial: true, whole: wholeIn, coloured: colouredOf, reading: true });
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
       return anatomy;
     };
