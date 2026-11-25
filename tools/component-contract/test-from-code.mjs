@@ -266,6 +266,8 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   host.attrs['data-figma-id'] = 'footer/button';
   ok('a layer inside a placed component, mapped to its root, stays on that root', elementOfLayer(inner, 'footer/button/container', 'container', R, others)[0] === inner);
   ok('a text inside a placed component, mapped to its root, is that root\'s words', elementOfLayer(inner, 'footer/button/label', 'text', R, others)[1] === true);
+  const day = el('ds-button', [], { 'data-figma-id': 'footer/day' }), words = el('span', [], { 'data-part': 'value' }); words.parentElement = day; day.firstElementChild = words;
+  ok('a part first in a placed component that draws no root of its own is that part, never the component\'s words', elementOfLayer(words, 'footer/day/value', 'text', R, others)[0] === words && elementOfLayer(words, 'footer/day/value', 'text', R, others)[1] === false);
 }
 // a placed instance the mapping names is opened at any depth of placing: an override two deep (a slider's stop's dot,
 // inside its Stops) is read, not left to the inner component's own value (Material 3's standard slider)

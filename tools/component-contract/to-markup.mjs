@@ -264,12 +264,14 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
 }
 
 /* What a component the library does not hold, swapped in where no prop swaps it, draws of its own that its mark does not
-   (no sheet names it, no prop passes it): its look as an inline style, as its sheet would say it, and its modes, as this
+   (no sheet names it, no prop passes it): its look as an inline style, as its sheet would say it (its fill the mark's
+   colour), and its modes, as this
    component's markup says a mode (modeAttrs). */
 function swappedLook(L, inner, rel, host) {
   const par = inner[rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : ''] || host;
   const style = declarations({ ...L, kind: 'container' }, { holds: true, row: !par.layout || par.layout.direction !== 'column', words: null }, tokenNames).decls
-    .filter(([k]) => /^(background|border|box-shadow|outline|opacity)/.test(k)).map(([k, v]) => `${k}: ${v}`).join('; ');
+    // (its fill as a mark's: the glyph's colour, which a mark is read by, never a box behind it)
+    .filter(([k]) => /^(background|border|box-shadow|outline|opacity)/.test(k)).map(([k, v]) => `${/^background(-color)?$/.test(k) ? 'color' : k}: ${v}`).join('; ');
   return { ...(style && { style }), ...Object.fromEntries(Object.entries(L.modes || {}).map(([k, v]) => [MODES.attribute(k), v])) };
 }
 

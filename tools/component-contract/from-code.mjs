@@ -499,7 +499,9 @@ export function outlineIsOwn(x, focused, inPlaced, ringed) {
    whether it is words. Runs in the page (passed as source); tested by test-from-code.mjs. */
 export function elementOfLayer(q, id, kind, rootRe, others) {
   const h = q && q.parentElement;
-  const isHost = h && rootRe && h.firstElementChild === q && [...h.classList, h.tagName.toLowerCase()].some((c) => { const x = (c.match(new RegExp(rootRe)) || [])[1]; return x && others[x]; });
+  // (an element that names a part, data-part, is a part of the component it sits in, never that component's root, though
+  // it come first in its host: a day's words where it draws no control around them, read as the part they are)
+  const isHost = h && rootRe && h.firstElementChild === q && !q.getAttribute('data-part') && [...h.classList, h.tagName.toLowerCase()].some((c) => { const x = (c.match(new RegExp(rootRe)) || [])[1]; return x && others[x]; });
   if (!isHost) return [q, false];
   const its = h.getAttribute('data-figma-id');
   if (kind === 'instance' && !its) return [h, false];

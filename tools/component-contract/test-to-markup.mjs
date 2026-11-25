@@ -213,7 +213,7 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     ok('parts: another component swapped in where no prop swaps it is drawn in the part\'s place, given its own props', !!b && b.attrs['data-part'] === 'trail' && b.textContent === '7' && !find(d, (x) => x.tag === 'ds-trail')); }
   { const d = await run(row({ 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Icons/star', background: 'Fill/accent', radius: 4, modes: { tone: 'bold' } } })), x = find(d, (y) => y.attrs['data-part'] === 'trail');
     ok('parts: a component the library does not hold, in place of one it does, is marked where it goes as an icon is, with the look and modes it draws of its own',
-      x && x.tag === 'span' && x.attrs['data-icon'] === 'Icons/star' && !find(d, (y) => y.tag === 'ds-trail') && /background: var\(--fill-accent\)/.test(x.attrs.style || '') && /border-radius: 4px/.test(x.attrs.style || '') && Object.values(x.attrs).includes('bold'), JSON.stringify(x && x.attrs)); }
+      x && x.tag === 'span' && x.attrs['data-icon'] === 'Icons/star' && !find(d, (y) => y.tag === 'ds-trail') && /(^|; )color: var\(--fill-accent\)/.test(x.attrs.style || '') && !/background/.test(x.attrs.style || '') && /border-radius: 4px/.test(x.attrs.style || '') && Object.values(x.attrs).includes('bold'), JSON.stringify(x && x.attrs)); }
   { const two = { ...item, anatomy: { ...item.anatomy, trail_2: { ...item.anatomy.trail, order: 2 } } };
     const r = row({ 'item/trail_2': { kind: 'instance', parent: 'item', order: 2, component: 'Trail', with: { Tone: 'Loud' } } }), L = { ...lib(r), Item: two };
     const dir = path.join(tmp, 'copies'); fs.mkdirSync(dir); fs.writeFileSync(path.join(dir, 'dom.js'), DOM);
