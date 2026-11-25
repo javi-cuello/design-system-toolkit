@@ -219,11 +219,13 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
       clientStorage: { getAsync: async () => "", setAsync: async () => {} }, getNodeByIdAsync: async () => null,
       loadAllPagesAsync: async () => { events.push("loadAll"); } };
     const lp = vm.runInContext(src + "\n;loadPages", vm.createContext({ figma: fw, console, __html__: "", fetch: () => new Promise(() => {}), setTimeout, clearTimeout }));
-    await lp();
+    await lp(true);
     ok("the window says pages are loading before loadAllPagesAsync is awaited", events[0].startsWith("loading every page") && events[1] === "loadAll");
     events.length = 0; fw.loadAllPagesAsync = async () => { throw new Error("not supported"); };
-    await lp();
+    await lp(true);
     ok("…and counts the pages where they load one by one", events.join() === "loading every page of the file (a large file takes minutes),loading pages 0/2,page,loading pages 1/2,page");
+    events.length = 0; await lp();
+    ok("…and says nothing where the plugin only opens (detect)", events.join() === "page,page");
   }
   const text = (id, chars, auto, h) => ({ textStyleId: id, characters: chars, textAutoResize: auto, height: h });
   const page = (name, texts) => ({ name, findAllWithCriteria: () => texts });

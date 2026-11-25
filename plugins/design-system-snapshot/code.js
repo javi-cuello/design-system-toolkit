@@ -247,11 +247,12 @@ const place = (parent, node) => {
   try { parent.appendChild(node); return true; } catch (e) { if (/unloaded font/.test(message(e))) return false; throw e; }
 };
 // Said before it starts: on a large file loading every page takes minutes, and a window still on "Starting…" reads as hung.
-const loadPages = async () => {
-  say('loading every page of the file (a large file takes minutes)');
+// `tell`: a snapshot says it (a window still on "Starting…" reads as hung); detect() on open stays quiet.
+const loadPages = async (tell = false) => {
+  if (tell) say('loading every page of the file (a large file takes minutes)');
   try { await figma.loadAllPagesAsync(); } catch (e) {
     const all = figma.root.children;
-    for (let i = 0; i < all.length; i++) { say('loading pages', i, all.length); await all[i].loadAsync(); }
+    for (let i = 0; i < all.length; i++) { if (tell) say('loading pages', i, all.length); await all[i].loadAsync(); }
   }
 };
 
@@ -1261,7 +1262,7 @@ const componentSets = (scope) => /** @type {(ComponentSetNode | ComponentNode)[]
 /** @param {boolean} withIcons */
 async function collectLibrary(withIcons) {
   walkWhole = false;
-  await loadPages();
+  await loadPages(true);
   say('reading the variables and styles');
   const tokens = await collectTokens();
 
@@ -1365,7 +1366,7 @@ async function collectLibrary(withIcons) {
 async function collectScreens() {
   walkWhole = true;
   sourceSeen.clear(); // a component's notes are read fresh each run
-  await loadPages();
+  await loadPages(true);
   const screens = [];
   // The section a page sits in: the nearest header page above it. A page
   // named with a leading dash is a member ("-- Main screens"), or a divider
