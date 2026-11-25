@@ -60,7 +60,7 @@ export function stripped(source) {
 
 /* The payload, left as ASCII (so a character is a byte) in entries of CHUNK, PER_NODE to a frame, under one holder
    that says how many there are. `expr` is the payload's expression; `extra` adds to what the call returns. */
-const written = (expr, extra = '') => `
+const written = (expr, extra = '', after = '') => `
 const __payload = ${expr};
 const __text = JSON.stringify(__payload).replace(/[^ -~]/g, (c) => String.fromCharCode(92) + 'u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 const __holder = figma.createFrame();
@@ -72,6 +72,7 @@ for (let i = 0; i < __text.length; i += ${CHUNK}) {
   __box.setSharedPluginData('${NS}', 'c' + __n++, __text.slice(i, i + ${CHUNK}));
 }
 __holder.setSharedPluginData('${NS}', 'n', String(__n));
+${after}
 return { holder: __holder.id, chunks: __n, bytes: __text.length${extra}, seconds: Math.round((Date.now() - __t0) / 1000) };
 `;
 
@@ -200,8 +201,7 @@ unrecordedSeen.push = function (...xs) { if (xs.length) __groups.push(xs); retur
 const __names = new Set(__PAGES.map((i) => figma.root.children[i].name));
 const __sets = ${PLANNED}.filter((pg) => __PAGES.includes(pg.index)).flatMap((pg) => pg.sets.filter((s) => !__SCOPE || __SCOPE.includes(s.id)).map((s) => s.id));
 const __components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], pages: { test: (n) => __names.has(n) }, scope: new Set(__sets) });
-scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered));
-${written('{ components: __components, sets: __sets, unrecorded: __groups, unreadable, unanswered: unanswered - __from }', ', components: __components.length')}`;
+${written('{ components: __components, sets: __sets, unrecorded: __groups, unreadable, unanswered: unanswered - __from }', ', components: __components.length', `scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered));`)}`;
 
 /* The tokens call: the plugin's collectTokens, the icon names by collectLibrary's own expressions, and the sets the
    parts must cover. */
@@ -271,8 +271,9 @@ export function join(found) {
   // each part says how many it added, from the count the calls before it left: parts run side by side all add
   const unanswered = parts.reduce((n, p) => n + p.unanswered, head.unanswered);
   if (unanswered) tokens._meta.variablesUnanswered = unanswered;
-  // a variant's unreadable entry is listed once by name, as the walk lists it; a set's, which says its page, each time
-  const unreadable = parts.flatMap((p) => p.unreadable).filter((x, i, all) => x.page !== undefined || all.findIndex((y) => y.page === undefined && y.name === x.name) === i);
+  // as the walk lists them: a set's entry, which says its page, each time; a variant's only when no entry before it has its name
+  const unreadable = [];
+  for (const x of parts.flatMap((p) => p.unreadable)) if (x.page !== undefined || !unreadable.some((y) => y.name === x.name)) unreadable.push(x);
   return { tokens, components: parts.flatMap((p) => p.components), icons: [], iconSets: head.iconSets, iconPage: head.iconPage, ...(head.iconGroups && { iconGroups: head.iconGroups }), ...(head.iconDescriptions && { iconDescriptions: head.iconDescriptions }), graphics: [], previews: [], ...(unreadable.length && { unreadable }) };
 }
 

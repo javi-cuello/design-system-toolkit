@@ -115,6 +115,10 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   ok('the unrecorded are kept as the whole walk keeps them: a node\'s all while fewer than 200 are kept, in plan order, then the first 40 kinds', j.tokens._meta.unrecorded.join() === 'x0,x1,x2,over1,over2');
   ok('the run\'s unanswered count is the tokens call\'s plus what each part added, so parts run side by side lose none', j.tokens._meta.variablesUnanswered === 4);
   ok('a variant unreadable in two parts is listed once, as the walk lists it; a set\'s entry, which says its page, each time', j.unreadable.map((x) => x.name).join() === 'Bad,Set,Worse,Set');
+  const c = part('a', { unreadable: [{ name: 'Card', page: 'P', reason: 'r' }] }), d = part('b', { unreadable: [{ name: 'Card', reason: 'r' }] });
+  ok('a variant\'s entry after a set\'s of the same name, in another part, is dropped, as the walk drops it', join([head, c, d]).unreadable.length === 1);
+  const code = storeCode({ pages: [0], scope: null });
+  ok('a part stores its unanswered count only once its holder is written, so a part that fails writing it leaves the count as it was', code.indexOf("'unanswered', String(unanswered)") > code.indexOf("__holder.setSharedPluginData"));
   assert.throws(() => payloadOf([head]), /no part walked 2 planned sets/); n++; console.log('ok a tokens holder collected alone is refused, never delivered as a whole run');
   assert.throws(() => payloadOf([a]), /0 of the holders hold the tokens/); n++; console.log('ok a part holder collected alone is refused, never delivered as a whole run');
   ok('one whole run\'s holder is delivered as it is', payloadOf([{ tokens: {}, components: [] }]).components.length === 0);
