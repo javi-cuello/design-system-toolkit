@@ -5,6 +5,8 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 ### Added
 - **A property's links say each layer's own variants** (`layerVariants`) when its layers sit in different variants, so two swaps driving one icon in turn each name where they drive it.
 - **A reference inside a placed instance is recorded when it names one of the set's own keys**: a property the set exposes on a nested layer.
+### Changed
+- `collectScreens` and `reachable`, which only the window calls, sit below the MCP cut, so the script `use_figma` runs keeps room under its 50 000 characters.
 
 
 ## [0.89.6] - 2026-11-25

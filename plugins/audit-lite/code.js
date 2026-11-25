@@ -2687,53 +2687,6 @@ async function collectLibrary(withIcons) {
   return { tokens, components, icons, iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, ...(Object.keys(iconGroups).length && { iconGroups }), ...(Object.keys(iconDescriptions).length && { iconDescriptions }), graphics, previews, ...(unreadable.length && { unreadable }) };
 }
 
-async function collectScreens() {
-  walkWhole = true;
-  sourceSeen.clear(); // a component's notes are read fresh each run
-  await loadPages(true);
-  const screens = [];
-  // The section a page sits in: the nearest header page above it. A page
-  // named with a leading dash is a member ("-- Main screens"), or a divider
-  // when it is nothing but dashes, which ends the section; any other page is
-  // a header and starts one. Two sections may each hold a "-- Main screens",
-  // so a screen is addressed by section, page and name: snapshot-standard rule 24.
-  let section = null, read = 0;
-  const ready = figma.root.children.reduce((n, page) => n + page.children.filter((f) => (f.type === 'FRAME' || f.type === 'SECTION') && f.devStatus).length, 0);
-  for (const page of figma.root.children) {
-    if (/^[-\s]+$/.test(page.name)) { section = null; continue; }
-    if (!page.name.trim().startsWith('-')) section = page.name.trim();
-    for (const f of page.children) {
-      if (f.type !== 'FRAME' && f.type !== 'SECTION') continue;
-      // Ready for dev (or Completed) is the designer's own "this one counts",
-      // and the API allows it only on a node directly under a page or section
-      // — which is exactly this loop. An unmarked frame is a draft: its name
-      // travels so the receiver can say what it passed over, its tree does
-      // not. A name prefix was the alternative and would have been silent
-      // when forgotten; this control is visible in the file.
-      const devStatus = (f.devStatus && f.devStatus.type) || null;
-      if (!devStatus) { screens.push({ section, page: page.name, frame: f.name, id: f.id, devStatus: null }); continue; }
-      say('reading frames', read++, ready);
-      // The frame as a picture, beside the frame as numbers. Every property
-      // can match while the composition does not: an upside-down image, a
-      // border drawn twice, a title that wraps — each measures identical and
-      // each shipped. A person spotting them by holding the page next to the
-      // frame is the thing this loop exists to replace, so the frame travels
-      // with the snapshot and the check does the holding.
-      // Scaled so the longest side is 1200: this is compared as regions, not
-      // as pixels — two rasterisers never agree pixel for pixel — and a full
-      // 9794-tall export would cost more than it tells.
-      let image = null;
-      try {
-        const scale = Math.min(1, 1200 / Math.max(f.width, f.height));
-        const bytes = await f.exportAsync({ format: 'PNG', constraint: { type: 'SCALE', value: scale } });
-        image = { scale, data: figma.base64Encode(bytes) };
-      } catch (e) { /* a frame that will not export still sends its tree */ }
-      const tree = await walk(f, 0);
-      screens.push({ section, page: page.name, frame: f.name, id: f.id, devStatus, image, tree });
-    }
-  }
-  return { _meta: { file: figma.root.name, fileKey: figma.fileKey, fileId: fileId(), snapshot: new Date().toISOString().slice(0, 10), plugin: VERSION, unrecorded: [...new Set(unrecordedSeen)].slice(0, 40) }, screens };
-}
 
 // What a node can say that the snapshot does not send.
 //
@@ -2807,24 +2760,6 @@ async function detect() {
   return sets > 0 && !marked ? 'library' : 'screens';
 }
 
-/*
- * Is the router listening, asked BEFORE the button is live.
- *
- * Collecting a library is half a minute of reading the designer's file, and
- * until now the only way to learn nothing was listening was to spend it and be
- * told at the end. The UI greys the button out and shows the command instead.
- * Any answer is a router listening: one that answers 500 is up and broken, and
- * its own error is what the person needs, never "Nothing is listening" and a
- * snapshot quietly saved as a file (0.67.1).
- */
-async function reachable() {
-  try {
-    const res = await fetch(SERVER, { method: 'GET' });
-    return res.status > 0;
-  } catch (e) {
-    return false;
-  }
-}
 
 /*
  * The kind the router's routing records for this file, which is the answer;
@@ -2857,39 +2792,36 @@ async function kind() {
  * @param {any[]} roots
  */
 function propLinks(roots, keys) {
-  /** @type {Record<string, { kind: string, layers: string[][], variants?: string[], layerVariants?: string[][] }>} */ const links = {};
-  /** @type {Record<string, Set<string>>} */ const where = {};
-  /** @type {Record<string, Set<string>[]>} */ const byLayer = {};
+  const links = /** @type {Record<string, { kind: string, layers: string[][], variants?: string[], layerVariants?: string[][] }>} */ ({});
+  // (per property, per layer, the variants it is driven in)
+  const by = /** @type {Record<string, Set<string>[]>} */ ({});
   let root = '';
   /** @param {any} node @param {string[]} at @param {boolean} [inside] */
   const walk = (node, at, inside = false) => {
-    /** @type {Record<string, number>} */ const seen = {};
+    const seen = /** @type {Record<string, number>} */ ({});
     for (const c of node.children || []) {
       const n = c.visible === false ? (seen[c.name] || 0) + 1 : (seen[c.name] = (seen[c.name] || 0) + 1);
-      const here = [...at, c.name + (n > 1 ? `[${n}]` : '')];
-      const refs = c.componentPropertyReferences;
-      if (refs) for (const kind of ['characters', 'visible', 'mainComponent']) {
-        if (!refs[kind]) continue;
-        // (inside a placed instance a reference is its component's own, unless it names one of this set's keys: a
+      const here = [...at, c.name + (n > 1 ? `[${n}]` : '')], refs = c.componentPropertyReferences || {};
+      for (const kind of ['characters', 'visible', 'mainComponent']) {
+        const ref = refs[kind];
+        // (inside a placed instance a reference is its component's own, unless it is one of this set's keys: a
         // property the set exposes on a nested layer)
-        if (inside && !(keys && keys.has(refs[kind]))) continue;
-        const prop = bare(refs[kind]);
-        const l = links[prop] || (links[prop] = { kind, layers: [] });
-        let i = l.layers.findIndex((x) => x.join('/') === here.join('/') && x.length === here.length);
-        if (i < 0) { l.layers.push(here); i = l.layers.length - 1; }
-        (where[prop] || (where[prop] = new Set())).add(root);
-        const per = byLayer[prop] || (byLayer[prop] = []);
+        if (!ref || (inside && !(keys && keys.has(ref)))) continue;
+        const prop = bare(ref), l = links[prop] || (links[prop] = { kind, layers: [] }), per = by[prop] || (by[prop] = []);
+        let i = l.layers.findIndex((x) => JSON.stringify(x) === JSON.stringify(here));
+        if (i < 0) i = l.layers.push(here) - 1;
         (per[i] || (per[i] = new Set())).add(root);
       }
       walk(c, here, inside || c.type === 'INSTANCE');
     }
   };
   for (const v of roots) { root = v.name; walk(v, []); }
+  const names = (/** @type {Set<string>} */ w) => roots.map((v) => v.name).filter((n) => w.has(n));
   for (const [prop, l] of Object.entries(links)) {
-    if (where[prop].size < roots.length) l.variants = roots.map((v) => v.name).filter((n) => where[prop].has(n));
+    const all = new Set(by[prop].flatMap((x) => [...x]));
+    if (all.size < roots.length) l.variants = names(all);
     // (each layer's own variants where they are not the property's: two swaps driving one layer in turn, one per state)
-    const per = byLayer[prop];
-    if (per.some((x) => x.size < where[prop].size)) l.layerVariants = per.map((x) => roots.map((v) => v.name).filter((n) => x.has(n)));
+    if (by[prop].some((x) => x.size < all.size)) l.layerVariants = by[prop].map(names);
   }
   return links;
 }
@@ -3200,6 +3132,74 @@ class Cancelled extends Error {}
 
 // ---- the window and the headless entry: everything below runs from the UI or a bridge, never from use_figma's run,
 // which calls collectLibrary itself and is cut here to stay under its size cap (tools/snapshot/mcp.mjs, CUT).
+
+async function collectScreens() {
+  walkWhole = true;
+  sourceSeen.clear(); // a component's notes are read fresh each run
+  await loadPages(true);
+  const screens = [];
+  // The section a page sits in: the nearest header page above it. A page
+  // named with a leading dash is a member ("-- Main screens"), or a divider
+  // when it is nothing but dashes, which ends the section; any other page is
+  // a header and starts one. Two sections may each hold a "-- Main screens",
+  // so a screen is addressed by section, page and name: snapshot-standard rule 24.
+  let section = null, read = 0;
+  const ready = figma.root.children.reduce((n, page) => n + page.children.filter((f) => (f.type === 'FRAME' || f.type === 'SECTION') && f.devStatus).length, 0);
+  for (const page of figma.root.children) {
+    if (/^[-\s]+$/.test(page.name)) { section = null; continue; }
+    if (!page.name.trim().startsWith('-')) section = page.name.trim();
+    for (const f of page.children) {
+      if (f.type !== 'FRAME' && f.type !== 'SECTION') continue;
+      // Ready for dev (or Completed) is the designer's own "this one counts",
+      // and the API allows it only on a node directly under a page or section
+      // — which is exactly this loop. An unmarked frame is a draft: its name
+      // travels so the receiver can say what it passed over, its tree does
+      // not. A name prefix was the alternative and would have been silent
+      // when forgotten; this control is visible in the file.
+      const devStatus = (f.devStatus && f.devStatus.type) || null;
+      if (!devStatus) { screens.push({ section, page: page.name, frame: f.name, id: f.id, devStatus: null }); continue; }
+      say('reading frames', read++, ready);
+      // The frame as a picture, beside the frame as numbers. Every property
+      // can match while the composition does not: an upside-down image, a
+      // border drawn twice, a title that wraps — each measures identical and
+      // each shipped. A person spotting them by holding the page next to the
+      // frame is the thing this loop exists to replace, so the frame travels
+      // with the snapshot and the check does the holding.
+      // Scaled so the longest side is 1200: this is compared as regions, not
+      // as pixels — two rasterisers never agree pixel for pixel — and a full
+      // 9794-tall export would cost more than it tells.
+      let image = null;
+      try {
+        const scale = Math.min(1, 1200 / Math.max(f.width, f.height));
+        const bytes = await f.exportAsync({ format: 'PNG', constraint: { type: 'SCALE', value: scale } });
+        image = { scale, data: figma.base64Encode(bytes) };
+      } catch (e) { /* a frame that will not export still sends its tree */ }
+      const tree = await walk(f, 0);
+      screens.push({ section, page: page.name, frame: f.name, id: f.id, devStatus, image, tree });
+    }
+  }
+  return { _meta: { file: figma.root.name, fileKey: figma.fileKey, fileId: fileId(), snapshot: new Date().toISOString().slice(0, 10), plugin: VERSION, unrecorded: [...new Set(unrecordedSeen)].slice(0, 40) }, screens };
+}
+
+/*
+ * Is the router listening, asked BEFORE the button is live.
+ *
+ * Collecting a library is half a minute of reading the designer's file, and
+ * until now the only way to learn nothing was listening was to spend it and be
+ * told at the end. The UI greys the button out and shows the command instead.
+ * Any answer is a router listening: one that answers 500 is up and broken, and
+ * its own error is what the person needs, never "Nothing is listening" and a
+ * snapshot quietly saved as a file (0.67.1).
+ */
+async function reachable() {
+  try {
+    const res = await fetch(SERVER, { method: 'GET' });
+    return res.status > 0;
+  } catch (e) {
+    return false;
+  }
+}
+
 
 if (!HEADLESS) {
   const ready = () => Promise.all([kind(), reachable()]).then(([mode, up]) =>

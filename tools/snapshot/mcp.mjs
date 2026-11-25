@@ -142,8 +142,8 @@ export function declared(source, from, to) {
   const [, b] = span(lines, to);
   return lines.slice(a, b + 1).map((l) => /^(?:async function|function|const|let) ([A-Za-z_$][\w$]*)/.exec(l)).filter(Boolean).map((m) => m[1]);
 }
-// never reached by a part; the parts also never read the tokens
-const UNUSED = ['collectLibrary', 'collectScreens', 'iconFacts', 'glyphFill', 'anatomyOf'];
+// never reached by a part; the parts also never read the tokens (collectScreens lives below CUT, never shipped)
+const UNUSED = ['collectLibrary', 'iconFacts', 'glyphFill', 'anatomyOf'];
 /* The tokens call reads no component: the walk and everything after it up to collectComponents goes, but the page
    tests and componentSets that say which sets the parts must walk (proved on a 64-page library, 2026-11-25). */
 const KEPT = ['isIconPage', 'isScratchPage', 'componentSets'];
