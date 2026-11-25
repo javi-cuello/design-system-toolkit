@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations } from './css.mjs';
-import { tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
+import { tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp } from './layers.mjs';
 
@@ -199,7 +199,7 @@ export function givenOf(placed, w, library = {}, lang = JS, settings = HOUSE) {
    only where the design keeps the instance whole, so a part it does not list is not drawn). `a` is one combination's
    anatomy (expand), `hid` the instance there, `whole` the instances it keeps whole (derive's wholeIn); `seen` collects
    each layer so carried. Tested by test-to-markup.mjs. */
-export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), library = {}, lang = JS, settings = HOUSE, sheet = true } = {}) {
+export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), added = null, library = {}, lang = JS, settings = HOUSE, sheet = true } = {}) {
   const e = a[hid], m = e && e.kind === 'instance' && mainOf(e.component, e.key);
   if (!m) return {};
   const { M, back } = placedAs(a, hid, m, mainOf);
@@ -217,7 +217,7 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     const L = inner[rel], X = M[mk], at = `${hid}/${rel}`, entry = {};
     const Lm = L.kind === 'instance' && mainOf(L.component, L.key), Xm = X.kind === 'instance' && mainOf(X.component, X.key);
     if (Lm) {
-      const nested = insideOf(a, at, mainOf, { whole, seen, library, lang, settings, sheet: false });
+      const nested = insideOf(a, at, mainOf, { whole, seen, added, library, lang, settings, sheet: false });
       if (Lm !== Xm) Object.assign(entry, { render: Lm, props: givenOf(Lm, L.with, library, lang, settings) });
       else {
         const w = Object.fromEntries(Object.entries(L.with || {}).filter(([k, v]) => !same(v, (X.with || {})[k])));
@@ -250,7 +250,7 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     if (!mk || (mk !== 'root' && !own(mk)) || ['instance', 'slot'].includes((M[mk] || {}).kind)) continue;
     const node = addedOf(a, `${hid}/${rel}`, mainOf, { library, lang, settings });
     if (!node) continue;
-    for (const k of Object.keys(a)) if (k === `${hid}/${rel}` || k.startsWith(`${hid}/${rel}/`)) seen.add(k);
+    for (const k of Object.keys(a)) if (k === `${hid}/${rel}` || k.startsWith(`${hid}/${rel}/`)) { seen.add(k); if (added) added.add(k); }
     const key = mk === 'root' ? '' : segOf(mk), was = out[key] || {};
     out[key] = { ...was, add: [...(was.add || []), { at: inner[rel].order ?? 0, node }] };
   }
@@ -482,7 +482,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const insideAt = (id, e, when) => {
     const a = expand(c, { ...D, ...when });
     if (!a[id] || a[id].kind !== 'instance' || placedOf(library, a[id]) !== placedOf(library, e)) return {};
-    return insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), seen: carried, library, lang, settings });
+    // (a numbered copy's look too: no sheet rule reaches inside one, to-code's copySelector)
+    const copied = !!copyOf(c, id) || Object.keys(a).some((k) => k !== id && copyOf(c, k) === id);
+    return insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), seen: carried, library, lang, settings, sheet: !copied });
   };
   const nodeLit = (x) => {
     const attrs = `{ ${Object.entries(x.attrs || {}).map(([k, v]) => `${str(k)}: ${str(v)}`).join(', ')} }`;
@@ -1052,7 +1054,7 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     if (x.id === 'root') continue;
     // a part the contract keeps inside a placed component is an override there: read where the sheet writes it
     // and what it puts in a placed component's slot (a menu's items), by its own hook under that slot
-    const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains, library));
+    const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains, library)) || (x.inside && framework === 'web-components' && copySelector(c, n, x.id, mains, library));
     const at = nested ? nested : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
       : x.slotted ? { skip: 'a sample of what a caller puts in the slot' }
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
@@ -1061,6 +1063,17 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     // each part's selector by its id too (not in the mapping written): a stored path may be two parts never drawn
     // together, where the self leg needs each one's own (from-code swapPartsOf)
     if (typeof at === 'string') byId[x.id] = at;
+  }
+  // a layer the markup adds inside a placed instance, where that component has no part for it (insideOf's `add`): read
+  // under the part it is added to, by the name it is drawn with (a web component's alone: React and a snippet keep the gap)
+  if (framework === 'web-components') {
+    const added = new Set(), mainOf = (name, key) => placedOf(library, { component: name, key }), D = variantDefaults(c);
+    for (const when of [D, ...(c.variants || []).map((v) => ({ ...D, ...(v.when || {}) }))]) {
+      const a = expand(c, when);
+      for (const id of Object.keys(a)) { if (a[id].kind !== 'instance') continue; let up = a[id].parent; while (up && a[up] && a[up].kind !== 'instance') up = a[up].parent; if (!up || !a[up]) insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), added, library, settings }); }
+    }
+    const selOf = (id) => byId[id] || (added.has(id) && (() => { const e = (parts.get(id) || {}).e || {}, up = e.parent && selOf(e.parent); return up ? `${up} > ${n.part(camel(id.split('/').pop()).replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`))}` : null; })());
+    for (const x of parts.values()) if (added.has(x.id) && typeof layers[pathOf(x.id)] !== 'string') { const at = selOf(x.id); if (at) { layers[pathOf(x.id)] = at; byId[x.id] = at; } }
   }
   return Object.defineProperty({ storyId: storyIdOf(titleOf(c, platform), 'Default'), root, state: root, axes, layers, waivers: {} }, 'byId', { value: byId });
 }

@@ -699,8 +699,8 @@ const placedOf = (a, host, M) => placedMatch(M, Object.fromEntries(Object.keys(a
 /* Whether a part is inside a placed component this library holds, so named as that component's own: a part of it at
    any props the instance is placed with (a status icon's Warning--filled at Failed, though another variant places it
    at Warning alt, which draws none). */
-const hostIn = (c, id, mains) => { const a = allOf(c); const h = hostOf(a, id), m = h && a[h].component && mains(a[h].component, a[h].key);
-  if (!m || copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h) || (hostOf(a, h) && !hostIn(c, h, mains))) return false;
+const hostIn = (c, id, mains, copies = false) => { const a = allOf(c); const h = hostOf(a, id), m = h && a[h].component && mains(a[h].component, a[h].key);
+  if (!m || (!copies && (copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h))) || (hostOf(a, h) && !hostIn(c, h, mains))) return false;
   const withs = [a[h].with, ...(c.variants || []).flatMap((v) => [((v.add || {})[h] || {}).with, (v.set || {})[`${h}.with`]])].filter((w, i) => i === 0 || w);
   return withs.some((w) => !!placedOf(a, h, placedAs({ ...a, [h]: { ...a[h], with: w } }, h, m, mains).M)[id.slice(h.length + 1)]); };
 
@@ -1158,6 +1158,15 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
 // the selector the sheet styles a part by, at no condition: what the markup's parity mapping names it by
 /* A part inside a placed component this library holds, by that component's own names under the instance; else null. */
 export const nestedSelector = (c, n, id, mains, library = {}) => (hostIn(c, id, mains) ? chain(c, n, id, '', mains, library) : null);
+/* The same for a part inside a placed component that has numbered copies (copyOf), which share its hook: no sheet rule
+   reaches it (a rule would hold for every copy), but the markup sets it through `parts`, and a reading finds it under
+   its own copy, counted among those that share the hook (partSelector's :nth-child). */
+export const copySelector = (c, n, id, mains, library = {}) => {
+  const a = allOf(c), h = hostOf(a, id);
+  if (!h || hostIn(c, id, mains) || !hostIn(c, id, mains, true)) return null;
+  const s = chain(c, n, id, '', mains, library), own = n.part(partSeg(c, h)), seg = n.part(partSeg(c, copyOf(c, h) || h)), i = s.indexOf(own);
+  return `${s.slice(0, i)}${seg}:nth-child(${Number((/_(\d+)$/.exec(h) || [0, 1])[1])} of ${seg})${s.slice(i + own.length)}`;
+};
 export const selectorOf = (c, n, id, mains = null, library = {}) => (id === 'root' ? n.root + through(n, c.component, placedIn(c)) : chain(c, n, id, '', mains, library));
 export const heldOf = (library) => (name, key = null) => heldBy(library, { component: name, key });
 const findAdded = (c, id) => (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean);

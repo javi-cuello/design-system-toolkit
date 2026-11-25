@@ -219,6 +219,11 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     for (const c of Object.values(L)) { fs.mkdirSync(path.join(dir, c.folder)); fs.writeFileSync(path.join(dir, c.folder, `${c.folder}.js`), toElement(c, c.folder, { naming: ELEMENT, library: L })); }
     const d = (await import(path.join(dir, 'row', 'row.js'))).renderRow(), tones = d.kids[0].kids.filter((x) => x.tag === 'ds-trail').map((x) => x.attrs.tone);
     ok('parts: a numbered copy, which shares its first\'s data-part, is set apart by its own name', tones.join() === 'plain,loud', tones.join()); }
+  { const r = row({ item_2: { kind: 'instance', parent: 'root', order: 1, component: 'Item', with: {} }, 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'B' }, 'item_2/label': { kind: 'text', parent: 'item_2', order: 0, content: 'C', color: 'Red' } });
+    const m = toParity(r, 'row', { naming: ELEMENT, library: lib(r), framework: 'web-components' }).layers, o = toElement(r, 'row', { naming: ELEMENT, library: lib(r) });
+    ok('parts: inside placed copies, which share a hook no sheet rule can tell apart, each copy is read under its own count and its look passed inline',
+      m['Item > Label'] === 'ds-row > [data-part="item"]:nth-child(1 of [data-part="item"]) > [data-part="label"]' && m['Item#2 > Label'] === 'ds-row > [data-part="item"]:nth-child(2 of [data-part="item"]) > [data-part="label"]'
+      && /"label": \{ content: "C", attrs: \{ "style": "[^"]*color: var\(--red\)/.test(o) && toParity(r, 'row', { naming: CLASS, library: lib(r) }).layers['Item#2 > Label'].skip, JSON.stringify(m) + o); }
   const hid = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'A' } });
   { const d = await run(hid);
     ok('parts: a part the instance hides (kept whole, the part not drawn) is taken away', !find(d, (x) => x.tag === 'ds-trail') && find(d, (x) => x.attrs['data-part'] === 'label').textContent === 'A'); }
@@ -231,7 +236,9 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     for (const c of Object.values(L)) { fs.mkdirSync(path.join(dir, c.folder)); fs.writeFileSync(path.join(dir, c.folder, `${c.folder}.js`), toElement(c, c.folder, { naming: ELEMENT, library: L })); }
     const out = toElement(r, 'row', { naming: ELEMENT, library: L }), d = (await import(path.join(dir, 'row', 'row.js'))).renderRow(), box = find(d, (x) => x.attrs['data-part'] === 'box');
     const note = box && box.kids[1];
-    ok('parts: a layer the placed component has no part for is drawn into the part it sits in, at its place, its look said on it', !!note && note.attrs['data-part'] === 'note' && note.textContent === 'N' && /color: var\(--text-strong\)/.test(note.attrs.style || '') && !/Note: drawn here/.test(out), out); }
+    ok('parts: a layer the placed component has no part for is drawn into the part it sits in, at its place, its look said on it', !!note && note.attrs['data-part'] === 'note' && note.textContent === 'N' && /color: var\(--text-strong\)/.test(note.attrs.style || '') && !/Note: drawn here/.test(out), out);
+    const ls = toParity(r, 'row', { naming: ELEMENT, library: L, framework: 'web-components' }).layers;
+    ok('parts: the mapping reads such a layer under the part it is added to, by the name it is drawn with', ls['Item > Box > Note'] === `${ls['Item > Box']} > [data-part="note"]` && typeof ls['Item > Box'] === 'string', JSON.stringify(ls)); }
   const byProp = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'B' } }, { big: { type: 'boolean', default: false, figma: 'Big' } }, [{ when: { big: true }, set: { 'item/label.content': 'C' } }]);
   { const a = find(await run(byProp), (x) => x.attrs['data-part'] === 'label').textContent, b = find(await run(byProp, { big: true }), (x) => x.attrs['data-part'] === 'label').textContent;
     ok('parts: what they carry follows this component\'s own props, as each variant draws it', a === 'B' && b === 'C', `${a} ${b}`); }
