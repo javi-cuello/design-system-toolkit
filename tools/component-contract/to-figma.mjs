@@ -944,6 +944,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // shadow and whether it clips, each only where it differs from what the layer already has. A stroke's colour alone
   // left the main's weight (a 2 px focus read back 1, one bottom side read back all four)
   const sameNum = async (n, f, t) => { const v = await V(t); if (v) return !!(n.boundVariables && n.boundVariables[f] && n.boundVariables[f].id === v.id); const raw = typeof t === 'number' ? t : K.values && K.values[t]; return raw == null || n[f] === raw; };
+  // whether a placed layer clips, where the contract says (hidden, or UNCLIPPED's visible) and it differs: a reading from
+  // code states it too, as it read it
+  const clipOver = (n, e) => { if (e.overflow != null && 'clipsContent' in n && n.clipsContent !== (e.overflow === 'hidden')) n.clipsContent = e.overflow === 'hidden'; };
   const lookOver = async (n, e) => {
     const b = e.border;
     clearedLook(n, { border: b }, P.cleared);
@@ -957,7 +960,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (b.dash && 'dashPattern' in n) { const d = Array.isArray(b.dash) ? b.dash : [4, 4]; if (JSON.stringify(n.dashPattern) !== JSON.stringify(d)) n.dashPattern = d; }
     }
     if (e.radius != null && 'topLeftRadius' in n) for (const [i, f] of ['topLeftRadius', 'topRightRadius', 'bottomRightRadius', 'bottomLeftRadius'].entries()) { const t = Array.isArray(e.radius) ? e.radius[i] : e.radius; if (!(await sameNum(n, f, t))) await num(n, f, t); }
-    if (e.overflow != null && 'clipsContent' in n && n.clipsContent !== (e.overflow === 'hidden')) n.clipsContent = e.overflow === 'hidden';
+    clipOver(n, e);
     // (a shadow an instance clears, `none` (P.cleared): its effects emptied, the style with them)
     if (e.shadow === P.cleared) { if ('effects' in n && n.effects.length) n.effects = []; }
     else if (e.shadow && 'effectStyleId' in n) { if (!effects[e.shadow]) missing.add(`shadow ${e.shadow}`); else if (n.effectStyleId !== effects[e.shadow].id) toEffect.push([n, effects[e.shadow], e.shadow]); }
@@ -973,6 +976,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     else if (e.kind !== 'text') await paintIf(n, 'fills', e.background);
     styleFill(n, e, e.kind === 'text' ? e.color : e.background);
     // (a reading from code states what it read, not Figma's defaults: only its stroke's colour, as before)
+    if (e.kind !== 'text' && P.fromCode) clipOver(n, e);
     if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e); else if (e.border === P.cleared) clearedLook(n, { border: e.border }, P.cleared); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
     const flowing = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
@@ -1134,6 +1138,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // a Figma contract's placed instance: its own fill, stroke, corners, shadow and clipping, where the design overrides
       // them (derive keeps on an instance only what differs from its component: ownStyling)
       if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e, e.background); await lookOver(n, e); }
+      else if (P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') clipOver(n, e);
       if (e.rotation) n.rotation = e.rotation;
       // a placed instance's own bounds (a dialog's modal at most 556 wide): a frame drawn here takes them with its layout
       if (n.type === 'INSTANCE') for (const f of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (e[f] != null) await num(n, f, e[f]);

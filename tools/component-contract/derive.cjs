@@ -856,8 +856,13 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       const R = x && e && e.kind === 'instance' && e.component && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
       if (R) for (const f of ['fillStyle', 'border', 'background', 'shadow']) if (x[f] === CLEARED && e[f] === undefined && R[f] !== undefined) e[f] = R[f];
       if (R && x.radius === 0 && e.radius === undefined && cornered(R.radius)) e.radius = R.radius;
-      // (and a clip this component stops that the placed layer draws again, its own component's, left out above: said)
-      if (R && x.overflow === UNCLIPPED && e.overflow === undefined && R.overflow === 'hidden') e.overflow = 'hidden';
+    }
+    // and a clip this component stops that the placed layer draws again, its own component's, left out above: said. Both
+    // readings: each reads a clip wherever one is drawn
+    for (const k of kept) {
+      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+      const R = x && e && e.kind === 'instance' && e.component && x.overflow === UNCLIPPED && e.overflow === undefined && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
+      if (R && R.overflow === 'hidden') e.overflow = 'hidden';
     }
     inherit();
   }

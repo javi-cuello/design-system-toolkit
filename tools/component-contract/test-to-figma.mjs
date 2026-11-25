@@ -402,8 +402,17 @@ delete globalThis.figma;
   // placed layer's look sets clipsContent to whether the contract says hidden: false for visible
   const drawnB = plan({ contract: 1, component: 'Row', props: {}, anatomy: { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Box', overflow: 'visible' } }, variants: [] }).variants[0].anatomy.b;
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
-  ok('an instance said unclipped is planned so, and its look sets clipsContent off where it clips',
-    drawnB.overflow === 'visible' && src.includes("if (e.overflow != null && 'clipsContent' in n && n.clipsContent !== (e.overflow === 'hidden')) n.clipsContent = e.overflow === 'hidden';"));
+  const line = src.split('\n').find((l) => /^\s*const clipOver = \(n, e\) =>/.test(l));
+  const clipOver = line && new Function(`${line.trim()} return clipOver;`)();
+  const node = (c) => ({ name: 'B', clipsContent: c });
+  const after = (c, e) => { const n = node(c); clipOver(n, e); return n.clipsContent; };
+  ok('an instance said unclipped is planned so, and its clip set off where it clips; hidden sets it on; unsaid leaves it',
+    drawnB.overflow === 'visible' && !!clipOver && after(true, { overflow: 'visible' }) === false && after(false, { overflow: 'hidden' }) === true && after(true, {}) === true
+    && /clipOver\(n, e\);\n\s*const lookOver|lookOver = async \(n, e\) => \{[\s\S]{0,4000}?clipOver\(n, e\);/.test(src));
+  // a reading from code states its clip too, though no other look of it is applied (lookOver skipped for it)
+  ok('a reading from code sets a placed layer\'s and a placed instance\'s clip, and nothing more of its look',
+    src.includes("if (e.kind !== 'text' && P.fromCode) clipOver(n, e);\n    if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);")
+    && src.includes("else if (P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') clipOver(n, e);"));
 }
 
 // a drawing compared with the component it was derived from, field by field: what it named otherwise or left out

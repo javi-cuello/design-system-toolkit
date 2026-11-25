@@ -876,6 +876,17 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     a.c.overflow === 'visible' && a.p.overflow === undefined && a.h.overflow === 'hidden' && !Object.values(a).some((x) => 'clipless' in x)
     && src.includes("if (cs.overflow === 'visible') ie.clipless = true;"));
 }
+{
+  // a reading of a page whose Box, placed in a Holder that stops its clip, clips again: said hidden, as derive says it of a
+  // drawing; unsaid, it would read as the Holder's visible. One still unclipped is the Holder's own
+  const { colourKept } = await import('./from-code.mjs');
+  const B = { contract: 1, component: 'Box', props: {}, anatomy: { root: { kind: 'container', overflow: 'hidden' } }, variants: [] };
+  const H = { contract: 1, component: 'Holder', props: {}, anatomy: { root: { kind: 'container' }, box: { kind: 'instance', parent: 'root', component: 'Box', overflow: 'visible' } }, variants: [] };
+  const mains = byComponentName([B, H]);
+  const read = (box) => colourKept({ add() {} }, { root: { kind: 'container' }, holder: { kind: 'instance', parent: 'root', component: 'Holder' }, 'holder/box': { kind: 'instance', parent: 'holder', component: 'Box', ...box } }, mains, { reading: true });
+  ok('a reading of a Box its holder stops clipping, clipping again, says hidden; one still unclipped is left to the holder',
+    read({ overflow: 'hidden' })['holder/box'].overflow === 'hidden' && !('holder/box' in read({ overflow: 'visible' })));
+}
 { const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
   ok('the reading declares its layered set once', (src.match(/\b(const|let|var)\s+layered\b/g) || []).length === 1); }
 // the self page (site.mjs selfSiteFiles, from-code's render): what it serves and when it loads again
