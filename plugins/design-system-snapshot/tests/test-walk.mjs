@@ -437,6 +437,10 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("a variable Figma never returns reads as none, and the run goes on", got.every((x) => x === null));
   ok("…and after three unanswered the rest are not asked", asked === 3);
   ok("…and the count the tokens record is every lookup left unread, the ones never asked too", vm.runInContext("unanswered", vctx) === 5);
+  await v("a");
+  ok("…each counted once and not asked again in the run", vm.runInContext("unanswered", vctx) === 5 && asked === 3);
+  const src2 = src.slice(src.indexOf("async function collectTokens"), src.indexOf("async function collectTokens") + 600);
+  ok("…and a new run gives each its three tries again, asking what the last gave up on", /timedOut = 0;/.test(src2) && /for \(const id of missed\) delete varCache\[id\]/.test(src2));
   ok("…and a wait past a second says so, a step with no count (a bar that runs)", posted.some((m) => m.type === "progress" && /waiting for Figma/.test(m.text) && m.total === undefined));
 }
 

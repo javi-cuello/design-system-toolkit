@@ -5,7 +5,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 ### Fixed
 - **Snapshots are fast again.** 0.90.0 read every placed instance's layers in every variant to find a property the set exposes inside one; the walk now looks inside instances only for a property no outer layer takes.
 - **Reading components names the one it is on**, so a large component holding the count says which it is.
-- **The tokens' `variablesUnanswered` counts every lookup left unread**, the ones never asked after three gave no answer too (it stopped at three); two lookups in flight together each keep their own answer; once a slow one is answered, the step it interrupted is said again; and the MCP parts carry the three-tries cap from one part to the next.
+- **The tokens' `variablesUnanswered` counts every lookup left unread**, the ones never asked after three gave no answer too (it stopped at three); two lookups in flight together each keep their own answer; once a slow one is answered, the step it interrupted is said again; and the MCP parts carry the three-tries cap from one part to the next. A variable never read is counted once and not asked again in the run; each new run (the window stays open) gives three tries afresh; a lookup answered after Cancel no longer puts the progress back.
 
 ## [0.90.1] - 2026-11-25
 ### Fixed
