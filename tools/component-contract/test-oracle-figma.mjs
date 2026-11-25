@@ -247,6 +247,25 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const chain = structuredClone(set); for (const v of chain.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.children[0] = { id: v.id + 'n', name: 'Nested', type: 'INSTANCE', componentId: 'C:4', size: { x: 12, y: 12 }, relativeTransform: T(2, 2), overrides: [{ id: v.id + 'nv', overriddenFields: ['fills'] }], children: [{ id: v.id + 'nv', name: 'Dot', type: 'VECTOR', size: { x: 4, y: 4 }, relativeTransform: T(0, 0) }] }; }
     const cx4 = { ...remote, components: { ...remote.components, 'C:4': { key: 'k-local', name: 'Local' } } };
     assert.ok(compareContract('chip', chain, c, cx4).rows.some((x) => x.kind === 'contract:not stated' && /Dot/.test(x.path)), 'a local main without a contract in the chain: not stated');
+    // an icon's own place stays the host's too
+    const c4 = structuredClone(c); delete c4.anatomy.icon.width;
+    assert.ok(compareContract('chip', set, c4, { ...ctx, icons: new Set(['Icon']) }).rows.some((x) => x.kind === 'contract:not stated' && x.path === 'icon.width'));
+    // a component this project stores, though remote (a sibling file's) or named as an icon: its insides stay unsaid
+    for (const cx of [{ ...remote, own: new Set(['Icon']) }, { ...ctx, icons: new Set(['Icon']), own: new Set(['Icon']) }])
+      assert.ok(compareContract('chip', set, c, cx).rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'the project\'s own component: not another library\'s');
+    // a layer inside another library's component that an instance shows: the host's to say
+    const shown = structuredClone(set); for (const v of shown.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.overrides = [{ id: v.id + 'g', overriddenFields: ['visible'] }, { id: i.id, overriddenFields: ['fills'] }]; }
+    assert.ok(compareContract('chip', shown, c, remote).rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'a visibility override stays a row');
+    // another library's instance nested in a main with a contract that does not name it: its presence is that main's gap
+    {
+      const nest = structuredClone(set);
+      for (const v of nest.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.componentId = 'C:3'; i.children = [{ id: v.id + 'r', name: 'Remote', type: 'INSTANCE', componentId: 'C:2', size: { x: 4, y: 4 }, relativeTransform: T(0, 0), children: [{ id: v.id + 'rv', name: 'Shape', type: 'VECTOR', size: { x: 4, y: 4 }, relativeTransform: T(0, 0) }] }]; }
+      const box = { contract: 1, component: 'Box', figma: { name: 'Box', key: 'k-box3' }, props: {}, anatomy: { root: { kind: 'container', width: 16, height: 16 } }, variants: [] };
+      const cx = { ...ctx, components: { ...ctx.components, 'C:3': { key: 'k-box3', name: 'Box' }, 'C:2': { key: 'k-far', name: 'Far', remote: true } }, mains: (key) => (key === 'k-box3' ? box : null) };
+      const c5 = structuredClone(c); c5.anatomy.icon = { ...c5.anatomy.icon, component: 'Box', key: 'k-box3' };
+      const r5 = compareContract('chip', nest, c5, cx);
+      assert.ok(r5.rows.some((x) => /Remote$/.test(x.path) && ['contract:part', 'contract:not stated'].includes(x.kind)), 'the nested instance itself is a row, not skipped');
+    }
     // a main with no contract that is neither: still "not stated"
     assert.ok(compareContract('chip', set, c, { ...ctx, icons: new Set(['Other']) }).rows.some((x) => x.kind === 'contract:not stated'));
   }

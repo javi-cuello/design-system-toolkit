@@ -752,11 +752,13 @@ export function compareContract(component, setNode, contract, ctx) {
   // part by part, each variant Figma draws; the parts the contract says turned on their own axes
   const turned = turnedParts(contract);
   // why a main no contract holds says what is inside it all the same: another library's, or an icon this one stores
+  // (never one this project stores as a component, `ctx.own` by name: a sibling file's is remote too, and an icon's
+  // name can be a component's)
   const elsewhere = (inst) => {
-    const c = ctx.components[inst.componentId];
+    const c = ctx.components[inst.componentId], m = mainOf(ctx, inst);
+    if (!m || (ctx.own && ctx.own.has(m.owner))) return null;
     if (c && c.remote) return 'inside another library\'s component: that library\'s contract says it';
-    const m = mainOf(ctx, inst);
-    return m && ctx.icons && ctx.icons.has(m.owner) ? 'inside an icon: its stored drawing says it' : null;
+    return ctx.icons && ctx.icons.has(m.owner) ? 'inside an icon: its stored drawing says it' : null;
   };
   // a placed instance's main, expanded at the instance's props by its own contract (ctx.mains: its key → the contract)
   const expansions = new Map();
@@ -800,21 +802,24 @@ export function compareContract(component, setNode, contract, ctx) {
     // inside them; the layer's own fields stay rows where an instance overrides it, as does a placed instance's place)
     const mainSays = (n) => {
       const said = [];
-      let whole = true, inner = false, geo = null, why = null, plain = false, self = false;
+      let whole = true, inner = false, geo = null, why = null, plain = false, self = false, inside = false;
       for (let q = n; q && q !== v; q = parentOf.get(q)) {
         if (q.type !== 'INSTANCE') continue;
         const x = expansion(q);
         if (x === UNSPELT) return { unspelt: true };
-        if (!x) { whole = false; const w = elsewhere(q); if (w) { why = why || w; if (q === n && !inInstance(n)) self = true; } else plain = true; continue; }
+        if (!x) { whole = false; const w = elsewhere(q); if (w) { why = why || w; if (q === n) self = true; else inside = true; } else plain = true; continue; }
         // an instance's own size is its placement's (fill, hug, a fixed width, or its place where stretched), never its main's root's
         if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; } if (!said.length) { inner = x.turned.has(x.byNode.get(n)); if (q !== n) geo = { q, x }; } said.push(o); }
       }
       // (a size any instance around the layer lists as overridden on it, an outer one's too: a stated value)
       if (geo) { geo.listed = new Set(); for (let q = parentOf.get(n); q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') for (const o of q.overrides || []) if (o.id === n.id) for (const f of o.overriddenFields || []) geo.listed.add(f); }
-      const away = why && !plain ? { why, self, overridden: overriddenHere(n) } : null;
+      // (`self`: the layer is such an instance, its presence and place another main's or the host's to say, unless one
+      // around it is such too; `inside`: it lies within one; `shown`: an instance shows it, which its host says)
+      const away = why && !plain ? { why, self: self && !inside, inside, overridden: overriddenHere(n), shown: shownHere(n) } : null;
       return { said: said.length ? Object.assign({}, ...said) : null, whole, turned: inner, geo, away };
     };
     // the fields any instance around a layer (itself included) lists as overridden on it, in REST's names
+    const shownHere = (n) => { for (let q = n; q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE' && (q.overrides || []).some((o) => o.id === n.id && (o.overriddenFields || []).includes('visible'))) return true; return false; };
     const overriddenHere = (n) => { const out = new Set(); for (let q = n; q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') for (const o of overridesOf(q)) if (o.id === n.id) for (const f of o.overriddenFields) if (!OVERRIDE_IGNORED.has(f)) out.add(f); return out; };
     // a field left to a main said elsewhere: skipped, named, unless an instance overrides it here (a field REST names
     // that no contract field maps to keeps every field a row) or it is the placed instance's own place
@@ -855,7 +860,7 @@ export function compareContract(component, setNode, contract, ctx) {
     for (const { path: p, node } of untaken(v, taken)) {
       const { said, whole, unspelt, turned: mainTurned, geo, away } = inInstance(node) ? mainSays(node) : { said: null, whole: true };
       if (unspelt) { t.skip(SPELL); continue; }
-      if (!said && away && !away.overridden.size) { t.skip(away.why); continue; }
+      if (!said && away && away.inside && !away.overridden.size && !away.shown) { t.skip(away.why); continue; }
       if (!said) { if (whole) t.differ(v.name, p, 'part', 'present', 'missing'); else t.differ(v.name, p, 'not stated', 'present', undefined); continue; }
       t.check(v.name, p, 'part', true, true);
       const a = restPart(node, parentOf.get(node) || null, ctx, idOfProp, frameOf(node), { turned: !!mainTurned });
@@ -1170,9 +1175,12 @@ async function main(argv) {
       try { const c = JSON.parse(fs.readFileSync(path.join(w.paths.components, f, 'contract.json'), 'utf8')); if (c.figma && c.figma.key) byKey[c.figma.key] = c; } catch { /* no contract */ }
     }
     const mains = (key) => byKey[key] || null;
+    // the components this project stores, by name (its index's, else each spec's): never another library's or an icon
+    const own = new Set(Object.values(index).map((x) => x && x.name).filter(Boolean));
     const byFile = {};
     for (const f of folders) {
       const stored = JSON.parse(fs.readFileSync(path.join(w.paths.components, f, 'figma.json'), 'utf8'));
+      if (stored.name) own.add(stored.name);
       const file = (index[f] || {}).file || keys[0];
       (byFile[file] || (byFile[file] = [])).push({ folder: f, stored, id: stored.id, count: 1 + (stored.variants || []).length });
     }
@@ -1199,7 +1207,7 @@ async function main(argv) {
       for (const s of sets) {
         const r = got[s.id];
         if (!r || r.missing || !r.document) { results.push({ component: s.folder, missing: true, readAt: said }); continue; }
-        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains, icons: new Set((meta && meta.icons) || []) };
+        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains, icons: new Set((meta && meta.icons) || []), own };
         const spec = resolveSpec(s.stored);
         let contract = null;
         try { contract = JSON.parse(fs.readFileSync(path.join(w.paths.components, s.folder, 'contract.json'), 'utf8')); } catch { /* no contract: the spec alone */ }
