@@ -3,7 +3,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
 ## [0.90.3] - 2026-11-25
 ### Fixed
-- **A library with variables of its own no longer asks Figma for another library's.** Figma loads that library first and freezes, the window with it, past any timeout (a large library held at "1 of 171"); those are counted unread instead.
+- **Before asking for a variable of another library, the window says Figma will pause**: Figma loads that library first and stops, this window with it, until it has; nothing can be said during, so it is said before.
 - **The bar runs while a step waits without a count**: the bare indeterminate bar drew a still stub that read as stuck.
 
 ## [0.90.2] - 2026-11-25

@@ -167,18 +167,17 @@ async function modesOf(n) {
 /** @type {Record<string, Variable | null>} */
 const varCache = {};
 /** @param {string} id */
-// A lookup Figma never answers is given up after a while; after three, the rest are not asked; `unanswered` counts
-// every one unread. A collection's lookup likewise (`answered`, MISSED when it never comes).
+// A lookup Figma never answers (a library variable it cannot fetch: on one large library the first of 171 hung the
+// run for good, Cancel included, 2026-11-25) is given up after a while; after three, the rest are not asked, and the
+// tokens say how many went unread (`unanswered`: the lookups given up on and those never asked after, so the count is
+// every one unread). A collection's lookup likewise (`answered`, MISSED when it never comes).
 const VARIABLE_WAIT = 5000;
 let unanswered = 0, timedOut = 0;
-// A library with variables of its own never asks for another library's (key/id): Figma freezes loading it. Counted
-// as unread.
-let own = false;
 /** @type {Set<string>} */ const missed = new Set();
 /** @type {Map<string, any>} */ const collectionsAsked = new Map();
 // Each run (the window stays open between them) asks again what the last gave up on: its three tries are its own.
 function freshLookups() {
-  unanswered = 0; timedOut = 0; own = false;
+  unanswered = 0; timedOut = 0;
   for (const id of missed) delete varCache[id];
   missed.clear(); collectionsAsked.clear();
 }
@@ -199,7 +198,6 @@ async function answered(ask) {
 }
 async function variable(id) {
   if (id in varCache) return varCache[id];
-  if (own && id.includes('/')) { unanswered++; return (varCache[id] = null); }
   const got = await answered(() => figma.variables.getVariableByIdAsync(id));
   // (one never read is counted once and never asked again: read as none for the rest of the run)
   if (got === MISSED) { unanswered++; missed.add(id); return (varCache[id] = null); }
@@ -596,7 +594,6 @@ async function collectTokens() {
   boundIds = null;   // a run reads the file as it is now: the window stays open between runs
   freshLookups();
   const collections = await figma.variables.getLocalVariableCollectionsAsync();
-  own = collections.length > 0;
   // Every collection under its own name, with its own modes: the payload
   // assumes no collection is called anything in particular (toolkit-standard
   // §D 7). It carried five named lookups until 0.32.0 — a convenience for two
@@ -674,7 +671,9 @@ async function collectTokens() {
   for (const i of ids) {
     // counted: a large library binds thousands, each fetched on its own, and a still window reads as hung
     // (each one: a lookup Figma is slow to answer waits a few seconds, and the count says which)
-    say('reading the variables the components use', n++, ids.size);
+    // (one of another library's makes Figma load that library, and Figma, this window with it, stops until it has:
+    // said before asking, since nothing can be said during)
+    say(i.includes('/') && !(i in varCache) ? 'loading a library this one uses: Figma pauses until it has' : 'reading the variables the components use', n++, ids.size);
     const v = await variable(i).catch(() => null);
     // (each collection asked once, and one never answered counted once)
     const cid = v && v.remote ? v.variableCollectionId : null;

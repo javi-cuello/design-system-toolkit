@@ -441,9 +441,6 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("…each counted once and not asked again in the run", vm.runInContext("unanswered", vctx) === 5 && asked === 3);
   vm.runInContext("freshLookups()", vctx); await v("a");
   ok("…and a new run gives each its three tries again, asking what the last gave up on", asked === 4 && vm.runInContext("unanswered", vctx) === 1);
-  { vm.runInContext("freshLookups(); own = true", vctx); const before = asked; await v("VariableID:abc/1:2");
-    ok("a library with variables of its own never asks for another library's (Figma freezes loading it), and counts it unread", asked === before && vm.runInContext("unanswered", vctx) === 1);
-    ok("…and a library run sets so only when it has variables of its own", /own = collections\.length > 0;/.test(src.slice(src.indexOf("async function collectTokens"), src.indexOf("async function collectTokens") + 400))); }
   ok("…a library run and a screens run each start so", ["async function collectTokens", "async function collectScreens"].every((f) => src.slice(src.indexOf(f), src.indexOf(f) + 300).includes("freshLookups();")));
   ok("…and a wait past a second says so, a step with no count (a bar that runs)", posted.some((m) => m.type === "progress" && /waiting for Figma/.test(m.text) && m.total === undefined));
 }
