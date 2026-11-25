@@ -33,6 +33,9 @@ import { hold, restartWhenStale } from '../shared/stale-self.mjs';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { isFigmaOrigin } from '../shared/origin.mjs';
+// forked by the supervisor, it ends with it: an orphan keeps its port from the next one (before any await, or
+// a disconnect during one goes unheard)
+if (process.send) { process.on('disconnect', () => process.exit(0)); if (!process.connected) process.exit(0); }
 
 /*
  * The contract, the schema and the store are read FRESH for every snapshot,
@@ -327,8 +330,6 @@ await Promise.all(['127.0.0.1', '::1'].map((host) => new Promise((done) => {
 // what load() cannot make fresh (an .mjs, this file) makes the router restart itself once no snapshot is being
 // read or delivered, the supervisor bringing it back with the files on disk; a router run by hand only says so
 restartWhenStale([fileURLToPath(import.meta.url)], { servers, busy: () => held > 0 });
-// forked by the supervisor, it ends with it: an orphan keeps its port from the next one
-if (process.send) process.on('disconnect', () => process.exit(0));
 
 console.log(`figma-snapshot router on http://localhost:${PORT} (both loopback stacks) — ${list.length} project(s)`);
 for (const p of list) {

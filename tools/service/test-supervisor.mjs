@@ -54,6 +54,10 @@ test('a supervisor started after 03:00 runs that day\'s review at once, and not 
   clock = new Date(2026, 0, 5, 23, 0);
   await new Promise((r) => setTimeout(r, 50));
   s.stop();
+  // restarted the same day (a stale file, a crash): a held review stays owed, so only the marker stops a second run
+  const again = supervise({ logs: dir, children: [], review: [process.execPath, review], every: 10, now: () => clock, log: (m) => said.push(m) });
+  await new Promise((r) => setTimeout(r, 80));
+  again.stop();
   assert.equal(said.filter((m) => m === 'review: started').length, 1);
   fs.rmSync(dir, { recursive: true, force: true });
 });
@@ -70,7 +74,8 @@ test('install.sh: the review stays off over two runs without REVIEW, on once ask
   const dir = tmp(), repo = path.join(dir, 'repo'), home = path.join(dir, 'home'), fake = path.join(dir, 'fake');
   for (const d of ['skills/one', 'tools/service', 'tools/snapshot', 'home/Library/LaunchAgents', 'fake']) fs.mkdirSync(path.join(dir, d.startsWith('home') || d === 'fake' ? '' : 'repo', d), { recursive: true });
   fs.copyFileSync(path.join(HERE, '..', '..', 'install.sh'), path.join(repo, 'install.sh'));
-  fs.copyFileSync(path.join(HERE, 'com.toolkit.plist'), path.join(repo, 'tools/service/com.toolkit.plist'));
+  // a comment naming --review, as the template's once did, must not read as the review being on
+  fs.writeFileSync(path.join(repo, 'tools/service/com.toolkit.plist'), fs.readFileSync(path.join(HERE, 'com.toolkit.plist'), 'utf8').replace('<plist version="1.0">', '<!-- with --review, the daily review -->\n<plist version="1.0">'));
   fs.writeFileSync(path.join(repo, 'tools/snapshot/pairing.cjs'), '');
   execFileSync('git', ['init', '-q', repo]);
   // launchctl records each call and fails, as for an agent not loaded: nothing reaches the real launchd

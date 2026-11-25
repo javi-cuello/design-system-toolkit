@@ -48,11 +48,17 @@ export function supervise({ children, logs, review = null, hour = 3, every = 600
   };
   for (const c of children) start(c, wait);
 
-  // today's, if already past: a supervisor started after 03:00 still runs that day's review (--if-owed acts once)
+  // today's, if already past, so a supervisor started after 03:00 still runs that day's review; once a day only, by
+  // a dated marker: a held review stays owed, and each restart would start another paid run
   let due = today(now(), hour);
+  const tried = path.join(logs, 'review.tried');
+  const day = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   const timer = review && setInterval(() => {
     if (now() < due || reviewing) return;
     due = nextAt(now(), hour);
+    let last = null; try { last = fs.readFileSync(tried, 'utf8'); } catch {}
+    if (last === day(now())) return;
+    fs.writeFileSync(tried, day(now()));
     const fds = out('review');
     reviewing = spawn(review[0], review.slice(1), { stdio: ['ignore', ...fds] });
     for (const fd of fds) fs.closeSync(fd);
