@@ -221,11 +221,12 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     assert.ok(kinds(r).includes('contract:ambiguous'), 'a third Label where two are drawn: ambiguous, never the first');
     assert.ok(!kinds(compareContract('chip', set, contract(), ctx)).includes('contract:ambiguous'), 'a lone label is the first of its name, as derive names it');
     assert.ok(!r.rows.some((x) => x.kind === 'contract:content'), 'an ambiguous part is not compared as if found');
-    // a contract that keeps some of several same-named layers numbers them: each is the layer at its number, hidden ones counted
-    { const s4 = structuredClone(setNode); for (const v of s4.children) v.children.splice(1, 0, { ...structuredClone(v.children[0]), id: v.id + 't2', visible: false }, { ...structuredClone(v.children[0]), id: v.id + 't3' });
+    // a contract that keeps some of several same-named layers numbers them among the drawn ones (the walk keeps no hidden
+    // layer): each is the drawn layer at its number
+    { const s4 = structuredClone(setNode); for (const v of s4.children) v.children.splice(1, 0, { ...structuredClone(v.children[0]), id: v.id + 'h1', visible: false }, { ...structuredClone(v.children[0]), id: v.id + 't2' }, { ...structuredClone(v.children[0]), id: v.id + 't3' });
       const c7 = contract(); c7.anatomy.label_3 = { ...c7.anatomy.label, order: 2 }; delete c7.anatomy.label;
       const r7 = compareContract('chip', s4, c7, ctx);
-      assert.ok(!kinds(r7).includes('contract:ambiguous') && !r7.rows.some((x) => x.kind === 'contract:part' && /label_3$/.test(x.path)), 'label_3 is the third Label, the hidden second counted'); }
+      assert.ok(!kinds(r7).includes('contract:ambiguous') && !r7.rows.some((x) => x.kind === 'contract:part' && /label_3$/.test(x.path)), 'label_3 is the third drawn Label, the hidden one not counted'); }
   }
   // inside an instance: a field Figma has and the contract leaves unsaid is a row, as is a layer no part is
   {

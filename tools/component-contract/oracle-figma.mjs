@@ -668,7 +668,7 @@ export function partOurs(e) {
  * number, and only where the contract has as many such parts as Figma has layers; else the part is ambiguous, never
  * the first that fits.
  */
-export function addressParts(flat, variant, propIds) {
+export function addressParts(flat, variant, propIds, { sameVersion = true } = {}) {
   const found = new Map([['root', variant]]), ambiguous = new Map(), taken = new Set([variant]);
   const kids = (n) => (n.children || []).filter((c) => c.visible !== false);
   const depth = (id) => { let d = 0; for (let p = flat[id] && flat[id].parent; p; p = flat[p] && flat[p].parent) d++; return d; };
@@ -690,10 +690,12 @@ export function addressParts(flat, variant, propIds) {
     const siblings = ids.filter((x) => (flat[x].parent || 'root') === (part.parent || 'root') && baseOf(x).base === base && (flat[x].name || null) === (part.name || null));
     // (fewer parts than layers, each numbered within the layers' count: a contract keeps only some of an instance's rows,
     // and a part's number is its place among every layer of that name, hidden ones too, as derive's paths() counts)
-    const every = (parent.children || []).filter((c) => fits(part, base, c));
-    // (the file read is the version the snapshot read, so no twin is new; a number past the layers' count stays ambiguous)
-    const numbered = siblings.length < fit.length && siblings.every((x) => baseOf(x).nth <= every.length);
-    const c = fit.length === 1 ? fit[0] : siblings.length === fit.length ? fit[nth - 1] : numbered && every[nth - 1].visible !== false ? every[nth - 1] : null;
+    // (a number counts the drawn layers of one exact name, as derive's paths() counts the walk's, which keeps no hidden
+    // one; the file read is the version the snapshot read, so no twin is new; a number past the count, or names differing
+    // in case, stays ambiguous; so do fewer parts than layers in a main read at another version, sameVersion false)
+    const byNumber = new Set(fit.map((x) => x.name)).size === 1 && siblings.every((x) => baseOf(x).nth <= fit.length)
+      && (siblings.length === fit.length || (sameVersion && siblings.length < fit.length));
+    const c = fit.length === 1 ? fit[0] : byNumber ? fit[nth - 1] : null;
     if (c && !taken.has(c)) { found.set(id, c); taken.add(c); continue; }
     ambiguous.set(id, fit.map((x) => `${x.name} (#${kids(parent).indexOf(x) + 1})`));
   }
@@ -790,7 +792,7 @@ export function compareContract(component, setNode, contract, ctx) {
       const when = whenOfProps(main, ip, instanceProps(ctx, inst));
       if (!when) { expansions.set(inst, UNSPELT); return UNSPELT; }
       const mflat = expand(main, when);
-      const { found } = addressParts(mflat, inst, ip);
+      const { found } = addressParts(mflat, inst, ip, { sameVersion: false });
       // a text a string prop fills says the instance's value for it; a part an instance prop swaps, the component it names
       // (and without the size the main's part keeps only while it is empty, whileEmpty: an instance's layer keeps none, derive's emptyless)
       const part = (id) => {
