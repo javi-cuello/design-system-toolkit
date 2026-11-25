@@ -137,7 +137,7 @@ const colour = (c, opacity = 1) => {
 };
 const gradient = (p) => {
   const [s, e] = p.gradientHandlePositions || [];
-  const angle = s && e ? Math.round((Math.atan2(e.y - s.y, e.x - s.x) * 180 / Math.PI + 90 + 360) % 360) : null;
+  const angle = s && e ? Math.round(Math.atan2(e.y - s.y, e.x - s.x) * 180 / Math.PI + 90 + 360) % 360 : null;
   return { type: 'GRADIENT_LINEAR', angle, stops: (p.gradientStops || []).map((st) => ({ position: +st.position.toFixed(4), color: st.boundVariables && st.boundVariables.color ? BOUND : colour(st.color, p.opacity ?? 1) })) };
 };
 /* Figma's paints as the walk names them, a bound one as BOUND (a paint at no opacity is none, unless `all`: a style's
@@ -163,7 +163,7 @@ export function paintsOf(list, all = false) {
 // a value as ours writes it, a token's name as BOUND: a colour literal, an image, a paint type or a gradient stay
 const LITERAL = /^(#|rgb\(|IMAGE:|GRADIENT_|SOLID$|VIDEO$|PATTERN$|EMOJI$)/;
 export function paintOurs(v) {
-  if (v && typeof v === 'object' && !Array.isArray(v)) return { type: v.type, angle: v.angle ?? null, stops: (v.stops || []).map((s) => ({ position: s.position, color: LITERAL.test(String(s.color)) ? s.color : BOUND })) };
+  if (v && typeof v === 'object' && !Array.isArray(v)) return { type: v.type, angle: v.angle == null ? null : v.angle % 360, stops: (v.stops || []).map((s) => ({ position: s.position, color: LITERAL.test(String(s.color)) ? s.color : BOUND })) };
   return typeof v === 'string' && !LITERAL.test(v) ? BOUND : v;
 }
 const num = (v) => (typeof v === 'number' ? v : v == null ? v : BOUND);

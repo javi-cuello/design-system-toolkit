@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { recordedOf, readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
+import { recordedOf, readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, paintOurs, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
 
 const require = createRequire(import.meta.url);
 const { compact, resolve } = require('../snapshot/spec.cjs');
@@ -26,6 +26,10 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   const g = paintsOf([{ type: 'GRADIENT_LINEAR', gradientHandlePositions: [{ x: 0.5, y: 0 }, { x: 0.5, y: 1 }, { x: 0, y: 0 }], gradientStops: [{ position: 0, color: white }, { position: 1, color: { r: 0, g: 0, b: 0, a: 1 } }] }])[0];
   assert.equal(g.angle, 180, 'top to bottom is 180°, as CSS says it');
   assert.deepEqual(g.stops.map((s) => s.color), ['#ffffff', '#000000']);
+  // a hair short of upright rounds to 0°, never 360°; a contract an older snapshot wrote at 360 reads as 0
+  const up = paintsOf([{ type: 'GRADIENT_LINEAR', gradientHandlePositions: [{ x: 0.5, y: 1 }, { x: 0.497, y: 0 }, { x: 0, y: 0 }], gradientStops: [] }])[0];
+  assert.equal(up.angle, 0);
+  assert.equal(paintOurs({ type: 'GRADIENT_LINEAR', angle: 360, stops: [] }).angle, 0);
 }
 {
   const frame = { id: '1', name: 'Box', type: 'FRAME', size: { x: 100, y: 40 }, relativeTransform: T(4, 6), layoutMode: 'HORIZONTAL', paddingTop: 1, paddingRight: 2, paddingBottom: 3, paddingLeft: 4, itemSpacing: 8, primaryAxisAlignItems: 'SPACE_BETWEEN', counterAxisAlignItems: 'CENTER', layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'HUG', cornerRadius: 6, opacity: 0.5, clipsContent: true,

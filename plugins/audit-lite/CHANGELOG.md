@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.17] - 2026-11-25
+### Fixed
+- Carries snapshot walk 0.89.6: a gradient a hair short of upright is recorded at 0°, never 360°.
+
 ## [0.14.16] - 2026-11-25
 ### Fixed
 - Carries snapshot walk 0.89.5: a rejected variable lookup clears its timer.

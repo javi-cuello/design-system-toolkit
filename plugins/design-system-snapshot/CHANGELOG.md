@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.89.6] - 2026-11-25
+### Fixed
+- **A gradient a hair short of upright is recorded at 0°, never 360°.** The angle was rounded after it was wrapped, so 359.6° read 360.
+
 ## [0.89.5] - 2026-11-25
 ### Fixed
 - **A variable lookup Figma rejects clears its timer too**, not only one it answers.

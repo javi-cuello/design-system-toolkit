@@ -1,4 +1,4 @@
-// Design system snapshot — v0.89.5 · plugin-standard v1.1.0
+// Design system snapshot — v0.89.6 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -444,7 +444,7 @@ async function gradient(p) {
   const det = a * e - b * d;
   const inv = (/** @type {number} */ x, /** @type {number} */ y) => [(e * (x - c) - b * (y - f)) / det, (-d * (x - c) + a * (y - f)) / det];
   const [x0, y0] = inv(0, 0.5), [x1, y1] = inv(1, 0.5);
-  const angle = Math.round((Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI + 90 + 360) % 360);
+  const angle = Math.round(Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI + 90 + 360) % 360;
   const stops = [];
   for (const st of p.gradientStops) {
     const bound = st.boundVariables && st.boundVariables.color;
@@ -816,7 +816,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.89.5';
+const VERSION = '0.89.6';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

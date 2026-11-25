@@ -371,7 +371,7 @@ export function gradientFromCss(g, box) {
   const colourOf = (raw) => (raw.match(COLOUR) || [raw])[0];
   // the handles' angle as the snapshot records it beside the transform (its `gradient`: start to end through the
   // inverse transform, clockwise from up, whole degrees); here the handles run along (a, b)
-  const angle = Math.round(((Math.atan2(b, a) * 180) / Math.PI + 90 + 360) % 360);
+  const angle = Math.round((Math.atan2(b, a) * 180) / Math.PI + 90 + 360) % 360;
   return { type: 'GRADIENT_LINEAR', angle, transform: [[n(a), n(b), n(c)], [n(-b), n(a), n(c2)]], stops: g.stops.map((st, i) => ({ position: +(at[i] / 100).toFixed(4), color: colourOf(st.raw) })) };
 }
 export function fillsFromCss(color, image, box, clear = (c) => !c || /^(transparent|rgba\(0, 0, 0, 0\))$/.test(c), { size = '', repeat = '' } = {}) {
