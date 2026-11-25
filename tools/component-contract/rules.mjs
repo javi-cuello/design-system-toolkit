@@ -318,7 +318,8 @@ export function placeFromCss(own) {
     if (n != null && /%$/.test(n) && /%$/.test(sizes[i])) return { to: 'scale', near: n };
     // both edges and a size of its own is over-constrained: the far inset gives way (css2 §10.3.7, §10.6.4), unless
     // auto margins centre it, which the caller measures
-    if (n != null && f != null && sizes[i] && !/^(auto|fit-content|max-content|min-content)$/.test(sizes[i])) return { to: 'min', near: n };
+    // (a size a variant takes back, unset or initial, is auto: no size of its own, as pick reads an inset)
+    if (n != null && f != null && sizes[i] && !/^(auto|fit-content|max-content|min-content|unset|initial|revert|revert-layer)$/.test(sizes[i])) return { to: 'min', near: n };
     if (n != null && f != null) return { to: 'stretch', near: n, far: f };
     if (f != null) return { to: 'max', far: f };
     return { to: 'min', ...(n != null && { near: n }) };

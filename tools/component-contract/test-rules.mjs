@@ -113,6 +113,10 @@ ok('a text written never to wrap grows both ways whatever size it states (a WIDT
 
 ok('a blend goes to mix-blend-mode in CSS\'s spelling and back in Figma\'s; normal is none', blendToCss('color_dodge') === 'color-dodge' && blendFromCss('color-dodge') === 'color_dodge' && blendFromCss(blendToCss('multiply')) === 'multiply' && blendFromCss('normal') === undefined && blendFromCss('') === undefined);
 
+ok('a size a variant takes back (unset, initial, revert) is no size of its own: pinned at both edges, the box stretches between them, as css.mjs writes a stretch over a sized base',
+  ['unset', 'initial', 'revert', 'revert-layer', 'auto'].every((w) => placeFromCss({ position: 'absolute', 'inset-block-start': '0', 'inset-block-end': '0', 'block-size': w }).constraints.vertical === 'stretch')
+  && placeFromCss({ position: 'absolute', 'inset-block-start': '0', 'inset-block-end': '0', 'block-size': '10rem' }).constraints.vertical === 'min');
+
 ok('corner smoothing goes to corner-shape and back the same, 0.1 to 1; none, 0 and the plain circle say no smoothing',
   [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].every((v) => smoothingFromCss(smoothingToCss(v)) === v)
   && smoothingToCss(0) === null && smoothingToCss(undefined) === null && smoothingFromCss('round') === null && smoothingFromCss('superellipse(1)') === null && smoothingFromCss('squircle') === smoothingFromCss('superellipse(2)') && smoothingFromCss('superellipse(2e0)') === smoothingFromCss('superellipse(2)'));
