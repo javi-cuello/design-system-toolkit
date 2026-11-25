@@ -849,8 +849,15 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const f = readCleared({ root: { kind: 'container' }, c: { kind: 'instance', component: 'Card', fillless: true }, u: { kind: 'instance', component: 'Card', strokeless: true }, k: { kind: 'instance', component: 'Card', fillless: true, background: 'Bg/other' } }, (n) => (n === 'Card' ? F : null));
   const S = { component: 'Pop', props: {}, anatomy: { root: { kind: 'container', shadow: 'Shadows/Menu' } }, variants: [] };
   const sh = readCleared({ root: { kind: 'container' }, a: { kind: 'instance', component: 'Pop', shadowless: true }, b: { kind: 'instance', component: 'Pop' } }, (n) => (n === 'Pop' ? S : null));
+  { const { shadowOnlyRings, clearValue } = await import('./from-code.mjs');
+    ok('a box-shadow of stroke rings alone is no shadow; a blurred one is',
+      shadowOnlyRings('none') && shadowOnlyRings('rgb(0, 0, 0) 0px 0px 0px 1px inset') && shadowOnlyRings('rgb(1, 2, 3) 0px -1px 0px 0px inset, rgb(1, 2, 3) 0px 1px 0px 0px inset')
+      && !shadowOnlyRings('rgba(0, 0, 0, 0.3) 0px 2px 6px 0px') && !shadowOnlyRings('rgb(0, 0, 0) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0.3) 0px 2px 6px 0px'));
+    ok('a colour value is clear by its alpha only: an opaque rgb with a 0 channel is not',
+      ['transparent', '#0000', '#00000000', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.0)', 'rgb(0 0 0 / 0)', 'rgba(0,0,0,0%)'].every(clearValue)
+      && !['rgb(255, 0, 0)', 'rgb(10, 20, 0)', '#ff0000', 'rgba(0,0,0,0.5)', 'rgb(0 0 0 / 50%)'].some(clearValue)); }
   ok('a placed component drawing no shadow its component draws reads as the shadow cleared; one unread says nothing',
-    sh.a.shadow === 'none' && sh.b.shadow === undefined && !('shadowless' in sh.a) && src.includes("if (cs.boxShadow === 'none') ie.shadowless = true;"));
+    sh.a.shadow === 'none' && sh.b.shadow === undefined && !('shadowless' in sh.a) && src.includes('if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true;'));
   ok('a placed component painting clear where its component has a fill reads as the fill cleared; one unread, or painted, says nothing',
     f.c.background === 'none' && f.u.background === undefined && f.k.background === 'Bg/other' && !Object.values(f).some((x) => 'fillless' in x)
     && readCleared({ c: { kind: 'instance', component: 'Card', fillless: true } }, () => F, (t) => (t === 'Bg/card' ? 'rgba(0, 0, 0, 0)' : undefined)).c.background === undefined

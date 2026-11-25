@@ -261,7 +261,20 @@ export function roomTaken(e, room) {
    root has one at its props has had it cleared, as to-code writes a contract's `none` (rules.mjs CLEARED): read back so.
    Its fill likewise. The mark goes from every part. (A colour style code has none of: never read.) */
 // a colour value that paints nothing (a transparent token: a ghost button's fill)
-const clearValue = (v) => typeof v === 'string' && /^(transparent|#[0-9a-f]{3}0|#[0-9a-f]{6}00|rgba?\([^)]*[,/]\s*0(\.0+)?\))$/i.test(v.trim());
+export const clearValue = (v) => {
+  if (typeof v !== 'string') return false;
+  const t = v.trim().toLowerCase();
+  if (t === 'transparent' || /^#([0-9a-f]{3}0|[0-9a-f]{6}00)$/.test(t)) return true;
+  // the alpha, a fourth comma value or one after a slash: rgb(255, 0, 0) has none
+  const m = /^(?:rgba?|hsla?)\((?:[^,/)]+,){3}\s*([^,/)]+)\)$/.exec(t) || /^(?:rgba?|hsla?)\([^/)]*\/\s*([^/)]+)\)$/.exec(t);
+  return !!m && parseFloat(m[1]) === 0;
+};
+/* Whether a computed box-shadow draws no shadow: none, or only the rings a stroke is drawn in (each layer unblurred, as
+   css.mjs writes a stroke; an effect style's shadow blurs). Run in the page too, as its source. */
+export function shadowOnlyRings(bs) {
+  if (!bs || bs === 'none') return true;
+  return bs.split(/,(?![^(]*\))/).every((l) => { const n = l.replace(/(rgba?|hsla?|color)\([^)]*\)/g, '').match(/-?[\d.]+px/g) || []; return n.length >= 2 && parseFloat(n[2] || '0') === 0; });
+}
 export function readCleared(anatomy, mains, valueOf = () => undefined) {
   const { atProps } = req('./derive.cjs');
   for (const e of Object.values(anatomy)) {
@@ -2055,8 +2068,9 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
+        const shadowOnlyRings = new Function(`return ${ringsSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)();
         // a colour that paints nothing: fully transparent, whatever its channels
@@ -2190,7 +2204,7 @@ async function main() {
             // its own styling over its component's root (a toggle's fill on its toggle item), folded back where it is that root's
             // (ownStyling); drawn over its parent where it paints, as a box is
             // (no arc, focus ring or outline: those are its component's drawing, or the ring rule's, never an override read here)
-            { const ie = out[out.length - 1]; boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(n); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; if (cs.boxShadow === 'none') ie.shadowless = true; } delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
+            { const ie = out[out.length - 1]; boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(n); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true; } delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
             // the layers the mapping names inside it, where the mapping names it too, at any depth of placing (opensPlaced; an
             // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
             // (each at its place among the component's own drawn children, which this reading does not all read)
@@ -2299,7 +2313,7 @@ async function main() {
         const siblingOrder = new Function(`return ${siblingOrderSrc}`)();
         for (const xs of Object.values(byParent)) siblingOrder(xs).forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
