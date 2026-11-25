@@ -489,7 +489,7 @@ function diffTree(walked, stored, restRoot, t) {
       // (a vector's corners rounded vertex by vertex, mixed: no one radius REST states)
       if (!(k in a) && k === 'radius' && o.radius === 'mixed') { t.skip('radius: mixed per vertex, REST silent'); continue; }
       // (a corner smoothing on a layer with no radius on either side: REST states cornerSmoothing only beside a radius)
-      if (k === 'smoothing' && !(k in a) && !('radius' in a) && !('radius' in b)) { t.skip('smoothing: no radius, REST silent'); continue; }
+      if (k === 'smoothing' && !(k in a) && !('radius' in a) && (!('radius' in b) || b.radius === 'mixed')) { t.skip(b.radius === 'mixed' ? 'smoothing: radius mixed per vertex, REST silent' : 'smoothing: no radius, REST silent'); continue; }
       if (k === 'textStyle' && (a[k] === 'mixed' || b[k] === 'mixed')) { t.skip('textStyle of mixed text'); continue; }
       // how many layers an instance overrides (of the first eight, restOurs); the fields' names are REST's own, not checkable
       if (k === 'overrides' && Array.isArray(a[k]) && Array.isArray(b[k])) { t.check(variant, p, k, a[k].length, b[k].length); continue; }
@@ -949,7 +949,8 @@ export function compareContract(component, setNode, contract, ctx) {
     // (four zeros said, as an instance squaring off its component's corners says them: REST leaves zeros out, restPart)
     if (!('radius' in a) && Array.isArray(b.radius) && b.radius.every((x) => x === 0)) delete b.radius;
     // (a corner smoothing with no radius on either side, moot: REST states cornerSmoothing only beside a radius)
-    if (!('smoothing' in a) && 'smoothing' in b && !('radius' in a) && !('radius' in b)) { delete b.smoothing; t.skip('smoothing: no radius, REST silent'); }
+    // (a vector's per-vertex radius, `mixed`, is no radius REST states either: the same, said so)
+    if (!('smoothing' in a) && 'smoothing' in b && !('radius' in a) && (!('radius' in b) || part.radius === 'mixed')) { delete b.smoothing; t.skip(part.radius === 'mixed' ? 'smoothing: radius mixed per vertex, REST silent' : 'smoothing: no radius, REST silent'); }
     if (a.typography === 'mixed') { delete a.typography; delete b.typography; t.skip('textStyle of mixed text'); }
     // a styled text's letter spacing is its style's, said by the contract only where the layer sets its own
     if (typeof a.typography === 'string' && 'letterSpacing' in a && !('letterSpacing' in b)) { delete a.letterSpacing; t.skip('letterSpacing: a styled text\'s, unsaid'); }
