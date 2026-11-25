@@ -294,6 +294,9 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     // a component this project stores, though remote (a sibling file's) or named as an icon: its insides stay unsaid
     for (const cx of [{ ...remote, own: new Set(['Icon']) }, { ...ctx, icons: new Set(['Icon']), own: new Set(['Icon']) }])
       assert.ok(compareContract('chip', set, c, cx).rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'the project\'s own component: not another library\'s');
+    // …but a remote one that only shares a stored component's name, under another key, is another library's copy
+    assert.ok(!compareContract('chip', set, c, { ...remote, own: new Set(['Icon']), ownKeys: new Map([['Icon', new Set(['k-ours'])]]) }).rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'a namesake: said there');
+    assert.ok(compareContract('chip', set, c, { ...remote, own: new Set(['Icon']), ownKeys: new Map([['Icon', new Set([remote.components['C:9'].componentSetId ? remote.componentSets[remote.components['C:9'].componentSetId].key : remote.components['C:9'].key])]]) }).rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'its own key: ours');
     // a layer inside another library's component that an instance shows: the host's to say
     const shown = structuredClone(set); for (const v of shown.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.overrides = [{ id: v.id + 'g', overriddenFields: ['visible'] }]; }
     assert.ok(compareContract('chip', shown, c, remote).rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'a visibility override stays a row');

@@ -794,7 +794,9 @@ export function compareContract(component, setNode, contract, ctx) {
   // name can be a component's)
   const elsewhere = (inst) => {
     const c = ctx.components[inst.componentId], m = mainOf(ctx, inst);
-    if (!m || (ctx.own && ctx.own.has(m.owner))) return null;
+    // (a remote component of a stored one's name but another key is a namesake: another library's copy, never ours)
+    const namesake = c && c.remote && ctx.ownKeys && ctx.ownKeys.has(m.owner) && !ctx.ownKeys.get(m.owner).has(m.key);
+    if (!m || (ctx.own && ctx.own.has(m.owner) && !namesake)) return null;
     if (c && c.remote) return 'inside another library\'s component: that library\'s contract says it';
     return ctx.icons && ctx.icons.has(m.owner) ? 'inside an icon: its stored drawing says it' : null;
   };
@@ -1222,6 +1224,9 @@ async function main(argv) {
       try { const c = JSON.parse(fs.readFileSync(path.join(w.paths.components, f, 'contract.json'), 'utf8')); if (c.figma && c.figma.key) byKey[c.figma.key] = c; } catch { /* no contract */ }
     }
     const mains = (key) => byKey[key] || null;
+    // (each stored component's keys by its name: a remote one of that name and another key is not this project's)
+    const ownKeys = new Map();
+    for (const c of Object.values(byKey)) if (c.figma.name) (ownKeys.get(c.figma.name) || ownKeys.set(c.figma.name, new Set()).get(c.figma.name)).add(c.figma.key);
     // the components this project stores, by name (its index's, else each spec's): never another library's or an icon
     const own = new Set(Object.values(index).map((x) => x && x.name).filter(Boolean));
     // (every stored spec's name, the components not asked for among them)
@@ -1255,7 +1260,7 @@ async function main(argv) {
       for (const s of sets) {
         const r = got[s.id];
         if (!r || r.missing || !r.document) { results.push({ component: s.folder, missing: true, readAt: said }); continue; }
-        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains, icons: new Set((meta && meta.icons) || []), own, walk: meta && ((meta.sources && meta.sources[file] && meta.sources[file].plugin) || (!meta.sources && meta.plugin)) };
+        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains, icons: new Set((meta && meta.icons) || []), own, ownKeys, walk: meta && ((meta.sources && meta.sources[file] && meta.sources[file].plugin) || (!meta.sources && meta.plugin)) };
         const spec = resolveSpec(s.stored);
         let contract = null;
         try { contract = JSON.parse(fs.readFileSync(path.join(w.paths.components, s.folder, 'contract.json'), 'utf8')); } catch { /* no contract: the spec alone */ }
