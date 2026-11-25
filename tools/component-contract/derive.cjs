@@ -617,6 +617,8 @@ function ownStyling(anatomy, mains) {
     const one = (f, v) => (f === 'layout' && v && typeof v === 'object' && !v.padding ? { ...v, padding: { top: 0, end: 0, bottom: 0, start: 0 } } : v);
     // (a stroke stays said beside a shadow cleared: to-code writes both in one box-shadow, so `none` alone would drop it)
     if (root) for (const f of OWN) if (e[f] !== undefined && !(f === 'border' && e.shadow === CLEARED) && sorted(one(f, e[f])) === sorted(one(f, root[f]))) delete e[f];
+    // (a size kept only while empty goes with the size: one the instance no longer states is its component's)
+    if (Array.isArray(e.whileEmpty)) { const kept = e.whileEmpty.filter((f) => e[f] !== undefined); if (kept.length) e.whileEmpty = kept; else delete e.whileEmpty; }
   }
   return anatomy;
 }

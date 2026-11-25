@@ -724,6 +724,11 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   { const tinted = { ...button, anatomy: { root: { ...button.anatomy.root, modes: { palette: 'blue' } } } };
     const t = (m) => ownStyling({ root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Button', with: { Size: 'Sm' }, modes: m } }, (n) => (n === 'Button' ? tinted : null)).b.modes;
     ok('an instance\'s modes equal to its component\'s own are the component\'s; another mode stays', t({ palette: 'blue' }) === undefined && t({ palette: 'red' }).palette === 'red'); }
+  { const ring = { component: 'Ring', props: {}, anatomy: { root: { kind: 'container', minWidth: 69, minHeight: 40, whileEmpty: ['minWidth', 'minHeight'] } } };
+    const r = (own) => ownStyling({ root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Ring', width: 20, ...own } }, (n) => (n === 'Ring' ? ring : null)).b;
+    const a = r({ minWidth: 69, minHeight: 40, whileEmpty: ['minWidth', 'minHeight'] }), b = r({ minWidth: 80, minHeight: 40, whileEmpty: ['minWidth', 'minHeight'] });
+    ok('an instance\'s sizes kept only while empty, its component\'s own, go whole, the note with them; one of its own keeps its note',
+      a.minWidth === undefined && a.whileEmpty === undefined && b.minWidth === 80 && JSON.stringify(b.whileEmpty) === '["minWidth"]'); }
 }
 
 
