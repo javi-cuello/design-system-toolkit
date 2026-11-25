@@ -181,7 +181,7 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
       /Icon: drawn here inside Sw, which has no prop for it/i.test(toReact(org, 'org', { naming: CLASS, library: { Switcher: sw, Org: org } })) && !/drawn here inside/.test(el) && /"": \{ add: \[\{ at: 0, node: h\("span", \{ "data-part": "icon", "data-icon": "Icon\/case"/.test(el), el); } }
 /* ── parts: what a holder sets inside a placed component that no prop of it carries (renderX's third argument) ── */
 { // a tiny document, enough for dom.js: the generated modules run here as they run in Chrome
-  const el = (tag) => ({ tag, tagName: tag.toUpperCase(), attrs: {}, kids: [], up: null, setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }, hasAttribute(k) { return k in this.attrs; }, removeAttribute(k) { delete this.attrs[k]; },
+  const el = (tag) => ({ tag, tagName: tag.toUpperCase(), attrs: {}, kids: [], up: null, setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }, get attributes() { return Object.entries(this.attrs).map(([name, value]) => ({ name, value })); }, hasAttribute(k) { return k in this.attrs; }, removeAttribute(k) { delete this.attrs[k]; },
     addEventListener() {}, append(...xs) { for (const x of xs) { if (typeof x === 'object') x.up = this; this.kids.push(x); } }, get children() { return this.kids.filter((x) => typeof x === 'object'); },
     insertBefore(x, r) { x.up = this; const i = r ? this.kids.indexOf(r) : -1; if (i < 0) this.kids.push(x); else this.kids.splice(i, 0, x); },
     remove() { this.up.kids.splice(this.up.kids.indexOf(this), 1); }, replaceWith(x) { x.up = this.up; this.up.kids.splice(this.up.kids.indexOf(this), 1, x); },
@@ -214,6 +214,17 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   { const d = await run(row({ 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Icons/star', background: 'Fill/accent', radius: 4, modes: { tone: 'bold' } } })), x = find(d, (y) => y.attrs['data-part'] === 'trail');
     ok('parts: a component the library does not hold, in place of one it does, is marked where it goes as an icon is, with the look and modes it draws of its own',
       x && x.tag === 'span' && x.attrs['data-icon'] === 'Icons/star' && !find(d, (y) => y.tag === 'ds-trail') && /(^|; )color: var\(--fill-accent\)/.test(x.attrs.style || '') && !/background/.test(x.attrs.style || '') && /border-radius: 4px/.test(x.attrs.style || '') && Object.values(x.attrs).includes('bold'), JSON.stringify(x && x.attrs)); }
+  { const tone = (bg) => ({ 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Icons/star', background: bg } });
+    const r = row(tone('Fill/accent'), { big: { type: 'boolean', default: false, figma: 'Big' } }, [{ when: { big: true }, set: { 'item/trail.background': 'Fill/danger' } }]);
+    const at = async (args) => ((find(await run(r, args), (y) => y.attrs['data-part'] === 'trail') || {}).attrs || {}).style || '';
+    const a = await at({}), b = await at({ big: true });
+    ok('parts: a swapped-in mark whose look differs between combinations keeps each combination\'s own look', /fill-accent/.test(a) && /fill-danger/.test(b), `${a} | ${b}`); }
+  { const marked = { ...item, anatomy: { root: { kind: 'container' }, mark: { kind: 'instance', parent: 'root', order: 0, component: 'Icons/dot', name: 'Status dot' } } };
+    const r = row({ 'item/mark': { kind: 'instance', parent: 'item', order: 0, component: 'Badge', with: { Count: '3' } } }), L = { ...lib(r), Item: marked };
+    const dir = path.join(tmp, 'mark'); fs.mkdirSync(dir); fs.writeFileSync(path.join(dir, 'dom.js'), DOM);
+    for (const c of Object.values(L)) { fs.mkdirSync(path.join(dir, c.folder)); fs.writeFileSync(path.join(dir, c.folder, `${c.folder}.js`), toElement(c, c.folder, { naming: ELEMENT, library: L })); }
+    const d = (await import(path.join(dir, 'row', 'row.js'))).renderRow(), b = find(d, (x) => x.tag === 'ds-badge');
+    ok('parts: a component drawn in place of a part keeps that part\'s hooks (its name, its Figma name)', !!b && b.attrs['data-part'] === 'mark' && b.attrs['data-figma-name'] === 'Status dot', JSON.stringify(b && b.attrs)); }
   { const two = { ...item, anatomy: { ...item.anatomy, trail_2: { ...item.anatomy.trail, order: 2 } } };
     const r = row({ 'item/trail_2': { kind: 'instance', parent: 'item', order: 2, component: 'Trail', with: { Tone: 'Loud' } } }), L = { ...lib(r), Item: two };
     const dir = path.join(tmp, 'copies'); fs.mkdirSync(dir); fs.writeFileSync(path.join(dir, 'dom.js'), DOM);

@@ -235,7 +235,10 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
       const up = (k) => inner[k.includes('/') ? k.slice(0, k.lastIndexOf('/')) : ''] || e;
       const css = (y, par) => new Map(declarations(y, { holds: y.kind === 'container', row: !par.layout || par.layout.direction !== 'column', words: y.kind === 'text' ? y.content : null }, tokenNames).decls.map(([k, v]) => [k, v]));
       const mine = css(L, up(rel)), theirs = css(X, M[X.parent] || M.root || {});
-      const style = [...mine].filter(([k, v]) => theirs.get(k) !== v && !/^(position|inset|top|right|bottom|left|order|z-index|translate)/.test(k)).map(([k, v]) => `${k}: ${v}`).join('; ');
+      const placing = /^(position|inset|top|right|bottom|left|order|z-index|translate)/;
+      // (and a paint the placed part draws that the design takes away, unset)
+      const gone = [...theirs.keys()].filter((k) => !mine.has(k) && /^(background|border|box-shadow|outline)/.test(k)).map((k) => `${k}: unset`);
+      const style = [...[...mine].filter(([k, v]) => theirs.get(k) !== v && !placing.test(k)).map(([k, v]) => `${k}: ${v}`), ...gone].join('; ');
       if (style) entry.attrs = { ...entry.attrs, style };
     }
     if (Object.keys(entry).length) seen.add(at);
@@ -528,12 +531,13 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   })();
   const partsCode = (id, e) => {
     const base = insideAt(id, e, {});
-    const same = (x, y) => JSON.stringify(x, (k, v) => (k === 'render' ? v.component || v.icon : v)) === JSON.stringify(y, (k, v) => (k === 'render' ? v.component || v.icon : v));
+    // (a placed render compared by its component, an icon's mark by all it carries: its look and modes)
+    const keyOf = (x) => JSON.stringify(x, (k, v) => (k === 'render' && v.component ? v.component : v)), same = (x, y) => keyOf(x) === keyOf(y);
     if (axesOf) {
       // (looked up by the combination, the one most combinations draw the fallback)
       const got = axesOf.combos.map((w) => [w, insideAt(id, e, w)]), counts = new Map();
-      for (const [, x] of got) { const k = JSON.stringify(x, (k2, v) => (k2 === 'render' ? v.component || v.icon : v)); counts.set(k, (counts.get(k) || 0) + 1); }
-      const top = [...counts].sort((x, y) => y[1] - x[1])[0][0], most = got.find(([, x]) => JSON.stringify(x, (k2, v) => (k2 === 'render' ? v.component || v.icon : v)) === top)[1];
+      for (const [, x] of got) { const k = keyOf(x); counts.set(k, (counts.get(k) || 0) + 1); }
+      const top = [...counts].sort((x, y) => y[1] - x[1])[0][0], most = got.find(([, x]) => keyOf(x) === top)[1];
       const rest = got.filter(([, x]) => !same(x, most));
       if (!rest.length) return Object.keys(most).length ? partsLit(most) : null;
       const names = axesOf.keys.map((k) => ref(props.find((y) => y.key === k).name));
@@ -919,7 +923,8 @@ export function dressed(parts, root) {
       const p = parts[k.getAttribute('data-part')];
       if (k.tagName.includes('-')) continue;
       if (p && p.hidden) { k.remove(); continue; }
-      if (p && p.render) { k.replaceWith(p.render(p.props || {}, { 'data-part': k.getAttribute('data-part') }, p.parts || {})); continue; }
+      // (given the part's own hooks: its name, its Figma name, its modes, aria-hidden)
+      if (p && p.render) { k.replaceWith(p.render(p.props || {}, Object.fromEntries([...k.attributes].filter((x) => /^(data-|aria-)/.test(x.name)).map((x) => [x.name, x.value])), p.parts || {})); continue; }
       if (p) dress(p, k);
       if (!k.hasAttribute('data-slot')) walk(k);
     }
@@ -1105,7 +1110,7 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   // under the part it is added to, by the name it is drawn with (a web component's alone: React and a snippet keep the gap)
   if (framework === 'web-components') {
     const added = new Set(), mainOf = (name, key) => placedOf(library, { component: name, key }), D = variantDefaults(c);
-    for (const when of [D, ...(c.variants || []).map((v) => ({ ...D, ...(v.when || {}) }))]) {
+    for (const when of [D, ...(c.variants || []).filter((v) => !pointerWords(c, v.when)).map((v) => ({ ...D, ...(v.when || {}) }))]) {
       const a = expand(c, when);
       for (const id of Object.keys(a)) { if (a[id].kind !== 'instance') continue; let up = a[id].parent; while (up && a[up] && a[up].kind !== 'instance') up = a[up].parent; if (!up || !a[up]) insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), added, library, settings }); }
     }
