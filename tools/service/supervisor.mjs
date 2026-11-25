@@ -79,7 +79,7 @@ export function supervise({ children, logs, review = null, hour = 3, every = 600
 }
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const TOOLKIT = path.join(HERE, '..', '..');
   const service = supervise({
     logs: path.join(os.homedir(), 'Library', 'Logs', 'toolkit'),

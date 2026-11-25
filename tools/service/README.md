@@ -12,9 +12,15 @@ launchctl kickstart -k gui/$(id -u)/com.toolkit   # restart the login agent
 
 ## As a login agent
 
-`install.sh` writes `com.toolkit.plist` (this folder's template, with this checkout's paths) to `~/Library/LaunchAgents/` and loads it. It runs node through a `toolkit` link beside this file, so Login Items says "toolkit". `REVIEW=on ./install.sh` adds `--review`, and a later run keeps it. The install also stops and deletes the three agents this one replaced: `com.toolkit.figma-snapshot`, `com.toolkit.figma-audit` and `com.toolkit.review`.
+`install.sh` writes this folder's plist template, with this checkout's paths, to the user's launch agents and loads it. Node runs through a link named `toolkit` beside this file, so Login Items says "toolkit". The install also stops and deletes the three agents this one replaced.
 
-Each child's output goes to `~/Library/Logs/toolkit/<name>.log` and `.err` (`figma-snapshot`, `figma-audit`, `review`). The supervisor logs each exit and restart to `toolkit.log`.
+| To | Do |
+| --- | --- |
+| add the daily review | `REVIEW=on ./install.sh` (a later run keeps it) |
+| read a child's output | `~/Library/Logs/toolkit/<child>.log` and `.err` |
+| read the exits and restarts | `~/Library/Logs/toolkit/toolkit.log` |
+
+The children are `figma-snapshot`, `figma-audit` and `review`.
 
 A child restarts itself onto changed files by exiting once idle ([`stale-self.mjs`](../shared/stale-self.mjs)), and the supervisor brings it back. The supervisor does the same for its own file, and launchd brings it back.
 
