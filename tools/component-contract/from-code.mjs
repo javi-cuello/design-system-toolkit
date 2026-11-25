@@ -2257,7 +2257,7 @@ async function main() {
                 e.arc = { start: turn(from - 90), end: +(turn(from - 90) + +c[2]).toFixed(2), inner: r ? +(+r[1] / 100).toFixed(4) : 0 }; } }
             // a vector's own outline drawn as the box's clip (css.mjs, rules.mjs pathsToCss), read back below as its paths
             // (where the box is one the markup draws a vector as: empty, hidden from readers; rules.mjs pathsOfBox)
-            if (/^path\(/.test(String(s.clipPath || ''))) e.clipBox = { clipPath: s.clipPath, ariaHidden: n.getAttribute('aria-hidden') === 'true', children: n.children.length, text: n.textContent };
+            if (/^path\(/.test(String(s.clipPath || ''))) e.clipBox = { clipPath: s.clipPath, ariaHidden: n.getAttribute('aria-hidden') === 'true', children: n.children.length, text: n.textContent, icon: n.hasAttribute('data-icon') };
             // its blend (css.mjs mix-blend-mode), read back below in Figma's spelling
             if (s.mixBlendMode && s.mixBlendMode !== 'normal') e.mixBlend = s.mixBlendMode;
             // a focus ring drawn as the box's outline (taking no room; the browser's own, style auto, is not the design's): read, and drawn below as the layer the design has
@@ -2275,8 +2275,6 @@ async function main() {
             if (bw.some(Boolean)) {
               const color = s[`border${EDGES[bw.findIndex(Boolean)]}Color`];
               e.border = bw.every((v) => v === bw[0]) ? { color, width: bw[0], inLayout: true } : { color, width: bw, sides: { top: bw[0], end: bw[1], bottom: bw[2], start: bw[3] }, inLayout: true };
-              // (dashed, as css.mjs dashes a line's one edge or a border that takes room)
-              if (s[`border${EDGES[bw.findIndex(Boolean)]}Style`] === 'dashed') e.border.dash = 'dashed';
               // (dashed, as css.mjs writes a dashed stroke that takes room)
               if (EDGES.some((k, i) => bw[i] && s[`border${k}Style`] === 'dashed')) e.border.dash = 'dashed';
             }
@@ -2656,7 +2654,7 @@ async function main() {
         } else if (x.radius) x.radius = x.full ? (await fullRadius(id)) || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
-        if (x.clipBox) { const p = pathsOfBox(x.clipBox); if (p) x.paths = p; delete x.clipBox; }
+        if (x.clipBox) { const d = figmaContract && [figmaContract.anatomy || {}, ...(figmaContract.variants || []).map((v) => v.add || {})].map((a) => a[id]).find(Boolean), p = pathsOfBox(x.clipBox, d && d.kind); if (p) x.paths = p; delete x.clipBox; }
         if (x.mixBlend) { if (x.blend === undefined) x.blend = blendFromCss(x.mixBlend); delete x.mixBlend; }
         if (x.border) {
           const clearRing = x.border.clearRing;

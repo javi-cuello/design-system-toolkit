@@ -282,10 +282,11 @@ export function pathsToCss(paths) {
   return `path(${rule === 'EVENODD' ? 'evenodd, ' : ''}"${data}")`;
 }
 /* The paths a reading takes off a box: only a vector's as the markup draws one (an empty element hidden from readers,
-   to-markup's graphic), never a clip a project puts on a container or on words. `box`: { clipPath, ariaHidden,
-   children, text }, as the page read it. */
-export function pathsOfBox(box) {
-  if (!box || !box.ariaHidden || box.children || String(box.text || '').trim()) return null;
+   to-markup's graphic), never a clip a project puts on a container or on words, nor an icon mark (data-icon); and only
+   where the design's part there is a vector (`kind`, its element's kind in the design). `box`: { clipPath, ariaHidden,
+   children, text, icon }, as the page read it. */
+export function pathsOfBox(box, kind) {
+  if (kind !== 'graphic' || !box || box.icon || !box.ariaHidden || box.children || String(box.text || '').trim()) return null;
   return pathsFromCss(box.clipPath);
 }
 export function pathsFromCss(v) {
