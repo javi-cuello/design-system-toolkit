@@ -389,6 +389,30 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     && 'chip/text' in derive(holder('Text/strong', 'Save'), ['Chip']).anatomy && selfCheck(holder('Text/danger', 'Save'), over, ['Chip'], { mains }).length === 0);
 }
 {
+  // an instance that clears its component's colour style or stroke says so, `none`: left unsaid, it would be its component's
+  const box = { name: 'Box', id: '9:5', props: {}, variants: [{ name: 'Box', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', fills: ['Bg/clear'], fillStyle: 'Clear/Clear', strokes: ['Line/strong'], strokeSides: [1, 1, 1, 1], children: [] }] };
+  const row = (own) => ({ name: 'Row', id: '9:6', props: {}, variants: [{ name: 'Row', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Box', type: 'INSTANCE', instanceOf: 'Box', layout: 'HORIZONTAL', sizing: 'HUG/HUG', ...own, children: [] }] }] });
+  const mains = mainsFrom({ Box: box });
+  const cleared = derive(row({ overrides: ['fillStyleId,fills,strokes'] }), ['Box'], { mains }).anatomy.box;
+  const kept = derive(row({ fills: ['Bg/clear'], fillStyle: 'Clear/Clear', strokes: ['Line/strong'], strokeSides: [1, 1, 1, 1] }), ['Box'], { mains }).anatomy.box;
+  ok('an instance that clears its component\'s colour style and stroke says none of each; one that keeps them says neither',
+    cleared.fillStyle === 'none' && cleared.border === 'none' && kept.fillStyle === undefined && kept.border === undefined);
+  ok('and with no contract for its component, nothing is said', derive(row({}), ['Box']).anatomy.box.fillStyle === undefined);
+  // placed inside another component that clears it, a Box drawn with its style and stroke again says them: unsaid, they
+  // would be the clearing component's none
+  const holder = { name: 'Holder', id: '9:7', props: {}, variants: [{ name: 'Holder', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Box', type: 'INSTANCE', instanceOf: 'Box', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fillStyleId,fills,strokes'], children: [] }] }] };
+  const page = (own) => ({ name: 'Page', id: '9:8', props: {}, variants: [{ name: 'Page', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Holder', type: 'INSTANCE', instanceOf: 'Holder', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'], children: [
+      { name: 'Box', type: 'INSTANCE', instanceOf: 'Box', layout: 'HORIZONTAL', sizing: 'HUG/HUG', ...own, children: [] }] }] }] });
+  const both = mainsFrom({ Box: box, Holder: holder }); // (as a store's: each main read without mains)
+  const back = derive(page({ fills: ['Bg/clear'], fillStyle: 'Clear/Clear', strokes: ['Line/strong'], strokeSides: [1, 1, 1, 1] }), ['Holder', 'Box'], { mains: both }).anatomy;
+  const still = derive(page({ overrides: ['fillStyleId,fills,strokes'] }), ['Holder', 'Box'], { mains: both }).anatomy;
+  ok('a Box its holder clears, drawn with its style and stroke again inside it, says them; one still cleared says nothing',
+    back['holder/box'] && back['holder/box'].fillStyle === 'Clear/Clear' && back['holder/box'].border && back['holder/box'].border.color === 'Line/strong' && !('holder/box' in still));
+}
+{
   // an instance that hides a layer of its component (the walk records what shows) is kept whole: nothing here could say the hiding
   const pill = { name: 'Pill', id: '9:3', props: {}, variants: [{ name: 'Pill', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
     { name: 'Dot', type: 'FRAME', sizing: 'FIXED/FIXED', w: 6, h: 6 }, { name: 'Text', type: 'TEXT', text: 'Pill', textStyle: 'Label/sm', fills: ['Text/strong'], sizing: 'HUG/HUG' }] }] };

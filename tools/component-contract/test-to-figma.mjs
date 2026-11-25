@@ -900,8 +900,17 @@ delete globalThis.figma;
     && src.includes("n.resize(side('minWidth', e.width, n.paddingLeft + n.paddingRight) ?? n.width, side('minHeight', e.height, n.paddingTop + n.paddingBottom) ?? n.height);"));
   ok('a placed instance takes its own fill, stroke, corners, shadow and clipping, and a layer inside one its stroke\'s weights and place, never its colour alone; neither from a contract read from code',
     src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e, e.background); await lookOver(n, e); }")
-    && src.includes("if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);") && src.includes("await lookOver(n, e); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")
+    && src.includes("if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);") && src.includes("await lookOver(n, e); else if (e.border === P.cleared) clearStroke(n); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")
     && src.includes("for (const [i, f] of fields.entries()) if (!(await sameNum(n, f, side(i)))) await num(n, f, side(i));"));
+  // an instance that clears its component's colour style or stroke (`none`, rules.mjs CLEARED): the style detached, no
+  // strokes; `none` never looked up as a style's name
+  ok('a placed instance whose colour style or stroke the contract clears has its style detached and its strokes none',
+    src.includes("if (e.fillStyle === P.cleared) { if (n.fillStyleId) toFill.push([n, { id: '' }, 'clearing a colour style']); return; }")
+    && src.includes("const clearStroke = (n) => { if ('strokes' in n && n.strokes.length) n.strokes = []; };")
+    && src.includes("if (b === P.cleared) clearStroke(n);")
+    && src.includes("const fillNames = [...new Set(els.map((e) => e.fillStyle).filter((x) => x && x !== P.cleared))];")
+    && !needs({ variants: [{ anatomy: { b: { kind: 'instance', component: 'B', fillStyle: 'none', border: 'none' } } }] }).fillStyles.length
+    && plan({ component: 'Card', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }).cleared === 'none');
   ok('the walk\'s page-qualified name of a drawing on the round trip page is the component\'s own, that exact prefix only',
     src.includes('if (comp && comp.name === `${pageName}/${p.name}`) comp.name = p.name;'));
   ok('a drawing in the library\'s own file goes on a page of its own, which every reader of the drawing asks for',

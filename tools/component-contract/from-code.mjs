@@ -47,7 +47,7 @@ export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
 import { inWordsOf } from './to-figma.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -257,6 +257,20 @@ export function roomTaken(e, room) {
 
 /* Whether a layer's name in the reading is the design's rather than the markup's (nameInside with the design's names
    against without): one only the design gives, or the markup's own the design drops. */
+/* A placed component the page draws no stroke on (no border, ring or outline read: `strokeless`) where its component's
+   root has one at its props has had it cleared, as to-code writes a contract's `none` (rules.mjs CLEARED): read back so.
+   The mark goes from every part. (A colour style code has none of: never read.) */
+export function readCleared(anatomy, mains) {
+  const { atProps } = req('./derive.cjs');
+  for (const e of Object.values(anatomy)) {
+    if (!e || !e.strokeless) continue;
+    delete e.strokeless;
+    const m = e.kind === 'instance' && e.component && mains(e.component, e.key), R = m && atProps(m, e.with || {}).root;
+    if (R && R.border && typeof R.border === 'object' && R.border.color != null && e.border === undefined) e.border = CLEARED;
+  }
+  return anatomy;
+}
+
 export function nameBorrowed(inside, id, markup, names) {
   return (nameInside(inside, id, markup, names) ?? null) !== (nameInside(inside, id, markup, null) ?? null);
 }
@@ -2165,7 +2179,7 @@ async function main() {
             // its own styling over its component's root (a toggle's fill on its toggle item), folded back where it is that root's
             // (ownStyling); drawn over its parent where it paints, as a box is
             // (no arc, focus ring or outline: those are its component's drawing, or the ring rule's, never an override read here)
-            { const ie = out[out.length - 1]; boxStyling(ie); delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
+            { const ie = out[out.length - 1]; boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
             // the layers the mapping names inside it, where the mapping names it too, at any depth of placing (opensPlaced; an
             // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
             // (each at its place among the component's own drawn children, which this reading does not all read)
@@ -2726,7 +2740,7 @@ async function main() {
         const { M } = placedAs(anatomy, hid, hm, mainOf), match = placedMatch(M, inner);
         for (const [rel, e] of Object.entries(inner)) if (match[rel] && M[match[rel]].kind === e.kind) A.take('placed-main-token', { anatomy: { [`${hid}/${rel}`]: e } }, () => zeroTokens(e, M[match[rel]], L.value, { fill: true }));
       }
-      normalForm(anatomy); colourKept(A, anatomy, mainOf, { partial: true, whole: wholeIn, coloured: colouredOf, reading: true });
+      readCleared(anatomy, mainOf); normalForm(anatomy); colourKept(A, anatomy, mainOf, { partial: true, whole: wholeIn, coloured: colouredOf, reading: true });
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
       return anatomy;
     };

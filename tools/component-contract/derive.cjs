@@ -34,7 +34,7 @@ const { variantValues: valuesOf } = require('../shared/names.js');
 
 const KIND = { TEXT: 'text', INSTANCE: 'instance', SLOT: 'slot', FRAME: 'container', GROUP: 'container', COMPONENT: 'container', COMPONENT_SET: 'container', SECTION: 'container' };
 // alignment and sizing words, from the one table every direction reads
-const { alignFromFigma, sizeFromFigma, typeFromFigma, spacingFromFigma } = require('./rules.mjs');
+const { alignFromFigma, sizeFromFigma, typeFromFigma, spacingFromFigma, CLEARED } = require('./rules.mjs');
 // a long-running process (the snapshot router) reads this file fresh and keeps the rules.mjs it first loaded, which
 // clearing require.cache never reloads: one without these helpers derives as before them, never a throw (store.cjs
 // deletes a contract whose derive threw)
@@ -539,6 +539,9 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
   const anywhere = new Set(flat.flatMap((f) => Object.values(f.anatomy).map((x) => x && x.parent).filter(Boolean)));
   const slotty = (a, x) => x.kind === 'slot' || (a[x.parent] || {}).kind === 'slot';
   flat.forEach((f, i) => { for (const [k, x] of Object.entries(f.anatomy)) if (x && x.emptyKept) { if (filled.get(base(i)).has(k) || placed.has(k) || (!slotty(f.anatomy, x) && anywhere.has(k))) for (const m of x.emptyKept) delete x[m]; else x.whileEmpty = x.emptyKept; delete x.emptyKept; } });
+  // an instance that clears its component's colour style or stroke says so (cleared), before its own styling is held to
+  // its component's
+  if (mains) for (const f of flat) cleared(f.anatomy, mains);
   // (`found`: a Map, by each variant's `when`, of the instances its insides are kept whole in)
   if (mains) for (const f of flat) { const here = found ? new Set() : null; ownInsides(f.anatomy, mains, { found: here }); if (found) found.set(JSON.stringify(f.when), [...here]); }
   return flat;
@@ -594,6 +597,20 @@ function ownStyling(anatomy, mains) {
   }
   return anatomy;
 }
+/* An instance that draws no colour style, or no stroke, where its component's root has one at the instance's props has
+   cleared it (Figma's override: an instance's own fills or strokes replace its component's, the style with them; a
+   stroke's paint hidden draws none). Unsaid, it would be its component's, so it is said `none` (CLEARED, rules.mjs).
+   Only a reading from Figma says it: the walk records an instance's own style and stroke wherever it has them. */
+function cleared(anatomy, mains) {
+  for (const e of Object.values(anatomy)) {
+    const m = e && e.kind === 'instance' && e.component && mains(e.component, e.key);
+    const root = m && atProps(m, e.with).root;
+    if (!root) continue;
+    if (typeof root.fillStyle === 'string' && root.fillStyle !== CLEARED && e.fillStyle === undefined) e.fillStyle = CLEARED;
+    if (root.border && typeof root.border === 'object' && root.border.color != null && e.border === undefined) e.border = CLEARED;
+  }
+  return anatomy;
+}
 /* The one colour a placed component draws its glyph in at the instance's props: the background of its root's graphic
    children, where they hold one colour (an icon's vector, a slot placeholder's fill), else null. to-code writes it on
    the instance (its color), so a reading that finds it there reads the component's own colour, no override (from-code). */
@@ -641,7 +658,8 @@ let M = { ...atProps(m, e.with) };
   const placed = asPlaced(M), keyOf = Object.fromEntries(Object.entries(placed.back).map(([k, v]) => [v, k]));
   M = placed.M;
   for (let i = 0; i < swapped.length; i++) swapped[i] = keyOf[swapped[i]] || swapped[i];
-  ownStyling(M, mains);
+  // (an instance of it that clears its own component's style or stroke says none, as derive says it of a host's: cleared)
+  cleared(M, mains); ownStyling(M, mains);
   return { M, swapped, back: placed.back };
 }
 
@@ -753,6 +771,14 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
+    // a placed layer this component clears the style or stroke of (none) that draws its own component's again: its own
+    // styling, left out above as that component's, is said, or it would read as this one's none (a reading from code
+    // reads no colour style, so only Figma's)
+    if (!reading) for (const k of kept) {
+      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+      const R = x && e && e.kind === 'instance' && e.component && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
+      if (R) for (const f of ['fillStyle', 'border']) if (x[f] === CLEARED && e[f] === undefined && R[f] !== undefined) e[f] = R[f];
+    }
     inherit();
   }
 }

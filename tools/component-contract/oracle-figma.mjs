@@ -45,6 +45,7 @@ import { expand, camel } from './layers.mjs';
 import { WEIGHTS } from '../parity/values.mjs';
 // which parts a contract says turned on their own axes: its convention, read, never a value computed
 import { turnedParts } from './to-code.mjs';
+import { CLEARED } from './rules.mjs';
 
 const require = createRequire(import.meta.url);
 const { resolve: resolveSpec, layerPaths } = require('../snapshot/spec.cjs');
@@ -630,6 +631,8 @@ export function partOurs(e) {
   const o = {};
   for (const [k, v] of Object.entries(e)) {
     if (['parent', 'order', 'name', 'paths', 'modes', 'whileEmpty', 'canvas', 'shows'].includes(k)) continue;
+    // a colour style or stroke an instance clears (rules.mjs CLEARED), as said: none (fields)
+    if (v === CLEARED && (k === 'border' || k === 'fillStyle')) { o[k] = CLEARED; continue; }
     if (k === 'width' || k === 'height') o[k] = v === 'hug' || v === 'fill' ? v : num(v);
     else if (k === 'background' || k === 'color') o[k] = Array.isArray(v) ? v.map(paintOurs) : paintOurs(v);
     else if (k === 'layout') {
@@ -842,6 +845,8 @@ export function compareContract(component, setNode, contract, ctx) {
     // a layer a resized instance's constraints move: its main's place and size where they put it (constrained, below)
     const loose = new Set();
     if (moved) { b = { ...b, ...moved.at }; for (const k of Object.keys(moved.at)) loose.add(k); }
+    // a colour style or stroke said cleared (the host's or a main's word over its own) is none: Figma's having one, a row
+    for (const k of ['border', 'fillStyle']) if (b[k] === CLEARED) { b = { ...b }; delete b[k]; }
     // a part an instance prop swaps is named by the prop's value; the key of what it swaps to no contract holds
     if (b.$swapped) { b = { ...b }; delete b.$swapped; if ('key' in a && !('key' in b)) { delete a.key; t.skip('key: a swap the contract names by its component'); } }
     // a layer stretched on an axis is sized by its place where the contract says its end (or bottom); with neither

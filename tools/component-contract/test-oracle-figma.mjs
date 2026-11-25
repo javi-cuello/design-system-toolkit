@@ -342,6 +342,15 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
       return compareContract('chip', set, c, { ...ctx, components: { ...ctx.components, 'C:5': { key: 'k-anim', name: 'Anim' } }, mains: (key) => (key === 'k-anim' ? M : null) }); })();
     assert.ok(!turned.rows.some((x) => x.path === "anim/bar" && /absolute/.test(x.kind)) && turned.skipped["absolute: the main's, moved by its constraints in a resized instance"] > 0, 'a turned layer: skipped, counted');
   }
+  // an instance that clears its main's colour style or stroke says `none`: held to Figma's having neither
+  {
+    const box = (v, strokes) => ({ id: v.id + 'b', name: 'Box', type: 'INSTANCE', componentId: 'C:6', size: { x: 10, y: 10 }, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', fills: [], strokes, strokeWeight: 1, children: [] });
+    const main = { contract: 1, component: 'Box', figma: { name: 'Box', key: 'k-box' }, props: {}, anatomy: { root: { kind: 'container', width: 10, height: 10, fillStyle: 'Clear/Clear', border: { color: '#000000', width: 1 } } }, variants: [] };
+    const cx = { ...ctx, components: { ...ctx.components, 'C:6': { key: 'k-box', name: 'Box' } }, mains: (key) => (key === 'k-box' ? main : null) };
+    const run = (strokes) => { const set = structuredClone(setNode); for (const v of set.children) v.children.push(box(v, strokes)); const c = contract(); c.anatomy.box = { kind: 'instance', parent: 'root', order: 1, component: 'Box', key: 'k-box', width: 10, height: 10, fillStyle: 'none', border: 'none' }; return compareContract('chip', set, c, cx).rows.filter((x) => x.path === 'box'); };
+    assert.deepEqual(run([]), [], 'cleared in Figma, said cleared: no row');
+    assert.ok(run([{ type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 1 } }]).some((x) => x.kind === 'contract:border'), 'a stroke Figma draws, said cleared: a row');
+  }
   // the walk keeps an instance's first eight overrides, then a style's alone is left out: REST's list is cut the same way
   {
     const fields = [['inheritFillStyleId'], ['fills', 'inheritFillStyleId'], ['inheritFillStyleId'], ['fills'], ['inheritFillStyleId'], ['fills'], ['inheritFillStyleId'], ['inheritFillStyleId'], ['fills'], ['fills']];

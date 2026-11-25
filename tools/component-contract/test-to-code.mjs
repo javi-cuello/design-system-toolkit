@@ -893,4 +893,16 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const r = declarations({ kind: 'container', background: 'C/error', fillStyle: 'Sys/error' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] });
   ok('a colour style writes its colour alone and is never said unread', r.decls.length === 1 && r.decls[0][1] === 'var(--C/error)' && !r.unread.length);
 }
+{
+  // a placed component whose stroke or colour style the contract clears (`none`, rules.mjs CLEARED): its stroke's
+  // channel written back to none, its component's shadow kept; a cleared colour style writes nothing
+  const box = (align, shadow) => ({ contract: 1, component: 'Box', props: {}, anatomy: { root: { kind: 'container', width: 10, height: 10, fillStyle: 'Clear/Clear', border: { color: 'Line/strong', width: 1, align }, ...(shadow && { shadow }) } }, variants: [] });
+  const card = { contract: 1, component: 'Card', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, align: 'start', crossAlign: 'start', padding: { top: 0, end: 0, bottom: 0, start: 0 } } }, box: { kind: 'instance', parent: 'root', order: 0, component: 'Box', border: 'none', fillStyle: 'none' } }, variants: [] };
+  const sheet = (align, shadow) => { const B = box(align, shadow), mains = (n) => (n === 'Box' ? B : null); return { css: toCss(card, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains }), ok: selfCheck(card, rulesOf(card, mains).rules, mains).length === 0 }; };
+  const rule = (css) => (css.match(/> \.ds-card__box \{[^}]*\}/) || [''])[0];
+  const inside = sheet('inside', 'Effect/sm'), outside = sheet('outside');
+  ok('a cleared stroke takes its channel back to none: an inside ring off the shadow, the component\'s effect kept; an outline unset',
+    inside.ok && outside.ok && /box-shadow: var\(--effect-sm\);/.test(rule(inside.css)) && !/inset/.test(rule(inside.css))
+    && /outline: unset;/.test(rule(outside.css)) && !/none;|Clear/.test(rule(inside.css) + rule(outside.css)));
+}
 console.log(`${n} passed`);

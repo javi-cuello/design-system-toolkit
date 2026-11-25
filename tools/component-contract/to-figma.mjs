@@ -39,7 +39,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
-import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, looksLikeValue } from './rules.mjs';
+import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, looksLikeValue, CLEARED } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 import { turnedParts } from './to-code.mjs';
 import { geometry } from './geometry.mjs';
@@ -598,7 +598,7 @@ export function plan(contract, { axisOrder = [] } = {}) {
     return { name: axes.map((a) => `${a.figma}=${show(a, w[a.key])}`).join(', '), cell: cellOf(w), anatomy: Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, { ...e, name: slotName(e, contract.props || {}) ?? e.name ?? partName(ownId(id, e, offByDefault)) }])) };
   });
   const slots = Object.values(contract.props || {}).filter((p) => p.type === 'slot' && p.figma).map((p) => ({ figma: p.figma, settings: p.settings || null, description: p.description || '', preferred: p.preferred || [] }));
-  return { name: /^[a-z][A-Za-z0-9-]*$/.test(contract.component) ? sentence(contract.component) : contract.component, slots, axes: axes.map((a) => a.figma), booleans: booleans.map((b) => ({ figma: b.figma, default: b.default })), swaps: swaps.map((x) => ({ figma: x.figma })), text: text.map((t) => ({ figma: t.figma, default: t.default })), notDrawn: Object.keys(props).filter((k) => gone(k).length).map((k) => (whole(k) ? `${props[k].figma || k} (it takes the whole component away)` : `${props[k].figma || k}=${gone(k).join(', ')} (takes the whole component away)`)), order: Object.values(props).map((p) => p.figma).filter(Boolean), fromCode: (contract.code || {}).from === 'code', align: ALIGN_DATA.toFigma, size: Object.fromEntries(SIZE_ROWS), rows: Math.max(rowKeys.length, 1), cols: last ? last.values.length : 1, variants };
+  return { name: /^[a-z][A-Za-z0-9-]*$/.test(contract.component) ? sentence(contract.component) : contract.component, slots, axes: axes.map((a) => a.figma), booleans: booleans.map((b) => ({ figma: b.figma, default: b.default })), swaps: swaps.map((x) => ({ figma: x.figma })), text: text.map((t) => ({ figma: t.figma, default: t.default })), notDrawn: Object.keys(props).filter((k) => gone(k).length).map((k) => (whole(k) ? `${props[k].figma || k} (it takes the whole component away)` : `${props[k].figma || k}=${gone(k).join(', ')} (takes the whole component away)`)), order: Object.values(props).map((p) => p.figma).filter(Boolean), fromCode: (contract.code || {}).from === 'code', align: ALIGN_DATA.toFigma, size: Object.fromEntries(SIZE_ROWS), cleared: CLEARED, rows: Math.max(rowKeys.length, 1), cols: last ? last.values.length : 1, variants };
 }
 
 /* What the plugin runs: the plan drawn, every value bound to the variable,
@@ -786,7 +786,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // alignment and sizing words, from the one table every direction reads (rules.mjs), handed in as data
   const ALIGN = P.align, SIZE = P.size;
   const styles = {}, fonts = {}, icons = {}, sets = {}, effects = {}, toEffect = [], fillStyles = {}, toFill = [];
-  const fillNames = [...new Set(els.map((e) => e.fillStyle).filter(Boolean))];
+  // (a colour style an instance clears, `none` (P.cleared), is no style's name)
+  const fillNames = [...new Set(els.map((e) => e.fillStyle).filter((x) => x && x !== P.cleared))];
   const typos = [...new Set(els.map((e) => e.typography).filter(Boolean))], assets = [...new Set(els.map((e) => e.asset).filter(Boolean))];
   const [container] = await Promise.all([
     K.iconContainer ? tried('icon container', () => own(K.iconContainer, () => figma.importComponentSetByKeyAsync(K.iconContainer))) : null,
@@ -912,6 +913,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // already drawn), all at once at the end with the text styles; one whose key was not found is said, not dropped
   const styleFill = (n, e, paint) => {
     if (!e.fillStyle || !('fillStyleId' in n)) return;
+    // (an instance that clears its component's colour style: detached, with the others at the end)
+    if (e.fillStyle === P.cleared) { if (n.fillStyleId) toFill.push([n, { id: '' }, 'clearing a colour style']); return; }
     const rec = K.fillStyleColours && K.fillStyleColours[e.fillStyle];
     // (an image by its kind alone, as the style records it; a part that holds no colour of its own takes the style alone,
     // derive's: a paint its layer shows at no opacity)
@@ -940,8 +943,11 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // shadow and whether it clips, each only where it differs from what the layer already has. A stroke's colour alone
   // left the main's weight (a 2 px focus read back 1, one bottom side read back all four)
   const sameNum = async (n, f, t) => { const v = await V(t); if (v) return !!(n.boundVariables && n.boundVariables[f] && n.boundVariables[f].id === v.id); const raw = typeof t === 'number' ? t : K.values && K.values[t]; return raw == null || n[f] === raw; };
+  // (a stroke an instance clears, `none` (P.cleared): no strokes)
+  const clearStroke = (n) => { if ('strokes' in n && n.strokes.length) n.strokes = []; };
   const lookOver = async (n, e) => {
     const b = e.border;
+    if (b === P.cleared) clearStroke(n);
     if (b && typeof b === 'object' && 'strokes' in n) {
       if (b.color) await paintIf(n, 'strokes', b.color);
       const align = (b.align || 'inside').toUpperCase();
@@ -966,7 +972,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     else if (e.kind !== 'text') await paintIf(n, 'fills', e.background);
     styleFill(n, e, e.kind === 'text' ? e.color : e.background);
     // (a reading from code states what it read, not Figma's defaults: only its stroke's colour, as before)
-    if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
+    if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e); else if (e.border === P.cleared) clearStroke(n); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
     const flowing = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
     // (a layer inside an instance: never drawn in a wrapper by to-code.mjs)
@@ -1170,7 +1176,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         // one radius, or one per corner in Figma's order: top left, top right, bottom right, bottom left
         // an ellipse has no corners: a radius a variant kept from a rectangle is not drawn
         if (e.radius != null && 'topLeftRadius' in n) for (const [i, f] of ['topLeftRadius', 'topRightRadius', 'bottomRightRadius', 'bottomLeftRadius'].entries()) await num(n, f, Array.isArray(e.radius) ? e.radius[i] : e.radius);
-        if (e.border) {
+        if (e.border && typeof e.border === 'object') {
           n.strokes = e.border.color ? await paints(e.border.color) : [];
           // where the contract says (a divider's on its centre), else inside; taking room in the layout only where it says
           n.strokeAlign = (e.border.align || 'inside').toUpperCase();
@@ -1479,7 +1485,7 @@ export function needs(p, isVar = varNamer()) {
   const els = p.variants.flatMap((v) => Object.values(v.anatomy));
   const vars = new Set();
   for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (isVar(t)) vars.add(t);
-  return { styles: [...new Set(els.map((e) => e.typography).filter(Boolean))], icons: [...new Set(els.map((e) => e.asset).filter(Boolean))], vars: [...vars], components: [...new Set(els.filter((e) => e.kind === 'instance' && e.component).map((e) => e.component))], swaps: [...new Set(els.flatMap((e) => Object.values(e.with || {})).filter((v) => typeof v === 'string'))], effects: [...new Set(els.map((e) => e.shadow).filter((x) => x && !/\(/.test(x)))], fillStyles: [...new Set(els.map((e) => e.fillStyle).filter(Boolean))] };
+  return { styles: [...new Set(els.map((e) => e.typography).filter(Boolean))], icons: [...new Set(els.map((e) => e.asset).filter(Boolean))], vars: [...vars], components: [...new Set(els.filter((e) => e.kind === 'instance' && e.component).map((e) => e.component))], swaps: [...new Set(els.flatMap((e) => Object.values(e.with || {})).filter((v) => typeof v === 'string'))], effects: [...new Set(els.map((e) => e.shadow).filter((x) => x && !/\(/.test(x)))], fillStyles: [...new Set(els.map((e) => e.fillStyle).filter((x) => x && x !== CLEARED))] };
 }
 
 /** Each mode axis's collections, as the drawing sets a layer's mode on them: { axis: [{ collection, key, name, names }] },

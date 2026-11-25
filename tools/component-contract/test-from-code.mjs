@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -832,6 +832,19 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
 // the reading's set of parts whose background lays a layer over the colour (`layered`) is one name in the reading: a
 // second declared later in the same scope (the five-prop pruning's combination keys) threw before its line wherever a
 // render lost a layer (Material's horizontal card and mobile gallery, log14) and was asked in place of the first
+{
+  // a placed component drawing no stroke where its component's root has one reads back as the stroke cleared, `none`
+  // (rules.mjs CLEARED, as to-code writes it); one whose component draws none, or one drawing a stroke, reads nothing
+  const B = { component: 'Box', props: {}, anatomy: { root: { kind: 'container', border: { color: 'Line/strong', width: 1 } } }, variants: [] };
+  const P = { component: 'Plain', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const mains = (n) => (n === 'Box' ? B : n === 'Plain' ? P : null);
+  const a = readCleared({ root: { kind: 'container' }, b: { kind: 'instance', component: 'Box', strokeless: true }, p: { kind: 'instance', component: 'Plain', strokeless: true }, s: { kind: 'instance', component: 'Box', border: { color: 'x', width: 1 } }, g: { kind: 'graphic', strokeless: true } }, mains);
+  ok('a placed component drawing no stroke its component draws reads as the stroke cleared; nothing else does, and the mark is gone',
+    a.b.border === 'none' && a.p.border === undefined && a.s.border.color === 'x' && !Object.values(a).some((x) => 'strokeless' in x));
+  const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
+  ok('…its stroke read as drawn, before its outline is left to its component', src.includes("boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; delete ie.arc;")
+    && src.includes('readCleared(anatomy, mainOf); normalForm(anatomy); colourKept('));
+}
 { const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
   ok('the reading declares its layered set once', (src.match(/\b(const|let|var)\s+layered\b/g) || []).length === 1); }
 // the self page (site.mjs selfSiteFiles, from-code's render): what it serves and when it loads again
