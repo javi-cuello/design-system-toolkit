@@ -544,6 +544,10 @@ delete globalThis.figma;
   const holder = (kept) => ({ component: 'Select', props: {}, anatomy: { root: { kind: 'container' }, c: { kind: 'instance', parent: 'root', component: 'Chev', width: 16, height: 16 }, ...(kept && { 'c/down': { kind: 'instance', parent: 'c', component: 'Down', width: 16, height: 16, overflow: 'hidden' } }) }, variants: [] });
   ok('a part filled from the placed component it is the direct part of keeps no constraints, as the library keeps none for it: only its override differs', JSON.stringify(roundTrip(holder(true), holder(false), { mains }).rows.map((r) => r.at)) === '["c/down.overflow"]');
   // (every row checked: the library's own override, the clipping, is the one row; a constraints row was the defect)
+  const box = { component: 'Box', props: {}, anatomy: { root: { kind: 'container', width: 16, height: 16 }, mark: { kind: 'graphic', parent: 'root', width: 8, height: 2, background: 'Icon/inverse', paths: [{ windingRule: 'EVENODD', data: 'M 0 0 L 8 0 L 8 2 Z' }] } }, variants: [] };
+  const host = (kept) => ({ component: 'Check', props: {}, anatomy: { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Box' }, ...(kept && { 'b/mark': { kind: 'graphic', parent: 'b', width: 8, height: 2, background: kept } }) }, variants: [] });
+  ok('a vector filled from the placed component is held without its paths where the library states none (the walk records none inside an instance): only its override differs',
+    JSON.stringify(roundTrip(host('Icon/other'), host(null), { mains: (n) => (n === 'Box' ? box : null) }).rows.map((r) => r.at)) === '["b/mark.background"]');
 }
 
 {

@@ -280,6 +280,9 @@ export function ownInPlaced(library, drawn, mains, whole = new Set()) {
       // Carbon's dropdown chevron's Chevron--down, filled with a scale the library keeps none of)
       const nested = (() => { for (let p = x.parent; p && p !== 'root'; p = (M[p] || {}).parent) if ((M[p] || {}).kind === 'instance') return true; return false; })();
       if (!f.absolute && !(nested && f.constraints && f.constraints.horizontal === 'scale' && f.constraints.vertical === 'scale')) delete f.constraints;
+      // (nor a vector's paths, which the walk records inside no instance (derive's ownInsides holds its layers without
+      // them): the library's part stating none says nothing of them)
+      if (f.paths && !y.paths) delete f.paths;
       out[id] = f;
       break;
     }
