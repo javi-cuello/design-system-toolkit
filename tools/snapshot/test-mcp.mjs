@@ -99,6 +99,8 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   ok('the parts, run in any order, join into what one whole walk gives, in its order, the icons named; two pages of one name each walked once', JSON.stringify(whole.components) === JSON.stringify(ref) && whole.components.length === 7 && steps[0].scope === null && whole.iconSets.join() === 'Arrow' && whole.icons.length === 0);
   ok('a part returns what each node left unrecorded as that node\'s group, which the join keeps as the whole walk does', found.some((f) => JSON.stringify(f.unrecorded) === '[["Tag.paragraphSpacing","Tag.listSpacing"]]') && whole.tokens._meta.unrecorded.join() === 'Tag.paragraphSpacing,Tag.listSpacing' && ref.length === 7);
   ok('each part starts from the count of variables left unanswered so far, leaves its own for the next, and says what it added', found.every((f) => f.unanswered === 0) && tmp.getSharedPluginData(NS, 'unanswered') === '2');
+  // (and the lookups given up on, so the cap of three holds across parts: each part leaves it and the next takes it up)
+  ok('…the lookups given up on likewise', [storeCode(steps[0])].every((c) => c.includes("timedOut = Number(scratch().getSharedPluginData(") && c.includes("'timedOut', String(timedOut))")));
   const head = top;
   assert.throws(() => join([head, ...found.slice(1)]), /no part walked 2 planned sets \(1:1, 1:2\)/); n++; console.log('ok a part not collected is refused, its sets named');
   assert.throws(() => join([head, ...found, found[1]]), /walked more than once/); n++; console.log('ok a part collected twice is refused');

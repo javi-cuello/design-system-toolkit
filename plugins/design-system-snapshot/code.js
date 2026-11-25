@@ -118,9 +118,11 @@ function fileId() {
 /* Cancel, pressed in the window, is checked here: each step and each component, icon set,
    graphic and frame says where it is first, so a run stops between two of them, never inside one. */
 let cancelled = false;
+/** @type {{ type: string, text: string, done?: number, total?: number } | null} */ let lastSaid = null;
 const say = (text, done, total) => {
   if (cancelled) throw new Cancelled('cancelled');
-  if (!HEADLESS) figma.ui.postMessage({ type: 'progress', text, done, total });
+  lastSaid = { type: 'progress', text, done, total };
+  if (!HEADLESS) figma.ui.postMessage(lastSaid);
 };
 
 // ---- helpers ---------------------------------------------------------------
@@ -167,24 +169,29 @@ const varCache = {};
 /** @param {string} id */
 // A lookup Figma never answers (a library variable it cannot fetch: on one large library the first of 171 hung the
 // run for good, Cancel included, 2026-11-25) is given up after a while; after three, the rest are not asked, and the
-// tokens say how many went unread. A collection's lookup likewise (`answered`, null when it never comes).
+// tokens say how many went unread (`unanswered`: the lookups given up on and those never asked after, so the count is
+// every one unread). A collection's lookup likewise (`answered`, MISSED when it never comes).
 const VARIABLE_WAIT = 5000;
-let unanswered = 0;
-/** @template T @param {() => Promise<T>} ask @returns {Promise<T | null>} */
+let unanswered = 0, timedOut = 0;
+const MISSED = Symbol('missed');
+/** @template T @param {() => Promise<T>} ask @returns {Promise<T | typeof MISSED>} */
 async function answered(ask) {
-  if (unanswered > 2) return null;
+  if (timedOut > 2) { unanswered++; return MISSED; }
   const p = ask();
-  // (past a second, the window says so with a bar that runs without a count: the run is waiting, not hung)
-  let t, slow; const L = {}, got = await Promise.race([p, new Promise((r) => {
+  // (past a second, the window says so with a bar that runs without a count: the run is waiting, not hung; once it is
+  // answered, the step it interrupted is said again)
+  let t, slow, waited = false; const L = {}, got = await Promise.race([p, new Promise((r) => {
     t = setTimeout(() => r(L), VARIABLE_WAIT);
-    slow = setTimeout(() => { if (!HEADLESS) figma.ui.postMessage({ type: 'progress', text: 'waiting for Figma to return a library variable' }); }, 1000);
+    slow = setTimeout(() => { waited = true; if (!HEADLESS) figma.ui.postMessage({ type: 'progress', text: 'waiting for Figma to return a library variable' }); }, 1000);
   })]).finally(() => { clearTimeout(t); clearTimeout(slow); });
-  return got === L ? (unanswered++, null) : /** @type {T} */ (got);
+  if (waited && lastSaid && !HEADLESS) figma.ui.postMessage(lastSaid);
+  if (got === L) { timedOut++; unanswered++; return MISSED; }
+  return /** @type {T} */ (got);
 }
 async function variable(id) {
   if (id in varCache) return varCache[id];
-  const before = unanswered, got = await answered(() => figma.variables.getVariableByIdAsync(id));
-  return unanswered > before || unanswered > 2 ? null : (varCache[id] = got);
+  const got = await answered(() => figma.variables.getVariableByIdAsync(id));
+  return got === MISSED ? null : (varCache[id] = got);
 }
 /** @param {unknown} id */
 async function styleName(id) {
@@ -656,7 +663,7 @@ async function collectTokens() {
     // (each one: a lookup Figma is slow to answer waits a few seconds, and the count says which)
     say('reading the variables the components use', n++, ids.size);
     const v = await variable(i).catch(() => null);
-    const c = v && v.remote && await answered(() => figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId)).catch(() => null);
+    const c = v && v.remote && await answered(() => figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId)).then((x) => (x === MISSED ? null : x), () => null);
     if (c && !here.has(c.name)) others.set(c.name, c);
   }
   for (const c of [...collections, ...others.values()]) {

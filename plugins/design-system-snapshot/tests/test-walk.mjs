@@ -430,11 +430,13 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
     showUI() {}, ui: { postMessage: (m) => posted.push(m), onmessage: null }, clientStorage: { getAsync: async () => "", setAsync: async () => {} },
     getNodeByIdAsync: async () => null, variables: { getVariableByIdAsync: () => { asked++; return new Promise(() => {}); } } };
   const now = (f) => { f(); return 0; };   // the wait elapses at once
-  const v = vm.runInContext(src + "\n;variable", vm.createContext({ figma: fw, console, __html__: "", fetch: () => new Promise(() => {}), setTimeout: now, clearTimeout() {} }));
+  const vctx = vm.createContext({ figma: fw, console, __html__: "", fetch: () => new Promise(() => {}), setTimeout: now, clearTimeout() {} });
+  const v = vm.runInContext(src + "\n;variable", vctx);
   const got = [];
   for (const id of ["a", "b", "c", "d", "e"]) got.push(await v(id));
   ok("a variable Figma never returns reads as none, and the run goes on", got.every((x) => x === null));
   ok("…and after three unanswered the rest are not asked", asked === 3);
+  ok("…and the count the tokens record is every lookup left unread, the ones never asked too", vm.runInContext("unanswered", vctx) === 5);
   ok("…and a wait past a second says so, a step with no count (a bar that runs)", posted.some((m) => m.type === "progress" && /waiting for Figma/.test(m.text) && m.total === undefined));
 }
 

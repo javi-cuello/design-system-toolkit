@@ -188,20 +188,20 @@ figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
 const tokens = await collectTokens();
-scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered));
+scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered)); scratch().setSharedPluginData('${NS}', 'timedOut', String(timedOut));
 %ICONS%
 ${written(`{ tokens, unanswered, sets: ${PLANNED}.flatMap((pg) => pg.sets.map((s) => s.id)), iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, ...(Object.keys(iconGroups).length && { iconGroups }), ...(Object.keys(iconDescriptions).length && { iconDescriptions }) }`, ', sets: __payload.sets.length')}}`;
 const PART = `
 figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
-const __from = unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0;
+const __from = unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0; timedOut = Number(scratch().getSharedPluginData('${NS}', 'timedOut')) || 0;
 const __groups = [];
 unrecordedSeen.push = function (...xs) { if (xs.length) __groups.push(xs); return Array.prototype.push.apply(this, xs); };
 const __names = new Set(__PAGES.map((i) => figma.root.children[i].name));
 const __sets = ${PLANNED}.filter((pg) => __PAGES.includes(pg.index)).flatMap((pg) => pg.sets.filter((s) => !__SCOPE || __SCOPE.includes(s.id)).map((s) => s.id));
 const __components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], pages: { test: (n) => __names.has(n) }, scope: new Set(__sets) });
-${written('{ components: __components, sets: __sets, unrecorded: __groups, unreadable, unanswered: unanswered - __from }', ', components: __components.length', `scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered));`)}`;
+${written('{ components: __components, sets: __sets, unrecorded: __groups, unreadable, unanswered: unanswered - __from }', ', components: __components.length', `scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered)); scratch().setSharedPluginData('${NS}', 'timedOut', String(timedOut));`)}`;
 
 /* The tokens call: the plugin's collectTokens, the icon names by collectLibrary's own expressions, and the sets the
    parts must cover. */
