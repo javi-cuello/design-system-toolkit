@@ -1,4 +1,4 @@
-// Design system snapshot — v0.90.2 · plugin-standard v1.1.0
+// Design system snapshot — v0.90.3 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -167,17 +167,18 @@ async function modesOf(n) {
 /** @type {Record<string, Variable | null>} */
 const varCache = {};
 /** @param {string} id */
-// A lookup Figma never answers (a library variable it cannot fetch: on one large library the first of 171 hung the
-// run for good, Cancel included, 2026-11-25) is given up after a while; after three, the rest are not asked, and the
-// tokens say how many went unread (`unanswered`: the lookups given up on and those never asked after, so the count is
-// every one unread). A collection's lookup likewise (`answered`, MISSED when it never comes).
+// A lookup Figma never answers is given up after a while; after three, the rest are not asked; `unanswered` counts
+// every one unread. A collection's lookup likewise (`answered`, MISSED when it never comes).
 const VARIABLE_WAIT = 5000;
 let unanswered = 0, timedOut = 0;
+// A library with variables of its own never asks for another library's (key/id): Figma freezes loading it. Counted
+// as unread.
+let own = false;
 /** @type {Set<string>} */ const missed = new Set();
 /** @type {Map<string, any>} */ const collectionsAsked = new Map();
 // Each run (the window stays open between them) asks again what the last gave up on: its three tries are its own.
 function freshLookups() {
-  unanswered = 0; timedOut = 0;
+  unanswered = 0; timedOut = 0; own = false;
   for (const id of missed) delete varCache[id];
   missed.clear(); collectionsAsked.clear();
 }
@@ -198,6 +199,7 @@ async function answered(ask) {
 }
 async function variable(id) {
   if (id in varCache) return varCache[id];
+  if (own && id.includes('/')) { unanswered++; return (varCache[id] = null); }
   const got = await answered(() => figma.variables.getVariableByIdAsync(id));
   // (one never read is counted once and never asked again: read as none for the rest of the run)
   if (got === MISSED) { unanswered++; missed.add(id); return (varCache[id] = null); }
@@ -594,6 +596,7 @@ async function collectTokens() {
   boundIds = null;   // a run reads the file as it is now: the window stays open between runs
   freshLookups();
   const collections = await figma.variables.getLocalVariableCollectionsAsync();
+  own = collections.length > 0;
   // Every collection under its own name, with its own modes: the payload
   // assumes no collection is called anything in particular (toolkit-standard
   // §D 7). It carried five named lookups until 0.32.0 — a convenience for two
@@ -847,7 +850,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.90.2';
+const VERSION = '0.90.3';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1541,7 +1544,7 @@ function propLinks(roots, keys) {
     }
   };
   for (const v of roots) { root = v.name; walk(v, [], null); }
-  // a placed instance's insides are read only for a key no outer layer takes (walk 0.90.2): read whole, every instance
+  // a placed instance's insides are read only for a key no outer layer takes (walk 0.90.3): read whole, every instance
   // in every variant, they made a large library's snapshot many times slower
   const only = new Set([...(keys || [])].filter((k) => k.includes('#') && !(bare(k) in links)));
   if (only.size) for (const v of roots) { root = v.name; walk(v, [], only); }

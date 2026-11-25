@@ -1,6 +1,11 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.90.3] - 2026-11-25
+### Fixed
+- **A library with variables of its own no longer asks Figma for another library's.** Figma loads that library first and freezes, the window with it, past any timeout (a large library held at "1 of 171"); those are counted unread instead.
+- **The bar runs while a step waits without a count**: the bare indeterminate bar drew a still stub that read as stuck.
+
 ## [0.90.2] - 2026-11-25
 ### Fixed
 - **Snapshots are fast again.** 0.90.0 read every placed instance's layers in every variant to find a property the set exposes inside one; the walk now looks inside instances only for a property no outer layer takes.

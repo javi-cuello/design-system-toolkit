@@ -88,6 +88,11 @@ progress{display:block;width:100%;height:4px;margin:var(--space-2) 0 0;border:0;
 progress::-webkit-progress-bar{background:var(--figma-color-bg-tertiary)}
 progress::-webkit-progress-value{background:var(--figma-color-bg-brand);transition:width .2s}
 @media (prefers-reduced-motion: reduce){progress::-webkit-progress-value{transition:none}}
+/* waiting without a count: a band runs across, so a wait reads as alive (a bare indeterminate bar drew a still stub) */
+progress:indeterminate{background:linear-gradient(90deg,var(--figma-color-bg-tertiary) 0 40%,var(--figma-color-bg-brand) 40% 60%,var(--figma-color-bg-tertiary) 60%) 0 0/250% 100%;animation:waiting 1.2s linear infinite}
+progress:indeterminate::-webkit-progress-bar{background:transparent}
+@keyframes waiting{from{background-position:100% 0}to{background-position:0 0}}
+@media (prefers-reduced-motion: reduce){progress:indeterminate{animation:none;background:var(--figma-color-bg-brand);opacity:.4}}
 .hint{margin:var(--space-3) 0 0}
 </style>
 <script type="module">
