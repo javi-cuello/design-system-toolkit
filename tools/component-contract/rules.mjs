@@ -19,10 +19,11 @@
 import { splitTop, parseGradient, COLOUR, WEIGHTS, figmaWeight, weightName } from '../parity/values.mjs';
 import { stopPositions } from '../parity/schema.mjs';
 
-/* Cleared: an instance that clears its component's colour style, stroke or fill (fillStyle, border, background) says
+/* Cleared: an instance that clears its component's colour style, stroke, fill or shadow (fillStyle, border, background, shadow) says
    `none` (derive's cleared), as does a layer inside an opened instance that draws no fill where its component's layer
    has one; one row for every side. Figma: the instance's style detached, its strokes or fills none (to-figma). CSS: a
-   colour style writes nothing (the contract's background says the colour); a fill cleared is `background: none`; a
+   colour style writes nothing (the contract's background says the colour); a fill cleared is `background: none`, a
+   shadow cleared `box-shadow: none` (Figma: its effects emptied); a
    stroke cleared is the channel its component draws one in set back (to-code's override of the component's root:
    unset, or its shadow without the ring); both read back from a placed component drawing none where its component's
    root has one (from-code readCleared). */
