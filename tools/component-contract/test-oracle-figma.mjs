@@ -265,6 +265,17 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const c = contract(); delete c.anatomy.root.layout; delete c.anatomy.label.width; c.anatomy.label.absolute = { x: 8, y: 6 }; c.anatomy.label.constraints = { horizontal: 'stretch', vertical: 'min' };
     assert.ok(compareContract('chip', set, c, ctx).rows.some((x) => x.kind === 'contract:width' && x.path === 'label'));
   }
+  // a placed instance's size is its placement's, never its main's root's, and the size an empty main keeps only while
+  // empty (whileEmpty) is not the instance's: a ring stretched round its box, its end and bottom said, sized by them
+  {
+    const ring = (v) => ({ id: v.id + 'r', name: 'Ring', type: 'INSTANCE', componentId: 'C:7', size: { x: v.size.x + 4, y: 36 }, relativeTransform: T(-2, -2), layoutPositioning: 'ABSOLUTE', constraints: { horizontal: 'LEFT_RIGHT', vertical: 'TOP_BOTTOM' }, layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', children: [] });
+    const set = structuredClone(setNode); for (const v of set.children) v.children.push(ring(v));
+    const c = contract(); c.anatomy.ring = { kind: 'instance', parent: 'root', order: 1, component: 'Ring', key: 'k-ring', position: 'absolute', absolute: { x: -2, y: -2, end: -2, bottom: -2 }, constraints: { horizontal: 'stretch', vertical: 'stretch' } };
+    const main = { contract: 1, component: 'Ring', figma: { name: 'Ring', key: 'k-ring' }, props: {}, anatomy: { root: { kind: 'container', width: 'hug', height: 'hug', minWidth: 69, minHeight: 40, whileEmpty: ['minWidth', 'minHeight'] } }, variants: [] };
+    const cx = { ...ctx, components: { ...ctx.components, 'C:7': { key: 'k-ring', name: 'Ring' } }, mains: (key) => (key === 'k-ring' ? main : null) };
+    const rows = compareContract('chip', set, c, cx).rows.filter((x) => x.path === 'ring');
+    assert.deepEqual(rows, [], 'neither the main\'s hug nor its empty minimum is held to the placed ring');
+  }
   // the counts: a component nothing was checked on is not checked, never a match
   const R = (checked, rows = [], skipped = {}) => ({ rows, checked, skipped });
   const rep = report('lib', [

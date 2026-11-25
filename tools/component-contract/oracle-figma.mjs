@@ -749,8 +749,10 @@ export function compareContract(component, setNode, contract, ctx) {
       const mflat = expand(main, when);
       const { found } = addressParts(mflat, inst, ip);
       // a text a string prop fills says the instance's value for it; a part an instance prop swaps, the component it names
+      // (and without the size the main's part keeps only while it is empty, whileEmpty: an instance's layer keeps none, derive's emptyless)
       const part = (id) => {
         const o = partOurs(mflat[id]); const r = /^\{(\w+)\}$/.exec(o.content || '');
+        for (const f of mflat[id].whileEmpty || []) delete o[f];
         if (r && typeof when[r[1]] === 'string') o.content = when[r[1]];
         for (const [pid, p] of Object.entries(main.props || {})) if (p.type === 'instance' && (p.swaps || []).includes(id) && typeof when[pid] === 'string') { o.component = when[pid]; delete o.key; o.$swapped = true; }
         return o;
@@ -780,7 +782,8 @@ export function compareContract(component, setNode, contract, ctx) {
         const x = expansion(q);
         if (x === UNSPELT) return { unspelt: true };
         if (!x) { whole = false; continue; }
-        if (x.byNode.has(n)) said.push(x.part(x.byNode.get(n)));
+        // an instance's own size is its placement's (fill, hug, a fixed width, or its place where stretched), never its main's root's
+        if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; } said.push(o); }
       }
       return { said: said.length ? Object.assign({}, ...said) : null, whole };
     };
