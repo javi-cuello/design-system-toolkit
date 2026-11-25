@@ -19,7 +19,9 @@
  * Rows: { component, variant, path, figma, ours, kind } where kind is `<against>:<field>` (`spec:fills`,
  * `contract:layout.padding`, `contract:part`). A placed instance is held to its main's own contract, expanded at the
  * instance's props, with the host's word over it; where a main has no contract, a field Figma has there that the host
- * leaves unsaid is `contract:not stated`, counted apart, never a difference. Every field compared is counted, and every
+ * leaves unsaid is `contract:not stated`, counted apart, never a difference; where that main is another library's
+ * (REST's `remote`) or one of this library's icons (the tokens' `_meta.icons`), what is inside it is said there, and the
+ * field is skipped by that name, unless an instance overrides it or it is the placed instance's own place. Every field compared is counted, and every
  * field skipped (REST silent, mixed text, a swap REST does not name) is counted apart, never as passing. A library's
  * report, per side: the components that match on every field checked, that differ, that differ only by `not stated`,
  * and that had nothing checked; the differences and the `not stated` rows; and the kinds that differ most.
@@ -749,6 +751,13 @@ export function compareContract(component, setNode, contract, ctx) {
   } else if (isSet) t.skip('invalid: the contract lists none');
   // part by part, each variant Figma draws; the parts the contract says turned on their own axes
   const turned = turnedParts(contract);
+  // why a main no contract holds says what is inside it all the same: another library's, or an icon this one stores
+  const elsewhere = (inst) => {
+    const c = ctx.components[inst.componentId];
+    if (c && c.remote) return 'inside another library\'s component: that library\'s contract says it';
+    const m = mainOf(ctx, inst);
+    return m && ctx.icons && ctx.icons.has(m.owner) ? 'inside an icon: its stored drawing says it' : null;
+  };
   // a placed instance's main, expanded at the instance's props by its own contract (ctx.mains: its key → the contract)
   const expansions = new Map();
   const expansion = (inst) => {
@@ -787,20 +796,32 @@ export function compareContract(component, setNode, contract, ctx) {
     // what the mains' own contracts say of a layer: each instance around it (itself first) expanded at its props, the
     // innermost said first and each outer main over it (null where none says it); `whole` where every one of those
     // instances has a contract, so a field none says is a difference, else it is `not stated`
+    // (`away`: every main without a contract is another library's or one of this library's icons, which say what is
+    // inside them; the layer's own fields stay rows where an instance overrides it, as does a placed instance's place)
     const mainSays = (n) => {
       const said = [];
-      let whole = true, inner = false, geo = null;
+      let whole = true, inner = false, geo = null, why = null, plain = false, self = false;
       for (let q = n; q && q !== v; q = parentOf.get(q)) {
         if (q.type !== 'INSTANCE') continue;
         const x = expansion(q);
         if (x === UNSPELT) return { unspelt: true };
-        if (!x) { whole = false; continue; }
+        if (!x) { whole = false; const w = elsewhere(q); if (w) { why = why || w; if (q === n) self = true; } else plain = true; continue; }
         // an instance's own size is its placement's (fill, hug, a fixed width, or its place where stretched), never its main's root's
         if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; } if (!said.length) { inner = x.turned.has(x.byNode.get(n)); if (q !== n) geo = { q, x }; } said.push(o); }
       }
       // (a size any instance around the layer lists as overridden on it, an outer one's too: a stated value)
       if (geo) { geo.listed = new Set(); for (let q = parentOf.get(n); q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') for (const o of q.overrides || []) if (o.id === n.id) for (const f of o.overriddenFields || []) geo.listed.add(f); }
-      return { said: said.length ? Object.assign({}, ...said) : null, whole, turned: inner, geo };
+      const away = why && !plain ? { why, self, overridden: overriddenHere(n) } : null;
+      return { said: said.length ? Object.assign({}, ...said) : null, whole, turned: inner, geo, away };
+    };
+    // the fields any instance around a layer (itself included) lists as overridden on it, in REST's names
+    const overriddenHere = (n) => { const out = new Set(); for (let q = n; q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') for (const o of overridesOf(q)) if (o.id === n.id) for (const f of o.overriddenFields) out.add(f); return out; };
+    // a field left to a main said elsewhere: skipped, named, unless an instance overrides it here (a field REST names
+    // that no contract field maps to keeps every field a row) or it is the placed instance's own place
+    const aside = (vname, id, a, b, away) => {
+      const unknown = [...away.overridden].some((f) => !OVERRIDE_KNOWN.has(f) && !OVERRIDE_IGNORED.has(f));
+      const held = (k) => unknown || !(k in OVERRIDDEN_AS) || OVERRIDDEN_AS[k].some((f) => away.overridden.has(f)) || (away.self && PLACE.includes(k));
+      for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { if (held(k)) t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); else t.skip(away.why); delete a[k]; }
     };
     const unstated = (vname, id, a, b) => { for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; } };
     const frameOf = (n) => { let f = parentOf.get(n) || null; while (f && GROUPS.has(f.type)) f = parentOf.get(f); return f; };
@@ -826,18 +847,19 @@ export function compareContract(component, setNode, contract, ctx) {
           // a paint the host states is the whole fill: its main's fill style goes with the main's paint (Figma detaches it)
           if (('background' in part || 'color' in part) && !('fillStyle' in part)) delete b.fillStyle;
         }
-        if (!whole) unstated(v.name, id, a, b);
+        if (!whole) { if (says.away) aside(v.name, id, a, b, says.away); else unstated(v.name, id, a, b); }
       }
       fields(v.name, id, n, a, b, part, says ? constrained(n, parent, says.geo, part) : null);
     }
     // a layer Figma draws that no part is: inside an instance whose main's contract says it, held to that; else a row
     for (const { path: p, node } of untaken(v, taken)) {
-      const { said, whole, unspelt, turned: mainTurned, geo } = inInstance(node) ? mainSays(node) : { said: null, whole: true };
+      const { said, whole, unspelt, turned: mainTurned, geo, away } = inInstance(node) ? mainSays(node) : { said: null, whole: true };
       if (unspelt) { t.skip(SPELL); continue; }
+      if (!said && away && !away.overridden.size) { t.skip(away.why); continue; }
       if (!said) { if (whole) t.differ(v.name, p, 'part', 'present', 'missing'); else t.differ(v.name, p, 'not stated', 'present', undefined); continue; }
       t.check(v.name, p, 'part', true, true);
       const a = restPart(node, parentOf.get(node) || null, ctx, idOfProp, frameOf(node), { turned: !!mainTurned });
-      if (!whole) unstated(v.name, p, a, said);
+      if (!whole) { if (away) aside(v.name, p, a, said, away); else unstated(v.name, p, a, said); }
       fields(v.name, p, node, a, said, {}, constrained(node, parentOf.get(node), geo, {}));
     }
   }
@@ -960,6 +982,25 @@ const UNSPELT = { unspelt: true };
 const SPELL = "an instance's props its main's contract cannot spell";
 // the fields a placed instance says of itself, never its main's
 const OWN = ['kind', 'component', 'key', 'with', 'swappedBy'];
+// a placed instance's own place and size: the host's to say, never its main's
+const PLACE = ['width', 'height', 'absolute', 'constraints', 'flip', 'rotation'];
+// the overridden fields REST lists, by the contract field each one sets; a contract field not listed here, or an
+// overridden field none maps, keeps the row
+const TEXT_OVERRIDES = ['fontSize', 'fontFamily', 'fontPostScriptName', 'fontWeight', 'italic', 'letterSpacing', 'lineHeightPx', 'lineHeightPercent', 'lineHeightPercentFontSize', 'lineHeightUnit', 'textCase', 'textDecoration', 'inheritTextStyleId', 'openTypeFlags', 'paragraphSpacing', 'listSpacing', 'textAlignHorizontal', 'textAlignVertical', 'textAutoResize', 'characterStyleOverrides', 'styleOverrideTable', 'lineIndentations', 'lineTypes', 'hangingPunctuation', 'maxLines', 'boundVariables'];
+const LAYOUT_OVERRIDES = ['itemSpacing', 'counterAxisSpacing', 'paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom', 'counterAxisAlignItems', 'primaryAxisAlignItems', 'counterAxisSizingMode', 'primaryAxisSizingMode', 'layoutGrow', 'layoutAlign', 'layoutPositioning', 'itemReverseZIndex', 'strokesIncludedInLayout', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'targetAspectRatio', 'layoutGrids', 'grid', 'boundVariables'];
+const STROKE_OVERRIDES = ['strokes', 'strokeWeight', 'strokeAlign', 'individualStrokeWeights', 'strokeDashes', 'strokeJoin', 'strokeCap', 'strokeMiterAngle', 'inheritStrokeStyleId', 'boundVariables'];
+const FILL_OVERRIDES = ['fills', 'inheritFillStyleId', 'boundVariables'];
+const RADIUS_OVERRIDES = ['cornerRadius', 'topLeftRadius', 'topRightRadius', 'bottomLeftRadius', 'bottomRightRadius', 'rectangleCornerRadii', 'cornerSmoothing', 'boundVariables'];
+const OVERRIDDEN_AS = {
+  background: FILL_OVERRIDES, fillStyle: FILL_OVERRIDES, color: FILL_OVERRIDES, border: STROKE_OVERRIDES, opacity: ['opacity', 'boundVariables'], blend: ['blendMode'],
+  shadow: ['effects', 'inheritEffectStyleId', 'boundVariables'], radius: RADIUS_OVERRIDES, smoothing: RADIUS_OVERRIDES,
+  width: ['width', ...LAYOUT_OVERRIDES], height: ['height', ...LAYOUT_OVERRIDES], minWidth: LAYOUT_OVERRIDES, maxWidth: LAYOUT_OVERRIDES, minHeight: LAYOUT_OVERRIDES, maxHeight: LAYOUT_OVERRIDES,
+  layout: LAYOUT_OVERRIDES, position: LAYOUT_OVERRIDES, overflow: ['clipsContent'], constraints: ['constraints'], absolute: ['width', 'height', 'constraints', ...LAYOUT_OVERRIDES],
+  content: ['characters', 'text'], typography: TEXT_OVERRIDES, letterSpacing: TEXT_OVERRIDES, textCase: TEXT_OVERRIDES, textDecoration: TEXT_OVERRIDES, autoResize: TEXT_OVERRIDES, verticalAlign: TEXT_OVERRIDES, textAlign: TEXT_OVERRIDES,
+};
+const OVERRIDE_KNOWN = new Set(Object.values(OVERRIDDEN_AS).flat());
+// overridden fields that set nothing the contract compares on the layer: its name and visibility are the walk's, the rest no contract holds
+const OVERRIDE_IGNORED = new Set(['name', 'visible', 'componentProperties', 'locked', 'lockMode', 'pluginData', 'sharedPluginData', 'exportSettings', 'preserveRatio', 'transitionNodeID', 'transitionDuration', 'transitionEasing', 'explicitVariableModes']);
 // an instance's props (Figma's names and values) in its main's contract's spelling
 function whenOfProps(main, ip, given) {
   const when = {};
@@ -1158,7 +1199,7 @@ async function main(argv) {
       for (const s of sets) {
         const r = got[s.id];
         if (!r || r.missing || !r.document) { results.push({ component: s.folder, missing: true, readAt: said }); continue; }
-        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains };
+        const ctx = { styles: r.styles || {}, components: r.components || {}, componentSets: r.componentSets || {}, mains, icons: new Set((meta && meta.icons) || []) };
         const spec = resolveSpec(s.stored);
         let contract = null;
         try { contract = JSON.parse(fs.readFileSync(path.join(w.paths.components, s.folder, 'contract.json'), 'utf8')); } catch { /* no contract: the spec alone */ }

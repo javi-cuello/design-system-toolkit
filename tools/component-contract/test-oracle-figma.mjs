@@ -219,6 +219,26 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const r = compareContract('chip', set, c, ctx);
     assert.ok(r.rows.some((x) => x.kind === 'contract:not stated' && x.path === 'icon.opacity'), 'the instance\'s own opacity, unsaid');
     assert.ok(r.rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'a layer inside a walked instance that no part is, its main without a contract');
+    // another library's main, or one of this library's icons: what is inside is said there, a named skip; the
+    // instance's own opacity (not its place) too, unless an instance overrides it
+    const remote = { ...ctx, components: { ...ctx.components, 'C:9': { ...ctx.components['C:9'], remote: true } } };
+    for (const [cx, why] of [[remote, /another library/], [{ ...ctx, icons: new Set(['Icon']) }, /an icon/]]) {
+      const r2 = compareContract('chip', set, c, cx);
+      assert.ok(!r2.rows.some((x) => x.kind === 'contract:not stated'), 'nothing left unsaid inside');
+      assert.ok(Object.keys(r2.skipped).some((k) => why.test(k)), 'counted as a named skip');
+    }
+    const c2 = structuredClone(c); delete c2.anatomy.icon.width;
+    const r3 = compareContract('chip', set, c2, remote);
+    assert.ok(r3.rows.some((x) => x.kind === 'contract:not stated' && x.path === 'icon.width'), 'a placed instance\'s own size is the host\'s, never skipped');
+    const set2 = structuredClone(set); for (const v of set2.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.overrides = [{ id: v.id + 'g', overriddenFields: ['fills'] }]; }
+    assert.ok(compareContract('chip', set2, c, remote).rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'a layer an instance overrides stays a row');
+    // only the field overridden stays a row: a colour override on the instance leaves its opacity the main's
+    const own = (fields) => { const s = structuredClone(set); for (const v of s.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.overrides = [{ id: i.id, overriddenFields: fields }]; } return compareContract('chip', s, c, remote).rows.some((x) => x.kind === 'contract:not stated' && x.path === 'icon.opacity'); };
+    assert.ok(!own(['fills']), 'a fill override is not an opacity one');
+    assert.ok(own(['opacity']), 'an opacity override is the host\'s, unsaid');
+    assert.ok(own(['someNewField']), 'a field no contract field maps keeps every row');
+    // a main with no contract that is neither: still "not stated"
+    assert.ok(compareContract('chip', set, c, { ...ctx, icons: new Set(['Other']) }).rows.some((x) => x.kind === 'contract:not stated'));
   }
   // inside an instance whose main has a contract: the main's expansion, the host's overrides over it, held to Figma
   {
