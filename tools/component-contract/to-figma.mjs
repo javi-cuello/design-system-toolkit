@@ -1483,7 +1483,7 @@ export const clearedLook = (n, e, cleared) => {
    the plugin code. */
 export const blendLook = (n, e) => {
   if (!e.blend || !('blendMode' in n)) return;
-  const flat = (m) => (m === 'PASS_THROUGH' ? 'NORMAL' : m), want = e.blend.toUpperCase();
+  const flat = (m) => (m === 'PASS_THROUGH' ? 'NORMAL' : m), want = e.blend.toUpperCase().replace(/-/g, '_');
   if (flat(n.blendMode) === want) return;
   n.blendMode = want === 'NORMAL' && ['FRAME', 'INSTANCE', 'GROUP', 'COMPONENT', 'COMPONENT_SET', 'SECTION'].includes(n.type) ? 'PASS_THROUGH' : want;
 };

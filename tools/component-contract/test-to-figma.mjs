@@ -420,6 +420,7 @@ delete globalThis.figma;
   // blending children are not isolated, and as normal on a shape or text; at creation and in every kept layer's override
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
   const after = (type, m, e) => { const n = { type, blendMode: m }; blendLook(n, e); return n.blendMode; };
+  ok('a hyphenated blend, as CSS writes it, is set in Figma\'s spelling', after('RECTANGLE', 'NORMAL', { blend: 'color-dodge' }) === 'COLOR_DODGE');
   ok('a layer said unblended is set back, pass-through on a frame, instance or group, normal on a shape or text; pass-through stays; unsaid leaves it; a mode is set',
     after('INSTANCE', 'DARKEN', { blend: 'normal' }) === 'PASS_THROUGH' && after('FRAME', 'DARKEN', { blend: 'normal' }) === 'PASS_THROUGH' && after('GROUP', 'DARKEN', { blend: 'normal' }) === 'PASS_THROUGH'
     && after('RECTANGLE', 'DARKEN', { blend: 'normal' }) === 'NORMAL' && after('TEXT', 'MULTIPLY', { blend: 'normal' }) === 'NORMAL'
