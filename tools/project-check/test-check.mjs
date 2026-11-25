@@ -106,6 +106,13 @@ console.log('ok the validate gate asks where the system\'s own code is');
     assert.ok(!fs.existsSync(path.join(wt, 'measured', 'accepted')), '--plan copies nothing');
     spawnSync(process.execPath, [path.join(HERE, 'check.mjs'), '--repo', wt, '--no-browser'], { encoding: 'utf8', env, timeout: 120000 });
     assert.match(line(main, /a component read back/), /runs/, main);
+    // --quick runs what --plan would, but not the gates that measure: the push runs them (2026-11-26: a project
+    // with no quick check made the plan gate ask agents for the full one they may not run)
+    const quick = spawnSync(process.execPath, [path.join(HERE, 'check.mjs'), '--repo', code, '--plan', '--quick'], { encoding: 'utf8', env }).stdout;
+    assert.match(line(quick, /a component read back/), /skipped \(--quick/, quick);
+    assert.match(line(quick, /^parity:/), /skipped \(--quick/, quick);
+    assert.match(line(quick, /no job the toolkit owns/), /runs/, quick);
+    console.log('ok --quick skips the gates that measure, and only those');
     assert.doesNotMatch(work, /not a registered project/, work);
     assert.match(line(work, /a component read back/), /no accepted round-trip counts/, 'the worktree is measured, not the main checkout\n' + work);
     assert.equal(fs.readFileSync(path.join(wt, 'measured', 'accepted', 'components.json'), 'utf8'), '{"a":1}', 'a worktree starts from the main checkout\'s accepted measurements');

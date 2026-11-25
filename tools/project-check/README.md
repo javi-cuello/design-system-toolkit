@@ -5,7 +5,7 @@ The two triggers a project repo fires: its check and its push. Toolkit-standard 
 ## Use
 
 ```sh
-node tools/project-check/check.mjs --repo <dir> [--no-browser] [--plan]
+node tools/project-check/check.mjs --repo <dir> [--quick] [--no-browser] [--plan]
 ```
 
 This runs every gate the toolkit holds a project to, in one entry. A gate a project cannot feed is RED. It stays RED until the project supplies the fact, or rules it out in `check.without`.
@@ -24,6 +24,7 @@ It redirects the one design system it found; in a repo with several, the others 
 | Option | What it does |
 |---|---|
 | `--plan` | runs only the cheap gates and lists the rest. `bin/closing` reads it. |
+| `--quick` | skips the gates that measure: the browser gates and the round trip, which takes the measuring lock. Under a minute, for the check before work; the push runs them all. |
 | `--no-browser` | skips the browser gates |
 
 | File | What it is |

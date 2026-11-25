@@ -58,6 +58,8 @@ const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : nu
 // the on-disk spelling, so a shell that entered through ~/projects still matches the registry
 const REPO = realPath(arg('--repo') || '.');
 const PLAN = argv.includes('--plan');
+// --quick: every gate but those that measure (a browser, or the measuring lock), so work can start on a check that takes under a minute; the push runs them all
+const QUICK = argv.includes('--quick');
 const config = createRequire(import.meta.url)('../shared/repo-config.cjs').repoConfig(REPO, 'check');
 const C = config.check || {};
 const req = createRequire(import.meta.url);
@@ -97,7 +99,7 @@ const where = req('../snapshot/store.cjs').paths(REPO, config.paths || {});
 
 // the browser gates: run unless asked not to, or unless a push changed nothing a render follows
 const BASE = process.env.CHECK_BASE || '';
-let noBrowser = argv.includes('--no-browser') ? 'asked for' : null;
+let noBrowser = argv.includes('--no-browser') ? 'asked for' : QUICK ? '--quick; the push runs it' : null;
 if (!noBrowser && BASE && C.renders) {
   const hit = renderChanged(REPO, BASE, C.renders);
   if (hit === null) noBrowser = `nothing a render follows changed since ${BASE.slice(0, 10)}`;
@@ -146,7 +148,7 @@ const GATES = [
   { id: 'componentStyles', na: noDesign, name: 'each component\'s stylesheet is its contract, generated', rule: 'code-standard 23',
     needs: () => (config.paths && config.paths.componentStyles ? null : 'no `paths.componentStyles`: where tools/component-contract/to-code.mjs writes the component stylesheets'),
     cmd: () => ['node', T('tools/component-contract/to-code.mjs'), '--repo', REPO, '--check'] },
-  { id: 'roundTrip', na: noDesign, name: 'a component read back from code or Figma is the contract it was, no worse than accepted', rule: '§D 23',
+  { id: 'roundTrip', na: noDesign, measures: true, name: 'a component read back from code or Figma is the contract it was, no worse than accepted', rule: '§D 23',
     needs: () => (!label ? 'not a registered project (no figma-design-system/ context document)' : contract.layout(null, label).error ? `its layout: ${contract.layout(null, label).error}` : fs.existsSync(path.join(contract.layout(null, label).projectDir, 'round-trip', 'accepted.json')) ? null : 'no accepted round-trip counts: node tools/component-contract/eval.mjs --project <label> --accept, once'),
     cmd: () => ['node', T('tools/component-contract/eval.mjs'), '--project', label, '--check'] },
   { id: 'specs', na: noDesign, name: 'component specs resolve and compact to themselves', rule: 'snapshot-standard',
@@ -215,6 +217,7 @@ for (const g of GATES) {
   }
   if (missing) { line(g.name, `RED — not run: ${missing}; supply it, or rule the gate out in check.without with a reason`); failed++; continue; }
   if (g.browser && noBrowser) { line(g.name, `skipped (${noBrowser})`); continue; }
+  if (g.measures && QUICK) { line(g.name, 'skipped (--quick; the push runs it)'); continue; }
   if (PLAN && !g.fn) { line(g.name, 'runs'); continue; }
   const t0 = Date.now();
   let out = '', ok;
