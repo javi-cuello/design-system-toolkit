@@ -36,6 +36,7 @@ Type, colour, surfaces and the scales everything else is built on.
 - [Space between prose elements](foundations/space-between-prose-elements.md)
 - [Spacing with a text style](foundations/spacing-that-travels-with-a-text-style.md)
 - [Type on a phone](foundations/type-on-a-phone.md)
+- [Large text and small headings](foundations/large-reading-text-and-the-smallest-heading-on-a-phone.md)
 
 ### Colour and surfaces
 
