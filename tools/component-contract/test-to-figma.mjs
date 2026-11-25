@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf, arrangementOf, placeVariants, LOOKUP, lookupWants, keptFor, covers, clearedLook } from './to-figma.mjs';
+import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf, arrangementOf, placeVariants, LOOKUP, lookupWants, keptFor, covers, clearedLook, blendLook } from './to-figma.mjs';
 import { isDeepStrictEqual } from 'node:util';
 
 let n = 0;
@@ -415,16 +415,18 @@ delete globalThis.figma;
     && src.includes("else if (P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') clipOver(n, e);"));
 }
 {
-  // a layer kept inside an instance that sets its component's blend back (rules.mjs UNBLENDED, `normal`) has its blend
-  // mode set where it differs, pass-through counting as normal, in the override every kept layer takes
+  // a layer, or a layer kept inside an instance, said to blend (or to set its component's blend back, rules.mjs
+  // UNBLENDED `normal`) has its mode set where it differs: normal as pass-through on a frame, instance or group, so its
+  // blending children are not isolated, and as normal on a shape or text; at creation and in every kept layer's override
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
-  const line = src.split('\n').find((l) => /^\s*const blendOver = \(n, e\) =>/.test(l));
-  const blendOver = line && new Function(`${line.trim()} return blendOver;`)();
-  const after = (m, e) => { const n = { name: 'Divider', blendMode: m }; blendOver(n, e); return n.blendMode; };
-  ok('a kept layer said unblended has its blend mode set back; pass-through is left as normal; unsaid leaves it; a mode is set',
-    !!blendOver && after('DARKEN', { blend: 'normal' }) === 'NORMAL' && after('PASS_THROUGH', { blend: 'normal' }) === 'PASS_THROUGH' && after('DARKEN', {}) === 'DARKEN'
-    && after('PASS_THROUGH', { blend: 'multiply' }) === 'MULTIPLY'
-    && /const override = async \(n, e\) => \{[\s\S]{0,2000}?blendOver\(n, e\);/.test(src));
+  const after = (type, m, e) => { const n = { type, blendMode: m }; blendLook(n, e); return n.blendMode; };
+  ok('a layer said unblended is set back, pass-through on a frame, instance or group, normal on a shape or text; pass-through stays; unsaid leaves it; a mode is set',
+    after('INSTANCE', 'DARKEN', { blend: 'normal' }) === 'PASS_THROUGH' && after('FRAME', 'DARKEN', { blend: 'normal' }) === 'PASS_THROUGH' && after('GROUP', 'DARKEN', { blend: 'normal' }) === 'PASS_THROUGH'
+    && after('RECTANGLE', 'DARKEN', { blend: 'normal' }) === 'NORMAL' && after('TEXT', 'MULTIPLY', { blend: 'normal' }) === 'NORMAL'
+    && after('FRAME', 'PASS_THROUGH', { blend: 'normal' }) === 'PASS_THROUGH' && after('VECTOR', 'NORMAL', { blend: 'normal' }) === 'NORMAL' && after('FRAME', 'DARKEN', {}) === 'DARKEN'
+    && after('FRAME', 'PASS_THROUGH', { blend: 'multiply' }) === 'MULTIPLY'
+    && /const override = async \(n, e\) => \{[\s\S]{0,2000}?blendLook\(n, e\);/.test(src) && src.includes("if (e.opacity != null) await num(n, 'opacity', e.opacity);\n      blendLook(n, e);")
+    && src.includes('const blendLook = ${blendLook.toString()};'));
 }
 
 // a drawing compared with the component it was derived from, field by field: what it named otherwise or left out

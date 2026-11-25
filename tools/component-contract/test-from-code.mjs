@@ -1064,6 +1064,34 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); }
   }
 }
+// a blend an instance sets back goes round: css.mjs (through to-code's held instance) writes mix-blend-mode normal over
+// its component's darken, Chrome computes it so, and the reader's mark and readCleared read back `normal` (rules.mjs
+// UNBLENDED); the same instance with nothing said computes its component's darken and reads nothing
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a blend in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({});
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      const naming = { kind: 'class', prefix: 'ds-', part: '__' };
+      const item = { contract: 1, component: 'Item', props: {}, anatomy: { root: { kind: 'container', blend: 'darken' } }, variants: [] };
+      const input = (said) => ({ contract: 1, component: 'Input', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', order: 0, component: 'Item', key: 'i1', ...said } }, variants: [] });
+      const mains = (n) => (n === 'Item' ? { ...item, folder: 'item' } : null);
+      const back = async (said) => {
+        const css = toCss(item, 'item', { naming }) + toCss(input(said), 'input', { naming, mains });
+        await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html><style>${css}</style><div class="ds-input"><div class="ds-item ds-input__item">x</div></div>` });
+        const mode = await call(tab, () => getComputedStyle(document.querySelector('.ds-input__item')).mixBlendMode);
+        // (the reader's own mark, as from-code's page walk sets it on a placed component)
+        const ie = { kind: 'instance', component: 'Item' }; if (mode === 'normal') ie.blendless = true;
+        return [mode, readCleared({ root: { kind: 'container' }, item: ie }, (n) => (n === 'Item' ? item : null)).item.blend];
+      };
+      const [setBack, unsaid] = [await back({ blend: 'normal' }), await back({})];
+      ok('a blend an instance sets back reads back from Chrome as written, normal; one left unsaid computes its component\'s and reads nothing',
+        setBack[0] === 'normal' && setBack[1] === 'normal' && unsaid[0] === 'darken' && unsaid[1] === undefined, JSON.stringify([setBack, unsaid]));
+    } finally { await browser.close(); }
+  }
+}
 { // a design boolean the mapping draws false by a text left empty (a card's status line, False: { status: '' }) is read as that boolean
   const { emptyShows, emptiedArgs, onlyInCode, stateHidden, designCombo, subjectOf } = await import('./from-code.mjs');
   const design = { showStatus: { type: 'boolean', default: true, figma: 'Show status', shows: ['status'] } };

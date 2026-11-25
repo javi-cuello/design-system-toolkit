@@ -497,7 +497,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   // where its component blends has set it back, `normal` (rules.mjs UNBLENDED); unsaid, it would be its component's blend
   const darkBox = { ...box, variants: [{ ...box.variants[0], blendMode: 'DARKEN' }] }, bm = mainsFrom({ Box: darkBox });
   ok('an instance that draws no blend where its component does says normal; one that blends says nothing, nor one whose component does not blend',
-    derive(row({}), ['Box'], { mains: bm }).anatomy.box.blend === 'normal' && derive(row({ blendMode: 'DARKEN' }), ['Box'], { mains: bm }).anatomy.box.blend === 'darken'
+    derive(row({}), ['Box'], { mains: bm }).anatomy.box.blend === 'normal' && derive(row({ blendMode: 'DARKEN' }), ['Box'], { mains: bm }).anatomy.box.blend === undefined
     && derive(row({}), ['Box'], { mains }).anatomy.box.blend === undefined);
   // and a layer inside an opened instance that draws no blend where its component's layer does (Carbon's number input
   // action item's divider, darkened in its component, set back in the input)

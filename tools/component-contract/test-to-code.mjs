@@ -517,6 +517,24 @@ else console.log('skip: no stored contracts on this machine');
   ok('with no store given, a placed instance is given only its place', !/outline|box-shadow|border-radius/.test(toCss(box, 'box', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
 }
 
+// a placed component the store holds that sets its component's blend back (rules.mjs UNBLENDED, `normal`: Carbon's
+// number input over its action item's darkened divider) is written so over the component's mode, directly and as a
+// nested instance inside a held one; a layer kept inside it too
+{
+  const item = { contract: 1, component: 'Item', props: {}, anatomy: { root: { kind: 'container', blend: 'darken' }, divider: { kind: 'container', parent: 'root', order: 0, width: 1, height: 20, background: 'C/line', blend: 'darken' } }, variants: [] };
+  const pair = { contract: 1, component: 'Pair', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', order: 0, component: 'Item', key: 'i1' } }, variants: [] };
+  const input = { contract: 1, component: 'Input', props: {}, anatomy: { root: { kind: 'container' },
+    item: { kind: 'instance', parent: 'root', order: 0, component: 'Item', key: 'i1', blend: 'normal' },
+    'item/divider': { kind: 'container', parent: 'item', order: 0, width: 1, height: 20, background: 'C/line', blend: 'normal' },
+    pair: { kind: 'instance', parent: 'root', order: 1, component: 'Pair', key: 'p1' },
+    'pair/item': { kind: 'instance', parent: 'pair', order: 0, component: 'Item', key: 'i1', blend: 'normal' } }, variants: [] };
+  const mains = (n) => (n === 'Item' ? { ...item, folder: 'item' } : n === 'Pair' ? { ...pair, folder: 'pair' } : null);
+  const sheet = toCss(input, 'input', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('a held instance said unblended is mix-blend-mode normal over its component\'s mode, placed directly, nested in a held one, and a layer kept inside it',
+    /\.ds-input__item \{[^}]*mix-blend-mode: normal;/.test(sheet) && /> \.ds-input__pair > \.ds-pair__item \{[^}]*mix-blend-mode: normal;/.test(sheet)
+    && /> \.ds-input__item > \.ds-item__divider \{[^}]*mix-blend-mode: normal;/.test(sheet) && selfCheck(input, rulesOf(input, mains).rules, mains).length === 0);
+}
+
 // a part a placed component draws only at the props a variant places it with (Icon button's focus ring at state focus,
 // overridden inside Atlassian's split button): the mapping reads it where the sheet writes it, the host placed at those
 // props, never at its base ones, where the part is not, nor matched by place to another part there (its tooltip)

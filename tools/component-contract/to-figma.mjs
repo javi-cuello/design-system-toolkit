@@ -947,9 +947,6 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // whether a placed layer clips, where the contract says (hidden, or UNCLIPPED's visible) and it differs: a reading from
   // code states it too, as it read it
   const clipOver = (n, e) => { if (e.overflow != null && 'clipsContent' in n && n.clipsContent !== (e.overflow === 'hidden')) n.clipsContent = e.overflow === 'hidden'; };
-  // its blend mode, where the contract says one (UNBLENDED's normal over its component's) and it differs: pass-through is
-  // normal, as the walk reads both
-  const blendOver = (n, e) => { const was = n.blendMode === 'PASS_THROUGH' ? 'NORMAL' : n.blendMode; if (e.blend && 'blendMode' in n && was !== e.blend.toUpperCase()) n.blendMode = e.blend.toUpperCase(); };
   const lookOver = async (n, e) => {
     const b = e.border;
     clearedLook(n, { border: b }, P.cleared);
@@ -978,7 +975,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     } else if (e.kind === 'graphic' && n.type === 'VECTOR') await paintIf(n, n.strokes.length && e.background !== P.cleared ? 'strokes' : 'fills', e.background, true);
     else if (e.kind !== 'text') await paintIf(n, 'fills', e.background);
     styleFill(n, e, e.kind === 'text' ? e.color : e.background);
-    blendOver(n, e);
+    blendLook(n, e);
     // (a reading from code states what it read, not Figma's defaults: only its stroke's colour, as before)
     if (e.kind !== 'text' && P.fromCode) clipOver(n, e);
     if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e); else if (e.border === P.cleared) clearedLook(n, { border: e.border }, P.cleared); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
@@ -1132,7 +1129,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (n.type === 'INSTANCE') await fontsOf(n);
       if (id !== 'root') n.name = e.name;
       if (e.opacity != null) await num(n, 'opacity', e.opacity);
-      if (e.blend) n.blendMode = e.blend.toUpperCase();
+      blendLook(n, e);
       if (e.mask) n.isMask = true;
       // an icon placed as an instance (a button's Icon/house) takes its colour on its paths, as one drawn as a graphic
       // does: the instance itself has no fill, and the code's colour went nowhere
@@ -1459,6 +1456,7 @@ const variantValues = ${variantValues.toString()};
 const bareProp = ${bareProp.toString()};
 const styleIdsOf = ${styleIdsOf.toString()};
 const clearedLook = ${clearedLook.toString()};
+const blendLook = ${blendLook.toString()};
 const keyMatches = ${keyMatches.toString()};
 const sizingAxes = ${sizingAxes.toString()};
 const placeVariants = ${placeVariants.toString()};
@@ -1477,6 +1475,17 @@ export const clearedLook = (n, e, cleared) => {
   const handled = { fill: e.fillStyle === cleared, stroke: e.border === cleared };
   if (handled.stroke && 'strokes' in n && n.strokes.length) n.strokes = [];
   return { handled, detach: handled.fill && 'fillStyleId' in n && !!n.fillStyleId };
+};
+
+/* A layer's blend mode, where the contract says one and it differs (pass-through and normal are one to the walk): a
+   mode as itself; normal (rules.mjs UNBLENDED, over its component's mode) as pass-through on a frame, instance or group,
+   so its blending children are not isolated, and as normal on a shape or text, which have no children. Written into
+   the plugin code. */
+export const blendLook = (n, e) => {
+  if (!e.blend || !('blendMode' in n)) return;
+  const flat = (m) => (m === 'PASS_THROUGH' ? 'NORMAL' : m), want = e.blend.toUpperCase();
+  if (flat(n.blendMode) === want) return;
+  n.blendMode = want === 'NORMAL' && ['FRAME', 'INSTANCE', 'GROUP', 'COMPONENT', 'COMPONENT_SET', 'SECTION'].includes(n.type) ? 'PASS_THROUGH' : want;
 };
 
 /* The styles a layer uses, any kind of layer: its text style, effect, fill and stroke styles, a text's per run where
