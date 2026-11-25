@@ -46,7 +46,12 @@ export function stripped(source) {
     if (block) { if (t.includes('*/')) block = false; continue; }
     if (t.startsWith('/*')) { if (!t.includes('*/')) block = true; else if (!t.endsWith('*/')) out.push(t); continue; }
     if (!t || t.startsWith('//')) continue;
-    out.push(t);
+    // a trailing comment too, where nothing before it can hold a // (no string, template, regex or URL)
+    const at = t.indexOf(' // ');
+    let kept = at > 0 && !/['"`/]/.test(t.slice(0, at)) ? t.slice(0, at).trimEnd() : t;
+    // and a /* … */ inside the line, on the same guard: nothing before it a string or a regex
+    for (let i = kept.search(/\/\*.*?\*\//); i > 0 && !/['"`/]/.test(kept.slice(0, i)); i = kept.search(/\/\*.*?\*\//)) kept = kept.replace(/ ?\/\*.*?\*\//, '');
+    out.push(kept);
   }
   return out.join('\n').replace(/\/\*\* @[^*]*\*\/ ?/g, '');
 }

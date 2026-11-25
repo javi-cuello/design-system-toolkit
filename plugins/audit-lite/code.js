@@ -1478,17 +1478,11 @@ const varCache = {};
 const VARIABLE_WAIT = 15000;
 let unanswered = 0;
 async function variable(id) {
-  if (!(id in varCache)) {
-    if (unanswered >= 3) return null;
-    const LATE = {};
-    let timer;
-    const late = new Promise((resolve) => { timer = setTimeout(() => resolve(LATE), VARIABLE_WAIT); });
-    const got = await Promise.race([figma.variables.getVariableByIdAsync(id), late]);
-    clearTimeout(timer);
-    if (got === LATE) { unanswered++; return null; }
-    varCache[id] = got;
-  }
-  return varCache[id];
+  if (id in varCache) return varCache[id];
+  if (unanswered > 2) return null;
+  let t; const L = {}, got = await Promise.race([figma.variables.getVariableByIdAsync(id), new Promise((r) => { t = setTimeout(() => r(L), VARIABLE_WAIT); })]);
+  clearTimeout(t);
+  return got === L ? (unanswered++, null) : (varCache[id] = got);
 }
 /** @param {unknown} id */
 async function styleName(id) {
@@ -1957,7 +1951,7 @@ async function collectTokens() {
   let n = 0;
   for (const i of ids) {
     // counted: a large library binds thousands, each fetched on its own, and a still window reads as hung
-    if (n++ % 25 === 0) say('reading the variables the components use', n - 1, ids.size ?? ids.length);
+    if (n++ % 25 === 0) say('reading the variables the components use', n - 1, ids.size);
     const v = await variable(i).catch(() => null);
     const c = v && v.remote && await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(() => null);
     if (c && !here.has(c.name)) others.set(c.name, c);
