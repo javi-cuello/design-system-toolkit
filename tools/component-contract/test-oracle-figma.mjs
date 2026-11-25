@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { recordedOf, readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, paintOurs, restWalk, restPart, compareSpec, compareContract, linksOf, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
+import { recordedOf, readAt, BOUND, UNNAMED, plainText, partOurs, FIELDS, NOT_CHECKABLE, REASONS, paintsOf, paintOurs, restWalk, restPart, compareSpec, compareContract, linksOf, addressParts, client, fetchSets, versionAt, report } from './oracle-figma.mjs';
 
 const require = createRequire(import.meta.url);
 const { compact, resolve } = require('../snapshot/spec.cjs');
@@ -31,6 +31,11 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   assert.equal(up.angle, 0);
   assert.equal(paintOurs({ type: 'GRADIENT_LINEAR', angle: 360, stops: [] }).angle, 0);
   assert.equal(paintOurs({ type: 'GRADIENT_LINEAR', angle: -90, stops: [] }).angle, 270);
+  // a part a swap property drives is the layer that property drives, though the swapped-in icon names it otherwise
+  { const flat = { root: {}, icon: { kind: 'instance', parent: 'root', component: 'Add', swappedBy: 'swapIcon' } };
+    const v = { name: 'V', children: [{ name: 'Close', type: 'INSTANCE', componentPropertyReferences: { mainComponent: 'Swap icon#1:2' } }] };
+    assert.equal(addressParts(flat, v, { 'Swap icon': 'swapIcon' }).found.get('icon'), v.children[0]);
+    assert.equal(addressParts({ root: {}, icon: { ...flat.icon, swappedBy: 'other' } }, v, { 'Swap icon': 'swapIcon' }).found.get('icon'), undefined, 'another property: no pair'); }
   // a text's weight is its face's name, as the contract says it: Lucida Grande's Regular is 400 though its file says 500
   { const tx = (fontStyle) => restPart({ id: 't', name: 'T', type: 'TEXT', size: { x: 10, y: 10 }, relativeTransform: [[1, 0, 0], [0, 1, 0]], characters: 'A', style: { fontFamily: 'Lucida Grande', fontStyle, fontWeight: 500, fontSize: 14, lineHeightPx: 18, lineHeightUnit: 'PIXELS' } }, null, { styles: {}, components: {}, componentSets: {} }, {}).typography.weight;
     assert.equal(tx('Regular'), 400); assert.equal(tx('Bold'), 700); assert.equal(tx(undefined), 500); }
@@ -341,6 +346,9 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     // a vector the main's contract says is rounded per vertex (mixed), REST silent: a skip, never a row
     { const mx = icon(); mx.anatomy.glyph.radius = 'mixed';
       assert.ok(!compareContract('chip', set, host, { ...ctx, mains: () => mx }).rows.some((x) => x.kind === 'contract:radius'), 'the main\'s mixed: skipped'); }
+    // the main's own swap property on one of its parts is the main's to say: at the host it is no row
+    { const sw = icon(); sw.anatomy.badge.swappedBy = 'tint';
+      assert.ok(!compareContract('chip', set, host, { ...ctx, mains: () => sw }).rows.some((x) => x.kind === 'contract:swappedBy'), 'the main\'s swap: not the host\'s'); }
     // a main that says otherwise is a real row, never "not stated"
     const wrong = icon(); wrong.variants[0].set['glyph.width'] = 14;
     const r2 = compareContract('chip', set, host, { ...ctx, mains: () => wrong });

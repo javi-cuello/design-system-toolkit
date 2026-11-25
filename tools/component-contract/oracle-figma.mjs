@@ -694,6 +694,9 @@ export function addressParts(flat, variant, propIds, { sameVersion = true } = {}
   const fits = (part, base, c) => {
     if (part.name) return part.name === c.name;
     if (camel(c.name) === base) return true;
+    // (a part a swap property drives is the layer that property drives, whatever the swapped-in component names it)
+    const swap = c.componentPropertyReferences && c.componentPropertyReferences.mainComponent;
+    if (part.swappedBy && swap && propIds[bare(swap)] === part.swappedBy) return true;
     const ref = c.componentPropertyReferences && c.componentPropertyReferences.visible, pid = ref && propIds[bare(ref)];
     return !!pid && base === pid + camel(c.name).replace(/^./, (x) => x.toUpperCase());
   };
@@ -820,6 +823,8 @@ export function compareContract(component, setNode, contract, ctx) {
         if (r && typeof when[r[1]] === 'string') o.content = when[r[1]];
         // (a vector the main rounds per vertex, mixed: no one radius REST states, as for a host's own part)
         if (mflat[id].radius === 'mixed') { delete o.radius; t.skip('radius: mixed per vertex, REST silent'); }
+        // (the main's own swap property is the main's to say, checked against its own set; at the host it drives nothing)
+        if (o.swappedBy !== undefined) { delete o.swappedBy; t.skip('swappedBy: the main\'s own property'); }
         for (const [pid, p] of Object.entries(main.props || {})) if (p.type === 'instance' && (p.swaps || []).includes(id) && typeof when[pid] === 'string') { o.component = when[pid]; delete o.key; o.$swapped = true; }
         return o;
       };
