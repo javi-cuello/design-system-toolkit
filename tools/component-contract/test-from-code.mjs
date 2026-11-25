@@ -606,6 +606,13 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
       && JSON.stringify(paddingOf({ ...box, direction: 'ltr' }, px)) === '{"top":2,"end":12,"bottom":6,"start":4}');
     ok('and the property each side\'s token is read from with it',
       paddingCss(true).start === 'padding-right' && paddingCss(true).end === 'padding-left' && paddingCss(false).start === 'padding-left' && paddingCss(false).top === 'padding-top');
+    const { flowOf } = await import('./from-code.mjs');
+    const f = (o) => JSON.stringify(flowOf({ rowGap: '8px', columnGap: '4px', flexWrap: 'nowrap', ...o }, px));
+    ok('a flex box\'s gap is the one along its flow (a row\'s the column gap), and wrapped, the one between its lines is its crossGap; normal is 0',
+      f({ flexDirection: 'row' }) === '{"direction":"row","gap":4}' && f({ flexDirection: 'column' }) === '{"direction":"column","gap":8}'
+      && f({ flexDirection: 'row', flexWrap: 'wrap' }) === '{"direction":"row","gap":4,"crossGap":8}' && f({ flexDirection: 'row', flexWrap: 'wrap', rowGap: 'normal' }) === '{"direction":"row","gap":4,"crossGap":0}');
+    const z = zeroTokens({ layout: { direction: 'row', wrap: true, gap: 4, crossGap: 0 } }, { layout: { gap: 'S/4', crossGap: 'S/0' } }, (t) => ({ 'S/0': 0, 'S/4': 4 })[t]);
+    ok('a zero between the lines takes the design\'s zero token, as a gap does', z.layout.crossGap === 'S/0');
   }
   {
     const { sideWinner } = await import('../parity/values.mjs');

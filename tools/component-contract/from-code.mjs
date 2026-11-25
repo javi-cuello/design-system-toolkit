@@ -1039,6 +1039,13 @@ export function paddingOf(s, px) {
   const rtl = s.direction === 'rtl';
   return { top: px(s.paddingTop), end: px(rtl ? s.paddingLeft : s.paddingRight), bottom: px(s.paddingBottom), start: px(rtl ? s.paddingRight : s.paddingLeft) };
 }
+/* A flex box's direction and gaps from its computed style: the gap along the flow (a row's the column gap, a column's
+   the row gap; the gap shorthand computes as both, row first) and, wrapped, the one between its lines, the contract's
+   crossGap; normal is 0. Self-contained: run in the page (from-code's walk). Tested by test-from-code.mjs. */
+export function flowOf(s, px) {
+  const col = /column/.test(s.flexDirection), g = (v) => (v === 'normal' ? 0 : px(v));
+  return { direction: col ? 'column' : 'row', gap: g(col ? s.rowGap : s.columnGap), ...(/^wrap/.test(s.flexWrap) && { crossGap: g(col ? s.columnGap : s.rowGap) }) };
+}
 export const paddingCss = (rtl) => ({ top: 'padding-top', end: rtl ? 'padding-left' : 'padding-right', bottom: 'padding-bottom', start: rtl ? 'padding-right' : 'padding-left' });
 
 /* The effect style a whole box-shadow is: the one the code names, where it draws the layers read (their offsets, blur,
@@ -1089,7 +1096,7 @@ export function zeroTokens(e, fe, value, { fill = false } = {}) {
   const zeroish = (t) => { const v = val(t); return v === 0 || v === '0'; };
   const at = (o, path) => path.reduce((x, k) => (x == null ? x : x[k]), o);
   const put = (o, path, v) => { let x = o; for (const k of path.slice(0, -1)) x = x[k] = x[k] || {}; x[path.at(-1)] = v; };
-  for (const path of [['radius'], ['layout', 'gap'], ...['top', 'end', 'bottom', 'start'].map((k) => ['layout', 'padding', k])]) {
+  for (const path of [['radius'], ['layout', 'gap'], ['layout', 'crossGap'], ...['top', 'end', 'bottom', 'start'].map((k) => ['layout', 'padding', k])]) {
     const want = at(fe, path), have = at(e, path);
     if (path[0] === 'layout' && !e.layout) continue;
     // a 0 the design leaves unbound, where the code says none: 0 on that side (a slot's padding), as the code renders it
@@ -2073,11 +2080,11 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
-        const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)();
+        const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)(), flowOf = new Function(`return ${flowSrc}`)();
         // a colour that paints nothing: fully transparent, whatever its channels
         const clear = (c) => /rgba\(.*,\s*0\)$|transparent/.test(c);
         let root = document.querySelector(sel); if (!root) return null;
@@ -2239,7 +2246,7 @@ async function main() {
             const n = at || node, s = at ? getComputedStyle(at) : style;
             if (/flex/.test(s.display)) {
               const A = { 'flex-start': 'start', 'flow-start': 'start', start: 'start', normal: 'start', center: 'center', 'flex-end': 'end', 'flow-end': 'end', end: 'end', 'space-between': 'space-between', stretch: 'stretch' };
-              e.layout = { direction: /column/.test(s.flexDirection) ? 'column' : 'row', gap: s.gap === 'normal' ? 0 : px(s.gap), align: A[s.justifyContent] || s.justifyContent, crossAlign: A[s.alignItems] || s.alignItems };
+              e.layout = { ...flowOf(s, px), align: A[s.justifyContent] || s.justifyContent, crossAlign: A[s.alignItems] || s.alignItems };
             }
             // (start and end by its direction: right to left, the start is the right, paddingOf)
             const pad = paddingOf(s, px);
@@ -2327,7 +2334,7 @@ async function main() {
         const siblingOrder = new Function(`return ${siblingOrderSrc}`)();
         for (const xs of Object.values(byParent)) siblingOrder(xs).forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -2606,7 +2613,8 @@ async function main() {
           if (!x.layout.padding) { const sides = {}; for (const [k, p] of Object.entries(paddingCss(x.rtl))) sides[k] = await authoredValue(L.tab, styledAt(id), p, styles); const said = paddingSaid(x.layout.padding, sides); if (said) x.layout.padding = said; }
           // a gap below 0 was written as the second child's pull back: its token is there
           const pulled = pulledBy[id];
-          if ('gap' in x.layout) x.layout.gap = pulled ? await tok('space', x.layout.gap, `${id}.gap`, pulled.props, pulled.from) : await tok('space', x.layout.gap, `${id}.gap`, ['row-gap', 'column-gap', 'gap']);
+          if ('gap' in x.layout) x.layout.gap = pulled ? await tok('space', x.layout.gap, `${id}.gap`, pulled.props, pulled.from) : await tok('space', x.layout.gap, `${id}.gap`, [x.layout.direction === 'column' ? 'row-gap' : 'column-gap', 'gap']);
+          if ('crossGap' in x.layout) x.layout.crossGap = await tok('space', x.layout.crossGap, `${id}.crossGap`, [x.layout.direction === 'column' ? 'column-gap' : 'row-gap', 'gap']);
           if (x.layout.padding) for (const k of Object.keys(x.layout.padding)) x.layout.padding[k] = await tok('space', x.layout.padding[k], `${id}.padding`, [paddingCss(x.rtl)[k]]);
         }
         delete x.rtl;
