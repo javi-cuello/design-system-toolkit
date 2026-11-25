@@ -877,7 +877,11 @@ export function compareContract(component, setNode, contract, ctx) {
         if (mflat[id].radius === 'mixed') { delete o.radius; t.skip('radius: mixed per vertex, REST silent'); }
         // (the main's own swap property is the main's to say, checked against its own set; at the host it drives nothing)
         if (o.swappedBy !== undefined) { delete o.swappedBy; t.skip('swappedBy: the main\'s own property'); }
-        for (const [pid, p] of Object.entries(main.props || {})) if (p.type === 'instance' && (p.swaps || []).includes(id) && typeof when[pid] === 'string') { o.component = when[pid]; delete o.key; o.$swapped = true; }
+        // (a part swapped to another component: its styling here is the swapped-out one's, `$out`, mainSays)
+        for (const [pid, p] of Object.entries(main.props || {})) if (p.type === 'instance' && (p.swaps || []).includes(id) && typeof when[pid] === 'string') {
+          if (!sameComponent(o.component, when[pid])) o.$out = true;
+          o.component = when[pid]; delete o.key; o.$swapped = true;
+        }
         return o;
       };
       x = { byNode: new Map([...found].map(([id, n]) => [n, id])), part, turned: turnedParts(main), flat: mflat };
@@ -902,15 +906,18 @@ export function compareContract(component, setNode, contract, ctx) {
     // inside them; the layer's own fields stay rows where an instance overrides it, as does a placed instance's place)
     const mainSays = (n) => {
       const said = [];
-      let whole = true, inner = false, geo = null, why = null, plain = false, self = false, inside = false;
+      let whole = true, inner = false, geo = null, why = null, plain = false, self = false, inside = false, selfSaid = false;
       for (let q = n; q && q !== v; q = parentOf.get(q)) {
         if (q.type !== 'INSTANCE') continue;
         const x = expansion(q);
         if (x === UNSPELT) return { unspelt: true };
         if (!x) { whole = false; const w = elsewhere(q); if (w) { why = why || w; if (q === n) self = true; else inside = true; } else plain = true; continue; }
         // an instance's own size is its placement's (fill, hug, a fixed width, or its place where stretched), never its main's root's
-        if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; } if (!said.length) { inner = x.turned.has(x.byNode.get(n)); if (q !== n) geo = { q, x }; } said.push(o); }
+        if (x.byNode.has(n)) { const o = x.part(x.byNode.get(n)); if (q === n) { delete o.width; delete o.height; selfSaid = true; } if (!said.length) { inner = x.turned.has(x.byNode.get(n)); if (q !== n) geo = { q, x }; } said.push(o); }
       }
+      // (an outer main's part swapped to another component states the swapped-out one's styling: where the instance's
+      // own main says its root, that styling is the target's, its own main's word, never the outer's)
+      for (const o of said) if (o.$out) { delete o.$out; if (selfSaid) for (const f of STYLED) if (f in o) { delete o[f]; t.skip('a swapped-out component\'s styling: the swap target\'s own main says it'); } }
       // (a size any instance around the layer lists as overridden on it, an outer one's too: a stated value)
       if (geo) { geo.listed = new Set(); for (let q = parentOf.get(n); q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') for (const o of q.overrides || []) if (o.id === n.id) for (const f of o.overriddenFields || []) geo.listed.add(f); }
       // (`self`: the layer is such an instance, its presence and place another main's or the host's to say, unless one
@@ -1137,6 +1144,10 @@ const UNSPELT = { unspelt: true };
 const SPELL = "an instance's props its main's contract cannot spell";
 // the fields a placed instance says of itself, never its main's
 const OWN = ['kind', 'component', 'key', 'with', 'swappedBy'];
+// an instance's styling, unsaid where it is its own component's root's (derive's ownStyling)
+const { OWN: STYLED } = require('./derive.cjs');
+// one component named by its set or by its folder (Icon, Icons/Icon, Set / Icon)
+const sameComponent = (x, y) => { if (typeof x !== 'string' || typeof y !== 'string') return x === y; const [a, b] = x.length < y.length ? [x, y] : [y, x]; return a === b || b.endsWith(`/${a}`) || b.endsWith(` / ${a}`); };
 // a placed instance's own place and size: the host's to say, never its main's
 const PLACE = ['width', 'height', 'absolute', 'position', 'constraints', 'flip', 'rotation'];
 // the overridden fields REST lists, by the contract field each one sets; a contract field not listed here, or an

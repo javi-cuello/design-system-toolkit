@@ -407,6 +407,14 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     // the main's own swap property on one of its parts is the main's to say: at the host it is no row
     { const sw = icon(); sw.anatomy.badge.swappedBy = 'tint';
       assert.ok(!compareContract('chip', set, host, { ...ctx, mains: () => sw }).rows.some((x) => x.kind === 'contract:swappedBy'), 'the main\'s swap: not the host\'s'); }
+    // a part the main swaps to another component by its prop states the swapped-out one's styling: where the target's own
+    // main says its root, that main's word holds (no radius), never the outer's; with no contract for the target, the
+    // outer's word still stands, so a difference there stays a row
+    { const out = icon(); out.anatomy.badge.radius = 2;
+      const star = { contract: 1, component: 'Star', figma: { name: 'Star', key: 'k-swap' }, props: {}, anatomy: { root: { kind: 'container', width: 4, height: 4 } }, variants: [] };
+      const radii = (m) => compareContract('chip', set, host, { ...ctx, mains: m }).rows.filter((x) => x.kind === 'contract:radius');
+      assert.deepEqual(radii((key) => (key === 'kset-icon' ? out : key === 'k-swap' ? star : null)), [], 'the swap target\'s own main says its styling');
+      assert.ok(radii((key) => (key === 'kset-icon' ? out : null)).length > 0, 'no contract for the target: the outer\'s word, a row'); }
     // a slot the main fills from its own slot property: what the instance puts there is the instance's, no row at the host
     { const sl = icon(); sl.props.items = { type: 'slot', figma: 'Items' }; sl.anatomy.items = { kind: 'slot', parent: 'root', order: 3, width: 10, height: 10, absolute: { x: 0, y: 0 }, content: '{items}' };
       const withSlot = structuredClone(set); for (const v of withSlot.children) v.children.find((x) => x.type === 'INSTANCE').children.push({ id: v.id + 's', name: 'Items', type: 'SLOT', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), componentPropertyReferences: { slotContentId: 'Items#1:1' } });
