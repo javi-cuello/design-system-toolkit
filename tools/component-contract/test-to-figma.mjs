@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf, arrangementOf, placeVariants, LOOKUP, lookupWants, keptFor, covers } from './to-figma.mjs';
+import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf, arrangementOf, placeVariants, LOOKUP, lookupWants, keptFor, covers, clearedLook } from './to-figma.mjs';
 import { isDeepStrictEqual } from 'node:util';
 
 let n = 0;
@@ -900,14 +900,17 @@ delete globalThis.figma;
     && src.includes("n.resize(side('minWidth', e.width, n.paddingLeft + n.paddingRight) ?? n.width, side('minHeight', e.height, n.paddingTop + n.paddingBottom) ?? n.height);"));
   ok('a placed instance takes its own fill, stroke, corners, shadow and clipping, and a layer inside one its stroke\'s weights and place, never its colour alone; neither from a contract read from code',
     src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e, e.background); await lookOver(n, e); }")
-    && src.includes("if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);") && src.includes("await lookOver(n, e); else if (e.border === P.cleared) clearStroke(n); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")
+    && src.includes("if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);") && src.includes("await lookOver(n, e); else if (e.border === P.cleared) clearedLook(n, { border: e.border }, P.cleared); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")
     && src.includes("for (const [i, f] of fields.entries()) if (!(await sameNum(n, f, side(i)))) await num(n, f, side(i));"));
   // an instance that clears its component's colour style or stroke (`none`, rules.mjs CLEARED): the style detached, no
   // strokes; `none` never looked up as a style's name
+  const node = () => ({ type: 'INSTANCE', fillStyleId: 'S:1', strokes: [{ type: 'SOLID' }], fills: [{ type: 'SOLID' }] });
+  const a = node(), ra = clearedLook(a, { fillStyle: 'none', border: 'none' }, 'none');
+  const b = node(), rb = clearedLook(b, { fillStyle: 'Brand/fill', border: { color: 'Line' } }, 'none');
+  const c = { type: 'INSTANCE', fillStyleId: '', strokes: [] }, rc = clearedLook(c, { fillStyle: 'none', border: 'none' }, 'none');
   ok('a placed instance whose colour style or stroke the contract clears has its style detached and its strokes none',
-    src.includes("if (e.fillStyle === P.cleared) { if (n.fillStyleId) toFill.push([n, { id: '' }, 'clearing a colour style']); return; }")
-    && src.includes("const clearStroke = (n) => { if ('strokes' in n && n.strokes.length) n.strokes = []; };")
-    && src.includes("if (b === P.cleared) clearStroke(n);")
+    ra.detach && a.strokes.length === 0 && a.fills.length === 1 && !rb.detach && b.strokes.length === 1 && !rc.detach && rc.handled.fill && rc.handled.stroke && !rb.handled.fill && !rb.handled.stroke
+    && src.includes('const clearedLook = ${clearedLook.toString()};'.replace('${clearedLook.toString()}', clearedLook.toString())) && (src.match(/clearedLook\(n, \{/g) || []).length === 3
     && src.includes("const fillNames = [...new Set(els.map((e) => e.fillStyle).filter((x) => x && x !== P.cleared))];")
     && !needs({ variants: [{ anatomy: { b: { kind: 'instance', component: 'B', fillStyle: 'none', border: 'none' } } }] }).fillStyles.length
     && plan({ component: 'Card', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }).cleared === 'none');

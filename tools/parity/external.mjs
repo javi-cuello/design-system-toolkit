@@ -32,6 +32,7 @@
  * Written 2026-10-05 from a scratch run that found three real differences in
  * one library's Button in 31 seconds.
  */
+import { CLEARED } from '../component-contract/rules.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -93,7 +94,8 @@ export function expected(element, fields, value, textStyle, effectOf = () => nul
     if (f === 'padding' && element.layout?.padding) for (const side of ['top', 'end', 'bottom', 'start']) { const t = tok(element.layout.padding[side]); out[`padding-${side}`] = { want: t.v, token: t.token }; }
     if (f === 'gap' && element.layout?.gap != null) { const t = tok(element.layout.gap); out.gap = { want: t.v, token: t.token }; }
     if (f === 'border') {
-      if (!element.border) out['border-width'] = { want: 0, token: null };
+      // (none drawn, or one the contract clears: `none`, rules.mjs CLEARED)
+      if (!element.border || element.border === CLEARED) out['border-width'] = { want: 0, token: null };
       else { const w = [].concat(element.border.width ?? 1)[0]; const tw = tok(w), tc = tok(element.border.color); out['border-width'] = { want: tw.v, token: tw.token }; out['border-color'] = { want: { color: tc.v }, token: tc.token }; }
     }
     if (f === 'typography' && element.typography) {

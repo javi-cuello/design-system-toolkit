@@ -914,7 +914,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   const styleFill = (n, e, paint) => {
     if (!e.fillStyle || !('fillStyleId' in n)) return;
     // (an instance that clears its component's colour style: detached, with the others at the end)
-    if (e.fillStyle === P.cleared) { if (n.fillStyleId) toFill.push([n, { id: '' }, 'clearing a colour style']); return; }
+    { const c = clearedLook(n, { fillStyle: e.fillStyle }, P.cleared); if (c.detach) toFill.push([n, { id: '' }, 'clearing a colour style']); if (c.handled.fill) return; }
     const rec = K.fillStyleColours && K.fillStyleColours[e.fillStyle];
     // (an image by its kind alone, as the style records it; a part that holds no colour of its own takes the style alone,
     // derive's: a paint its layer shows at no opacity)
@@ -943,11 +943,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // shadow and whether it clips, each only where it differs from what the layer already has. A stroke's colour alone
   // left the main's weight (a 2 px focus read back 1, one bottom side read back all four)
   const sameNum = async (n, f, t) => { const v = await V(t); if (v) return !!(n.boundVariables && n.boundVariables[f] && n.boundVariables[f].id === v.id); const raw = typeof t === 'number' ? t : K.values && K.values[t]; return raw == null || n[f] === raw; };
-  // (a stroke an instance clears, `none` (P.cleared): no strokes)
-  const clearStroke = (n) => { if ('strokes' in n && n.strokes.length) n.strokes = []; };
   const lookOver = async (n, e) => {
     const b = e.border;
-    if (b === P.cleared) clearStroke(n);
+    clearedLook(n, { border: b }, P.cleared);
     if (b && typeof b === 'object' && 'strokes' in n) {
       if (b.color) await paintIf(n, 'strokes', b.color);
       const align = (b.align || 'inside').toUpperCase();
@@ -972,7 +970,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     else if (e.kind !== 'text') await paintIf(n, 'fills', e.background);
     styleFill(n, e, e.kind === 'text' ? e.color : e.background);
     // (a reading from code states what it read, not Figma's defaults: only its stroke's colour, as before)
-    if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e); else if (e.border === P.cleared) clearStroke(n); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
+    if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e); else if (e.border === P.cleared) clearedLook(n, { border: e.border }, P.cleared); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
     const flowing = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
     // (a layer inside an instance: never drawn in a wrapper by to-code.mjs)
@@ -1447,6 +1445,7 @@ export function pluginCode(contract, keys, { before = '', after = '', failed = '
 const variantValues = ${variantValues.toString()};
 const bareProp = ${bareProp.toString()};
 const styleIdsOf = ${styleIdsOf.toString()};
+const clearedLook = ${clearedLook.toString()};
 const keyMatches = ${keyMatches.toString()};
 const sizingAxes = ${sizingAxes.toString()};
 const placeVariants = ${placeVariants.toString()};
@@ -1457,6 +1456,15 @@ let __res; try { __res = await (${RUNTIME.toString()})(P, ${JSON.stringify(keys)
 /* A value names a variable where it has a group (Colour/Primary) or is one of the project's variables by name (a
    library whose variables sit at the top of their collection: "layer-hover (contextual)"); anything else is a literal. */
 export const varNamer = (names = []) => { const known = new Set(names); return (t) => typeof t === 'string' && (t.includes('/') || known.has(t)); };
+
+/* A colour style or stroke a placed instance clears (`none`, rules.mjs CLEARED, passed as `cleared`): its strokes emptied
+   here; `detach` where it holds a style still, which the drawing detaches with the other styles at the end; `handled`, the
+   ones said cleared, so nothing else draws them. Written into the plugin code. */
+export const clearedLook = (n, e, cleared) => {
+  const handled = { fill: e.fillStyle === cleared, stroke: e.border === cleared };
+  if (handled.stroke && 'strokes' in n && n.strokes.length) n.strokes = [];
+  return { handled, detach: handled.fill && 'fillStyleId' in n && !!n.fillStyleId };
+};
 
 /* The styles a layer uses, any kind of layer: its text style, effect, fill and stroke styles, a text's per run where
    they are mixed. One reading for both walks that look for them, the drawing's own-file scan (RUNTIME) and the library

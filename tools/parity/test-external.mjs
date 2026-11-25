@@ -5,6 +5,7 @@ import { parseColour as rgba } from './values.mjs';
 import { wholeVars, judge, expected, combinations, argsFor, group, where, compareProps, frameworkProps, draftEntry, joinProp, suspectMappings, tokenWords, cssShadows, shadowKey, compareTokens, readApi, elementIn, winning, invisibleBorder, storyKey, componentKey, insideAudited, contractEntry, varChain } from './external.mjs';
 
 import { readFileSync } from 'node:fs';
+import { fieldsFor } from './pair.mjs';
 import { createRequire } from 'node:module';
 // what a library on the framework these fixtures are written in is given (audit-defaults codeProps, then frameworks): no MUI fact lives in the code
 const HOUSE = JSON.parse(readFileSync(new URL('../../standards/audit-settings.json', import.meta.url), 'utf8'))['audit-defaults'];
@@ -37,6 +38,8 @@ ok('what the contract says an element should measure, each value with the token 
 ok('no fill drawn is a transparent box; no border drawn is a width of 0',
   expected({ kind: 'container' }, ['background', 'border'], value, style).background.want.color === 'rgb(0 0 0 / 0)'
   && expected({ kind: 'container' }, ['border'], value, style)['border-width'].want === 0);
+ok('a border the contract clears (`none`) is a width of 0, no colour asked',
+  ((x) => x['border-width'].want === 0 && !('border-color' in x))(expected({ kind: 'instance', border: 'none' }, fieldsFor({ kind: 'instance', border: 'none' }), value, style)));
 
 const contract = { props: { size: { type: 'enum', values: ['l', 's'], default: 'l' }, disabled: { type: 'boolean', default: false }, state: { type: 'enum', values: ['rest', 'hover', 'loading'], default: 'rest' }, icon: { type: 'boolean', default: false } },
   invalid: [{ disabled: true, state: 'hover' }] };

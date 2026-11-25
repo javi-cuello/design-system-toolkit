@@ -30,6 +30,7 @@ import { partSeg, entryOf } from './to-code.mjs';
 import { propsOf } from './to-markup.mjs';
 import { TOLERANCE } from './geometry.mjs';
 import { near } from '../parity/schema.mjs';
+import { CLEARED } from './rules.mjs';
 import { WEIGHTS } from '../parity/values.mjs';
 import { launch, newPage, attach, navigate, call, waitFor, media, forceState, screenshot } from '../shared/cdp.mjs';
 
@@ -129,6 +130,8 @@ export function expected(c, combo, { value, tokens }) {
       const r = Array.isArray(e.radius) ? e.radius.map(num) : [num(e.radius), num(e.radius), num(e.radius), num(e.radius)];
       if (r.every((v) => v !== undefined)) x.radius = r; else skip('radius');
     }
+    // (a stroke the contract clears, `none` (rules.mjs CLEARED): none drawn)
+    if (e.border === CLEARED) x.stroke = [0, 0, 0, 0];
     tok('background', e.background); if (e.border) tok('strokeColour', e.border.color); tok('color', e.color);
     if (e.background !== undefined) { const v = col(e.background); if (v !== undefined) x.background = v; else skip(typeof e.background === 'object' ? (Array.isArray(e.background) ? 'background list' : 'background gradient') : 'background'); }
     if (e.border && e.border.color !== undefined) {
@@ -152,7 +155,8 @@ export function expected(c, combo, { value, tokens }) {
       }
     }
     // a paint style by its value, through the snapshot's styles: a text's colour, a box's fill, where nothing else says it
-    if (e.fillStyle !== undefined) {
+    // (a colour style the contract clears: none, its own fill said by its background)
+    if (e.fillStyle !== undefined && e.fillStyle !== CLEARED) {
       const st = ((tokens && tokens.paintStyles) || []).find((y) => y.name === e.fillStyle);
       const paints = st && (st.paints || []).filter((q) => q.visible !== false);
       const v = paints && paints.length === 1 && paints[0].type === 'SOLID' ? col(paints[0].color) : undefined;

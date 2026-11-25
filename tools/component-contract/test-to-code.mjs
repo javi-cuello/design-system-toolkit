@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn } from './to-code.mjs';
+import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn, paintsAny } from './to-code.mjs';
 import { declarations } from './css.mjs';
 import { toElement } from './to-markup.mjs';
 import { ELEMENT } from './site.mjs';
@@ -904,5 +904,9 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a cleared stroke takes its channel back to none: an inside ring off the shadow, the component\'s effect kept; an outline unset',
     inside.ok && outside.ok && /box-shadow: var\(--effect-sm\);/.test(rule(inside.css)) && !/inset/.test(rule(inside.css))
     && /outline: unset;/.test(rule(outside.css)) && !/none;|Clear/.test(rule(inside.css) + rule(outside.css)));
+}
+{
+  const c = { anatomy: { a: { kind: 'instance', border: 'none', fillStyle: 'none' }, b: { kind: 'instance', border: { color: 'x' } } }, variants: [{ set: { 'c.border': 'none' } }] };
+  ok('a stroke cleared (`none`) paints nothing; a stroke paints', !paintsAny(c, 'a') && paintsAny(c, 'b') && !paintsAny(c, 'c'));
 }
 console.log(`${n} passed`);

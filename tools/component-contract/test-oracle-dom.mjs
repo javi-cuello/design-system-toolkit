@@ -93,6 +93,12 @@ const TOKENS = { collections: {
   const c = { props: {}, anatomy: { root: { kind: 'container' },
     end: { kind: 'container', parent: 'root', order: 0, absolute: { x: 92, y: 4, end: 8 }, constraints: { horizontal: 'max', vertical: 'min' } },
     mid: { kind: 'container', parent: 'root', order: 1, absolute: { x: 10, y: 0, end: 6, bottom: 0 }, constraints: { horizontal: 'center', vertical: 'scale' } } } };
+  {
+    // a colour style or stroke the contract clears (`none`): no style looked up, nothing unread; the stroke none
+    const k = { contract: 1, component: 'K', props: {}, anatomy: { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', order: 0, component: 'B', fillStyle: 'none', border: 'none' } }, variants: [] };
+    const { parts: kp, unread: ku } = expected(k, {}, { value: resolver(TOKENS), tokens: TOKENS });
+    assert.ok(!Object.keys(ku).length && JSON.stringify(kp.b.stroke) === '[0,0,0,0]' && kp.b.background === undefined, 'a cleared style and stroke: compared as none, never unread');
+  }
   const { parts, unread } = expected(c, {}, { value: resolver(TOKENS), tokens: TOKENS });
   ok('max holds the far edge, not x; center holds the centre\'s offset; scale is held to the stored box', parts.end.end === 8 && parts.end.x === undefined && parts.end.y === 4 && parts.mid.cx === 2 && parts.mid.y === undefined && parts.mid.storedPlace && !unread['place that scales'], JSON.stringify(parts));
 }
