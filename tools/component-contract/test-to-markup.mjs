@@ -208,6 +208,12 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   const swap = row({ 'item/trail': { kind: 'instance', parent: 'item', order: 1, component: 'Badge', with: { Count: '7' } } });
   { const d = await run(swap), b = find(d, (x) => x.tag === 'ds-badge');
     ok('parts: another component swapped in where no prop swaps it is drawn in the part\'s place, given its own props', !!b && b.attrs['data-part'] === 'trail' && b.textContent === '7' && !find(d, (x) => x.tag === 'ds-trail')); }
+  { const two = { ...item, anatomy: { ...item.anatomy, trail_2: { ...item.anatomy.trail, order: 2 } } };
+    const r = row({ 'item/trail_2': { kind: 'instance', parent: 'item', order: 2, component: 'Trail', with: { Tone: 'Loud' } } }), L = { ...lib(r), Item: two };
+    const dir = path.join(tmp, 'copies'); fs.mkdirSync(dir); fs.writeFileSync(path.join(dir, 'dom.js'), DOM);
+    for (const c of Object.values(L)) { fs.mkdirSync(path.join(dir, c.folder)); fs.writeFileSync(path.join(dir, c.folder, `${c.folder}.js`), toElement(c, c.folder, { naming: ELEMENT, library: L })); }
+    const d = (await import(path.join(dir, 'row', 'row.js'))).renderRow(), tones = d.kids[0].kids.filter((x) => x.tag === 'ds-trail').map((x) => x.attrs.tone);
+    ok('parts: a numbered copy, which shares its first\'s data-part, is set apart by its own name', tones.join() === 'plain,loud', tones.join()); }
   const hid = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'A' } });
   { const d = await run(hid);
     ok('parts: a part the instance hides (kept whole, the part not drawn) is taken away', !find(d, (x) => x.tag === 'ds-trail') && find(d, (x) => x.attrs['data-part'] === 'label').textContent === 'A'); }

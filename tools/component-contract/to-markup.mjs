@@ -207,7 +207,8 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
   // (a part of the component's own, not one inside a nested instance, which that instance's entry carries, nor a slot's
   // sample, which the slot's filler draws)
   const own = (mk) => { for (let up = (M[mk] || {}).parent; up && up !== 'root'; up = (M[up] || {}).parent) if (['instance', 'slot'].includes((M[up] || {}).kind)) return false; const id = back[mk] || mk; return mk !== 'root' && !!(m.anatomy[id] || (m.variants || []).some((v) => (v.add || {})[id])); };
-  const segOf = (mk) => { const id = back[mk] || mk; return partSeg(m, copyOf(m, id) || id); };
+  // (a numbered copy by its own name, as its holder looks it up: each copy set apart)
+  const segOf = (mk) => partSeg(m, back[mk] || mk);
   const same = (x, y) => JSON.stringify(x ?? null) === JSON.stringify(y ?? null);
   const out = {}, put = (mk, entry) => { if (Object.keys(entry).length) out[segOf(mk)] = { ...out[segOf(mk)], ...entry }; };
   for (const [rel, mk] of Object.entries(match)) {
@@ -634,7 +635,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       if (ownAt(e.with) || [...combos, ...varied].some(({ w }) => ownAt(w)) || byMine) gaps.push(`${partName(id)} is given props only a pointer state draws: the stylesheet's, or frontend-build's to add`);
       for (const x of props.filter((y) => y.pass && y.pass.part === id && y.type !== 'value')) { const i = given.findIndex(([k]) => k === x.pass.to); if (i >= 0) given.splice(i, 1); given.push([x.pass.to, { code: ref(x.name) }]); }
       used.add(placed.component);
-      return { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id), own: theirs.map((x) => x.name), ...(withParts && { parts: partsCode(id, e) }) };
+      return { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id), own: theirs.map((x) => x.name), ...(withParts && { parts: partsCode(id, e), key: partSeg(c, id) }) };
     }
   };
   // a text entry: one input, its own value the Value text and its ::placeholder the Placeholder (to-code's entryOf)
@@ -754,7 +755,8 @@ function hOf(item, depth) {
   // (a placed part as its holder sets it, `parts` by its data-part name: dom.js placed; the rest, dressed)
   const seg = (list) => (list.find(([k]) => k === 'data-part') || [])[1];
   const key = (list) => `parts[${str(seg(list).lit)}]`;
-  if (item.placed) return seg(item.hook) ? `${pad}placed(${key(item.hook)}, ${fnOf(item.placed)}, ${obj(item.attrs)}, ${obj(item.hook)}${item.parts ? `, ${item.parts}` : ''})` : `${pad}${fnOf(item.placed)}(${obj(item.attrs)}, ${obj(item.hook)}${item.parts ? `, ${item.parts}` : ''})`;
+  // (a numbered copy by its own name: it shares its first's data-part, but a holder may set each apart)
+  if (item.placed) return seg(item.hook) ? `${pad}placed(${item.key ? `parts[${str(item.key)}]` : key(item.hook)}, ${fnOf(item.placed)}, ${obj(item.attrs)}, ${obj(item.hook)}${item.parts ? `, ${item.parts}` : ''})` : `${pad}${fnOf(item.placed)}(${obj(item.attrs)}, ${obj(item.hook)}${item.parts ? `, ${item.parts}` : ''})`;
   const attrs = item.spread ? `{ ${item.spread}${item.attrs.length ? `, ${obj(item.attrs).slice(2, -2)}` : ''} }` : obj(item.attrs);
   if (!item.children.length) return `${pad}h(${str(item.tag)}, ${attrs})`;
   return `${pad}h(${str(item.tag)}, ${attrs},\n${item.children.map((x) => hOf(x, depth + 1)).join(',\n')})`;
