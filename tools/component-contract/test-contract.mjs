@@ -419,6 +419,13 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const onPage = derive(page({ fills: ['Bg/clear'], fillStyle: 'Clear/Clear', strokes: ['Line/strong'], strokeSides: [1, 1, 1, 1] }), ['Holder', 'Box'], { mains: stored }).anatomy;
   ok('a stored component\'s Box that keeps its style and stroke, placed, says neither cleared; drawn unchanged on a page, no part of it is kept',
     placedBox.fillStyle === undefined && placedBox.border === undefined && Object.keys(onPage).sort().join() === 'holder,root');
+  // and one whose mains did not hold its Box (another library's), read with mains and stored, keeps the Box as walked:
+  // its clear still reads as cleared, wherever the contract is read (as JSON, as a store keeps it)
+  const H2 = JSON.parse(JSON.stringify(derive(holder, ['Box'], { mains: mainsFrom({}) }))), stored2 = byComponentName([derive(box, []), H2]);
+  const back2 = derive(page({ fills: ['Bg/clear'], fillStyle: 'Clear/Clear', strokes: ['Line/strong'], strokeSides: [1, 1, 1, 1] }), ['Holder', 'Box'], { mains: stored2 }).anatomy;
+  const still2 = derive(page({ overrides: ['fillStyleId,fills,strokes'] }), ['Holder', 'Box'], { mains: stored2 }).anatomy;
+  ok('a stored component whose mains did not hold its Box keeps that Box\'s clear: drawn with its style again on a page it is kept, still cleared it is not',
+    Object.keys(back2).sort().join() === 'holder,holder/box,root' && Object.keys(still2).sort().join() === 'holder,root');
 }
 {
   // an instance that hides a layer of its component (the walk records what shows) is kept whole: nothing here could say the hiding

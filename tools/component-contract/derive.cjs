@@ -662,7 +662,10 @@ let M = { ...atProps(m, e.with) };
   // only where the component was read without mains, whose instances keep the style they draw, so one with none cleared
   // it. One read with mains, as a store keeps it, already says none where an instance cleared, and an unsaid style there
   // is its component's, left out by ownStyling: read as cleared, it was a none no instance said)
+  // A contract read with mains lists the instances its mains did not resolve (asWalked: another library's, or one whose
+  // main threw), which keep their style as walked too, so they are cleared here as well)
   if (RAW.has(m)) cleared(M, mains);
+  else if ((m.asWalked || []).length) { const walked = new Set(m.asWalked), own = Object.fromEntries(Object.entries(M).filter(([k]) => walked.has(placed.back[k] || k))); cleared(own, mains); }
   ownStyling(M, mains);
   return { M, swapped, back: placed.back };
 }
@@ -1029,6 +1032,14 @@ function deriveWith(stored, known, { stateAxis = HOUSE.stateAxis || null, pointe
   // a part drawn only under some props' values (an icon at one size only), said once per part
   const when = partConditions(rows, props);
   if (Object.keys(when).length) contract.when = when;
+  // the instances `mains` did not resolve (another library's component, or one whose main threw): no none was said of
+  // them and their styling stays as walked, so a reader placing this component reads their unsaid style as cleared
+  // (placedAs); every other instance's none is already said, and an unsaid style there is its component's
+  if (mains) {
+    const walked = new Set();
+    for (const f of flat) for (const [id, e] of Object.entries(f.anatomy)) if (e && e.kind === 'instance' && e.component && (e.fillStyle === undefined || e.border === undefined)) { const m = mains(e.component, e.key); if (!m || !atProps(m, e.with).root) walked.add(id); }
+    if (walked.size) contract.asWalked = [...walked].sort();
+  }
   return contract;
 }
 
