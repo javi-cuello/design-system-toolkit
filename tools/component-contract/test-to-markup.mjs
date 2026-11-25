@@ -219,6 +219,9 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   const hid = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'A' } });
   { const d = await run(hid);
     ok('parts: a part the instance hides (kept whole, the part not drawn) is taken away', !find(d, (x) => x.tag === 'ds-trail') && find(d, (x) => x.attrs['data-part'] === 'label').textContent === 'A'); }
+  { const shown = { ...item, props: { showTrail: { type: 'boolean', default: true, figma: 'Show trail', shows: ['trail'] } } };
+    const r = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'A' } }), out = toElement(r, 'row', { naming: ELEMENT, library: { ...lib(r), Item: shown } });
+    ok('parts: a part a prop of it shows, which the instance says is shown, is not taken away (a reading would take the prop off)', !/hidden: true/.test(out), out); }
   const byProp = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'B' } }, { big: { type: 'boolean', default: false, figma: 'Big' } }, [{ when: { big: true }, set: { 'item/label.content': 'C' } }]);
   { const a = find(await run(byProp), (x) => x.attrs['data-part'] === 'label').textContent, b = find(await run(byProp, { big: true }), (x) => x.attrs['data-part'] === 'label').textContent;
     ok('parts: what they carry follows this component\'s own props, as each variant draws it', a === 'B' && b === 'C', `${a} ${b}`); }

@@ -232,8 +232,10 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     put(mk, entry);
   }
   if (whole.has(hid)) {
-    const drawn = new Set(Object.values(match));
-    for (const mk of Object.keys(M)) if (own(mk) && !drawn.has(mk) && (!M[mk].parent || M[mk].parent === 'root' || drawn.has(M[mk].parent))) put(mk, { hidden: true });
+    // (not a part a prop of it shows that the instance says is shown: hidden, a reading takes that prop to be off,
+    // where the design says it is on; the design's own contradiction, left drawn)
+    const drawn = new Set(Object.values(match)), shown = new Set(Object.values(m.props || {}).filter((q) => q.type === 'boolean' && q.shows).flatMap((q) => q.shows));
+    for (const mk of Object.keys(M)) if (own(mk) && !shown.has(back[mk] || mk) && !drawn.has(mk) && (!M[mk].parent || M[mk].parent === 'root' || drawn.has(M[mk].parent))) put(mk, { hidden: true });
   }
   return out;
 }
