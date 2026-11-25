@@ -28,7 +28,7 @@ Type, colour, surfaces and the scales everything else is built on.
 
 - [Line height and letter spacing, from Figma to the browser](foundations/line-height-letter-spacing-figma-to-css.md)
 - [Naming text styles](foundations/naming-text-styles.md)
-- [Naming text styles: tags, defaults and a second platform](foundations/naming-text-styles-part-2.md) (Part 2)
+- [Naming text styles, part 2](foundations/naming-text-styles-part-2.md)
 - [One type scale for an interface and its articles](foundations/one-type-scale-for-ui-and-content.md)
 - [Fitting a type scale to a ratio](foundations/fitting-an-existing-type-scale-to-a-ratio.md)
 - [Naming a phone mode](foundations/naming-a-phone-mode-on-a-type-token.md)
