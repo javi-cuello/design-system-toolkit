@@ -1481,12 +1481,12 @@ const varCache = {};
 const VARIABLE_WAIT = 5000;
 let unanswered = 0, timedOut = 0;
 /** @type {Set<string>} */ const missed = new Set();
-/** @type {Map<string, any>} */ const collectionsAsked = new Map();
+/** @type {Map<string, any>} */ const cols = new Map();
 // Each run (the window stays open between them) asks again what the last gave up on: its three tries are its own.
 function freshLookups() {
   unanswered = 0; timedOut = 0;
   for (const id of missed) delete varCache[id];
-  missed.clear(); collectionsAsked.clear();
+  missed.clear(); cols.clear();
 }
 const MISSED = Symbol('missed');
 /** @template T @param {() => Promise<T>} ask @returns {Promise<T | typeof MISSED>} */
@@ -1497,7 +1497,7 @@ async function answered(ask) {
   // answered, the step it interrupted is said again)
   let t, slow, waited = false; const L = {}, got = await Promise.race([p, new Promise((r) => {
     t = setTimeout(() => r(L), VARIABLE_WAIT);
-    slow = setTimeout(() => { waited = true; if (!HEADLESS) figma.ui.postMessage({ type: 'progress', text: 'waiting for Figma to return a library variable' }); }, 1000);
+    slow = setTimeout(() => { waited = true; if (!HEADLESS) figma.ui.postMessage({ type: 'progress', text: 'Figma is slow' }); }, 1000);
   })]).finally(() => { clearTimeout(t); clearTimeout(slow); });
   if (waited && lastSaid && !HEADLESS && !cancelled) figma.ui.postMessage(lastSaid);
   if (got === L) { timedOut++; return MISSED; }
@@ -1974,18 +1974,20 @@ async function collectTokens() {
   // and the collections of another library whose variables the components bind (a component file whose colours, spaces
   // and radii live in a foundations file has none local), marked remote: a name a local one holds is that one
   const ids = boundVariableIds(), others = new Map(), here = new Set(collections.map((c) => c.name));
-  let n = 0;
+  let n = 0; const libs = new Set();
   for (const i of ids) {
     // counted: a large library binds thousands, each fetched on its own, and a still window reads as hung
     // (each one: a lookup Figma is slow to answer waits a few seconds, and the count says which)
-    // (one of another library's makes Figma load that library, and Figma, this window with it, stops until it has:
-    // said before asking, since nothing can be said during)
-    say(i.includes('/') && !(i in varCache) ? 'loading a library this one uses: Figma pauses until it has' : 'reading the variables the components use', n++, ids.size);
+    // (the first of another library's makes Figma load that library, and Figma, this window with it, stops until it
+    // has: said before asking, and a moment given for the window to show it, since nothing can be said during)
+    const lib = i.includes('/') && i.split('/')[0];
+    if (lib && !libs.has(lib)) { libs.add(lib); say('Figma pauses to load a library it uses', n++, ids.size); await new Promise((r) => setTimeout(r, 50)); }
+    else say('reading the variables the components use', n++, ids.size);
     const v = await variable(i).catch(() => null);
     // (each collection asked once, and one never answered counted once)
     const cid = v && v.remote ? v.variableCollectionId : null;
-    if (cid && !collectionsAsked.has(cid)) collectionsAsked.set(cid, await answered(() => figma.variables.getVariableCollectionByIdAsync(cid)).then((x) => (x === MISSED ? (unanswered++, null) : x), () => null));
-    const c = cid ? collectionsAsked.get(cid) : null;
+    if (cid && !cols.has(cid)) cols.set(cid, await answered(() => figma.variables.getVariableCollectionByIdAsync(cid)).then((x) => (x === MISSED ? (unanswered++, null) : x), () => null));
+    const c = cid ? cols.get(cid) : null;
     if (c && !here.has(c.name)) others.set(c.name, c);
   }
   for (const c of [...collections, ...others.values()]) {
@@ -2850,7 +2852,7 @@ function propLinks(roots, keys) {
     }
   };
   for (const v of roots) { root = v.name; walk(v, [], null); }
-  // a placed instance's insides are read only for a key no outer layer takes (walk 0.90.3): read whole, every instance
+  // a placed instance's insides are read only for a key no outer layer takes (walk 0.90.2): read whole, every instance
   // in every variant, they made a large library's snapshot many times slower
   const only = new Set([...(keys || [])].filter((k) => k.includes('#') && !(bare(k) in links)));
   if (only.size) for (const v of roots) { root = v.name; walk(v, [], only); }

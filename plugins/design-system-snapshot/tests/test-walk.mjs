@@ -442,7 +442,7 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   vm.runInContext("freshLookups()", vctx); await v("a");
   ok("…and a new run gives each its three tries again, asking what the last gave up on", asked === 4 && vm.runInContext("unanswered", vctx) === 1);
   ok("…a library run and a screens run each start so", ["async function collectTokens", "async function collectScreens"].every((f) => src.slice(src.indexOf(f), src.indexOf(f) + 300).includes("freshLookups();")));
-  ok("…and a wait past a second says so, a step with no count (a bar that runs)", posted.some((m) => m.type === "progress" && /waiting for Figma/.test(m.text) && m.total === undefined));
+  ok("…and a wait past a second says so, a step with no count (a bar that runs)", posted.some((m) => m.type === "progress" && /Figma is slow/.test(m.text) && m.total === undefined));
 }
 
 console.log(n + "/" + n + " passed");
