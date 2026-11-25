@@ -2435,14 +2435,15 @@ async function main() {
             // pinned to both edges, its size is theirs; on an axis it is not, its own or what it holds
             for (const [axis, to, i] of [['width', place.constraints.horizontal, 0], ['height', place.constraints.vertical, 1]]) {
               if (to === 'stretch') { delete e[axis]; continue; }
-              if (e.kind === 'graphic') continue;
+              // (an icon mark is a box the sheet sizes, as in the flow below; an svg draws at its own size)
+              if (e.kind === 'graphic' && !mark.has(e.id)) continue;
               const v = String(pos[axis === 'width' ? 'inline-size' : 'block-size'] ?? pos[axis] ?? '').trim();
               // an absolutely placed box with no size of its own shrinks to fit what it holds (css2 §10.3.7), which
               // Figma says as hug where it has auto layout; a percentage of its parent, or no auto layout, is the
               // length it renders at
               // (as text shrinks to fit its words, and a placed component its own main, which sizes it, where the design's
               // part hugs on that axis: else the size it renders at, so one drawn at the wrong size still shows)
-              const designHugs = e.kind === 'instance' && figmaContract && [figmaContract.anatomy || {}, ...(figmaContract.variants || []).map((w) => w.add || {})].some((a) => a[e.id] && a[e.id][axis] === 'hug');
+              const designHugs = (e.kind === 'instance' || mark.has(e.id)) && figmaContract && [figmaContract.anatomy || {}, ...(figmaContract.variants || []).map((w) => w.add || {})].some((a) => a[e.id] && a[e.id][axis] === 'hug');
               e[axis] = (!v || /^(auto|fit-content|max-content|min-content)$/.test(v)) && (e.layout || e.kind === 'text' || designHugs) ? 'hug' : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
               if (designHugs && !e.layout && e.kind !== 'text' && e[axis] === 'hug') A.add('design-hug', `anatomy.${e.id}.${axis}`);
             }
