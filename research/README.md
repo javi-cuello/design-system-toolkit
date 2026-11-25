@@ -32,6 +32,7 @@ Type, colour, surfaces and the scales everything else is built on.
 - [One type scale for an interface and its articles](foundations/one-type-scale-for-ui-and-content.md)
 - [Fitting a type scale to a ratio](foundations/fitting-an-existing-type-scale-to-a-ratio.md)
 - [Naming a phone mode](foundations/naming-a-phone-mode-on-a-type-token.md)
+- [Which text style a component takes](foundations/which-text-style-a-component-takes.md)
 - [Space between prose elements](foundations/space-between-prose-elements.md)
 - [Spacing with a text style](foundations/spacing-that-travels-with-a-text-style.md)
 - [Type on a phone](foundations/type-on-a-phone.md)
