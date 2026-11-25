@@ -60,6 +60,11 @@ export const BOUND = '@bound';
 const API = 'https://api.figma.com';
 const r2 = (v) => (typeof v === 'number' ? +v.toFixed(2) : v);
 const bare = (k) => String(k).replace(/#\d+:\d+$/, '');
+/* A layer's reference to a property, as the host's prop id: inside a placed instance (`propIds[ONLY]`, the host's full
+   property keys) only a key the host defines is the host's (a swap it exposes deep down); any other names the placed
+   component's own property, though its name be the host's too */
+const ONLY = Symbol('host keys');
+const refId = (propIds, ref) => (!ref || (propIds[ONLY] && !propIds[ONLY].has(ref)) ? undefined : propIds[bare(ref)]);
 const clear = (a) => a < 0.5 / 255;
 const H = { LEFT: 'MIN', RIGHT: 'MAX', CENTER: 'CENTER', LEFT_RIGHT: 'STRETCH', SCALE: 'SCALE' };
 const V = { TOP: 'MIN', BOTTOM: 'MAX', CENTER: 'CENTER', TOP_BOTTOM: 'STRETCH', SCALE: 'SCALE' };
@@ -163,7 +168,7 @@ export function paintsOf(list, all = false) {
 // a value as ours writes it, a token's name as BOUND: a colour literal, an image, a paint type or a gradient stay
 const LITERAL = /^(#|rgb\(|IMAGE:|GRADIENT_|SOLID$|VIDEO$|PATTERN$|EMOJI$)/;
 export function paintOurs(v) {
-  if (v && typeof v === 'object' && !Array.isArray(v)) return { type: v.type, angle: v.angle == null ? null : v.angle % 360, stops: (v.stops || []).map((s) => ({ position: s.position, color: LITERAL.test(String(s.color)) ? s.color : BOUND })) };
+  if (v && typeof v === 'object' && !Array.isArray(v)) return { type: v.type, angle: v.angle == null ? null : ((v.angle % 360) + 360) % 360, stops: (v.stops || []).map((s) => ({ position: s.position, color: LITERAL.test(String(s.color)) ? s.color : BOUND })) };
   return typeof v === 'string' && !LITERAL.test(v) ? BOUND : v;
 }
 const num = (v) => (typeof v === 'number' ? v : v == null ? v : BOUND);
@@ -595,11 +600,11 @@ export function restPart(n, parent, ctx, propIds, frame = parent, { turned = fal
   if (es) e.shadow = es; else if ((n.effects || []).some((x) => x.visible !== false)) e.shadow = 'literal';
   // a slot holds what its property gives it
   const slot = n.componentPropertyReferences && n.componentPropertyReferences.slotContentId;
-  if (slot && propIds[bare(slot)]) e.content = `{${propIds[bare(slot)]}}`;
+  if (refId(propIds, slot)) e.content = `{${refId(propIds, slot)}}`;
   if (n.type === 'TEXT') {
     const st = n.style || {};
     const ref = n.componentPropertyReferences && n.componentPropertyReferences.characters;
-    e.content = ref && propIds[bare(ref)] ? `{${propIds[bare(ref)]}}` : String(n.characters || '');
+    e.content = refId(propIds, ref) ? `{${refId(propIds, ref)}}` : String(n.characters || '');
     const mixed = (n.characterStyleOverrides || []).some(Boolean);
     const style = styleName(ctx, n, 'text');
     e.typography = mixed ? 'mixed' : style || { size: st.fontSize, lineHeight: st.lineHeightUnit === 'INTRINSIC_%' || !st.lineHeightUnit ? 0 : r2(st.lineHeightPx), weight: st.fontWeight, italic: !!st.italic, family: st.fontFamily };
@@ -618,7 +623,7 @@ export function restPart(n, parent, ctx, propIds, frame = parent, { turned = fal
     const w = instanceProps(ctx, n);
     if (Object.keys(w).length) e.with = w;
     const swap = n.componentPropertyReferences && n.componentPropertyReferences.mainComponent;
-    if (swap && propIds[bare(swap)]) e.swappedBy = propIds[bare(swap)];
+    if (refId(propIds, swap)) e.swappedBy = refId(propIds, swap);
   }
   return e;
 }
@@ -719,6 +724,7 @@ export function compareContract(component, setNode, contract, ctx) {
   const defs = setNode.componentPropertyDefinitions || {};
   const cprops = contract.props || {};
   const idOfProp = Object.fromEntries(Object.entries(cprops).map(([id, p]) => [p.figma, id]));
+  const hostOnly = { ...idOfProp, [ONLY]: new Set(Object.keys(defs)) };
   // props: each Figma property a contract prop of its type, default and options
   const TYPE = { VARIANT: 'enum', BOOLEAN: 'boolean', TEXT: 'string', INSTANCE_SWAP: 'instance', SLOT: 'slot' };
   for (const [k, d] of Object.entries(defs)) {
@@ -803,7 +809,7 @@ export function compareContract(component, setNode, contract, ctx) {
     const index = (n) => { for (const c of n.children || []) { parentOf.set(c, n); index(c); } };
     index(v);
     const inInstance = (n) => { for (let q = parentOf.get(n); q && q !== v; q = parentOf.get(q)) if (q.type === 'INSTANCE') return true; return false; };
-    const ownProps = (n) => (inInstance(n) ? {} : idOfProp);
+    const ownProps = (n) => (inInstance(n) ? hostOnly : idOfProp);
     // what the mains' own contracts say of a layer: each instance around it (itself first) expanded at its props, the
     // innermost said first and each outer main over it (null where none says it); `whole` where every one of those
     // instances has a contract, so a field none says is a difference, else it is `not stated`
@@ -848,7 +854,7 @@ export function compareContract(component, setNode, contract, ctx) {
       const says = n.type === 'INSTANCE' || inInstance(n) ? mainSays(n) : null;
       // turned on its own axes by the contract that says its size: the host's, else the main's that does
       const turnedHere = turned.has(id) || (!!says && says.turned && !('width' in part) && !('height' in part));
-      // (a layer inside a placed instance names that instance's component's properties, never this one's: ownProps)
+      // (a layer inside a placed instance names its component's properties, never this one's unless by this one's key: refId)
       const a = restPart(n, n === v ? null : parent, ctx, ownProps(n), n === v ? null : frameOf(n), { turned: turnedHere });
       let b = partOurs(part);
       // an instance, and a layer inside one, says what differs from its component (derive's ownStyling): what it leaves

@@ -30,6 +30,7 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   const up = paintsOf([{ type: 'GRADIENT_LINEAR', gradientHandlePositions: [{ x: 0.5, y: 1 }, { x: 0.497, y: 0 }, { x: 0, y: 0 }], gradientStops: [] }])[0];
   assert.equal(up.angle, 0);
   assert.equal(paintOurs({ type: 'GRADIENT_LINEAR', angle: 360, stops: [] }).angle, 0);
+  assert.equal(paintOurs({ type: 'GRADIENT_LINEAR', angle: -90, stops: [] }).angle, 270);
 }
 {
   const frame = { id: '1', name: 'Box', type: 'FRAME', size: { x: 100, y: 40 }, relativeTransform: T(4, 6), layoutMode: 'HORIZONTAL', paddingTop: 1, paddingRight: 2, paddingBottom: 3, paddingLeft: 4, itemSpacing: 8, primaryAxisAlignItems: 'SPACE_BETWEEN', counterAxisAlignItems: 'CENTER', layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'HUG', cornerRadius: 6, opacity: 0.5, clipsContent: true,
@@ -253,9 +254,13 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     assert.deepEqual(inner(['fills', 'exportSettings']), [], 'a colour override and an ignored one leave its opacity the main\'s');
     assert.ok(inner(['opacity']).includes('opacity'), 'its opacity, overridden here, unsaid: a row');
     // a text inside the instance tied to a property is tied to its component's, though the host has one of that name
-    { const s = structuredClone(set); for (const v of s.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.children.push({ id: v.id + 'c', name: 'Caption', type: 'TEXT', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), characters: 'Go', componentPropertyReferences: { characters: 'Label#1:0' } }); }
+    { const s = structuredClone(set); for (const v of s.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.children.push({ id: v.id + 'c', name: 'Caption', type: 'TEXT', size: { x: 10, y: 10 }, relativeTransform: T(0, 0), characters: 'Go', componentPropertyReferences: { characters: 'Label#9:9' } }); }
       const c5 = structuredClone(c); c5.anatomy['icon/caption'] = { kind: 'text', parent: 'icon', order: 1, name: 'Caption', content: 'Go' };
-      assert.ok(!compareContract('chip', s, c5, ctx).rows.some((x) => x.kind === 'contract:content'), 'its words are what it draws, not the host\'s {label}'); }
+      assert.ok(!compareContract('chip', s, c5, ctx).rows.some((x) => x.kind === 'contract:content'), 'its words are what it draws, not the host\'s {label}');
+      // by the host's own key it is the host's still (a property exposed deep down)
+      const c6 = structuredClone(c5); c6.anatomy['icon/caption'].content = '{label}';
+      const s3 = structuredClone(s); for (const v of s3.children) v.children.find((x) => x.type === 'INSTANCE').children.find((x) => x.name === 'Caption').componentPropertyReferences = { characters: 'Label#1:0' };
+      assert.ok(!compareContract('chip', s3, c6, ctx).rows.some((x) => x.kind === 'contract:content'), 'the host\'s own key, deep down, is the host\'s {label}'); }
     // a chain with a contract-less main that is neither another library's nor an icon keeps its rows
     const chain = structuredClone(set); for (const v of chain.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.children[0] = { id: v.id + 'n', name: 'Nested', type: 'INSTANCE', componentId: 'C:4', size: { x: 12, y: 12 }, relativeTransform: T(2, 2), overrides: [{ id: v.id + 'nv', overriddenFields: ['fills'] }], children: [{ id: v.id + 'nv', name: 'Dot', type: 'VECTOR', size: { x: 4, y: 4 }, relativeTransform: T(0, 0) }] }; }
     const cx4 = { ...remote, components: { ...remote.components, 'C:4': { key: 'k-local', name: 'Local' } } };
