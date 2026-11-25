@@ -151,6 +151,13 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
   variants: [], invalid: [] });
 {
   assert.deepEqual(linksOf(setNode.children), { Label: { kind: 'characters', layers: [['Label']] } });
+  // walk 0.90.0 on: a set's own key inside a placed instance is the set's, another's is its component's; each layer's own
+  // variants where fewer than the property's; before (no keys), not into instances, as that walk read them
+  { const inst = (refs) => ({ name: 'Menu', type: 'INSTANCE', children: [{ name: 'Text', type: 'TEXT', componentPropertyReferences: refs }] });
+    const v = (name, extra) => ({ name, children: [{ name: 'Label', type: 'TEXT', componentPropertyReferences: { characters: 'Label#1:1' } }, ...extra] });
+    const roots = [v('Size=Large', [inst({ characters: 'Label#1:1' })]), v('Size=Small', [inst({ characters: 'Own#9:9' })])];
+    assert.deepEqual(linksOf(roots, new Set(['Label#1:1'])), { Label: { kind: 'characters', layers: [['Label'], ['Menu', 'Text']], layerVariants: [['Size=Large', 'Size=Small'], ['Size=Large']] } });
+    assert.deepEqual(linksOf(roots), { Label: { kind: 'characters', layers: [['Label']] } }); }
   const sp = compareSpec('chip', setNode, storedFull(), ctx);
   assert.deepEqual(sp.rows, [], 'a spec that says what Figma says has no row');
   assert.ok(sp.checked > 20, 'and its fields were checked, each counted');

@@ -972,7 +972,14 @@ function deriveWith(stored, known, { stateAxis = HOUSE.stateAxis || null, pointe
   // (only where the property drives the layer: a set that binds it in some variants only, snapshot 0.61.0 on, leaves the
   // rest their own words, as anatomies does)
   // (the link found by the layer it names, as anatomies finds it, and by the prop that layer is read as)
-  const drives = (prop, segs, t) => { const l = (Object.entries(L).find(([k, x]) => x.kind === 'characters' && propId(figmaProps, k) === prop && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))) || [])[1]; return !l || !l.variants || l.variants.map(valuesOf).some((w) => Object.entries(w).every(([k, v]) => t.when[k] === v)); };
+  // (by the layer's own variants where the walk says them, 0.90.0 on, as anatomies has it)
+  const drives = (prop, segs, t) => {
+    const l = (Object.entries(L).find(([k, x]) => x.kind === 'characters' && propId(figmaProps, k) === prop && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))) || [])[1];
+    if (!l) return true;
+    let j = l.layers.findIndex((at) => keyOf([].concat(at)) === keyOf(segs)); if (j < 0) j = l.layers.findIndex((at) => keyOf([].concat(at)) === plain(segs));
+    const vs = l.layerVariants ? l.layerVariants[j] : l.variants;
+    return !vs || vs.map(valuesOf).some((w) => Object.entries(w).every(([k, v]) => t.when[k] === v));
+  };
   for (const t of trees) for (const { node, segs } of t.list) {
     // (every property that drives the layer, where one layer takes two in turn)
     const props = Object.entries(L).filter(([, x]) => x.kind === 'characters' && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))).map(([k]) => propId(figmaProps, k));

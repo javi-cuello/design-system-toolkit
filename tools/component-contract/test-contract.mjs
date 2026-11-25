@@ -353,6 +353,12 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const per = derive({ ...spec, props: { ...spec.props, 'Icon (20)': 'INSTANCE_SWAP', 'Icon (16)': 'INSTANCE_SWAP' },
     links: { ...spec.links, 'Icon (16)': { kind: 'mainComponent', layers: [['Content', 'Icon container']], variants: names('Small') },
       'Icon (20)': { kind: 'mainComponent', layers: [['Content', 'Icon container'], ['Elsewhere']], variants: [...names('Large'), ...names('Small')], layerVariants: [names('Large'), [...names('Large'), ...names('Small')]] } } });
+  // and a text property's default is read off a layer it drives in the default variant, never one its own words fill there
+  const tx = (name, text) => ({ name, type: 'TEXT', text, textStyle: 'Label/sm', fills: ['Ink'], sizing: 'HUG/HUG' });
+  const badge = (size) => ({ name: `Size=${size}`, type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', align: 'MIN/MIN', children: [tx('Badge', 'New'), tx('Title', 'Title')] });
+  const bd = derive({ name: 'Badge', id: '4:1', defaultVariant: 'Size=Small', props: { Label: 'TEXT', Size: ['Large', 'Small'] }, variants: [badge('Large'), badge('Small')],
+    links: { Label: { kind: 'characters', layers: [['Title'], ['Badge']], layerVariants: [['Size=Large', 'Size=Small'], ['Size=Large']] } } });
+  ok('…a text property\'s default is a layer it drives in the default variant, by the layer\'s own variants', bd.props.label.default === 'Title');
   ok('…and a layer two properties drive in turn names each in the variants the walk gives that layer', expand(per, { leftIcon: true })[id].swappedBy === 'icon20' && expand(per, { leftIcon: true, size: 'small' })[id].swappedBy === 'icon16');
 }
 
