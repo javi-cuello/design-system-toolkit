@@ -279,6 +279,7 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const cx = { ...ctx, components: { ...ctx.components, 'C:7': { key: 'k-ring', name: 'Ring' } }, mains: (key) => (key === 'k-ring' ? main : null) };
     const rows = compareContract('chip', set, c, cx).rows.filter((x) => x.path === 'ring');
     assert.deepEqual(rows, [], 'neither the main\'s hug nor its empty minimum is held to the placed ring');
+    assert.ok(compareContract('chip', set, c, cx).skipped["minWidth: an empty main's minimum (whileEmpty), an instance's keeps none"] > 0, 'the minimum dropped is counted as skipped');
   }
   // an instance whose fill the host overrides (its own paint, the style detached) keeps none of its main's fill style
   {
@@ -304,25 +305,42 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     assert.deepEqual(rowsOf(false, 'fill', 0), [], 'drawn in a wrapper: its own axes');
     assert.deepEqual(rowsOf(true, 16, 'fill'), [], 'placed, turned in place: Figma\'s order, its own size');
   }
-  // inside a resized instance, a layer its constraints move with the instance's box is not at its main's numbers: where
-  // the host leaves its place to the main, that axis is skipped, counted; an instance at its main's size is held
+  // inside a resized instance, a layer its constraints move with the instance's box is held where they put it: its
+  // main's place and size moved as each constraint says (scaled, at the far edge, centred, stretched) by how much its
+  // parent grew; where the main's parent size is not known (a root that fills), skipped, counted
   {
-    const anim = (v, w, h, bx) => ({ id: v.id + 'a', name: 'Anim', type: 'INSTANCE', componentId: 'C:5', size: { x: w, y: h }, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', clipsContent: true,
-      overrides: [{ id: v.id + 'a', overriddenFields: ['width', 'height'] }],
-      children: [{ id: v.id + 'ab', name: 'Bar', type: 'RECTANGLE', size: { x: w, y: h }, relativeTransform: T(bx, 0), constraints: { horizontal: 'SCALE', vertical: 'SCALE' } }] });
-    const main = { contract: 1, component: 'Anim', figma: { name: 'Anim', key: 'k-anim' }, props: {}, anatomy: { root: { kind: 'container', width: 160, height: 16, overflow: 'hidden' },
-      bar: { kind: 'graphic', parent: 'root', order: 0, width: 160, height: 16, shape: 'rectangle', constraints: { horizontal: 'scale', vertical: 'scale' }, absolute: { x: -160, y: 0 } } }, variants: [] };
-    const cx = { ...ctx, components: { ...ctx.components, 'C:5': { key: 'k-anim', name: 'Anim' } }, mains: (key) => (key === 'k-anim' ? main : null) };
-    const host = (w, h) => { const c = contract(); c.anatomy.anim = { kind: 'instance', parent: 'root', order: 1, component: 'Anim', key: 'k-anim', width: w, height: h }; c.anatomy['anim/bar'] = { kind: 'graphic', parent: 'anim', order: 0, width: w, height: h, shape: 'rectangle' }; return c; };
-    const run = (w, h, bx) => { const set = structuredClone(setNode); for (const v of set.children) v.children.push(anim(v, w, h, bx)); return compareContract('chip', set, host(w, h), cx); };
-    const r = run(80, 8, -80);
-    assert.deepEqual(r.rows.filter((x) => /^anim/.test(x.path)), [], 'scaled with the instance: not the main\'s -160');
-    assert.ok(r.skipped['absolute: the main\'s, moved by its constraints in a resized instance'] > 0, 'counted as skipped');
-    assert.ok(run(160, 16, -100).rows.some((x) => x.path === 'anim/bar' && x.kind === 'contract:absolute.x'), 'at its main\'s size, held to the main');
-    // stretched, both edges keep their offsets: its x is held, only its size moves
-    main.anatomy.bar.constraints = { horizontal: 'stretch', vertical: 'scale' };
-    const st = (() => { const set = structuredClone(setNode); for (const v of set.children) { const x = anim(v, 80, 8, -100); x.children[0].constraints = { horizontal: 'LEFT_RIGHT', vertical: 'SCALE' }; v.children.push(x); } return compareContract('chip', set, host(80, 8), cx); })();
-    assert.ok(st.rows.some((x) => x.path === 'anim/bar' && x.kind === 'contract:absolute.x'), 'a stretched layer\'s x, held');
+    const H2 = { min: 'LEFT', max: 'RIGHT', center: 'CENTER', stretch: 'LEFT_RIGHT', scale: 'SCALE' };
+    const anim = (v, w, sizing, bar) => ({ id: v.id + 'a', name: 'Anim', type: 'INSTANCE', componentId: 'C:5', size: { x: w, y: 16 }, relativeTransform: T(40, 8), layoutSizingHorizontal: sizing, layoutSizingVertical: 'FIXED', clipsContent: true,
+      overrides: [{ id: v.id + 'a', overriddenFields: ['width'] }],
+      children: [{ id: v.id + 'ab', name: 'Bar', type: 'RECTANGLE', size: { x: bar.w, y: 16 }, relativeTransform: T(bar.x, 0), constraints: { horizontal: H2[bar.c], vertical: 'TOP' } }] });
+    const mainOf = (rootW, bar) => ({ contract: 1, component: 'Anim', figma: { name: 'Anim', key: 'k-anim' }, props: {}, anatomy: { root: { kind: 'container', width: rootW, height: 16, overflow: 'hidden' },
+      bar: { kind: 'graphic', parent: 'root', order: 0, width: bar.w, height: 16, shape: 'rectangle', constraints: { horizontal: bar.c, vertical: 'min' }, absolute: { x: bar.x, y: 0 } } }, variants: [] });
+    const run = ({ rootW = 160, w, sizing = 'FIXED', main, drawn }) => {
+      const set = structuredClone(setNode); for (const v of set.children) v.children.push(anim(v, w, sizing, drawn));
+      const c = contract(); c.anatomy.anim = { kind: 'instance', parent: 'root', order: 1, component: 'Anim', key: 'k-anim', width: sizing === 'HUG' ? 'hug' : w, height: 16 };
+      c.anatomy['anim/bar'] = { kind: 'graphic', parent: 'anim', order: 0, shape: 'rectangle' };
+      const M = mainOf(rootW, main);
+      const r = compareContract('chip', set, c, { ...ctx, components: { ...ctx.components, 'C:5': { key: 'k-anim', name: 'Anim' } }, mains: (key) => (key === 'k-anim' ? M : null) });
+      return { rows: r.rows.filter((x) => x.path === 'anim/bar'), skipped: r.skipped["absolute: the main's, moved by its constraints in a resized instance"] || 0 };
+    };
+    const clean = (r, why) => { assert.deepEqual(r.rows, [], why); assert.equal(r.skipped, 0, why + ': checked, not skipped'); };
+    clean(run({ w: 80, main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -80, w: 80 } }), 'scaled with the instance');
+    assert.ok(run({ w: 80, main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -60, w: 80 } }).rows.some((x) => x.kind === 'contract:absolute.x'), 'scaled elsewhere than the constraint puts it: a row');
+    assert.ok(run({ w: 80, main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -80, w: 60 } }).rows.some((x) => x.kind === 'contract:width'), 'scaled to another size: a row');
+    clean(run({ w: 80, main: { c: 'max', x: 140, w: 20 }, drawn: { c: 'max', x: 60, w: 20 } }), 'at the far edge, moved with it');
+    assert.ok(run({ w: 80, main: { c: 'max', x: 140, w: 20 }, drawn: { c: 'max', x: 140, w: 20 } }).rows.some((x) => x.kind === 'contract:absolute.x'), 'not moved with the far edge: a row');
+    clean(run({ w: 80, main: { c: 'center', x: 70, w: 20 }, drawn: { c: 'center', x: 30, w: 20 } }), 'centred, moved half as far');
+    clean(run({ w: 80, main: { c: 'stretch', x: 10, w: 140 }, drawn: { c: 'stretch', x: 10, w: 60 } }), 'stretched, its size grown with its parent');
+    assert.ok(run({ w: 80, main: { c: 'stretch', x: 10, w: 140 }, drawn: { c: 'stretch', x: 20, w: 60 } }).rows.some((x) => x.kind === 'contract:absolute.x'), 'a stretched layer\'s x, held');
+    clean(run({ rootW: 'hug', w: 160, sizing: 'HUG', main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -160, w: 160 } }), 'a main that hugs, placed hugging: not resized');
+    const fill = run({ rootW: 'fill', w: 80, main: { c: 'scale', x: -160, w: 160 }, drawn: { c: 'scale', x: -80, w: 80 } });
+    assert.ok(fill.rows.length === 0 && fill.skipped > 0, 'a main that fills: its size unknown, skipped, counted');
+    // a turned layer's place is its turned box's, which the constraints move about its own axes: not predicted, skipped
+    const turned = (() => { const set = structuredClone(setNode); for (const v of set.children) { const x = anim(v, 80, 'FIXED', { c: 'scale', x: -80, w: 80 }); x.children[0].relativeTransform = [[0, 1, -80], [-1, 0, 16]]; v.children.push(x); }
+      const c = contract(); c.anatomy.anim = { kind: 'instance', parent: 'root', order: 1, component: 'Anim', key: 'k-anim', width: 80, height: 16 }; c.anatomy['anim/bar'] = { kind: 'graphic', parent: 'anim', order: 0, shape: 'rectangle' };
+      const M = mainOf(160, { c: 'scale', x: -160, w: 160 }); M.anatomy.bar.rotation = 90; M.anatomy.bar.absolute.y = 16;
+      return compareContract('chip', set, c, { ...ctx, components: { ...ctx.components, 'C:5': { key: 'k-anim', name: 'Anim' } }, mains: (key) => (key === 'k-anim' ? M : null) }); })();
+    assert.ok(!turned.rows.some((x) => x.path === "anim/bar" && /absolute/.test(x.kind)) && turned.skipped["absolute: the main's, moved by its constraints in a resized instance"] > 0, 'a turned layer: skipped, counted');
   }
   // the walk keeps an instance's first eight overrides, then a style's alone is left out: REST's list is cut the same way
   {
