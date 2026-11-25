@@ -263,12 +263,14 @@ export function roomTaken(e, room) {
 export function readCleared(anatomy, mains) {
   const { atProps } = req('./derive.cjs');
   for (const e of Object.values(anatomy)) {
-    if (!e || !e.strokeless) continue;
-    delete e.strokeless;
+    if (!e || (!e.strokeless && !e.fillless)) continue;
+    const stroke = !!e.strokeless, fill = !!e.fillless;
+    delete e.strokeless; delete e.fillless;
     const m = e.kind === 'instance' && e.component && mains(e.component, e.key), R = m && atProps(m, e.with || {}).root;
-    if (R && R.border && typeof R.border === 'object' && R.border.color != null && e.border === undefined) e.border = CLEARED;
-    // (and no fill where its root has one: cleared too, as to-code writes a contract's background none)
-    if (R && typeof R.background === 'string' && R.background !== CLEARED && e.background === undefined) e.background = CLEARED;
+    if (stroke && R && R.border && typeof R.border === 'object' && R.border.color != null && e.border === undefined) e.border = CLEARED;
+    // (and a fill the page paints clear, `fillless`, where its root has one: cleared too, as to-code writes a contract's
+    // background none; never a fill merely left unread)
+    if (fill && R && typeof R.background === 'string' && R.background !== CLEARED && e.background === undefined) e.background = CLEARED;
   }
   return anatomy;
 }
@@ -2181,7 +2183,7 @@ async function main() {
             // its own styling over its component's root (a toggle's fill on its toggle item), folded back where it is that root's
             // (ownStyling); drawn over its parent where it paints, as a box is
             // (no arc, focus ring or outline: those are its component's drawing, or the ring rule's, never an override read here)
-            { const ie = out[out.length - 1]; boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
+            { const ie = out[out.length - 1]; boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(n); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; } delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
             // the layers the mapping names inside it, where the mapping names it too, at any depth of placing (opensPlaced; an
             // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
             // (each at its place among the component's own drawn children, which this reading does not all read)

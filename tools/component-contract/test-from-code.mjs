@@ -842,8 +842,14 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('a placed component drawing no stroke its component draws reads as the stroke cleared; nothing else does, and the mark is gone',
     a.b.border === 'none' && a.p.border === undefined && a.s.border.color === 'x' && !Object.values(a).some((x) => 'strokeless' in x));
   const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
-  ok('…its stroke read as drawn, before its outline is left to its component', src.includes("boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; delete ie.arc;")
+  ok('…its stroke read as drawn, before its outline is left to its component', src.includes("boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true;")
     && src.includes('readCleared(anatomy, mainOf); normalForm(anatomy); colourKept('));
+  // its fill likewise, only where the page paints it clear (fillless): a fill merely unread says nothing
+  const F = { component: 'Card', props: {}, anatomy: { root: { kind: 'container', background: 'Bg/card' } }, variants: [] };
+  const f = readCleared({ root: { kind: 'container' }, c: { kind: 'instance', component: 'Card', fillless: true }, u: { kind: 'instance', component: 'Card', strokeless: true }, k: { kind: 'instance', component: 'Card', fillless: true, background: 'Bg/other' } }, (n) => (n === 'Card' ? F : null));
+  ok('a placed component painting clear where its component has a fill reads as the fill cleared; one unread, or painted, says nothing',
+    f.c.background === 'none' && f.u.background === undefined && f.k.background === 'Bg/other' && !Object.values(f).some((x) => 'fillless' in x)
+    && src.includes("if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true;"));
 }
 { const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
   ok('the reading declares its layered set once', (src.match(/\b(const|let|var)\s+layered\b/g) || []).length === 1); }
