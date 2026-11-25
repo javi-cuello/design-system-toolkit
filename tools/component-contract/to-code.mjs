@@ -1114,6 +1114,9 @@ export function selfCheck(c, rules, mains, t = HOUSE) {
 // which keeps its size there: a text alone in it does not count, a limit named in the README)
 const pseudoSel = (p) => (!p || p === 'turn' ? '' : p === 'empty' ? ':not(:has(*))' : `::${p}`);
 /* A part's selector: the root, then each part on its way down, by child combinators (code-standard rule 5). */
+// (copyOf once per placed component and part: chain names every nested part through it, and a contract does not change)
+const COPIES = new WeakMap();
+const copyOfOnce = (m, k) => { if (!COPIES.has(m)) COPIES.set(m, new Map()); const got = COPIES.get(m); if (!got.has(k)) got.set(k, copyOf(m, k)); return got.get(k); };
 function chain(c, n, id, rootCond, given = null, library = {}) {
   const mains = given || (() => null);
   const [own, pseudo = ''] = id.split('::');
@@ -1148,7 +1151,7 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
       const next = rest.slice(0, -1).findIndex((s) => all[s] && all[s].kind === 'instance' && mains(all[s].component, all[s].key));
       const take = next >= 0 ? rest.slice(0, next + 1) : rest;
       // (a numbered copy of the placed component's, which shares its first's hook, counted among those: partSelector's)
-      const ownSeg = (k) => { const first = copyOf(hm, k), p = n2.part(partSeg(hm, first || k)); return first ? `${p}:nth-child(${Number(/_(\d+)$/.exec(k)[1])} of ${p})` : p; };
+      const ownSeg = (k) => { const first = /_\d+$/.test(k) && copyOfOnce(hm, k), p = n2.part(partSeg(hm, first || k)); return first ? `${p}:nth-child(${Number(/_(\d+)$/.exec(k)[1])} of ${p})` : p; };
       inner.push(...take.map((s, i) => ownSeg(own(s)) + (i === next ? through(n, all[s].component, heldIn(hm, own(s), mains)) : '')));
       rest = rest.slice(take.length);
       if (rest.length) { h = take[take.length - 1]; hm = mains(all[h].component, all[h].key); }
