@@ -254,7 +254,7 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     for (const cx of [{ ...remote, own: new Set(['Icon']) }, { ...ctx, icons: new Set(['Icon']), own: new Set(['Icon']) }])
       assert.ok(compareContract('chip', set, c, cx).rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'the project\'s own component: not another library\'s');
     // a layer inside another library's component that an instance shows: the host's to say
-    const shown = structuredClone(set); for (const v of shown.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.overrides = [{ id: v.id + 'g', overriddenFields: ['visible'] }, { id: i.id, overriddenFields: ['fills'] }]; }
+    const shown = structuredClone(set); for (const v of shown.children) { const i = v.children.find((x) => x.type === 'INSTANCE'); i.overrides = [{ id: v.id + 'g', overriddenFields: ['visible'] }]; }
     assert.ok(compareContract('chip', shown, c, remote).rows.some((x) => x.kind === 'contract:not stated' && /Glyph/.test(x.path)), 'a visibility override stays a row');
     // another library's instance nested in a main with a contract that does not name it: its presence is that main's gap
     {
@@ -265,6 +265,9 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
       const c5 = structuredClone(c); c5.anatomy.icon = { ...c5.anatomy.icon, component: 'Box', key: 'k-box3' };
       const r5 = compareContract('chip', nest, c5, cx);
       assert.ok(r5.rows.some((x) => /Remote$/.test(x.path) && ['contract:part', 'contract:not stated'].includes(x.kind)), 'the nested instance itself is a row, not skipped');
+      // named as a host part with its width unsaid: its place is a row, never skipped as its library's
+      const c6 = structuredClone(c5); c6.anatomy['icon/remote'] = { kind: 'instance', parent: 'icon', order: 0, component: 'Far', key: 'k-far', name: 'Remote' };
+      assert.ok(compareContract('chip', nest, c6, cx).rows.some((x) => x.kind === 'contract:not stated' && x.path === 'icon/remote.width'), 'a nested instance\'s own width, unsaid: a row');
     }
     // a main with no contract that is neither: still "not stated"
     assert.ok(compareContract('chip', set, c, { ...ctx, icons: new Set(['Other']) }).rows.some((x) => x.kind === 'contract:not stated'));

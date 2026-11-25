@@ -697,7 +697,14 @@ function untaken(variant, taken) {
     for (const c of (n.children || []).filter((x) => x.visible !== false)) {
       const p = at ? `${at} > ${c.name}` : c.name;
       if (open && !taken.has(c)) out.push({ path: p, node: c });
-      walk(c, p, open && (c.type !== 'INSTANCE' || overridesOf(c).length > 0));
+      const opens = c.type !== 'INSTANCE' || overridesOf(c).length > 0;
+      walk(c, p, open && opens);
+      // (an instance the walk leaves shut whose only overrides show layers: those layers, which its host says)
+      if (open && !opens) {
+        const shown = new Set((c.overrides || []).filter((o) => (o.overriddenFields || []).includes('visible')).map((o) => o.id));
+        const find = (m, q) => { for (const d of (m.children || []).filter((x) => x.visible !== false)) { const dp = `${q} > ${d.name}`; if (shown.has(d.id) && !taken.has(d)) out.push({ path: dp, node: d }); find(d, dp); } };
+        if (shown.size) find(c, p);
+      }
     }
   };
   walk(variant, '', true);
@@ -1165,7 +1172,8 @@ async function main(argv) {
     try { index = JSON.parse(fs.readFileSync(w.paths.index, 'utf8')).components || {}; } catch { /* every folder under its spec's own file below */ }
     let changes = [];
     try { changes = JSON.parse(fs.readFileSync(w.paths.changes, 'utf8')); } catch { /* no snapshot time: the file as it is */ }
-    const folders = fs.readdirSync(w.paths.components).filter((f) => fs.existsSync(path.join(w.paths.components, f, 'figma.json')) && (!opt.only.length || opt.only.includes(f)));
+    const specs = fs.readdirSync(w.paths.components).filter((f) => fs.existsSync(path.join(w.paths.components, f, 'figma.json')));
+    const folders = specs.filter((f) => !opt.only.length || opt.only.includes(f));
     const keys = projects.libraryRoles(w.doc).components;
     let meta = null;
     try { meta = JSON.parse(fs.readFileSync(w.paths.tokens, 'utf8'))._meta; } catch { /* no pin recorded */ }
@@ -1177,10 +1185,11 @@ async function main(argv) {
     const mains = (key) => byKey[key] || null;
     // the components this project stores, by name (its index's, else each spec's): never another library's or an icon
     const own = new Set(Object.values(index).map((x) => x && x.name).filter(Boolean));
+    // (every stored spec's name, the components not asked for among them)
+    for (const f of specs) try { const n = JSON.parse(fs.readFileSync(path.join(w.paths.components, f, 'figma.json'), 'utf8')).name; if (n) own.add(n); } catch { /* unreadable: the index's name */ }
     const byFile = {};
     for (const f of folders) {
       const stored = JSON.parse(fs.readFileSync(path.join(w.paths.components, f, 'figma.json'), 'utf8'));
-      if (stored.name) own.add(stored.name);
       const file = (index[f] || {}).file || keys[0];
       (byFile[file] || (byFile[file] = [])).push({ folder: f, stored, id: stored.id, count: 1 + (stored.variants || []).length });
     }
