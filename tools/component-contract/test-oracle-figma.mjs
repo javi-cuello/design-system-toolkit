@@ -463,11 +463,16 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     assert.ok(!tr.rows.some((x) => x.path === 'tag/name.letterSpacing'), 'a styled text\'s spacing is not unstated ' + JSON.stringify(tr.rows.filter((x) => /letter/.test(x.path))));
     // inside another library's component: its styled text's decoration is that library's to say, unless the instance
     // overrides it here, when it stays a row (derive never states it, so the row is the override's only signal)
-    const remote = (ov) => { const s2 = structuredClone(tagged); for (const v of s2.children) { const g = v.children.find((c) => c.name === 'Tag'); g.children[0].style.textDecoration = 'UNDERLINE'; if (ov) g.overrides = [{ id: g.children[0].id, overriddenFields: ['textDecoration'] }]; } return s2; };
+    const remote = (ov, fields = ['textDecoration']) => { const s2 = structuredClone(tagged); for (const v of s2.children) { const g = v.children.find((c) => c.name === 'Tag'); g.children[0].style.textDecoration = 'UNDERLINE'; if (ov) g.overrides = [{ id: g.children[0].id, overriddenFields: fields }]; } return s2; };
     const rcx = { ...ctx, components: { ...ctx.components, 'C:7': { key: 'k-tag', name: 'Tag', remote: true } }, mains: () => null };
     const deco = (ov) => compareContract('chip', remote(ov), tc, rcx).rows.filter((x) => x.path === 'tag/name.textDecoration');
     assert.equal(deco(false).length, 0, 'not overridden: left to its library');
     assert.ok(deco(true).length > 0, 'overridden here: a row');
+    // an override that touches none of them (its fill's variable swapped) leaves the style's spacing, case and decoration silent
+    const fillOnly = compareContract('chip', remote(true, ['fills', 'boundVariables']), tc, rcx).rows.filter((x) => /^tag\/name\.(textDecoration|textCase|letterSpacing)$/.test(x.path));
+    assert.deepEqual(fillOnly, [], 'a fill override raises no text-field row');
+    // nor does a style swapped, whose new style brings its own (REST lists them beside inheritTextStyleId)
+    assert.equal(compareContract('chip', remote(true, ['inheritTextStyleId', 'textDecoration', 'letterSpacing']), tc, rcx).rows.filter((x) => /^tag\/name\.(textDecoration|letterSpacing)$/.test(x.path)).length, 0, 'a style swap raises no text-field row');
   }
   // an instance whose fill the host overrides (its own paint, the style detached) keeps none of its main's fill style
   {

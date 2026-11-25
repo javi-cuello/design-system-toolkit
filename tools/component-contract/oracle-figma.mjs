@@ -888,7 +888,10 @@ export function compareContract(component, setNode, contract, ctx) {
     // that no contract field maps to keeps every field a row) or it is the placed instance's own place
     const aside = (vname, id, a, b, away) => {
       const unknown = [...away.overridden].some((f) => !OVERRIDE_KNOWN.has(f) && !OVERRIDE_IGNORED.has(f));
-      const held = (k) => unknown || !(k in OVERRIDDEN_AS) || OVERRIDDEN_AS[k].some((f) => away.overridden.has(f)) || (away.self && PLACE.includes(k));
+      // (a styled text's spacing, case and decoration listed beside its style swapped, inheritTextStyleId, come with the
+      // new style, which the part's typography names: REST lists them with a swap: 64 of the 66 overrides naming them on one field's placeholder)
+      const withStyle = (k) => ['letterSpacing', 'textCase', 'textDecoration'].includes(k) && away.overridden.has('inheritTextStyleId') && typeof a.typography === 'string' && typeof b.typography === 'string';
+      const held = (k) => !withStyle(k) && (unknown || !(k in OVERRIDDEN_AS) || OVERRIDDEN_AS[k].some((f) => away.overridden.has(f)) || (away.self && PLACE.includes(k)));
       // (a styled text's field an instance overrides here stays a row though fields() would skip it as its style's: derive
       // never states a styled text's decoration, so that row is the override's only signal)
       for (const k of Object.keys(a)) {
@@ -1099,6 +1102,9 @@ const OWN = ['kind', 'component', 'key', 'with', 'swappedBy'];
 const PLACE = ['width', 'height', 'absolute', 'position', 'constraints', 'flip', 'rotation'];
 // the overridden fields REST lists, by the contract field each one sets; a contract field not listed here, or an
 // overridden field none maps, keeps the row
+// (a styled text's spacing, case and decoration each by its own name only, as REST lists one overridden: letterSpacing and
+// textCase appear by name in the stored REST files, never as a style field; a style swapped, inheritTextStyleId, is the
+// typography's, which names the style)
 const TEXT_OVERRIDES = ['fontSize', 'fontFamily', 'fontPostScriptName', 'fontWeight', 'italic', 'letterSpacing', 'lineHeightPx', 'lineHeightPercent', 'lineHeightPercentFontSize', 'lineHeightUnit', 'textCase', 'textDecoration', 'inheritTextStyleId', 'openTypeFlags', 'paragraphSpacing', 'listSpacing', 'textAlignHorizontal', 'textAlignVertical', 'textAutoResize', 'characterStyleOverrides', 'styleOverrideTable', 'lineIndentations', 'lineTypes', 'hangingPunctuation', 'maxLines', 'boundVariables'];
 const LAYOUT_OVERRIDES = ['itemSpacing', 'counterAxisSpacing', 'paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom', 'counterAxisAlignItems', 'primaryAxisAlignItems', 'counterAxisSizingMode', 'primaryAxisSizingMode', 'layoutGrow', 'layoutAlign', 'layoutPositioning', 'itemReverseZIndex', 'strokesIncludedInLayout', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'targetAspectRatio', 'layoutGrids', 'grid', 'boundVariables'];
 const STROKE_OVERRIDES = ['strokes', 'strokeWeight', 'strokeAlign', 'individualStrokeWeights', 'strokeDashes', 'strokeJoin', 'strokeCap', 'strokeMiterAngle', 'inheritStrokeStyleId', 'boundVariables'];
@@ -1109,7 +1115,7 @@ const OVERRIDDEN_AS = {
   shadow: ['effects', 'inheritEffectStyleId', 'boundVariables'], radius: RADIUS_OVERRIDES, smoothing: RADIUS_OVERRIDES,
   width: ['width', ...LAYOUT_OVERRIDES], height: ['height', ...LAYOUT_OVERRIDES], minWidth: LAYOUT_OVERRIDES, maxWidth: LAYOUT_OVERRIDES, minHeight: LAYOUT_OVERRIDES, maxHeight: LAYOUT_OVERRIDES,
   layout: LAYOUT_OVERRIDES, position: LAYOUT_OVERRIDES, overflow: ['clipsContent'], constraints: ['constraints'], absolute: ['width', 'height', 'constraints', ...LAYOUT_OVERRIDES],
-  content: ['characters', 'text'], typography: TEXT_OVERRIDES, letterSpacing: TEXT_OVERRIDES, textCase: TEXT_OVERRIDES, textDecoration: TEXT_OVERRIDES, autoResize: TEXT_OVERRIDES, verticalAlign: TEXT_OVERRIDES, textAlign: TEXT_OVERRIDES,
+  content: ['characters', 'text'], typography: TEXT_OVERRIDES, letterSpacing: ['letterSpacing'], textCase: ['textCase'], textDecoration: ['textDecoration'], autoResize: TEXT_OVERRIDES, verticalAlign: TEXT_OVERRIDES, textAlign: TEXT_OVERRIDES,
 };
 const OVERRIDE_KNOWN = new Set(Object.values(OVERRIDDEN_AS).flat());
 // overridden fields that set nothing the contract compares on the layer: its name and visibility are the walk's, the rest no contract holds
