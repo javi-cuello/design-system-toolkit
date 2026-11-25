@@ -276,6 +276,19 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const rows = compareContract('chip', set, c, cx).rows.filter((x) => x.path === 'ring');
     assert.deepEqual(rows, [], 'neither the main\'s hug nor its empty minimum is held to the placed ring');
   }
+  // an instance whose fill the host overrides (its own paint, the style detached) keeps none of its main's fill style
+  {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    const box = (v) => ({ id: v.id + 'b', name: 'Box', type: 'INSTANCE', componentId: 'C:6', size: { x: 10, y: 10 }, relativeTransform: T(40, 8), layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED', fills: [{ type: 'SOLID', color: red }], children: [] });
+    const set = structuredClone(setNode); for (const v of set.children) v.children.push(box(v));
+    const c = contract(); c.anatomy.box = { kind: 'instance', parent: 'root', order: 1, component: 'Box', key: 'k-box', width: 10, height: 10, background: '#ff0000' };
+    const main = { contract: 1, component: 'Box', figma: { name: 'Box', key: 'k-box' }, props: {}, anatomy: { root: { kind: 'container', width: 10, height: 10, background: 'rgb(0 0 0 / 0)', fillStyle: 'Clear/Clear' } }, variants: [] };
+    const cx = { ...ctx, components: { ...ctx.components, 'C:6': { key: 'k-box', name: 'Box' } }, mains: (key) => (key === 'k-box' ? main : null) };
+    assert.deepEqual(compareContract('chip', set, c, cx).rows.filter((x) => x.path === 'box'), [], 'the host\'s paint is the whole fill');
+    // and one the host leaves its main's fill keeps the main's style, held
+    const c2 = contract(); c2.anatomy.box = { ...c.anatomy.box }; delete c2.anatomy.box.background;
+    assert.ok(compareContract('chip', set, c2, cx).rows.some((x) => x.path === 'box' && x.kind === 'contract:fillStyle'), 'the main\'s style, where Figma has none, a row');
+  }
   // the counts: a component nothing was checked on is not checked, never a match
   const R = (checked, rows = [], skipped = {}) => ({ rows, checked, skipped });
   const rep = report('lib', [

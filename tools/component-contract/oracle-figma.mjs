@@ -803,7 +803,11 @@ export function compareContract(component, setNode, contract, ctx) {
       if (n.type === 'INSTANCE' || inInstance(n)) {
         const { said, whole, unspelt } = mainSays(n);
         if (unspelt) for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k)) { delete a[k]; t.skip(SPELL); }
-        if (said) { b = { ...said, ...b }; for (const k of OWN) if (k in said && !(k in part)) delete b[k]; }
+        if (said) {
+          b = { ...said, ...b }; for (const k of OWN) if (k in said && !(k in part)) delete b[k];
+          // a paint the host states is the whole fill: its main's fill style goes with the main's paint (Figma detaches it)
+          if (('background' in part || 'color' in part) && !('fillStyle' in part)) delete b.fillStyle;
+        }
         if (!whole) unstated(v.name, id, a, b);
       }
       fields(v.name, id, n, a, b, part);
