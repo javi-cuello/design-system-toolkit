@@ -28,7 +28,8 @@ Other ways in, each explained in [REFERENCE.md](REFERENCE.md):
 node tools/snapshot/unpack.mjs <file>.json <out-dir>          # a file the plugin saved with no router running
 node tools/snapshot/unpack.mjs --zip <out.zip>                # package the unpacker to run on its own
 node tools/snapshot/mcp.mjs script                            # snapshot through the Figma MCP, with no Figma app open
-node tools/snapshot/mcp.mjs collect <project> <holder id> [--file <key>] [--repo <dir>] [--save <file>]
+node tools/snapshot/mcp.mjs parts [<plan.json>]               # a large library: the plan, then the calls it sizes
+node tools/snapshot/mcp.mjs collect <project> <holder id>… [--file <key>] [--repo <dir>] [--save <file>]
 node tools/snapshot/mcp.mjs cleanup
 node tools/snapshot/deliver.cjs <project> library <payload.json>   # re-run a failed write from its kept payload
 node tools/snapshot/deliver.cjs <project> --pin                    # re-read the release stamps

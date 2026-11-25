@@ -3,7 +3,9 @@
  * A library snapshot taken through the official Figma MCP (`use_figma`), with no Figma app open.
  *
  *   node mcp.mjs script                          # the code an agent passes to use_figma, on stdout
- *   node mcp.mjs collect <project> <holder id>   # read what that run left, and deliver it (deliver.cjs)
+ *   node mcp.mjs parts                           # a large library: the read-only code that plans its parts
+ *   node mcp.mjs parts <plan.json>               #   the calls to make, given what the plan returned, as JSON
+ *   node mcp.mjs collect <project> <holder id>…  # read what the run (or every call of the parts) left, and deliver it
  *       [--file <key>]                           #   the library file it ran in, when the project routes several
  *       [--repo <dir>]                           #   into a copy of the project's repo instead: the equality proof
  *       [--save <file>]                          #   and keep the payload as a file
@@ -56,12 +58,10 @@ export function stripped(source) {
   return out.join('\n').replace(/\/\*\* @[^*]*\*\/ ?/g, '');
 }
 
-/* After the plugin's file: collect as its own run does, then leave the payload as ASCII (so a character is a byte)
-   in entries of CHUNK, PER_NODE to a frame, under one holder that says how many there are. */
-const EPILOGUE = `
-figma.skipInvisibleInstanceChildren = true;
-const __t0 = Date.now();
-const __payload = await collectLibrary(true);
+/* The payload, left as ASCII (so a character is a byte) in entries of CHUNK, PER_NODE to a frame, under one holder
+   that says how many there are. `expr` is the payload's expression; `extra` adds to what the call returns. */
+const written = (expr, extra = '') => `
+const __payload = ${expr};
 const __text = JSON.stringify(__payload).replace(/[^ -~]/g, (c) => String.fromCharCode(92) + 'u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 const __holder = figma.createFrame();
 __holder.name = 'Snapshot payload';
@@ -72,20 +72,28 @@ for (let i = 0; i < __text.length; i += ${CHUNK}) {
   __box.setSharedPluginData('${NS}', 'c' + __n++, __text.slice(i, i + ${CHUNK}));
 }
 __holder.setSharedPluginData('${NS}', 'n', String(__n));
-return { holder: __holder.id, chunks: __n, bytes: __text.length, components: __payload.components.length, seconds: Math.round((Date.now() - __t0) / 1000) };
+return { holder: __holder.id, chunks: __n, bytes: __text.length${extra}, seconds: Math.round((Date.now() - __t0) / 1000) };
 `;
+
+/* After the plugin's file: collect as its own run does, then leave the payload. */
+const EPILOGUE = `
+figma.skipInvisibleInstanceChildren = true;
+const __t0 = Date.now();${written('await collectLibrary(true)', ', components: __payload.components.length')}`;
 
 /* Where the plugin's window and headless entry begin: dead code here (HEADLESS is true and the epilogue calls
    collectLibrary), cut so the run stays under the cap. The plugin's own comment marks it. */
 export const CUT = '// ---- the window and the headless entry:';
-export function script() {
+const plugin = () => {
   const source = fs.readFileSync(PLUGIN, 'utf8');
   if (!source.includes(CUT)) throw new Error(`the snapshot plugin no longer marks where its window code starts ("${CUT}")`);
-  const body = stripped(source.slice(0, source.indexOf(CUT))).replace(/^const HEADLESS = .*$/m, 'const HEADLESS = true;');
-  const code = body + '\n' + EPILOGUE;
-  if (code.length > CAP) throw new Error(`the snapshot code is ${code.length} characters, over use_figma's ${CAP}`);
+  return source.slice(0, source.indexOf(CUT));
+};
+const headless = (source) => stripped(source).replace(/^const HEADLESS = .*$/m, 'const HEADLESS = true;');
+const capped = (code, what) => {
+  if (code.length > CAP) throw new Error(`the ${what} is ${code.length} characters, over use_figma's ${CAP}`);
   return code;
-}
+};
+export function script() { return capped(headless(plugin()) + '\n' + EPILOGUE, 'snapshot code'); }
 
 // The plugin's own name for its temporary page, read from it, so a rename reaches the cleanup too.
 const SCRATCH = /^const SCRATCH = '([^']+)';$/m.exec(fs.readFileSync(PLUGIN, 'utf8'))[1];
@@ -96,6 +104,154 @@ if (figma.currentPage === p) await figma.setCurrentPageAsync(figma.root.children
 const id = p.id;
 p.remove();
 return { removedNodeIds: [id] };`;
+
+/* ---- A large library, in parts. One run outlasts use_figma's time limit on a large library (64 pages, 2026-11-25:
+   a generic Figma error), while parts of up to about 2 000 variant walks each took 17–132 s. So: a read-only plan;
+   a tokens call; a store call that keeps the walk on the temporary page as a function and runs the first part; and
+   part calls of a few lines that run what is stored. Each leaves a holder, and collect joins them. */
+export const LIMIT = 1500;
+
+/* A top-level declaration of the plugin, from the line that opens it at column 0 to the line that closes it there
+   (a `{` block to its `}`, anything else to the first line that ends with `;`). */
+function span(lines, name) {
+  const start = lines.findIndex((l) => l.startsWith(`async function ${name}(`) || l.startsWith(`function ${name}(`) || l.startsWith(`const ${name} = `));
+  if (start < 0) throw new Error(`the snapshot plugin no longer declares ${name} at the top level`);
+  const end = lines[start].endsWith('{') ? lines.findIndex((l, i) => i > start && l.startsWith('}')) : lines.findIndex((l, i) => i >= start && l.endsWith(';'));
+  return [start, end];
+}
+export const picked = (source, names) => { const lines = source.split('\n'); return names.map((n) => { const [a, b] = span(lines, n); return lines.slice(a, b + 1).join('\n'); }).join('\n'); };
+/* The plugin without what a run with no icons never reaches: the declarations named, and every `if (withIcons) {`
+   block (the previews and their dark renders), cut to its closing brace at the same indent. */
+export function cut(source, names) {
+  let lines = source.split('\n');
+  for (const n of names) { const [a, b] = span(lines, n); lines.splice(a, b - a + 1); }
+  for (let a; (a = lines.findIndex((l) => /^\s+if \(withIcons\) \{$/.test(l))) >= 0;) {
+    const indent = lines[a].match(/^\s+/)[0];
+    const b = lines.findIndex((l, i) => i > a && l === `${indent}}`);
+    if (b < 0) throw new Error('an `if (withIcons) {` block of the snapshot plugin does not close at its own indent');
+    lines.splice(a, b - a + 1);
+  }
+  return lines.join('\n');
+}
+// never reached by the tokens call or a part; the parts also never read the tokens
+const UNUSED = ['collectLibrary', 'collectScreens', 'iconFacts', 'glyphFill', 'anatomyOf'];
+export const DEAD = { tokens: UNUSED, parts: [...UNUSED, 'collectTokens'] };
+
+/* The sets the walk takes, page by page in the file's order, each page by its index: collectComponents' own pages
+   (no icon page, no scratch page) and its own componentSets. One expression for the plan, the tokens call (which
+   says what collect must find) and each part (which says what it walked). */
+const PLANNED = `figma.root.children.map((p, index) => ({ p, index })).filter(({ p }) => !isIconPage(p) && !isScratchPage(p)).map(({ p, index }) => ({ index, name: p.name, sets: componentSets(p) }))`;
+
+/* The plan: read-only, per page each set's id and its walks, variants × (1 + booleans), which is what a part costs. */
+export function planCode() {
+  return capped(`${stripped(picked(plugin(), ['isIconPage', 'isScratchPage', 'componentSets']))}
+for (const p of figma.root.children) await p.loadAsync();
+const walks = (s) => { let b = 0; try { b = Object.values(s.componentPropertyDefinitions).filter((d) => d.type === 'BOOLEAN').length; } catch (e) { b = 0; } return (s.type === 'COMPONENT_SET' ? s.children.length : 1) * (1 + b); };
+return ${PLANNED}.filter((pg) => pg.sets.length).map((pg) => ({ index: pg.index, name: pg.name, sets: pg.sets.map((s) => ({ id: s.id, walks: walks(s) })) }));`, 'plan code');
+}
+
+/* Parts of at most `limit` walks, the plan's order kept; a set over the limit goes alone. A part names its pages,
+   and its sets only where it takes part of a page (null: its pages whole). */
+export function sized(plan, limit = LIMIT) {
+  const parts = [];
+  let cur = null;
+  for (const pg of plan) for (const s of pg.sets) {
+    if (!cur || (cur.walks + s.walks > limit && cur.sets.length)) parts.push(cur = { walks: 0, sets: [], pages: [] });
+    cur.walks += s.walks;
+    cur.sets.push(s.id);
+    if (!cur.pages.includes(pg.index)) cur.pages.push(pg.index);
+  }
+  return parts.map((p) => {
+    const whole = p.pages.every((i) => plan.find((pg) => pg.index === i).sets.every((s) => p.sets.includes(s.id)));
+    return { pages: p.pages, scope: whole ? null : p.sets, walks: p.walks };
+  });
+}
+
+const TOKENS = `
+{
+figma.skipInvisibleInstanceChildren = true;
+const __t0 = Date.now();
+await loadPages(true);
+const tokens = await collectTokens();
+%ICONS%
+${written(`{ tokens, unanswered, sets: ${PLANNED}.flatMap((pg) => pg.sets.map((s) => s.id)), iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, ...(Object.keys(iconGroups).length && { iconGroups }), ...(Object.keys(iconDescriptions).length && { iconDescriptions }) }`, ', sets: __payload.sets.length')}}`;
+const PART = `
+figma.skipInvisibleInstanceChildren = true;
+const __t0 = Date.now();
+await loadPages(true);
+const __names = new Set(__PAGES.map((i) => figma.root.children[i].name));
+const __scope = __SCOPE ? new Set(__SCOPE) : null;
+const __components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], pages: { test: (n) => __names.has(n) }, scope: __scope });
+const __sets = ${PLANNED}.filter((pg) => __names.has(pg.name)).flatMap((pg) => pg.sets.filter((s) => !__scope || __scope.has(s.id)).map((s) => s.id));
+${written('{ components: __components, sets: __sets, unrecorded: [...new Set(unrecordedSeen)], unreadable, unanswered }', ', components: __components.length')}`;
+
+/* The tokens call: the plugin's collectTokens, the icon names by collectLibrary's own expressions, and the sets the
+   parts must cover. */
+export function tokensCode() {
+  const source = plugin();
+  const lines = source.split('\n');
+  const [a, b] = span(lines, 'collectLibrary');
+  const own = lines.slice(a, b + 1);
+  const icons = ['iconPage', 'iconSets', 'groupOf', 'iconGroups', 'iconDescriptions'].map((n) => {
+    const line = own.find((l) => l.startsWith(`  const ${n} = `));
+    if (!line) throw new Error(`collectLibrary no longer reads ${n} on one line`);
+    return line.trim();
+  });
+  return capped(headless(cut(source, DEAD.tokens)) + '\n' + TOKENS.replace('%ICONS%', icons.join('\n')), 'tokens call');
+}
+
+const args = (part) => `${JSON.stringify(part.pages)}, ${JSON.stringify(part.scope)}`;
+/* The store call: the walk as one function, kept as shared plugin data on the temporary page, and its first part. */
+export function storeCode(first) {
+  const fn = `async function __snap(__PAGES, __SCOPE) {\n${headless(cut(plugin(), DEAD.parts))}\n${PART}}`;
+  return capped(`${fn}
+const __page = figma.root.children.find((p) => p.name === ${JSON.stringify(SCRATCH)}) || Object.assign(figma.createPage(), { name: ${JSON.stringify(SCRATCH)} });
+__page.setSharedPluginData('${NS}', 'code', __snap.toString());
+return await __snap(${args(first)});`, 'store call');
+}
+export const partCode = (part) => capped(`const __page = figma.root.children.find((p) => p.name === ${JSON.stringify(SCRATCH)});
+const __src = __page ? __page.getSharedPluginData('${NS}', 'code') : '';
+if (!__src) throw new Error('no stored walk on the temporary page: make the store call first');
+return await (new Function('return ' + __src)())(${args(part)});`, 'part call');
+
+/* Every call to make, in order, given what the plan returned. */
+export function calls(plan) {
+  const parts = sized(plan);
+  if (!parts.length) throw new Error('the plan holds no component set');
+  const say = (p, i) => `part ${i + 1} of ${parts.length}: ${p.walks} walks on page${p.pages.length > 1 ? 's' : ''} ${p.pages.join(', ')}`;
+  return [
+    { call: 'tokens', code: tokensCode() },
+    { call: `${say(parts[0], 0)}, storing the walk`, code: storeCode(parts[0]) },
+    ...parts.slice(1).map((p, i) => ({ call: say(p, i + 1), code: partCode(p) })),
+  ];
+}
+
+/* The holders of one run in parts, joined into the payload one whole run gives (with no icon files, graphics or
+   previews: the parts name icons, as a run with icons off does). Refused unless the parts walked every set the
+   tokens call found, each once, in its order. */
+export function join(found) {
+  const heads = found.filter((p) => p.tokens);
+  if (heads.length !== 1) throw new Error(`${heads.length} of the holders hold the tokens: collect one tokens holder and every part's`);
+  const head = heads[0];
+  const at = new Map(head.sets.map((id, i) => [id, i]));
+  const parts = found.filter((p) => !p.tokens).sort((x, y) => (at.get(x.sets[0]) ?? Infinity) - (at.get(y.sets[0]) ?? Infinity));
+  const walked = parts.flatMap((p) => p.sets);
+  const seen = new Set(walked);
+  const list = (ids) => ids.slice(0, 5).join(', ') + (ids.length > 5 ? ` and ${ids.length - 5} more` : '');
+  const missing = head.sets.filter((id) => !seen.has(id));
+  if (missing.length) throw new Error(`no part walked ${missing.length} planned set${missing.length > 1 ? 's' : ''} (${list(missing)}): run those parts, then collect every holder`);
+  const twice = [...new Set(walked.filter((id, i) => walked.indexOf(id) !== i))];
+  if (twice.length) throw new Error(`${list(twice)} walked more than once: collect each part's holder once`);
+  const unplanned = walked.filter((id) => !at.has(id));
+  if (unplanned.length) throw new Error(`${list(unplanned)} walked but not in the file the tokens call read: run the plan and its calls again`);
+  if (walked.some((id, i) => at.get(id) !== i)) throw new Error('the parts do not follow the plan\'s order: make the calls `parts <plan.json>` gives');
+  const { tokens } = head;
+  tokens._meta.unrecorded = [...new Set(parts.flatMap((p) => p.unrecorded))].slice(0, 40);
+  const unanswered = parts.reduce((n, p) => n + p.unanswered, head.unanswered);
+  if (unanswered) tokens._meta.variablesUnanswered = unanswered;
+  const unreadable = parts.flatMap((p) => p.unreadable);
+  return { tokens, components: parts.flatMap((p) => p.components), icons: [], iconSets: head.iconSets, iconPage: head.iconPage, ...(head.iconGroups && { iconGroups: head.iconGroups }), ...(head.iconDescriptions && { iconDescriptions: head.iconDescriptions }), graphics: [], previews: [], ...(unreadable.length && { unreadable }) };
+}
 
 /* The payload from a holder as REST gives it: its count, and each entry wherever under it it sits. */
 export function joined(node) {
@@ -126,24 +282,32 @@ export function libraryKey(routed, chosen) {
   return { error: `routes ${keyed.length} library files: name the one the script ran in with --file <key> (${keyed.map((e) => `${e.key}${e.name ? ` ${e.name}` : ''}`).join(', ')})` };
 }
 
-export async function read(fileKey, id, token) {
+async function holder(fileKey, id, token) {
   const r = await fetch(`https://api.figma.com/v1/files/${fileKey}/nodes?ids=${encodeURIComponent(id)}&plugin_data=shared`, { headers: { 'X-Figma-Token': token }, signal: AbortSignal.timeout(120000) });
   if (!r.ok) throw new Error(`Figma answered ${r.status} reading ${id}: ${(await r.text()).slice(0, 200)}`);
   const answer = await r.json();
   const node = (answer.nodes || {})[id];
   if (!node || !node.document) throw new Error(`${id} is not in the file: run the script again`);
-  const payload = named(joined(node.document), answer.name);
+  return { payload: joined(node.document), name: answer.name };
+}
+
+/* One holder is a whole run's; several are the holders of a run in parts, joined. */
+export async function read(fileKey, ids, token) {
+  const found = [];
+  for (const id of [].concat(ids)) found.push(await holder(fileKey, id, token));
+  const payload = named(found.length === 1 ? found[0].payload : join(found.map((f) => f.payload)), found[0].name);
   // the file read is the one the payload names, whether or not the cloud gave the run its key
   if (payload.tokens && payload.tokens._meta) payload.tokens._meta.fileKey ||= fileKey;
   return payload;
 }
 
 async function main(argv) {
-  const [cmd, name, id] = argv;
   const flag = (f) => { const i = argv.indexOf(f); return i > 0 ? argv[i + 1] : null; };
+  const [cmd, name, ...ids] = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--')));
   if (cmd === 'script') return process.stdout.write(script());
   if (cmd === 'cleanup') return process.stdout.write(CLEANUP + '\n');
-  if (cmd !== 'collect' || !name || !id) { console.error('usage: mcp.mjs script | collect <project> <holder id> [--file <key>] [--repo <dir>] [--save <file>] | cleanup'); process.exit(2); }
+  if (cmd === 'parts') return process.stdout.write(name ? JSON.stringify(calls(JSON.parse(fs.readFileSync(name, 'utf8'))), null, 1) + '\n' : planCode() + '\n');
+  if (cmd !== 'collect' || !name || !ids.length) { console.error('usage: mcp.mjs script | parts [<plan.json>] | collect <project> <holder id>… [--file <key>] [--repo <dir>] [--save <file>] | cleanup'); process.exit(2); }
   const contract = require('./projects.cjs');
   const { deliver } = require('./deliver.cjs');
   const { tokenFor } = require('./version.cjs');
@@ -153,7 +317,7 @@ async function main(argv) {
   if (error) { console.error(`${name}: ${error}`); process.exit(2); }
   const token = tokenFor(project.repo, {});
   if (!token) { console.error('no Figma token: bin/set-key figma'); process.exit(2); }
-  const payload = await read(fileKey, id, token);
+  const payload = await read(fileKey, ids, token);
   if (flag('--save')) fs.writeFileSync(flag('--save'), JSON.stringify(payload));
   const r = await deliver(flag('--repo') ? { ...project, repo: path.resolve(flag('--repo')) } : project, 'library', payload);
   console.log(`${name}: ${r.result}${r.why ? ` — ${r.why}` : ''}`);

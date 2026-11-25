@@ -1,6 +1,6 @@
 # Snapshot standard — how a design file reaches a project's snapshot, and how readers find it
 
-**Version 2.27.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
+**Version 2.28.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
 
 Governs the chain from a Figma file to a project's stored snapshot: the
 **plugin** (`plugins/design-system-snapshot`), the **router**
@@ -506,7 +506,13 @@ so switching routes rewrites the image files once; and the cloud can list a
 collection's variables in another order, which moves a line in the stored
 tokens and nothing generated from them. A run outlasts the call's answer on a
 large library: the call can report the answer lost while the run completes,
-so the temporary page is looked for before a run is repeated. A project that
+so the temporary page is looked for before a run is repeated. A library too
+large for one call's time limit is taken in parts (`mcp.mjs parts`): a
+read-only plan, a tokens call, then parts of about 1,500 variant walks, the
+walk stored once on the temporary page and run by each part; `collect` joins
+the holders and refuses unless the parts walked every set the tokens call
+found, each once, in its order. The parts name icons and send no icon files,
+graphics or previews, as a run with icons off does. A project that
 routes several library files names the one the run was in (`collect --file
 <key>`); the first file is never assumed. Screens are not served.
 *Why:* a second payload builder drifts from the first without anyone noticing,
@@ -518,8 +524,10 @@ two escaped icon descriptions, the attribute order in 87 of 138 icons, one
 variable's place in its collection, and the pixels of 1192 images, none moved
 by more than 17. With the fixes, a second pair of runs wrote the same files
 but for the images, that variable's line and the timestamps (one project,
-30 Oct 2026).
-*Checked:* `tools/snapshot/test-mcp.mjs` "the payload reads back whole, across frames, its characters as they were"; `tools/snapshot/test-mcp.mjs` "the file's name is Figma's own, since use_figma calls every file Document"; `plugins/design-system-snapshot/tests/test-walk.mjs` "pages load one by one where loading them all is refused"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a style's line is measured from one-line text already drawn in it, never the run's own"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a description the cloud hands back escaped reads as typed"; `tools/snapshot/test-router.mjs` "an icon is stored with its attributes sorted, so the app and the cloud write the same file". `tools/snapshot/test-mcp.mjs` "with several, --file names the one read, never the first by default".
+30 Oct 2026). One whole run of a 64-page library failed with a generic Figma
+error, while parts of up to about 2,000 variant walks each took 17–132 s and
+all succeeded (one project, 25 Nov 2026).
+*Checked:* `tools/snapshot/test-mcp.mjs` "the parts, run in any order, join into what one whole walk gives, in its order, the icons named"; `tools/snapshot/test-mcp.mjs` "a part not collected is refused, its sets named"; `tools/snapshot/test-mcp.mjs` "the payload reads back whole, across frames, its characters as they were"; `tools/snapshot/test-mcp.mjs` "the file's name is Figma's own, since use_figma calls every file Document"; `plugins/design-system-snapshot/tests/test-walk.mjs` "pages load one by one where loading them all is refused"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a style's line is measured from one-line text already drawn in it, never the run's own"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a description the cloud hands back escaped reads as typed"; `tools/snapshot/test-router.mjs` "an icon is stored with its attributes sorted, so the app and the cloud write the same file". `tools/snapshot/test-mcp.mjs` "with several, --file names the one read, never the first by default".
 
 **27 · A scratch page is not the library.**
 A page named "Scratch" (after any marker, any case), alone or followed by a

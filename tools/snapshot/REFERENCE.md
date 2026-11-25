@@ -43,7 +43,9 @@ An agent with the official Figma MCP can take a library snapshot with no Figma
 app open (snapshot-standard rule 26):
 
     node tools/snapshot/mcp.mjs script            # the code to pass to use_figma as it is, on the library
-    node tools/snapshot/mcp.mjs collect <project> <holder id>   # the id that run returned; delivers through deliver.cjs
+    node tools/snapshot/mcp.mjs parts             # a large library: the read-only plan code, then
+    node tools/snapshot/mcp.mjs parts <plan.json> #   the calls to make, as JSON, given what the plan returned
+    node tools/snapshot/mcp.mjs collect <project> <holder id>…  # the id(s) the run returned; delivers through deliver.cjs
     node tools/snapshot/mcp.mjs cleanup           # the code that removes the temporary page; pass it to use_figma
 
 `script` is the plugin's own code.js, its whole-line comments dropped to fit
@@ -58,7 +60,18 @@ told which one the run was in with `--file <key>`; `--repo <dir>` delivers into 
 repo instead, and `--save <file>` keeps the payload. A run can outlast the
 tool's answer: when the call reports it lost, look for the temporary page
 before running it again. Libraries only; screens are not served.
-`test-mcp.mjs` holds the script to the cap and the read-back to its chunks.
+A large library outlasts one call's time limit (a 64-page one did, 2026-11-25),
+so `parts` takes it in parts. Pass the plan code to `use_figma` and save what it
+returns as a file: each set's id and its walks, variants × (1 + booleans).
+`parts <plan.json>` then lists the calls in order. The tokens call reads the
+variables, styles and icon names. The next call stores the walk on the
+temporary page and runs the first part; each later call runs what is stored.
+A part holds about 1,500 walks, and a set over that goes alone. Collect every
+holder the calls return, the tokens one included, in one `collect`. It refuses
+unless the parts walked every set the tokens call found, each once, in its
+order. The parts send no icon files, graphics or previews.
+`test-mcp.mjs` holds every call to the cap, the read-back to its chunks, and
+the parts, run on a stand-in file, to what one whole walk gives.
 
 ## As a login agent
 
