@@ -740,6 +740,11 @@ function asGlyphOf(e, x, reading) {
 const emptyless = (e) => { if (!e || !e.whileEmpty) return e; const r = { ...e }; for (const f of e.whileEmpty) delete r[f]; delete r.whileEmpty; return r; };
 function ownInsides(anatomy, mains, { partial = false, whole = new Set(), coloured = null, reading = false, found = null } = {}) {
   ownStyling(anatomy, mains);
+  // (a nested instance an outer instance's turn kept as drawing another style, stroke, fill or effect than that
+  // instance's component draws there: an inner instance's component drawing it alike does not make it that one's, as
+  // the outer component's word is said over the inner's (a host restoring a style its placed component cleared on a
+  // nested icon))
+  const stated = new Set();
   for (const id of Object.keys(anatomy)) {
     const e = anatomy[id];
     if (!e || e.kind !== 'instance' || !e.component) continue;
@@ -800,8 +805,42 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       for (const f of ['width', 'height']) if (!(f in p)) delete r[f];
       anatomy[k] = r;
     }
-    if (whole.has(id)) { inherit(); continue; }
-    if (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk))) { if (found) found.add(id); inherit(); continue; }
+    // a layer kept that draws no fill where its component's part has one has cleared it (an instance's override: its
+    // fills emptied, or at no opacity, which the walk does not record): said none, or a reader would take the part's
+    // unsaid fill as its component's (Carbon's read-only time picker's field background); in an instance kept whole too,
+    // whose every layer is kept, as walked (a field's background a read-only state empties)
+    // (Figma's reading only: one from code says a fill cleared only where it saw one painted clear, readCleared)
+    const sayCleared = (kept) => {
+      for (const k of kept) {
+        const e = anatomy[k], x = M[match[k.slice(id.length + 1)]];
+        if (!e || !x || e.kind !== 'instance' || x.kind !== 'instance') continue;
+        const m2 = e.component && mains(e.component, e.key), R = (m2 && atProps(m2, e.with).root) || {};
+        const drawn = (o, f) => (o[f] === CLEARED ? undefined : o[f] !== undefined ? o[f] : R[f] === CLEARED ? undefined : R[f]);
+        if (['fillStyle', 'border', 'background', 'shadow'].some((f) => sorted(drawn(e, f)) !== sorted(drawn(x, f)))) stated.add(k);
+      }
+      if (!reading) for (const k of kept) {
+        const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+        if (e && x && e.kind !== 'instance' && e.background === undefined && paintOf(x.background)) e.background = CLEARED;
+        // and a nested instance that draws no colour style where its component's part has one (its fills replaced, the
+        // style with them): its own component's root's style is what it draws where it says none, so only where that
+        // root has none either (the walk records an instance's own style wherever it has one)
+        if (e && x && e.kind === 'instance' && e.fillStyle === undefined && typeof x.fillStyle === 'string' && x.fillStyle !== CLEARED) {
+          const m2 = e.component && mains(e.component, e.key), R = m2 && atProps(m2, e.with).root;
+          if (!R || typeof R.fillStyle !== 'string' || R.fillStyle === CLEARED) e.fillStyle = CLEARED;
+        }
+      }
+      // a placed layer this component clears the style or stroke of (none) that draws its own component's again: its own
+      // styling, left out above as that component's, is said, or it would read as this one's none (a reading from code
+      // reads no colour style, so only Figma's)
+      if (!reading) for (const k of kept) {
+        const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+        const R = x && e && e.kind === 'instance' && e.component && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
+        if (R) for (const f of ['fillStyle', 'border', 'background', 'shadow']) if (x[f] === CLEARED && e[f] === undefined && R[f] !== undefined) e[f] = R[f];
+        if (R && x.radius === 0 && e.radius === undefined && cornered(R.radius)) e.radius = R.radius;
+      }
+    };
+    if (whole.has(id)) { sayCleared(inner); inherit(); continue; }
+    if (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk))) { if (found) found.add(id); sayCleared(inner); inherit(); continue; }
     const own = (k) => {
       // (a vector's paths are its component's: the walk records none inside an instance, snapshot 0.86.0, so a placed
       // layer is held to its part without them where it states none)
@@ -831,31 +870,16 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       const unstated = (m, by) => { const r = { ...m }; for (const f of ['absolute', 'constraints']) if (by[f] === undefined) delete r[f]; return r; };
       return reading && look(arcForm(sized(y))) === look(arcForm(unstated(sized(x), y)));
     };
-    const kept = new Set(inner.filter((k) => !own(k)));
+    const kept = new Set(inner.filter((k) => stated.has(k) || !own(k)));
+
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
-    // a layer kept that draws no fill where its component's part has one has cleared it (an instance's override: its
-    // fills emptied, or at no opacity, which the walk does not record): said none, or a reader would take the part's
-    // unsaid fill as its component's (Carbon's read-only time picker's field background)
-    // (Figma's reading only: one from code says a fill cleared only where it saw one painted clear, readCleared)
-    if (!reading) for (const k of kept) {
-      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
-      if (e && x && e.kind !== 'instance' && e.background === undefined && paintOf(x.background)) e.background = CLEARED;
-    }
+    sayCleared(kept);
     // and one kept that does not clip where its component's part does has stopped it (an override): said `visible`
     // (UNCLIPPED), or a reader would take the part's clip as its component's. Both readings: each reads a clip wherever
     // one is drawn (the walk's clips, code's computed overflow), so none read is none drawn
     for (const k of kept) {
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (e && x && e.kind !== 'instance' && e.kind !== 'text' && e.overflow === undefined && x.overflow === 'hidden') e.overflow = UNCLIPPED;
-    }
-    // a placed layer this component clears the style or stroke of (none) that draws its own component's again: its own
-    // styling, left out above as that component's, is said, or it would read as this one's none (a reading from code
-    // reads no colour style, so only Figma's)
-    if (!reading) for (const k of kept) {
-      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
-      const R = x && e && e.kind === 'instance' && e.component && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
-      if (R) for (const f of ['fillStyle', 'border', 'background', 'shadow']) if (x[f] === CLEARED && e[f] === undefined && R[f] !== undefined) e[f] = R[f];
-      if (R && x.radius === 0 && e.radius === undefined && cornered(R.radius)) e.radius = R.radius;
     }
     // and a clip this component stops that the placed layer draws again, its own component's, left out above: said. Both
     // readings: each reads a clip wherever one is drawn

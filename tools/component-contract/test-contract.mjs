@@ -559,6 +559,39 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const rawCleared = swapIn(derive(wrapSpec({ overrides: ['fillStyleId,fills,strokes'] }), ['Box'])), rawKept = swapIn(derive(wrapSpec({ fills: ['Bg/clear'], fillStyle: 'Clear/Clear' }), ['Box']));
   ok('a swap target read without mains: its instance with no style reads as cleared, one with its style does not',
     rawCleared.fillStyle === 'none' && rawKept.fillStyle !== 'none');
+  // an instance kept whole (it hides a layer of its component) still says none of a fill its layer no longer draws
+  const field2 = { ...field, variants: [{ ...field.variants[0], children: [...field.variants[0].children, { name: 'Status', type: 'FRAME', w: 8, h: 8, sizing: 'FIXED/FIXED' }] }] };
+  const whole = derive(form({ strokes: ['Line/subtle'], strokeSides: [0, 0, 1, 0] }), ['Field'], { mains: mainsFrom({ Field: field2 }) }).anatomy['field/background'];
+  ok('a layer of an instance kept whole that draws no fill where its component\'s has one says none',
+    !!whole && whole.background === 'none');
+  // a nested instance that draws no colour style where the placed component's has one says none (its own component
+  // drawing none either): unsaid, it would read as the placed component's
+  const tray = { name: 'Tray', id: '9:11', props: {}, variants: [{ name: 'Tray', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Glyph', type: 'INSTANCE', instanceOf: 'Glyph', w: 16, h: 16, sizing: 'FIXED/FIXED', fillStyle: 'Clear/Clear', children: [] }, { name: 'Status', type: 'FRAME', w: 8, h: 8, sizing: 'FIXED/FIXED' }] }] };
+  const shelf = (own) => ({ name: 'Shelf', id: '9:12', props: {}, variants: [{ name: 'Shelf', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Tray', type: 'INSTANCE', instanceOf: 'Tray', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'], children: [
+      { name: 'Glyph', type: 'INSTANCE', instanceOf: 'Glyph', w: 16, h: 16, sizing: 'FIXED/FIXED', ...own, children: [] }] }] }] });
+  const tm = mainsFrom({ Tray: tray });
+  // (the Tray kept whole, its Status hidden, so the Glyph is kept either way)
+  ok('a nested instance that draws no style where its placed component\'s does says none; one that draws it, its style',
+    derive(shelf({ overrides: ['fillStyleId,fills'] }), ['Tray'], { mains: tm }).anatomy['tray/glyph'].fillStyle === 'none'
+    && derive(shelf({ fillStyle: 'Clear/Clear' }), ['Tray'], { mains: tm }).anatomy['tray/glyph'].fillStyle === 'Clear/Clear');
+  // a host restoring a style its placed component clears on a nested icon, inside an instance whose own component draws
+  // that style: kept, since the placed component's none is said over the inner instance's
+  const knob = { name: 'Knob', id: '9:13', props: {}, variants: [{ name: 'Knob', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Glyph', type: 'INSTANCE', instanceOf: 'Glyph', w: 16, h: 16, sizing: 'FIXED/FIXED', fillStyle: 'Clear/Clear', children: [] }] }] };
+  const dial = { name: 'Dial', id: '9:14', props: {}, variants: [{ name: 'Dial', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fillStyleId,fills'], children: [
+      { name: 'Glyph', type: 'INSTANCE', instanceOf: 'Glyph', w: 16, h: 16, sizing: 'FIXED/FIXED', overrides: ['fillStyleId,fills'], children: [] }] }] }] };
+  const panel = (own) => ({ name: 'Panel', id: '9:15', props: {}, variants: [{ name: 'Panel', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Dial', type: 'INSTANCE', instanceOf: 'Dial', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fillStyleId'], children: [
+      { name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fillStyleId'], children: [
+        { name: 'Glyph', type: 'INSTANCE', instanceOf: 'Glyph', w: 16, h: 16, sizing: 'FIXED/FIXED', ...own, children: [] }] }] }] }] });
+  const dm = mainsFrom({ Knob: knob, Dial: dial });
+  const restored = derive(panel({ fillStyle: 'Clear/Clear', overrides: ['fillStyleId'] }), ['Dial', 'Knob'], { mains: dm }).anatomy;
+  const left = derive(panel({}), ['Dial', 'Knob'], { mains: dm }).anatomy;
+  ok('a nested icon whose style the host restores over its placed component\'s none is kept with it; one left cleared is not kept',
+    restored['dial/knob/glyph'] && restored['dial/knob/glyph'].fillStyle === 'Clear/Clear' && !('dial/knob/glyph' in left));
 }
 {
   // an instance that hides a layer of its component (the walk records what shows) is kept whole: nothing here could say the hiding
