@@ -131,6 +131,7 @@ export const NOT_CHECKABLE = [
   { reason: 'inference', field: 'contract whileEmpty, canvas, when, shows', why: 'inferences across variants (and flipped trees), not a field Figma stores' },
   { reason: 'named otherwise', field: 'overridden style ids (fillStyleId, strokeStyleId…)', why: 'REST names them inherit…StyleId and leaves some out where the plugin API lists them; the other overridden fields are held' },
   { reason: 'not in the response', field: 'smoothing of an instance, radius of an ellipse', why: 'REST leaves them out where the plugin API reads an instance\'s through to its component and gives an ellipse one; held where REST states them' },
+  { reason: 'not in the response', field: 'smoothing of a layer with no radius', why: 'REST states cornerSmoothing only beside a corner radius; with none on either side it rounds nothing; held wherever a radius is' },
   { reason: 'not in the response', field: 'variantProperties', why: 'not in the nodes response; each variant\'s props are read from its name' },
 ];
 
@@ -487,6 +488,8 @@ function diffTree(walked, stored, restRoot, t) {
       if (!(k in a) && (k === 'strokesInLayout' || k === 'sizing' || (k === 'smoothing' && f.type === 'INSTANCE') || (k === 'radius' && f.type === 'ELLIPSE'))) { t.skip(`${k}: REST silent`); continue; }
       // (a vector's corners rounded vertex by vertex, mixed: no one radius REST states)
       if (!(k in a) && k === 'radius' && o.radius === 'mixed') { t.skip('radius: mixed per vertex, REST silent'); continue; }
+      // (a corner smoothing on a layer with no radius on either side: REST states cornerSmoothing only beside a radius)
+      if (k === 'smoothing' && !(k in a) && !('radius' in a) && !('radius' in b)) { t.skip('smoothing: no radius, REST silent'); continue; }
       if (k === 'textStyle' && (a[k] === 'mixed' || b[k] === 'mixed')) { t.skip('textStyle of mixed text'); continue; }
       // how many layers an instance overrides (of the first eight, restOurs); the fields' names are REST's own, not checkable
       if (k === 'overrides' && Array.isArray(a[k]) && Array.isArray(b[k])) { t.check(variant, p, k, a[k].length, b[k].length); continue; }
@@ -945,6 +948,8 @@ export function compareContract(component, setNode, contract, ctx) {
     if (part.radius === 'mixed' && !('radius' in a)) { delete b.radius; t.skip('radius: mixed per vertex, REST silent'); }
     // (four zeros said, as an instance squaring off its component's corners says them: REST leaves zeros out, restPart)
     if (!('radius' in a) && Array.isArray(b.radius) && b.radius.every((x) => x === 0)) delete b.radius;
+    // (a corner smoothing with no radius on either side, moot: REST states cornerSmoothing only beside a radius)
+    if (!('smoothing' in a) && 'smoothing' in b && !('radius' in a) && !('radius' in b)) { delete b.smoothing; t.skip('smoothing: no radius, REST silent'); }
     if (a.typography === 'mixed') { delete a.typography; delete b.typography; t.skip('textStyle of mixed text'); }
     // a styled text's letter spacing is its style's, said by the contract only where the layer sets its own
     if (typeof a.typography === 'string' && 'letterSpacing' in a && !('letterSpacing' in b)) { delete a.letterSpacing; t.skip('letterSpacing: a styled text\'s, unsaid'); }

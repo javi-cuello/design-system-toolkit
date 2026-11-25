@@ -232,6 +232,15 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const r = compareContract('chip', square, c, ctx); assert.ok(!kinds(r).includes('contract:radius') && Object.keys(r.skipped).some((k) => /mixed/.test(k)), 'mixed: skipped by name'); }
   { const st = storedFull(); for (const v of st.variants) v.radius = 'mixed'; const square = structuredClone(setNode); for (const v of square.children) delete v.cornerRadius;
     assert.ok(!compareSpec('chip', square, st, ctx).rows.some((x) => x.kind === 'spec:radius'), 'and in the spec leg'); }
+  // a smoothing on a layer with no radius on either side: REST states cornerSmoothing only beside a radius, a named skip;
+  // beside a radius REST leaves it out of, still a row
+  { const c = contract(); delete c.anatomy.root.radius; c.anatomy.root.smoothing = 1; const square = structuredClone(setNode); for (const v of square.children) delete v.cornerRadius;
+    const r = compareContract('chip', square, c, ctx); assert.ok(!kinds(r).includes('contract:smoothing') && Object.keys(r.skipped).some((k) => /smoothing: no radius/.test(k)), 'no radius: skipped by name');
+    const c2 = contract(); c2.anatomy.root.smoothing = 1; assert.ok(kinds(compareContract('chip', setNode, c2, ctx)).includes('contract:smoothing'), 'with a radius: a row');
+    const st = storedFull(); for (const v of st.variants) { delete v.radius; v.smoothing = 1; }
+    assert.ok(!compareSpec('chip', square, st, ctx).rows.some((x) => x.kind === 'spec:smoothing'), 'and in the spec leg');
+    const st2 = storedFull(); for (const v of st2.variants) v.smoothing = 1;
+    assert.ok(compareSpec('chip', setNode, st2, ctx).rows.some((x) => x.kind === 'spec:smoothing'), 'the spec leg, with a radius: a row'); }
   // a radius of four zeros (an instance squaring off its component's corners) is what REST says by leaving it out
   { const c = contract(); c.anatomy.root.radius = 0; const square = structuredClone(setNode); for (const v of square.children) delete v.cornerRadius;
     assert.ok(!kinds(compareContract('chip', square, c, ctx)).includes('contract:radius'), 'a 0 radius is REST\'s none');
