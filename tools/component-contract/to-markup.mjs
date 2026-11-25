@@ -237,7 +237,7 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
       const mine = css(L, up(rel)), theirs = css(X, M[X.parent] || M.root || {});
       const placing = /^(position|inset|top|right|bottom|left|order|z-index|translate)/;
       // (and a paint the placed part draws that the design takes away, unset)
-      const gone = [...theirs.keys()].filter((k) => !mine.has(k) && /^(background|border|box-shadow|outline)/.test(k)).map((k) => `${k}: unset`);
+      const gone = [...theirs.keys()].filter((k) => !mine.has(k) && /^(background|border|box-shadow|outline)/.test(k) && !/radius/.test(k)).map((k) => `${k}: unset`);
       const style = [...[...mine].filter(([k, v]) => theirs.get(k) !== v && !placing.test(k)).map(([k, v]) => `${k}: ${v}`), ...gone].join('; ');
       if (style) entry.attrs = { ...entry.attrs, style };
     }
@@ -923,8 +923,8 @@ export function dressed(parts, root) {
       const p = parts[k.getAttribute('data-part')];
       if (k.tagName.includes('-')) continue;
       if (p && p.hidden) { k.remove(); continue; }
-      // (given the part's own hooks: its name, its Figma name, its modes, aria-hidden)
-      if (p && p.render) { k.replaceWith(p.render(p.props || {}, Object.fromEntries([...k.attributes].filter((x) => /^(data-|aria-)/.test(x.name)).map((x) => [x.name, x.value])), p.parts || {})); continue; }
+      // (given the part's own names, its data-part and Figma name; never the mark's icon, modes or aria-hidden, the old drawing's)
+      if (p && p.render) { k.replaceWith(p.render(p.props || {}, Object.fromEntries(['data-part', 'data-figma-name'].filter((a) => k.hasAttribute(a)).map((a) => [a, k.getAttribute(a)])), p.parts || {})); continue; }
       if (p) dress(p, k);
       if (!k.hasAttribute('data-slot')) walk(k);
     }
