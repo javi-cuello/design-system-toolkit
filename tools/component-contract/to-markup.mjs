@@ -218,7 +218,8 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     const Lm = L.kind === 'instance' && mainOf(L.component, L.key), Xm = X.kind === 'instance' && mainOf(X.component, X.key);
     if (Lm) {
       const nested = insideOf(a, at, mainOf, { whole, seen, added, library, lang, settings, sheet: false });
-      if (Lm !== Xm) Object.assign(entry, { render: Lm, props: givenOf(Lm, L.with, library, lang, settings) });
+      // (another of the library's drawn in its place: given its props, and the modes the design sets on it, as placed gives a part's)
+      if (Lm !== Xm) Object.assign(entry, { render: Lm, props: givenOf(Lm, L.with, library, lang, settings), ...(L.modes && Object.keys(L.modes).length && { host: Object.fromEntries(Object.entries(L.modes).map(([k, v]) => [MODES.attribute(k), v])) }) });
       else {
         const w = Object.fromEntries(Object.entries(L.with || {}).filter(([k, v]) => !same(v, (X.with || {})[k])));
         const props = givenOf(Lm, w, library, lang, settings);
@@ -516,6 +517,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     ...(v.content !== undefined ? [`content: ${str(v.content)}`] : []),
     ...(v.add ? [`add: [${v.add.map((x) => `{ at: ${x.at}, node: ${nodeLit(x.node)} }`).join(', ')}]`] : []),
     ...(v.attrs ? [`attrs: { ${Object.entries(v.attrs).map(([p, l]) => `${str(p)}: ${str(l)}`).join(', ')} }`] : []),
+    ...(v.host ? [`host: { ${Object.entries(v.host).map(([p, l]) => `${str(p)}: ${str(l)}`).join(', ')} }`] : []),
   ].join(', ')} }`).join(', ')} }`;
   // (the most particular variant that holds first, each as the whole combination draws there; the defaults' last; never a
   // pointer state's, which no markup holds)
@@ -923,8 +925,8 @@ export function dressed(parts, root) {
       const p = parts[k.getAttribute('data-part')];
       if (k.tagName.includes('-')) continue;
       if (p && p.hidden) { k.remove(); continue; }
-      // (given the part's own names, its data-part and Figma name; never the mark's icon, modes or aria-hidden, the old drawing's)
-      if (p && p.render) { k.replaceWith(p.render(p.props || {}, Object.fromEntries(['data-part', 'data-figma-name'].filter((a) => k.hasAttribute(a)).map((a) => [a, k.getAttribute(a)])), p.parts || {})); continue; }
+      // (given the part's own names, its data-part and Figma name; never the mark's icon, modes or aria-hidden, the old drawing's; the design's own modes, p.host)
+      if (p && p.render) { k.replaceWith(p.render(p.props || {}, { ...Object.fromEntries(['data-part', 'data-figma-name'].filter((a) => k.hasAttribute(a)).map((a) => [a, k.getAttribute(a)])), ...p.host }, p.parts || {})); continue; }
       if (p) dress(p, k);
       if (!k.hasAttribute('data-slot')) walk(k);
     }

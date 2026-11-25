@@ -220,11 +220,11 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     const a = await at({}), b = await at({ big: true });
     ok('parts: a swapped-in mark whose look differs between combinations keeps each combination\'s own look', /fill-accent/.test(a) && /fill-danger/.test(b), `${a} | ${b}`); }
   { const marked = { ...item, anatomy: { root: { kind: 'container' }, mark: { kind: 'instance', parent: 'root', order: 0, component: 'Icons/dot', name: 'Status dot' } } };
-    const r = row({ 'item/mark': { kind: 'instance', parent: 'item', order: 0, component: 'Badge', with: { Count: '3' } } }), L = { ...lib(r), Item: marked };
+    const r = row({ 'item/mark': { kind: 'instance', parent: 'item', order: 0, component: 'Badge', with: { Count: '3' }, modes: { theme: 'dark' } } }), L = { ...lib(r), Item: marked };
     const dir = path.join(tmp, 'mark'); fs.mkdirSync(dir); fs.writeFileSync(path.join(dir, 'dom.js'), DOM);
     for (const c of Object.values(L)) { fs.mkdirSync(path.join(dir, c.folder)); fs.writeFileSync(path.join(dir, c.folder, `${c.folder}.js`), toElement(c, c.folder, { naming: ELEMENT, library: L })); }
     const d = (await import(path.join(dir, 'row', 'row.js'))).renderRow(), b = find(d, (x) => x.tag === 'ds-badge');
-    ok('parts: a component drawn in place of a part keeps that part\'s names (data-part, its Figma name), never the old mark\'s icon or aria-hidden', !!b && b.attrs['data-part'] === 'mark' && b.attrs['data-figma-name'] === 'Status dot' && !('data-icon' in b.attrs) && !('aria-hidden' in b.attrs), JSON.stringify(b && b.attrs)); }
+    ok('parts: a component drawn in place of a part keeps that part\'s names (data-part, its Figma name), never the old mark\'s icon or aria-hidden, the design\'s own modes on it', !!b && b.attrs['data-part'] === 'mark' && b.attrs['data-figma-name'] === 'Status dot' && !('data-icon' in b.attrs) && !('aria-hidden' in b.attrs) && Object.values(b.attrs).includes('dark'), JSON.stringify(b && b.attrs)); }
   { const two = { ...item, anatomy: { ...item.anatomy, trail_2: { ...item.anatomy.trail, order: 2 } } };
     const r = row({ 'item/trail_2': { kind: 'instance', parent: 'item', order: 2, component: 'Trail', with: { Tone: 'Loud' } } }), L = { ...lib(r), Item: two };
     const dir = path.join(tmp, 'copies'); fs.mkdirSync(dir); fs.writeFileSync(path.join(dir, 'dom.js'), DOM);
@@ -236,10 +236,10 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     ok('parts: inside placed copies, which share a hook no sheet rule can tell apart, each copy is read under its own count and its look passed inline',
       m['Item > Label'] === 'ds-row > [data-part="item"]:nth-child(1 of [data-part="item"]) > [data-part="label"]' && m['Item#2 > Label'] === 'ds-row > [data-part="item"]:nth-child(2 of [data-part="item"]) > [data-part="label"]'
       && /"label": \{ content: "C", attrs: \{ "style": "[^"]*color: var\(--red\)/.test(o) && toParity(r, 'row', { naming: CLASS, library: lib(r) }).layers['Item#2 > Label'].skip, JSON.stringify(m) + o); }
-  { const filled = { ...item, anatomy: { ...item.anatomy, label: { ...item.anatomy.label, background: 'Fill/accent' } } };
+  { const filled = { ...item, anatomy: { ...item.anatomy, label: { ...item.anatomy.label, background: 'Fill/accent', radius: 4 } } };
     const r = row({ item_2: { kind: 'instance', parent: 'root', order: 1, component: 'Item', with: {} }, 'item_2/label': { kind: 'text', parent: 'item_2', order: 0, content: 'C' } });
     const o = toElement(r, 'row', { naming: ELEMENT, library: { ...lib(r), Item: filled } });
-    ok('parts: a paint the placed part draws that the design takes away inside a copy is unset inline', /"label": \{[^}]*"style": "[^"]*background[\w-]*: unset/.test(o), o); }
+    ok('parts: a paint the placed part draws that the design takes away inside a copy is unset inline, never its radius', /"label": \{[^}]*"style": "[^"]*background[\w-]*: unset/.test(o) && !/radius[\w-]*: unset/.test(o), o); }
   const hid = row({ 'item/label': { kind: 'text', parent: 'item', order: 0, content: 'A' } });
   { const d = await run(hid);
     ok('parts: a part the instance hides (kept whole, the part not drawn) is taken away', !find(d, (x) => x.tag === 'ds-trail') && find(d, (x) => x.attrs['data-part'] === 'label').textContent === 'A'); }
