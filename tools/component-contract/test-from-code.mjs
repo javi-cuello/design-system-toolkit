@@ -299,8 +299,11 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
 {
   const { ownBoxOf } = await import('./from-code.mjs');
   const inPage = new Function(`return ${ownBoxOf.toString()}`)();
-  const button = { style: { display: 'inline-flex' } }, style = (n) => n.style;
-  const host = { style: { display: 'contents' }, firstElementChild: button };
+  const el = (st, attrs = []) => ({ style: st, hasAttribute: (k) => attrs.includes(k) }), style = (n) => n.style;
+  const button = el({ display: 'inline-flex' });
+  const host = { style: { display: 'contents' }, firstElementChild: button, childElementCount: 1 };
+  ok('a contents host whose child is not its one control (another child beside it, or a layer read as its own part) is read off itself',
+    inPage({ ...host, childElementCount: 2 }, style) !== button && inPage({ ...host, firstElementChild: el({ display: 'block' }, ['data-contract-id']) }, style).style.display === 'contents');
   ok('a placed instance\'s styling is read off its control where its host draws no box, else off itself',
     inPage(host, style) === button && inPage({ ...host, style: { display: 'flex' } }, style).style.display === 'flex' && inPage({ style: { display: 'contents' }, firstElementChild: null }, style).style.display === 'contents');
 }

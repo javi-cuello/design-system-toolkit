@@ -116,10 +116,12 @@ export function cssOrderOf(n, parent, style) {
 }
 /* The box a placed instance draws, which its own styling is read off: a host that draws none (display: contents, a
    custom element wrapping its control) draws it through that control, where to-code writes this component's override
-   (`> [data-part="icon-button"] > button`); else the instance itself. `style` is getComputedStyle. Runs in the page
-   (passed as source); tested by test-from-code.mjs. */
+   (`> [data-part="icon-button"] > button`); else the instance itself, and so where the host holds more than that one
+   child, or its child is a layer read as its own part (`data-contract-id`). `style` is getComputedStyle. Runs in the
+   page (passed as source); tested by test-from-code.mjs. */
 export function ownBoxOf(n, style) {
-  return style(n).display === 'contents' && n.firstElementChild ? n.firstElementChild : n;
+  const c = n.firstElementChild;
+  return style(n).display === 'contents' && c && n.childElementCount === 1 && !c.hasAttribute('data-contract-id') ? c : n;
 }
 /* A part turned a quarter is drawn in a wrapper (to-code.mjs turnedParts, `[data-turn]`): its parent is the wrapper's
    (`up`); where the wrapper is a box, the part is turned and the wrapper is what that parent lays out (`flow`, sized on
