@@ -1153,4 +1153,11 @@ ok('codeKeys: two modules saying different keys for one instance name say none',
   const B = assistsOf(), b = read(), db = keyInstances(b, {}, { Radio: 'k1' }, B);
   ok('keyInstances: a key the placed module declares is declared, untagged; without it the library\'s is a placed-key borrowing',
     a.r.key === 'k1' && da && !Object.keys(A.out()).length && b.r.key === 'k1' && !db && JSON.stringify(B.out()) === JSON.stringify({ 'placed-key': ['anatomy.r.key'] })); }
+{
+  // the comparison leaves a layer inside a placed instance to its component where the design leaves it unsaid
+  const { placedOver } = await import('./from-code.mjs');
+  const f = { root: { kind: 'container' }, 'root/tag': { kind: 'instance' }, box: { kind: 'container' } };
+  ok('a layer under a placed instance the design leaves out is its component\'s; one under a plain layer, or nothing, is not',
+    placedOver(f, 'root/tag/content/close') === true && placedOver(f, 'box/inner') === false && placedOver(f, 'gone/inner') === false);
+}
 console.log(`${n}/${n} passed`);

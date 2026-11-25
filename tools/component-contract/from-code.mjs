@@ -955,6 +955,8 @@ export function keyInstances(anatomy, fromCode, fromLibrary, A) {
   return declared;
 }
 
+/* Whether a layer the expanded design `f` leaves out sits inside an instance it places: its component draws it. */
+export const placedOver = (f, id) => { for (let i = id.lastIndexOf('/'); i > 0; i = id.lastIndexOf('/', i - 1)) { const up = f[id.slice(0, i)]; if (up) return up.kind === 'instance'; } return false; };
 /* What a generated module says it draws (to-markup's `export const figma = {…}`): the design component's name, read from
    the code's text, or null where it says nothing. Tested by test-from-code.mjs. */
 export function codeFigma(js) {
@@ -2922,6 +2924,8 @@ async function main() {
         for (const [mapped, cid] of Object.entries(pairs).filter(([k]) => !k.includes('@'))) {
           const fid = elementIn(f, mapped) || mapped;
           if (!f[fid] && !c[cid]) continue;
+          // (a layer inside a placed instance the design leaves unsaid at these props is its component's own, drawn there)
+          if (!f[fid] && c[cid] && placedOver(f, fid)) continue;
           if (!f[fid] || !c[cid]) { compare.push({ when, figma: fid, code: cid, verdict: f[fid] ? 'code draws none' : 'figma draws none' }); continue; }
           for (const k of ['background', 'color', 'typography', 'radius', 'border']) {
             // a shape Figma draws as an ellipse is a fully round box in code: its roundness is the shape's
