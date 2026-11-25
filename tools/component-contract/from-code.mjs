@@ -114,6 +114,13 @@ export function cssOrderOf(n, parent, style) {
   const s = style(flow), box = s.display === 'contents' && flow.firstElementChild ? flow.firstElementChild : flow, o = +style(box).order;
   return o && parent != null && up && up.getAttribute('data-contract-id') === parent && /flex|grid/.test(style(up).display) ? o : null;
 }
+/* The box a placed instance draws, which its own styling is read off: a host that draws none (display: contents, a
+   custom element wrapping its control) draws it through that control, where to-code writes this component's override
+   (`> [data-part="icon-button"] > button`); else the instance itself. `style` is getComputedStyle. Runs in the page
+   (passed as source); tested by test-from-code.mjs. */
+export function ownBoxOf(n, style) {
+  return style(n).display === 'contents' && n.firstElementChild ? n.firstElementChild : n;
+}
 /* A part turned a quarter is drawn in a wrapper (to-code.mjs turnedParts, `[data-turn]`): its parent is the wrapper's
    (`up`); where the wrapper is a box, the part is turned and the wrapper is what that parent lays out (`flow`, sized on
    the parent's axes), the part placed inside it at its own size; where the wrapper is none (display: contents) the part
@@ -2078,9 +2085,9 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
-        const shadowOnlyRings = new Function(`return ${ringsSrc}`)();
+        const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)();
         // a colour that paints nothing: fully transparent, whatever its channels
@@ -2121,7 +2128,7 @@ async function main() {
         const walk = (n, parent, order, inside = false) => {
           // a turn's wrapper is no part: what it holds is the part, in its place among its siblings
           if (n.hasAttribute('data-turn')) { if (n.firstElementChild) walk(n.firstElementChild, parent, order, inside); return; }
-          const s = getComputedStyle(n);
+          const s = getComputedStyle(n), node = n, style = s;
           // not drawn: hidden, or a native control MUI keeps for its behaviour at no opacity (a switch's input); a layer
           // the mapping names at no opacity is drawn and see-through (a loading button's label keeps its width)
           if (s.display === 'none' || s.visibility === 'hidden' || (+s.opacity === 0 && !n.hasAttribute('data-figma-id'))) return;
@@ -2214,7 +2221,9 @@ async function main() {
             // its own styling over its component's root (a toggle's fill on its toggle item), folded back where it is that root's
             // (ownStyling); drawn over its parent where it paints, as a box is
             // (no arc, focus ring or outline: those are its component's drawing, or the ring rule's, never an override read here)
-            { const ie = out[out.length - 1]; boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(n); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true; if (cs.overflow === 'visible') ie.clipless = true; if (cs.mixBlendMode === 'normal') ie.blendless = true; } delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
+            // (off the box it draws: a host that draws none, display: contents, draws it through its control, where to-code
+            // writes this component's override on it, `> button`)
+            { const ie = out[out.length - 1], bx = ownBox(n, getComputedStyle); boxStyling(ie, bx); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(bx); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true; if (cs.overflow === 'visible') ie.clipless = true; if (cs.mixBlendMode === 'normal') ie.blendless = true; } delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
             // the layers the mapping names inside it, where the mapping names it too, at any depth of placing (opensPlaced; an
             // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
             // (each at its place among the component's own drawn children, which this reading does not all read)
@@ -2237,7 +2246,9 @@ async function main() {
           // a box's own styling as the contract says it: its layout, fill, corners, stroke, clipping and shadow, read off
           // its computed style (a container's, a text's, a slot's; and a placed instance's own, what it sets over its
           // component's root, which derive's ownStyling folds back where it is that root's)
-          function boxStyling(e) {
+          // (`at`: the element whose box it is, the walked one's own unless said: a placed instance's control, below)
+          function boxStyling(e, at = null) {
+            const n = at || node, s = at ? getComputedStyle(at) : style;
             if (/flex/.test(s.display)) {
               const A = { 'flex-start': 'start', 'flow-start': 'start', start: 'start', normal: 'start', center: 'center', 'flex-end': 'end', 'flow-end': 'end', end: 'end', 'space-between': 'space-between', stretch: 'stretch' };
               e.layout = { direction: /column/.test(s.flexDirection) ? 'column' : 'row', gap: s.gap === 'normal' ? 0 : px(s.gap), align: A[s.justifyContent] || s.justifyContent, crossAlign: A[s.alignItems] || s.alignItems };
@@ -2323,7 +2334,7 @@ async function main() {
         const siblingOrder = new Function(`return ${siblingOrderSrc}`)();
         for (const xs of Object.values(byParent)) siblingOrder(xs).forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -2331,8 +2342,12 @@ async function main() {
       // each element's matched styles fetched once for all the properties this render reads of it
       // (through the read cache, where the reading has one: read-cache.mjs; fetchLevels' source is part of the question)
       const styles = L.cache ? Object.assign(new Map(), { through: (sel, f) => L.cache.step('levels', `${fetchLevels}\0${sel}`, f) }) : new Map();
+      // the element each part's own styling is written on: a placed instance whose host draws no box (display: contents),
+      // its control (ownBoxOf, where boxStyling read it; to-code writes its override there), else the part itself
+      const viaControl = new Set(await call(L.tab, ([ids, src]) => { const own = new Function(`return ${src}`)(); return ids.filter((id) => { const n = document.querySelector(`[data-contract-id="${id}"]`); return !!n && own(n, getComputedStyle) !== n; }); }, [raw.filter((e) => e.kind === 'instance').map((e) => e.id), ownBoxOf.toString()]));
+      const styledAt = (id) => boxSelector(id, viaControl.has(id) ? 'contents' : null);
       // a whole computed border may be a floored one (1.5px reads 1px): the cascade's, as the code audit reads it
-      for (const e of raw) if (e.border && Number.isInteger(e.border.width)) { const w = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, 'border-top-width', { cache: styles }); if (w != null && Math.floor(w) === e.border.width) e.border.width = w; }
+      for (const e of raw) if (e.border && Number.isInteger(e.border.width)) { const w = await authoredWidth(L.tab, styledAt(e.id), 'border-top-width', { cache: styles }); if (w != null && Math.floor(w) === e.border.width) e.border.width = w; }
       // a box the code sizes itself (height: 24px, a minimum), which a hug would lose: the cascade's own value,
       // as the contract's minHeight/minWidth (Figma's min sizes on an auto layout)
       // written physically or logically (block-size is height in a horizontal writing mode), in px or rem
@@ -2521,7 +2536,7 @@ async function main() {
         const dirs = new Map();
         const rtlOf = async (at) => { if (!dirs.has(at)) dirs.set(at, await call(L.tab, ([q]) => { const n = document.querySelector(q); return !!n && getComputedStyle(n).direction === 'rtl'; }, [at])); return dirs.get(at); };
         const varsOf = async (at, p) => (shorthandOf(p) ? authoredSideVars(L.tab, at, p, await rtlOf(at), styles) : authoredVars(L.tab, at, p, styles));
-        for (const p of css) { const [prop, part] = p.split(':'), at = el.startsWith('[') ? el : `[data-contract-id="${el}"]`; const rawOf = part === 'base' ? await authoredValue(L.tab, at, prop, styles) : null; const vars = part === 'base' ? (() => { const ls = splitTop(String(rawOf || '')), m = ls.length && /^\s*var\(\s*(--[\w-]+)/.exec(ls[ls.length - 1]); return m ? [m[1]] : []; })() : part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles), { outside: /-out$/.test(part) }) || {})[part.replace(/-out$/, '')] || []) : await varsOf(at, p); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
+        for (const p of css) { const [prop, part] = p.split(':'), at = el.startsWith('[') ? el : styledAt(el); const rawOf = part === 'base' ? await authoredValue(L.tab, at, prop, styles) : null; const vars = part === 'base' ? (() => { const ls = splitTop(String(rawOf || '')), m = ls.length && /^\s*var\(\s*(--[\w-]+)/.exec(ls[ls.length - 1]); return m ? [m[1]] : []; })() : part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles), { outside: /-out$/.test(part) }) || {})[part.replace(/-out$/, '')] || []) : await varsOf(at, p); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
         // (the toolkit's own rendering names every token it draws with, var() for var(): a value it wrote raw is the design's
         // raw value, never a token guessed by value, which a project's compiled code may need)
         // (unless nothing was offered to name a var by: a focus ring's corner, which to-code writes as a calc() of one)
@@ -2535,7 +2550,7 @@ async function main() {
       // a fully round corner, a box's or its ring's (`after`: the ring is its ::after): the library's fullest radius
       // (fullestOf) where the code names a radius token there, else null, the caller's raw value or reading. One rule for both.
       const fullRadius = async (id, after = false) => {
-        for (const p of ['border-top-left-radius', 'border-radius']) if ((await authoredVars(L.tab, `[data-contract-id="${id}"]`, after ? `${p}::after` : p, styles)).length) return fullest();
+        for (const p of ['border-top-left-radius', 'border-radius']) if ((await authoredVars(L.tab, styledAt(id), after ? `${p}::after` : p, styles)).length) return fullest();
         return null;
       };
       for (const e of raw) {
@@ -2586,7 +2601,7 @@ async function main() {
         if (x.kind === 'instance') for (const [f, css] of Object.entries(INSTANCE_CSS)) {
           if (x[f] === undefined) continue;
           let mine = false;
-          for (const p of css) { const at = `[data-contract-id="${id}"]`, sel = await authoredSelector(L.tab, at, p, styles); if (instanceWrites(f, sel, sel && await call(L.tab, writtenByHolder, selectorParts(sel), at, '[data-contract-id="root"]'), sel ? null : await authoredValue(L.tab, at, p, styles))) { mine = true; break; } }
+          for (const p of css) { const at = await boxOf({ id, kind: x.kind }), sel = await authoredSelector(L.tab, at, p, styles); if (instanceWrites(f, sel, sel && await call(L.tab, writtenByHolder, selectorParts(sel), at, '[data-contract-id="root"]'), sel ? null : await authoredValue(L.tab, at, p, styles))) { mine = true; break; } }
           if (!mine) delete x[f];
         }
         A.take('design-shape', { anatomy: { [id]: x } }, () => asShape(x, fa, raw.some((r) => r.parent === id), fa && drawnHere()[id]));
@@ -2594,7 +2609,7 @@ async function main() {
         delete x.box;
         if (x.layout) {
           // a 0 padding the code writes is said, as it writes it (paddingSaid)
-          if (!x.layout.padding) { const sides = {}; for (const [k, p] of Object.entries(paddingCss(x.rtl))) sides[k] = await authoredValue(L.tab, `[data-contract-id="${id}"]`, p, styles); const said = paddingSaid(x.layout.padding, sides); if (said) x.layout.padding = said; }
+          if (!x.layout.padding) { const sides = {}; for (const [k, p] of Object.entries(paddingCss(x.rtl))) sides[k] = await authoredValue(L.tab, styledAt(id), p, styles); const said = paddingSaid(x.layout.padding, sides); if (said) x.layout.padding = said; }
           // a gap below 0 was written as the second child's pull back: its token is there
           const pulled = pulledBy[id];
           if ('gap' in x.layout) x.layout.gap = pulled ? await tok('space', x.layout.gap, `${id}.gap`, pulled.props, pulled.from) : await tok('space', x.layout.gap, `${id}.gap`, ['row-gap', 'column-gap', 'gap']);
@@ -2609,12 +2624,12 @@ async function main() {
           // names one: written raw, it stays raw)
           // (the shorthand or the longhand; the base is fills' first only where a colour was read under the layers)
           const layers = [];
-          for (const prop of ['background', 'background-image']) layers.push(...splitTop(String(await authoredValue(L.tab, `[data-contract-id="${id}"]`, prop, styles) || '')));
+          for (const prop of ['background', 'background-image']) layers.push(...splitTop(String(await authoredValue(L.tab, styledAt(id), prop, styles) || '')));
           const overNamed = layers.some((l) => /gradient\(/.test(l) && /var\(/.test(l)), base = !!x.background;
           for (const [i, f] of fills.entries()) named.push(typeof f === 'string' && /^IMAGE:/.test(f) ? f : typeof f === 'string' ? await tok('background', f, `${id}.background`, ['background-color', 'background', 'background:base', 'background-image'], null, (i === 0 && base) || overNamed)
             : await (async () => {
               // (a token by value only where the gradient names one: written raw, its stops are raw)
-              let named = false; for (const p of ['background-image', 'background']) if (/var\(/.test(String(await authoredValue(L.tab, `[data-contract-id="${id}"]`, p, styles) || ''))) named = true;
+              let named = false; for (const p of ['background-image', 'background']) if (/var\(/.test(String(await authoredValue(L.tab, styledAt(id), p, styles) || ''))) named = true;
               return { ...f, stops: await Promise.all(f.stops.map(async (st) => ({ ...st, color: await tok('background', st.color, `${id}.background`, ['background-image', 'background'], null, named) }))) };
             })());
           // (once, however many renders read it)
@@ -2694,7 +2709,7 @@ async function main() {
         // a shadow is the library's effect style that draws it (layers matched by what they draw); none, its css
         // the effect style the code wrote (box-shadow: var(--elevation-raised)), else the one that draws the same layers
         if (x.shadow || x.shadowAll) {
-          const at = `[data-contract-id="${id}"]`;
+          const at = styledAt(id);
           const said = [...await authoredVars(L.tab, at, 'box-shadow', styles, { leading: true }), ...await layerVars(L.tab, at, 'box-shadow', styles)];
           const effects = L.tokens.effects || [];
           const named = said.length && effects.find((fx) => said.some((v) => writtenAs(v, fx.name)));

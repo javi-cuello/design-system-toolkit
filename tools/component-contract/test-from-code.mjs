@@ -293,6 +293,18 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     && inPage({ ...host, firstElementChild: { style: { order: '0' } } }, 'layer', style) === null);
 }
 
+// a placed instance's own styling is read off the box it draws: a host that draws none (display: contents) draws it
+// through its control, where to-code writes this component's override on it (`> [data-part="icon-button"] > button`:
+// a split button's corners, padding and sides read nothing off the host)
+{
+  const { ownBoxOf } = await import('./from-code.mjs');
+  const inPage = new Function(`return ${ownBoxOf.toString()}`)();
+  const button = { style: { display: 'inline-flex' } }, style = (n) => n.style;
+  const host = { style: { display: 'contents' }, firstElementChild: button };
+  ok('a placed instance\'s styling is read off its control where its host draws no box, else off itself',
+    inPage(host, style) === button && inPage({ ...host, style: { display: 'flex' } }, style).style.display === 'flex' && inPage({ style: { display: 'contents' }, firstElementChild: null }, style).style.display === 'contents');
+}
+
 // a child out of the flow paints where the browser paints it, never where a CSS order would put it: order moves only a
 // flex or grid item (CSS Flexbox 4.1, 4.3), and an absolute child paints over the box's unpositioned children, in markup
 // order among the positioned, a z-index over all (CSS 2 Appendix E); the children in the flow keep their laid-out order
@@ -842,7 +854,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('a placed component drawing no stroke its component draws reads as the stroke cleared; nothing else does, and the mark is gone',
     a.b.border === 'none' && a.p.border === undefined && a.s.border.color === 'x' && !Object.values(a).some((x) => 'strokeless' in x));
   const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
-  ok('…its stroke read as drawn, before its outline is left to its component', src.includes("boxStyling(ie); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true;")
+  ok('…its stroke read as drawn, before its outline is left to its component', src.includes("boxStyling(ie, bx); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true;")
     && src.includes('readCleared(anatomy, mainOf, L.value); normalForm(anatomy); colourKept('));
   ok('…and a part Figma says cleared that code draws nothing for is the same: both draw nothing',
     src.includes("if (verdict === 'differs' && f[fid][k] === CLEARED && cv == null && (k === 'background' || k === 'border')) verdict = 'same token';"));
