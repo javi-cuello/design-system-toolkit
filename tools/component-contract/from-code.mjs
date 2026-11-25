@@ -776,14 +776,14 @@ export function onlyInCode(props, design, joins = {}) {
 /* A slot control in the toolkit's own story (the self leg): to-markup's swap of a library component (`placed`) says so,
    with the component it draws where the caller passes nothing. Only this story sets `placed`: a docgen default (a real
    Storybook's `icon = <ChevronDown />`) is no such mark. Tested by test-from-code.mjs. */
-export const selfSlotControl = (x) => ({ control: 'slot', ...(x.placed && { placed: x.placed.component }) });
+export const selfSlotControl = (x) => ({ control: 'slot', ...(x.placed && { placed: x.placed.component }), ...(x.sample && { sample: x.key }) });
 /* A code prop that takes content: a slot, found where a stand-in for it lands; one the self story marks `placed` is read
    at the component it draws by default, with no stand-in (asDesignSwaps then takes the design's swap). Tested by
    test-from-code.mjs. */
 /* The reading's own mark taken off every prop of each props map given: no contract written carries `placed`. Tested by
    test-from-code.mjs. */
-export function dropPlaced(...maps) { for (const m of maps) for (const p of Object.values(m || {})) delete p.placed; }
-export const slotProp = (k, a, must = {}) => ({ type: 'slot', code: k, ...must, ...(a.placed && { placed: true }) });
+export function dropPlaced(...maps) { for (const m of maps) for (const p of Object.values(m || {})) { delete p.placed; delete p.sample; } }
+export const slotProp = (k, a, must = {}) => ({ type: 'slot', code: k, ...must, ...(a.placed && { placed: true }), ...(a.sample && { sample: a.sample }) });
 /* An icon the code takes by name (a string) where the design swaps an instance: the design's swap, one per size where
    the code merged them (to-markup's one `icon` for Icon (16) and Icon (20)); never a key the design holds as another
    kind. So is content the code takes where it draws one of the library's components by default (a slot `placed`),
@@ -1997,9 +1997,11 @@ async function main() {
     if (Object.keys(L.pseudoOf).length) props.state = { type: 'enum', values: ['rest', ...Object.keys(L.pseudoOf), ...setStates], default: 'rest', role: 'interaction', pointer: Object.keys(L.pseudoOf), code: '__state' };
     if (L.governed && figmaContract) A.take('empty-shows', { props }, () => emptyShows(props, figmaContract.props, joinedProps, story.args, (L.joins(figmaContract, story.argTypes) || {}).twice));
     const textsOnlyInCode = onlyInCode(props, figmaContract && figmaContract.props, joinedProps);
-    let defaults = Object.fromEntries(Object.entries(props).filter(([, p]) => p.type !== 'string').map(([, p]) => [p.code, p.type === 'slot' && !p.placed ? slotMark(p.code) : p.default]));
+    let defaults = Object.fromEntries(Object.entries(props).filter(([, p]) => p.type !== 'string').map(([, p]) => [p.code, p.type === 'slot' && !p.placed && !p.sample ? slotMark(p.code) : p.default]));
     // each slot's stand-in, by the prop it stands in for: the element it lands in is the slot
-    const marks = Object.entries(props).filter(([, p]) => p.type === 'slot' && !p.placed).map(([k, p]) => [slotMark(p.code), k]);
+    // (a slot the self story draws its sample in while given nothing, `sample`: no stand-in, found by the name the markup
+    // marks it with, data-slot, its sample read as its parts)
+    const marks = Object.entries(props).filter(([, p]) => p.type === 'slot' && !p.placed).map(([k, p]) => (p.sample ? [null, k, p.sample] : [slotMark(p.code), k]));
     // for another component drawn inside this one: each of its booleans that shows a layer, by that layer's selector in its own mapping
     const shownSel = Object.fromEntries(Object.keys(others).map((slug) => {
       const fc = official.get(slug), parts = L.partsOf ? L.partsOf(slug) : null;
@@ -2009,7 +2011,7 @@ async function main() {
     // and the layers its swaps swap, so a glyph goes to the swap of the layer it is drawn in (a select's caret is no
     // glyph of its menu's slot), as to-markup draws a swap's icon in its own layer
     const swapSel = Object.fromEntries(Object.keys(others).map((slug) => [slug, swappedLayers(official.get(slug), L, slug)]));
-    for (const [k, p] of Object.entries(props)) if (p.type === 'slot' && !p.placed) slotArgs[p.code] = slotMark(p.code);
+    for (const [k, p] of Object.entries(props)) if (p.type === 'slot' && !p.placed && !p.sample) slotArgs[p.code] = slotMark(p.code);
 
     // one render, read as anatomy. The walk starts at the component's own root: the mapping's `root`, or
     // the framework's root class for it, which holds every part (the first paired element may be one part
@@ -2156,7 +2158,7 @@ async function main() {
           const text = entryEl ? plain(n.value || n.placeholder || '').trim() : wordsAsDrawn(n, s);
           // a box whose only content is its words is a text, unless the mapping says its words are a layer of their own
           // the element a slot's stand-in landed in is the slot, what the caller puts there its content, not its parts
-          const filled = marks.find(([m]) => text === m);
+          const filled = marks.find(([m, , own]) => (m != null && text === m) || (own && !inside && n.getAttribute('data-slot') === own));
           // an icon is an svg, or the mark to-markup leaves for the project to draw one in (an empty element naming it, data-icon)
           // a placed component's slot this one fills (to-markup marks its slots, data-slot): a slot, what is put in it read
           const fills = inside && n.getAttribute('data-slot');
@@ -2179,7 +2181,7 @@ async function main() {
           // (a host that draws no box, display: contents, renders at its control's: the box in the flow)
           { const b = s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n, r = b.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
           // a slot holding only words: its text styles kept aside, for where the design draws a text there
-          if (filled && !n.children.length) e.asText = { color: s.color, type: typeOf(n, s), textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign };
+          if (filled && filled[0] != null && !n.children.length) e.asText = { color: s.color, type: typeOf(n, s), textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign };
           n.setAttribute('data-contract-id', id);
           // a part turned a quarter: its wrapper, which its parent lays out, read for its sizes on the parent's axes (turnOf)
           const tn = turnOf(n, getComputedStyle);
@@ -2318,7 +2320,8 @@ async function main() {
           out.push(e);
           // a box's children, and its own words where it has them beside its children (a label written straight
           // into a link beside its icon): a text part of its own, where it sits among them
-          if (kind === 'container' || fills) {
+          // (and a slot's own sample, drawn while it is given nothing: its parts)
+          if (kind === 'container' || fills || (filled && filled[2])) {
             let i = 0, said = false;
             for (const c of n.childNodes) {
               if (c.nodeType === 1) walk(c, id, i++, inside);

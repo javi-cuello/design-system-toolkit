@@ -373,9 +373,12 @@ const odd = toCss({ ...chip, anatomy: { ...chip.anatomy, nav: { kind: 'container
 ok('a copy drawn otherwise than its first stays a part of its own', /__day-2 \{[^}]*align-self: stretch/.test(odd) && /__day \{[^}]*opacity/.test(odd));
 const texts = toCss({ ...chip, anatomy: { ...chip.anatomy, title: { kind: 'text', parent: 'root', order: 1, color: 'C/a' }, title_2: { kind: 'text', parent: 'root', order: 2, color: 'C/b' } } }, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
 ok('numbered copies of a placed component take their first\'s class; two texts stay two parts', rows.includes('.ds-chip__nav > .ds-chip__item {') && !/item-2/.test(rows) && texts.includes('__title-2 {') && texts.includes('var(--c-b)'));
-// a slot's children are samples: one rule places any child, and none of their insides is written
+// a slot's children are its sample, drawn while the caller passes nothing: one rule places any child a caller puts there,
+// placed and no more, and each part of the sample is written by its own class, as the design draws it (what the
+// rule for any child says that a sample's child does not, unset on it)
 const slotted = toCss({ ...chip, anatomy: { ...chip.anatomy, slot: { kind: 'slot', parent: 'root', order: 1, layout: { direction: 'column' } }, 'slot/item': { kind: 'container', parent: 'slot', order: 0, width: 'fill', background: 'C/x', layout: { direction: 'row' } }, 'slot/item/label': { kind: 'text', parent: 'slot/item', order: 0, color: 'C/y' }, 'slot/item_2': { kind: 'instance', parent: 'slot', order: 1, component: 'Badge', width: 'fill' } } }, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
-ok('a slot\'s samples are one rule for any child, placed and no more', /\.ds-chip__slot > \* \{\s*align-self: stretch;/.test(slotted) && !/__item|var\(--c-x\)|var\(--c-y\)/.test(slotted));
+ok('a slot\'s rule for any child places it and no more', /\.ds-chip__slot > \* \{\s*align-self: stretch;\s*\}/.test(slotted));
+ok('a slot\'s sample is written part by part, as the design draws it', /\.ds-chip__slot > \.ds-chip__item \{[^}]*background: var\(--c-x\)/.test(slotted) && /\.ds-chip__item > \.ds-chip__slot-item-label \{[^}]*color: var\(--c-y\)/.test(slotted));
 // a focus ring drawn as a layer of its own is the parent's outline, offset by its clear less its width
 const ringed = { ...chip, variants: [...chip.variants, { when: { state: 'hover' }, add: {} }], props: { ...chip.props, state: { ...chip.props.state, values: ['rest', 'hover', 'focus'], pointer: ['hover', 'focus'] } } };
 ringed.variants.push({ when: { state: 'focus' }, add: { ring: { kind: 'graphic', parent: 'root', position: 'absolute', absolute: { x: -4, y: -4, end: -4, bottom: -4 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus/colour', width: [2, 2, 2, 2] } } } });
@@ -841,7 +844,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     'body/sample': { kind: 'container', parent: 'body', layout: { direction: 'column' }, width: 'fill', height: 'hug', minHeight: 200, whileEmpty: ['minHeight'] } },
     variants: [{ when: { size: 'lg' }, set: { 'body.whileEmpty': null, 'body.minHeight': 100, 'body/sample.whileEmpty': null } }] };
   const css = toCss(c, 'sheet');
-  ok('a slot\'s sample frame gives its empty size to nothing a caller places', !/> \*:not\(:has\(\*\)\)/.test(css) && !/10\.5rem|12\.5rem/.test(css));
+  ok('a slot\'s sample frame gives its empty size to nothing a caller places, only to itself', !/> \*(:not\(:has\(\*\)\))? \{[^}]*min-block-size/.test(css) && /sheet__sample:not\(:has\(\*\)\) \{[^}]*min-block-size: 12\.5rem/.test(css));
   ok('a combination that sets its own minimum keeps it when empty, never unset', /lg[^{]*sheet__body:not\(:has\(\*\)\) \{[^}]*min-block-size: 6\.25rem/.test(css) && !/min-block-size: unset/.test(css));
 }
 // an override two placed components deep is the innermost one's part, named level by level; a graphic directly under a

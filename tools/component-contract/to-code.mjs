@@ -736,8 +736,13 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
   const turned = turnedParts(c);
   const firstInFlow = (pid) => Object.entries(a).filter(([, x]) => x.parent === pid && !(x.position === 'absolute' || x.absolute)).sort((x, y) => (x[1].order ?? 0) - (y[1].order ?? 0))[0]?.[0];
   // a placed component's insides are its own stylesheet's (code-standard rule 5): this one stops at the instance
-  const inside = (id) => { for (let p = a[id].parent; p; p = a[p] && a[p].parent) if (a[p] && (a[p].kind === 'instance' || (a[a[p].parent] || {}).kind === 'slot')) return true; return false; };
-  for (let [id, e] of Object.entries(a)) {
+  // (a slot's sample is this one's own drawing, its fallback: to-markup draws it while the caller passes nothing)
+  const inside = (id) => { for (let p = a[id].parent; p; p = a[p] && a[p].parent) if (a[p] && a[p].kind === 'instance') return true; return false; };
+  // a slot's first child is met twice: once for the rule that places any child a caller puts there (`slot/*`, `any`),
+  // once for its own, as the sample's every part is drawn
+  const anyOf = new Set();
+  const each = Object.entries(a).flatMap(([id, e]) => ((a[e.parent] || {}).kind === 'slot' && !anyOf.has(e.parent) && anyOf.add(e.parent) ? [[id, e, true], [id, e, false]] : [[id, e, false]]));
+  for (let [id, e, any] of each) {
     if (inside(id)) {
       // save the colour the instance's glyph is drawn in, which the placing component sets on it: an icon draws
       // in its element's color (currentColor), so the colour is the instance's
@@ -785,10 +790,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       if (decls.length) out[id] = { decls: new Map(decls.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: [] };
       continue;
     }
-    // a slot's children are samples of what a caller puts there: the first says where any child sits, as
-    // the slot's every child (`> *`), and none says how it looks
-    const slotted = e.parent && a[e.parent] && a[e.parent].kind === 'slot';
-    if (slotted && out[`${e.parent}/*`]) continue;
+    // a slot's first child says where any child a caller puts there sits, as the slot's every child (`> *`), and not
+    // how it looks; its own rule, and its siblings', are the sample's, drawn while the caller passes nothing
+    const slotted = any;
     // a numbered copy of a placed component beside its first (item, item_2, item_3: rows of a list) is one more of
     // it: it takes the first's class and rule, so a list of any length is styled
     if (copyOf(c, id)) continue;
@@ -950,6 +954,12 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     // (an icon's colour too: back to the one the placed component draws it in, not unset, which would inherit)
     const own = now && ALL[id].kind === 'instance' && placedGlyph({ ...ALL, [host]: a[host] || ALL[host] }, host, id.slice(host.length + 1), m, mains);
     if (own) out[id].decls.set('color', { v: tokenNames.token(own), given: true });
+  }
+  // the sample's own children are reached by the rule for any child too: what it says that theirs does not is unset on
+  // theirs, so each is drawn as the design draws it
+  for (const [id, e] of Object.entries(a)) {
+    const all = (a[e.parent] || {}).kind === 'slot' && out[`${e.parent}/*`];
+    if (all && out[id]) for (const p of all.decls.keys()) if (!out[id].decls.has(p)) out[id].decls.set(p, { v: 'unset' });
   }
   // copies of one part and a slot's children share one rule, so one pull back cannot be said for all but the first
   for (const id of pulling) if (out[id] && pulls(a[id]) && Object.keys(a).some((k) => a[k].parent === id && (copyOf(c, k) || a[id].kind === 'slot'))) out[id].unread.push('layout.gap below 0 between copies of one part or a slot\'s children (each pulls back on its own rule; theirs is shared)');

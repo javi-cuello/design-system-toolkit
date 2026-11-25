@@ -431,6 +431,16 @@ ok('and to-code styles that input and its placeholder by the same selectors: the
   ok('a box it puts there keeps what it holds', /h\("div", \{ "data-part": "group" \},\s*placed\(parts\["[^"]*"\], renderItem, \{ label: "Three" \}/.test(g) && toParity(grouped, 'bar', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers['Menu > List > Group > Item'] === 'ds-bar > [data-part="menu"] > [data-part="list"] > [data-part="group"] > [data-part="menu-list-group-item"]');
   const titled = { contract: 1, component: 'Panel', props: { title: { type: 'slot', figma: 'Title' } }, anatomy: { root: { kind: 'container' }, head: { kind: 'slot', parent: 'root', content: '{title}' } }, variants: [] };
   ok('a slot is marked by its contract name, whatever its name in code', /"data-slot": "title"/.test(toElement(titled, 'panel', { naming: ELEMENT, library: {} })));
+  // what the design holds in a slot is its fallback, drawn while the caller passes nothing (a <slot>'s own content), each
+  // part under its own conditions and words, and mapped by its own selector, so the self leg reads it back
+  { const held = { ...titled, props: { body: { type: 'slot', figma: 'Body' }, heading: { type: 'string', default: 'Heading', figma: 'Heading', sets: ['head/words'] }, more: { type: 'boolean', default: false, figma: 'More' } },
+      anatomy: { ...titled.anatomy, head: { kind: 'slot', parent: 'root', content: '{body}' }, 'head/words': { kind: 'text', parent: 'head', order: 0, content: '{heading}' } },
+      variants: [{ when: { more: true }, add: { 'head/extra': { kind: 'text', parent: 'head', order: 1, content: 'Extra' } } }] };
+    const el = toElement(held, 'panel', { naming: ELEMENT, library: {} }), re = toReact(held, 'panel', { naming: CLASS, library: {} }), kb = toSnippet(held, 'panel', { naming: KIRBY, library: {} });
+    ok('a slot\'s sample is drawn while the caller passes nothing', /body,\s*\(body == null\) && h\("span", \{ "data-part": "words" \},\s*heading\)/.test(el) && /\(body == null && \(more\)\) && h\("span", \{ "data-part": "extra" \}/.test(el), el);
+    ok('in React and a snippet too', /\{body == null && \(\s*<span className="ds-panel__words">\{heading\}<\/span>/.test(re) && /<\?php if \(\$slots->body\(\) == null\): \?>/.test(kb), re);
+    ok('the sample is mapped by its own selector, never skipped', toParity(held, 'panel', { naming: ELEMENT, library: {}, framework: 'web-components' }).layers['Head > Words'] === 'ds-panel > [data-part="head"] > [data-part="words"]');
+    ok('a slot holding a sample says so to its reader', propsOf(held, {}).find((x) => x.key === 'body').sample === true && !propsOf(titled, {}).find((x) => x.key === 'title').sample); }
   // a variant that draws the slot elsewhere (a dialog's content moved to the root when immersive): that part shows the slot too
   { const moved = { ...titled, props: { ...titled.props, wide: { type: 'boolean', default: false, axis: true, figma: 'Wide' } }, anatomy: { ...titled.anatomy, box: { kind: 'container', parent: 'root' }, 'box/head': { kind: 'slot', parent: 'box', content: '{title}' } },
       variants: [{ when: { wide: true }, add: { head: { kind: 'slot', parent: 'root', content: '{title}' } }, remove: ['box/head'] }] };

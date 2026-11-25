@@ -557,6 +557,11 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
     JSON.stringify(selfSlotControl({ type: 'node', placed: { parts: ['button'], component: 'Btn' } })) === '{"control":"slot","placed":"Btn"}' && JSON.stringify(selfSlotControl({ type: 'node' })) === '{"control":"slot"}'
     && slotProp('button1', selfSlotControl({ type: 'node', placed: { parts: ['button'], component: 'Btn' } })).placed === true
     && !('placed' in slotProp('icon', { control: 'slot', default: '<ChevronDown />' })) && !('placed' in slotProp('children', { control: 'slot', default: 'Submit' })));
+  // a slot the toolkit's markup draws its design sample in while given nothing: read with no stand-in, by its data-slot name
+  ok('the self story marks a slot holding a sample by its contract name, and the reading keeps the mark till it is dropped',
+    JSON.stringify(selfSlotControl({ type: 'node', key: 'body', sample: true })) === '{"control":"slot","sample":"body"}'
+    && slotProp('content', selfSlotControl({ type: 'node', key: 'body', sample: true })).sample === 'body' && !('sample' in slotProp('icon', { control: 'slot' })));
+  { const props = { b: { type: 'slot', code: 'b', sample: 'body' } }; dropPlaced(props); ok('no contract a reading writes keeps the sample mark', !('sample' in props.b)); }
   { // the mark leaves both the shaped contract and the reading the report writes (asFigma copies each prop)
     const raw = { component: 'G', props: { b: { type: 'slot', code: 'b', placed: true } }, anatomy: { root: { kind: 'container' } }, variants: [] };
     const shaped = asFigma(raw, {});

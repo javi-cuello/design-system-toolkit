@@ -100,7 +100,8 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
     else if (p.type === 'string') { const t = (c.anatomy[(p.sets || [])[0]] || {}).content; out.push({ ...base, type: 'string', default: p.default ?? (typeof t === 'string' && !/^\{.+\}$/.test(t) ? t : '') }); }
     else if (p.type === 'number') out.push({ ...base, type: 'number', default: Number.isFinite(Number(p.default)) ? Number(p.default) : 0 });
     else if (p.type === 'instance') out.push({ ...base, ...swapOf(c, p, library, lang) });
-    else if (p.type === 'slot') out.push({ ...base, type: 'node', slot: slotPartOf(c, key), slots: slotParts(c, key) });
+    // (`sample`: the design holds something in it, which the markup draws while the caller passes nothing)
+    else if (p.type === 'slot') { const slots = slotParts(c, key); out.push({ ...base, type: 'node', slot: slotPartOf(c, key), slots, ...(sampled(c, slots) && { sample: true }) }); }
     // an event: a DOM handler (onClick) is the element's own, typed by it and passed with the rest; another is a gap
     else if (p.type === 'event') { if (!HANDLERS.has(key)) out.push({ ...base, type: 'event' }); }
   }
@@ -338,6 +339,11 @@ function slotPartOf(c, key) {
   const last = (id) => camel(id.split('/').pop());
   const hit = slots.find(([, e]) => e.content === `{${key}}`) || slots.find(([id]) => last(id) === key) || slots.find(([id]) => last(id).endsWith(cap(key)));
   return hit ? hit[0] : null;
+}
+// whether the design holds anything in any of these slot parts, at any combination (its sample)
+function sampled(c, slots) {
+  const all = { ...(c.anatomy || {}), ...Object.assign({}, ...(c.variants || []).map((v) => v.add || {})) };
+  return Object.values(all).some((e) => e && slots.includes(e.parent));
 }
 // every part that shows a slot prop: its own, and another a variant draws in its place (a dialog's content moved to
 // the root when immersive: the variant takes the slot's own part away and adds one whose content names it), never a
@@ -606,7 +612,12 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       out = { tag: 'span', attrs: [...hook(id), ['data-icon', glyph], ...(size ? [['data-icon-size', { lit: size }]] : []), ['aria-hidden', { lit: 'true' }]], children: [] };
     } else if (slot) {
       // marked as a slot, so a reading of a component that fills it finds it (from-code)
-      out = { tag, attrs: [...hook(id), ...((slot.slots || [slot.slot]).includes(id) ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };
+      const given = lang.php ? `$slots->${slot.name}()` : slot.name;
+      // what the design holds in the slot, its sample, is the slot's fallback: drawn while the caller passes nothing, as a
+      // <slot>'s own content is (a card's header and subhead, a rail's items), each part as the design draws it there
+      const none = `${given} == null`, fallback = (e.kind === 'slot' ? kids.get(id) || [] : []).flatMap((k) => node(k, known, true)).filter(Boolean)
+        .map((x) => (x.comment ? x : x.when ? { when: `${none} && (${x.when})`, node: x.node } : { when: none, node: x }));
+      out = { tag, attrs: [...hook(id), ...((slot.slots || [slot.slot]).includes(id) ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: given, raw: true } : { code: given }, ...fallback] };
       // a swapped component of the library's: what the caller passes, else the design's own instance, as Figma draws
       // the swap at its default (a snippet takes no markup from its caller: there the slot stays)
       // (each layer the swap drives, and as a variant swaps that instance for another of the library's: instanceOut)
@@ -1116,7 +1127,8 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     // and what it puts in a placed component's slot (a menu's items), by its own hook under that slot
     const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains, library)) || (x.inside && framework === 'web-components' && copySelector(c, n, x.id, mains, library));
     const at = nested ? nested : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
-      : x.slotted ? { skip: 'a sample of what a caller puts in the slot' }
+      // (a sample in a placed component's slot, where this one puts nothing there: that component's to draw)
+      : x.slotted && (parts.get(x.slotted) || {}).inside ? { skip: 'a sample of what a caller puts in the slot' }
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
       : partSelector(c, n, x.id, x, library);
     layers[pathOf(x.id)] = at;
