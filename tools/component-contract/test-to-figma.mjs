@@ -902,6 +902,9 @@ delete globalThis.figma;
     src.includes("if (!P.fromCode && e.kind === 'instance' && n.type === 'INSTANCE') { await paintIf(n, 'fills', e.background); styleFill(n, e, e.background); await lookOver(n, e); }")
     && src.includes("if (e.kind !== 'text' && !P.fromCode) await lookOver(n, e);") && src.includes("await lookOver(n, e); else if (e.border === P.cleared) clearedLook(n, { border: e.border }, P.cleared); else if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);")
     && src.includes("for (const [i, f] of fields.entries()) if (!(await sameNum(n, f, side(i)))) await num(n, f, side(i));"));
+  ok('a shadow an instance clears empties its effects, the style with them; none is never an effect style looked up',
+    src.includes("if (e.shadow === P.cleared) { if ('effects' in n && n.effects.length) n.effects = []; }") && src.includes('if (e.shadow === P.cleared) n.effects = [];')
+    && !needs({ component: 'X', props: {}, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Y', shadow: 'none' } }, variants: [] }).effects.includes('none'));
   // an instance that clears its component's colour style or stroke (`none`, rules.mjs CLEARED): the style detached, no
   // strokes; `none` never looked up as a style's name
   const node = () => ({ type: 'INSTANCE', fillStyleId: 'S:1', strokes: [{ type: 'SOLID' }], fills: [{ type: 'SOLID' }] });

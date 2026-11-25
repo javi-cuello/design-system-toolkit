@@ -166,8 +166,10 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     }
   }
   const shadow = take('shadow');
+  // (a shadow an instance clears, `none` (rules.mjs CLEARED): none drawn, unless a ring is)
+  if (shadow === CLEARED && !rings.length) put('box-shadow', 'none');
   if (shadow === 'literal') unread.push('shadow (an effect with no style)');
-  else if (typeof shadow === 'string') rings.push(names.token(shadow));
+  else if (typeof shadow === 'string' && shadow !== CLEARED) rings.push(names.token(shadow));
   if (rings.length) put('box-shadow', rings.join(', '));
 
   const opacity = take('opacity');

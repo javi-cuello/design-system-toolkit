@@ -958,7 +958,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     }
     if (e.radius != null && 'topLeftRadius' in n) for (const [i, f] of ['topLeftRadius', 'topRightRadius', 'bottomRightRadius', 'bottomLeftRadius'].entries()) { const t = Array.isArray(e.radius) ? e.radius[i] : e.radius; if (!(await sameNum(n, f, t))) await num(n, f, t); }
     if (e.overflow != null && 'clipsContent' in n && n.clipsContent !== (e.overflow === 'hidden')) n.clipsContent = e.overflow === 'hidden';
-    if (e.shadow && 'effectStyleId' in n) { if (!effects[e.shadow]) missing.add(`shadow ${e.shadow}`); else if (n.effectStyleId !== effects[e.shadow].id) toEffect.push([n, effects[e.shadow], e.shadow]); }
+    // (a shadow an instance clears, `none` (P.cleared): its effects emptied, the style with them)
+    if (e.shadow === P.cleared) { if ('effects' in n && n.effects.length) n.effects = []; }
+    else if (e.shadow && 'effectStyleId' in n) { if (!effects[e.shadow]) missing.add(`shadow ${e.shadow}`); else if (n.effectStyleId !== effects[e.shadow].id) toEffect.push([n, effects[e.shadow], e.shadow]); }
   };
   const override = async (n, e) => {
     await layoutOver(n, e);
@@ -1193,7 +1195,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         // Figma's frames clip by default; the contract says which do
         if ('clipsContent' in n) n.clipsContent = e.overflow === 'hidden';
         // its shadow: the library's effect style, bound at the end with the text styles; an unmatched one, said
-        if (e.shadow) { if (effects[e.shadow]) toEffect.push([n, effects[e.shadow], e.shadow]); else missing.add(`shadow ${e.shadow}`); }
+        if (e.shadow === P.cleared) n.effects = [];
+        else if (e.shadow) { if (effects[e.shadow]) toEffect.push([n, effects[e.shadow], e.shadow]); else missing.add(`shadow ${e.shadow}`); }
       }
       if (id !== 'root' && n.parent !== nodes[e.parent]) nodes[e.parent].appendChild(n);
       // a size said as intent, set once the part has its parent: fill the parent's flow, hug what it holds, a fixed
@@ -1494,7 +1497,7 @@ export function needs(p, isVar = varNamer()) {
   const els = p.variants.flatMap((v) => Object.values(v.anatomy));
   const vars = new Set();
   for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (isVar(t)) vars.add(t);
-  return { styles: [...new Set(els.map((e) => e.typography).filter(Boolean))], icons: [...new Set(els.map((e) => e.asset).filter(Boolean))], vars: [...vars], components: [...new Set(els.filter((e) => e.kind === 'instance' && e.component).map((e) => e.component))], swaps: [...new Set(els.flatMap((e) => Object.values(e.with || {})).filter((v) => typeof v === 'string'))], effects: [...new Set(els.map((e) => e.shadow).filter((x) => x && !/\(/.test(x)))], fillStyles: [...new Set(els.map((e) => e.fillStyle).filter((x) => x && x !== CLEARED))] };
+  return { styles: [...new Set(els.map((e) => e.typography).filter(Boolean))], icons: [...new Set(els.map((e) => e.asset).filter(Boolean))], vars: [...vars], components: [...new Set(els.filter((e) => e.kind === 'instance' && e.component).map((e) => e.component))], swaps: [...new Set(els.flatMap((e) => Object.values(e.with || {})).filter((v) => typeof v === 'string'))], effects: [...new Set(els.map((e) => e.shadow).filter((x) => x && x !== CLEARED && !/\(/.test(x)))], fillStyles: [...new Set(els.map((e) => e.fillStyle).filter((x) => x && x !== CLEARED))] };
 }
 
 /** Each mode axis's collections, as the drawing sets a layer's mode on them: { axis: [{ collection, key, name, names }] },
@@ -1944,7 +1947,7 @@ export function verify(p, drawn, isVar = varNamer()) {
       if (e.kind === 'graphic') checks.push(['colour', e.background, layer.inner || layer.fill]);
       if (e.kind === 'instance') checks.push(['component', e.component, layer.instanceOf]);
       if (e.kind === 'container') {
-        checks.push(['fill', e.background, layer.fill], ['radius', tok(e.radius), layer.radius], ['border', tok(e.border && e.border.color), layer.stroke], ['shadow', e.shadow && !/\(/.test(e.shadow) ? e.shadow : null, layer.effect]);
+        checks.push(['fill', e.background, layer.fill], ['radius', tok(e.radius), layer.radius], ['border', tok(e.border && e.border.color), layer.stroke], ['shadow', e.shadow && e.shadow !== CLEARED && !/\(/.test(e.shadow) ? e.shadow : null, layer.effect]);
         if (e.layout) checks.push(['gap', tok(e.layout.gap), layer.gap], ['padding', tok(e.layout.padding && e.layout.padding.start), layer.paddingLeft]);
       }
       // only what the contract names: a value it does not give is nothing to check

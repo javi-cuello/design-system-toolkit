@@ -847,6 +847,10 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   // its fill likewise, only where the page paints it clear (fillless): a fill merely unread says nothing
   const F = { component: 'Card', props: {}, anatomy: { root: { kind: 'container', background: 'Bg/card' } }, variants: [] };
   const f = readCleared({ root: { kind: 'container' }, c: { kind: 'instance', component: 'Card', fillless: true }, u: { kind: 'instance', component: 'Card', strokeless: true }, k: { kind: 'instance', component: 'Card', fillless: true, background: 'Bg/other' } }, (n) => (n === 'Card' ? F : null));
+  const S = { component: 'Pop', props: {}, anatomy: { root: { kind: 'container', shadow: 'Shadows/Menu' } }, variants: [] };
+  const sh = readCleared({ root: { kind: 'container' }, a: { kind: 'instance', component: 'Pop', shadowless: true }, b: { kind: 'instance', component: 'Pop' } }, (n) => (n === 'Pop' ? S : null));
+  ok('a placed component drawing no shadow its component draws reads as the shadow cleared; one unread says nothing',
+    sh.a.shadow === 'none' && sh.b.shadow === undefined && !('shadowless' in sh.a) && src.includes("if (cs.boxShadow === 'none') ie.shadowless = true;"));
   ok('a placed component painting clear where its component has a fill reads as the fill cleared; one unread, or painted, says nothing',
     f.c.background === 'none' && f.u.background === undefined && f.k.background === 'Bg/other' && !Object.values(f).some((x) => 'fillless' in x)
     && src.includes("if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true;"));

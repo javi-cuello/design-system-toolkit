@@ -403,6 +403,9 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     cleared.background === 'none' && kept.background === undefined);
   // corners likewise: the walk records a radius wherever it is not 0, so an instance with none where its component rounds is 0
   const round = { ...box, variants: [{ ...box.variants[0], radius: [16, 2, 2, 16] }] }, rm = mainsFrom({ Box: round });
+  const shaded = { ...box, variants: [{ ...box.variants[0], effect: 'Shadows/Menu', effects: ['DROP_SHADOW'] }] }, sm = mainsFrom({ Box: shaded });
+  ok('an instance with no shadow where its component has one says none; one that keeps it says nothing',
+    derive(row({}), ['Box'], { mains: sm }).anatomy.box.shadow === 'none' && derive(row({ effect: 'Shadows/Menu', effects: ['DROP_SHADOW'] }), ['Box'], { mains: sm }).anatomy.box.shadow === undefined);
   ok('an instance with no radius where its component rounds its corners says 0; one that keeps them says nothing',
     derive(row({}), ['Box'], { mains: rm }).anatomy.box.radius === 0 && derive(row({ radius: [16, 2, 2, 16] }), ['Box'], { mains: rm }).anatomy.box.radius === undefined
     && derive(row({}), ['Box'], { mains }).anatomy.box.radius === undefined);

@@ -612,6 +612,8 @@ function cleared(anatomy, mains) {
     if (paintOf(root.background) && e.background === undefined) e.background = CLEARED;
     // (and corners: the walk records a radius wherever it is not 0, so none where its root has one is 0, squared off)
     if (cornered(root.radius) && e.radius === undefined) e.radius = 0;
+    // (and a shadow: the walk records an instance's effect wherever it has one, so none where its root has one cleared it)
+    if (typeof root.shadow === 'string' && root.shadow !== CLEARED && e.shadow === undefined) e.shadow = CLEARED;
   }
   return anatomy;
 }
@@ -806,7 +808,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     if (!reading) for (const k of kept) {
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       const R = x && e && e.kind === 'instance' && e.component && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
-      if (R) for (const f of ['fillStyle', 'border', 'background']) if (x[f] === CLEARED && e[f] === undefined && R[f] !== undefined) e[f] = R[f];
+      if (R) for (const f of ['fillStyle', 'border', 'background', 'shadow']) if (x[f] === CLEARED && e[f] === undefined && R[f] !== undefined) e[f] = R[f];
       if (R && x.radius === 0 && e.radius === undefined && cornered(R.radius)) e.radius = R.radius;
     }
     inherit();
