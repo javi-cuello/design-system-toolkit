@@ -669,6 +669,13 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const unfilled = { root: { kind: 'container' }, m: { kind: 'instance', parent: 'root', component: 'Menu' }, 'm/head': { kind: 'text', parent: 'm', color: 'C/text', order: 0 }, 'm/list': { kind: 'slot', parent: 'm', content: '{list}', order: 1 } };
   ownInsides(unfilled, (n) => (n === 'Menu' ? menu : null));
   ok('and one whose slot shows none of its samples, filled with nothing, hides them: the instance is kept whole', !!unfilled['m/head']);
+  // a nested instance a placed component clips that this instance draws unclipped has stopped the clip: said `visible`
+  // where its own component's root does not clip (none resolved: its styling as walked), as unsaid it reads the part's
+  const list = { contract: 1, component: 'List', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item', key: 'k', overflow: 'hidden', order: 0 } }, variants: [] };
+  const itemOf = (root, component = 'Item') => { const x = { root: { kind: 'container' }, l: { kind: 'instance', parent: 'root', component: 'List' }, 'l/item': { kind: 'instance', parent: 'l', component, key: 'k', order: 0 } }; ownInsides(x, (n) => (n === 'List' ? list : n === 'Item' && root ? { contract: 1, component: 'Item', props: {}, anatomy: { root }, variants: [] } : null)); return x['l/item']; };
+  ok('a nested instance unclipped where its placed component clips it says visible, unless its own component\'s root clips or it is another component\'s',
+    itemOf(null).overflow === 'visible' && itemOf({ kind: 'container' }).overflow === 'visible' && !('overflow' in (itemOf({ kind: 'container', overflow: 'hidden' }) || {}))
+    && itemOf(null, 'Other').overflow === undefined);
   // a footer pinned to the bottom of a dialog the instance makes taller stands lower: its near offset follows from that
   // height, no override; a far offset that moves is one
   const dialog = { contract: 1, component: 'Dialog', props: {}, anatomy: { root: { kind: 'container' }, foot: { kind: 'container', parent: 'root', position: 'absolute', absolute: { x: 0, y: 234, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'max' } } } };

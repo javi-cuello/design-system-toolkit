@@ -881,10 +881,15 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     sayCleared(kept);
     // and one kept that does not clip where its component's part does has stopped it (an override): said `visible`
     // (UNCLIPPED), or a reader would take the part's clip as its component's. Both readings: each reads a clip wherever
-    // one is drawn (the walk's clips, code's computed overflow), so none read is none drawn
+    // one is drawn (the walk's clips, code's computed overflow), so none read is none drawn. A nested instance too, where
+    // its own component's root does not clip (none resolved: its styling as walked), as its unsaid clip is that root's;
+    // not one of another component than the part's, or a swap draws, whose part's clip was the swapped-out component's
     for (const k of kept) {
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
-      if (e && x && e.kind !== 'instance' && e.kind !== 'text' && e.overflow === undefined && x.overflow === 'hidden') e.overflow = UNCLIPPED;
+      if (!e || !x || e.kind === 'text' || e.overflow !== undefined || x.overflow !== 'hidden') continue;
+      if (e.kind === 'instance' && (swapped.includes(mk) || x.component !== e.component || !keyMatches(e.key, x.key))) continue;
+      const m2 = e.kind === 'instance' && e.component && mains(e.component, e.key), R = m2 && atProps(m2, e.with).root;
+      if (!R || R.overflow !== 'hidden') e.overflow = UNCLIPPED;
     }
     // and a clip this component stops that the placed layer draws again, its own component's, left out above: said. Both
     // readings: each reads a clip wherever one is drawn
