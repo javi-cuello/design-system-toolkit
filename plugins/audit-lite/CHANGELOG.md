@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.13] - 2026-11-25
+### Fixed
+- Carries snapshot walk 0.89.2: a snapshot loads pages one by one, each named.
+
 ## [0.14.12] - 2026-11-25
 ### Fixed
 - **Carries the snapshot plugin's walk at 0.89.1**: loading the pages and reading the variables each say so first, and the page-by-page fallback counts the pages.

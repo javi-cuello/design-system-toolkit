@@ -1,4 +1,4 @@
-// Design system snapshot — v0.89.1 · plugin-standard v1.1.0
+// Design system snapshot — v0.89.2 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -249,10 +249,15 @@ const place = (parent, node) => {
 // Said before it starts: on a large file loading every page takes minutes, and a window still on "Starting…" reads as hung.
 // `tell`: a snapshot says it (a window still on "Starting…" reads as hung); detect() on open stays quiet.
 const loadPages = async (tell = false) => {
-  if (tell) say('loading every page of the file (a large file takes minutes)');
-  try { await figma.loadAllPagesAsync(); } catch (e) {
+  // A snapshot loads page by page, each named: on one large library loadAllPagesAsync never returned (2026-11-25),
+  // and one call says nothing of where it is. Opening the plugin (detect) keeps the one call.
+  if (tell) {
     const all = figma.root.children;
-    for (let i = 0; i < all.length; i++) { if (tell) say('loading pages', i, all.length); await all[i].loadAsync(); }
+    for (let i = 0; i < all.length; i++) { say(`loading page "${all[i].name}"`, i, all.length); await all[i].loadAsync(); }
+    return;
+  }
+  try { await figma.loadAllPagesAsync(); } catch (e) {
+    for (const p of figma.root.children) await p.loadAsync();
   }
 };
 
@@ -800,7 +805,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.89.1';
+const VERSION = '0.89.2';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

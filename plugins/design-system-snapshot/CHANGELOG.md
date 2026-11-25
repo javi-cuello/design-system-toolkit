@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.89.2] - 2026-11-25
+### Fixed
+- **A snapshot loads the file page by page, each named.** On one large library Figma's load-every-page call never returned and Cancel could not stop it; one page at a time shows where it is and which page stalls.
+
 ## [0.89.1] - 2026-11-25
 ### Fixed
 - **The window says what it is doing while a large file loads.** Loading every page and reading the variables ran before the first progress message, so a large library sat on "Starting…" for minutes and read as hung. Each now says so first, and the page-by-page fallback counts the pages.
