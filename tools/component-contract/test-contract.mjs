@@ -439,6 +439,21 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     swapIn(wrap({ b: ['Box'] })).fillStyle === 'none' && swapIn(wrap(null)).fillStyle === undefined);
   ok('a part walked as another library\'s component in one variant is not cleared where a variant names one the mains resolved',
     at('b').component === 'Box' && at('b').fillStyle === undefined);
+  // (by name and key: another library's Box of key k1 walked, cleared, in one variant; this library's Box of key k2,
+  // resolved and kept, in another)
+  const boxK = { ...box, key: 'k2' };
+  const kv = (kind, own) => ({ name: `Kind=${kind}`, type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [{ name: 'Box', type: 'INSTANCE', instanceOf: 'Box', layout: 'HORIZONTAL', sizing: 'HUG/HUG', ...own, children: [] }] });
+  const keyedSpec = { name: 'Keyed', id: '9:10', props: { Kind: ['a', 'b'] }, variants: [kv('a', { instanceOfKey: 'k1', overrides: ['fillStyleId,fills,strokes'] }), kv('b', { instanceOfKey: 'k2', fills: ['Bg/clear'], fillStyle: 'Clear/Clear', strokes: ['Line/strong'], strokeSides: [1, 1, 1, 1] })] };
+  const keyed = derive(keyedSpec, ['Box'], { mains: mainsFrom({ Box: boxK }) }), Bk = derive(boxK, []);
+  const atK = (kind) => placedAs({ x: { kind: 'instance', component: 'Keyed', with: { Kind: kind } } }, 'x', keyed, byComponentName([keyed, Bk])).M.box;
+  ok('a part walked as one key of a component is not cleared where a variant names the key the mains resolved',
+    JSON.stringify(keyed.asWalked) === JSON.stringify({ box: ['Box#k1'] }) && atK('b').key === 'k2' && atK('b').fillStyle === undefined);
+  // a swap target read without mains has every instance's style as walked: one with none cleared it, one with it kept it
+  const wrapSpec = (own) => ({ name: 'Icon/Wrap', id: '9:9', props: {}, variants: [{ name: 'Icon/Wrap', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'B', type: 'INSTANCE', instanceOf: 'Box', layout: 'HORIZONTAL', sizing: 'HUG/HUG', ...own, children: [] }] }] });
+  const rawCleared = swapIn(derive(wrapSpec({ overrides: ['fillStyleId,fills,strokes'] }), ['Box'])), rawKept = swapIn(derive(wrapSpec({ fills: ['Bg/clear'], fillStyle: 'Clear/Clear' }), ['Box']));
+  ok('a swap target read without mains: its instance with no style reads as cleared, one with its style does not',
+    rawCleared.fillStyle === 'none' && rawKept.fillStyle !== 'none');
 }
 {
   // an instance that hides a layer of its component (the walk records what shows) is kept whole: nothing here could say the hiding

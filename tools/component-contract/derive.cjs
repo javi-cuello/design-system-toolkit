@@ -627,7 +627,7 @@ const e = anatomy[id];
 let M = { ...atProps(m, e.with) };
   // the parts whose styling stays as walked (asWalked, below), by key here: each to the components it was walked as
   const walked = new Map();
-  const walkedOf = (c, at = (k) => k) => { const A = RAW.has(c) ? null : c.asWalked || {}; return (k, x) => (A ? (A[k] || []).includes(x.component) : true) && walked.set(at(k), true); };
+  const walkedOf = (c, at = (k) => k) => { const A = RAW.has(c) ? null : c.asWalked || {}; return (k, x) => (A ? (A[k] || []).includes(walkedAs(x)) : true) && walked.set(at(k), true); };
   { const w = walkedOf(m); for (const [k, x] of Object.entries(M)) if (x && x.kind === 'instance') w(k, x); }
   // a swap the instance states (Icon: folder) draws that component where the swap points: compared so, its glyph
   // the swapped icon's own drawing, so only what an instance can override there (its colour) is compared
@@ -920,6 +920,9 @@ function mainsFrom(specs, known = [], optionsOf = () => ({})) {
 // the contracts derived here without `mains` (mainsFrom's): their instances' styling is as walked, never pruned to
 // their components' (placedAs)
 const RAW = new WeakSet();
+// an instance as mains looked it up: its component's name, and its key where it has one (`Box#k1`), since mains resolve
+// by key first and refuse a name of another key
+const walkedAs = (e) => (e.key ? `${e.component}#${e.key}` : e.component);
 function derive(stored, known = [], options = {}) {
   // a part turned a quarter is said in its own axes only where code draws it in a wrapper (to-code.mjs turnedParts, one
   // rule for the contract, the code and the drawing): found on the contract said without the swap, then said again
@@ -1043,9 +1046,9 @@ function deriveWith(stored, known, { stateAxis = HOUSE.stateAxis || null, pointe
   // them and their styling stays as walked, so a reader placing this component reads their unsaid style as cleared
   // (placedAs); every other instance's none is already said, and an unsaid style there is its component's
   if (mains) {
-    // (each with the components it was walked as: a variant whose part names a component mains resolved is not walked)
+    // (each with the components it was walked as, by name and key: a variant whose part names a component mains resolved is not walked)
     const walked = {};
-    for (const f of flat) for (const [id, e] of Object.entries(f.anatomy)) if (e && e.kind === 'instance' && e.component && (e.fillStyle === undefined || e.border === undefined)) { const m = mains(e.component, e.key); if (!m || !atProps(m, e.with).root) walked[id] = [...new Set([...(walked[id] || []), e.component])].sort(); }
+    for (const f of flat) for (const [id, e] of Object.entries(f.anatomy)) if (e && e.kind === 'instance' && e.component && (e.fillStyle === undefined || e.border === undefined)) { const m = mains(e.component, e.key); if (!m || !atProps(m, e.with).root) walked[id] = [...new Set([...(walked[id] || []), walkedAs(e)])].sort(); }
     if (Object.keys(walked).length) contract.asWalked = Object.fromEntries(Object.entries(walked).sort(([a], [b]) => (a < b ? -1 : 1)));
   }
   return contract;
