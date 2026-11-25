@@ -207,6 +207,10 @@ const contract = () => ({ contract: 1, component: 'Chip', props: { size: { type:
     const c = contract(); change(c);
     assert.ok(kinds(compareContract('chip', setNode, c, ctx)).includes(kind), `a changed ${kind} is caught`);
   }
+  // a radius of four zeros (an instance squaring off its component's corners) is what REST says by leaving it out
+  { const c = contract(); c.anatomy.root.radius = 0; const square = structuredClone(setNode); for (const v of square.children) delete v.cornerRadius;
+    assert.ok(!kinds(compareContract('chip', square, c, ctx)).includes('contract:radius'), 'a 0 radius is REST\'s none');
+    assert.ok(kinds(compareContract('chip', setNode, c, ctx)).includes('contract:radius'), 'and a 0 where Figma rounds differs'); }
   // parts are found in Figma's own tree by their names, never through the stored spec; two candidates are ambiguous
   {
     const set = structuredClone(setNode);

@@ -401,6 +401,11 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('and with no contract for its component, nothing is said', derive(row({}), ['Box']).anatomy.box.fillStyle === undefined);
   ok('an instance that draws no fill where its component has one says its fill none too; one that keeps it says nothing',
     cleared.background === 'none' && kept.background === undefined);
+  // corners likewise: the walk records a radius wherever it is not 0, so an instance with none where its component rounds is 0
+  const round = { ...box, variants: [{ ...box.variants[0], radius: [16, 2, 2, 16] }] }, rm = mainsFrom({ Box: round });
+  ok('an instance with no radius where its component rounds its corners says 0; one that keeps them says nothing',
+    derive(row({}), ['Box'], { mains: rm }).anatomy.box.radius === 0 && derive(row({ radius: [16, 2, 2, 16] }), ['Box'], { mains: rm }).anatomy.box.radius === undefined
+    && derive(row({}), ['Box'], { mains }).anatomy.box.radius === undefined);
   // a layer inside an opened instance that draws no fill where its component's layer has one: none, else it reads as the component's
   const field = { name: 'Field', id: '9:7', props: {}, variants: [{ name: 'Field', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
     { name: 'Background', type: 'RECTANGLE', w: 40, h: 20, absolute: true, constraints: 'STRETCH/STRETCH', sizing: 'FIXED/FIXED', fills: ['Field/bg'], strokes: ['Line/strong'], strokeSides: [0, 0, 1, 0] }] }] };

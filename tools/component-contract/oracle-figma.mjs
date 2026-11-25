@@ -894,6 +894,8 @@ export function compareContract(component, setNode, contract, ctx) {
     for (const f of part.whileEmpty || []) if (!(f in a)) { delete b[f]; t.skip(`${f}: an empty frame's minimum (whileEmpty)`); }
     if (n.type === 'INSTANCE' && !('smoothing' in a) && 'smoothing' in b) { delete b.smoothing; t.skip('smoothing: REST silent'); }
     if (n.type === 'ELLIPSE' && !('radius' in a) && 'radius' in b) { delete b.radius; t.skip('radius: REST silent'); }
+    // (four zeros said, as an instance squaring off its component's corners says them: REST leaves zeros out, restPart)
+    if (!('radius' in a) && Array.isArray(b.radius) && b.radius.every((x) => x === 0)) delete b.radius;
     if (a.typography === 'mixed') { delete a.typography; delete b.typography; t.skip('textStyle of mixed text'); }
     // a styled text's letter spacing is its style's, said by the contract only where the layer sets its own
     if (typeof a.typography === 'string' && 'letterSpacing' in a && !('letterSpacing' in b)) { delete a.letterSpacing; t.skip('letterSpacing: a styled text\'s, unsaid'); }

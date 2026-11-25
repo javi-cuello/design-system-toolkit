@@ -599,7 +599,8 @@ function ownStyling(anatomy, mains) {
 }
 /* An instance that draws no colour style, or no stroke, where its component's root has one at the instance's props has
    cleared it (Figma's override: an instance's own fills or strokes replace its component's, the style with them; a
-   stroke's paint hidden draws none). Unsaid, it would be its component's, so it is said `none` (CLEARED, rules.mjs).
+   stroke's paint hidden draws none). Unsaid, it would be its component's, so it is said `none` (CLEARED, rules.mjs);
+   corners squared off where its component's root rounds them are said 0.
    Only a reading from Figma says it: the walk records an instance's own style and stroke wherever it has them. */
 function cleared(anatomy, mains) {
   for (const e of Object.values(anatomy)) {
@@ -609,9 +610,13 @@ function cleared(anatomy, mains) {
     if (typeof root.fillStyle === 'string' && root.fillStyle !== CLEARED && e.fillStyle === undefined) e.fillStyle = CLEARED;
     if (root.border && typeof root.border === 'object' && root.border.color != null && e.border === undefined) e.border = CLEARED;
     if (paintOf(root.background) && e.background === undefined) e.background = CLEARED;
+    // (and corners: the walk records a radius wherever it is not 0, so none where its root has one is 0, squared off)
+    if (cornered(root.radius) && e.radius === undefined) e.radius = 0;
   }
   return anatomy;
 }
+// a radius that rounds a corner (0, or four zeros, rounds none)
+const cornered = (v) => v != null && v !== 0 && !(Array.isArray(v) && v.every((x) => x === 0));
 // a paint a part draws (a cleared one, none, draws nothing)
 const paintOf = (v) => v != null && v !== CLEARED && !(Array.isArray(v) && !v.length);
 /* The one colour a placed component draws its glyph in at the instance's props: the background of its root's graphic
@@ -802,6 +807,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       const R = x && e && e.kind === 'instance' && e.component && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
       if (R) for (const f of ['fillStyle', 'border', 'background']) if (x[f] === CLEARED && e[f] === undefined && R[f] !== undefined) e[f] = R[f];
+      if (R && x.radius === 0 && e.radius === undefined && cornered(R.radius)) e.radius = R.radius;
     }
     inherit();
   }
