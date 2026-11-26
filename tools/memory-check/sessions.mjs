@@ -8,8 +8,8 @@
  *
  *   node tools/memory-check/sessions.mjs [--folder <project dir>] [--root <dir>] [--keep <session id>] [--prune]
  *
- * --folder defaults to the current directory, read as its main checkout's when it is a git worktree; Claude
- * Code files sessions under that path with every character but a letter or digit made "-". A session open
+ * --folder defaults to the current directory: the folder the session was launched in (a worktree with no
+ * sessions of its own reads its main checkout's). Claude Code files sessions under that path with every character but a letter or digit made "-". A session open
  * now (~/.claude/sessions) counts as live however idle. Claude Code's own cleanupPeriodDays sweep deletes every
  * session past its age, named or not; this one deletes only side sessions, sooner.
  */
@@ -41,18 +41,24 @@ export function running(dir = path.join(os.homedir(), '.claude', 'sessions')) {
   return fs.readdirSync(dir).filter((f) => /^\d+\.json$/.test(f)).flatMap((f) => {
     try {
       const s = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
-      process.kill(s.pid, 0);
+      try { process.kill(s.pid, 0); } catch (e) { if (e.code !== 'EPERM') throw e; } // EPERM: alive, another user's
       return [s.sessionId];
     } catch { return []; }
   });
 }
 
-/* A project's folder: its main checkout's, since Claude Code files a worktree's sessions there. */
-export function projectOf(dir) {
+/* Where a project's sessions are filed: Claude Code files a session by the folder it was launched in, so that
+   folder's own; a worktree with none falls back to its main checkout's, where a session that later moved into
+   the worktree is filed. */
+export function sessionDir(dir, root = ROOT) {
+  const own = path.join(root, folderName(fs.realpathSync(dir)));
+  if (fs.existsSync(own) && fs.readdirSync(own).some((f) => f.endsWith('.jsonl'))) return own;
   try {
-    const common = execFileSync('git', ['-C', dir, 'rev-parse', '--path-format=absolute', '--git-common-dir'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    return fs.realpathSync(path.dirname(common));
-  } catch { return fs.realpathSync(dir); }
+    const top = execFileSync('git', ['-C', dir, 'rev-parse', '--path-format=absolute', '--show-toplevel', '--git-common-dir'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim().split('\n');
+    // a worktree's common dir is <main>/.git; a submodule's or a plain repo's tells us nothing new
+    if (path.basename(top[1]) === '.git' && path.dirname(top[1]) !== top[0]) return path.join(root, folderName(fs.realpathSync(path.dirname(top[1]))));
+  } catch { /* not a repo */ }
+  return own;
 }
 
 export function sessions(dir, { now = Date.now(), keep = [], open = running() } = {}) {
@@ -76,11 +82,12 @@ export function prune(list) {
   return gone;
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+const isMain = () => { try { return !!process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } };
+if (isMain()) {
   const argv = process.argv.slice(2);
   const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : null; };
-  const project = projectOf(arg('--folder') || process.cwd());
-  const dir = path.join(arg('--root') || ROOT, folderName(project));
+  const project = fs.realpathSync(arg('--folder') || process.cwd());
+  const dir = sessionDir(project, arg('--root') || ROOT);
   const list = sessions(dir, { keep: arg('--keep') ? [arg('--keep')] : [] });
   if (!list.length) { console.log(`sessions: none for ${project}`); process.exit(0); }
   for (const s of list) console.log(`${s.id.slice(0, 8)}  ${(s.name || '(unnamed)').padEnd(20)} ${String(s.days).padStart(3)}d${s.live ? '  live' : ''}${s.kept ? '  this session' : ''}${s.stale ? '  stale' : ''}`);

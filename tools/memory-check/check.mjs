@@ -19,7 +19,7 @@ import { execFileSync } from 'node:child_process';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const LIMITS = JSON.parse(fs.readFileSync(path.join(HERE, 'limits.json'), 'utf8'));
-export const ROOT = path.join(os.homedir(), '.claude', 'projects');
+export const ROOT = path.join(os.homedir(), '.claude', 'projects'); // projects-path: Claude Code's own session folder, not a project's home
 const ENTRY = /^- \[[^\]]+\]\(([^)]+)\) — \S/;
 
 /* Claude Code names a project's folder by its path with every character but a letter or digit made "-". */
@@ -35,7 +35,7 @@ function toolkitFolder() {
 function frontmatter(text) {
   const m = /^---\n([\s\S]*?)\n---\n/.exec(text);
   if (!m) return null;
-  const get = (k) => { const r = new RegExp(`^[ \\t]*${k}:[ \\t]*(.*)$`, 'm').exec(m[1]); return r ? r[1].trim().replace(/^(["'])(.*)\\1$/, '$2') : ''; };
+  const get = (k) => { const r = new RegExp(`^[ \\t]*${k}:[ \\t]*(.*)$`, 'm').exec(m[1]); return r ? r[1].trim().replace(/^(["'])(.*)\1$/, '$2') : ''; };
   return { name: get('name'), description: get('description'), type: get('type') };
 }
 
@@ -97,13 +97,14 @@ export function checkWritten(files, { root = ROOT, seen = new Set() } = {}) {
   // keyed without the message, whose counts move with every edit, so each file's rule blocks once a session
   const wrote = new Set(files);
   const found = dirs.flatMap((d) => (fs.existsSync(d) ? checkFolder(d, { multi: isMulti(d, own) }).filter((x) => x.file === 'MEMORY.md' || wrote.has(path.join(d, x.file))) : []))
-    .filter((x) => x.level === 'error').map((x) => ({ ...x, key: `memory:${x.folder}:${x.file}:${x.rule}` }))
-    .filter((x) => !seen.has(x.key));
+    .filter((x) => x.level === 'error').map((x) => ({ ...x, key: `memory:${x.folder}:${x.file}:${x.rule}:${x.message.replace(/\d+/g, '#')}` }))
+    .filter((x, i, all) => !seen.has(x.key) && all.findIndex((y) => y.key === x.key) === i);
   if (!found.length) return null;
   return { reason: `A memory file you wrote breaks toolkit-standard §D 25 (node ${path.join(HERE, 'check.mjs')}):\n${found.map((x) => `  ${x.folder}/memory/${x.file}: ${x.message}`).join('\n')}`, keys: found.map((x) => x.key) };
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+const isMain = () => { try { return !!process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } };
+if (isMain()) {
   const argv = process.argv.slice(2);
   const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : null; };
   const today = arg('--today') ? new Date(`${arg('--today')}T00:00:00`) : new Date();

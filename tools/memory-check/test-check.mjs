@@ -42,6 +42,8 @@ try {
 
   const front = folder('front', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': '---\nname: other\ndescription:\nmetadata:\n  type: notes\n---\n' });
   assert.equal(rules(front).filter((r) => r === 'frontmatter:error').length, 3);
+  const quoted = folder('quoted', { 'MEMORY.md': '- [A](./a.md) — a\n', 'a.md': '---\nname: "a"\ndescription: "what"\nmetadata:\n  type: project\n---\n' });
+  assert.deepEqual(rules(quoted), [], 'a quoted name and a ./ link read as written');
   ok('frontmatter: name is the file\'s, a description, a documented type');
 
   const big = folder('big', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': fm('a') + 'x'.repeat(26000) });
@@ -55,9 +57,13 @@ try {
   const seen = new Set();
   const first = checkWritten([path.join(two, 'a.md')], { root, seen });
   assert.ok(first && /one/.test(first.reason), 'a written file in a broken folder blocks');
+  fs.appendFileSync(path.join(two, 'MEMORY.md'), '- [Gone](gone.md) — gone\n');
+  const later = checkWritten([path.join(two, 'MEMORY.md')], { root, seen: new Set(first.keys) });
+  assert.ok(later && /gone\.md/.test(later.reason), 'a new kind of index finding blocks though another has');
+  fs.writeFileSync(path.join(two, 'MEMORY.md'), '- [A](a.md) — a\n- [B](b.md) — b\n');
   for (const k of first.keys) seen.add(k);
   assert.equal(checkWritten([path.join(two, 'a.md')], { root, seen }), null, 'once: a finding put to the session does not block again');
-  assert.equal(checkWritten([path.join(dated, 'a.md')], { root, seen: new Set(['memory:dated:a.md:dated']) }), null, 'a stale warning never blocks');
+  assert.equal(checkWritten([path.join(dated, 'a.md')], { root, seen: new Set(['memory:dated:a.md:dated:"## Loose, as of #-#-#": a date is written "(as of YYYY-MM-DD)"']) }), null, 'a stale warning never blocks');
   assert.equal(checkWritten([path.join(front, 'MEMORY.md')], { root }), null, 'a finding in a file the session did not write is not its stop\'s');
   fs.appendFileSync(path.join(big, 'a.md'), 'more');
   const once = new Set(checkWritten([path.join(big, 'a.md')], { root }).keys);
