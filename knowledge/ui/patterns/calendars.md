@@ -133,7 +133,7 @@ How time is shown on a calendar: choosing between the month grid, the week and d
 
 **Build**
 - [strong] *Elements:* a date without a time is written `<time datetime="2026-11-23">`, a timed one `<time datetime="2026-11-23T09:00">` ([WHATWG, the time element](https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-time-element); the element itself is *Semantics and keyboard* below); the all-day row comes before the timed entries in the DOM, as it does on screen (code-standard rule 2).
-- [strong] *States:* all-day is a property of the entry's data, as RFC 5545's DATE value, Google's `start.date` and FullCalendar's `allDay` are (sources above); the markup carries it as an attribute (`data-all-day`) the stylesheet reads, as code-standard rule 9 maps a variant to an attribute.
+- [strong] *States:* all-day is a property of the entry's data, as RFC 5545's DATE value, Google's `start.date` and FullCalendar's `allDay` are (sources above); the markup carries it as an attribute (`data-all-day`) the stylesheet reads (beyond code-standard rule 9, which maps a component's variant axes to attributes).
 - [required] *Rules:* code-standard rule 2 (DOM order is reading order).
 
 **Check**

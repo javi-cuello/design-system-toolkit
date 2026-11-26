@@ -229,7 +229,7 @@ How a person adds, opens, edits, moves and deletes entries on a calendar, and ma
 **Cases**
 - A day pencilled in for a project, not yet agreed → status Tentative, drawn apart from confirmed days, and still blocking the day.
 - A tentative day confirmed → the status changes in place; the entry is not deleted and re-added.
-- Two projects on one day → both shown, side by side or stacked, each with its own label; the tool may warn but Clockify does not refuse.
+- Two projects on one day → both shown, side by side or stacked, each with its own label; whether the tool allows the overlap is [timesheets](timesheets.md#what-a-timesheet-refuses-or-warns-about).
 
 **Accessibility**
 - [required] 1.4.1: tentative is told in words or a named icon ("Tentative"), not by a lighter fill or dashed border alone.
@@ -243,7 +243,7 @@ How a person adds, opens, edits, moves and deletes entries on a calendar, and ma
 - *Script* could: assert every tentative chip has the word in its accessible name; render two entries on one day and assert both are visible.
 - *Judgement*: does the status say how firm the entry is, and does a separate flag say whether it blocks the day?
 
-**Sources.** RFC 5545, Google, Outlook and Calendly agree that firmness and blocking are two properties. How a clash is handled differs: Clockify allows and shows it, Calendly prevents bookings into it. No checked source documents a warning on save.
+**Sources.** RFC 5545, Google, Outlook and Calendly agree that firmness and blocking are two properties. How a clash is handled differs: Calendly prevents bookings into it, and timesheets split on it ([timesheets](timesheets.md#what-a-timesheet-refuses-or-warns-about)). No checked source documents a warning on save.
 
 ## After saving
 
