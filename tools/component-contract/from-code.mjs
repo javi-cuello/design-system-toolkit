@@ -1327,12 +1327,13 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
   // (nor a place in its frame: the component's too; one placed absolutely in an auto layout, position absolute, keeps it)
   const framed = (e) => e.position !== 'absolute';
   const loose = (e) => (framed(e) || !e.absolute) && !(e.constraints && e.constraints.horizontal === 'scale' && e.constraints.vertical === 'scale');
-  const one = (id, e) => { if (!inside(id)) return e; const { absolute, constraints, ...rest } = e; return { ...rest, ...(absolute && !framed(e) && { absolute }), ...(constraints && !loose(e) && { constraints }) }; };
+  // (nor a slot's binding: the placed component's own prop, which derive states only on its own slots)
+  const one = (id, e) => { if (!inside(id)) return e; const { absolute, constraints, ...rest } = e; if (rest.kind === 'slot') delete rest.content; return { ...rest, ...(absolute && !framed(e) && { absolute }), ...(constraints && !loose(e) && { constraints }) }; };
   const strip = (anatomy) => Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, one(id, e)]));
   // (a variant's own: what it sets of the element, its parent, position and place, over the element)
   const asIn = (v, id) => { const e = { ...(all[id] || {}), ...((v.add || {})[id] || {}) }; for (const f of ['parent', 'position', 'absolute', 'constraints']) if (`${id}.${f}` in (v.set || {})) e[f] = v.set[`${id}.${f}`]; return e; };
   const insideIn = (v, id) => { for (let up = asIn(v, id).parent; up; up = asIn(v, up).parent) if (asIn(v, up).kind === 'instance') return true; return false; };
-  const gone = (v, k) => { const m = /^(.+)\.(constraints|absolute)(\.|$)/.exec(k); if (!m || !insideIn(v, m[1])) return false; const e = asIn(v, m[1]); return m[2] === 'absolute' ? framed(e) : loose(e); };
+  const gone = (v, k) => { const m = /^(.+)\.(constraints|absolute|content)(\.|$)/.exec(k); if (!m || !insideIn(v, m[1])) return false; const e = asIn(v, m[1]); return m[2] === 'content' ? e.kind === 'slot' : m[2] === 'absolute' ? framed(e) : loose(e); };
   const kept = variants.map((v) => ({ ...v, ...(v.add && { add: strip(v.add) }), ...(v.set && { set: Object.fromEntries(Object.entries(v.set).filter(([k]) => !gone(v, k))) }) }));
   return { contract: { ...contract, anatomy: strip(contract.anatomy), props: ordered, variants: kept }, renamed };
 }
