@@ -932,6 +932,18 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a part scaled in a stretched parent is a share of that parent\'s size: the grandparent\'s less both offsets',
     /inset-inline-start: -100%/.test(rule) && /inline-size: 100%/.test(rule) && /inset-block-start: 0%/.test(rule) && /block-size: 100%/.test(rule) && !/is no number/.test(css));
 }
+// a part scaled in a parent that hugs: a share of the size a part placed by both its edges gives that parent, else of
+// the size its auto layout's padding and parts in the flow give it
+{
+  const hug = (dot) => ({ contract: 1, component: 'Hug', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, align: 'center', crossAlign: 'center', padding: { top: 11, end: 11, bottom: 11, start: 11 } }, width: 'hug', height: 'hug' },
+    box: { kind: 'graphic', parent: 'root', width: 18, height: 18, order: 0 },
+    ...(dot && { dot: { kind: 'graphic', parent: 'root', width: 24, height: 24, position: 'absolute', absolute: { x: 8, y: 8, end: 8, bottom: 8 }, constraints: { horizontal: 'center', vertical: 'center' }, order: 1 } }),
+    ripple: { kind: 'graphic', parent: 'root', background: 'C/strong', width: 50, height: 35, position: 'absolute', absolute: { x: -10, y: 5 }, constraints: { horizontal: 'scale', vertical: 'scale' }, order: 2 } }, variants: [] });
+  const rule = (c) => { const css = toCss(c, 'hug', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }); return [(css.match(/\.ds-hug__ripple \{[^}]*\}/) || [''])[0], css]; };
+  const [a, ca] = rule(hug(true)), [b, cb] = rule(hug(false));
+  ok('a part scaled in a parent that hugs is a share of the size a part placed by both edges, or its padding and parts in the flow, give it',
+    [a, b].every((r) => /inset-inline-start: -25%/.test(r) && /inline-size: 125%/.test(r) && /inset-block-start: 12.5%/.test(r) && /block-size: 87.5%/.test(r)) && ![ca, cb].some((c) => /is no number/.test(c)));
+}
 // and a part centred in such a parent keeps its centre's distance from that parent's, as with a parent of a number's size
 {
   const ct = { contract: 1, component: 'Ctr', props: {}, anatomy: { root: { kind: 'container', width: 160, height: 16 },
