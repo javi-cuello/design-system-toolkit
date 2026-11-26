@@ -333,8 +333,8 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
   const ring = { kind: 'graphic', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus/focus', width: 2 }, shape: 'rectangle' };
   const tile = { contract: 1, component: 'Tile', folder: 'tile', props: { state: { type: 'enum', values: ['rest', 'focus-visible'], default: 'rest', role: 'interaction', pointer: ['focus-visible'] } },
     anatomy: { root: { kind: 'container', background: 'Bg/x' } }, variants: [{ when: { state: 'focus-visible' }, add: { focusBorder: { ...ring, parent: 'root' } } }] };
-  ok('under the library\'s settings its focus ring is compared as an outline; under the house\'s, as an element only that state draws',
-    !leftToCode(tile, null, own)('focusBorder.border') && partsOf(tile, own).get('focusBorder').ring && !partsOf(tile).get('focusBorder').ring && partsOf(tile).get('focusBorder').pointerHeld);
+  ok('under the library\'s settings its focus ring is compared as an outline; under the house\'s, which gives that state no pseudo-class, a part only that state draws, left to code',
+    !leftToCode(tile, null, own)('focusBorder.border') && partsOf(tile, own).get('focusBorder').ring && !partsOf(tile).get('focusBorder').ring && !partsOf(tile).get('focusBorder').pointerHeld && partsOf(tile).get('focusBorder').pointerOnly);
   const d = selfDrawn(tile, { library: { Tile: tile }, mains: () => null, settings: own });
   ok('the self leg\'s inputs are drawn under the library\'s settings: the ring an outline at its focus, mapped to the box',
     /:focus-visible[^{]*\{\s*outline:/.test(d.sheet) && d.mapping.layers['Focus border'] === 'ds-tile');

@@ -216,7 +216,9 @@ export function partsOf(c, t = HOUSE) {
     // as one the rest draw too (below), so the sheet shows it under that state's pseudo-class and hides it at rest, and
     // a page forced to that state draws it; `pointerHeld` says no other value draws it. One inside a placed component
     // or a slot is that component's or a caller's, so stays a gap
-    if (part.pointerOnly && !part.ring && part.pointerAdds && !part.inside && !part.slotted) { part.pointerOnly = false; part.pointerHeld = true; }
+    // (and only where each state that draws it has a pseudo-class the sheet can show it under: else it stays a gap)
+    const showable = (w) => Object.entries(w).some(([k, x]) => pointer(k, x) && pseudoClasses(t)[x]);
+    if (part.pointerOnly && !part.ring && part.pointerAdds && part.pointerAdds.every(showable) && !part.inside && !part.slotted) { part.pointerOnly = false; part.pointerHeld = true; }
     // a part the rest of the grid draws that a pointer state also puts in where the rest take it out (a tile's border at
     // hover, a search's clear icon at focus): the markup holds it wherever that state's combination draws it, the
     // pointer value aside, and the sheet hides it where the contract draws none (to-code's pointerShown)
@@ -1107,6 +1109,15 @@ export function rulesOf(c, mains, t = HOUSE) {
   // CSS decides by specificity where the contract applies its layers in order, so a combination the two read
   // differently gets a rule of its own, naming every prop the grid is chosen by, which outranks every layer's
   // (as derive's per-combination entries do)
+  // a part only a pointer state draws (partsOf `pointerHeld`) is hidden by the base, whatever else holds, and shown by
+  // the combinations that draw it (the check below unsets its display there): never hidden at another pointer state,
+  // which CSS can hold at once with its own (a menu open at focus stays open while the box is also hovered)
+  const held = [...partsOf(c, t).values()].filter((x) => x.pointerHeld && !x.id.includes('::') && !(partsOf(c, t).get(x.e.parent) || {}).pointerHeld).map((x) => x.id);
+  if (held.length) {
+    let base = rules.find((r) => !Object.keys(r.when).length);
+    if (!base) { base = { when: {}, weight: 0, parts: {} }; rules.unshift(base); }
+    for (const id of held) (base.parts[id] ||= new Map()).set('display', { v: 'none' });
+  }
   for (const [key, miss] of groupBy(selfCheck(c, rules, mains, t), (o) => JSON.stringify(o.when))) {
     const when = JSON.parse(key), parts = {};
     for (const o of miss) (parts[o.part] ||= new Map()).set(o.property, { v: o.want ?? 'unset', ...(o.knob && { knob: o.knob }) });

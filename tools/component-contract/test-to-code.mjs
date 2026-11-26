@@ -807,7 +807,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   // a part only a pointer state draws (the up arrow at focus): the markup holds it, so the sheet hides it at rest and
   // draws it at that state's pseudo-class, where a page forced to the state reads it
   ok('a part only a pointer state draws is hidden by the sheet at rest and drawn at that state alone',
-    /:not\(:is\(:focus-visible[^{]*> \.pick__up \{\s*display: none;\s*\}/.test(css) && /:where\(:is\(:focus-visible[^{]*\) > \.pick__up \{\s*inline-size/.test(css) && selfCheck(c, rulesOf(c).rules).length === 0); }
+    /\.pick > \.pick__up \{\s*display: none;\s*\}/.test(css) && /:where\(:is\(:focus-visible[^{]*\) > \.pick__up \{\s*display: unset/.test(css) && /:where\(:is\(:focus-visible[^{]*\) > \.pick__up \{\s*inline-size/.test(css) && selfCheck(c, rulesOf(c).rules).length === 0); }
 // a part only a pointer state draws takes its place among the parts another variant places at that state's combination:
 // a grip a variant puts after the icons a hover adds stands after them in the markup, though that variant adds none
 { const c = { contract: 1, component: 'Btn', props: { grip: { type: 'boolean', default: false }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] } },
@@ -1023,9 +1023,17 @@ ok('a placed component stretched by its insets takes no size from its main', dec
 }
 // the rest state rules out only the pointer states the component has: hovering one with no Hover value draws it at rest
 {
-  const c = { contract: 1, component: 'Pin', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'] } },
-    anatomy: { root: { kind: 'container', layout: { direction: 'row' } } }, variants: [{ when: { state: 'focus' }, add: { hint: { kind: 'text', parent: 'root', content: 'Hi' } } }] };
-  const css = toCss(c, 'pin', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
-  ok('a part only focus draws is hidden at rest, the rest ruling out only the component\'s own pointer states, never a hover it has no value for', /\.ds-pin:where\(:not\(:is\(:focus-visible, :has\(:focus-visible\)\)\)\) > \.ds-pin__hint \{\s*display: none/.test(css) && !/:hover/.test(css), css);
+  const c = { contract: 1, component: 'Pin', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'] } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const r = condition(c, namer('pin'), 'state', 'rest');
+  ok('the rest state rules out only the component\'s own pointer states, never a hover it has no value for', /:not\(:is\(:focus-visible/.test(r) && !/:hover/.test(r), r);
+}
+// a part only focus draws stays shown while the box is also hovered: hidden by the base, shown by focus, never hidden at hover
+{
+  const c = { contract: 1, component: 'Pik', props: { state: { type: 'enum', values: ['rest', 'hover', 'focus'], default: 'rest', role: 'interaction', pointer: ['hover', 'focus'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } } }, variants: [{ when: { state: 'focus' }, add: { menu: { kind: 'container', parent: 'root', layout: { direction: 'column' } } } }] };
+  const css = toCss(c, 'pik', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('a part only focus draws is hidden by the base and shown at focus, never hidden at hover (CSS holds both at once)', /\.ds-pik > \.ds-pik__menu \{\s*display: none/.test(css) && /:focus-visible[^{]*> \.ds-pik__menu \{\s*display: flex/.test(css) && !/:hover[^{]*> \.ds-pik__menu/.test(css), css);
+  const odd = { ...c, props: { state: { ...c.props.state, values: ['rest', 'hovered'], pointer: ['hovered'] } }, variants: [{ when: { state: 'hovered' }, add: { hint: { kind: 'text', parent: 'root', content: 'Hi' } } }] };
+  ok('…and a state with no pseudo-class leaves such a part a gap, never hidden for good', !partsOf(odd).get('hint').pointerHeld);
 }
 console.log(`${n} passed`);
