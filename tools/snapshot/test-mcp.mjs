@@ -50,11 +50,12 @@ const plan = [
   { index: 2, name: 'Table', sets: [{ id: '2:1', walks: 4000 }] },
   { index: 4, name: 'Chip', sets: [{ id: '4:1', walks: 100 }, { id: '4:2', walks: 1000 }, { id: '4:3', walks: 500 }] },
 ];
-const parts = sized(plan);
-ok(`parts are sized at ${LIMIT} walks, a set over the limit alone, the plan's order kept; a part names its sets only where it takes part of a page`,
+const parts = sized(plan, 1500);
+ok(`parts are sized at the limit given (1500 here), a set over the limit alone, the plan's order kept; a part names its sets only where it takes part of a page`,
   JSON.stringify(parts.map((p) => [p.pages, p.scope])) === JSON.stringify([[[1], null], [[2], null], [[4], ['4:1', '4:2']], [[4], ['4:3']]]) && parts.map((p) => p.walks).join() === '1200,4000,1100,500');
 const made = calls(plan);
-ok('the calls are the tokens call, the store call with the first part, then one call a part', made.length === 5 && made[0].call === 'tokens' && /storing the walk/.test(made[1].call) && /^part 4 of 4: 500 walks on page 4$/.test(made[4].call));
+ok('the calls are the tokens call, the store call with the first part, then one call a part', made.length === 7 && made[0].call === 'tokens' && /storing the walk/.test(made[1].call) && /^part 6 of 6: 500 walks on page 4$/.test(made[6].call));
+ok(`parts default to ${LIMIT} walks, the most a 117-page library's parts held without running Figma out of memory`, LIMIT === 600 && sized(plan).every((p) => p.walks <= LIMIT || p.scope?.length === 1 || p.pages.length === 1));
 const every = [planCode(), ...made.map((c) => c.code)];
 ok(`every call fits use_figma's ${CAP} characters, and holds no \\u or \\\\ escape`, every.every((c) => c.length <= CAP && !/\\u|\\\\/.test(c)));
 let allParse = true; for (const c of every) { try { new vm.Script(`(async () => {\n${c}\n})`); } catch { allParse = false; } }
