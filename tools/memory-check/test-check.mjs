@@ -58,13 +58,13 @@ try {
   assert.deepEqual(rules(rule), ['rule:error', 'rule:error']);
   const said = folder('said', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a')}## Open (as of 2026-11-20)\n\n- Never push on red.\n- **Always** ask.\n\n\`\`\`\nNever in a fence\n\`\`\`\n` });
   assert.deepEqual(rules(said), ['rule:error', 'rule:error']);
-  const cased = folder('cased', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a')}## Open (as of 2026-11-20)\n\n- NEVER push.\n- Do NOT push.\n> never\n- [ ] Must ask\n- _Always_ ask\n- Must-fix items: 3 open\n- Always-on sidebar shipped\n~~~\nNever in a tilde fence\n~~~\n` });
-  assert.deepEqual(rules(cased), Array(5).fill('rule:error'), 'any case and any list opener; a hyphenated word is state');
+  const cased = folder('cased', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a')}## Open (as of 2026-11-20)\n\n- NEVER push.\n- Do NOT push.\n> never\n- [ ] Must ask\n- _Always_ ask\n- *Never* push\n1) Never push\n> - Must ask\n- Must-fix items: 3 open\n  \`\`\`\n  Never in an indented fence\n  \`\`\`\n- Always-on sidebar shipped\n~~~\nNever in a tilde fence\n~~~\n` });
+  assert.deepEqual(rules(cased), Array(8).fill('rule:error'), 'any case and any list opener; a hyphenated word is state');
   ok('a rule is never memory: the feedback type, a Why line, a line opening Never or Always');
 
   const loose = folder('loose', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a')}## How the build works\n\n## Open (as of 2026-11-20)\n` });
   assert.deepEqual(rules(loose), ['undated:error']);
-  const above = folder('above', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a')}Always check the build first.\n\n## Open (as of 2026-11-20)\n` });
+  const above = folder('above', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a')}Build notes.\n\n## Open (as of 2026-11-20)\n` });
   assert.ok(rules(above).includes('undated:error'), 'prose above the first section is not dated state');
   const ref = folder('ref', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a', 'reference')}## Where the files are\n` });
   assert.deepEqual(rules(ref), [], 'a reference file holds pointers, not dated state');

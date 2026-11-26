@@ -23,7 +23,7 @@ export const LIMITS = JSON.parse(fs.readFileSync(path.join(HERE, 'limits.json'),
 export const ROOT = path.join(os.homedir(), '.claude', 'projects'); // projects-path: Claude Code's own session folder, not a project's home
 const ENTRY = /^- \[[^\]]+\]\(([^)]+)\) — \S/;
 /* A rule's shape: Claude Code's own feedback template, or a line that opens with a command. */
-const RULE = /\*\*(?:Why|How to apply):\*\*|^\s*(?:#+\s+|>\s*|[-*+]\s+(?:\[[ x]\]\s+)?|\d+\.\s+)?(?:\*\*|_)?(?:never|always|don['’]t|do not|must)(?=[\s*_:,.]|$)/i;
+const RULE = /\*\*(?:Why|How to apply):\*\*|^\s*(?:#+\s+)?(?:>\s*)?(?:(?:[-*+]|\d+[.)])\s+(?:\[[ x]\]\s+)?)?(?:\*{1,2}|_{1,2})?(?:never|always|don['’]t|do not|must)(?=[\s*_:,.!;?]|$)/i;
 const HOMES = 'a rule goes to its home (a standard, a skill, the repo\'s CLAUDE.md or ~/.claude/CLAUDE.md), never to memory';
 
 /* Claude Code names a project's folder by its path with every character but a letter or digit made "-". */
@@ -73,7 +73,7 @@ export function checkFolder(dir, { today = new Date(), multi = false } = {}) {
       else if (!LIMITS.types.includes(fm.type)) add(f, 'frontmatter', `type "${fm.type}" is not one of ${LIMITS.types.join(', ')}`);
     }
     if (Buffer.byteLength(body) > LIMITS.fileBytes) add(f, 'size', `${Buffer.byteLength(body)} bytes, over ${LIMITS.fileBytes}: move what has another home there`);
-    const text = body.replace(/^---\n[\s\S]*?\n---\n/, '').replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1/gm, '');
+    const text = body.replace(/^---\n[\s\S]*?\n---\n/, '').replace(/^[ \t]*(`{3,}|~{3,})[^\n]*\n[\s\S]*?^[ \t]*\1/gm, '');
     for (const l of text.split('\n').filter((l) => RULE.test(l))) add(f, 'rule', `"${l.trim().slice(0, 60)}": ${HOMES}`);
     if (fm?.type === 'project' && /^\s*\S/.test(text.split(/^## /m)[0].replace(/^#\s.*$/m, ''))) add(f, 'undated', 'prose above the first section: a project file is "## <what> (as of YYYY-MM-DD)" sections only');
     if (fm?.type === 'project') for (const h of text.split('\n').filter((l) => /^## /.test(l) && !/\bas of\b/i.test(l))) add(f, 'undated', `"${h.slice(3, 60)}": a project file holds dated state, "## <what> (as of YYYY-MM-DD)"; a lasting fact or rule has another home`);
