@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge } from './from-code.mjs';
+import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1137,6 +1137,23 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     && at({ design: { w: { kind: 'text', typography: 'Body/sm' } }, id: 'w' }) === 'typography,letterSpacing,textCase,textDecoration');
 }
 
+// 2026-11-26: a stroke across the edge goes round at 1px: Chrome computes its outline offset snapped as a border width
+// (calc(1px / -2) reads -1px, as an inside one would), so the reader takes the offset as written, resolved where it is
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
+  ok('an outline offset snaps as a border width: under 1px up to 1px, larger down to whole px, the sign kept', snappedOffset(-0.5) === -1 && snappedOffset(-1.5) === -1 && snappedOffset(-2) === -2 && snappedOffset(0) === 0 && snappedOffset(0.4) === 1);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to resolve a written length in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({});
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await navigate(tab, 'http://round-trip.test/', { html: '<!doctype html><div id="s" style="--w: 1px; outline: var(--w) solid red; outline-offset: calc(var(--w) / -2)"></div>' });
+      const computed = await call(tab, () => getComputedStyle(document.getElementById('s')).outlineOffset);
+      const said = await call(tab, lengthAt, ['#s', 'calc(var(--w) / -2)']), none = await call(tab, lengthAt, ['#s', 'auto']);
+      ok('a 1px stroke across the edge computes a snapped offset, and its written one resolves to the half pixel it says', computed === '-1px' && said === -0.5 && snappedOffset(said) === -1 && none === null, `${computed} ${said} ${none}`);
+    } finally { await browser.close(); }
+  }
+}
 // 2026-11-22: a text with no style goes round as itself: css.mjs writes its values, spacing, case and decoration, and
 // the reader's own two halves (textTypeOf in the page, typedText after it) read them back as the contract said them
 { const fs = await import('node:fs');

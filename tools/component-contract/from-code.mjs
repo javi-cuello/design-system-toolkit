@@ -555,6 +555,14 @@ export function elementOfLayer(q, id, kind, rootRe, others) {
    across that edge the line's own 0, as a size read off the box (a share of its parent's, a line scaled with it at
    `0%`) counts the edge in, which the design's line draws across no size. `width`: the stroke's widths per side, read;
    `raw`: as the box measured them. Changes the part in place. Tested by test-from-code.mjs. */
+/* An outline offset as Chrome computes it: rounded as a border width (CSSWG #12906, resolved 2026-02), its size under 1px
+   up to 1px and a larger one down to whole px, its sign kept. The reader's test that a written offset is the one that
+   computed. Tested by test-from-code.mjs. */
+/* A length as written (a calc, a custom property) resolved at an element, in px, through a property Chrome does not
+   snap (a text indent, a length alone, on a hidden child, which inherits the element's custom properties); null where it is no length there.
+   Runs in the page. Tested by test-from-code.mjs. */
+export const lengthAt = ([sel, val]) => { const n = document.querySelector(sel); if (!n) return null; const t = document.createElement('i'); t.style.cssText = 'position:absolute;visibility:hidden'; t.style.textIndent = val; if (!t.style.textIndent) return null; n.appendChild(t); const m = parseFloat(getComputedStyle(t).textIndent); t.remove(); return Number.isFinite(m) ? m : null; };
+export const snappedOffset = (v) => (v === 0 ? 0 : Math.sign(v) * (Math.abs(v) < 1 ? 1 : Math.floor(Math.abs(v))));
 export function lineEdge(x, width, raw0) {
   if (!x || !x.border) return x;
   const raw = Array.isArray(raw0) ? raw0 : [], thin = (n, i) => n === 0 || (typeof n === 'number' && n === raw[i]);
@@ -2489,6 +2497,14 @@ async function main() {
       const styledAt = (id) => boxSelector(id, viaControl.has(id) ? 'contents' : null);
       // a whole computed border may be a floored one (1.5px reads 1px): the cascade's, as the code audit reads it
       for (const e of raw) if (e.border && Number.isInteger(e.border.width)) { const w = await authoredWidth(L.tab, styledAt(e.id), 'border-top-width', { cache: styles }); if (w != null && Math.floor(w) === e.border.width) e.border.width = w; }
+      // and a whole computed outline offset may be a snapped one (Chrome rounds it as a border width, CSSWG #12906: a 1px
+      // stroke across the edge, calc(1px / -2), computes -1px, as one inside would): the cascade's, resolved where it is
+      // written (a custom property, a calc), kept where its snapping gives back what computed
+      for (const e of raw) for (const o of [e.outline, e.ownOutline]) if (o && o.offset < 0 && Number.isInteger(o.offset)) {
+        const said = await authoredWidth(L.tab, styledAt(e.id), 'outline-offset', { raw: true, cache: styles });
+        const v = said && (/^-?[\d.]+px$/.test(said.trim()) ? parseFloat(said) : await call(L.tab, lengthAt, [styledAt(e.id), said]));
+        if (typeof v === 'number' && Number.isFinite(v) && snappedOffset(v) === o.offset) o.offset = v;
+      }
       // a box the code sizes itself (height: 24px, a minimum), which a hug would lose: the cascade's own value,
       // as the contract's minHeight/minWidth (Figma's min sizes on an auto layout)
       // written physically or logically (block-size is height in a horizontal writing mode), in px or rem
