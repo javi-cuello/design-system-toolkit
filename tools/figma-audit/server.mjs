@@ -1096,11 +1096,15 @@ const server = createServer(held(async (req, res) => {
       // one line, always: a newline in `where` would split the §6 row and write lines of its own into the document
       const on = String(where || "the queue").replace(/\s+/g, " ").trim() + (about ? ", about: " + String(about).replace(/\s+/g, " ").trim().slice(0, 140) : "");
       // the date cells a row still holds after its line went (a take-back whose reopen failed) are not handed out again
-      const held = [];
-      for (const f of existsSync(AUDIT_DIR) ? readdirSync(AUDIT_DIR).filter((n) => n.endsWith(".json") && !n.endsWith(".tmp")) : []) {
-        try { for (const r of Object.values(JSON.parse(await readFile(join(AUDIT_DIR, f), "utf8")).rows || {})) if (r && typeof r.ruledOn === "string") held.push(r.ruledOn); } catch {}
+      // (the project's records: the one file a legacy --data names, else the folder's; one unread is said, and its dates
+      // are simply not held)
+      const heldDates = [];
+      const records = LEGACY ? [DATA_ARG] : (existsSync(AUDIT_DIR) ? readdirSync(AUDIT_DIR).filter((n) => n.endsWith(".json") && !n.endsWith(".tmp")) : []).map((f) => join(AUDIT_DIR, f));
+      for (const f of records) {
+        try { for (const r of Object.values(JSON.parse(await readFile(f, "utf8")).rows || {})) if (r && typeof r.ruledOn === "string") heldDates.push(r.ruledOn); }
+        catch (e) { console.warn("ruling: could not read " + f + " for the dates its rows hold \u2014 " + e.message); }
       }
-      const next = appendRuling(md, clean, on, undefined, held);
+      const next = appendRuling(md, clean, on, undefined, heldDates);
       if (!next) return [200, { ok: false, error: "the context document has no rulings table in §6" }];
       // A dry run answers every check above and writes nothing — the way to
       // probe a live service, after a probe appended a row to a real document.

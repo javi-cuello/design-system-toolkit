@@ -713,7 +713,7 @@ function appendRuling(md, text, where, today = new Date().toISOString().slice(0,
   let date = today;
   // one letter, as every reader of §6 dates expects: past z it refuses rather than write `undefined`
   for (let k = 0; taken.has(date); k++) {
-    if (k >= 25) throw new Error(`26 decisions already recorded on ${today}: record this one by hand`);
+    if (k >= 25) throw new Error(`26 date cells already taken or held on ${today}: record this one by hand`);
     date = today + "bcdefghijklmnopqrstuvwxyz"[k];
   }
   const row = header.map((h) => h === "date" ? date

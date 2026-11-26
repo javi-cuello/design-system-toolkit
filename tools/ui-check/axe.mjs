@@ -54,14 +54,20 @@ export async function axePages(urls, { disable = [] } = {}) {
     // (2026-11-26, a done row's number on its tint), so neither is left to the machine
     for (const url of urls) {
       try {
-        const violations = [];
+        const seen = new Map();                 // a violation found in both schemes is one entry, "(light, dark)"
         for (const scheme of ['light', 'dark']) {
           await media(tab, { 'prefers-color-scheme': scheme });
+          // a fresh load for each scheme: the same address with a #fragment would otherwise not reload, and a page that
+          // reads matchMedia once at load would keep the first scheme
+          await navigate(tab, 'about:blank');
           await navigate(tab, url, { until: 'networkIdle' });
           await tab.evaluate(AXE);
-          for (const v of await call(tab, run, TAGS, disable)) violations.push({ ...v, help: `${v.help} (${scheme})` });
+          for (const v of await call(tab, run, TAGS, disable)) {
+            const key = v.id + '\n' + v.targets.map((t) => t.replace(/ \([\d.]+:1, .*\)$/, '')).join('\n');
+            if (seen.has(key)) seen.get(key).schemes.push(scheme); else seen.set(key, { ...v, schemes: [scheme] });
+          }
         }
-        results.push({ url, violations });
+        results.push({ url, violations: [...seen.values()].map(({ schemes, ...v }) => ({ ...v, help: `${v.help} (${schemes.join(', ')})` })) });
       } catch (e) { results.push({ url, error: String(e.message || e).split('\n')[0] }); }
     }
   } finally { await browser.close(); }
