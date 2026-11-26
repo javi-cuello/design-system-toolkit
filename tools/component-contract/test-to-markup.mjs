@@ -11,7 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { toReact, toElement, toSnippet, toGallery, toParity, toStories, partsOf, propsOf, filesFor, namingFault, partSelector, storyIdOf, storybookOf, BANNER, DOM, unexposed } from './to-markup.mjs';
+import { toReact, toElement, toSnippet, toGallery, toParity, toStories, partsOf, propsOf, filesFor, namingFault, partSelector, storyIdOf, storybookOf, BANNER, DOM, unexposed, swapKeysOf, insideOf } from './to-markup.mjs';
 import { siteFiles, serveSite } from './site.mjs';
 import { combinations, toCss, namer, drawn, entryOf, sampleSelector } from './to-code.mjs';
 import { expand, variantDefaults } from './layers.mjs';
@@ -150,6 +150,21 @@ const two = { component: 'Find', props: { placeholderText: { type: 'string', fig
 { const out = toElement(two, 'find', { naming: ELEMENT, library: {} });
   ok('one text two strings set is the one a variant swaps in where drawn, else the other, which draws its layer\'s words', /value \? valueText : placeholderText/.test(out) && /placeholderText = "Search"/.test(out)); }
 const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['info', 'error'], default: 'info', figma: 'Tone' } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/info' } }, variants: [{ when: { tone: 'error' }, set: { 'icon.component': 'Icon/alert' } }], folder: 'alert' };
+{ // a wrapper the library does not hold, its glyph named by its own prop and placed inside it: the glyph is marked
+  const banner = { component: 'Banner', props: { tone: { type: 'enum', values: ['info', 'error'], default: 'info', figma: 'Tone' } }, folder: 'banner',
+    anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Wrap', with: { '<icon>': 'Info', size: 'm' } }, 'icon/info': { kind: 'instance', parent: 'icon', component: 'Info' } },
+    variants: [{ when: { tone: 'error' }, set: { 'icon.with': { '<icon>': 'Error', size: 'm' } }, add: { 'icon/error': { kind: 'instance', parent: 'icon', component: 'Error' } }, remove: ['icon/info'] }] };
+  ok('a wrapper the library does not hold marks the glyph its own prop names and places, as its variants change it; the prop is its swap',
+    /"data-icon": \(tone === "error"\) \? "Error" : "Info"/.test(toElement(banner, 'banner', { naming: ELEMENT, library: {} })) && [...swapKeysOf(banner, 'icon')].join() === '<icon>');
+  const added = { ...banner, anatomy: { root: banner.anatomy.root }, variants: [{ when: { tone: 'info' }, add: { icon: banner.anatomy.icon, 'icon/info': banner.anatomy['icon/info'] } }, { when: { tone: 'error' }, add: { icon: { ...banner.anatomy.icon, with: { '<icon>': 'Error' } }, 'icon/error': { kind: 'instance', parent: 'icon', component: 'Error' } } }] };
+  ok('a wrapper each variant adds at props of its own marks the glyph that variant gives it', /"data-icon": \(tone === "error"\) \? "Error" : \(?\(?tone === "info"\)? \? "Info" : "Info"\)?/.test(toElement(added, 'banner', { naming: ELEMENT, library: {} })), toElement(added, 'banner', { naming: ELEMENT, library: {} })); }
+{ // a component the library does not hold, swapped in where no prop swaps it: its look and the limits of its size inline
+  const tile = { component: 'Tile', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const cell = { component: 'Cell', props: {}, anatomy: { root: { kind: 'container' }, slot: { kind: 'instance', parent: 'root', component: 'Tile' } }, variants: [] };
+  const mainOf = (n) => ({ Tile: tile, Cell: cell })[n] || null;
+  const a = { root: { kind: 'container' }, cell: { kind: 'instance', parent: 'root', component: 'Cell' }, 'cell/slot': { kind: 'instance', parent: 'cell', component: 'Foreign', minWidth: 24, maxWidth: 24, radius: 3 } };
+  const r = ((insideOf(a, 'cell', mainOf).slot || {}).render || {}).attrs || {};
+  ok('a component swapped in that the library does not hold carries the limits of its size inline, beside its look', /min-inline-size: 1\.5rem/.test(r.style) && /max-inline-size: 1\.5rem/.test(r.style) && /border-radius: 3px/.test(r.style), JSON.stringify(r)); }
 ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(tone === "error"\) \? "Icon\/alert" : "Icon\/info"/.test(toElement(alert, 'alert', { naming: ELEMENT, library: {} })));
 { const two = { ...alert, props: { tone: { type: 'enum', values: ['info', 'warning', 'error'], default: 'info', figma: 'Tone' } }, variants: [{ when: { tone: 'warning' }, set: { 'icon.component': 'Icon/warn' } }, ...alert.variants] };
   ok('two glyphs variants change nest bracketed (PHP 8 refuses an unbracketed nested choice)', /: \(\(tone === "warning"\) \? "Icon\/warn" : "Icon\/info"\)/.test(toElement(two, 'alert', { naming: ELEMENT, library: {} }))); }

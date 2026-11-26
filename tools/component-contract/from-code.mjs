@@ -46,6 +46,7 @@ import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, spl
 export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
+import { swapKeysOf } from './to-markup.mjs';
 import { inWordsOf } from './to-figma.mjs';
 import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, growsDown, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
@@ -909,7 +910,8 @@ export function boundText(content, id, props, args, design, joined = {}) {
  *  derive keys a collection the tokens lack (modes.cjs `keyed`) and to-markup writes it. */
 export function modeKeysOf(axes, contract) {
   const set = new Set((axes || []).map((a) => a.key));
-  for (const e of Object.values((contract && contract.anatomy) || {})) for (const k of Object.keys((e && e.modes) || {})) set.add(k);
+  // (on a part of the base, or one a variant adds: a link's external icon, added with its colour mode)
+  for (const e of [...Object.values((contract && contract.anatomy) || {}), ...((contract && contract.variants) || []).flatMap((v) => Object.values(v.add || {}))]) for (const k of Object.keys((e && e.modes) || {})) set.add(k);
   for (const v of (contract && contract.variants) || []) for (const [p, m] of Object.entries(v.set || {})) if (/\.modes$/.test(p)) for (const k of Object.keys(m || {})) set.add(k);
   return [...set];
 }
@@ -3296,8 +3298,21 @@ async function main() {
         const held = (n) => fe.component === n || (set ? JSON.stringify(figmaContract).includes(JSON.stringify(n)) : placed().includes(n));
         // and every glyph a variant changes it to, held the same way, or the whole layer stays the code's graphic
         const glyphs = fromCode.variants.map((v) => (v.set || {})[`${id}.asset`]).filter((g) => typeof g === 'string');
-        if (!swapped && (!held(named) || !glyphs.every((g) => held(whole(g))))) return;
-        e.kind = 'instance'; e.component = swapped ? fe.component : named; delete e.asset;
+        // a wrapper the library does not hold whose own prop names the glyph it places (a <icon>: Status warning): that
+        // wrapper, its prop at the glyph the code draws, in the design's spelling, where every glyph drawn is one the
+        // design gives that prop (to-markup marks the glyph, swapKeysOf)
+        // (where the design lists nothing inside it, a placed component's own contract that does: its nearest)
+        const keysOf = () => { const ks = swapKeysOf(figmaContract, id), segs = id.split('/'); for (let i = segs.length - 1; !ks.size && i > 0; i--) { const h = figmaEl(segs.slice(0, i).join('/')), m = h && h.kind === 'instance' && mainOf(h.component, h.key); if (m) return swapKeysOf(m, segs.slice(i).join('/')); } return ks; };
+        const wk = !swapped && !mainOf(fe.component, fe.key) && [...keysOf()][0];
+        const spelt = wk && new Map([fe.with, ...(figmaContract.variants || []).flatMap((v) => [(v.set || {})[`${id}.with`], ((v.add || {})[id] || {}).with])]
+          .filter((w) => w && typeof w === 'object' && typeof w[wk] === 'string').map((w) => [w[wk].toLowerCase(), w[wk]]));
+        const wrapped = spelt && [e.asset, ...glyphs].every((g) => spelt.has(String(g).toLowerCase()));
+        if (!swapped && !wrapped && (!held(named) || !glyphs.every((g) => held(whole(g))))) return;
+        if (wrapped) {
+          e.with = { [wk]: spelt.get(e.asset.toLowerCase()) };
+          for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.with`] = { [wk]: spelt.get(v.set[`${id}.asset`].toLowerCase()) }; delete v.set[`${id}.asset`]; }
+        }
+        e.kind = 'instance'; e.component = swapped || wrapped ? fe.component : named; delete e.asset;
         // (with the design's key, so it stays that icon and is never a same-named component of the library: designKeyOf)
         { const k = designKeyOf(figmaContract, fe, e.component); if (k) e.key = k; else delete e.key; }
         // the glyph's own size the mark says (to-markup's data-icon-size): its set's variant, as Figma's Size
@@ -3307,7 +3322,7 @@ async function main() {
         // (a colour inside a component the library holds no contract for is that component's own: designSetsColour)
         if (!ownIcon.has(id) && !designSetsColour(figmaContract, id, mainOf)) { delete e.background; for (const v of fromCode.variants) if (v.set) delete v.set[`${id}.background`]; }
         // a variant that changes the glyph (an alert's error icon) changes the component in the same set, with its key
-        if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = whole(v.set[`${id}.asset`]); delete v.set[`${id}.asset`]; const k = swapKeyOf(figmaContract, e.key, v.set[`${id}.component`]); if (k === undefined) delete v.set[`${id}.key`]; else v.set[`${id}.key`] = k; }
+        if (!swapped && !wrapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = whole(v.set[`${id}.asset`]); delete v.set[`${id}.asset`]; const k = swapKeyOf(figmaContract, e.key, v.set[`${id}.component`]); if (k === undefined) delete v.set[`${id}.key`]; else v.set[`${id}.key`] = k; }
         // a colour the component placed draws its glyph in itself is no override (after the swaps above, so each variant is
         // held to the component it places)
         dropOwnGlyph(id, e, fromCode.variants, mainsOfAll);

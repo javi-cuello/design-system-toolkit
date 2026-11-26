@@ -131,6 +131,20 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
   for (const x of out) if (TAKEN.has(x.name) || lang.taken.has(x.name)) { x.renamed = x.name; x.name = x.name === 'role' && !names.has('appearance') ? 'appearance' : x.name === 'role' && !names.has('variant') ? 'variant' : free(`${x.name}Option`); names.add(x.name); }
   return out;
 }
+/* The props of a placed instance whose value names the component placed straight inside it, in any variant (a wrapper's
+   <icon>: Status warning, placing Status warning): its swaps, which say the glyph it draws. One source for the markup's
+   mark of a component the library does not hold, the reading of it and eval's gapOf. Tested by test-to-markup.mjs. */
+export function swapKeysOf(c, el) {
+  const vs = c.variants || [], low = (v) => String(v).toLowerCase();
+  const all = { ...(c.anatomy || {}), ...Object.assign({}, ...vs.map((v) => v.add || {})) };
+  const inside = new Set([...Object.values(all).filter((e) => e && e.parent === el && e.kind === 'instance' && e.component).map((e) => low(e.component)),
+    ...vs.flatMap((v) => Object.entries(v.set || {}).filter(([k, x]) => typeof x === 'string' && k.endsWith('.component') && (all[k.slice(0, -'.component'.length)] || {}).parent === el).map(([, x]) => low(x)))]);
+  const out = new Set();
+  for (const w of [(all[el] || {}).with, ...vs.map((v) => (v.set || {})[`${el}.with`]), ...vs.map((v) => ((v.add || {})[el] || {}).with)]) for (const [k, x] of Object.entries(w && typeof w === 'object' ? w : {})) if (typeof x === 'string' && inside.has(low(x))) out.add(k);
+  for (const v of vs) for (const [k, x] of Object.entries(v.set || {})) if (k.startsWith(`${el}.with.`) && typeof x === 'string' && inside.has(low(x))) out.add(k.slice(el.length + 6));
+  return out;
+}
+
 /* A combination that is a pointer state (a hover, a focus; partsOf's own test): what is drawn there no markup holds. */
 export const pointerWords = (c, when) => Object.entries(when || {}).some(([k, v]) => ((c.props || {})[k] || {}).role === 'interaction' && (((c.props || {})[k] || {}).pointer || []).includes(v));
 
@@ -282,8 +296,9 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
 function swappedLook(L, inner, rel, host) {
   const par = inner[rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : ''] || host;
   const style = declarations({ ...L, kind: 'container' }, { holds: true, row: !par.layout || par.layout.direction !== 'column', words: null }, tokenNames).decls
-    // (its fill as a mark's: the glyph's colour, which a mark is read by, never a box behind it)
-    .filter(([k]) => /^(background|border|box-shadow|outline|opacity)/.test(k)).map(([k, v]) => `${/^background(-color)?$/.test(k) ? 'color' : k}: ${v}`).join('; ');
+    // (its fill as a mark's: the glyph's colour, which a mark is read by, never a box behind it; and the limits the
+    // design gives its size, as the sheet writes them where a variant adds it: an icon tile held to 24 both ways)
+    .filter(([k]) => /^(background|border|box-shadow|outline|opacity|min-|max-)/.test(k)).map(([k, v]) => `${/^background(-color)?$/.test(k) ? 'color' : k}: ${v}`).join('; ');
   return { ...(style && { style }), ...Object.fromEntries(Object.entries(L.modes || {}).map(([k, v]) => [MODES.attribute(k), v])) };
 }
 
@@ -618,7 +633,20 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       let glyph = icon ? { code: ref(icon.name) } : { lit: e.component };
       // (a variant that hands this layer to another of its swaps: that one's name where it holds)
       if (icons.length > 1) { const code = byVariant((c.variants || []).filter((v) => icons.some((x) => x.key === (v.set || {})[`${id}.swappedBy`])), (v) => ref(icons.find((x) => x.key === v.set[`${id}.swappedBy`]).name), glyph.code); if (code) glyph = { code }; }
-      if (!icon) for (const v of c.variants || []) {
+      // (a wrapper the library does not hold, its glyph named by a prop of its own (a <icon>: Status warning that places
+      // Status warning): that glyph, as its variants change it)
+      const wrapped = !icon && [...swapKeysOf(c, id)].find((k) => e.with && typeof e.with[k] === 'string');
+      if (wrapped) {
+        glyph = { lit: e.with[wrapped] };
+        for (const v of c.variants || []) {
+          // (set by a variant, or the part added by one at props of its own: a status icon each type adds)
+          const w = (v.set || {})[`${id}.with`] ?? ((v.add || {})[id] || {}).with, g = w && typeof w === 'object' ? w[wrapped] : (v.set || {})[`${id}.with.${wrapped}`], t = typeof g === 'string' && testOf(v.when);
+          if (!t) continue;
+          const prev = glyph.code ? `(${glyph.code})` : lang.str(glyph.lit);
+          glyph = { code: t === 'true' ? lang.str(g) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${lang.str(g)} : ${prev}` };
+        }
+      }
+      if (!icon && !wrapped) for (const v of c.variants || []) {
         const g = (v.set || {})[`${id}.component`], t = typeof g === 'string' && !library[g] && testOf(v.when);
         if (!t) continue;
         // (a nested choice bracketed: PHP 8 refuses an unbracketed one)

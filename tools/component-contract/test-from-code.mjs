@@ -754,8 +754,9 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   !keepsName('Action footer', 'footer/menu/actionFooter') && !keepsName('Action footer', 'x/actionFooter_2') && keepsName('Context menu item / Default', 'a/contextMenuItemDefault') && keepsName('Footer', 'x/actionFooter') && keepsName('Item 2', 'list/item2') && keepsName('Icon 24', 'a/icon24'));
 { const c = { anatomy: { root: { modes: { 'color-palette': 'color-palette-1', 'color-palette-1': 'blue' } }, label: {} }, variants: [{ when: {}, set: { 'root.modes': { 'color-palette-2': 'red' } } }] };
   const k = modeKeysOf([{ key: 'theme' }, { key: 'color-palette' }], c);
-  ok('the mode keys read are the tokens\' axes and every key the contract sets a mode under, a collection the tokens lack (its own slug) and one a variant sets included',
-    ['theme', 'color-palette', 'color-palette-1', 'color-palette-2'].every((x) => k.includes(x)) && k.length === 4 && modeKeysOf([{ key: 'theme' }], null).join() === 'theme'); }
+  ok('the mode keys read are the tokens\' axes and every key the contract sets a mode under, a collection the tokens lack (its own slug), one a variant sets and one on a part a variant adds included',
+    ['theme', 'color-palette', 'color-palette-1', 'color-palette-2'].every((x) => k.includes(x)) && k.length === 4 && modeKeysOf([{ key: 'theme' }], null).join() === 'theme'
+    && modeKeysOf([], { anatomy: {}, variants: [{ when: { x: true }, add: { icon: { kind: 'instance', modes: { 'icon-color-helper': 'link' } } } }] }).join() === 'icon-color-helper'); }
 { // stacking first on top per combination, where the children cannot overlap
   const design = { props: { size: { type: 'enum', values: ['md', 'sm'], default: 'md' }, open: { type: 'boolean', default: false } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, firstOnTop: true } }, bar: { kind: 'container', parent: 'root', layout: { direction: 'row', firstOnTop: true } },

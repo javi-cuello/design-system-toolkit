@@ -56,7 +56,7 @@ import { fileURLToPath } from 'node:url';
 import { contracts, hashOf } from './official.mjs';
 import { roundTrip, drawSettings } from './to-figma.mjs';
 import { libraryOf } from '../parity/project.mjs';
-import { partsOf, unexposed, pointerWords, isDrawing } from './to-markup.mjs';
+import { partsOf, unexposed, pointerWords, isDrawing, swapKeysOf } from './to-markup.mjs';
 import { sharesNeverWritten, tokenNames } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
@@ -213,15 +213,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // (but its Size: to-markup passes that one, data-icon-size, and from-code reads it back)
   // (nor a swap: the prop whose value names the component placed in it, its glyph, which code draws or does not, and
   // which is measured: excused, a wrong glyph read as the same)
-  const low0 = (v) => String(v).toLowerCase();
-  const placedIn1 = (el) => new Set([...Object.entries(all).filter(([id, e]) => e && e.parent === el && e.kind === 'instance' && e.component).map(([, e]) => low0(e.component)),
-    ...vs.flatMap((v) => Object.entries(v.set || {}).filter(([k, x]) => typeof x === 'string' && k.endsWith('.component') && (all[k.slice(0, -'.component'.length)] || {}).parent === el).map(([, x]) => low0(x)))]);
-  const swapKeys = (el) => {
-    const inside = placedIn1(el), out = new Set();
-    for (const w of [(all[el] || {}).with, ...vs.map((v) => (v.set || {})[`${el}.with`]), ...vs.map((v) => ((v.add || {})[el] || {}).with)]) for (const [k, x] of Object.entries(w && typeof w === 'object' ? w : {})) if (typeof x === 'string' && inside.has(low0(x))) out.add(k);
-    for (const v of vs) for (const [k, x] of Object.entries(v.set || {})) if (k.startsWith(`${el}.with.`) && typeof x === 'string' && inside.has(low0(x))) out.add(k.slice(el.length + 6));
-    return out;
-  };
+  const swapKeys = (el) => swapKeysOf(contract, el);
   const swapRow = (el, field, row) => {
     if (field.startsWith('with.')) return swapKeys(el).has(field.slice(5));
     if (field !== 'with' || !row || !row.library || typeof row.library !== 'object') return false;
