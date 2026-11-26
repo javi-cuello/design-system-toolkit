@@ -677,7 +677,7 @@ export function carries(attrs, k, v) {
   const kk = String(k).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
   // (and an arg to-markup renamed off an HTML attribute's name, typeOption for Type, which its markup still writes under
   // that attribute: type)
-  const renamed = /^([a-z]+)Option$/.exec(String(k));
+  const renamed = /^([a-z]+)Option\d*$/.exec(String(k));
   const own = attrs[k] ?? attrs[`data-${k}`] ?? attrs[`aria-${k}`] ?? (kk !== k ? attrs[kk] ?? attrs[`data-${kk}`] : undefined) ?? (renamed ? attrs[renamed[1]] : undefined);
   if (v === true) return own != null && own !== 'false';
   if (v === false) return own == null || own === 'false';
@@ -2620,7 +2620,7 @@ async function main() {
           if (x[f] === undefined) continue;
           let mine = false;
           for (const p of css) { const at = await boxOf({ id, kind: x.kind }), sel = await authoredSelector(L.tab, at, p, styles); if (instanceWrites(f, sel, sel && await call(L.tab, writtenByHolder, selectorParts(sel), at, '[data-contract-id="root"]'), sel ? null : await authoredValue(L.tab, at, p, styles))) { mine = true; break; } }
-          if (mine && f === 'ownOutline' && ringKnobbed(await authoredValue(L.tab, await boxOf({ id, kind: x.kind }), 'outline', styles))) mine = false;
+          if (mine && f === 'ownOutline' && (ringKnobbed(await authoredValue(L.tab, await boxOf({ id, kind: x.kind }), 'outline', styles)) || ringKnobbed(await authoredValue(L.tab, await boxOf({ id, kind: x.kind }), 'outline-color', styles)))) mine = false;
           if (!mine) delete x[f];
         }
         A.take('design-shape', { anatomy: { [id]: x } }, () => asShape(x, fa, raw.some((r) => r.parent === id), fa && drawnHere()[id]));

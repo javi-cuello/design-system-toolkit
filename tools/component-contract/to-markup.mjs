@@ -866,7 +866,10 @@ function hOf(item, depth) {
   // (`lead`: what a holder's own attributes override, written before them: the component's own variable modes, which an
   // instance's mode, set by the component placing it (the host), replaces, as Figma's instance override does)
   const lead = (item.lead || []).length ? `${obj(item.lead).slice(2, -2)}, ` : '';
-  const attrs = item.spread ? `{ ${lead}${item.spread}${item.attrs.length ? `, ${obj(item.attrs).slice(2, -2)}` : ''} }` : obj(item.attrs);
+  // (a holder's null for one of them, a mode it sets only in some variants, leaves the component's own standing: the host
+  // spread without its nulls where something leads)
+  const spread = lead && item.spread ? item.spread.replace(/\.\.\.host\b/, '...Object.fromEntries(Object.entries(host).filter(([, v]) => v != null))') : item.spread;
+  const attrs = spread ? `{ ${lead}${spread}${item.attrs.length ? `, ${obj(item.attrs).slice(2, -2)}` : ''} }` : obj(item.attrs);
   if (!item.children.length) return `${pad}h(${str(item.tag)}, ${attrs})`;
   return `${pad}h(${str(item.tag)}, ${attrs},\n${item.children.map((x) => hOf(x, depth + 1)).join(',\n')})`;
 }

@@ -163,16 +163,16 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     const line = e.kind === 'graphic' && (e.width === 0 || e.height === 0);
     // (a line dashes that one edge: a border dashes as it is)
     if (dash && !dashed && !line && !(align === 'inside' && b.inLayout)) unread.push('border.dash (on some sides: CSS dashes a whole outline only)');
-    if (dashed) { put('outline', `${w(0)} dashed ${c}`); put('outline-offset', align === 'inside' ? `calc(-1 * ${w(0)})` : align === 'center' ? `calc(${w(0)} / -2)` : '0'); }
+    if (dashed) { put('outline', `${w(0)} dashed ${c}`, raw(b.color) ? NOTE : undefined); put('outline-offset', align === 'inside' ? `calc(-1 * ${w(0)})` : align === 'center' ? `calc(${w(0)} / -2)` : '0'); }
     else if (line) put(e.width === 0 ? 'border-left' : 'border-top', `${w(on.findIndex(Boolean) < 0 ? 0 : on.findIndex(Boolean))} ${dash ? 'dashed' : 'solid'} ${c}`);
     else if (align === 'inside' && b.inLayout) {
-      SIDES.forEach((s, i) => { if (on[i]) put(`border-${{ top: 'top', end: 'right', bottom: 'bottom', start: 'left' }[s]}`, `${w(i)} ${dash ? 'dashed' : 'solid'} ${c}`); });
+      SIDES.forEach((s, i) => { if (on[i]) put(`border-${{ top: 'top', end: 'right', bottom: 'bottom', start: 'left' }[s]}`, `${w(i)} ${dash ? 'dashed' : 'solid'} ${c}`, raw(b.color) ? NOTE : undefined); });
     } else if (on.every(Boolean) && widths.every((x) => x === widths[0])) {
       // all round, one width: one ring, inward, outward or across the edge
       if (align === 'inside') rings.push(`inset 0 0 0 ${w(0)} ${c}`);
       // beside an effect style, an outside ring is one of box-shadow's layers, first, as parity reads it
       else if (align === 'outside' && typeof e.shadow === 'string' && e.shadow !== 'literal') rings.push(`0 0 0 ${w(0)} ${c}`);
-      else { put('outline', `${w(0)} solid ${c}`); put('outline-offset', align === 'center' ? `calc(${w(0)} / -2)` : '0'); }
+      else { put('outline', `${w(0)} solid ${c}`, raw(b.color) ? NOTE : undefined); put('outline-offset', align === 'center' ? `calc(${w(0)} / -2)` : '0'); }
     } else {
       // some sides: one offset shadow per side, inset for an inside stroke, outside the box otherwise
       // an inset shadow shifted toward the box's middle draws that edge inside it; an outer one, shifted out, outside

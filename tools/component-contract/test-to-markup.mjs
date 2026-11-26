@@ -842,6 +842,6 @@ else {
   const holder = { component: 'Holder', props: { on: { type: 'boolean', default: false, figma: 'On' } }, anatomy: { root: { kind: 'container' }, btn: { kind: 'instance', parent: 'root', component: 'Btn' } },
     variants: [{ when: { on: true }, set: { 'btn.modes': { tone: 'selected' } } }] };
   const own = toElement(btn, 'btn', { naming: ELEMENT, library: {} }), held = toElement(holder, 'holder', { naming: ELEMENT, library: { Btn: { ...btn, folder: 'btn' } } });
-  ok('a mode a holder sets on a placed instance overrides its own: own mode before the host, none set where none overrides', /h\("ds-btn", \{ "data-tone": "subtle", \.\.\.rest, \.\.\.host/.test(own) && /"data-tone": on \? "selected" : null/.test(held), own + held); }
+  ok('a mode a holder sets on a placed instance overrides its own: own mode before the host, none set where none overrides, its null leaving the own one standing', /h\("ds-btn", \{ "data-tone": "subtle", \.\.\.rest, \.\.\.Object\.fromEntries\(Object\.entries\(host\)\.filter\(\(\[, v\]\) => v != null\)\)/.test(own) && /"data-tone": on \? "selected" : null/.test(held), own + held); }
 
 console.log(`${n} passed`);
