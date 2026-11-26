@@ -48,8 +48,8 @@ export function running(dir = path.join(os.homedir(), '.claude', 'sessions')) {
 }
 
 /* Where a project's sessions are filed: Claude Code files a session by the folder it was launched in, so that
-   folder's own; a worktree with none falls back to its main checkout's, where a session that later moved into
-   the worktree is filed. */
+   folder's own; a worktree's root with none falls back to its main checkout's, where a session that later
+   moved into the worktree is filed. A subfolder never falls back. */
 export function sessionDir(dir, root = ROOT) {
   const own = path.join(root, folderName(fs.realpathSync(dir)));
   if (fs.existsSync(own) && fs.readdirSync(own).some((f) => f.endsWith('.jsonl'))) return own;
