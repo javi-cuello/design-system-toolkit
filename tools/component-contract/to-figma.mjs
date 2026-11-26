@@ -446,7 +446,10 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   const cut = Math.max(0, combos.length - limit); combos = combos.slice(0, limit);
   const whole = wholeHosts(library, mains), inTheirs = inWordsOf(library, drawn);
   // what each combination lists inside a host kept whole: a layer one of them leaves out is one the design hides there
-  const listed = new Map([...whole].map((h) => [h, combos.map((c) => Object.keys(expand(library, { ...variantDefaults(library), ...c })).filter((k) => k.startsWith(`${h}/`))).filter((ks) => ks.length).map((ks) => new Set(ks))]));
+  // (only a combination listing the host whole: one listing only its overrides left the rest out as its component's)
+  const expanded = combos.map((c) => expand(library, { ...variantDefaults(library), ...c }));
+  const listedWholeAt = expanded.map((A) => (mains ? req('./derive.cjs').wholeIn(A, mains) : new Set()));
+  const listed = new Map([...whole].map((h) => [h, expanded.map((A, i) => (listedWholeAt[i].has(h) ? Object.keys(A).filter((k) => k.startsWith(`${h}/`)) : [])).filter((ks) => ks.length).map((ks) => new Set(ks))]));
   const hidden = (h, k) => (listed.get(h) || []).some((ks) => !ks.has(k));
   // (the pointer states are `pointerFrom`'s, the design's, matched by Figma name and word: a reading held as the library on
   // the second leg names a state it forces, disabled among them, a pointer state of its own)
@@ -475,6 +478,11 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // alike, so a layer the design is seen to hide is never filled, and drawn there it stays a difference
     const here = new Set();
     if (mains) req('./derive.cjs').ownInsides(JSON.parse(JSON.stringify(A)), mains, { found: here });
+    // (only a host this combination lists whole, some layer it lists its component's own (wholeIn: a partial cut would
+    // shrink it): one listing only what it overrides had its unchanged layers left out as its component's, derive's
+    // cut, so a layer missing there is its component's, not hidden (Carbon's group label, shown by Label, beside an
+    // overridden row))
+    if (mains) { const listedWhole = listedWholeAt[combos.indexOf(c)]; for (const h of [...here]) if (!listedWhole.has(h)) here.delete(h); }
     const loose = [...whole].filter((h) => !here.has(h));
     const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k))));
     // (the drawn side held to the library as filled, so a part filled there is the library's to compare a field of too)

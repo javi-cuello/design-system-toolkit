@@ -549,6 +549,19 @@ delete globalThis.figma;
   ok('a vector filled from the placed component is held without its paths where the library states none (the walk records none inside an instance): only its override differs',
     JSON.stringify(roundTrip(host('Icon/other'), host(null), { mains: (n) => (n === 'Box' ? box : null) }).rows.map((r) => r.at)) === '["b/mark.background"]');
 }
+// 2026-11-26: a placed checkbox the design lists only by its overridden row in one variant (its label and box left out
+// as its component's own) and whole in another (its tip hidden): what the first leaves out is not hidden, so the code's
+// label and box there are the component's own, no difference
+{
+  const cb = { component: 'Cb', props: { label: { type: 'boolean', default: true, figma: 'Label', shows: ['label'] } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', color: 'C/t', order: 0 }, row: { kind: 'container', parent: 'root', order: 1 }, 'row/box': { kind: 'container', parent: 'row', background: 'C/b', order: 0 }, tip: { kind: 'container', parent: 'root', order: 2 } }, variants: [] };
+  const lbl = { 'c/label': { kind: 'text', parent: 'c', color: 'C/t', order: 0 } }, box = { 'c/row/box': { kind: 'container', parent: 'c/row', background: 'C/b', order: 0 } };
+  const group = (all) => ({ component: 'Group', props: { horizontal: { type: 'boolean', default: false } },
+    anatomy: { root: { kind: 'container' }, c: { kind: 'instance', parent: 'root', component: 'Cb', with: { Label: true } }, ...(all && lbl), 'c/row': { kind: 'container', parent: 'c', order: 1, modes: { m: 'x' } }, ...(all && box) },
+    variants: [{ when: { horizontal: true }, add: all ? {} : { ...lbl, ...box } }] });
+  const rows = (lib) => roundTrip(lib, group(true), { mains: (n) => (n === 'Cb' ? cb : null) }).rows.map((r) => r.at);
+  ok('what a placed component listed by its overrides alone leaves out is its component\'s own, not hidden: drawn there, no row',
+    rows(group(false)).length === 0);
+}
 
 {
   // an instance's prop at its own component's default is that prop unstated: the library states it, a reading does not
