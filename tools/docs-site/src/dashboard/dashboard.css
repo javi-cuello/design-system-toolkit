@@ -509,8 +509,6 @@
   }
   /* The chip itself (.sev and its kin) is in stock-ui: Parity's Properties and Visual pages draw it too. */
   .visible-flag { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-soft); }
-  /* Add a note: a quiet text action beside the row's buttons; 24px tall for WCAG 2.5.8. */
-  .note-toggle { font-size: var(--text-sm); min-block-size: 24px; }
   .where {
     font-family: var(--font-mono); font-size: var(--text-sm);
     color: var(--fg); text-decoration: none;

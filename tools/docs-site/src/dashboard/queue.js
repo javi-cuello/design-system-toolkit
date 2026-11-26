@@ -556,11 +556,12 @@ export function build() {
             // The buttons that come and go (Fix all, Verify, Ask) and the
             // row's stamp come after the ones always there, so ticking a row
             // never moves those. The note opens on demand, under them, and
-            // stays open once it holds text.
+            // stays open once it holds text; its toggle is a .button like
+            // its peers (a link among buttons read as broken, 2026-11-26).
             '<div class="row-actions">' +
                 (bucket === "b1" ? '<button class="button do-row" type="button" data-do="' + esc(id) + '" ' + about("do-" + esc(id)) + '>Fix this</button>' : '') +
                 '<button class="button rule-row" type="button" data-rule="' + esc(id) + '" ' + about("rule-" + esc(id)) + '>Record as ruling</button>' +
-                '<button class="link-button note-toggle" type="button" data-note-toggle aria-expanded="false" aria-controls="nwrap-' + esc(id) + '" ' + about("ntoggle-" + esc(id)) + '>Add a note</button>' +
+                '<button class="button note-toggle" type="button" data-note-toggle aria-expanded="false" aria-controls="nwrap-' + esc(id) + '" ' + about("ntoggle-" + esc(id)) + '>Add a note</button>' +
                 (bucket === "b1" ? '<button class="button do-all" type="button" data-doall="' + esc(id) + '" ' + about("doall-" + esc(id)) + ' hidden></button>' : '') +
                 '<button class="button verify-row" type="button" data-verify="' + esc(id) + '" ' + about("verify-" + esc(id)) + ' hidden>Verify</button>' +
                 '<button class="button ask-row" type="button" data-ask-row="' + esc(n) + '" ' + about("askrow-" + esc(id)) + ' hidden>Ask about this row</button>' +
@@ -885,7 +886,12 @@ async function doRow(id, sharedNote) {
   if (!(await claudeReady())) return queueStatus("No API key — this needs Claude.", "warn");
 
   queueStatus("Working on " + (r.where || id) + "\u2026");
+  // The row's own button says which step it is on: "Working…" alone, with the
+  // status far up in the toolbar, read as a button that did nothing while the
+  // plan was being written (2026-11-26).
+  const step = (t) => { const b = document.querySelector('[data-do="' + CSS.escape(id) + '"]'); if (b && b.disabled) b.textContent = t; };
   try {
+    step("Reading settings\u2026");
     const rules = await contextRules();
     const { fix: fixTemplate } = await api.scripts();
     if (!fixTemplate) return queueStatus("The service did not return the skill's fix instruction.", "warn");
@@ -916,6 +922,7 @@ async function doRow(id, sharedNote) {
     // live press of Fix this — Sonnet 5 writes the code and the description
     // it sets at length) is asked once more with room, not every press.
     let plan;
+    step("Asking Claude\u2026");
     try { plan = await askClaude.json(fixPrompt, { max_tokens: 3000 }); }
     catch (e) { if (!e || e.code !== "truncated") throw e; plan = await askClaude.json(fixPrompt, { max_tokens: 8000 }); }
     if (!plan || !plan.code) return queueStatus("Claude didn't return code to run.", "warn");
@@ -927,6 +934,7 @@ async function doRow(id, sharedNote) {
     // Stored before it runs, so what happened is readable afterwards.
     await store.doc("rows/" + id).set(Object.assign({}, r, { appliedCode: plan.code, appliedAt: new Date().toISOString() }));
 
+    step("Running in Figma\u2026");
     await bridge.exec(plan.code);
 
     /*
@@ -954,6 +962,7 @@ async function doRow(id, sharedNote) {
     const t = targetOf(r);
     let whyNotRun = "";
     if (run && t) {
+      step("Checking\u2026");
       let found = null;
       try { found = await run([t], rules); } catch (e) { found = null; whyNotRun = " " + sentence(e && e.message ? e.message : "The check failed."); }
       // `null` from the dispatch is "could not run", and an absent component

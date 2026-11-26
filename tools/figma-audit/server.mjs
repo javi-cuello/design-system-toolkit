@@ -42,7 +42,7 @@
 // does not collide with the MCP servers Claude Code spawns from 9223 up.
 
 import { createServer } from "node:http";
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile, writeFile, mkdir, rename, rm, copyFile } from "node:fs/promises";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -1203,6 +1203,9 @@ const server = createServer(held(async (req, res) => {
       if (!ANTHROPIC_KEY) return json(res, 200, { ok: false, error: "no_api_key" });
       const { prompt, system, max_tokens, use } = JSON.parse(await body(req));
       const judge = use === "judge" ? JSON.parse(await readFile(join(SCANNER, "judge.json"), "utf8")) : null;
+      // logged like a plugin call: a page's Fix this that sat on "Working…" left nothing here to say where (2026-11-26)
+      const c0 = Date.now();
+      console.log(`claude → ${String(prompt || "").length} chars${use ? ` (${use})` : ""}, ${max_tokens || 2000} tokens allowed`);
       const r = await fetch(API + "/v1/messages", {
         method: "POST",
         headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
@@ -1225,6 +1228,7 @@ const server = createServer(held(async (req, res) => {
         })
       });
       const out = await r.json();
+      console.log(`claude ← ${r.ok ? "answered" : "http " + r.status} in ${Math.round((Date.now() - c0) / 1000)}s${out.stop_reason ? ` (${out.stop_reason})` : ""}`);
       // A rejected key is the one failure the reader can act on, so it gets a
       // stable code rather than whatever prose the API happened to return.
       if (!r.ok) {
@@ -1341,7 +1345,7 @@ const plugged = () => [...plugins.values()].some((e) => !e.socket.destroyed);
  * and the Desktop Bridge dials it: a figma-console MCP that took [::1] on a project's port, free while this held
  * only 127.0.0.1, answered the plugin in this service's place and every audit stage timed out (2026-11-26;
  * three projects' ports held so that day). Held here, the MCP moves to a port of its own. Found held at start, this
- * still serves 127.0.0.1, says the holder once and on /status, and takes [::1] when it comes free.
+ * still serves 127.0.0.1, says the holder in the log and on /status, and takes [::1] when it comes free.
  */
 const server6 = createServer();
 for (const ev of ["request", "upgrade"]) for (const fn of server.listeners(ev)) server6.on(ev, fn);
@@ -1350,18 +1354,26 @@ server6.headersTimeout = 60000;
 server6.on("error", (e) => {
   // no IPv6 loopback on this machine, or no right to it: said on /status and in the log, not tried again
   if (e.code !== "EADDRINUSE") { loopback6Clash = `[::1]:${PORT} is not served (${e.code || e.message}); 127.0.0.1 only`; return console.error(loopback6Clash); }
-  if (!loopback6Clash) {
-    let who = ""; try { who = execFileSync("lsof", ["-nP", `-iTCP@[::1]:${PORT}`, "-sTCP:LISTEN"], { encoding: "utf8", timeout: 3000 }).trim().split("\n").slice(1).map((l) => l.split(/\s+/).slice(0, 2).join(" ")).join(", "); } catch {}
-    loopback6Clash = `[::1]:${PORT} is held by ${who || "another process"}, and the Desktop Bridge dials it first: stop it (a figma-console MCP: end that session's MCP) or move it off ${PORT}`;
-    console.error(loopback6Clash);
-  }
+  // the holder read each time, without blocking (lsof can take seconds), and said in the log when it changes
+  execFile("lsof", ["-nP", `-iTCP@[::1]:${PORT}`, "-sTCP:LISTEN"], { encoding: "utf8", timeout: 3000 }, (_, out) => {
+    const who = String(out || "").trim().split("\n").slice(1).map((l) => l.split(/\s+/).slice(0, 2).join(" ")).join(", ");
+    const said = `[::1]:${PORT} is held by ${who || "another process"}, and the Desktop Bridge dials it first: stop it (a figma-console MCP: end that session's MCP) or move it off ${PORT}`;
+    if (said !== loopback6Clash) console.error(said);
+    loopback6Clash = said;
+  });
   // not once the service has closed for a restart (stale-self closes both): it would take requests while it waits to exit
   setTimeout(() => { if (server.listening) server6.listen(PORT, "::1"); }, 30000).unref();
 });
-server6.on("listening", () => { if (loopback6Clash) console.log(`[::1]:${PORT} came free and is held now`); loopback6Clash = null; });
+server6.on("listening", () => {
+  // a retry that bound as the service closed for a restart lets go again
+  if (!server.listening) return server6.close();
+  if (loopback6Clash) console.log(`[::1]:${PORT} came free and is held now`);
+  loopback6Clash = null;
+});
 const selfRestart = restartWhenStale(boundBy(HERE), { servers: [server, server6], busy: () => pending.size > 0 || plugged() });
-server6.listen(PORT, "::1");
 server.listen(PORT, "127.0.0.1", () => {
+  // [::1] once 127.0.0.1 is held: an older copy of this service holding both is 127.0.0.1's clash, said there
+  server6.listen(PORT, "::1");
   console.log("figma audit      http://127.0.0.1:" + PORT);
   console.log("records          " + AUDIT_DIR + (LEGACY ? " (single record: audit.json)" : "/<library>.json"));
   console.log("claude           " + (ANTHROPIC_KEY ? "enabled"
