@@ -222,7 +222,7 @@ How a person adds, opens, edits, moves and deletes entries on a calendar, and ma
 
 **How**
 - [moderate] **Tentative still counts as taken by default.** Calendly: "By default, Calendly marks Outlook calendars as unavailable for events marked as Busy, Tentative", and the setting can change ([busy vs free](https://calendly.com/help/how-to-manage-busy-vs-free-calendar-settings)); iCalendar's default `TRANSP` is OPAQUE ([RFC 5545 §3.8.2.7](https://www.rfc-editor.org/rfc/rfc5545#section-3.8.2.7)).
-- [weak] **Overlaps allowed and shown side by side.** Clockify: "By default, Clockify allows overlapping entries", seen as "blocks of time that are layered next to each other" ([overlapping entries](https://clockify.me/help/troubleshooting/permissions/overlapping-entries)).
+- [weak] **Overlaps allowed and shown side by side.** Clockify: "By default, Clockify allows overlapping entries", seen as "blocks of time that are layered next to each other" ([overlapping entries](https://clockify.me/help/troubleshooting/permissions/overlapping-entries)). Whether a timesheet allows, refuses or overwrites an overlap is contested: [timesheets: *What a timesheet refuses or warns about*](timesheets.md#what-a-timesheet-refuses-or-warns-about).
 - [weak] **Booking tools refuse a clash instead.** Calendly "checks your calendar for busy times" and offers only free slots ([busy vs free](https://calendly.com/help/how-to-manage-busy-vs-free-calendar-settings)).
 - [required] **Where entries sync as iCalendar,** tentative, confirmed and cancelled map to `STATUS`, and busy or free to `TRANSP` ([RFC 5545](https://www.rfc-editor.org/rfc/rfc5545)).
 
