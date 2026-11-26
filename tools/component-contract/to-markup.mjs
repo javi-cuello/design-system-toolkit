@@ -439,7 +439,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // variant's rename over its own add, so the later one is the name there as in the design)
   const nameAttr = (id) => {
     const nm = ((parts.get(id) || {}).e || {}).name;
-    const vs = c.variants || [], addNamed = vs.some((v) => v.add && v.add[id] && (v.add[id].name ?? '') !== (nm ?? ''));
+    // (adds count where any add names the part otherwise or any variant renames it: an add after a rename gives back
+    // its own name there)
+    const vs = c.variants || [], addNamed = vs.some((v) => (v.add && v.add[id] && (v.add[id].name ?? '') !== (nm ?? '')) || (v.set && `${id}.name` in v.set));
     const sets = [...vs.filter((v) => !v.combination), ...vs.filter((v) => v.combination)].filter((v) => (v.set && `${id}.name` in v.set) || (addNamed && v.add && v.add[id]));
     const code = byVariant(sets, (v) => lang.str((v.set && `${id}.name` in v.set ? v.set[`${id}.name`] : v.add[id].name) || ''), lang.str(nm || ''));
     return code ? [['data-figma-name', { code }]] : nm ? [['data-figma-name', { lit: nm }]] : [];

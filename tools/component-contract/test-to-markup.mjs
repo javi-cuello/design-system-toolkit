@@ -285,6 +285,9 @@ ok('a layer whose name its id does not give back carries the design\'s name (dat
 { const later = { ...renamed, props: { tone: { type: 'enum', values: ['a', 'b'], default: 'a', figma: 'Tone' }, size: { type: 'enum', values: ['s', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', name: 'Mark' } },
     variants: [{ when: { tone: 'b' }, set: { 'mark.name': 'Bar' } }, { when: { size: 'l' }, add: { mark: { kind: 'graphic', parent: 'root', name: 'Rectangle ' } } }] };
   const out = toReact(later, 'tag', { naming: CLASS, library: {} });
+  const back = { ...later, variants: [later.variants[0], { when: { size: 'l' }, add: { mark: { kind: 'graphic', parent: 'root', name: 'Mark' } } }] };
+  const outBack = toReact(back, 'tag', { naming: CLASS, library: {} });
+  ok('…and an add under the part\'s own name after a rename gives that name back there', /data-figma-name=\{\(size === "l"\) \? "Mark" : \(\(tone === "b"\) \? "Bar" : "Mark"\)\}/.test(outBack), outBack);
   ok('an add after a rename names the part where both hold, as the design applies them', /data-figma-name=\{\(size === "l"\) \? "Rectangle " : \(\(tone === "b"\) \? "Bar" : "Mark"\)\}/.test(out), out); }
 // a rename a variant sets where an add gives its own name: the rename is the layer's name there
 { const both = { ...renamed, props: { size: { type: 'enum', values: ['s', 'm', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' } },
