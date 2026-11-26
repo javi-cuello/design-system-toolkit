@@ -83,6 +83,23 @@ ok("a path the walk did not reach marks nothing", markSlots({ name: "x", type: "
   delete figma.skipInvisibleInstanceChildren;
 }
 
+// 2026-11-26: a hidden sublayer handed over with the flag off was read for its visibility after the flag went back on,
+// when Figma no longer knows it ("get_visible: The node … does not exist"), and the whole snapshot stopped. Visibility is
+// read while the flag is off; a sublayer that throws anyway is not drawn.
+{
+  let on = true;
+  const ghost = box("Ghost", "FRAME"); Object.defineProperty(ghost, "visible", { get: () => { if (on) throw new Error("in get_visible: The node does not exist"); return false; } });
+  const gone = box("Gone", "FRAME"); Object.defineProperty(gone, "visible", { get: () => { throw new Error("in get_visible: The node does not exist"); } });
+  const kids = [box("Glyph", "VECTOR"), ghost, gone];
+  const lazy = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }] };
+  Object.defineProperty(lazy, "children", { get: () => (on ? [] : kids) });
+  Object.defineProperty(figma, "skipInvisibleInstanceChildren", { configurable: true, get: () => on, set: (v) => { on = v; } });
+  let walked = null, err = null; try { walked = await walk(lazy, 1); } catch (e) { err = e; }
+  ok("a sublayer Figma no longer knows once the flag is back on does not stop the snapshot, and is not drawn",
+    !err && JSON.stringify(walked.children.map((c) => c.name)) === '["Glyph"]', err && err.message);
+  delete figma.skipInvisibleInstanceChildren;
+}
+
 // Round 4: the release is stamped on every payload, so the store can tell a
 // field the plugin began to record from one a library began to use.
 const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"));

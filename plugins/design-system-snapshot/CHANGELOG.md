@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.90.5] - 2026-11-26
+### Fixed
+- **A hidden sublayer no longer stops the snapshot.** An instance read with hidden layers shown had each child's visibility read after the setting went back, when Figma no longer knows the hidden ones ("get_visible: The node … does not exist"). Visibility is now read while they are shown, and a layer that still cannot be read is left out as not drawn.
+
 ## [0.90.4] - 2026-11-25
 ### Fixed
 - **A placed instance Figma had not built yet is read whole.** With invisible children skipped, Figma returned no children for such an instance, visible ones included, so a variant's swapped icon or switch was recorded empty; the walk now reads that instance's children once with the skip off (hidden ones still left out).

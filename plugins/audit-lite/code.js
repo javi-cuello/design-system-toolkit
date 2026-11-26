@@ -1305,7 +1305,7 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
 function snapshotFacts() {
 const __html__ = undefined;
 const FACTS = true;
-// Design system snapshot — v0.90.4 · plugin-standard v1.1.0
+// Design system snapshot — v0.90.5 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -1635,7 +1635,7 @@ async function anatomyOf(set, shown) {
     const walk = async (node, optional) => {
       /** @type {Map<string, any>} */ const seen = new Map();
       for (const c of /** @type {any} */ (node).children || []) {
-        if (!c.visible) continue;
+        if (!isShown(c)) continue;
         const ref = c.componentPropertyReferences && c.componentPropertyReferences.visible;
         const opt = ref ? label(ref) : optional;
         const b = c.absoluteBoundingBox;
@@ -2158,7 +2158,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.90.4';
+const VERSION = '0.90.5';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -2174,7 +2174,7 @@ const unrecordedSeen = [];
  */
 /** @param {SceneNode} n @param {number[]} [path] @param {number[][]} [out] */
 function slotPaths(n, path = [], out = []) {
-  const kids = 'children' in n ? n.children.filter((c) => c.visible !== false) : [];
+  const kids = 'children' in n ? n.children.filter(isShown) : [];
   kids.forEach((c, i) => { const p = [...path, i]; if (c.type === 'SLOT') out.push(p); slotPaths(c, p, out); });
   return out;
 }
@@ -2251,12 +2251,16 @@ async function componentNotesOf(n) {
 // the flag off builds them; it is put back at once, and the walk drops the hidden ones as everywhere.
 /** @param {any} n */
 const kidsOf = (n, f = figma) => {
-  if (n.children.length || !f.skipInvisibleInstanceChildren) return n.children;
+  if (n.children.length || !f.skipInvisibleInstanceChildren) return n.children.filter(isShown);
+  // (each child's visibility read while the flag is off: once it is back on, a hidden sublayer read with it off is no
+  // node Figma knows, and reading it throws "does not exist")
   f.skipInvisibleInstanceChildren = false;
-  const kids = n.children;
-  f.skipInvisibleInstanceChildren = true;
-  return kids;
+  try { return n.children.filter(isShown); } finally { f.skipInvisibleInstanceChildren = true; }
 };
+/* Whether a layer is drawn: a sublayer Figma lists but no longer has (an instance's, read across a change of
+   skipInvisibleInstanceChildren) is not, rather than stopping the snapshot. */
+/** @param {SceneNode} c */
+function isShown(c) { try { return c.visible !== false; } catch (e) { return false; } }
 /** @param {SceneNode} n @param {number} depth @param {number} [at] its place among all its parent's children, none inside an instance @param {boolean} [inInstance] @returns {Promise<Record<string, unknown>>} */
 async function walk(n, depth, at, inInstance = false) {
   /** @type {Record<string, unknown>} */
@@ -2525,7 +2529,7 @@ async function walk(n, depth, at, inInstance = false) {
     if ((overrides.length || walkWhole) && depth < 12) {
       o.overrides = overrides.map((ov) => ov.overriddenFields.join(',')).slice(0, 8);
       const kids = [];
-      for (const c of kidsOf(n)) if (c.visible !== false) kids.push(await walk(c, depth + 1, undefined, true));
+      for (const c of kidsOf(n)) kids.push(await walk(c, depth + 1, undefined, true));
       o.children = kids;
     }
     return o;
@@ -2533,7 +2537,7 @@ async function walk(n, depth, at, inInstance = false) {
   if (unrecordedSeen.length < 200) unrecordedSeen.push(...unrecorded(n, o));
   if ('children' in n && depth < 12) {
     const kids = [];
-    for (const [i, c] of n.children.entries()) if (c.visible !== false) kids.push(await walk(c, depth + 1, inInstance ? undefined : i, inInstance));
+    for (const [i, c] of n.children.entries()) if (isShown(c)) kids.push(await walk(c, depth + 1, inInstance ? undefined : i, inInstance));
     o.children = kids;
   }
   return o;
