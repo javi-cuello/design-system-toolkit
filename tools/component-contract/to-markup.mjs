@@ -130,13 +130,13 @@ export const pointerWords = (c, when) => Object.entries(when || {}).some(([k, v]
 /* A part inside a placed component that no prop of that component carries (an avatar's icon shown in a switcher
    that has no prop for it): an override the markup cannot pass, so the generated code leaves it to the developer,
    named as a gap. `mainOf` is a component's contract by its name. Tested by test-to-markup.mjs. */
-/* The placed component a part is held to: outside any slot, the outermost it sits in; in a slot this component fills
-   (a menu's items), the one placed in that fill (an item, its avatar the override); a slot's own sample, none. */
+/* The placed component a part is held to: outside any slot, the outermost it sits in; in a slot, the one placed in what
+   fills it: what this component puts in a placed component's slot (a menu's items: an item, its avatar the override),
+   or its own slot's sample, which it draws while the caller passes nothing (a card's avatar). */
 export function overrideHost(c, id) {
   const parts = partsOf(c), part = parts.get(id);
   if (!part || !part.inside) return null;
   if (!part.slotted) return part.inside;
-  if (!(parts.get(part.slotted) || {}).inside) return null;
   let host = null;
   for (let up = part.e.parent; up && up !== part.slotted; up = ((parts.get(up) || {}).e || {}).parent) if ((((parts.get(up) || {}).e) || {}).kind === 'instance') host = up;
   return host;

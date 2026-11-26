@@ -130,13 +130,12 @@ export function mechanisms(by) {
 }
 
 /* What the toolkit's own markup leaves to the code that uses it, by design: a part drawn only at a pointer state (a menu
-   open at focus: frontend-build's, said as a gap in the markup), but a focus ring, which to-code draws as an outline;
-   and what a slot holds in the design (its sample content: the slot's filler is the caller's). The self legs count the
+   open at focus: frontend-build's, said as a gap in the markup), but a focus ring, which to-code draws as an outline.
+   (What a slot holds in the design is no gap: the markup draws it as the slot's fallback.) The self legs count the
    rows of these apart (`left`), never among the differences, and never dropped. `settings`: the library's, as the sheet
    is written under (which pointer state is focus, so which part is a ring). */
 export const GAPS = {
   'pointer-only-part': 'a part drawn only at a pointer state (a menu open at focus): no markup holds it',
-  'slot-sample': 'what a slot holds in the design, its sample: the slot\'s filler is the caller\'s',
   'unexposed-override': 'an override inside a placed component that no prop of it carries',
   'pointer-words': 'words only a pointer state changes (a field\'s "Search" at focus)',
   'pointer-with': 'a placed instance\'s props only a pointer state gives',
@@ -153,10 +152,9 @@ export const GAPS = {
 };
 /* Which gap of GAPS excuses a row (at, row), or null where it is a difference: leftToCode, by name. */
 export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true } = {}) {
-  // (a slot of a placed component is filled by the markup, its parts drawn: only the component's own slot is a sample;
-  // and a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
+  // (a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
   const parts = partsOf(contract, settings);
-  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : p.slotted && !(parts.get(p.slotted) || {}).inside ? 'slot-sample' : mainOf && !!unexposed(contract, p.id, mainOf) ? 'unexposed-override' : null);
+  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : mainOf && !!unexposed(contract, p.id, mainOf) ? 'unexposed-override' : null);
   const reasons = new Map([...parts.values()].map((p) => [p.id, reasonOf(p)]).filter(([, r]) => r));
   const ids = [...reasons.keys()];
   // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them

@@ -141,7 +141,10 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   ok('an override under one already named is not named again; a glyph only a hover state changes there is passed in parts, no gap', /Box: drawn here/.test(out2) && !/X: drawn here/.test(out2) && !/Icon: drawn here/.test(out2) && /"icon": \{ attrs: \{ "data-icon": "Icon\/case" \} \}/.test(out2), out2);
   { const sw3 = { ...sw, props: { size: { type: 'enum', values: ['s', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/dot' } }, variants: [{ when: { size: 'l' }, set: { 'icon.content': 'x' } }] };
     const org3 = { ...org, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switcher' }, 'sw/icon': { kind: 'instance', parent: 'sw', component: 'Icon/case' } } };
-    ok('a variant that sets one field of a part passes that field only: another component there is still an override', unexposed(org3, 'sw/icon', (n) => (n === 'Switcher' ? sw3 : null)) === 'part'); }
+    ok('a variant that sets one field of a part passes that field only: another component there is still an override', unexposed(org3, 'sw/icon', (n) => (n === 'Switcher' ? sw3 : null)) === 'part');
+    // in the component's own slot, its sample is drawn: a placed component there is held to its props as anywhere
+    const inSlot = { ...org, anatomy: { root: { kind: 'container' }, body: { kind: 'slot', parent: 'root' }, 'body/sw': { kind: 'instance', parent: 'body', component: 'Switcher' }, 'body/sw/icon': { kind: 'instance', parent: 'body/sw', component: 'Icon/case' } } };
+    ok('an override inside a placed component in the slot\'s own sample is one the markup cannot pass', unexposed(inSlot, 'body/sw/icon', (n) => (n === 'Switcher' ? sw : null)) === 'part'); }
   // a part the placed component draws only at one of its variants (Carbon's toggle item draws its small switch at Size
   // Small, untoggled): the variant passes the part, but a prop of it no variant gives (the toggle's switch Toggled) is an
   // override all the same; one a variant gives is passed

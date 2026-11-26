@@ -144,14 +144,14 @@ ok('a component measured since the accept is held until accepted; one that came 
   const some = causes([{ at: 'cap', library: { kind: 'text' }, drawn: null, in: 2 }, { at: 'cap.kind', library: 'text', drawn: 'slot', in: 2 }], 4);
   ok('a part missing in only some combinations folds nothing: its field rows from the others are causes of their own', some['cap.kind'] === 1 && some.cap === 1 && causes([{ at: 'cap', library: { kind: 'text' }, drawn: null, in: 4 }, { at: 'cap/x', library: 1, drawn: null, in: 4 }], 4)['cap (missing)'] === 2);
 }
-// what the markup leaves to its caller is counted apart: a menu drawn only at focus, a slot's sample content; a focus
-// ring (an outline in code) and a part every variant draws stay differences
+// what the markup leaves to its caller is counted apart: a menu drawn only at focus; a focus ring (an outline in code),
+// a part every variant draws and a slot's sample (the markup draws it as the slot's fallback) stay differences
 { const c = { contract: 1, component: 'Pick', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } },
     anatomy: { root: { kind: 'container' }, field: { kind: 'container', parent: 'root' }, slot: { kind: 'slot', parent: 'root' }, 'slot/sample': { kind: 'text', parent: 'slot', content: 'x' } },
     variants: [{ when: { state: 'focus' }, add: { menu: { kind: 'container', parent: 'root' }, 'menu/item': { kind: 'text', parent: 'menu', content: 'A' } } }] };
   const left = leftToCode(c);
-  ok('rows of a part drawn only at a pointer state, or inside a slot, are left to code; the rest are differences',
-    left('menu') && left('menu/item.content') && left('slot/sample.content') && !left('field.layout') && !left('slot.width') && !left('menuish'));
+  ok('rows of a part drawn only at a pointer state are left to code; the rest, a slot\'s sample among them, are differences',
+    left('menu') && left('menu/item.content') && !left('slot/sample.content') && !left('field.layout') && !left('slot.width') && !left('menuish'));
   const placed = { ...c, anatomy: { ...c.anatomy, picker: { kind: 'instance', parent: 'root', component: 'Menu' }, 'picker/items': { kind: 'slot', parent: 'picker' }, 'picker/items/one': { kind: 'text', parent: 'picker/items', content: 'One' } } };
   ok('what this component puts in a placed component\'s slot is drawn, so stays a difference', !leftToCode(placed)('picker/items/one.content'));
   const sw = { component: 'Switcher', props: { label: { type: 'string', figma: 'Label', sets: ['label'] } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Org' }, dot: { kind: 'graphic', parent: 'root', background: 'Icon/strong' } }, variants: [] };
@@ -558,37 +558,37 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
 { ok('strict: the same with no field taken from the design; one with a taken field, or untagged, is the same only assisted',
     isStrict({ rows: [], assisted: {} }) && !isStrict({ rows: [], assisted: { 'text-align': ['anatomy.label.textAlign'] } }) && isSame({ rows: [], assisted: { 'text-align': ['x'] } })
     && !isStrict({ rows: [], untagged: true }) && !isStrict({ rows: [{ at: 'x' }], assisted: {} }) && !isStrict({ rows: [], left: [{ at: 'x' }], assisted: {} }));
-  const legsS = { self: { a: { rows: [{ at: 'x.width' }], left: [{ at: 's/t.content', gap: 'slot-sample' }], assisted: { 'text-align': ['anatomy.t.textAlign'], 'component-name': ['component'] } }, b: { rows: [], left: [], untagged: true }, c: { rows: [], left: [], assisted: {} } } };
+  const legsS = { self: { a: { rows: [{ at: 'x.width' }], left: [{ at: 'm', gap: 'pointer-only-part' }], assisted: { 'text-align': ['anatomy.t.textAlign'], 'component-name': ['component'] } }, b: { rows: [], left: [], untagged: true }, c: { rows: [], left: [], assisted: {} } } };
   const k = counts(legsS);
   ok('--accept/--check: the strict count is the rows, those left to code and the fields assisted; an untagged reading has none',
     k['self strict'].a === 4 && k['self strict'].c === 0 && !('b' in k['self strict']) && k.self.a === 1);
   ok('--check: a strict count that rose is said', worse(counts(legsS), { ...k, 'self strict': { a: 3, c: 0 } }).some((w) => /self strict a: 3 → 4/.test(w)));
   const cz = causesOf(legsS)['self strict'].a;
-  ok('--diff: the strict causes name each gap and each assisting rule', cz['x.width'] === 1 && cz['left to code: slot-sample'] === 1 && cz['assisted: text-align'] === 1 && cz['assisted: component-name'] === 1);
+  ok('--diff: the strict causes name each gap and each assisting rule', cz['x.width'] === 1 && cz['left to code: pointer-only-part'] === 1 && cz['assisted: text-align'] === 1 && cz['assisted: component-name'] === 1);
   const said = []; const log = console.log; console.log = (l) => said.push(l);
   try { (await import('./eval.mjs')).report('lib', { legs: { self: { ...legsS.self, d: { rows: [], left: [], assisted: { 'text-align': ['y'] } } } } }); } finally { console.log = log; }
   ok('the verdict says strict beside assisted, the gap named by rule, and the readings not tagged', said.some((l) => /^lib self: 3 of 4 the same; strictly 1 \(1 assisted by text-align\); 1 untagged, not known strictly/.test(l)), said);
-  ok('the verdict lists the rows left to code by gap id', said.some((l) => /1 rows left to code \(slot-sample 1\)/.test(l)), said); }
+  ok('the verdict lists the rows left to code by gap id', said.some((l) => /1 rows left to code \(pointer-only-part 1\)/.test(l)), said); }
 // a weaker tier said beside the same, never instead: the same but for rows another library's component leaves to code
 { const f = (gap) => ({ at: 'x/y', gap });
   ok('apart from foreign: the same, or blocked only by inside-foreign and foreign-own rows; isSame unchanged',
     isSameApartFromForeign({ rows: [] }) && isSameApartFromForeign({ rows: [], left: [f('inside-foreign'), f('foreign-own')] }) && !isSame({ rows: [], left: [f('inside-foreign')] })
-    && !isSameApartFromForeign({ rows: [], left: [f('inside-foreign'), f('slot-sample')] }) && !isSameApartFromForeign({ rows: [{ at: 'x' }], left: [f('inside-foreign')] })
+    && !isSameApartFromForeign({ rows: [], left: [f('inside-foreign'), f('pointer-only-part')] }) && !isSameApartFromForeign({ rows: [{ at: 'x' }], left: [f('inside-foreign')] })
     && !isSameApartFromForeign({ rows: [], left: [f('foreign-own')], predicted: 2 }) && !isSameApartFromForeign({ rows: [], left: [f('foreign-own')], cut: 1 }) && !isSameApartFromForeign({ rows: [], lacks: true }) && !isSameApartFromForeign({ skipped: 'x' }));
   const said = []; const log = console.log; console.log = (l) => said.push(l);
-  try { (await import('./eval.mjs')).report('lib', { legs: { self: { a: { rows: [], left: [f('inside-foreign')], assisted: {} }, b: { rows: [], assisted: {} }, c: { rows: [], left: [f('slot-sample')], assisted: {} } } } }); } finally { console.log = log; }
+  try { (await import('./eval.mjs')).report('lib', { legs: { self: { a: { rows: [], left: [f('inside-foreign')], assisted: {} }, b: { rows: [], assisted: {} }, c: { rows: [], left: [f('pointer-only-part')], assisted: {} } } } }); } finally { console.log = log; }
   ok('the headline says the weaker tier beside the same and the strict', said.some((l) => /^lib self: 1 of 3 the same; strictly 1; 2 the same apart from another library's insides; measured/.test(l)), said); }
 // each excuse of leftToCode is a named gap with an id
 { const c = { contract: 1, component: 'Pick', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } },
     anatomy: { root: { kind: 'container' }, slot: { kind: 'slot', parent: 'root' }, 'slot/sample': { kind: 'text', parent: 'slot', content: 'x' }, tip: { kind: 'graphic', parent: 'root', width: 15, height: 9, radius: 'mixed' } },
     variants: [{ when: { state: 'focus' }, add: { menu: { kind: 'container', parent: 'root' } } }] };
   const g = gapOf(c);
-  ok('gapOf names the branch that excuses a row, and none for a difference', g('menu') === 'pointer-only-part' && g('slot/sample.content') === 'slot-sample' && g('tip.radius', { library: 'mixed', drawn: null }) === 'path-radius' && g('root.width') === null
+  ok('gapOf names the branch that excuses a row, and none for a difference (a slot\'s sample among them: the markup draws it)', g('menu') === 'pointer-only-part' && g('slot/sample.content') === null && g('tip.radius', { library: 'mixed', drawn: null }) === 'path-radius' && g('root.width') === null
     // (an effect with no style, its values never recorded: none drawn is the gap, one drawn stays a difference)
     && g('tip.shadow', { library: 'literal', drawn: null }) === 'unrecorded-effect' && leftToCode(c)('tip.shadow', { library: 'literal', drawn: null }) && g('tip.shadow', { library: 'literal', drawn: 'Shadow/1' }) === null
     // (a token spelt as the same custom property as the one read back: the gap; another token, or words told apart by case, stay a difference)
-    && g('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) === 'one-css-name' && leftToCode(c)('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) && g('tip.layout.padding.start', { library: 'Space050', drawn: 'Space025' }) === null && g('slot/sample.content', { library: 'Label', drawn: 'label' }) === 'slot-sample' && g('tip.content', { library: 'Label', drawn: 'label' }) === null);
-  ok('every gap id is described', ['pointer-only-part', 'slot-sample', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'pointer-words', 'pointer-with', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
+    && g('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) === 'one-css-name' && leftToCode(c)('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) && g('tip.layout.padding.start', { library: 'Space050', drawn: 'Space025' }) === null && g('slot/sample.content', { library: 'Label', drawn: 'label' }) === null && g('tip.content', { library: 'Label', drawn: 'label' }) === null);
+  ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'pointer-words', 'pointer-with', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
   ok('leftToCode is gapOf said as yes or no', leftToCode(c)('menu') === true && leftToCode(c)('root.width') === false); }
 
 // a count derived from an accepted leg (`self strict`) that accepted.json does not hold yet is said, never failed on: it
