@@ -867,7 +867,10 @@ export const INSTANCE_CSS = {
   radius: ['border-top-left-radius', 'border-radius'], full: ['border-top-left-radius', 'border-radius'], cornerShape: ['corner-top-left-shape', 'corner-shape'],
   border: ['border-top-width', 'border-top-color', 'border-top', 'border', 'border-width', 'border-color', 'box-shadow'],
   shadow: ['box-shadow'], shadowAll: ['box-shadow'], ringsUsed: ['box-shadow'], overflow: ['overflow'], opacity: ['opacity'], mixBlend: ['mix-blend-mode'],
+  ownOutline: ['outline-color', 'outline-width', 'outline-style', 'outline'],
 };
+// (an outline that reads the ring knob first, `var(--<prefix>ring, …)`, is to-code's focus ring (ringOf), never a stroke)
+export const ringKnobbed = (v) => /var\(\s*--[\w-]*ring\s*,/.test(String(v || ''));
 
 /* The selectors of a list, each as written and as its compounds in order (`.a > .b:where([x="1 2"]) .c` → .a,
    .b:where([x="1 2"]), .c): split at the top level only, never inside brackets, parentheses or quotes. Self-contained,
@@ -2215,10 +2218,11 @@ async function main() {
               ...glyphsDrawn(n, swapSel[other], iconRe, isRoot, ownLayer) });
             // its own styling over its component's root (a toggle's fill on its toggle item), folded back where it is that root's
             // (ownStyling); drawn over its parent where it paints, as a box is
-            // (no arc, focus ring or outline: those are its component's drawing, or the ring rule's, never an override read here)
+            // (no arc: its component's drawing; an outline is its own stroke where this component writes it (css.mjs draws an
+            // outside or centred stroke as one), kept below only so, INSTANCE_CSS, never a ring of a box of its own, ::after)
             // (off the box it draws: a host that draws none, display: contents, draws it through its control, where to-code
             // writes this component's override on it, `> button`)
-            { const ie = out[out.length - 1], bx = ownBox(n, getComputedStyle); boxStyling(ie, bx); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(bx); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true; if (cs.overflow === 'visible') ie.clipless = true; if (cs.mixBlendMode === 'normal') ie.blendless = true; } delete ie.arc; delete ie.clipBox; delete ie.mixBlend; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
+            { const ie = out[out.length - 1], bx = ownBox(n, getComputedStyle); boxStyling(ie, bx); if (!ie.border && !ie.outline && !ie.ownOutline) ie.strokeless = true; { const cs = getComputedStyle(bx); if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true; if (shadowOnlyRings(cs.boxShadow)) ie.shadowless = true; if (cs.overflow === 'visible') ie.clipless = true; if (cs.mixBlendMode === 'normal') ie.blendless = true; } delete ie.arc; delete ie.clipBox; delete ie.mixBlend; { const o = ie.ownOutline || (ie.outline && !ie.outline.after ? ie.outline : null); delete ie.outline; delete ie.ownOutline; if (o) ie.ownOutline = o; } if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
             // the layers the mapping names inside it, where the mapping names it too, at any depth of placing (opensPlaced; an
             // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
             // (each at its place among the component's own drawn children, which this reading does not all read)
@@ -2606,6 +2610,7 @@ async function main() {
           if (x[f] === undefined) continue;
           let mine = false;
           for (const p of css) { const at = await boxOf({ id, kind: x.kind }), sel = await authoredSelector(L.tab, at, p, styles); if (instanceWrites(f, sel, sel && await call(L.tab, writtenByHolder, selectorParts(sel), at, '[data-contract-id="root"]'), sel ? null : await authoredValue(L.tab, at, p, styles))) { mine = true; break; } }
+          if (mine && f === 'ownOutline' && ringKnobbed(await authoredValue(L.tab, await boxOf({ id, kind: x.kind }), 'outline', styles))) mine = false;
           if (!mine) delete x[f];
         }
         A.take('design-shape', { anatomy: { [id]: x } }, () => asShape(x, fa, raw.some((r) => r.parent === id), fa && drawnHere()[id]));

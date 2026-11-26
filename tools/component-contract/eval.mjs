@@ -142,6 +142,7 @@ export const GAPS = {
   'pointer-with': 'a placed instance\'s props only a pointer state gives',
   'unwritten-scale': 'a scale constraint the sheet never writes (to-code sharesNeverWritten)',
   'path-radius': 'a radius the design holds only as mixed on a path, which no box\'s corners say',
+  'unrecorded-effect': 'an effect with no style, whose values the snapshot does not record: no sheet can draw it',
   'icon-own-colour': 'a placed icon\'s colour where the design leaves it the icon set\'s own',
   'placed-own-look': 'a placed component\'s own look the design overrides on the instance',
   'inside-foreign': 'the insides of a component the library does not hold',
@@ -236,7 +237,10 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // unread). A box's mixed (an older snapshot's), or a part some layer makes or keeps a box, stays a difference
   const vs = contract.variants || [];
   const onPath = (el) => { const rs = [contract.anatomy?.[el], ...vs.map((v) => (v.add || {})[el])].filter(Boolean); return rs.length > 0 && rs.every((e) => e.kind === 'graphic' && !e.shape) && !vs.some((v) => [`${el}.kind`, `${el}.shape`].some((k) => k in (v.set || {}))); };
-  const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) ? 'path-radius' : null);
+  // and an effect with no style (the snapshot records only that there is one, `literal`, never its values: css.mjs says
+  // it unread), which no sheet draws, so the reading finds none: where the reading draws one, it stays a difference
+  const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) ? 'path-radius'
+    : row.library === 'literal' && row.drawn == null && /\.shadow$/.test(at) ? 'unrecorded-effect' : null);
   // a placed instance's props only a pointer state gives: one of its own (a definition drawn hovered, its State Hover), or
   // the props this component's pointer state alone sets on it (a slider's item Active at hover): no markup holds either,
   // to-markup's gap. Only where every prop the design's side names there is such a one

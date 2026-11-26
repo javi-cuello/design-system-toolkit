@@ -807,6 +807,11 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('every field a placed instance\'s styling is read into names the CSS it is read from', ['background', 'layout', 'radius', 'border', 'shadow', 'overflow'].every((f) => INSTANCE_CSS[f] && INSTANCE_CSS[f].length));
   // (its opacity too: one this component writes on it is read, one the placed component's own sheet gives it is not)
   ok('a placed instance\'s opacity is read from its opacity, asked whose rule wrote it like the rest', JSON.stringify(INSTANCE_CSS.opacity) === '["opacity"]');
+  // (and its outline: css.mjs draws an outside or centred stroke as one, so this component's outline on it is its stroke;
+  // one through the ring knob is to-code's focus ring, never a stroke)
+  const { ringKnobbed } = await import('./from-code.mjs');
+  ok('a placed instance\'s outline is read as its own stroke where this component writes it, never through the ring knob',
+    INSTANCE_CSS.ownOutline.includes('outline') && ringKnobbed('var(--ds-ring, 2px solid var(--focus))') && ringKnobbed('var( --ring ,2px)') && !ringKnobbed('1px solid var(--transparent)') && !ringKnobbed('1px solid var(--ring-colour)') && !ringKnobbed(null));
 }
 { // a part code centres reads back both edges as measured, as derive.cjs writes a centred part's: (x - end) / 2 its centre's offset
   const { centredEdges } = await import('./from-code.mjs');
