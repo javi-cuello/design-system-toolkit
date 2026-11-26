@@ -99,20 +99,24 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
     // a string with no default of its own draws its layer's words (a placeholder's "Search")
     else if (p.type === 'string') { const t = (c.anatomy[(p.sets || [])[0]] || {}).content; out.push({ ...base, type: 'string', default: p.default ?? (typeof t === 'string' && !/^\{.+\}$/.test(t) ? t : '') }); }
     else if (p.type === 'number') out.push({ ...base, type: 'number', default: Number.isFinite(Number(p.default)) ? Number(p.default) : 0 });
-    else if (p.type === 'instance') out.push({ ...base, ...swapOf(c, p, library, lang) });
+    else if (p.type === 'instance') out.push({ ...base, ...swapOf(c, p, library, lang, key) });
     // (`sample`: the design holds something in it, which the markup draws while the caller passes nothing)
     else if (p.type === 'slot') { const slots = slotParts(c, key); out.push({ ...base, type: 'node', slot: slotPartOf(c, key), slots, ...(sampled(c, slots) && { sample: true }) }); }
     // an event: a DOM handler (onClick) is the element's own, typed by it and passed with the rest; another is a gap
     else if (p.type === 'event') { if (!HANDLERS.has(key)) out.push({ ...base, type: 'event' }); }
   }
   // one icon in code where Figma keeps a swap for each size of one part (Icon (16), Icon (20)): the first stays, named
-  // without its size, and answers to each one's Figma name; the sheet sizes the icon
+  // without its size, and answers to each one's Figma name; the sheet sizes the icon. Never two swaps that each drive
+  // a layer drawn at one combination (an Icon and an Icon (selected), each on its own layer): each stays its own prop
   const icons = new Map();
+  const drivers = [c.anatomy || {}, ...(c.variants || []).map((v) => Object.fromEntries(Object.entries(v.set || {}).filter(([k]) => k.endsWith('.swappedBy')).map(([k, x]) => [k.slice(0, -'.swappedBy'.length), { swappedBy: x }])))]
+    .map((a) => new Set(Object.values(a).map((e) => e && e.swappedBy).filter(Boolean)));
   for (const x of [...out]) {
     const part = x.type === 'icon' && (x.p.swaps || [])[0];
     if (!part) continue;
     const first = icons.get(part);
     if (!first) { icons.set(part, x); continue; }
+    if (drivers.some((d) => d.has(first.key) && d.has(x.key))) continue;
     first.figmas = [...(first.figmas || [first.p.figma]), x.p.figma];
     out.splice(out.indexOf(x), 1);
   }
@@ -304,8 +308,9 @@ export const isDrawing = (m) => !!m && !Object.keys(m.props || {}).length && Obj
 
 /* A swap: among icons (a component the library does not hold), the icon's name; of a part inside a placed component,
    that component's own prop, passed to it; among the library's components, what is placed. */
-function swapOf(c, p, library, lang) {
-  const id = (p.swaps || [])[0];
+function swapOf(c, p, library, lang, key) {
+  // (the layer it drives where the layer says so, its default the component drawn there: an Icon (selected) on its own layer)
+  const id = (p.swaps || []).find((x) => (at(c, x) || {}).swappedBy === key) || (p.swaps || [])[0];
   const e = id && at(c, id);
   for (let up = id && id.includes('/') ? id.slice(0, id.lastIndexOf('/')) : null; up; up = up.includes('/') ? up.slice(0, up.lastIndexOf('/')) : null) {
     const holder = at(c, up);
@@ -599,7 +604,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     else if (part.pointerShown && (!part.base || part.removes.length)) gaps.push(`${partName(id)} is also drawn at a pointer state: held here, the stylesheet's to show there and hide elsewhere`);
     if (unknown) gaps.push(`${partName(id)} is drawn by whether the field holds a value: the input's own :placeholder-shown, or frontend-build's to say`);
     if (when === 'false') return null;
-    const icon = props.find((x) => x.type === 'icon' && (x.p.swaps || []).includes(id));
+    // (of two swaps of this layer, the one that drives it, as the layer says: an Icon (selected) on its own layer)
+    const icons = props.filter((x) => x.type === 'icon' && (x.p.swaps || []).includes(id)), icon = icons.find((x) => x.key === e.swappedBy) || icons[0];
     const slot = props.find((x) => x.type === 'node' && ((x.slots || [x.slot]).includes(id) || (x.p.swaps || []).includes(id)));
     const tag = e.kind === 'text' || control || inline ? 'span' : 'div';
     let out;
@@ -607,6 +613,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       gaps.push(`${partName(id)}: draw the icon ${icon ? `its ${icon.name} names` : e.component}, as the project draws icons`);
       // the glyph a variant changes (an alert's error icon): the one its condition draws, else the part's own
       let glyph = icon ? { code: ref(icon.name) } : { lit: e.component };
+      // (a variant that hands this layer to another of its swaps: that one's name where it holds)
+      if (icons.length > 1) { const code = byVariant((c.variants || []).filter((v) => icons.some((x) => x.key === (v.set || {})[`${id}.swappedBy`])), (v) => ref(icons.find((x) => x.key === v.set[`${id}.swappedBy`]).name), glyph.code); if (code) glyph = { code }; }
       if (!icon) for (const v of c.variants || []) {
         const g = (v.set || {})[`${id}.component`], t = typeof g === 'string' && !library[g] && testOf(v.when);
         if (!t) continue;
