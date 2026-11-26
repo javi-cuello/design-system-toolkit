@@ -39,6 +39,9 @@ try {
   assert.equal(sessionDir(wt, root), path.join(root, folderName(repo)), 'a worktree with none of its own reads the main checkout\'s');
   fs.mkdirSync(path.join(root, folderName(fs.realpathSync(wt))), { recursive: true }); fs.writeFileSync(path.join(root, folderName(fs.realpathSync(wt)), 'w.jsonl'), '');
   assert.equal(sessionDir(wt, root), path.join(root, folderName(fs.realpathSync(wt))), 'a worktree with its own reads its own');
+  fs.mkdirSync(path.join(wt, 'deep'));
+  fs.rmSync(path.join(root, folderName(fs.realpathSync(wt))), { recursive: true });
+  assert.equal(sessionDir(path.join(wt, 'deep'), root), path.join(root, folderName(path.join(fs.realpathSync(wt), 'deep'))), 'a worktree\'s subfolder is never read as the main checkout');
   fs.mkdirSync(path.join(repo, 'sub'));
   assert.equal(sessionDir(path.join(repo, 'sub'), root), path.join(root, folderName(path.join(repo, 'sub'))), 'a subfolder is never read as the repo');
   fs.rmSync(repo, { recursive: true, force: true });

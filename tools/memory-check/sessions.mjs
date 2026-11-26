@@ -56,7 +56,7 @@ export function sessionDir(dir, root = ROOT) {
   try {
     const top = execFileSync('git', ['-C', dir, 'rev-parse', '--path-format=absolute', '--show-toplevel', '--git-common-dir'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim().split('\n');
     // a worktree's common dir is <main>/.git; a submodule's or a plain repo's tells us nothing new
-    if (path.basename(top[1]) === '.git' && path.dirname(top[1]) !== top[0]) return path.join(root, folderName(fs.realpathSync(path.dirname(top[1]))));
+    if (fs.realpathSync(dir) === fs.realpathSync(top[0]) && path.basename(top[1]) === '.git' && path.dirname(top[1]) !== top[0]) return path.join(root, folderName(fs.realpathSync(path.dirname(top[1]))));
   } catch { /* not a repo */ }
   return own;
 }
@@ -89,6 +89,7 @@ if (isMain()) {
   const project = fs.realpathSync(arg('--folder') || process.cwd());
   const dir = sessionDir(project, arg('--root') || ROOT);
   const list = sessions(dir, { keep: arg('--keep') ? [arg('--keep')] : [] });
+  console.log(`sessions in ${dir}`);
   if (!list.length) { console.log(`sessions: none for ${project}`); process.exit(0); }
   for (const s of list) console.log(`${s.id.slice(0, 8)}  ${(s.name || '(unnamed)').padEnd(20)} ${String(s.days).padStart(3)}d${s.live ? '  live' : ''}${s.kept ? '  this session' : ''}${s.stale ? '  stale' : ''}`);
   const named = list.filter((s) => s.name).length;
