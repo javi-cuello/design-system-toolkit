@@ -57,7 +57,7 @@ import { contracts, hashOf } from './official.mjs';
 import { roundTrip, drawSettings } from './to-figma.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, isDrawing } from './to-markup.mjs';
-import { sharesNeverWritten } from './to-code.mjs';
+import { sharesNeverWritten, tokenNames } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { closureOf } from './site.mjs';
@@ -143,6 +143,7 @@ export const GAPS = {
   'unwritten-scale': 'a scale constraint the sheet never writes (to-code sharesNeverWritten)',
   'path-radius': 'a radius the design holds only as mixed on a path, which no box\'s corners say',
   'unrecorded-effect': 'an effect with no style, whose values the snapshot does not record: no sheet can draw it',
+  'one-css-name': 'a token the design names that code spells as the same custom property as another (a name marked with an emoji beside the plain one): no sheet can tell the two apart',
   'icon-own-colour': 'a placed icon\'s colour where the design leaves it the icon set\'s own',
   'placed-own-look': 'a placed component\'s own look the design overrides on the instance',
   'inside-foreign': 'the insides of a component the library does not hold',
@@ -240,7 +241,8 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // and an effect with no style (the snapshot records only that there is one, `literal`, never its values: css.mjs says
   // it unread), which no sheet draws, so the reading finds none: where the reading draws one, it stays a difference
   const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) ? 'path-radius'
-    : row.library === 'literal' && row.drawn == null && /\.shadow$/.test(at) ? 'unrecorded-effect' : null);
+    : row.library === 'literal' && row.drawn == null && /\.shadow$/.test(at) ? 'unrecorded-effect'
+    : typeof row.library === 'string' && typeof row.drawn === 'string' && row.library !== row.drawn && /\.(background|color|radius|border|shadow|type|typography|width|height|min\w*|max\w*|opacity|layout)(\.|$)/.test(at) && !/^(#|rgba?\(|literal$|mixed$|scale$)/.test(row.library) && tokenNames.token(row.library) === tokenNames.token(row.drawn) ? 'one-css-name' : null);
   // a placed instance's props only a pointer state gives: one of its own (a definition drawn hovered, its State Hover), or
   // the props this component's pointer state alone sets on it (a slider's item Active at hover): no markup holds either,
   // to-markup's gap. Only where every prop the design's side names there is such a one

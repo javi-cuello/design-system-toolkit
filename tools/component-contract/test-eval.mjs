@@ -585,8 +585,10 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   const g = gapOf(c);
   ok('gapOf names the branch that excuses a row, and none for a difference', g('menu') === 'pointer-only-part' && g('slot/sample.content') === 'slot-sample' && g('tip.radius', { library: 'mixed', drawn: null }) === 'path-radius' && g('root.width') === null
     // (an effect with no style, its values never recorded: none drawn is the gap, one drawn stays a difference)
-    && g('tip.shadow', { library: 'literal', drawn: null }) === 'unrecorded-effect' && leftToCode(c)('tip.shadow', { library: 'literal', drawn: null }) && g('tip.shadow', { library: 'literal', drawn: 'Shadow/1' }) === null);
-  ok('every gap id is described', ['pointer-only-part', 'slot-sample', 'path-radius', 'unrecorded-effect', 'unexposed-override', 'pointer-words', 'pointer-with', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
+    && g('tip.shadow', { library: 'literal', drawn: null }) === 'unrecorded-effect' && leftToCode(c)('tip.shadow', { library: 'literal', drawn: null }) && g('tip.shadow', { library: 'literal', drawn: 'Shadow/1' }) === null
+    // (a token spelt as the same custom property as the one read back: the gap; another token, or words told apart by case, stay a difference)
+    && g('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) === 'one-css-name' && leftToCode(c)('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) && g('tip.layout.padding.start', { library: 'Space050', drawn: 'Space025' }) === null && g('slot/sample.content', { library: 'Label', drawn: 'label' }) === 'slot-sample' && g('tip.content', { library: 'Label', drawn: 'label' }) === null);
+  ok('every gap id is described', ['pointer-only-part', 'slot-sample', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'pointer-words', 'pointer-with', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
   ok('leftToCode is gapOf said as yes or no', leftToCode(c)('menu') === true && leftToCode(c)('root.width') === false); }
 
 // a count derived from an accepted leg (`self strict`) that accepted.json does not hold yet is said, never failed on: it
