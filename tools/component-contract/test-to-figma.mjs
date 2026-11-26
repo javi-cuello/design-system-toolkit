@@ -263,6 +263,12 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const md = (press) => ({ ...lk([]), anatomy: { root: { kind: 'container' } }, variants: [{ when: { blank: true }, set: { 'root.modes': { c: 'link' } } }, ...(press ? [{ when: { state: 'press', blank: true }, set: { 'root.modes': { c: press } } }] : [])] });
     const pm = roundTrip(md('link-pressed'), md(null), { layoutUnit: true }).rows.find((y) => y.at.startsWith('root.modes'));
     ok('a pointer state\'s set, last, over another state\'s other value is that state\'s row', pm && pm.pointer === true, pm);
+    // (and not where another state gives the same value at the row: the press's own sibling key changed, or the press
+    // saying what the rest says; review of 2026-11-26)
+    const sib = (pc, dc) => ({ ...lk([]), anatomy: { root: { kind: 'container' } }, variants: [{ when: { blank: true }, set: { 'root.modes': { c: 'x', d: 'y' } } }, { when: { state: 'press', blank: true }, set: { 'root.modes': { c: pc, d: dc } } }] });
+    const sr = roundTrip(sib('x', 'q'), sib('z', 'q'), { layoutUnit: true }).rows.find((y) => y.at === 'root.modes.c' || y.at === 'root.modes');
+    const same = roundTrip(sib('x', 'y'), sib('z', 'y'), { layoutUnit: true }).rows.find((y) => y.at.startsWith('root.modes'));
+    ok('…never where another state there gives the same value at the row (a sibling key the press changes, or the same value)', sr && sr.pointer === undefined && same && same.pointer === undefined, [sr, same]);
     ok('…the last variant to touch it decides, as expand() layers them, a combination last', (!laterSet || laterSet.pointer === undefined) && (!laterAdd || laterAdd.pointer === undefined) && combo && combo.pointer === true, [laterSet, laterAdd, combo]); }
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());
   { // a placed instance's key is compared only where both sides hold one: a reading from code holds none

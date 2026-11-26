@@ -507,7 +507,15 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
       if ((last.add || {})[el]) return true;
       // (a pointer state's set, last, whose value no other state there gives: a link's colour mode at press, over the one
       // it has at rest; where another state gives the same, the markup holds it through that one)
-      const said = (v) => JSON.stringify(Object.entries(v.set || {}).filter(([k]) => k === at || at.startsWith(`${k}.`) || k.startsWith(`${at}.`)));
+      // (the value at the row itself: a set of `root.modes` read at its key `c` for a row at `root.modes.c`, so a sibling
+      // key the press changes does not make the row the press's; a set keys `el.field`, layers.mjs applyTo)
+      const said = (v) => {
+        for (const [k, x] of Object.entries(v.set || {})) {
+          if (k === at) return JSON.stringify(x ?? null);
+          if (at.startsWith(`${k}.`)) return JSON.stringify(at.slice(k.length + 1).split('.').reduce((y, q) => (y == null ? undefined : y[q]), x) ?? null);
+        }
+        return JSON.stringify(Object.entries(v.set || {}).filter(([k]) => k.startsWith(`${at}.`)));
+      };
       return !ss.some((v) => !pointerAt(v.when) && said(v) === said(last));
     };
     // the named equivalences, each the same on both sides

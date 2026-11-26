@@ -1364,4 +1364,11 @@ ok('codeKeys: two modules saying different keys for one instance name say none',
 // the forced states read back under the design's own name for its axis: a library spelling it `state` compared as `state`
 ok('stateProp: the read-back interaction prop takes the design\'s axis name; none without a design',
   stateProp(['hover'], [], { props: { s: { type: 'enum', role: 'interaction', figma: 'state' } } }).figma === 'state' && !('figma' in stateProp(['hover'], [], null)) && stateProp(['hover'], ['loading'], null).values.join() === 'rest,hover,loading');
+{ // (and roundTrip, given such a reading against a design whose axis is `state`, raises no props row; review)
+  const { roundTrip } = await import('./to-figma.mjs');
+  const design = { contract: 1, component: 'L', props: { state: { type: 'enum', values: ['default', 'hover'], default: 'default', role: 'interaction', pointer: ['hover'], figma: 'state' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  // (unnamed, the house's mapping named it State, as it did before; axisNames leaves a named one alone)
+  const reading = (named) => ({ ...design, props: { state: named ? stateProp(['hover'], [], design) : { ...stateProp(['hover'], [], null), figma: 'State' } } });
+  const props = (r) => roundTrip(design, r, { layoutUnit: true, pointerFrom: design }).rows.filter((x) => x.at === 'props').length;
+  ok('a reading whose state prop takes the design\'s axis name raises no props row; one named the house\'s way would', props(reading(true)) === 0 && props(reading(false)) === 1); }
 console.log(`${n}/${n} passed`);
