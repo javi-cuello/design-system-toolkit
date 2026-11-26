@@ -447,8 +447,10 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   const whole = wholeHosts(library, mains), inTheirs = inWordsOf(library, drawn);
   // what each combination lists inside a host kept whole: a layer one of them leaves out is one the design hides there
   // (only a combination listing the host whole: one listing only its overrides left the rest out as its component's)
+  // (a reading's equivalences only where the library is a reading from code, as derive cut it; worked out only where
+  // some host is kept whole)
   const expanded = combos.map((c) => expand(library, { ...variantDefaults(library), ...c }));
-  const listedWholeAt = expanded.map((A) => (mains ? req('./derive.cjs').wholeIn(A, mains) : new Set()));
+  const listedWholeAt = expanded.map((A) => (mains && whole.size ? req('./derive.cjs').wholeIn(A, mains, { reading: !design }) : new Set()));
   const listed = new Map([...whole].map((h) => [h, expanded.map((A, i) => (listedWholeAt[i].has(h) ? Object.keys(A).filter((k) => k.startsWith(`${h}/`)) : [])).filter((ks) => ks.length).map((ks) => new Set(ks))]));
   const hidden = (h, k) => (listed.get(h) || []).some((ks) => !ks.has(k));
   // (the pointer states are `pointerFrom`'s, the design's, matched by Figma name and word: a reading held as the library on
@@ -456,7 +458,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   const P = pointerFrom || library, pq = (k) => { const q = library.props[k] || {}; return P === library ? q : Object.values(P.props || {}).find((d) => low(d.figma || '') === low(q.figma || k)) || {}; };
   const pointerAt = (w) => Object.entries(w || {}).some(([k, v]) => pq(k).role === 'interaction' && (pq(k).pointer || []).some((x) => low(x) === low(v)));
   const applies = (w, c) => Object.entries(w || {}).every(([k, v]) => String(c[k]) === String(v));
-  for (const c of combos) {
+  for (const [i, c] of combos.entries()) {
     const theirs = inTheirs(c);
     // (every variant that sets the field there a pointer state's: where another that applies sets it too, a focus and a
     // selected both saying Search, the markup holds the words through that one)
@@ -464,7 +466,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     byPointer = (at) => { const ss = atC.filter((v) => at in (v.set || {})); return ss.length > 0 && ss.every((v) => pointerAt(v.when)); };
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
-    const A = expand(library, { ...variantDefaults(library), ...c }), B = expand(drawn, { ...variantDefaults(drawn), ...theirs });
+    const A = expanded[i], B = expand(drawn, { ...variantDefaults(drawn), ...theirs });
     // a host kept whole over the whole contract (the reading keeps it so in every combination) that this combination
     // may hide no layer in: derive's own test of a hidden layer (ownInsides `found`: a part of its component not drawn
     // there), the one derive keeps a host whole by. Only a host listing nothing inside passes it (it draws its component
@@ -481,8 +483,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // (only a host this combination lists whole, some layer it lists its component's own (wholeIn: a partial cut would
     // shrink it): one listing only what it overrides had its unchanged layers left out as its component's, derive's
     // cut, so a layer missing there is its component's, not hidden (Carbon's group label, shown by Label, beside an
-    // overridden row))
-    if (mains) { const listedWhole = listedWholeAt[combos.indexOf(c)]; for (const h of [...here]) if (!listedWhole.has(h)) here.delete(h); }
+    // overridden row)). A host that hides a layer while every layer it shows is overridden lists alike, and is read so
+    // too: the contract keeps no word for which, and a layer the code draws there is then taken as its component's)
+    for (const h of [...here]) if (!listedWholeAt[i].has(h)) here.delete(h);
     const loose = [...whole].filter((h) => !here.has(h));
     const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k))));
     // (the drawn side held to the library as filled, so a part filled there is the library's to compare a field of too)

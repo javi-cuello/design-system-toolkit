@@ -561,6 +561,10 @@ delete globalThis.figma;
   const rows = (lib) => roundTrip(lib, group(true), { mains: (n) => (n === 'Cb' ? cb : null) }).rows.map((r) => r.at);
   ok('what a placed component listed by its overrides alone leaves out is its component\'s own, not hidden: drawn there, no row',
     rows(group(false)).length === 0);
+  // a layer a combination listing it whole hides (the tip, at horizontal) stays hidden: drawn at the default, a row
+  const tipped = group(true); tipped.anatomy['c/tip'] = { kind: 'container', parent: 'c', order: 2 }; tipped.variants[0].remove = ['c/tip'];
+  ok('…while a layer a whole listing hides stays a row where the code draws it', JSON.stringify(roundTrip(group(false), tipped, { mains: (n) => (n === 'Cb' ? cb : null) }).rows.map((r) => r.at)) === '["c/tip"]');
+  // (known limit: a host hiding a layer with every layer it shows overridden lists as overrides alone, and is read so)
 }
 
 {
