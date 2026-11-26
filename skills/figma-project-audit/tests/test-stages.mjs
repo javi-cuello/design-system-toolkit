@@ -202,7 +202,8 @@ for (const [f, heads] of [["tools/figma-audit/audit-session.mjs", ["exec(port, f
 
 // O8: the dashboard has ONE Audit, over the files ticked in its list
 {
-  const page = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/Dashboard.astro"), "utf8");
+  // the Audit button sits in the page's hero (audits.astro), its dialog in the dashboard
+  const page = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/Dashboard.astro"), "utf8") + readFileSync(join(ROOT, "tools/docs-site/src/pages/audits.astro"), "utf8");
   const audit = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/audit.js"), "utf8");
   const files = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/measures.js"), "utf8");
   const css = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/dashboard.css"), "utf8");
