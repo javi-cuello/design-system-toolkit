@@ -814,7 +814,11 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, label: { kind: 'text', parent: 'root', content: 'Go', order: 0 } },
     variants: [{ when: { grip: true }, add: { grip: { kind: 'container', parent: 'root', order: 1 } } }, { when: { state: 'hover' }, add: { icon: { kind: 'container', parent: 'root', order: 1 } } }, { when: { grip: true, state: 'hover' }, set: { 'grip.order': 2 } }] };
   const ids = markupOrder(c, childrenOf(partsOf(c)).get('root')).order.map((p) => p.id);
-  ok('a part only a pointer state draws is placed among the parts its combination places', JSON.stringify(ids) === JSON.stringify(['label', 'icon', 'grip'])); }
+  ok('a part only a pointer state draws is placed among the parts its combination places', JSON.stringify(ids) === JSON.stringify(['label', 'icon', 'grip']));
+  // (and stacked by that place: out of the flow, it would paint over the grip the design puts above it)
+  const out = { ...c, variants: c.variants.map((v) => (v.add && v.add.icon ? { ...v, add: { icon: { ...v.add.icon, position: 'absolute', absolute: { x: 2, y: 2 } } } } : v)) };
+  const css = toCss(out, 'btn');
+  ok('and is stacked by that place where it stands out of the flow', /isolation: isolate/.test(css) && /:where\(:hover\) > \.btn__grip \{[^}]*z-index: 3/.test(css)); }
 // a part the rest of the grid draws that a pointer state also puts in (a tile's border, framed or hovered): the markup
 // holds it, so the sheet hides it where the contract draws none and shows it at the pointer state (carbon tile, 2026-11-21)
 { const border = { kind: 'graphic', shape: 'rectangle', parent: 'root', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'C/s', width: 1 } };

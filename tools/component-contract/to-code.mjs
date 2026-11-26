@@ -235,6 +235,15 @@ export function childrenOf(parts) {
   return kids;
 }
 
+/* A variant that sets a place is read against the parts only a pointer state draws that its whole combination draws
+   (partsOf `pointerHeld`), which no variant of its own places among the rest: a resizer put after the icons a hover adds
+   is after them, and over them. `drawnHere(p)`, whether it is one; `orderAt(p)`, its place there. */
+function heldAt(c, v, parts) {
+  const whole = Object.keys(v.set || {}).some((k) => k.endsWith('.order')) && parts.some((p) => p.pointerHeld) ? expand(c, { ...variantDefaults(c), ...(v.when || {}) }) : null;
+  const drawnHere = (p) => !!whole && !!p.pointerHeld && !!whole[p.id] && (whole[p.id].parent ?? null) === (p.e.parent ?? null);
+  return { drawnHere, orderAt: (p) => (drawnHere(p) ? whole[p.id].order : undefined) };
+}
+
 /* Which of a box's children comes before which, in the defaults and every variant: for each child (`parts`, each
    { id, e, base }: its id, its entry, whether the defaults draw it), the children some variant draws before it. A part a
    variant adds under another box (a part of the defaults among them) is not in this one there. */
@@ -243,12 +252,9 @@ function beforeOf(c, parts) {
   for (const v of [{}, ...(c.variants || [])]) {
     const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
     const away = (p) => p.id in add && (add[p.id].parent ?? p.e.parent) !== p.e.parent;
-    // (a variant that sets a place is read against a part only a pointer state draws that its whole combination draws,
-    // which no variant of its own places among the rest: a resizer put after the icons a hover adds is after them)
-    const whole = Object.keys(set).some((k) => k.endsWith('.order')) && parts.some((p) => p.pointerHeld) ? expand(c, { ...variantDefaults(c), ...(v.when || {}) }) : null;
-    const drawnHere = (p) => !!whole && !!p.pointerHeld && !!whole[p.id] && (whole[p.id].parent ?? null) === (p.e.parent ?? null);
+    const { drawnHere, orderAt } = heldAt(c, v, parts);
     const here = parts.filter((p) => !away(p) && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id)) || drawnHere(p)));
-    const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? (drawnHere(p) && !p.base ? whole[p.id].order : undefined) ?? p.e.order ?? 0;
+    const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? orderAt(p) ?? p.e.order ?? 0;
     for (const a of here) for (const b of here) if (at(a) < at(b)) before.get(b.id).add(a.id);
   }
   return before;
@@ -319,9 +325,10 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
       for (const v of [{}, ...(c.variants || [])]) {
         const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
         const asAt = (p) => partAtVariant(v, p.id, p.e);
-        const here = list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id))));
+        const { drawnHere, orderAt } = heldAt(c, v, list);
+        const here = list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id)) || drawnHere(p)));
         if (!here.some((p) => outOf(asAt(p)))) continue;
-        const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? p.e.order ?? 0;
+        const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? orderAt(p) ?? p.e.order ?? 0;
         // (it holds a part out of the flow here, not a ring: positioned, its containing block)
         const anchors = (p) => (kids.get(p.id) || []).some((q) => !q.ring && ((q.base && !gone.has(q.id)) || q.id in add) && (asAt(q).parent || 'root') === p.id && outOf(asAt(q)));
         const lifted = (p) => {
