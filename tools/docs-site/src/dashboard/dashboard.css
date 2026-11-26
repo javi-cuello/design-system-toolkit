@@ -495,8 +495,8 @@
   }
   .row[data-done="true"] { border-color: var(--good); background: var(--good-soft); }
   /* No opacity dim on a done row: at 55% the body text fell to 1.98:1. The done
-     state reads from the green rail, the tint and the ticked box instead. */
-  /* (the row's number keeps its own colour: green on the done tint fell to 4.41:1 in dark; the ticked box says done) */
+     state reads from the green rail, the tint and the ticked box instead; nor is
+     its number turned green (4.41:1 on the tint in dark). */
   /* a closed row (the Done and Rulings tabs) is a record, not a task: the plain card, its tick shown done
      and not a control, its footer only Ask, and the note line's Delete ruling to take a ruling back (the maintainer, 2026-11-26) */
   .cleared .row[data-done="true"] { border-color: var(--line-strong); background: var(--surface); }
