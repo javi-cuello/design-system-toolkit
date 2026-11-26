@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.19] - 2026-11-26
+### Fixed
+- With a context document, the closing offer is now stated: record any row the person says is intended as a ruling; an example is a row number from the tables shown, never a dropped candidate. The chat had invited a ruling on a row it had dropped.
+
 ## [0.14.18] - 2026-11-25
 ### Changed
 - Carries snapshot walk 0.90.0: per-layer variants on property links, and exposed nested references.

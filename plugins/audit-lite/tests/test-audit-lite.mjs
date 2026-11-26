@@ -127,6 +127,10 @@ const withPasted = report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, setting
 ok('without a context document the report says there are no rulings', withPasted.includes('- Rulings: none, as there is no context document.'));
 ok('the draft switch reaches the report, and only without a document', report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, Object.assign(settingsFor(null, null), { draft: true })).includes('- Draft a context document: yes') && !withPasted.includes('- Draft a context document: yes'));
 ok('the instructions say what a draft request and the closing files are', LITE.instructions.includes('Draft a context document: yes') && LITE.instructions.includes('8. **Offer the files**'));
+{
+  const withDoc = (LITE.instructions.split('**From the project\'s context document.**')[1] || '').split('**From the toolkit\'s defaults.**')[0];
+  ok('with a context document the closing offer is stated: record an intended row as a ruling, its example a shown row, never a dropped one', /offer to record any row the person says is intended as a ruling/.test(withDoc) && /never a candidate you dropped/.test(withDoc), withDoc);
+}
 
 // The clicks: Done and Record as ruling change what the page shows and what it stores.
 {
