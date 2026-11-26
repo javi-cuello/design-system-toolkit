@@ -478,6 +478,28 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("…and an alias into a collection without the mode reads its default mode", t.collections.Theme.values.Alt.Fg === 2 && t.collections.Theme.values.Base.Fg === 2);
 }
 
+// 0.91.0: two other libraries' collections under one name are both kept, their variables joined by mode name, the
+// first's kept where both name one; and an effect style another library gives the components is recorded as remote
+{
+  const coll = (id, modes, variableIds) => ({ id, name: "Space", remote: true, modes, defaultModeId: modes[0].modeId, variableIds, isExtension: false });
+  const one = coll("s1", [{ name: "M", modeId: "a-m" }], ["va", "vc"]), two = coll("s2", [{ name: "M", modeId: "b-m" }, { name: "N", modeId: "b-n" }], ["vb", "vc2"]);
+  const v = (id, name, col, values) => ({ id, name, key: "k" + id, scopes: [], remote: true, variableCollectionId: col, valuesByMode: values });
+  const vars = { va: v("va", "pad/a", "s1", { "a-m": 1 }), vc: v("vc", "pad/c", "s1", { "a-m": 3 }), vb: v("vb", "pad/b", "s2", { "b-m": 2, "b-n": 5 }), vc2: v("vc2", "pad/c", "s2", { "b-m": 9, "b-n": 9 }) };
+  const bound = { boundVariables: { paddingLeft: { type: "VARIABLE_ALIAS", id: "va" }, itemSpacing: { type: "VARIABLE_ALIAS", id: "vb" } } };
+  const shadow = { type: "EFFECT", name: "Raised", key: "e1", remote: true, effects: [{ type: "DROP_SHADOW", visible: true, offset: { x: 0, y: 1 }, radius: 2, spread: 0, color: { r: 0, g: 0, b: 0, a: 0.1 }, boundVariables: {} }] };
+  const comp = { type: "COMPONENT", name: "Box", parent: null, ...bound, effectStyleId: "S:e1", findAll: () => [] };
+  const page = { type: "PAGE", name: "Page", children: [comp], findAll: () => [comp], findAllWithCriteria: ({ types }) => (types.includes("COMPONENT") ? [comp] : []) };
+  const ff = { root: { name: "Lib", children: [page], getPluginData: () => "", findAllWithCriteria: () => [] }, fileKey: "K",
+    variables: { getLocalVariableCollectionsAsync: async () => [], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async (id) => ({ s1: one, s2: two })[id] || null },
+    getLocalTextStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async (id) => (id === "S:e1" ? shadow : null) };
+  const c = vm.createContext({ figma: ff, console, setTimeout, clearTimeout });
+  const t = await vm.runInContext(src + "\n;collectTokens()", c);
+  const sp = t.collections.Space;
+  ok("two other libraries' collections under one name are both kept: the second's variables join, by mode name", !!sp && sp.values.M["pad/a"] === 1 && sp.values.M["pad/b"] === 2 && sp.values.N["pad/b"] === 5 && sp.modes.join() === "M,N" && t._meta.collectionCounts.Space === 4);
+  ok("…a name both hold keeps the first's value", sp.values.M["pad/c"] === 3 && !("pad/c" in sp.values.N));
+  ok("an effect style another library gives the components is recorded, marked remote", t.effects.length === 1 && t.effects[0].name === "Raised" && t.effects[0].remote === true && t.effects[0].layers.length === 1);
+}
+
 // 0.89.4: a variable lookup Figma never answers is given up, and after three the rest are not asked
 {
   let asked = 0; const posted = [];

@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
-import { script, stripped, joined, named, libraryKey, PLUGIN, CAP, CHUNK, PER_NODE, NS, planCode, sized, calls, join, payloadOf, storeCode, tokensCode, partCode, DEAD, LIMIT } from './mcp.mjs';
+import { script, stripped, tightened, joined, named, libraryKey, PLUGIN, CAP, CHUNK, PER_NODE, NS, planCode, sized, calls, join, payloadOf, storeCode, tokensCode, partCode, DEAD, LIMIT } from './mcp.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -23,6 +23,7 @@ ok('…and kept where a string or a regex comes first', stripped("x = 'p'; // wh
 ok('an inline /* */ is dropped on the same guard', stripped('} catch (e) { /* why */ }') === '} catch (e) { }' && stripped("s = '/* k */';") === "s = '/* k */';");
 ok('an inline /* */ against a word never joins two words', stripped('let /* c */x = 1;') === 'let x = 1;' && stripped('return/* c */x;') === 'return x;');
 ok('an inline type note before a cast is dropped, the cast kept', stripped('const a = /** @type {X[]} */ (b);') === 'const a = (b);');
+ok('spaces beside an operator go on a line with no literal, never on one with a quote, backtick or slash, nor between two signs', tightened('const a = (b, c) => b === c && d;') === 'const a=(b,c)=>b===c&&d;' && tightened("x = 'a = b';") === "x = 'a = b';" && tightened('y = a / b + c;') === 'y = a / b + c;' && tightened('z = a - -b;') === 'z = a - -b;' && tightened('w = a + +b;') === 'w = a + +b;');
 ok('a comment is dropped, and a // inside a string kept', stripped("// note\nconst a = 'http://x';\n/* one\n two */\nb();") === "const a = 'http://x';\nb();");
 
 // the payload as the epilogue leaves it, read back as REST gives it

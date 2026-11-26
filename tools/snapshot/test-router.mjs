@@ -811,6 +811,8 @@ test('DESIGN-ONLY: a project with no repo is stored in its own toolkit folder, a
     comps.iconDescriptions = { check: 'done, tick' };
     // the core file's text style, which the components file's text uses: sent as another library's (plugin 0.78.0)
     comps.tokens.textStyles = [{ name: 'Body', remote: true, family: 'Inter', size: 14, lineHeight: 1.5 }];
+    // and another library's effect style its components use (plugin 0.91.0), one no file here sends
+    comps.tokens.effects = [{ name: 'Raised', remote: true, layers: [{ type: 'DROP_SHADOW', x: 0, y: 1, blur: 2, spread: 0, color: '#0000001a' }] }];
     assert.equal((await post('/library', comps)).status, 200);
     assert.ok(fs.existsSync(path.join(docDir, 'snapshot/previews/button.dark.png')), 'a dark render lands beside the light one');
     const ana = JSON.parse(fs.readFileSync(path.join(docDir, 'snapshot/previews/button.anatomy.json'), 'utf8'));
@@ -823,6 +825,8 @@ test('DESIGN-ONLY: a project with no repo is stored in its own toolkit folder, a
     assert.deepEqual(owned('COMPS').iconDescriptions, { check: 'done, tick' }, 'and its description');
     assert.deepEqual(owned('COMPS').iconColours, { check: 'Colour/Icon/strong' }, 'and the variable its glyph is painted with');
     assert.deepEqual(owned('COMPS').textStyles, [], "another library's style the components file sends is not its own");
+    assert.deepEqual([owned('COMPS').effects, owned('COMPS').remoteEffects], [[], ['Raised']], "nor another library's effect style, which is listed as that library's");
+    assert.ok(JSON.parse(fs.readFileSync(path.join(docDir, 'snapshot/tokens.json'), 'utf8')).effects.some((x) => x.name === 'Raised'), 'and shown where no file owns it');
     assert.equal(JSON.parse(fs.readFileSync(path.join(docDir, 'snapshot/tokens.json'), 'utf8')).textStyles.find((x) => x.name === 'Body').size, 16, "nor shown over the copy of the file that owns it");
     const stored = JSON.parse(fs.readFileSync(path.join(docDir, 'snapshot/tokens.json'), 'utf8'));
     assert.deepEqual([owned('COMPS').collections, owned('COMPS').remoteCollections], [['Local'], ['Colour', 'Space']], "another library's collections the components file sends are not its own");

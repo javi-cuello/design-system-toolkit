@@ -1017,6 +1017,8 @@ function ownsOf(incoming, { iconSets = [], iconPage = null, icons = [] } = {}) {
   const owns = { collections: Object.entries(incoming.collections || {}).filter(([, c]) => !c.remote).map(([n]) => n), icons: iconSets, ...(iconPage ? { iconPage } : {}), ...Object.fromEntries(OWNED.map((k) => [k, (incoming[k] || []).filter((x) => !x.remote).map((x) => x.name)])),
     // the other libraries' text styles it sends, which it does not own: kept while any source still sends one
     ...((incoming.textStyles || []).some((x) => x.remote) && { remoteTextStyles: incoming.textStyles.filter((x) => x.remote).map((x) => x.name) }),
+    // and the other libraries' effect styles its components use (plugin 0.91.0), the same way
+    ...((incoming.effects || []).some((x) => x.remote) && { remoteEffects: incoming.effects.filter((x) => x.remote).map((x) => x.name) }),
     // and the other libraries' collections its components bind (plugin 0.80.0), the same way
     ...(Object.values(incoming.collections || {}).some((c) => c.remote) && { remoteCollections: Object.keys(incoming.collections).filter((n) => incoming.collections[n].remote) }) };
   return { owns, exported };
@@ -1305,7 +1307,7 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
 function snapshotFacts() {
 const __html__ = undefined;
 const FACTS = true;
-// Design system snapshot — v0.90.8 · plugin-standard v1.1.0
+// Design system snapshot — v0.91.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -1988,9 +1990,10 @@ async function collectTokens() {
     const cid = v && v.remote ? v.variableCollectionId : null;
     if (cid && !cols.has(cid)) cols.set(cid, await answered(() => figma.variables.getVariableCollectionByIdAsync(cid)).then((x) => (x === MISSED ? (unanswered++, null) : x), () => null));
     const c = cid ? cols.get(cid) : null;
-    if (c && !here.has(c.name)) others.set(c.name, c);
+    // (two of them under one name, one library's collection and another's: each kept, their variables joined below)
+    if (c && !here.has(c.name)) others.set(c.name, [...(others.get(c.name) || []).filter((x) => x.id !== c.id), c]);
   }
-  for (const c of [...collections, ...others.values()]) {
+  for (const c of [...collections, ...[...others.values()].map((cs) => cs[0])]) {
     // its default mode by name: the base a token build writes on :root. A reader took the first mode it listed, and
     // the DTCG files are named, so sorted, by mode: one library's base was an accent theme, not Light
     const def = c.modes.find((m) => m.modeId === c.defaultModeId);
@@ -2011,10 +2014,26 @@ async function collectTokens() {
       entry.scopes = r.scopes;
       if (Object.keys(r.codeSyntax).length) entry.codeSyntax = r.codeSyntax;
     }
+    // (a second library's collection of the same name: its variables join, mode by mode name, a name the first holds
+    // kept as the first's; a component binds either, and the walk names a binding by its variable's name alone)
+    const held = new Set(Object.keys(entry.keys || {}));
+    for (const o of (c.remote && others.get(c.name) || []).slice(1)) for (const m of o.modes) {
+      const r = await read(o, m.name);
+      if (!entry.modes.includes(m.name)) { entry.modes.push(m.name); entry.values[m.name] = {}; entry.alias[m.name] = {}; }
+      for (const [k, v] of Object.entries(r.values)) if (!held.has(k)) { entry.values[m.name][k] = v; if (k in r.alias) entry.alias[m.name][k] = r.alias[k]; }
+      entry.keys = entry.keys || {}; entry.scopes = entry.scopes || {};
+      for (const [k, v] of Object.entries(r.keys)) if (!held.has(k) && !(k in entry.keys)) {
+        entry.keys[k] = v; entry.scopes[k] = r.scopes[k];
+        if (r.described[k]) entry.descriptions[k] = r.described[k];
+        if (r.hidden.includes(k)) entry.hidden = [...(entry.hidden || []), k];
+        if (r.codeSyntax[k]) entry.codeSyntax = { ...(entry.codeSyntax || {}), [k]: r.codeSyntax[k] };
+      }
+    }
     byName[c.name] = entry;
   }
   /** @type {Record<string, number>} */ const collectionCounts = {};
-  for (const c of [...collections, ...others.values()]) collectionCounts[c.name] = c.variableIds.length;
+  for (const c of collections) collectionCounts[c.name] = c.variableIds.length;
+  for (const [name, cs] of others) collectionCounts[name] = cs.reduce((t, x) => t + x.variableIds.length, 0);
 
   say('reading text styles');
   // a line height or letter spacing as a fraction of the font size, to four places: tools/shared/text-units.js's,
@@ -2026,7 +2045,9 @@ async function collectTokens() {
   // file has no local style), marked remote: a name a local one holds is that one
   const local = await figma.getLocalTextStylesAsync(), names = new Set(local.map((s) => s.name));
   const inside = (n) => { for (let p = n.parent; p; p = p.parent) if (p.type === 'COMPONENT' || p.type === 'COMPONENT_SET') return true; return false; };
-  const at = new Map(figma.root.children.flatMap((pg) => pg.findAllWithCriteria({ types: ['TEXT'] })).filter((t) => typeof t.textStyleId === 'string' && t.textStyleId && inside(t)).map((t) => [t.textStyleId, t]));
+  // (each style's text one that holds words, where any does: one with none says no font, and its style was dropped)
+  const at = new Map();
+  for (const t of figma.root.children.flatMap((pg) => pg.findAllWithCriteria({ types: ['TEXT'] }))) if (typeof t.textStyleId === 'string' && t.textStyleId && inside(t) && (!at.has(t.textStyleId) || (!at.get(t.textStyleId).characters.length && t.characters.length))) at.set(t.textStyleId, t);
   const textOf = new Map();
   const remote = /** @type {TextStyle[]} */ ((await Promise.all([...at.keys()].map(async (i) => { const s = await figma.getStyleByIdAsync(i); if (s) textOf.set(s, at.get(i)); return s; }))).filter((s) => s && s.remote && !names.has(s.name) && names.add(s.name)));
   // (each family's metric read once a run, where a style needs it)
@@ -2096,7 +2117,12 @@ async function collectTokens() {
   }
 
   const effects = [];
-  for (const e of await figma.getLocalEffectStylesAsync()) {
+  // and the effect styles of another library the components use (a component file whose shadows live in a foundations
+  // file has none local), marked remote, as its text styles are: a name a local one holds is that one
+  const localFx = await figma.getLocalEffectStylesAsync(), fxNames = new Set(localFx.map((e) => e.name));
+  const fxIds = new Set(figma.root.children.flatMap((pg) => pg.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET', 'FRAME', 'INSTANCE', 'RECTANGLE', 'ELLIPSE', 'VECTOR', 'GROUP'] })).filter((n) => typeof n.effectStyleId === 'string' && n.effectStyleId && (n.type === 'COMPONENT' || inside(n))).map((n) => n.effectStyleId));
+  const remoteFx = /** @type {EffectStyle[]} */ ((await Promise.all([...fxIds].map((i) => figma.getStyleByIdAsync(i).catch(() => null)))).filter((e) => e && e.type === 'EFFECT' && e.remote && !fxNames.has(e.name) && fxNames.add(e.name)));
+  for (const e of [...localFx, ...remoteFx]) {
     const layers = [];
     for (const x of e.effects.filter((y) => y.visible !== false)) {
       // A blur layer has a radius and nothing else; it is sent so the style is
@@ -2117,7 +2143,7 @@ async function collectTokens() {
       }
       layers.push({ type: sh.type, x: sh.offset.x, y: sh.offset.y, blur: sh.radius, spread: sh.spread || 0, color: colour(sh.color), ...(Object.keys(bound).length && { bound }) });
     }
-    effects.push({ name: e.name, key: e.key, layers });
+    effects.push({ name: e.name, key: e.key, ...(e.remote && { remote: true }), layers });
   }
 
   return {
@@ -2158,7 +2184,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.90.8';
+const VERSION = '0.91.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

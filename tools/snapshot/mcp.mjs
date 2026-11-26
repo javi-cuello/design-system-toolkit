@@ -89,7 +89,12 @@ const plugin = () => {
   if (!source.includes(CUT)) throw new Error(`the snapshot plugin no longer marks where its window code starts ("${CUT}")`);
   return source.slice(0, source.indexOf(CUT));
 };
-const headless = (source) => stripped(source).replace(/^const HEADLESS = .*$/m, 'const HEADLESS = true;');
+/* The spaces around an operator or a bracket dropped, on a line that holds no string, template or regular expression
+   (no quote, backtick or slash), so nothing inside a literal is touched; and never between two signs (`a - -b` would
+   read `a--b`). A space beside a punctuator is never part of the code's meaning: about a twentieth of what is sent
+   (2026-11-26: 0.91.0 was 1 786 characters over the cap without it). */
+export const tightened = (code) => code.split('\n').map((l) => (/['"`/]/.test(l) || /[+-]\s+[+-]/.test(l) ? l : l.replace(/ ?(===|!==|=>|&&|\|\||<=|>=|[=+\-*?:<>,{}()]) ?/g, '$1'))).join('\n');
+const headless = (source) => tightened(stripped(source)).replace(/^const HEADLESS = .*$/m, 'const HEADLESS = true;');
 const capped = (code, what) => {
   if (code.length > CAP) throw new Error(`the ${what} is ${code.length} characters, over use_figma's ${CAP}`);
   return code;

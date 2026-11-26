@@ -45,6 +45,8 @@ function ownsOf(incoming, { iconSets = [], iconPage = null, icons = [] } = {}) {
   const owns = { collections: Object.entries(incoming.collections || {}).filter(([, c]) => !c.remote).map(([n]) => n), icons: iconSets, ...(iconPage ? { iconPage } : {}), ...Object.fromEntries(OWNED.map((k) => [k, (incoming[k] || []).filter((x) => !x.remote).map((x) => x.name)])),
     // the other libraries' text styles it sends, which it does not own: kept while any source still sends one
     ...((incoming.textStyles || []).some((x) => x.remote) && { remoteTextStyles: incoming.textStyles.filter((x) => x.remote).map((x) => x.name) }),
+    // and the other libraries' effect styles its components use (plugin 0.91.0), the same way
+    ...((incoming.effects || []).some((x) => x.remote) && { remoteEffects: incoming.effects.filter((x) => x.remote).map((x) => x.name) }),
     // and the other libraries' collections its components bind (plugin 0.80.0), the same way
     ...(Object.values(incoming.collections || {}).some((c) => c.remote) && { remoteCollections: Object.keys(incoming.collections).filter((n) => incoming.collections[n].remote) }) };
   return { owns, exported };

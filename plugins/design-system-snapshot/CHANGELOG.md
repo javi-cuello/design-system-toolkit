@@ -1,6 +1,13 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.91.0] - 2026-11-26
+### Added
+- **The effect styles another library gives the components are recorded**, marked remote and held as that library's (owns.cjs `remoteEffects`), as its text styles are. A component file whose shadows live in a foundations file sent none, so its shadows read as none.
+### Fixed
+- **Two other libraries' collections under one name are both kept.** A file binding variables from two collections of the same name kept the first and dropped the second's variables, which then drew as 0; their variables now join mode by mode name, the first's kept where both name one.
+- **A remote text style's font is read off a text that holds words.** It was read off whichever of its texts came last, and an empty one says no font, so the style was dropped and its texts fell back to a default face.
+
 ## [0.90.8] - 2026-11-26
 ### Fixed
 - **A placed instance Figma had not built yet is read whole again.** 0.90.6 took out 0.90.4's read of such an instance's children with hidden layers shown, wrongly blamed for a crash that 0.90.7 traced to the round trip's drawing pages; without it a placed checkbox, icon or switch was recorded empty. Restored as 0.90.5 had it: each child's visibility read while hidden layers are shown.

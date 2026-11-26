@@ -205,7 +205,7 @@ function mergeTokens(before, incoming, { iconSets = [], iconPage = null, iconGro
       const w = writerOf(name);
       // (and another library's style no source owns, which this file no longer sends: nothing else would ever drop it)
       const going = dropped(kind, name) || (w && moved.includes(w)) || (v && v.remote && !w && !now.has(name)
-        && !Object.entries(sources).some(([s, x]) => !self(s) && !moved.includes(s) && lists(x, kind === 'collections' ? 'remoteCollections' : 'remoteTextStyles').includes(name)));
+        && !Object.entries(sources).some(([s, x]) => !self(s) && !moved.includes(s) && lists(x, { collections: 'remoteCollections', textStyles: 'remoteTextStyles', effects: 'remoteEffects' }[kind] || 'remoteTextStyles').includes(name)));
       const h = going && heir(name);
       // a moved writer's copy with no live one kept goes: kept, a later write would file it as the live owner's
       if (h) { out.set(name, keep[name][h]); delete keep[name][h]; } else if (!going) out.set(name, v);
