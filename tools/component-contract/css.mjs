@@ -105,7 +105,8 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
   put('background', fill.value, [].concat(bg ?? []).some((f) => raw(f) || (f && Array.isArray(f.stops) && f.stops.some((st) => raw(st.color)))) ? NOTE : undefined);
   unread.push(...fill.unread);
   const color = take('color');
-  if (typeof color === 'string') put('color', names.token(color));
+  // (a colour with no variable written as itself, as a fill's is: never as a token of its name)
+  if (typeof color === 'string') put('color', raw(color) ? color : names.token(color), raw(color) ? NOTE : undefined);
 
   const radius = take('radius');
   if (radius === 'mixed') unread.push('radius (mixed corners, unrecorded)');
@@ -151,7 +152,7 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     const widths = Array.isArray(b.width) ? b.width : SIDES.map((s) => b.width ?? (b.sides && typeof b.sides[s] === 'number' ? b.sides[s] : 1));
     const on = SIDES.map((s, i) => (b.sides ? !!b.sides[s] : widths[i] !== 0) && widths[i] !== 0);
     const w = (i) => len(widths[i], true) ?? (b.sides && typeof b.sides[SIDES[i]] === 'number' ? len(b.sides[SIDES[i]], true) : undefined);
-    const c = names.token(b.color);
+    const c = raw(b.color) ? b.color : names.token(b.color);
     const align = b.align || 'inside';
     // a dashed stroke all round, one width: an outline dashed, pulled in as far as the stroke's alignment puts it (an inset
     // shadow cannot dash); CSS sets no dash's length, so the pattern is the browser's (the user's ruling, 2026-11-17)

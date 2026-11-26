@@ -83,6 +83,11 @@ ok('a text with no style writes no style\'s fields (no token defines --literal-*
   const px = declarations({ kind: 'text', letterSpacing: '0.16' }, {}, { token: (n) => `var(--${n})`, textStyle: style }).decls;
   ok('a letter spacing kept as the snapshot spells it (0.16, a text with no style said) is px, never a token of that name', px[0][1] === '0.16px'); }
 ok('a literal carries its reason (code-standard rule 22)', lit[2] === 'no token in the design');
+// a text's colour and a stroke's with no variable (a raw #ae2a19) are written as themselves, as a fill's is: never as a
+// token of that name, which no token build defines (a required asterisk drew black)
+{ const r = declarations({ kind: 'text', color: '#ae2a19', typography: 'T' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls, b = declarations({ kind: 'container', border: { color: 'rgb(1 2 3 / 1)', width: 1 } }, {}, { token: (n) => `var(--${n})` }).decls;
+  ok('a raw text colour or stroke colour is written as itself, with its reason', r.find((x) => x[0] === 'color')[1] === '#ae2a19' && r.find((x) => x[0] === 'color')[2] === 'no token in the design' && b.some((x) => /rgb\(1 2 3 \/ 1\)/.test(x[1])) && !b.some((x) => /var\(--rgb/.test(x[1]))
+    && declarations({ kind: 'text', color: 'Text/strong' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls.find((x) => x[0] === 'color')[1] === 'var(--Text/strong)'); }
 // 2026-11-22: a text with no style, its values known (snapshot 0.82.0 on), is written as values, never a var() no token
 // defines; its spacing, case and decoration too, which css.mjs left unread
 { const r = declarations({ kind: 'text', typography: 'literal 12/18 semibold italic IBM Plex Sans', letterSpacing: 0.16, textCase: 'upper', textDecoration: 'underline' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] });
