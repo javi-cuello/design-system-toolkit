@@ -26,7 +26,7 @@ A combobox is a text field with a list of suggestions: the person types to narro
 - [moderate] **Model.** A text input with a popup list ([W3C APG combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)). Pick one of the APG's autocomplete behaviours and keep it: list with manual selection (suggestions shown, the person picks) is the safe default; inline completion and automatic selection suit expert tools.
 - [contested] **Matching: from the start, or anywhere.** Fluent's combobox moves the active option to the first one that starts with the typed text (`optionText.toLowerCase().indexOf(searchString) === 0`) and keeps the whole list ([Fluent useInputTriggerSlot](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-combobox/library/src/components/Combobox/useInputTriggerSlot.ts)). react-select, under Atlassian's Select, filters to options containing the text anywhere by default (`matchFrom: 'any'`) ([react-select filters](https://github.com/JedWatson/react-select/blob/master/packages/react-select/src/filters.ts)). The project decides.
 - [weak] **Synonyms and abbreviations.** Baymard: an autocomplete "can also support typos and sequencing, synonyms, common names, local spellings, and abbreviations" ([Baymard](https://baymard.com/blog/drop-down-usability)).
-- [weak] **Case and accents.** React Aria's filter takes options "to adjust the sensitivity to case, diacritics, and other parameters" ([React Aria useFilter](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useFilter.ts)).
+- [weak] **Sensitivity to case and accents is a setting of the filter.** React Aria's filter takes options "to adjust the sensitivity to case, diacritics, and other parameters" ([React Aria useFilter](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useFilter.ts)).
 - [weak] **The list opens on the chosen option.** MUI's slot list scrolls the selected option into view, or its reference value when empty ([MUI DigitalClock source](https://github.com/mui/mui-x/blob/master/packages/x-date-pickers/src/DigitalClock/DigitalClock.tsx)).
 - [moderate] **Keyboard.** Down Arrow enters the list, Enter accepts, Escape closes the popup; Alt + Down opens it without moving focus ([APG](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)).
 - [weak] **No results.** Say so in the popup ("No countries match 'Atl'"), never an empty box.
@@ -55,7 +55,7 @@ A combobox is a text field with a list of suggestions: the person types to narro
 - *Script:* could check `role="combobox"` with `aria-expanded` and `aria-controls`, that Escape closes the popup, that a no-match message appears, and that the field is a working native control with script disabled.
 - *Judgement:* Is the list long enough to need typing, and does matching find what people type?
 
-**Sources:** APG, Baymard, Carbon, Fluent, react-select and MUI as linked; they split on matching from the start or anywhere.
+**Sources:** APG, Baymard, Carbon, Fluent, react-select, MUI and React Aria as linked; they split on matching from the start or anywhere.
 
 ## List size and placement
 
