@@ -510,6 +510,17 @@ ok('and to-code styles that input and its placeholder by the same selectors: the
   const bare = toParity(card, 'card', { naming: ELEMENT, framework: 'web-components' }), bareOut = toElement(card, 'card', { naming: ELEMENT, library: {} });
   ok('with no library, every placed instance is a mark, in the markup and the mapping alike',
     /"data-part": "save"[^)]*"data-icon"/.test(bareOut) && bare.layers.Action === 'ds-card > [data-part="action"]' && bare.layers.Save === 'ds-card > [data-part="save"]'); }
+// a placed component this one draws in its own slot's sample (a card's avatar), its insides listed: each read under
+// that instance by its component's own part names, as one placed outside a slot is; one placed in a placed component's
+// slot stays its fill's
+{ const avatar = { contract: 1, component: 'Avatar', props: {}, anatomy: { root: { kind: 'container' }, disc: { kind: 'graphic', parent: 'root', order: 0 } }, variants: [] };
+  const card = { contract: 1, component: 'Card', props: { content: { type: 'slot', figma: 'Content' } }, anatomy: { root: { kind: 'container' },
+    content: { kind: 'slot', parent: 'root', order: 0, content: '{content}' }, 'content/row': { kind: 'container', parent: 'content', order: 0 },
+    'content/row/avatar': { kind: 'instance', parent: 'content/row', component: 'Avatar', order: 0 }, 'content/row/avatar/disc': { kind: 'graphic', parent: 'content/row/avatar', order: 0 } }, variants: [] };
+  const lib = { Avatar: { ...avatar, folder: 'avatar' }, Card: { ...card, folder: 'card' } };
+  const m = toParity(card, 'card', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers;
+  ok('a part inside a placed component in a slot\'s sample is mapped under that instance by its own name, never skipped',
+    m['Content > Row > Avatar > Disc'] === 'ds-card > [data-part="content"] > [data-part="row"] > [data-part="avatar"] > [data-part="disc"]', JSON.stringify(m)); }
 // whether a placed component is held is one question, asked of the library the markup is given, by the markup and the
 // sheet alike: never the sheet's own lookup, which is case-blind and holds no name two contracts share. Two contracts of
 // one name (the library keeps one) and two names that differ only in case each read the same on both sides

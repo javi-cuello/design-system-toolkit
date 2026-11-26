@@ -549,13 +549,15 @@ function everPulls(c) {
 }
 
 /* The nearest placed instance a part is inside, where none above it sits in a slot: the component whose own part it is
-   (one placed inside another is reached through both: hostIn, chain). */
-function hostOf(a, id) {
+   (one placed inside another is reached through both: hostIn, chain). `sample`: one in a slot's sample too, a slot
+   above the instance (what this component draws in its own slot while the caller passes nothing), never one below it. */
+function hostOf(a, id, sample = false) {
   let host = null;
   if ((a[(a[id] || {}).parent] || {}).kind === 'slot') return null;
   for (let p = a[id] && a[id].parent; p; p = a[p] && a[p].parent) {
     if (!a[p]) return null;
-    if ((a[a[p].parent] || {}).kind === 'slot') return null;
+    if (sample && a[p].kind === 'instance' && !host) host = p;
+    if ((a[a[p].parent] || {}).kind === 'slot' && !(sample && host)) return null;
     if (a[p].kind === 'instance' && !host) host = p;
   }
   return host;
@@ -719,8 +721,8 @@ const placedOf = (a, host, M) => placedMatch(M, Object.fromEntries(Object.keys(a
 /* Whether a part is inside a placed component this library holds, so named as that component's own: a part of it at
    any props the instance is placed with (a status icon's Warning--filled at Failed, though another variant places it
    at Warning alt, which draws none). */
-const hostIn = (c, id, mains, copies = false) => { const a = allOf(c); const h = hostOf(a, id), m = h && a[h].component && mains(a[h].component, a[h].key);
-  if (!m || (!copies && (copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h))) || (hostOf(a, h) && !hostIn(c, h, mains))) return false;
+const hostIn = (c, id, mains, copies = false, sample = false) => { const a = allOf(c); const h = hostOf(a, id, sample), m = h && a[h].component && mains(a[h].component, a[h].key);
+  if (!m || (!copies && (copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h))) || (hostOf(a, h, sample) && !hostIn(c, h, mains, false, sample))) return false;
   const withs = [a[h].with, ...(c.variants || []).flatMap((v) => [((v.add || {})[h] || {}).with, (v.set || {})[`${h}.with`]])].filter((w, i) => i === 0 || w);
   return withs.some((w) => !!placedOf(a, h, placedAs({ ...a, [h]: { ...a[h], with: w } }, h, m, mains).M)[id.slice(h.length + 1)]); };
 
@@ -1237,6 +1239,9 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
 // the selector the sheet styles a part by, at no condition: what the markup's parity mapping names it by
 /* A part inside a placed component this library holds, by that component's own names under the instance; else null. */
 export const nestedSelector = (c, n, id, mains, library = {}) => (hostIn(c, id, mains) ? chain(c, n, id, '', mains, library) : null);
+/* The same for a part inside a placed component this one draws in its own slot's sample (a card's avatar, a rail's
+   items): no sheet rule of this one's reaches it, its component's own sheet draws it, but a reading finds it there. */
+export const sampleSelector = (c, n, id, mains, library = {}) => (!hostIn(c, id, mains) && hostIn(c, id, mains, false, true) ? chain(c, n, id, '', mains, library) : null);
 /* The same for a part inside a placed component that has numbered copies (copyOf), which share its hook: no sheet rule
    reaches it (a rule would hold for every copy), but the markup sets it through `parts`, and a reading finds it under
    its own copy, counted among those that share the hook (partSelector's :nth-child). */

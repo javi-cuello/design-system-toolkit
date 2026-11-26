@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations } from './css.mjs';
-import { tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
+import { tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp } from './layers.mjs';
 
@@ -1142,7 +1142,7 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     if (x.id === 'root') continue;
     // a part the contract keeps inside a placed component is an override there: read where the sheet writes it
     // and what it puts in a placed component's slot (a menu's items), by its own hook under that slot
-    const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains, library)) || (x.inside && framework === 'web-components' && copySelector(c, n, x.id, mains, library));
+    const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains, library)) || (x.inside && framework === 'web-components' && copySelector(c, n, x.id, mains, library)) || (x.inside && sampleSelector(c, n, x.id, mains, library));
     const at = nested ? nested : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
       // (a sample in a placed component's slot, where this one puts nothing there: that component's to draw)
       : x.slotted && (parts.get(x.slotted) || {}).inside ? { skip: 'a sample of what a caller puts in the slot' }
