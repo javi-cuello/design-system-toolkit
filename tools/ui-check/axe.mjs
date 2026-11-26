@@ -5,7 +5,8 @@
  *
  *   node tools/ui-check/axe.mjs <url> [<url> …] [--disable <rule,rule>]
  *
- * Exit 0 clean, 1 violations, 2 a page that could not be checked.
+ * Each page is checked in the light and the dark colour scheme. Exit 0 clean, 1 violations, 2 a page that could
+ * not be checked.
  *
  * axe-core is vendored in vendor/ at a pinned version and injected into the
  * page under test, never loaded by a project: it is a test instrument, so a
@@ -20,7 +21,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { launch, newPage, attach, navigate, call, findChrome } from '../shared/cdp.mjs';
+import { launch, newPage, attach, navigate, call, findChrome, media } from '../shared/cdp.mjs';
 
 import { realpathSync } from 'node:fs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -34,7 +35,9 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 async function run(tags, disabled) {
   const rules = Object.fromEntries(disabled.map((id) => [id, { enabled: false }]));
   const r = await window.axe.run(document, { runOnly: { type: 'tag', values: tags }, rules, resultTypes: ['violations'] });
-  return r.violations.map((v) => ({ id: v.id, impact: v.impact, help: v.help, targets: v.nodes.map((n) => n.target.join(' ')) }));
+  // a contrast failure carries its measured pair, so a reader sees the colours without re-running it
+  const pair = (n) => { const m = /contrast of ([\d.]+) \(foreground color: (#\w+), background color: (#\w+)/.exec(n.failureSummary || ''); return m ? ` (${m[1]}:1, ${m[2]} on ${m[3]})` : ''; };
+  return r.violations.map((v) => ({ id: v.id, impact: v.impact, help: v.help, targets: v.nodes.map((n) => n.target.join(' ') + pair(n)) }));
 }
 
 /* The same run as a page function another runner can call on its own tab
@@ -47,11 +50,18 @@ export async function axePages(urls, { disable = [] } = {}) {
   const results = [];
   try {
     const tab = await attach(await newPage(browser.endpoint));
+    // each page in both colour schemes: run in the machine's own, a dark machine passed what failed in CI's light one
+    // (2026-11-26, a done row's number on its tint), so neither is left to the machine
     for (const url of urls) {
       try {
-        await navigate(tab, url, { until: 'networkIdle' });
-        await tab.evaluate(AXE);
-        results.push({ url, violations: await call(tab, run, TAGS, disable) });
+        const violations = [];
+        for (const scheme of ['light', 'dark']) {
+          await media(tab, { 'prefers-color-scheme': scheme });
+          await navigate(tab, url, { until: 'networkIdle' });
+          await tab.evaluate(AXE);
+          for (const v of await call(tab, run, TAGS, disable)) violations.push({ ...v, help: `${v.help} (${scheme})` });
+        }
+        results.push({ url, violations });
       } catch (e) { results.push({ url, error: String(e.message || e).split('\n')[0] }); }
     }
   } finally { await browser.close(); }

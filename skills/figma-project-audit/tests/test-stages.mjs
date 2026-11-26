@@ -207,16 +207,17 @@ for (const [f, heads] of [["tools/figma-audit/audit-session.mjs", ["exec(port, f
   const dash = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/Dashboard.astro"), "utf8");
   const hero = readFileSync(join(ROOT, "tools/docs-site/src/pages/audits.astro"), "utf8");
   const page = dash + hero;
-  const from = dash.indexOf('<Modal id="auditDialog"'), dialog = from < 0 ? "" : dash.slice(from, dash.indexOf("</Modal>", from));
+  const from = dash.indexOf('<Modal id="auditDialog"'), to = from < 0 ? -1 : dash.indexOf("</Modal>", from);
+  const dialog = from < 0 || to < 0 ? "" : dash.slice(from, to);
   const audit = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/audit.js"), "utf8");
   const files = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/measures.js"), "utf8");
   const css = readFileSync(join(ROOT, "tools/docs-site/src/dashboard/dashboard.css"), "utf8");
   ok("dashboard: one Audit button, no menu that comes and goes", /id="auditBtn"/.test(page) && !/auditMenu|auditAllBtn|auditChangedBtn/.test(page + audit));
-  ok("dashboard: Whole and Changed are two radios", (page.match(/type="radio" name="auditScope"/g) || []).length === 2);
+  ok("dashboard: Whole and Changed are two radios", (dialog.match(/type="radio" name="auditScope"/g) || []).length === 2);
   ok("dashboard: no tab hides the Audit button", !/data-scanned="no"\] \.head-actions/.test(css));
   ok("dashboard: Audit is the primary button and opens a dialog holding a checkbox per file and the two radios; Start audit runs the ticked files", /button--primary" id="auditBtn"/.test(hero) && /^<Modal id="auditDialog" title="Audit">[\s\S]*id="auditFiles"[\s\S]*name="auditScope"[\s\S]*value="run"[\s\S]*Start audit/.test(dialog) && /auditDialog\.showModal\(\)/.test(audit) && /type = "checkbox"/.test(files) && /returnValue !== "run"/.test(audit) && /runFiles\(pickedFiles\(\), scope\)/.test(audit));
-  // the hero up to the dashboard it holds: a marker that moved fails here rather than leave an empty slice that passes
-  const at = hero.indexOf('<ul class="files"'), end = hero.indexOf("<Dashboard");
+  // the hero from its actions to the dashboard it holds: a marker that moved fails here rather than leave an empty slice that passes
+  const at = hero.indexOf('<div class="head-actions"'), end = hero.indexOf("<Dashboard");
   const head = at >= 0 && end > at ? hero.slice(at, end) : null;
   ok("dashboard: the header holds no file checkbox and no scope radio; its file list is status only", head !== null && /id="fileList"/.test(head) && !/name="auditScope"|type="checkbox"/.test(head) && !/file-pick|li\.append\(dot, pick/.test(files));
   const run = audit.slice(audit.indexOf("async function runFiles"), audit.indexOf("auditBtn.addEventListener"));

@@ -497,6 +497,8 @@
   /* No opacity dim on a done row: at 55% the body text fell to 1.98:1. The done
      state reads from the green rail, the tint and the ticked box instead; nor is
      its number turned green (4.41:1 on the tint in dark). */
+  /* its band is the tint over the band, darker than either: the quiet text there takes the muted step (soft was 4.39:1 in light) */
+  .row[data-done="true"] .row-top { --fg-soft: var(--fg-muted); }
   /* a closed row (the Done and Rulings tabs) is a record, not a task: the plain card, its tick shown done
      and not a control, its footer only Ask, and the note line's Delete ruling to take a ruling back (the maintainer, 2026-11-26) */
   .cleared .row[data-done="true"] { border-color: var(--line-strong); background: var(--surface); }
