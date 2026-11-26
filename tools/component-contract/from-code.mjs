@@ -172,6 +172,20 @@ export function wordsAsDrawn(n, s) {
    another instance nested in it (`isRoot`). A layer that is itself a placed component is reached through its host
    (`[data-part=button] > button`): that host is the layer's own, so a selector that ends in a bare tag under the
    component's root also takes a nested copy's. Runs in the page (passed as source). */
+/* Whether a layer a boolean shows is drawn: laid out and not hidden, at any opacity, as Figma's boolean shows a layer by
+   its visibility alone and a design may draw one shown at 0 (a tooltip until hovered). `rects` its client rects' count,
+   `cs` its computed style. Tested by test-from-code.mjs. */
+export function layerShown(rects, cs) { return rects > 0 && cs.visibility !== 'hidden'; }
+
+/* An icon mark's fill of its own (`cs` its computed style): its box painted, where no mask cuts a glyph out of it, so a
+   placed component the library does not hold keeps the fill to-code writes on it as a box's (a navigation bar's
+   surface), never read as the glyph's colour; else null. Tested by test-from-code.mjs. */
+export function markFill(cs) {
+  const c = String(cs.backgroundColor || '');
+  if (!c || /rgba\(.*,\s*0\)$|transparent/.test(c)) return null;
+  return [cs.maskImage, cs.webkitMaskImage].every((m) => !m || m === 'none') ? c : null;
+}
+
 export function ownLayer(m, n, q, isRoot) {
   const host = q.replace(/\s*>\s*[a-z][a-z0-9-]*\s*$/i, '');
   for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (isRoot(up) && !(up === m.parentElement && host !== q && up.matches(host))) return false;
@@ -604,7 +618,8 @@ export function designTokenFor(kind, value, table, usage, under = null, judge = 
   // guess by scope (a dot the code paints with an icon token is a box in the markup and an ellipse in Figma)
   if (vars && vars.length) for (const v of vars) {
     // (in any of its modes: a contextual field token is one colour on the background and another on a layer)
-    const holds = (t) => (t[4] || [t[1]]).some((x) => (colour ? sameColour(x, value) : typeof x === 'number' && +x === +value));
+    // (a number to the reading's two decimals: Figma stores 4.8 as 4.800000190734863, read back 4.8)
+    const holds = (t) => (t[4] || [t[1]]).some((x) => (colour ? sameColour(x, value) : typeof x === 'number' && Math.abs(x - +value) < 0.005));
     // the toolkit's own css name for the token first; else the longest name the property ends in
     const said = table.find((t) => v === cssName(t[3] || '', t[0]) && holds(t)) || table.filter((t) => writtenAs(v, t[0], t[3]) && holds(t)).sort((a, b) => b[0].length - a[0].length)[0];
     if (said) return { token: said[0] };
@@ -2147,7 +2162,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
@@ -2161,7 +2176,7 @@ async function main() {
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
         const elementOfLayer = new Function(`return ${elementOfLayerSrc}`)();
         const opensPlaced = new Function(`return ${opensPlacedSrc}`)();
-        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)();
+        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), layerShown = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)();
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -2265,11 +2280,11 @@ async function main() {
               innerDisabled: !n.hasAttribute('disabled') && [...n.querySelectorAll('button[disabled], input[disabled], select[disabled], textarea[disabled], fieldset[disabled]')].some((m) => { for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (isRoot(up)) return false; return true; }),
               // its words, in the order it shows them: each element's own text, where it is drawn
               // each boolean that shows a layer: whether that layer is drawn in it, found where its own mapping places it
-              // (not one of another instance nested in it, and drawn: seen, not merely present)
+              // (not one of another instance nested in it, and drawn: layerShown)
               // (unknown, null, where each such layer is unseen only as a box around it is not drawn: one this component
               // hides inside the instance, a checkbox's box and value taken away whole, says nothing of the boolean)
               shown: Object.fromEntries(Object.entries(shownSel[other] || {}).map(([p, q]) => {
-                const seen = (m) => { const cs = getComputedStyle(m); return m.getClientRects().length && cs.visibility !== 'hidden' && +cs.opacity > 0; };
+                const seen = (m) => layerShown(m.getClientRects().length, getComputedStyle(m));
                 const ms = [...n.querySelectorAll(q)].filter((m) => ownLayer(m, n, q, isRoot));
                 // (a box not drawn: computed display none, the hidden attribute's too unless CSS draws it again; a display: contents
                 // wrapper has no box of its own and hides nothing)
@@ -2304,7 +2319,10 @@ async function main() {
           // an icon mark, a placed component drawn as the empty element to-markup leaves for it (one the store does not hold),
           // is a box to-code styles as the instance's own: its stroke, corners and clipping read as a box's, its fill
           // staying the glyph's colour (above)
-          if (kind === 'graphic' && e.mark) { const own = {}; boxStyling(own); for (const k of ['radius', 'full', 'cornerShape', 'outline', 'ownOutline', 'border', 'overflow', 'shadow', 'shadowAll', 'ringsUsed']) if (own[k] !== undefined) e[k] = own[k]; }
+          // (a fill of its own, its box painted, where no mask cuts a glyph out of it: a placed component's own fill, a
+          // navigation bar's surface, which to-code writes as a box's, never the glyph's colour)
+          if (kind === 'graphic' && e.mark) { const own = {}; boxStyling(own); for (const k of ['radius', 'full', 'cornerShape', 'outline', 'ownOutline', 'border', 'overflow', 'shadow', 'shadowAll', 'ringsUsed']) if (own[k] !== undefined) e[k] = own[k];
+            const fill = markFill(s); if (fill) { e.background = fill; delete e.icon; } }
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             boxStyling(e);
             // a box no flex lays out, or one with nothing to hug, has a size of its own (a switch's thumb, an avatar's image)
@@ -2410,7 +2428,7 @@ async function main() {
         const siblingOrder = new Function(`return ${siblingOrderSrc}`)();
         for (const xs of Object.values(byParent)) siblingOrder(xs).forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)

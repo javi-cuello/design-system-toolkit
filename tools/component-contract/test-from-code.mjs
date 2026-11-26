@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, markFill, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -52,6 +52,10 @@ ok('a value takes the token its field offers that holds it: a background among t
   designTokenFor('background', 'rgb(238, 238, 238)', table, {}, null, null, offered).token === 'Color/Background/Neutral/secondary'
   && designTokenFor('space', 8, table, {}, null, null, offered).token === 'Spacing/8' && designTokenFor('radius', 8, table, {}, null, null, offered).token === 'Corner radius/8'
   && designTokenFor('text', '#5e0007', table, {}, null, null, offered).token === 'Color/Text/Feedback/Danger/primary' && designTokenFor('space', 7, table, {}, null, null, offered).value === 7);
+{ const gap = [['Link/gap', 4.800000190734863, null, 'Link', [4.199999809265137, 4.800000190734863]]];
+  ok('the token the code wrote holds the value read to two decimals: Figma\'s 4.800000190734863 is the 4.8 read back, 4.9 is not',
+    designTokenFor('space', 4.8, gap, {}, null, null, null, [cssName('Link', 'Link/gap')]).token === 'Link/gap'
+    && designTokenFor('space', 4.9, gap, {}, null, null, () => null, [cssName('Link', 'Link/gap')]).token === undefined); }
 ok('the token the code wrote wins over the field\'s guess, where it holds the value: a dot painted with an icon token is not given the palette colour the background field offers',
   (() => { const t = [['Palette/Red/10', '#c00', ['ALL_SCOPES'], 'Primitives'], ['Colour/Icon/Feedback/Danger/strong', '#c00', ['SHAPE_FILL'], 'Semantic']];
     const off = offerFor([['Palette/Red/10', '#c00', ['FRAME_FILL']]]);
@@ -715,6 +719,11 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
       && placedHere({ ...A, 'i/box': { kind: 'container', parent: 'i' } }, 'i/box/dot', mainOf) === null
       && placedHere({ ...A, i: { ...A.i, with: { checked: 'false' } } }, 'i/box/dot', mainOf).kind === 'graphic');
   }
+  ok('a layer a boolean shows is shown at opacity 0 (a tooltip drawn until hovered), not where hidden or not laid out',
+    layerShown(1, { visibility: 'visible', opacity: '0' }) && !layerShown(1, { visibility: 'hidden', opacity: '1' }) && !layerShown(0, { visibility: 'visible', opacity: '1' }));
+  ok('an icon mark painted with a fill of its own keeps it as its fill; a clear one, or one a mask cuts a glyph from, has none',
+    markFill({ backgroundColor: 'rgb(255, 255, 255)', maskImage: 'none' }) === 'rgb(255, 255, 255)' && markFill({ backgroundColor: 'rgba(0, 0, 0, 0)' }) === null
+    && markFill({ backgroundColor: 'rgb(0, 0, 0)', maskImage: 'url(x.svg)' }) === null);
   ok('a full-round empty box where the design draws an ellipse is the ellipse', asShape({ kind: 'container', full: true, radius: 99 }, { kind: 'graphic', shape: 'ellipse' }, false).shape === 'ellipse');
   ok('an empty box where the design draws a line is the line; one holding parts, or under an icon, stays a box', asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, false).kind === 'graphic' && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, true).kind === 'container' && asShape({ kind: 'container' }, { kind: 'graphic', icon: true }, false).kind === 'container');
 }
