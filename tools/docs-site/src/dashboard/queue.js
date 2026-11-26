@@ -556,15 +556,17 @@ export function build() {
             // The buttons that come and go (Fix all, Verify, Ask) and the
             // row's stamp come after the ones always there, so ticking a row
             // never moves those. The note opens on demand, under them, and
-            // stays open once it holds text; its toggle is a .button like
-            // its peers (a link among buttons read as broken, 2026-11-26).
+            // stays open once it holds text. Every action is a ghost button:
+            // repeated on each row, a bordered one spends the attention budget
+            // row after row, and an accent link spends the accent (knowledge:
+            // visual, Emphasis and the attention budget; Quiet chrome).
             '<div class="row-actions">' +
-                (bucket === "b1" ? '<button class="button do-row" type="button" data-do="' + esc(id) + '" ' + about("do-" + esc(id)) + '>Fix this</button>' : '') +
-                '<button class="button rule-row" type="button" data-rule="' + esc(id) + '" ' + about("rule-" + esc(id)) + '>Record as ruling</button>' +
-                '<button class="button note-toggle" type="button" data-note-toggle aria-expanded="false" aria-controls="nwrap-' + esc(id) + '" ' + about("ntoggle-" + esc(id)) + '>Add a note</button>' +
-                (bucket === "b1" ? '<button class="button do-all" type="button" data-doall="' + esc(id) + '" ' + about("doall-" + esc(id)) + ' hidden></button>' : '') +
-                '<button class="button verify-row" type="button" data-verify="' + esc(id) + '" ' + about("verify-" + esc(id)) + ' hidden>Verify</button>' +
-                '<button class="button ask-row" type="button" data-ask-row="' + esc(n) + '" ' + about("askrow-" + esc(id)) + ' hidden>Ask about this row</button>' +
+                (bucket === "b1" ? '<button class="button button--ghost do-row" type="button" data-do="' + esc(id) + '" ' + about("do-" + esc(id)) + '>Fix this</button>' : '') +
+                '<button class="button button--ghost rule-row" type="button" data-rule="' + esc(id) + '" ' + about("rule-" + esc(id)) + '>Record as ruling</button>' +
+                '<button class="button button--ghost note-toggle" type="button" data-note-toggle aria-expanded="false" aria-controls="nwrap-' + esc(id) + '" ' + about("ntoggle-" + esc(id)) + '>Add a note</button>' +
+                (bucket === "b1" ? '<button class="button button--ghost do-all" type="button" data-doall="' + esc(id) + '" ' + about("doall-" + esc(id)) + ' hidden></button>' : '') +
+                '<button class="button button--ghost verify-row" type="button" data-verify="' + esc(id) + '" ' + about("verify-" + esc(id)) + ' hidden>Verify</button>' +
+                '<button class="button button--ghost ask-row" type="button" data-ask-row="' + esc(n) + '" ' + about("askrow-" + esc(id)) + ' hidden>Ask about this row</button>' +
                 '<span class="stamp" data-state="pending" id="stamp-' + esc(id) + '" hidden></span>' +
             '</div>' +
             '<div class="note-wrap" id="nwrap-' + esc(id) + '" hidden>' +
