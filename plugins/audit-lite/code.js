@@ -2251,16 +2251,16 @@ async function componentNotesOf(n) {
 // the flag off builds them; it is put back at once, and the walk drops the hidden ones as everywhere.
 /** @param {any} n */
 const kidsOf = (n, f = figma) => {
-  if (n.children.length || !f.skipInvisibleInstanceChildren) return n.children.filter(isShown);
   // (each child's visibility read while the flag is off: once it is back on, a hidden sublayer read with it off is no
   // node Figma knows, and reading it throws "does not exist")
-  f.skipInvisibleInstanceChildren = false;
-  try { return n.children.filter(isShown); } finally { f.skipInvisibleInstanceChildren = true; }
+  const k = 'skipInvisibleInstanceChildren', off = !n.children.length && f[k];
+  if (off) f[k] = false;
+  try { return n.children.filter(isShown); } finally { if (off) f[k] = true; }
 };
 /* Whether a layer is drawn: a sublayer Figma lists but no longer has (an instance's, read across a change of
    skipInvisibleInstanceChildren) is not, rather than stopping the snapshot; any other failure still stops it. */
 /** @param {SceneNode} c */
-function isShown(c) { try { return c.visible !== false; } catch (e) { if (/does not exist/.test(message(e))) return false; throw e; } }
+const isShown = (c) => { try { return c.visible !== false; } catch (e) { if (/not exist/.test(message(e))) return false; throw e; } };
 /** @param {SceneNode} n @param {number} depth @param {number} [at] its place among all its parent's children, none inside an instance @param {boolean} [inInstance] @returns {Promise<Record<string, unknown>>} */
 async function walk(n, depth, at, inInstance = false) {
   /** @type {Record<string, unknown>} */
@@ -2911,7 +2911,9 @@ async function preferredName(/** @type {any} */ x) {
   if (!key) return null;
   if (!localKeys) {
     localKeys = new Map();
-    try { for (const n of figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] })) if (n.key) localKeys.set(n.key, n.type === 'COMPONENT' && n.parent && n.parent.type === 'COMPONENT_SET' ? n.parent.name : n.name); } catch (e) { /* a runtime without the search names from imports alone */ }
+    try { for (const n of figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] })) if (n.key) localKeys.set(n.key, n.type === 'COMPONENT' && n.parent && n.parent.type === 'COMPONENT_SET' ? n.parent.name : n.name); } catch (e) {
+      // a runtime without the search names from imports alone
+    }
   }
   if (localKeys.has(key)) return /** @type {string} */ (localKeys.get(key));
   if (prefNames.has(key)) return /** @type {string|null} */ (prefNames.get(key));
