@@ -489,10 +489,14 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     // (as expand() layers them: a combination last, over the rest)
     const sets = (c.variants || []).filter((v) => v.set && `${id}.modes` in v.set).sort((x, y) => !!x.combination - !!y.combination);
     const keys = new Set([...Object.keys(e.modes || {}), ...sets.flatMap((v) => Object.keys(v.set[`${id}.modes`] || {}))]);
+    // (on a placed instance, unset is no attribute at all (null, which h() leaves out): its component's own mode stands
+    // there, as an instance with no mode override keeps its component's)
+    const none = e.kind === 'instance' && !lang.php ? 'null' : lang.str('');
+    const said = (m) => (m && m !== '' ? lang.str(m) : none);
     return [...keys].sort().map((k) => {
-      const code = byVariant(sets, (v) => lang.str((v.set[`${id}.modes`] || {})[k] || ''), lang.str((e.modes || {})[k] || ''));
+      const code = byVariant(sets, (v) => said((v.set[`${id}.modes`] || {})[k]), said((e.modes || {})[k]));
       return [MODES.attribute(k), code ? { code } : { lit: (e.modes || {})[k] || '' }];
-    });
+    }).filter(([, v]) => !(e.kind === 'instance' && !lang.php && v.lit === ''));
   };
   // what this component sets inside a placed instance that no prop of it carries (insideOf), as each combination draws
   // it: the placed component's third argument, `parts` (a web component's alone: React and a snippet keep the gap)
@@ -770,7 +774,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   for (const x of props) if (x.type === 'event') gaps.push(`${x.name}: when it fires, frontend-build's to wire (taken here, so it reaches no element)`);
   for (const x of props) if (x.type === 'number') gaps.push(`${x.name}: what the number does`);
   for (const x of props.filter((y) => y.renamed && y.renamed !== 'role')) gaps.push(`${x.name}: Figma's ${x.p.figma || x.renamed} is an HTML attribute's name, so it is ${x.name} here; name it for what it means`);
-  return { n, props, gaps, hooks, own, children, control, entry, busy: busyCode, inline, placed: [...used].sort(), iconOnly: iconOnlyOf(c) };
+  return { n, props, gaps, hooks, own, children, control, entry, busy: busyCode, inline, placed: [...used].sort(), iconOnly: iconOnlyOf(c), modeNames: new Set(modeAttrs('root').map(([k]) => k)) };
 }
 
 /* ── React ───────────────────────────────────────────────────────────── */
@@ -859,7 +863,10 @@ function hOf(item, depth) {
   const key = (list) => `parts[${str(seg(list).lit)}]`;
   // (a numbered copy by its own name: it shares its first's data-part, but a holder may set each apart)
   if (item.placed) return seg(item.hook) ? `${pad}placed(${item.key ? `parts[${str(item.key)}]` : key(item.hook)}, ${fnOf(item.placed)}, ${obj(item.attrs)}, ${obj(item.hook)}${item.parts ? `, ${item.parts}` : ''})` : `${pad}${fnOf(item.placed)}(${obj(item.attrs)}, ${obj(item.hook)}${item.parts ? `, ${item.parts}` : ''})`;
-  const attrs = item.spread ? `{ ${item.spread}${item.attrs.length ? `, ${obj(item.attrs).slice(2, -2)}` : ''} }` : obj(item.attrs);
+  // (`lead`: what a holder's own attributes override, written before them: the component's own variable modes, which an
+  // instance's mode, set by the component placing it (the host), replaces, as Figma's instance override does)
+  const lead = (item.lead || []).length ? `${obj(item.lead).slice(2, -2)}, ` : '';
+  const attrs = item.spread ? `{ ${lead}${item.spread}${item.attrs.length ? `, ${obj(item.attrs).slice(2, -2)}` : ''} }` : obj(item.attrs);
   if (!item.children.length) return `${pad}h(${str(item.tag)}, ${attrs})`;
   return `${pad}h(${str(item.tag)}, ${attrs},\n${item.children.map((x) => hOf(x, depth + 1)).join(',\n')})`;
 }
@@ -876,12 +883,13 @@ export function toElement(c, folder, { naming, library = {}, settings = HOUSE } 
   let host;
   // a busy control is not given its click (React's onClick guard, the same): h() adds no listener for a null
   const guard = t.control && t.busy ? [['onClick', { code: `(${t.busy}) ? null : onClick` }]] : [];
-  if (t.control) host = { tag, attrs: t.hooks, spread: '...host', children: [{ tag: t.control, spread: '...rest', attrs: [...t.own, ...guard], children: t.children }] };
+  const lead = t.hooks.filter(([k]) => t.modeNames.has(k)), hooks = t.hooks.filter(([k]) => !t.modeNames.has(k));
+  if (t.control) host = { tag, lead, attrs: hooks, spread: '...host', children: [{ tag: t.control, spread: '...rest', attrs: [...t.own, ...guard], children: t.children }] };
   else if (t.entry) {
-    host = { tag, attrs: t.hooks, spread: '...host', children: t.children };
+    host = { tag, lead, attrs: hooks, spread: '...host', children: t.children };
     const fill = (x) => (x.tag === 'input' ? Object.assign(x, { spread: '...rest' }) : (x.node && fill(x.node), (x.children || []).forEach(fill)));
     host.children.forEach(fill);
-  } else host = { tag, attrs: t.hooks, spread: '...rest, ...host', children: t.children };
+  } else host = { tag, lead, attrs: hooks, spread: '...rest, ...host', children: t.children };
   const attrsSaid = own.filter((x) => x.attr).map((x) => `${t.n.attr(x.key)}${x.type === 'enum' ? ` (${x.values.map(str).join(' | ')}, default ${str(x.default)})` : ` ("true" | "false", default "${x.default}")`}`);
   const body = `dressed(parts, ${hOf(host, 1).trimStart()})`;
   return [`/* ${BANNER} */`, ...(t.gaps.length ? ['/*', ...[...new Set(t.gaps)].map((g) => ` * frontend-build: ${said(g)}`), ' */'] : []),

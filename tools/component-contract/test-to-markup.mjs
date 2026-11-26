@@ -836,4 +836,12 @@ else {
     variants: [{ when: { checked: true }, set: { 'circle.kind': 'container', 'circle.shape': null }, add: { 'circle/dot': { kind: 'graphic', parent: 'circle', shape: 'ellipse' } } }] };
   ok('a shape a variant fills with shapes draws them inside it', /h\("span", \{ "data-part": "circle", "aria-hidden": "true" \},\s*\(checked\) && h\("span", \{ "data-part": "dot"/.test(toElement(radio, 'dot', { naming: ELEMENT, library: {} }))); }
 
+// a variable mode a holder sets on a placed instance overrides that component's own (Figma's instance override): the
+// component writes its own mode before the host's attributes, and the holder sets none (null) where it overrides nothing
+{ const btn = { component: 'Btn', props: {}, anatomy: { root: { kind: 'container', modes: { tone: 'subtle' } } }, variants: [] };
+  const holder = { component: 'Holder', props: { on: { type: 'boolean', default: false, figma: 'On' } }, anatomy: { root: { kind: 'container' }, btn: { kind: 'instance', parent: 'root', component: 'Btn' } },
+    variants: [{ when: { on: true }, set: { 'btn.modes': { tone: 'selected' } } }] };
+  const own = toElement(btn, 'btn', { naming: ELEMENT, library: {} }), held = toElement(holder, 'holder', { naming: ELEMENT, library: { Btn: { ...btn, folder: 'btn' } } });
+  ok('a mode a holder sets on a placed instance overrides its own: own mode before the host, none set where none overrides', /h\("ds-btn", \{ "data-tone": "subtle", \.\.\.rest, \.\.\.host/.test(own) && /"data-tone": on \? "selected" : null/.test(held), own + held); }
+
 console.log(`${n} passed`);
