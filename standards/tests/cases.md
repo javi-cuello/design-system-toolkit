@@ -344,3 +344,9 @@ Fixture: throwaway memory folders: one in shape; one with two memory files; an i
 Assert: the folder in shape passes and each break is a finding with its file; two files pass only in the toolkit's own folder; an old date is a warning, never an error; the Stop is blocked once with the finding; --prune deletes only the unnamed, non-live, unkept session past a week, with its folder, never the memory (toolkit-standard §D 25).
 Walked 2026-11-26 for toolkit-standard 2.50.0: test-check 8 passed, test-sessions 2 passed, test-hooks 7 passed (after review: the Stop blocks only on files written and the index, once per file and rule; a session open in ~/.claude/sessions is live however idle); the frontmatter case caught a real bug (an empty description read the next line); on the machine the check found 7 findings and 3 warnings across eleven folders before the refactor.
 Runs: node tools/memory-check/test-check.mjs — "two memory files are one too many", "a dated heading"; node tools/memory-check/test-sessions.mjs — "--prune deletes the stale one"; node --test tools/claude-hooks/test-hooks.mjs — "breaks toolkit-standard §D 25 is blocked once"
+
+## S26 · A review leaves no Low behind, and a modal stays centred — WALKED 2026-11-26
+Fixture: a review round that returns one High and two Lows; a dialog pinned to the top to stop it jumping.
+Assert: the gate's message asks for the Lows too ("Lows too"); the round closes with both Lows fixed or each named under Open: with its blocker; the dialog review cites design-standard rule 21 and the fix is the largest state's height, centred.
+Walked 2026-11-26 for toolkit-standard 2.51.0 and design-standard 1.8.0: test-hooks run after the message change.
+Runs: node --test tools/claude-hooks/test-hooks.mjs; node tools/toolkit-check/check-standards.mjs.

@@ -909,7 +909,7 @@ export function stopGate(session, transcript, repos, lastMessage, cwd = process.
     // the person sees this too: short, the method in §D 13
     return `Not done yet: ${s.why.join(', ')} changed since the last review (toolkit-standard §D 13). `
       + `Run the checks, then fresh read-only reviewers (Explore, never a fork, "review" in the description) on the diff (${dirs.map(diff).join(' / ')}) and the plan at ${planPath(session)}, one area each. `
-      + `Fix what is real; repeat until no new High. End with "Measure:" (before → after), "Toolkit:", "Open:" and "Docs:" lines.${theirs(st, session)}`;
+      + `Fix what is real, Lows too (or name them under Open: with what blocks them); repeat until no new High. End with "Measure:" (before → after), "Toolkit:", "Open:" and "Docs:" lines.${theirs(st, session)}`;
   }
   // a review still running has not closed the work: launching one is not finishing (28 Oct, the gate's first run)
   if (st.owed && !st.reviewing.length) {

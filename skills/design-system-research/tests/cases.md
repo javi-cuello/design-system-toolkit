@@ -343,3 +343,10 @@ Negative: names quoted only from Polaris, Primer, Carbon and Material docs pages
 Observed: 2026-11-18 — the token-taxonomy run went beyond the cluster at the user's request and found NL Design System's written grammar, Canvas's locked status set and Codex's numeric-size rename, none of which the first six systems show.
 Traced: 2026-11-18 for 3.12.0 — to references/system-sources.md, *Token files beyond the usual cluster*.
 Walked live: 2026-11-18 on knowledge/code/token-taxonomy.md, whose intensity section cites Paste, Canvas, Nord, Telekom, Siemens iX and Helios from their built files.
+
+## A37 · A deep guide is done only when its finish line passes
+Fixture: deep mode, a draft guide holding an em dash, a "see the article on X" with no link, and a question the collection already answers.
+Assert: the dash is gone (`grep -c '[—–]'` prints 0), scan-tells exits 0, the cross-reference is a link on the other article's title that resolves, and the merge is offered with the delete asked for.
+Negative: the guide is called done with a dash left, a bare "see X", or a second article on the same question.
+Observed: the maintainer's corrections on research guides, kept in memory until 2026-11-26.
+Traced: 2026-11-26 for 3.14.0 — to SKILL.md *Quality checklist before delivering*.

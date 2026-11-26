@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.14.0 (2026-11-26): the checklist's deep-mode finish line: no dashes, scan-tells clean, cross-references linked by title, a guide merged into the one it overlaps.
 - 3.13.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I; collection rules move to references/research-collection.md, the roster becomes tables, voice greps sit in one block (§13). No rule changed.
 - 3.12.0 (2026-11-18): the roster gains *Token files beyond the usual cluster*, about 25 systems' npm token packages with what each is good for. Case A36.
 - 3.11.0 (2026-11-18): deep mode finds neighbours by identifier: the draft's backticked names and each system's term for the subject are grepped across research/, every hit an article to read. Case A35.

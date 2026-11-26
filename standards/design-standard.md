@@ -1,6 +1,6 @@
 # Design standard — how an interface the toolkit builds or audits looks, behaves and reads, in a design file and in a built page
 
-**Version 1.7.0** — history in [`changelog/design-standard.md`](changelog/design-standard.md).
+**Version 1.8.0** — history in [`changelog/design-standard.md`](changelog/design-standard.md).
 
 **Scope.** The design of any interface a project or the toolkit itself puts in front of people: a documentation site, a dashboard, a tool, a screen drawn in Figma. Five areas, each owning one kind of decision: **UX** (what and why, across screens), **Interaction** (how it responds, in the moment), **Visual** (how it looks), **Content** (what it says) and **Accessibility** (who it works for). Above them sit the principles every area answers to; below them, **application profiles** say what a kind of product (documentation, dashboards, editorial reading, forms) must specify. A rule applies to a design file and to a built page alike; each says which it can be checked on. Project-agnostic by construction, like `code-standard.md`.
 
@@ -154,6 +154,16 @@ Good interaction answers every action at once, keeps the screen still under the 
    *Applies to:* design file and built page.
 
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the review of any list or table with per-item detail.
+
+21. **A modal sits centred on both axes, and is never pinned or offset.** A dialog that would jump as its content changes keeps the centre and opens at the height of its largest state, its body scrolling inside it (`knowledge/ui/components/modal-dialog.md` *Maximum height and position*, its item "Centred without jumping").
+
+   *Why:* a dialog pinned to the top or nudged off centre for one case makes each dialog in the product sit somewhere else, and the jump it was meant to fix has a fix that keeps the centre.
+
+   *Evidence:* maintainer-decreed 2026-10-18, in every project, after a dialog was pinned to the top to stop it jumping as a field appeared. Polaris centres always ("cannot be repositioned"); the knowledge item rates the fixed-height fix moderate, and this rule settles it for the toolkit.
+
+   *Applies to:* design file and built page.
+
+   *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the review of any dialog.
 
 
 ---

@@ -19,7 +19,7 @@ description: |
 
 # Design Systems Research
 
-**Version 3.13.0** — history in CHANGELOG.md.
+**Version 3.14.0** — history in CHANGELOG.md.
 
 This skill researches how real design systems handle a topic, from what they actually ship, and turns that into practical guidance. The best evidence is in the shipping systems: their docs, token repos, migration guides and public arguments in issues, PRs and RFC threads. A blog post tells you what one person believes. A v10 to v11 migration guide tells you what a team with millions of users learned the hard way. Use it whenever someone asks how design systems do something, wants approaches compared, or asks for research or best practice on a design system topic.
 
@@ -228,6 +228,7 @@ These are hard limits:
 - Every table passed both keeping tests: it is clear from the surrounding prose alone, and removing it would lose information, not tidiness. A table that introduces its own concepts is a paragraph not yet written.
 - Balance: at least one system sits outside the Western corporate cluster or the big-team context. Consensus claims passed the lineage check. Recommendations state the constraints their evidence depends on. User-outcome research was searched for, and its absence noted if not found.
 - Quotes: at most one per source, each under 15 words.
+- Deep mode, before calling the guide done: `grep -c '[—–]'` on it prints 0, and `python3 ~/.claude/skills/humanizer/scripts/scan-tells.py <file>` exits 0. Every cross-reference is a link on the other article's title, and it resolves. A guide on a question an article already covers is merged into it. Ask before deleting the superseded one.
 - Deep mode, the collection ([research-collection.md](references/research-collection.md)): every backticked identifier the draft cites was grepped across `research/`, and each article hit was read. Neighbours were read before searching, and each one the finding touches was corrected with its `updated` day set. The guide is 4,760 words or fewer, figures and comments left out.
 - Deep mode: [deep-mode-voice.md](references/deep-mode-voice.md) was read in the same turn the guide was written. The file presented is the rewritten guide, never a raw report artifact. A cheat sheet and a standalone short version are present, and the short version works alone. The opening's list of sections is linked, grouped by part past about fifteen sections, with anchors that resolve.
 - Deep mode: voice §13's three register greps were run over the body, excluding *Sources* and *What to re-check later*. Revision narrated in the body moves to *What to re-check later*. No narrator ("I", "my") appears outside quoted titles and proper nouns. Every "you" sits in a worked case, the advice, the cheat sheet, the short version or a quotation.
