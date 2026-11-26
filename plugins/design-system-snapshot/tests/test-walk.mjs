@@ -67,6 +67,13 @@ ok("a path the walk did not reach marks nothing", markSlots({ name: "x", type: "
   ok("…and none is said inside an instance, whose hidden children Figma may not hand over, the instance itself placed",
     icon.index === 1 && icon.children.length === 1 && !("index" in icon.children[0]) && !("index" in icon.children[0].children[0]));
 }
+// 0.93.0: a nested instance the component exposes (Figma's exposed instances) is recorded as exposed, its props the
+// component's to pass on; one it does not expose records nothing
+{
+  const inst = (exposed) => ({ ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [], ...(exposed !== undefined && { isExposedInstance: exposed }) });
+  const [on, off, none] = [await walk(inst(true), 1), await walk(inst(false), 1), await walk(inst(undefined), 1)];
+  ok("an exposed nested instance is recorded as exposed; one not exposed, or an API without the field, records nothing", on.exposed === true && !("exposed" in off) && !("exposed" in none));
+}
 
 // 2026-11-25: an overridden instance Figma had not built yet handed over no children while skipInvisibleInstanceChildren
 // was on (live: [] with it on, its layer with it off, then with it on again), so a placed icon was recorded empty though

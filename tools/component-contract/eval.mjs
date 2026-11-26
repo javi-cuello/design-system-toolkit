@@ -138,6 +138,7 @@ export function mechanisms(by) {
 export const GAPS = {
   'pointer-only-part': 'a part drawn only at a pointer state inside a placed component or a slot: no markup here holds it',
   'unexposed-override': 'an override inside a placed component that no prop of it carries',
+  'exposed-unforwarded': 'an override of a nested instance the placed component exposes, whose props the markup does not forward yet',
   'pointer-words': 'words only a pointer state changes (a field\'s "Search" at focus)',
   'pointer-with': 'a placed instance\'s props only a pointer state gives',
   'pointer-modes': 'variable modes only a pointer state sets (a card\'s at focus): the markup holds modes as attributes, which no pointer state changes',
@@ -156,7 +157,7 @@ export const GAPS = {
 export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true } = {}) {
   // (a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
   const parts = partsOf(contract, settings);
-  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : mainOf && !!unexposed(contract, p.id, mainOf) ? 'unexposed-override' : null);
+  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : mainOf && unexposed(contract, p.id, mainOf) ? (unexposed(contract, p.id, mainOf) === 'exposed' ? 'exposed-unforwarded' : 'unexposed-override') : null);
   const reasons = new Map([...parts.values()].map((p) => [p.id, reasonOf(p)]).filter(([, r]) => r));
   const ids = [...reasons.keys()];
   // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them
@@ -382,6 +383,12 @@ export const isStrict = (x) => isSame(x) && !!x.assisted && !Object.keys(x.assis
    component another library holds (inside-foreign, foreign-own), which the markup marks and does not draw. */
 const FOREIGN = new Set(['inside-foreign', 'foreign-own']);
 export const isSameApartFromForeign = (x) => !!x.rows && !x.rows.length && !x.lacks && !x.predicted && !x.cut && (x.left || []).every((r) => FOREIGN.has(r.gap));
+/* A third tier, beside the other two: held back only by what the library itself holds back, another library's insides
+   and an override no prop of the placed component carries (one on an instance it exposes is ours, exposed-unforwarded,
+   and holds a component out of this tier). The user's ruling, 2026-11-26: what Figma allows and no code can express is
+   counted apart, never among the toolkit's differences. */
+const LIBRARY = new Set([...FOREIGN, 'unexposed-override']);
+export const isSameApartFromLibrary = (x) => !!x.rows && !x.rows.length && !x.lacks && !x.predicted && !x.cut && (x.left || []).every((r) => LIBRARY.has(r.gap));
 /* A component's strict count: its rows, its rows left to code and its fields taken from the design. */
 const assistedFields = (x) => Object.values(x.assisted || {}).reduce((a, l) => a + l.length, 0);
 const strictCount = (x) => x.rows.length + (x.left || []).length + assistedFields(x);
@@ -500,7 +507,7 @@ export function report(label, { legs }, fields, byCause) {
     const gaps = {};
     for (const [, x] of m) for (const r of x.left || []) gaps[r.gap] = (gaps[r.gap] || 0) + 1;
     const byGap = Object.entries(gaps).sort((p, q) => q[1] - p[1] || p[0].localeCompare(q[0])).map(([g, k]) => `${g} ${k}`).join(', ');
-    console.log(`${label} ${leg}: ${m.filter(([, x]) => isSame(x)).length} of ${all} the same; strictly ${m.length && untagged === m.length ? 'not known' : m.filter(([, x]) => isStrict(x)).length}${byRule.length ? ` (${byRule.join(', ')})` : ''}${identifiedNote(m)}${untagged ? `; ${untagged} untagged, not known strictly (read before assist tags, or the Figma leg, whose drawer is not tagged)` : ''}; ${m.filter(([, x]) => isSameApartFromForeign(x)).length} the same apart from another library's insides; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (${byGap})` : ''}${m.some(([, x]) => typeof x.predicted === 'number' && x.predicted) ? `; ${m.reduce((a, [, x]) => a + (typeof x.predicted === 'number' ? x.predicted : 0), 0)} combinations predicted, not read (in ${m.filter(([, x]) => typeof x.predicted === 'number' && x.predicted).length})` : ''}${m.some(([, x]) => x.predicted === 'unknown') ? `; ${m.filter(([, x]) => x.predicted === 'unknown').length} not saying what was predicted (read before it was said, or a self-check that failed)` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
+    console.log(`${label} ${leg}: ${m.filter(([, x]) => isSame(x)).length} of ${all} the same; strictly ${m.length && untagged === m.length ? 'not known' : m.filter(([, x]) => isStrict(x)).length}${byRule.length ? ` (${byRule.join(', ')})` : ''}${identifiedNote(m)}${untagged ? `; ${untagged} untagged, not known strictly (read before assist tags, or the Figma leg, whose drawer is not tagged)` : ''}; ${m.filter(([, x]) => isSameApartFromForeign(x)).length} the same apart from another library's insides; ${m.filter(([, x]) => isSameApartFromLibrary(x)).length} the same apart from what the library holds back; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (${byGap})` : ''}${m.some(([, x]) => typeof x.predicted === 'number' && x.predicted) ? `; ${m.reduce((a, [, x]) => a + (typeof x.predicted === 'number' ? x.predicted : 0), 0)} combinations predicted, not read (in ${m.filter(([, x]) => typeof x.predicted === 'number' && x.predicted).length})` : ''}${m.some(([, x]) => x.predicted === 'unknown') ? `; ${m.filter(([, x]) => x.predicted === 'unknown').length} not saying what was predicted (read before it was said, or a self-check that failed)` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
     for (const [c, x] of m) if (x.cut) console.log(`  ${c}: ${x.cut} combination(s) past the first ${x.combinations} not compared`);
     if (byCause) for (const [c, k, n] of m.flatMap(([c, x]) => Object.entries(causes(x.rows, x.combinations)).map(([k, n]) => [c, k, n])).sort((a, b) => b[2] - a[2])) console.log(`  ${String(n).padStart(4)}  ${c}: ${k}`);
     if (!fields) continue;
@@ -852,7 +859,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const all = opt('--projects');
   if (all && flag('--mechanisms')) {
     // read only: each project's panel, its stored readings measured as the report measures them, grouped across all
-    const legs = (opt('--legs') || 'self').split(','), by = {}, stale = [], same = [], apart = [];
+    const legs = (opt('--legs') || 'self').split(','), by = {}, stale = [], same = [], apart = [], held = [];
     for (const p of all.split(',')) {
       const w = req('../snapshot/projects.cjs').layout(null, p);
       if (w.error) { console.error(w.error); process.exit(2); }
@@ -863,12 +870,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       const old = staleContracts(w.paths.components).filter((f) => panel.includes(f));
       if (old.length) console.log(`warning: ${p}: ${old.length} official contract(s) are not what their specs derive now: run node tools/component-contract/write.cjs ${w.paths.components}`);
       const m = measure(w, panel);
-      for (const l of legs) for (const [c, x] of Object.entries(m.legs[l] || {})) if (x.rows) { by[`${p}:${c}${legs.length > 1 ? ` (${l})` : ''}`] = x.rows; if (x.stale) stale.push(`${p}:${c}`); if (isSame(x)) same.push(`${p}:${c}`); if (isSameApartFromForeign(x)) apart.push(`${p}:${c}`); }
+      for (const l of legs) for (const [c, x] of Object.entries(m.legs[l] || {})) if (x.rows) { by[`${p}:${c}${legs.length > 1 ? ` (${l})` : ''}`] = x.rows; if (x.stale) stale.push(`${p}:${c}`); if (isSame(x)) same.push(`${p}:${c}`); if (isSameApartFromForeign(x)) apart.push(`${p}:${c}`); if (isSameApartFromLibrary(x)) held.push(`${p}:${c}`); }
     }
     console.log('(readings ranked as stored: a reading whose inputs moved since is not marked here; the report says which)');
     if (stale.length) console.log(`warning: ${stale.length} stale reading(s) ranked with the rest (${stale.slice(0, 3).join(', ')}${stale.length > 3 ? ', …' : ''}): read them again for a true ranking`);
     const all2 = Object.values(by);
-    console.log(`${all2.length} measured, ${same.length} the same, ${apart.length} the same apart from another library's insides, ${all2.reduce((a, r) => a + r.length, 0)} rows`);
+    console.log(`${all2.length} measured, ${same.length} the same, ${apart.length} the same apart from another library's insides, ${held.length} apart from what the library holds back, ${all2.reduce((a, r) => a + r.length, 0)} rows`);
     console.log('finishes components  rows  mechanism (finishes: components whose every row is this one)');
     for (const g of mechanisms(by).slice(0, +(opt('--top') || 25))) console.log(`${String(g.finishes).padStart(8)} ${String(g.components).padStart(10)} ${String(g.rows).padStart(5)}  ${g.key}\n            ${g.examples.join('\n            ')}`);
     // most components carry several mechanisms, so a single one finishes few: the components nearest the same, by how

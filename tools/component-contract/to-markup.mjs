@@ -187,7 +187,11 @@ export function unexposed(c, id, mainOf) {
   const by = (key) => props.some((q) => (q[key] || []).includes(rel));
   const differs = (k) => JSON.stringify(own[k] ?? null) !== JSON.stringify(part.e[k] ?? null);
   if (differs('kind')) return 'part';
-  if (differs('component') && !by('swaps') && !varied('component')) return 'part';
+  // a nested instance the component exposes (Figma's exposed instances) hands its own props and swaps to the caller:
+  // an override of those is a prop the component declares, which the markup does not forward yet ('exposed', the
+  // toolkit's to close); one on an instance it does not expose is the library's, which no markup can pass
+  const exposed = !!own.exposed;
+  if (differs('component') && !by('swaps') && !varied('component')) return exposed ? 'exposed' : 'part';
   if (differs('content') && !by('sets') && !varied('content')) return 'field';
   // a nested instance's own props reach it through a prop the component passes down to it
   // (each prop it is given on its own: one a variant of the component sets to that value is passed by that variant's
@@ -195,7 +199,7 @@ export function unexposed(c, id, mainOf) {
   const mine = (part.e.with && typeof part.e.with === 'object') ? part.e.with : {}, theirs = (own.with && typeof own.with === 'object') ? own.with : {};
   const reached = (k) => passing.some((v) => { const w = (v.set || {})[`${rel}.with`] ?? ((v.add || {})[rel] || {}).with; return w && typeof w === 'object' && JSON.stringify(w[k]) === JSON.stringify(mine[k]); });
   const unreached = Object.keys(mine).some((k) => JSON.stringify(mine[k]) !== JSON.stringify(theirs[k] ?? null) && !reached(k));
-  if (differs('with') && (!varied('with') || unreached) && !props.some((q) => [...(q.sets || []), ...(q.swaps || [])].some((l) => l.startsWith(`${rel}/`) || l === rel))) return 'field';
+  if (differs('with') && (!varied('with') || unreached) && !props.some((q) => [...(q.sets || []), ...(q.swaps || [])].some((l) => l.startsWith(`${rel}/`) || l === rel))) return exposed ? 'exposed' : 'field';
   return false;
 }
 

@@ -66,6 +66,8 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
     // icon named Checkbox beside the Checkbox set), the key says which it is (layers.mjs keyMatches); a local one has none
     if (n.instanceOfKey) e.key = n.instanceOfKey;
     if (n.props && Object.keys(n.props).length) e.with = n.props;
+    // exposed by the component it sits in (Figma's exposed instances): its props are that component's to pass on
+    if (n.exposed) e.exposed = true;
   }
   if (n.layout === 'HORIZONTAL' || n.layout === 'VERTICAL') {
     const [main, cross] = String(n.align || 'MIN/MIN').split('/');

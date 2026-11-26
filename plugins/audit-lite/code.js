@@ -1308,7 +1308,7 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
 function snapshotFacts() {
 const __html__ = undefined;
 const FACTS = true;
-// Design system snapshot — v0.92.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.93.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -2197,7 +2197,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.92.0';
+const VERSION = '0.93.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -2559,6 +2559,8 @@ async function walk(n, depth, at, inInstance = false) {
       props[bare(k)] = cp.type === 'INSTANCE_SWAP' && typeof cp.value === 'string' ? await swapName(cp.value) : cp.value;
     }
     o.props = props;
+    // a nested instance the component exposes (Figma's exposed instances): its props are the component's to pass on
+    try { if (n.isExposedInstance) o.exposed = true; } catch (e) { /* an API without it records nothing */ }
     // an instance is its component's spec — unless something inside it was
     // overridden, in which case the overridden layers are walked so the
     // override is in the snapshot rather than hidden behind the name

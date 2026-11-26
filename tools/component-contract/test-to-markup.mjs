@@ -191,6 +191,15 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     // (and another component there, which no variant adds, is the part itself overridden)
     const other = tog({ Toggled: 'False' }); other.anatomy['item/sw'].component = 'Checkbox';
     ok('another component where the placed one adds its own only at a variant is a part no prop passes', unexposed(other, 'item/sw', (n) => (n === 'Item' ? item : null)) === 'part'); }
+  // 2026-11-26: a nested instance the placed component exposes (Figma's exposed instances) hands its props to the caller,
+  // so an override of them is the toolkit's to forward ('exposed'), never the library's; its insides stay overrides
+  { const main = (exposed) => ({ component: 'Item', props: {}, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switch', with: { Toggled: 'False' }, ...(exposed && { exposed: true }) }, 'sw/knob': { kind: 'graphic', parent: 'sw', fill: ['a'] } }, variants: [] });
+    const at = (w, fill) => ({ component: 'Toggle', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item' }, 'item/sw': { kind: 'instance', parent: 'item', component: 'Switch', with: w }, 'item/sw/knob': { kind: 'graphic', parent: 'item/sw', fill: [fill] } }, variants: [] });
+    const of = (m) => (n) => (n === 'Item' ? m : null);
+    ok('an exposed nested instance\'s prop overridden is one to forward; the same on an unexposed one is the library\'s',
+      unexposed(at({ Toggled: 'True' }, 'a'), 'item/sw', of(main(true))) === 'exposed' && unexposed(at({ Toggled: 'True' }, 'a'), 'item/sw', of(main(false))) === 'field');
+    ok('…another component swapped into an exposed instance is one to forward too',
+      (() => { const c = at({ Toggled: 'False' }, 'a'); c.anatomy['item/sw'].component = 'Checkbox'; return unexposed(c, 'item/sw', of(main(true))) === 'exposed'; })()); }
   { const date = { component: 'Date', folder: 'date', props: { value: { type: 'string', default: 'Value', figma: 'Value', sets: ['label'] }, hasValue: { type: 'boolean', default: false, figma: 'Has value' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Select a date' } }, variants: [{ when: { hasValue: true }, set: { 'label.content': '{value}' } }] };
     const out = toElement(date, 'date', { naming: ELEMENT, library: { Date: date } });
     ok('a text that holds a literal until a variant swaps a prop in draws the literal there, never the prop on both sides', /hasValue \? value : "Select a date"/.test(out) && !/hasValue \? value : value/.test(out)); }

@@ -568,6 +568,8 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const keyedSpec = { name: 'Keyed', id: '9:10', props: { Kind: ['a', 'b'] }, variants: [kv('a', { instanceOfKey: 'k1', overrides: ['fillStyleId,fills,strokes'] }), kv('b', { instanceOfKey: 'k2', fills: ['Bg/clear'], fillStyle: 'Clear/Clear', strokes: ['Line/strong'], strokeSides: [1, 1, 1, 1] })] };
   const keyed = derive(keyedSpec, ['Box'], { mains: mainsFrom({ Box: boxK }) }), Bk = derive(boxK, []);
   const atK = (kind) => placedAs({ x: { kind: 'instance', component: 'Keyed', with: { Kind: kind } } }, 'x', keyed, byComponentName([keyed, Bk])).M.box;
+  const ex = (exposed) => derive({ name: 'Ex', id: '9:11', props: {}, variants: [{ name: 'Ex', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [{ name: 'Box', type: 'INSTANCE', instanceOf: 'Box', layout: 'HORIZONTAL', sizing: 'HUG/HUG', ...(exposed && { exposed: true }), children: [] }] }] }, ['Box']).anatomy.box;
+  ok('a nested instance the snapshot records as exposed is exposed in the contract; one it does not, not', ex(true).exposed === true && !('exposed' in ex(false)));
   ok('a part walked as one key of a component is not cleared where a variant names the key the mains resolved',
     JSON.stringify(keyed.asWalked) === JSON.stringify({ box: ['Box#k1'] }) && atK('b').key === 'k2' && atK('b').fillStyle === undefined);
   // a swap target read without mains has every instance's style as walked: one with none cleared it, one with it kept it

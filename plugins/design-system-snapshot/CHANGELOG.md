@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.93.0] - 2026-11-26
+### Added
+- **A nested instance the component exposes is recorded as `exposed`** (Figma's exposed instances): its props are the component's to pass on, so the round trip counts an override of them as the toolkit's to forward, and an override of an instance the component does not expose as the library's own. No snapshot recorded exposure before. Takes effect with the next snapshot.
+
 ## [0.92.0] - 2026-11-26
 ### Changed
 - **Each variant of a set is rendered as an asset only in a file its project lists as an asset library** (the `icons` role without `components`, which the router now answers as `asset` beside `kind`). It was guessed from an icon page, so a components library with one rendered all 4 778 of its variants at 2x beside its defaults and crashed Figma at the end of the walk. A file snapshotted with no router renders each set's default alone. Takes effect with the next snapshot.
