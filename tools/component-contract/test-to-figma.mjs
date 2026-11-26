@@ -521,17 +521,27 @@ delete globalThis.figma;
     ok('a lone glyph\'s opacity is the instance\'s, times the instance\'s own; another opacity differs',
       roundTrip(held({}, { opacity: 0.38 }), held({ background: 'Icon/strong', opacity: 0.38 }, null)).rows.length === 0
       && roundTrip(held({ opacity: 0.38 }, { opacity: 0.38 }), held({ background: 'Icon/strong', opacity: 0.144 }, null)).rows.length === 0
-      && roundTrip(held({}, { opacity: 0.38 }), code('Icon/strong')).rows.length === 1);    // a stroke of no width on every side draws nothing: no stroke, as a reading reads none; one side drawn stays a stroke
+      && roundTrip(held({}, { opacity: 0.38 }), code('Icon/strong')).rows.length === 1);
+    // a stroke of no width on every side draws nothing: no stroke, as a reading reads none; one side drawn stays a stroke
     const box = (b) => ic({ frame: { kind: 'container', parent: 'root', ...(b && { border: b }) } });
     ok('a stroke of no width on every side is no stroke; one with a side drawn differs from none',
       roundTrip(box({ color: 'C/line', sides: { top: 0, end: 0, bottom: 0, start: 0 }, align: 'center' }), box()).rows.length === 0
       && roundTrip(box({ color: 'C/line', sides: { top: 1, end: 0, bottom: 0, start: 0 }, align: 'center' }), box()).rows.length === 1);
+    // (and per combination: a variant that draws one side over the base's sides of none is a stroke there, a row)
+    const zero = { color: 'C/line', sides: { top: 0, end: 0, bottom: 0, start: 0 }, align: 'center' };
+    const shown = { ...box(zero), props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, variants: [{ when: { on: true }, set: { 'frame.border.sides': { top: 1, end: 0, bottom: 0, start: 0 } } }] };
+    const plain = { ...box(), props: shown.props };
+    const vr = roundTrip(shown, plain).rows;
+    ok('…a variant that draws one side over sides of none is a stroke there: a row at that combination alone', vr.length === 1 && vr[0].at.startsWith('frame.border') && vr[0].in === 1, JSON.stringify(vr));
     // a lone glyph painted with nothing (its fills emptied, behind its swap's other layer) is the instance's no colour:
     // code's transparent, read as none; one the code colours stays a row, and so does such a glyph in a held component
     const bare = ic({ icon: { kind: 'instance', parent: 'root', component: 'Icon/house' }, 'icon/vector': { kind: 'graphic', parent: 'icon' } });
     ok('a lone glyph painted with nothing is its icon\'s no colour; an icon code colours differs; one in a held component stays',
       roundTrip(bare, code()).rows.length === 0 && roundTrip(bare, code('Icon/strong')).rows.length >= 1
       && roundTrip(bare, code(), { mains: (n) => (n === 'Icon/house' ? ic({}) : null) }).rows.some((r) => r.at === 'icon/vector'));
+    // (nor one placed inside another instance, where code does not reach it to colour it: the one rule, rules.mjs bareGlyph)
+    const nest = (g) => ic({ card: { kind: 'instance', parent: 'root', component: 'Card' }, 'card/icon': { kind: 'instance', parent: 'card', component: 'Icon/house' }, ...(g && { 'card/icon/vector': { kind: 'graphic', parent: 'card/icon' } }) });
+    ok('…and one inside an icon placed inside another instance stays', roundTrip(nest(true), nest(false)).rows.some((r) => r.at === 'card/icon/vector'));
   }
   {
     const at = (e) => ({ contract: 1, component: 'Chip', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/x', ...e } }, variants: [] });

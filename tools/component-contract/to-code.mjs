@@ -784,7 +784,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       }
       // (one painted with nothing in an icon the library does not hold, which code draws by name in its colour: none,
       // transparent, or it takes the colour around it; rules.mjs bareGlyph)
-      else if (a[e.parent] && a[e.parent].kind === 'instance' && !inside(e.parent) && !mains(a[e.parent].component, a[e.parent].key) && bareGlyph(a[e.parent], e, !Object.keys(a).some((k) => k !== id && k.startsWith(`${e.parent}/`)))) extra.push([e.parent, [['color', 'transparent']]]);
+      else if (bareGlyph(a, e.parent, mains)) extra.push([e.parent, [['color', 'transparent']]]);
       // an override inside a placed component this library holds (derive keeps only a part that differs from that
       // component drawn at the instance's props): what it changes there, on that component's own part, reached through
       // the instance (chain); at any depth of placing (each placed component names its own parts down to the next it holds), a part the placed component no longer has said, not guessed

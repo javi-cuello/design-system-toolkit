@@ -91,10 +91,18 @@ export const sizeToFigma = (w) => (SIZE_ROWS.find((r) => r[0] === w) || [])[1];
    folds it there, with the colour style it is painted with (a Figma name for that colour, which code does not say). */
 export const GLYPH_WORDS = new Set(['kind', 'parent', 'name', 'order', 'background', 'fillStyle', 'opacity']);
 export const heldGlyph = (holder, glyph, lone) => !!lone && !!holder && !!glyph && glyph.kind === 'graphic' && glyph.background != null && holder.background == null && Object.keys(glyph).every((k) => GLYPH_WORDS.has(k));
-/* The same glyph painted with nothing (its fills emptied: a glyph kept hidden behind its swap's other layer): code
-   colours its instance transparent, which a reading reads as no colour; the comparison drops the glyph, the instance
-   saying none on either side. */
-export const bareGlyph = (holder, glyph, lone) => !!lone && !!holder && !!glyph && glyph.kind === 'graphic' && glyph.background == null && glyph.fillStyle == null && holder.background == null && Object.keys(glyph).every((k) => GLYPH_WORDS.has(k));
+/* The same glyph painted with nothing (its fills emptied: a glyph kept hidden behind its swap's other layer), the one
+   rule to-code and to-figma's comparison share: instance `hid` of anatomy `a`, of a component the library does not hold
+   (`mains`, none given: none held) and placed inside no other instance, whose one layer is such a glyph, saying nothing
+   but where it is, inside an instance with no colour of its own. Code colours that instance transparent, which a reading
+   reads as no colour; the comparison drops the glyph, the instance saying none on either side. */
+export const bareGlyph = (a, hid, mains = null) => {
+  const holder = a[hid];
+  if (!holder || holder.kind !== 'instance' || holder.background != null || (mains && mains(holder.component, holder.key))) return false;
+  for (let p = holder.parent; p; p = (a[p] || {}).parent) if ((a[p] || {}).kind === 'instance') return false;
+  const inside = Object.keys(a).filter((k) => k.startsWith(`${hid}/`)), glyph = inside.length === 1 && a[inside[0]].parent === hid ? a[inside[0]] : null;
+  return !!glyph && glyph.kind === 'graphic' && glyph.background == null && glyph.fillStyle == null && Object.keys(glyph).every((k) => GLYPH_WORDS.has(k));
+};
 /* Its opacity on the instance: one layer in a group shows at the group's opacity times its own, so the instance's times
    the glyph's, to the three places a reading keeps (from-code: 0.38 by 0.38 is 0.144); the glyph's own where the
    instance has none; undefined where the glyph has none. */
