@@ -282,6 +282,11 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const only = (m) => ({ ...lk([]), variants: [{ when: { state: 'press', blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', ...(m && { modes: m }) } } }] });
     const op = roundTrip(only(null), only({ theme: 'link' }), { layoutUnit: true }).rows.find((y) => y.at.startsWith('icon.modes'));
     ok('…but a part only the press draws there is the press\'s, its fields with it', op && op.pointer === true, op);
+    // (and a field only the comparison's own forms hold, missing from the stored anatomy, stays the press's: a glyph's
+    // colour said on its instance; review)
+    const gl = (col) => ({ ...lk([]), variants: [{ when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' }, 'icon/v': { kind: 'graphic', parent: 'icon', background: 'a' } } }, { when: { state: 'press', blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' }, 'icon/v': { kind: 'graphic', parent: 'icon', background: col } } }] });
+    const gr = roundTrip(gl('b'), gl('c'), { layoutUnit: true }).rows.filter((y) => y.at.startsWith('icon'));
+    ok('…and a field only the comparison forms (a glyph\'s colour on its instance) stays the press\'s', gr.length > 0 && gr.every((y) => y.pointer === true), gr);
     ok('…never where another state there gives the same value at the row (a sibling key the press changes, or the same value)', sr && sr.pointer === undefined && same && same.pointer === undefined, [sr, same]);
     ok('…the last variant to touch it decides, as expand() layers them, a combination last', (!laterSet || laterSet.pointer === undefined) && (!laterAdd || laterAdd.pointer === undefined) && combo && combo.pointer === true, [laterSet, laterAdd, combo]); }
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());
