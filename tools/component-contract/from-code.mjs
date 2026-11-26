@@ -2701,6 +2701,8 @@ async function main() {
           delete x.paint;
           if (named.length) x.background = named.length === 1 ? named[0] : named;
         } else if (x.background) x.background = await tok('background', x.background, `${id}.background`, ['background-color', 'background']);
+        // (a glyph coloured with nothing, transparent, paints nothing: no colour, as Figma's glyph with its fills emptied)
+        if (clearValue(x.icon)) delete x.icon;
         if (x.icon) {
           x.background = await tok('icon', x.icon, `${id}.icon`, ['fill', 'color']); delete x.icon;
           // a glyph whose colour the code sets on it, in any render: else it is the colour around it (asIcon)

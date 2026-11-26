@@ -521,7 +521,12 @@ delete globalThis.figma;
     ok('a lone glyph\'s opacity is the instance\'s, times the instance\'s own; another opacity differs',
       roundTrip(held({}, { opacity: 0.38 }), held({ background: 'Icon/strong', opacity: 0.38 }, null)).rows.length === 0
       && roundTrip(held({ opacity: 0.38 }, { opacity: 0.38 }), held({ background: 'Icon/strong', opacity: 0.144 }, null)).rows.length === 0
-      && roundTrip(held({}, { opacity: 0.38 }), code('Icon/strong')).rows.length === 1);
+      && roundTrip(held({}, { opacity: 0.38 }), code('Icon/strong')).rows.length === 1);    // a lone glyph painted with nothing (its fills emptied, behind its swap's other layer) is the instance's no colour:
+    // code's transparent, read as none; one the code colours stays a row, and so does such a glyph in a held component
+    const bare = ic({ icon: { kind: 'instance', parent: 'root', component: 'Icon/house' }, 'icon/vector': { kind: 'graphic', parent: 'icon' } });
+    ok('a lone glyph painted with nothing is its icon\'s no colour; an icon code colours differs; one in a held component stays',
+      roundTrip(bare, code()).rows.length === 0 && roundTrip(bare, code('Icon/strong')).rows.length >= 1
+      && roundTrip(bare, code(), { mains: (n) => (n === 'Icon/house' ? ic({}) : null) }).rows.some((r) => r.at === 'icon/vector'));
   }
   {
     const at = (e) => ({ contract: 1, component: 'Chip', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/x', ...e } }, variants: [] });

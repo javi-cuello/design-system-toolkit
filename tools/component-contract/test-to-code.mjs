@@ -592,6 +592,12 @@ else console.log('skip: no stored contracts on this machine');
   // (only a glyph the comparison folds up: one that also overrides its size keeps its opacity to itself, said as it is)
   const sized = { ...chip, anatomy: { ...chip.anatomy, 'icon/vector': { ...chip.anatomy['icon/vector'], width: 12 } } };
   ok('a glyph that overrides more than its colour and opacity gives the instance no opacity', !/opacity: 0\.144;/.test(toCss(sized, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
+  // a lone glyph painted with nothing (its fills emptied) in an icon the library does not hold: the icon transparent,
+  // where it would take the colour around it; one a variant paints takes that colour there
+  const bare = { ...chip, variants: [{ when: { off: true }, set: { 'icon/vector.background': 'C/on' } }], anatomy: { ...chip.anatomy, 'icon/vector': { kind: 'graphic', parent: 'icon' } } };
+  const bareSheet = toCss(bare, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('a lone glyph painted with nothing makes its icon transparent; a variant that paints it colours it there',
+    /\.ds-chip__icon \{[^}]*color: transparent;/.test(bareSheet) && /data-off[^{]*> \.ds-chip__icon \{[^}]*color: var\(/.test(bareSheet), bareSheet);
 }
 
 // an icon placed inside a placed component, which a variant recolours there (Carbon's disabled Toggletip icon): the

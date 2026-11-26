@@ -91,6 +91,10 @@ export const sizeToFigma = (w) => (SIZE_ROWS.find((r) => r[0] === w) || [])[1];
    folds it there, with the colour style it is painted with (a Figma name for that colour, which code does not say). */
 export const GLYPH_WORDS = new Set(['kind', 'parent', 'name', 'order', 'background', 'fillStyle', 'opacity']);
 export const heldGlyph = (holder, glyph, lone) => !!lone && !!holder && !!glyph && glyph.kind === 'graphic' && glyph.background != null && holder.background == null && Object.keys(glyph).every((k) => GLYPH_WORDS.has(k));
+/* The same glyph painted with nothing (its fills emptied: a glyph kept hidden behind its swap's other layer): code
+   colours its instance transparent, which a reading reads as no colour; the comparison drops the glyph, the instance
+   saying none on either side. */
+export const bareGlyph = (holder, glyph, lone) => !!lone && !!holder && !!glyph && glyph.kind === 'graphic' && glyph.background == null && glyph.fillStyle == null && holder.background == null && Object.keys(glyph).every((k) => GLYPH_WORDS.has(k));
 /* Its opacity on the instance: one layer in a group shows at the group's opacity times its own, so the instance's times
    the glyph's, to the three places a reading keeps (from-code: 0.38 by 0.38 is 0.144); the glyph's own where the
    instance has none; undefined where the glyph has none. */

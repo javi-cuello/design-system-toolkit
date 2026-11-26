@@ -39,7 +39,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
-import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, looksLikeValue, CLEARED, negative } from './rules.mjs';
+import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, bareGlyph, looksLikeValue, CLEARED, negative } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 import { turnedParts } from './to-code.mjs';
 import { geometry } from './geometry.mjs';
@@ -114,7 +114,7 @@ function pinned(x, other, design) {
    the instance (an svg filled with currentColor). Compared as the instance's: the glyph's colour moves up to an
    instance that has none, and the glyph, whose shape is its component's, goes. Only where the instance holds that one
    graphic and nothing else. Its opacity goes up with it, times the instance's own (rules.mjs heldOpacity). */
-function glyph(x) {
+function glyph(x, mains = null) {
   if (!x) return x;
   const out = { ...x };
   for (const [id, e] of Object.entries(x)) {
@@ -122,6 +122,9 @@ function glyph(x) {
     const inside = Object.keys(x).filter((k) => k.startsWith(`${id}/`));
     const kid = inside.length === 1 && x[inside[0]].parent === id ? x[inside[0]] : null;
     // only a colour (and its opacity) moves up: a glyph that also overrides its size, or an instance with a colour of its own, is compared as it is (rules.mjs heldGlyph)
+    // (one painted with nothing in an icon the library does not hold goes, said as its instance's no colour: rules.mjs
+    // bareGlyph)
+    if (bareGlyph(e, kid, !!kid) && !(mains && mains(e.component, e.key))) { delete out[inside[0]]; continue; }
     if (!heldGlyph(e, kid, !!kid)) continue;
     const opacity = heldOpacity(e, kid);
     out[id] = { ...e, background: kid.background, ...(kid.fillStyle && { fillStyle: kid.fillStyle }), ...(opacity !== undefined && { opacity }) };
@@ -466,7 +469,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     const atC = (library.variants || []).filter((v) => applies(v.when, c));
     byPointer = (at) => { const ss = atC.filter((v) => at in (v.set || {})); return ss.length > 0 && ss.every((v) => pointerAt(v.when)); };
     // the named equivalences, each the same on both sides
-    const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
+    const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))), mains)), mains));
     const A = expanded[i], B = expand(drawn, { ...variantDefaults(drawn), ...theirs });
     // a host kept whole over the whole contract (the reading keeps it so in every combination) that this combination
     // may hide no layer in: derive's own test of a hidden layer (ownInsides `found`: a part of its component not drawn
