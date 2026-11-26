@@ -549,15 +549,17 @@ function everPulls(c) {
 }
 
 /* The nearest placed instance a part is inside, where none above it sits in a slot: the component whose own part it is
-   (one placed inside another is reached through both: hostIn, chain). `sample`: one in a slot's sample too, a slot
-   above the instance (what this component draws in its own slot while the caller passes nothing), never one below it. */
+   (one placed inside another is reached through both: hostIn, chain). `sample`: one in a slot's sample too, a slot of
+   this component's own above the instance (what it draws there while the caller passes nothing), never one below the
+   instance nor one a placed instance holds (what this component puts in that one's slot: its fill's). */
 function hostOf(a, id, sample = false) {
   let host = null;
   if ((a[(a[id] || {}).parent] || {}).kind === 'slot') return null;
+  const own = (slot) => { for (let q = (a[slot] || {}).parent; q; q = (a[q] || {}).parent) if ((a[q] || {}).kind === 'instance') return false; return true; };
   for (let p = a[id] && a[id].parent; p; p = a[p] && a[p].parent) {
     if (!a[p]) return null;
     if (sample && a[p].kind === 'instance' && !host) host = p;
-    if ((a[a[p].parent] || {}).kind === 'slot' && !(sample && host)) return null;
+    if ((a[a[p].parent] || {}).kind === 'slot' && !(sample && host && own(a[p].parent))) return null;
     if (a[p].kind === 'instance' && !host) host = p;
   }
   return host;

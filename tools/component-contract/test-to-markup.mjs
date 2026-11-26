@@ -13,7 +13,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { toReact, toElement, toSnippet, toGallery, toParity, toStories, partsOf, propsOf, filesFor, namingFault, partSelector, storyIdOf, storybookOf, BANNER, DOM, unexposed } from './to-markup.mjs';
 import { siteFiles, serveSite } from './site.mjs';
-import { combinations, toCss, namer, drawn, entryOf } from './to-code.mjs';
+import { combinations, toCss, namer, drawn, entryOf, sampleSelector } from './to-code.mjs';
 import { expand, variantDefaults } from './layers.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { findChrome, launch, newPage, attach, navigate, forceState } from '../shared/cdp.mjs';
@@ -520,7 +520,14 @@ ok('and to-code styles that input and its placeholder by the same selectors: the
   const lib = { Avatar: { ...avatar, folder: 'avatar' }, Card: { ...card, folder: 'card' } };
   const m = toParity(card, 'card', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers;
   ok('a part inside a placed component in a slot\'s sample is mapped under that instance by its own name, never skipped',
-    m['Content > Row > Avatar > Disc'] === 'ds-card > [data-part="content"] > [data-part="row"] > [data-part="avatar"] > [data-part="disc"]', JSON.stringify(m)); }
+    m['Content > Row > Avatar > Disc'] === 'ds-card > [data-part="content"] > [data-part="row"] > [data-part="avatar"] > [data-part="disc"]', JSON.stringify(m));
+  // (a slot a placed instance holds is that one's: what sits in it is its fill, never this one's sample)
+  const list = { contract: 1, component: 'List', props: { items: { type: 'slot', figma: 'Items' } }, anatomy: { root: { kind: 'container' }, items: { kind: 'slot', parent: 'root', order: 0, content: '{items}' } }, variants: [] };
+  const page = { contract: 1, component: 'Page', props: {}, anatomy: { root: { kind: 'container' }, list: { kind: 'instance', parent: 'root', component: 'List', order: 0 },
+    'list/items': { kind: 'slot', parent: 'list', order: 0 }, 'list/items/avatar': { kind: 'instance', parent: 'list/items', component: 'Avatar', order: 0 }, 'list/items/avatar/disc': { kind: 'graphic', parent: 'list/items/avatar', order: 0 } }, variants: [] };
+  const lib2 = { Avatar: lib.Avatar, List: { ...list, folder: 'list' }, Page: { ...page, folder: 'page' } };
+  ok('…never one inside a placed component a placed instance\'s slot holds: that stays its fill\'s',
+    sampleSelector(page, namer('page', ELEMENT), 'list/items/avatar/disc', (n) => lib2[n] || null, lib2) === null && sampleSelector(card, namer('card', ELEMENT), 'content/row/avatar/disc', (n) => lib[n] || null, lib) !== null); }
 // whether a placed component is held is one question, asked of the library the markup is given, by the markup and the
 // sheet alike: never the sheet's own lookup, which is case-blind and holds no name two contracts share. Two contracts of
 // one name (the library keeps one) and two names that differ only in case each read the same on both sides
