@@ -238,7 +238,8 @@ export const textFromCss = (rows, own) => (rows.find((r) => word(own[r[1]]).spli
 // width or a set one; at a filled width (`fills`) its width is the room's, not its words')
 export const writtenNowrap = (authored, loose = false, fills = false) => !loose && (/^\s*nowrap\s*$/.test(authored || '') || (!fills && /^\s*pre\s*$/.test(authored || '')));
 // (`grows`: its minimum height is its words' own, as css.mjs writes a text that grows down at a height the design states)
-export const growsDown = (minAuthored) => /^\s*(fit-content|max-content|min-content)\s*$/.test(minAuthored || '');
+// (fit-content alone, as css.mjs writes it: a max- or min-content minimum is said for other reasons)
+export const growsDown = (minAuthored) => /^\s*fit-content\s*$/.test(minAuthored || '');
 export function autoResizeOf(width, height, nowrap = false, grows = false) {
   if (width === 'hug' || nowrap) return 'width_and_height';
   if (height === 'hug' || grows) return 'height';

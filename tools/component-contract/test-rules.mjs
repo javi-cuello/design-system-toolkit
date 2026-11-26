@@ -106,7 +106,7 @@ ok('a text written never to wrap grows both ways whatever size it states (a WIDT
   ok('a text that grows down at a height it states all the same keeps that height, its minimum its words\' own, and reads back as growing down; a fixed one, or one cut to lines, does not',
     d({ autoResize: 'height' })['min-block-size'] === 'fit-content' && d({ autoResize: 'height' })['block-size'] !== undefined && autoResizeOf(12, 12, false, growsDown(d({ autoResize: 'height' })['min-block-size'])) === 'height'
     && d({ autoResize: 'none' })['min-block-size'] === undefined && d({ autoResize: 'height', maxLines: 2, truncate: true })['min-block-size'] === undefined && d({ autoResize: 'height', height: 'hug' })['min-block-size'] === undefined
-    && autoResizeOf(12, 12, false, growsDown('0.75rem')) === 'none'); }
+    && autoResizeOf(12, 12, false, growsDown('0.75rem')) === 'none' && !growsDown('max-content') && !growsDown('min-content')); }
 {
   const styles = ['Label/md', 'Label/md-medium', 'Body/md'];
   const own = Object.fromEntries(tokenNames.textStyle('Label/md-medium'));

@@ -842,12 +842,13 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       }
       // (or one that states no number, a hug: the size a part of its own placed by both its edges gives, its near offset,
       // its size and its far offset, as derive records them for a part centred or pinned to both edges at the design's size)
-      const kid = Object.values(a).find((x) => x && x.parent === pid && x.absolute && typeof x.absolute[near] === 'number' && typeof x.absolute[far] === 'number' && typeof x[k] === 'number');
+      const kid = Object.values(a).find((x) => x && x.parent === pid && x.absolute && typeof x.absolute[near] === 'number' && typeof x.absolute[far] === 'number' && typeof x[k] === 'number' && !(x.whileEmpty || []).includes(k));
       if (kid) return +(kid.absolute[near] + kid[k] + kid.absolute[far]).toFixed(2);
       // (else, hugging what its auto layout holds, every number: its padding, and its parts in the flow, summed along
       // with the gaps between them, the largest across)
       const l = p.layout, flow = Object.values(a).filter((x) => x && x.parent === pid && x.position !== 'absolute' && !x.absolute);
-      if (p[k] !== 'hug' || !l || !l.direction || !flow.length) return null;
+      // (never one that wraps: its lines, not one, set its size)
+      if (p[k] !== 'hug' || !l || !l.direction || l.wrap || !flow.length) return null;
       const along = (l.direction === 'row') === (k === 'width'), pad = l.padding || {}, ends = k === 'width' ? [pad.start, pad.end] : [pad.top, pad.bottom];
       const nums = [...flow.map((x) => x[k]), ...ends.map((v) => v ?? 0), ...(along && flow.length > 1 ? [l.gap ?? 0] : []), p[k === 'width' ? 'minWidth' : 'minHeight'] ?? 0];
       if (!nums.every((v) => typeof v === 'number') || (along && l.align === 'space-between' && flow.length > 1)) return null;
