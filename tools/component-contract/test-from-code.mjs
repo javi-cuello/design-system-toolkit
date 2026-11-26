@@ -254,6 +254,7 @@ ok('a slot\'s stand-in is one word per prop, which no component draws', slotMark
 // a placed component's flag, as markup that writes every flag as a string carries it
 ok('a flag written "false" is off, and one written "true", bare or empty is on', !carries({ selected: 'false' }, 'selected', true) && carries({ selected: 'false' }, 'selected', false) && carries({ selected: 'true' }, 'selected', true) && carries({ selected: '' }, 'selected', true) && carries({ 'data-selected': 'true' }, 'selected', true) && carries({}, 'selected', false) && !carries({}, 'selected', true));
 ok('an arg by its own attribute, else by a data attribute holding its value, never the walk\'s own marks', carries({ size: 'sm' }, 'size', 'sm') && !carries({ size: 'md' }, 'size', 'sm') && carries({ 'data-hierarchy': 'primary' }, 'variant', 'primary') && !carries({ 'data-figma-id': 'primary' }, 'variant', 'primary'));
+ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that attribute, as its markup writes it', carries({ type: 'revealed' }, 'typeOption', 'revealed') && !carries({ type: 'revealed' }, 'typeOption', 'swipe-action') && carries({ 'type-option': 'x' }, 'typeOption', 'x'));
 // a placed component's layer mapped to its root inside its host: the host takes the id; a layer inside it stays
 {
   const { elementOfLayer } = await import('./from-code.mjs');

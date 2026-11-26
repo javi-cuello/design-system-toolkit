@@ -675,7 +675,10 @@ export function usageIn(contracts) {
 export function carries(attrs, k, v) {
   // (an arg as markup spells an attribute: isChecked as is-checked, the house's own words for a placed web component)
   const kk = String(k).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-  const own = attrs[k] ?? attrs[`data-${k}`] ?? attrs[`aria-${k}`] ?? (kk !== k ? attrs[kk] ?? attrs[`data-${kk}`] : undefined);
+  // (and an arg to-markup renamed off an HTML attribute's name, typeOption for Type, which its markup still writes under
+  // that attribute: type)
+  const renamed = /^([a-z]+)Option$/.exec(String(k));
+  const own = attrs[k] ?? attrs[`data-${k}`] ?? attrs[`aria-${k}`] ?? (kk !== k ? attrs[kk] ?? attrs[`data-${kk}`] : undefined) ?? (renamed ? attrs[renamed[1]] : undefined);
   if (v === true) return own != null && own !== 'false';
   if (v === false) return own == null || own === 'false';
   if (own != null) return own === String(v);
