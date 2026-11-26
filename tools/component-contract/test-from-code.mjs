@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -156,6 +156,8 @@ ok('a percentage radius is of the box, not pixels: 50% on a 120px avatar is a fu
 ok('the fullest radius is the largest corner token, never a larger one open to every field (a font weight of 400)',
   fullestOf([{ name: 'Font weight', value: 400, scopes: ['ALL_SCOPES'] }, { name: 'Radius/Full', value: 9999, scopes: ['CORNER_RADIUS'] }, { name: 'Radius/M', value: 8, scopes: ['CORNER_RADIUS'] }].map((t, i) => (i === 1 ? { ...t, value: 200 } : t))) === 'Radius/Full'
   && fullestOf([{ name: 'A', value: 4 }, { name: 'B', value: 12 }]) === 'B' && fullestOf([]) === null);
+ok('a corner rounder than its box is the token the code writes there (a small radius on a smaller box), else the fullest',
+  fullCorner('Radius/S', 'Radius/Full') === 'Radius/S' && fullCorner(6, 'Radius/Full') === 'Radius/Full' && fullCorner(6, null) === null);
 
 // a governed mapping, read with nothing opened: the engine's expanded target and the component's bridge
 {

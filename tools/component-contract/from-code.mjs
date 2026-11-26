@@ -533,6 +533,10 @@ export function cornersOf(cs, w, h, corner) {
 /* A library's fullest radius: the largest number the radius field offers, of the tokens scoped to corners where any is
    (a token open to every field, Atlassian's Body S font weight at 400, is offered too, and is no corner). Tested by
    test-from-code.mjs. */
+/* A corner rounder than its box (cornerOf's full) as a token: the one the code's own var names there, as written (a small
+   radius on a box less than twice it is that radius, never the fullest); else, where the code names a radius token at all,
+   the library's fullest (`fullest`, null where it names none). `named`: the token read from the code's var, or its raw value. */
+export const fullCorner = (named, fullest) => (typeof named === 'string' ? named : fullest);
 export function fullestOf(offered) {
   const ns = (offered || []).filter((t) => typeof t.value === 'number'), scoped = ns.filter((t) => (t.scopes || []).includes('CORNER_RADIUS'));
   const r = (scoped.length ? scoped : ns).sort((a, b) => b.value - a.value)[0];
@@ -2561,6 +2565,9 @@ async function main() {
         for (const p of ['border-top-left-radius', 'border-radius']) if ((await authoredVars(L.tab, styledAt(id), after ? `${p}::after` : p, styles)).length) return fullest();
         return null;
       };
+      // a corner rounder than its box (full) that the code writes with a token of its own (a small radius on a box less
+      // than twice it) is that token, as written; only a corner no token of its own names is the library's fullest
+      const roundOf = async (v, id, css) => fullCorner(await tok('radius', v, `${id}.radius`, css, null, false), await fullRadius(id));
       for (const e of raw) {
         const { id, under: u, nameBorrowed, ...x } = e;
         if (nameBorrowed) A.add('design-name-inside-placed', `anatomy.${id}.name`);
@@ -2668,8 +2675,8 @@ async function main() {
         if (Array.isArray(x.radius)) {
           // a radius per corner (cornersOf), each corner its own token as to-code writes each (css.mjs), a square one 0
           const CORNER = ['border-top-left-radius', 'border-top-right-radius', 'border-bottom-right-radius', 'border-bottom-left-radius'];
-          x.radius = await Promise.all(x.radius.map(async (c, i) => (typeof c === 'object' ? (await fullRadius(id)) || c.radius : c === 0 ? 0 : await tok('radius', c, `${id}.radius`, [CORNER[i], 'border-radius']))));
-        } else if (x.radius) x.radius = x.full ? (await fullRadius(id)) || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
+          x.radius = await Promise.all(x.radius.map(async (c, i) => (typeof c === 'object' ? (await roundOf(c.radius, id, [CORNER[i], 'border-radius'])) || c.radius : c === 0 ? 0 : await tok('radius', c, `${id}.radius`, [CORNER[i], 'border-radius']))));
+        } else if (x.radius) x.radius = x.full ? (await roundOf(x.radius, id, ['border-top-left-radius', 'border-radius'])) || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
         if (x.clipBox) { const d = figmaContract && [figmaContract.anatomy || {}, ...(figmaContract.variants || []).map((v) => v.add || {})].map((a) => a[id]).find(Boolean), p = pathsOfBox(x.clipBox, d && d.kind); if (p) x.paths = p; delete x.clipBox; }
