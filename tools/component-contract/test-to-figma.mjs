@@ -259,6 +259,10 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const laterSet = after({ when: { blank: true }, set: { 'icon.modes': null } }), laterAdd = after({ when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' } } });
     const combo = roundTrip(lk([{ ...pressAdd[0], combination: true }, { when: { blank: true }, set: { 'icon.modes': { theme: 'link' } } }]), lk([]), { layoutUnit: true }).rows.find((y) => y.at === 'icon.modes');
     ok('a field on a part a pointer state\'s variant adds again, last, is that state\'s; one another state sets is not', r && r.at === 'icon.modes' && r.pointer === true && n && n.pointer === undefined, [r, n]);
+    // (and a pointer state's set, last, over another state's other value: a link's colour mode at press over its rest one)
+    const md = (press) => ({ ...lk([]), anatomy: { root: { kind: 'container' } }, variants: [{ when: { blank: true }, set: { 'root.modes': { c: 'link' } } }, ...(press ? [{ when: { state: 'press', blank: true }, set: { 'root.modes': { c: press } } }] : [])] });
+    const pm = roundTrip(md('link-pressed'), md(null), { layoutUnit: true }).rows.find((y) => y.at.startsWith('root.modes'));
+    ok('a pointer state\'s set, last, over another state\'s other value is that state\'s row', pm && pm.pointer === true, pm);
     ok('…the last variant to touch it decides, as expand() layers them, a combination last', (!laterSet || laterSet.pointer === undefined) && (!laterAdd || laterAdd.pointer === undefined) && combo && combo.pointer === true, [laterSet, laterAdd, combo]); }
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());
   { // a placed instance's key is compared only where both sides hold one: a reading from code holds none

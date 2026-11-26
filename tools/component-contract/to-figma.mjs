@@ -503,7 +503,12 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
       const ss = atC.filter((v) => touches(v, at));
       if (ss.length > 0 && ss.every((v) => pointerAt(v.when))) return true;
       const el = at.split('.')[0], last = layered.filter((v) => (v.add || {})[el] || touches(v, at)).pop();
-      return !!last && !!(last.add || {})[el] && pointerAt(last.when);
+      if (!last || !pointerAt(last.when)) return false;
+      if ((last.add || {})[el]) return true;
+      // (a pointer state's set, last, whose value no other state there gives: a link's colour mode at press, over the one
+      // it has at rest; where another state gives the same, the markup holds it through that one)
+      const said = (v) => JSON.stringify(Object.entries(v.set || {}).filter(([k]) => k === at || at.startsWith(`${k}.`) || k.startsWith(`${at}.`)));
+      return !ss.some((v) => !pointerAt(v.when) && said(v) === said(last));
     };
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(unstroked(room(x)))))))), mains)), mains));

@@ -1984,6 +1984,12 @@ function unturn(root) {
   return { turned, restore: () => { for (const [n, css] of back) n.style.cssText = css; } };
 }
 
+/** The states the code forces (pseudo classes) and those it sets as a prop, read back as one interaction prop, named as
+ * the design names its interaction axis: a library's `state` as much as the house's State (2026-11-26). */
+export function stateProp(forced, setStates, design) {
+  const figma = design && (Object.values(design.props || {}).find((q) => q.role === 'interaction') || {}).figma;
+  return { type: 'enum', values: ['rest', ...forced, ...setStates], default: 'rest', role: 'interaction', pointer: forced, code: '__state', ...(figma && { figma }) };
+}
 async function main() {
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
@@ -2114,7 +2120,7 @@ async function main() {
     const asArg = stateKey && props[stateKey] && props[stateKey].type === 'enum' ? props[stateKey] : null;
     const setStates = asArg ? asArg.values.filter((v) => v !== asArg.default && v !== 'rest' && !(v in L.pseudoOf)) : [];
     if (asArg && Object.keys(L.pseudoOf).length) { L.stateArg = asArg.code; delete props[stateKey]; }
-    if (Object.keys(L.pseudoOf).length) props.state = { type: 'enum', values: ['rest', ...Object.keys(L.pseudoOf), ...setStates], default: 'rest', role: 'interaction', pointer: Object.keys(L.pseudoOf), code: '__state' };
+    if (Object.keys(L.pseudoOf).length) props.state = stateProp(Object.keys(L.pseudoOf), setStates, figmaContract);
     if (L.governed && figmaContract) A.take('empty-shows', { props }, () => emptyShows(props, figmaContract.props, joinedProps, story.args, (L.joins(figmaContract, story.argTypes) || {}).twice));
     const textsOnlyInCode = onlyInCode(props, figmaContract && figmaContract.props, joinedProps);
     let defaults = Object.fromEntries(Object.entries(props).filter(([, p]) => p.type !== 'string').map(([, p]) => [p.code, p.type === 'slot' && !p.placed && !p.sample ? slotMark(p.code) : p.default]));
