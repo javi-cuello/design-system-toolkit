@@ -510,16 +510,18 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
       if (!last || !pointerAt(last.when)) return false;
       // (and only where that variant changes the value at the row: drawn without it, the row's value the same, the rest
       // already says it, a press repeating its mode or leaving out one it never had; review of 2026-11-27)
-      // (read in the stored anatomy, keys sorted; a field only the comparison's own forms hold, xFromCentre or a glyph's
-      // colour said on its instance, is in neither and left to the rules below; review)
+      // (read keys sorted; a field only the later forms hold, xFromCentre, is in neither and left to the rules below)
       const raw = (anat) => at.split('.').slice(1).reduce((y, q) => (y == null ? undefined : y[q]), anat[el]);
       const sorted = (v) => JSON.stringify(v ?? null, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : w));
-      if (!withoutOf.has(last)) withoutOf.set(last, expand(library, { ...defaults, ...c }, { skip: last }));
-      const without = withoutOf.get(last);
+      // (both read through the named equivalences the rows come from, same(): a glyph's opacity folded onto its instance, an
+      // icon's Size at its own width, a default prop said or not; order, ranked against the drawing, is not folded; review)
+      if (!withoutOf.has(last)) { const w = expand(library, { ...defaults, ...c }, { skip: last }); withoutOf.set(last, { w, f: same(structuredClone(w)) }); }
+      if (!withoutOf.has('with')) withoutOf.set('with', same(structuredClone(expanded[i])));
+      const without = withoutOf.get(last).w, folded = withoutOf.get(last).f, here = withoutOf.get('with');
       // (a part only that variant draws there is its change, whatever the field reads)
       // (a key a stored map does not hold, a mode or a prop, is none there: only those read as such when absent)
-      const stored = /^[^.]+\.(modes|with)(\.|$)/.test(at) || raw(without) !== undefined || raw(expanded[i]) !== undefined;
-      if (without[el] && stored && sorted(raw(without)) === sorted(raw(expanded[i]))) return false;
+      const stored = /^[^.]+\.(modes|with)(\.|$)/.test(at) || raw(folded) !== undefined || raw(here) !== undefined;
+      if (without[el] && stored && sorted(raw(folded)) === sorted(raw(here))) return false;
       if (ss.every((v) => pointerAt(v.when))) return true;
       if ((last.add || {})[el]) return true;
       // (a pointer state's set, last, whose value no other state there gives: a link's colour mode at press, over the one
