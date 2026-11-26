@@ -6,6 +6,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 - **The effect styles another library gives the components are recorded**, marked remote and held as that library's (owns.cjs `remoteEffects`), as its text styles are. A component file whose shadows live in a foundations file sent none, so its shadows read as none.
 ### Fixed
 - **Two other libraries' collections under one name are both kept.** A file binding variables from two collections of the same name kept the first and dropped the second's variables, which then drew as 0; their variables now join mode by mode name, the first's kept where both name one.
+- **Joined by mode name whatever its case**, under the first's spelling, a mode only one side has holding only its variables; a third of the name keeps the second's where they meet; the collection's count is the variables recorded, a name both hold once. A shadow is read off any layer that carries one, a text or a boolean too.
 - **A remote text style's font is read off a text that holds words.** It was read off whichever of its texts came last, and an empty one says no font, so the style was dropped and its texts fell back to a default face.
 
 ## [0.90.8] - 2026-11-26
