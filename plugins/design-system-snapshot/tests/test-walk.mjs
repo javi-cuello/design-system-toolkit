@@ -88,7 +88,8 @@ ok("a path the walk did not reach marks nothing", markSlots({ name: "x", type: "
 // read while the flag is off; a sublayer that throws anyway is not drawn.
 {
   let on = true;
-  const ghost = box("Ghost", "FRAME"); Object.defineProperty(ghost, "visible", { get: () => { if (on) throw new Error("in get_visible: The node does not exist"); return false; } });
+  let readOn = 0;
+  const ghost = box("Ghost", "FRAME"); Object.defineProperty(ghost, "visible", { get: () => { if (on) { readOn++; throw new Error("in get_visible: The node does not exist"); } return false; } });
   const gone = box("Gone", "FRAME"); Object.defineProperty(gone, "visible", { get: () => { throw new Error("in get_visible: The node does not exist"); } });
   const kids = [box("Glyph", "VECTOR"), ghost, gone];
   const lazy = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }] };
@@ -96,7 +97,12 @@ ok("a path the walk did not reach marks nothing", markSlots({ name: "x", type: "
   Object.defineProperty(figma, "skipInvisibleInstanceChildren", { configurable: true, get: () => on, set: (v) => { on = v; } });
   let walked = null, err = null; try { walked = await walk(lazy, 1); } catch (e) { err = e; }
   ok("a sublayer Figma no longer knows once the flag is back on does not stop the snapshot, and is not drawn",
-    !err && JSON.stringify(walked.children.map((c) => c.name)) === '["Glyph"]', err && err.message);
+    !err && JSON.stringify(walked.children.map((c) => c.name)) === '["Glyph"]');
+  ok("…its visibility read while the flag is off, before Figma forgets it", readOn === 0);
+  const broken = box("Broken", "FRAME"); Object.defineProperty(broken, "visible", { get: () => { throw new Error("in get_visible: something else"); } });
+  const plain = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }], children: [broken] };
+  let loud = null; try { await walk(plain, 1); } catch (e) { loud = e; }
+  ok("…and any other failure reading a layer still stops the snapshot", !!loud);
   delete figma.skipInvisibleInstanceChildren;
 }
 

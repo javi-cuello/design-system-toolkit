@@ -2258,9 +2258,9 @@ const kidsOf = (n, f = figma) => {
   try { return n.children.filter(isShown); } finally { f.skipInvisibleInstanceChildren = true; }
 };
 /* Whether a layer is drawn: a sublayer Figma lists but no longer has (an instance's, read across a change of
-   skipInvisibleInstanceChildren) is not, rather than stopping the snapshot. */
+   skipInvisibleInstanceChildren) is not, rather than stopping the snapshot; any other failure still stops it. */
 /** @param {SceneNode} c */
-function isShown(c) { try { return c.visible !== false; } catch (e) { return false; } }
+function isShown(c) { try { return c.visible !== false; } catch (e) { if (/does not exist/.test(message(e))) return false; throw e; } }
 /** @param {SceneNode} n @param {number} depth @param {number} [at] its place among all its parent's children, none inside an instance @param {boolean} [inInstance] @returns {Promise<Record<string, unknown>>} */
 async function walk(n, depth, at, inInstance = false) {
   /** @type {Record<string, unknown>} */
