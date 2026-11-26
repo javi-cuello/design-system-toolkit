@@ -91,9 +91,9 @@ const plugin = () => {
 };
 /* The spaces around an operator or a bracket dropped, on a line that holds no string, template or regular expression
    (no quote, backtick or slash), so nothing inside a literal is touched; and never between two signs (`a - -b` would
-   read `a--b`). A space beside a punctuator is never part of the code's meaning: about a twentieth of what is sent
+   read `a--b`), nor on a line an HTML-like comment could start on (`a < !--b`, a `-->`). A space beside a punctuator is never part of the code's meaning: about a twentieth of what is sent
    (2026-11-26: 0.91.0 was 1 786 characters over the cap without it). */
-export const tightened = (code) => code.split('\n').map((l) => (/['"`/]/.test(l) || /[+-]\s+[+-]/.test(l) ? l : l.replace(/ ?(===|!==|=>|&&|\|\||<=|>=|[=+\-*?:<>,{}()]) ?/g, '$1'))).join('\n');
+export const tightened = (code) => code.split('\n').map((l) => (/['"`/]/.test(l) || /[+-]\s+[+-]|<\s*!|^\s*--|--\s*>/.test(l) ? l : l.replace(/ ?(===|!==|=>|&&|\|\||<=|>=|[=+\-*?:<>,{}()]) ?/g, '$1'))).join('\n');
 const headless = (source) => tightened(stripped(source)).replace(/^const HEADLESS = .*$/m, 'const HEADLESS = true;');
 const capped = (code, what) => {
   if (code.length > CAP) throw new Error(`the ${what} is ${code.length} characters, over use_figma's ${CAP}`);

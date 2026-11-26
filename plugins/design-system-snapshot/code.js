@@ -666,7 +666,7 @@ async function collectTokens() {
   const byName = {};
   // and the collections of another library whose variables the components bind (a component file whose colours, spaces
   // and radii live in a foundations file has none local), marked remote: a name a local one holds is that one
-  const ids = boundVariableIds(), others = new Map(), here = new Set(collections.map((c) => c.name));
+  const ids = boundVariableIds(), others = new Map(), joined = /** @type {Record<string, number>} */ ({}), here = new Set(collections.map((c) => c.name));
   let n = 0; const libs = new Set();
   for (const i of ids) {
     // counted: a large library binds thousands, each fetched on its own, and a still window reads as hung
@@ -682,7 +682,7 @@ async function collectTokens() {
     if (cid && !cols.has(cid)) cols.set(cid, await answered(() => figma.variables.getVariableCollectionByIdAsync(cid)).then((x) => (x === MISSED ? (unanswered++, null) : x), () => null));
     const c = cid ? cols.get(cid) : null;
     // (two of them under one name, one library's collection and another's: each kept, their variables joined below)
-    if (c && !here.has(c.name)) others.set(c.name, [...(others.get(c.name) || []).filter((x) => x.id !== c.id), c]);
+    if (c && !here.has(c.name) && !(others.get(c.name) || []).some((x) => x.id === c.id)) others.set(c.name, [...(others.get(c.name) || []), c]);
   }
   for (const c of [...collections, ...[...others.values()].map((cs) => cs[0])]) {
     // its default mode by name: the base a token build writes on :root. A reader took the first mode it listed, and
@@ -708,10 +708,14 @@ async function collectTokens() {
     // (a second library's collection of the same name: its variables join, mode by mode name, a name the first holds
     // kept as the first's; a component binds either, and the walk names a binding by its variable's name alone)
     const held = new Set(Object.keys(entry.keys || {}));
-    for (const o of (c.remote && others.get(c.name) || []).slice(1)) for (const m of o.modes) {
+    // (a mode matched by name whatever its case, as an alias's is, under the first's spelling; a mode only one side has
+    // holds only that side's variables)
+    for (const o of (c.remote && others.get(c.name) || []).slice(1)) {
+      for (const m of o.modes) {
       const r = await read(o, m.name);
-      if (!entry.modes.includes(m.name)) { entry.modes.push(m.name); entry.values[m.name] = {}; entry.alias[m.name] = {}; }
-      for (const [k, v] of Object.entries(r.values)) if (!held.has(k)) { entry.values[m.name][k] = v; if (k in r.alias) entry.alias[m.name][k] = r.alias[k]; }
+      const mn = entry.modes.find((x) => x.toLowerCase() === m.name.toLowerCase()) || m.name;
+      if (!entry.modes.includes(mn)) { entry.modes.push(mn); entry.values[mn] = {}; entry.alias[mn] = {}; }
+      for (const [k, v] of Object.entries(r.values)) if (!held.has(k)) { entry.values[mn][k] = v; if (k in r.alias) entry.alias[mn][k] = r.alias[k]; }
       entry.keys = entry.keys || {}; entry.scopes = entry.scopes || {};
       for (const [k, v] of Object.entries(r.keys)) if (!held.has(k) && !(k in entry.keys)) {
         entry.keys[k] = v; entry.scopes[k] = r.scopes[k];
@@ -719,12 +723,17 @@ async function collectTokens() {
         if (r.hidden.includes(k)) entry.hidden = [...(entry.hidden || []), k];
         if (r.codeSyntax[k]) entry.codeSyntax = { ...(entry.codeSyntax || {}), [k]: r.codeSyntax[k] };
       }
+      }
+      // (a third of that name keeps the second's where they meet, values and keys alike)
+      for (const k of Object.keys(entry.keys || {})) held.add(k);
     }
+    if (others.get(c.name) && others.get(c.name).length > 1) joined[c.name] = Object.keys(entry.keys || {}).length;
     byName[c.name] = entry;
   }
   /** @type {Record<string, number>} */ const collectionCounts = {};
   for (const c of collections) collectionCounts[c.name] = c.variableIds.length;
-  for (const [name, cs] of others) collectionCounts[name] = cs.reduce((t, x) => t + x.variableIds.length, 0);
+  // (two of one name: the variables recorded, a name both hold once)
+  for (const [name, cs] of others) collectionCounts[name] = joined[name] ?? cs[0].variableIds.length;
 
   say('reading text styles');
   // a line height or letter spacing as a fraction of the font size, to four places: tools/shared/text-units.js's,
@@ -811,7 +820,7 @@ async function collectTokens() {
   // and the effect styles of another library the components use (a component file whose shadows live in a foundations
   // file has none local), marked remote, as its text styles are: a name a local one holds is that one
   const localFx = await figma.getLocalEffectStylesAsync(), fxNames = new Set(localFx.map((e) => e.name));
-  const fxIds = new Set(figma.root.children.flatMap((pg) => pg.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET', 'FRAME', 'INSTANCE', 'RECTANGLE', 'ELLIPSE', 'VECTOR', 'GROUP'] })).filter((n) => typeof n.effectStyleId === 'string' && n.effectStyleId && (n.type === 'COMPONENT' || inside(n))).map((n) => n.effectStyleId));
+  const fxIds = new Set(figma.root.children.flatMap((pg) => pg.findAllWithCriteria({ types: ['COMPONENT', 'FRAME', 'INSTANCE', 'RECTANGLE', 'ELLIPSE', 'VECTOR', 'GROUP', 'TEXT', 'LINE', 'POLYGON', 'STAR', 'BOOLEAN_OPERATION'] })).filter((n) => typeof n.effectStyleId === 'string' && n.effectStyleId && (n.type === 'COMPONENT' || inside(n))).map((n) => n.effectStyleId));
   const remoteFx = /** @type {EffectStyle[]} */ ((await Promise.all([...fxIds].map((i) => figma.getStyleByIdAsync(i).catch(() => null)))).filter((e) => e && e.type === 'EFFECT' && e.remote && !fxNames.has(e.name) && fxNames.add(e.name)));
   for (const e of [...localFx, ...remoteFx]) {
     const layers = [];
