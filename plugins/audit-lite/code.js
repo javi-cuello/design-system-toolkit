@@ -1305,7 +1305,7 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
 function snapshotFacts() {
 const __html__ = undefined;
 const FACTS = true;
-// Design system snapshot — v0.90.6 · plugin-standard v1.1.0
+// Design system snapshot — v0.90.7 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -2158,7 +2158,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.90.6';
+const VERSION = '0.90.7';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -2556,8 +2556,9 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
 /* A scratch page ("Scratch" after any marker, alone or followed by a spaced dash, a colon or a bracket) holds
    trials, never the library: its components are not read and it is not in the page list
    (snapshot-standard rule 27). "Scratch card" and "Scratch-card" are a component's page. A run that names
-   component ids reads them. */
-const isScratchPage = (page) => /^\W*Scratch(\s+[-–—]|\s*[:([]|\s*$)/i.test(page.name);
+   component ids reads them. A page to-figma draws on ("Round trip · <component>", payload.cjs DRAWING_PAGE) is one
+   too: the store drops it anyway, and walking thirty of them made a large library's run crash Figma (2026-11-26). */
+const isScratchPage = (page) => page.name.startsWith('Round trip · ') || /^\W*Scratch(\s+[-–—]|\s*[:([]|\s*$)/i.test(page.name);
 /* A graphic is an illustration, not a glyph: a raster or a drawing placed at a
    size, with no Size axis and no currentColor. It exports as a PNG because a
    graphic's fill is usually an image, and an SVG of an image is that image

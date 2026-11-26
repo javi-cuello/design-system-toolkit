@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.90.7] - 2026-11-26
+### Fixed
+- **Pages the round trip draws on are skipped, not walked.** A library file holding to-figma's drawings ("Round trip · <component>" pages, thirty in one) had every one walked, previews included, only for the store to drop them; on a large library the run took very long and crashed Figma. They are now left out like a Scratch page; a run given component ids still reads them.
+
 ## [0.90.6] - 2026-11-26
 ### Fixed
 - **The snapshot no longer crashes Figma on a large library.** 0.90.4 switched Figma's skip-hidden-layers setting off and on for each placed instance that handed over no children; on a large library that crashed the Figma tab. The walk no longer touches the setting, so such an instance is recorded empty again (0.90.4's gain undone), and a layer Figma lists but no longer has is still left out as not drawn.

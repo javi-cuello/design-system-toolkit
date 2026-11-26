@@ -204,6 +204,18 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
   const byId = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], scope: new Set(["3:3"]) });
   ok("a page rule does not reach a scratch page; a run naming a component's id reads it", byPage.map((c) => c.page).join() === "Chip" && byId.map((c) => c.page).join() === "🚧 scratch");
 }
+// 0.90.7: a library holding thirty pages the round trip draws on had each walked, only for the store to drop them,
+// and the run crashed Figma; they are left out like a scratch page, and read when named by id
+{
+  const pageOf = (name, comp) => { const p = { type: "PAGE", name, children: [] }; if (comp) { comp.parent = p; p.children.push(comp); } p.findAll = (f) => p.children.filter(f); return p; };
+  const mk = (name, id) => ({ type: "COMPONENT", name, id, width: 40, height: 20, children: [], componentPropertyDefinitions: {} });
+  figma.root = { children: [pageOf("Switch", mk("Switch", "4:1")), pageOf("Round trip · Switch", mk("Switch", "4:2"))] };
+  const got = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] });
+  const byId = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], scope: new Set(["4:2"]) });
+  ok("a page the round trip draws on is not walked; a run naming its component's id reads it", got.map((c) => c.page).join() === "Switch" && byId.map((c) => c.page).join() === "Round trip · Switch");
+  const { DRAWING_PAGE } = (await import("node:module")).createRequire(import.meta.url)("../../../tools/snapshot/payload.cjs");
+  ok("…the prefix the same one the store drops", src.includes(`page.name.startsWith('${DRAWING_PAGE}')`));
+}
 // 0.69.0: a slot's preferred values are keys, which name nothing to a reader that did not store the component;
 // this file's own are named from the file, importing nothing; another library's by import, a variant by its set;
 // one that cannot be named is null, and the names stay in the order of the keys
