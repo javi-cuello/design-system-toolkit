@@ -57,7 +57,12 @@ try {
   assert.ok(first && /one/.test(first.reason), 'a written file in a broken folder blocks');
   for (const k of first.keys) seen.add(k);
   assert.equal(checkWritten([path.join(two, 'a.md')], { root, seen }), null, 'once: a finding put to the session does not block again');
-  assert.equal(checkWritten([path.join(dated, 'a.md')], { root, seen: new Set(['memory:dated:a.md:dated:"## Loose, as of 2026-11-01": a date is written "(as of YYYY-MM-DD)"']) }), null, 'a stale warning never blocks');
+  assert.equal(checkWritten([path.join(dated, 'a.md')], { root, seen: new Set(['memory:dated:a.md:dated']) }), null, 'a stale warning never blocks');
+  assert.equal(checkWritten([path.join(front, 'MEMORY.md')], { root }), null, 'a finding in a file the session did not write is not its stop\'s');
+  fs.appendFileSync(path.join(big, 'a.md'), 'more');
+  const once = new Set(checkWritten([path.join(big, 'a.md')], { root }).keys);
+  fs.appendFileSync(path.join(big, 'a.md'), 'more still');
+  assert.equal(checkWritten([path.join(big, 'a.md')], { root, seen: once }), null, 'a file still over its size after another edit does not block again');
   assert.equal(checkWritten([path.join(root, 'elsewhere.md')], { root }), null, 'a file outside a memory folder is not read');
   ok('the Stop hook blocks once on a memory folder the session wrote into, and only on errors');
 } finally { fs.rmSync(root, { recursive: true, force: true }); }

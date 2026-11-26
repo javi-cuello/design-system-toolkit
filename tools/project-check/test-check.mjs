@@ -112,6 +112,11 @@ console.log('ok the validate gate asks where the system\'s own code is');
     assert.match(line(quick, /a component read back/), /skipped \(--quick/, quick);
     assert.match(line(quick, /^parity:/), /skipped \(--quick/, quick);
     assert.match(line(quick, /no job the toolkit owns/), /runs/, quick);
+    // and a real --quick run, not a plan: the measuring gates are skipped, the others run
+    const real = spawnSync(process.execPath, [path.join(HERE, 'check.mjs'), '--repo', code, '--quick'], { encoding: 'utf8', env, timeout: 120000 }).stdout;
+    assert.match(line(real, /a component read back/), /skipped \(--quick/, real);
+    assert.match(line(real, /^parity:/), /skipped \(--quick/, real);
+    assert.match(line(real, /no job the toolkit owns/), /\bok\b|RED/, real);
     console.log('ok --quick skips the gates that measure, and only those');
     assert.doesNotMatch(work, /not a registered project/, work);
     assert.match(line(work, /a component read back/), /no accepted round-trip counts/, 'the worktree is measured, not the main checkout\n' + work);

@@ -17,15 +17,15 @@ const make = (id, ageDays, name) => {
   fs.utimesSync(f, t, t);
 };
 try {
-  make('old-side', 10); make('old-main', 40, 'main'); make('new-side', 2); make('live-side', 0); make('kept-side', 9);
+  make('old-side', 10); make('old-main', 40, 'main'); make('new-side', 2); make('live-side', 0); make('kept-side', 9); make('open-side', 12);
   fs.mkdirSync(path.join(dir, 'memory')); fs.writeFileSync(path.join(dir, 'memory', 'MEMORY.md'), '');
-  const list = sessions(dir, { now, keep: ['kept-side'] });
+  const list = sessions(dir, { now, keep: ['kept-side'], open: ['open-side'] });
   assert.equal(list.find((s) => s.id === 'old-main').name, 'main', 'the last title is the name');
   assert.deepEqual(list.filter((s) => s.stale).map((s) => s.id), ['old-side']);
-  console.log('ok only an unnamed, non-live, unkept session past a week is stale');
+  console.log('ok only an unnamed, non-live, unkept session past a week is stale; one Claude Code has open is live however idle');
   assert.deepEqual(prune(list), ['old-side']);
   assert.ok(!fs.existsSync(path.join(dir, 'old-side.jsonl')) && !fs.existsSync(path.join(dir, 'old-side')), 'its transcript and folder go');
-  for (const id of ['old-main', 'new-side', 'live-side', 'kept-side']) assert.ok(fs.existsSync(path.join(dir, `${id}.jsonl`)), id);
+  for (const id of ['old-main', 'new-side', 'live-side', 'kept-side', 'open-side']) assert.ok(fs.existsSync(path.join(dir, `${id}.jsonl`)), id);
   assert.ok(fs.existsSync(path.join(dir, 'memory', 'MEMORY.md')), 'memory is never touched');
   console.log('ok --prune deletes the stale one with its folder, and nothing else');
 } finally { fs.rmSync(dir, { recursive: true, force: true }); }

@@ -35,7 +35,7 @@ function toolkitFolder() {
 function frontmatter(text) {
   const m = /^---\n([\s\S]*?)\n---\n/.exec(text);
   if (!m) return null;
-  const get = (k) => { const r = new RegExp(`^[ \\t]*${k}:[ \\t]*(.*)$`, 'm').exec(m[1]); return r ? r[1].trim() : ''; };
+  const get = (k) => { const r = new RegExp(`^[ \\t]*${k}:[ \\t]*(.*)$`, 'm').exec(m[1]); return r ? r[1].trim().replace(/^(["'])(.*)\\1$/, '$2') : ''; };
   return { name: get('name'), description: get('description'), type: get('type') };
 }
 
@@ -50,11 +50,11 @@ export function checkFolder(dir, { today = new Date(), multi = false } = {}) {
   const index = path.join(dir, 'MEMORY.md');
   if (!fs.existsSync(index)) { add('MEMORY.md', 'index', 'no MEMORY.md: the index Claude Code loads'); return out; }
   const text = fs.readFileSync(index, 'utf8');
-  const lines = text.split('\n');
+  const lines = text.replace(/\n$/, '').split('\n');
   if (lines.length > LIMITS.indexLines) add('MEMORY.md', 'index', `${lines.length} lines: Claude Code loads the first ${LIMITS.indexLines}`);
   if (Buffer.byteLength(text) > LIMITS.indexBytes) add('MEMORY.md', 'index', `${Buffer.byteLength(text)} bytes: Claude Code loads the first ${LIMITS.indexBytes}`);
   for (const l of lines.filter((l) => /^\s*[-*] /.test(l) && !ENTRY.test(l))) add('MEMORY.md', 'index', `not "- [Title](file.md) — what it holds": ${l.slice(0, 60)}`);
-  const linked = lines.map((l) => ENTRY.exec(l)).filter(Boolean).map((m) => m[1]);
+  const linked = lines.map((l) => ENTRY.exec(l)).filter(Boolean).map((m) => m[1].replace(/^\.\//, ''));
   for (const f of linked.filter((f) => !fs.existsSync(path.join(dir, f)))) add('MEMORY.md', 'index', `links ${f}, which does not exist`);
   for (const f of topics.filter((f) => !linked.includes(f))) add(f, 'index', 'not linked from MEMORY.md');
   if (topics.length > 1 && !multi) add('MEMORY.md', 'one-file', `${topics.length} memory files (${topics.join(', ')}): a project keeps one`);
@@ -93,8 +93,11 @@ export function checkWritten(files, { root = ROOT, seen = new Set() } = {}) {
   const dirs = [...new Set(files.filter((f) => f.startsWith(root + path.sep) && f.endsWith('.md') && path.basename(path.dirname(f)) === 'memory').map((f) => path.dirname(f)))];
   if (!dirs.length) return null;
   const own = toolkitFolder();
-  const found = dirs.flatMap((d) => (fs.existsSync(d) ? checkFolder(d, { multi: isMulti(d, own) }) : []))
-    .filter((x) => x.level === 'error').map((x) => ({ ...x, key: `memory:${x.folder}:${x.file}:${x.rule}:${x.message}` }))
+  // the files it wrote, and the folder's index (one file, its links): a finding in another file is the checkout's;
+  // keyed without the message, whose counts move with every edit, so each file's rule blocks once a session
+  const wrote = new Set(files);
+  const found = dirs.flatMap((d) => (fs.existsSync(d) ? checkFolder(d, { multi: isMulti(d, own) }).filter((x) => x.file === 'MEMORY.md' || wrote.has(path.join(d, x.file))) : []))
+    .filter((x) => x.level === 'error').map((x) => ({ ...x, key: `memory:${x.folder}:${x.file}:${x.rule}` }))
     .filter((x) => !seen.has(x.key));
   if (!found.length) return null;
   return { reason: `A memory file you wrote breaks toolkit-standard §D 25 (node ${path.join(HERE, 'check.mjs')}):\n${found.map((x) => `  ${x.folder}/memory/${x.file}: ${x.message}`).join('\n')}`, keys: found.map((x) => x.key) };
