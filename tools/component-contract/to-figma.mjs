@@ -492,7 +492,15 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // (every variant that sets the field there a pointer state's: where another that applies sets it too, a focus and a
     // selected both saying Search, the markup holds the words through that one)
     const atC = (library.variants || []).filter((v) => applies(v.when, c));
-    byPointer = (at) => { const ss = atC.filter((v) => at in (v.set || {})); return ss.length > 0 && ss.every((v) => pointerAt(v.when)); };
+    // (or the part itself put there last by a pointer state's variant, as expand() layers them, a combination last: a
+    // press drawn from another layer, which carries none of what the rest set on the part)
+    const layered = [...atC.filter((v) => !v.combination), ...atC.filter((v) => v.combination).slice(0, 1)];
+    byPointer = (at) => {
+      const ss = atC.filter((v) => at in (v.set || {}));
+      if (ss.length > 0 && ss.every((v) => pointerAt(v.when))) return true;
+      const el = at.split('.')[0], last = layered.filter((v) => (v.add || {})[el] || at in (v.set || {})).pop();
+      return !!last && !!(last.add || {})[el] && pointerAt(last.when);
+    };
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(unstroked(room(x)))))))), mains)), mains));
     const A = expanded[i], B = expand(drawn, { ...variantDefaults(drawn), ...theirs });

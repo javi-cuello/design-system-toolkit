@@ -246,6 +246,14 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     // (held to a reading, the pointer states are the design's: a reading may force disabled as a pseudo state too)
     const reading = st([{ when: { state: 'disabled' }, set: { 't.content': 'Off' } }], ['hover', 'focus', 'disabled']);
     ok('the pointer states are the given design\'s, never the reading\'s own list', roundTrip(reading, st([]), { ...o, pointerFrom: st([]) }).rows[0].pointer === undefined && roundTrip(reading, st([]), o).rows[0].pointer === true); }
+  { // (and where a pointer state's variant puts the part there again last, as expand() layers them: its fields there are
+    // that state's, the modes another variant gave the part not drawn; 2026-11-26, a link's icon at press)
+    const lk = (add) => ({ contract: 1, component: 'L', props: { state: { type: 'enum', values: ['rest', 'press'], default: 'rest', role: 'interaction', pointer: ['press'], figma: 'State' }, blank: { type: 'boolean', default: false, figma: 'Blank' } },
+      anatomy: { root: { kind: 'container' } }, variants: [{ when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', modes: { theme: 'link' } } } }, ...add] });
+    const pressAdd = [{ when: { state: 'press', blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' } } }];
+    const [r] = roundTrip(lk(pressAdd), lk([]), { layoutUnit: true }).rows;
+    const [n] = roundTrip(lk([{ when: { blank: true }, set: { 'icon.modes': null } }]), lk([]), { layoutUnit: true }).rows;
+    ok('a field on a part a pointer state\'s variant adds again, last, is that state\'s; one another state sets is not', r && r.at === 'icon.modes' && r.pointer === true && n && n.pointer === undefined, [r, n]); }
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());
   { // a placed instance's key is compared only where both sides hold one: a reading from code holds none
     const placed = (key) => ({ ...two, anatomy: { ...two.anatomy, i: { kind: 'instance', parent: 'root', component: 'Button', ...(key && { key }) } } });

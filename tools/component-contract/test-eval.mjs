@@ -605,6 +605,11 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
     && gm('root.modes.theme', { library: 'a', drawn: null, pointer: true }) === 'pointer-modes'
     // (modes of several keys match in any key order)
     && gapOf({ ...c, variants: [{ when: { state: 'focus' }, set: { 'root.modes': { theme: 'a', density: 'b' } } }] })('root.modes', { library: { density: 'b', theme: 'a' }, drawn: null, pointer: true }) === 'pointer-modes');
+  // (2026-11-26, a link's press: a pointer state's variant that adds a part again carries only the modes it says, none
+  // where it says none; the part's modes another variant set are not drawn there)
+  { const ca = { ...c, anatomy: { ...c.anatomy, icon: { kind: 'instance', parent: 'root', component: 'Icon', modes: { theme: 'link' } } }, variants: [...c.variants, { when: { state: 'focus' }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' } } }] };
+    ok('modes a pointer state\'s variant drops by adding the part again are left to code; modes it adds with are, at that value',
+      gapOf(ca)('icon.modes', { library: null, drawn: { theme: 'link' }, pointer: true }) === 'pointer-modes' && gapOf(ca)('icon.modes', { library: null, drawn: { theme: 'link' } }) === null); }
   ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'exposed-unforwarded', 'pointer-words', 'pointer-with', 'pointer-modes', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
   ok('leftToCode is gapOf said as yes or no', leftToCode(c)('picker/hint') === true && leftToCode(c)('root.width') === false); }
 
