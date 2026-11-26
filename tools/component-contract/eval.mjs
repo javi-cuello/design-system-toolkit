@@ -157,7 +157,7 @@ export const GAPS = {
 export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true } = {}) {
   // (a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
   const parts = partsOf(contract, settings);
-  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : mainOf && unexposed(contract, p.id, mainOf) ? (/^exposed/.test(unexposed(contract, p.id, mainOf)) ? 'exposed-unforwarded' : 'unexposed-override') : null);
+  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : ((u) => (!u ? null : /^exposed/.test(u) ? 'exposed-unforwarded' : 'unexposed-override'))(mainOf && unexposed(contract, p.id, mainOf)));
   const reasons = new Map([...parts.values()].map((p) => [p.id, reasonOf(p)]).filter(([, r]) => r));
   const ids = [...reasons.keys()];
   // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them

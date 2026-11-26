@@ -177,7 +177,8 @@ export function unexposed(c, id, mainOf) {
   const passing = (main.variants || []).filter((v) => !pointerWords(main, v.when));
   // (one drawn only in a variant is held, as one of its base, to the part the component draws at the instance's props)
   const added = passing.some((v) => (v.add || {})[rel]);
-  const own = (main.anatomy || {})[rel] || (added ? atProps(main, he.with)[rel] : undefined);
+  const placedAt = added ? atProps(main, he.with)[rel] : undefined;
+  const own = (main.anatomy || {})[rel] || placedAt;
   if (added && !own) return false;
   // (a variant that adds the part draws a field it names only at that value: it passes this one only where it is ours)
   const varied = (f) => passing.some((v) => `${rel}.${f}` in (v.set || {}) || ((v.add || {})[rel] && JSON.stringify(v.add[rel][f] ?? null) === JSON.stringify(part.e[f] ?? null) && v.add[rel][f] !== undefined));
@@ -190,7 +191,7 @@ export function unexposed(c, id, mainOf) {
   // a nested instance the component exposes (Figma's exposed instances) hands its own props and swaps to the caller:
   // an override of those is a prop the component declares, which the markup does not forward yet ('exposed-part', 'exposed-field', the
   // toolkit's to close); one on an instance it does not expose is the library's, which no markup can pass
-  const exposed = !!((added ? atProps(main, he.with)[rel] : null) || own).exposed;
+  const exposed = !!(placedAt || own).exposed;
   if (differs('component') && !by('swaps') && !varied('component')) return exposed ? 'exposed-part' : 'part';
   if (differs('content') && !by('sets') && !varied('content')) return 'field';
   // a nested instance's own props reach it through a prop the component passes down to it
