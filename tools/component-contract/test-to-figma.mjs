@@ -294,6 +294,11 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const wp = (pressWith) => ({ ...lk([]), variants: [{ when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' } } }, { when: { state: 'press', blank: true }, set: { 'icon.with': pressWith } }] });
     const wrow = roundTrip(wp({ Other: 'x' }), wp({ Other: 'x', Size: 'L' }), { layoutUnit: true }).rows.find((y) => /icon\.with/.test(y.at));
     ok('…an instance\'s opacity the press changes through its glyph is the press\'s; a prop it never gives, left out, is not', orow.length > 0 && orow.every((y) => y.pointer === true) && wrow && wrow.pointer === undefined, [orow, wrow]);
+    // (and the reverse: a press whose raw value differs but folds to the rest's, an icon's Size said at its own width, is
+    // not the press's; review)
+    const sz = (size) => ({ ...lk([]), variants: [{ when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', width: 20, height: 20 } } }, { when: { state: 'press', blank: true }, set: { 'icon.with': { Size: size } } }] });
+    const srow = roundTrip(sz('20'), sz('24'), { layoutUnit: true }).rows.find((y) => /icon\.with/.test(y.at));
+    ok('…nor a press whose value differs raw but folds to the rest\'s (an icon\'s Size said at its own width)', !srow || srow.pointer === undefined, srow);
     ok('…never where another state there gives the same value at the row (a sibling key the press changes, or the same value)', sr && sr.pointer === undefined && same && same.pointer === undefined, [sr, same]);
     ok('…the last variant to touch it decides, as expand() layers them, a combination last', (!laterSet || laterSet.pointer === undefined) && (!laterAdd || laterAdd.pointer === undefined) && combo && combo.pointer === true, [laterSet, laterAdd, combo]); }
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());

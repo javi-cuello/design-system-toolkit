@@ -502,6 +502,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // (the anatomy without each last variant, once per combination; a combination skipped lets a second matching one in,
     // which two combinations matching one set of props would need: named, not met)
     const withoutOf = new Map();
+    let hereFolded = null;
     byPointer = (at) => {
       const ss = atC.filter((v) => touches(v, at));
       // (whatever else holds, the last variant to touch the row or put its part there decides it: a pointer state's set
@@ -516,8 +517,10 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
       // (both read through the named equivalences the rows come from, same(): a glyph's opacity folded onto its instance, an
       // icon's Size at its own width, a default prop said or not; order, ranked against the drawing, is not folded; review)
       if (!withoutOf.has(last)) { const w = expand(library, { ...defaults, ...c }, { skip: last }); withoutOf.set(last, { w, f: same(structuredClone(w)) }); }
-      if (!withoutOf.has('with')) withoutOf.set('with', same(structuredClone(expanded[i])));
-      const without = withoutOf.get(last).w, folded = withoutOf.get(last).f, here = withoutOf.get('with');
+      // (not folded either: parts ownInPlaced fills from the drawing for a loose host, and diff()'s own equivalences, a
+      // colour spelt hex or rgb() or a prop True or true: a press repeating the rest in another spelling stays the press's)
+      if (!hereFolded) hereFolded = same(structuredClone(expanded[i]));
+      const without = withoutOf.get(last).w, folded = withoutOf.get(last).f, here = hereFolded;
       // (a part only that variant draws there is its change, whatever the field reads)
       // (a key a stored map does not hold, a mode or a prop, is none there: only those read as such when absent)
       const stored = /^[^.]+\.(modes|with)(\.|$)/.test(at) || raw(folded) !== undefined || raw(here) !== undefined;
