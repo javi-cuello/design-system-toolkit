@@ -327,6 +327,11 @@ ok('a part a pointer state takes away stays, a gap saying so', /chevron-down/.te
     anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Tile' } }, variants: [{ when: { kind: 'framed' }, add: { border } }, { when: { state: 'hover' }, add: { border } }] };
   const el = toElement(tile, 'tile', { naming: ELEMENT, library: {} });
   ok('a part a pointer state also puts in is held wherever that state draws it, a gap saying the sheet shows it', /\n\s*h\("span", \{ "data-part": "border"/.test(el) && !/kind === "framed"\) && h\("span", \{ "data-part": "border"/.test(el) && /Border is also drawn at a pointer state/.test(el) && Array.isArray(partsOf(tile).get('border').pointerShown));
+  // a part only a pointer state draws (a fill at hover): held, at the values that state is drawn with, the sheet's to show
+  { const only = { ...tile, variants: [{ when: { state: 'hover', kind: 'framed' }, add: { border } }] };
+    const oe = toElement(only, 'tile', { naming: ELEMENT, library: {} });
+    ok('a part only a pointer state draws is held where that state draws it, a gap saying the sheet shows it there',
+      /kind === "framed"\) && h\("span", \{ "data-part": "border"/.test(oe) && /Border is drawn only at a pointer state: held here/.test(oe) && !/frontend-build: Border, drawn only/.test(oe) && partsOf(only).get('border').pointerHeld); }
   // (a base part the rest take out at a size and a pointer state puts back: held at that size too, as the gap says)
   const icon = { ...tile, anatomy: { ...tile.anatomy, icon: { kind: 'container', parent: 'root' } }, variants: [{ when: { kind: 'framed' }, remove: ['icon'] }, { when: { state: 'hover' }, add: { icon: { kind: 'container', parent: 'root' } } }] };
   const ie = toElement(icon, 'tile', { naming: ELEMENT, library: {} });

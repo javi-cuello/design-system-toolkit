@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, isSameApartFromForeign, gapOf, GAPS, leftToCode as leftToCode0, unaccepted, identifiedNote } from './eval.mjs';
 import { drawSettings } from './to-figma.mjs';
+import { partsOf } from './to-code.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
 import { selfDrawn, siteFiles, drawnAll, GENERATOR } from './site.mjs';
@@ -150,8 +151,11 @@ ok('a component measured since the accept is held until accepted; one that came 
     anatomy: { root: { kind: 'container' }, field: { kind: 'container', parent: 'root' }, slot: { kind: 'slot', parent: 'root' }, 'slot/sample': { kind: 'text', parent: 'slot', content: 'x' } },
     variants: [{ when: { state: 'focus' }, add: { menu: { kind: 'container', parent: 'root' }, 'menu/item': { kind: 'text', parent: 'menu', content: 'A' } } }] };
   const left = leftToCode(c);
-  ok('rows of a part drawn only at a pointer state are left to code; the rest, a slot\'s sample among them, are differences',
-    left('menu') && left('menu/item.content') && !left('slot/sample.content') && !left('field.layout') && !left('slot.width') && !left('menuish'));
+  ok('rows of a part drawn only at a pointer state are held by the markup, so differences; a slot\'s sample is drawn too, a difference, as the rest are',
+    !left('menu') && !left('menu/item.content') && !left('slot/sample.content') && !left('field.layout') && !left('slot.width') && !left('menuish'));
+  // (one only a pointer state draws inside a placed component is that component's, which no markup here holds)
+  const inPlaced = { ...c, anatomy: { ...c.anatomy, picker: { kind: 'instance', parent: 'root', component: 'Menu' } }, variants: [{ when: { state: 'focus' }, add: { 'picker/hint': { kind: 'text', parent: 'picker', content: 'A' } } }] };
+  ok('a part only a pointer state draws inside a placed component stays left to code', leftToCode(inPlaced)('picker/hint') && gapOf(inPlaced)('picker/hint') === 'pointer-only-part');
   const placed = { ...c, anatomy: { ...c.anatomy, picker: { kind: 'instance', parent: 'root', component: 'Menu' }, 'picker/items': { kind: 'slot', parent: 'picker' }, 'picker/items/one': { kind: 'text', parent: 'picker/items', content: 'One' } } };
   ok('what this component puts in a placed component\'s slot is drawn, so stays a difference', !leftToCode(placed)('picker/items/one.content'));
   const sw = { component: 'Switcher', props: { label: { type: 'string', figma: 'Label', sets: ['label'] } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Org' }, dot: { kind: 'graphic', parent: 'root', background: 'Icon/strong' } }, variants: [] };
@@ -329,8 +333,8 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
   const ring = { kind: 'graphic', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus/focus', width: 2 }, shape: 'rectangle' };
   const tile = { contract: 1, component: 'Tile', folder: 'tile', props: { state: { type: 'enum', values: ['rest', 'focus-visible'], default: 'rest', role: 'interaction', pointer: ['focus-visible'] } },
     anatomy: { root: { kind: 'container', background: 'Bg/x' } }, variants: [{ when: { state: 'focus-visible' }, add: { focusBorder: { ...ring, parent: 'root' } } }] };
-  ok('under the library\'s settings its focus ring is compared, not left to the code; under the house\'s it would be left',
-    !leftToCode(tile, null, own)('focusBorder.border') && leftToCode(tile, null)('focusBorder.border'));
+  ok('under the library\'s settings its focus ring is compared as an outline; under the house\'s, as an element only that state draws',
+    !leftToCode(tile, null, own)('focusBorder.border') && partsOf(tile, own).get('focusBorder').ring && !partsOf(tile).get('focusBorder').ring && partsOf(tile).get('focusBorder').pointerHeld);
   const d = selfDrawn(tile, { library: { Tile: tile }, mains: () => null, settings: own });
   ok('the self leg\'s inputs are drawn under the library\'s settings: the ring an outline at its focus, mapped to the box',
     /:focus-visible[^{]*\{\s*outline:/.test(d.sheet) && d.mapping.layers['Focus border'] === 'ds-tile');
@@ -581,15 +585,16 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
 // each excuse of leftToCode is a named gap with an id
 { const c = { contract: 1, component: 'Pick', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } },
     anatomy: { root: { kind: 'container' }, slot: { kind: 'slot', parent: 'root' }, 'slot/sample': { kind: 'text', parent: 'slot', content: 'x' }, tip: { kind: 'graphic', parent: 'root', width: 15, height: 9, radius: 'mixed' } },
-    variants: [{ when: { state: 'focus' }, add: { menu: { kind: 'container', parent: 'root' } } }] };
+    variants: [{ when: { state: 'focus' }, add: { menu: { kind: 'container', parent: 'root' }, 'picker/hint': { kind: 'text', parent: 'picker' } } }] };
+  c.anatomy.picker = { kind: 'instance', parent: 'root', component: 'Menu' };
   const g = gapOf(c);
-  ok('gapOf names the branch that excuses a row, and none for a difference (a slot\'s sample among them: the markup draws it)', g('menu') === 'pointer-only-part' && g('slot/sample.content') === null && g('tip.radius', { library: 'mixed', drawn: null }) === 'path-radius' && g('root.width') === null
+  ok('gapOf names the branch that excuses a row, and none for a difference (a slot\'s sample among them: the markup draws it)', g('picker/hint') === 'pointer-only-part' && g('menu') === null && g('slot/sample.content') === null && g('tip.radius', { library: 'mixed', drawn: null }) === 'path-radius' && g('root.width') === null
     // (an effect with no style, its values never recorded: none drawn is the gap, one drawn stays a difference)
     && g('tip.shadow', { library: 'literal', drawn: null }) === 'unrecorded-effect' && leftToCode(c)('tip.shadow', { library: 'literal', drawn: null }) && g('tip.shadow', { library: 'literal', drawn: 'Shadow/1' }) === null
     // (a token spelt as the same custom property as the one read back: the gap; another token, or words told apart by case, stay a difference)
     && g('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) === 'one-css-name' && leftToCode(c)('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) && g('tip.layout.padding.start', { library: 'Space050', drawn: 'Space025' }) === null && g('slot/sample.content', { library: 'Label', drawn: 'label' }) === null && g('tip.content', { library: 'Label', drawn: 'label' }) === null);
   ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'pointer-words', 'pointer-with', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
-  ok('leftToCode is gapOf said as yes or no', leftToCode(c)('menu') === true && leftToCode(c)('root.width') === false); }
+  ok('leftToCode is gapOf said as yes or no', leftToCode(c)('picker/hint') === true && leftToCode(c)('root.width') === false); }
 
 // a count derived from an accepted leg (`self strict`) that accepted.json does not hold yet is said, never failed on: it
 // is new bookkeeping, not a rise; a base leg absent still fails, as a Figma leg drawn since its accept does

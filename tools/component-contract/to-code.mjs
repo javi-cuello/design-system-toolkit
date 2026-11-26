@@ -207,16 +207,21 @@ export function partsOf(c, t = HOUSE) {
     delete part.texts;
     // a ring where to-code makes it the ringed element's outline at every focus that draws it (to-code's ringOf, the one rule)
     part.ring = !part.base && part.pointerOnly && part.rings.length > 0 && part.rings.every(Boolean);
+    for (let up = part.e.parent; up && up !== 'root'; up = ((parts.get(up) || {}).e || {}).parent) {
+      const k = ((parts.get(up) || {}).e || {}).kind;
+      if (k === 'instance') part.inside = up;
+      if (k === 'slot') part.slotted = up;
+    }
+    // a part only a pointer state draws, as an element (a header's hover fill, a menu open at focus): held by the markup
+    // as one the rest draw too (below), so the sheet shows it under that state's pseudo-class and hides it at rest, and
+    // a page forced to that state draws it; `pointerHeld` says no other value draws it. One inside a placed component
+    // or a slot is that component's or a caller's, so stays a gap
+    if (part.pointerOnly && !part.ring && part.pointerAdds && !part.inside && !part.slotted) { part.pointerOnly = false; part.pointerHeld = true; }
     // a part the rest of the grid draws that a pointer state also puts in where the rest take it out (a tile's border at
     // hover, a search's clear icon at focus): the markup holds it wherever that state's combination draws it, the
     // pointer value aside, and the sheet hides it where the contract draws none (to-code's pointerShown)
     if (!part.pointerOnly && part.pointerAdds) {
       part.pointerShown = part.pointerAdds.map((w) => Object.fromEntries(Object.entries(w).filter(([k, x]) => !pointer(k, x))));
-    }
-    for (let up = part.e.parent; up && up !== 'root'; up = ((parts.get(up) || {}).e || {}).parent) {
-      const k = ((parts.get(up) || {}).e || {}).kind;
-      if (k === 'instance') part.inside = up;
-      if (k === 'slot') part.slotted = up;
     }
   }
   return parts;
@@ -238,8 +243,12 @@ function beforeOf(c, parts) {
   for (const v of [{}, ...(c.variants || [])]) {
     const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
     const away = (p) => p.id in add && (add[p.id].parent ?? p.e.parent) !== p.e.parent;
-    const here = parts.filter((p) => !away(p) && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id))));
-    const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? p.e.order ?? 0;
+    // (a variant that sets a place is read against a part only a pointer state draws that its whole combination draws,
+    // which no variant of its own places among the rest: a resizer put after the icons a hover adds is after them)
+    const whole = Object.keys(set).some((k) => k.endsWith('.order')) && parts.some((p) => p.pointerHeld) ? expand(c, { ...variantDefaults(c), ...(v.when || {}) }) : null;
+    const drawnHere = (p) => !!whole && !!p.pointerHeld && !!whole[p.id] && (whole[p.id].parent ?? null) === (p.e.parent ?? null);
+    const here = parts.filter((p) => !away(p) && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id)) || drawnHere(p)));
+    const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? (drawnHere(p) && !p.base ? whole[p.id].order : undefined) ?? p.e.order ?? 0;
     for (const a of here) for (const b of here) if (at(a) < at(b)) before.get(b.id).add(a.id);
   }
   return before;
@@ -1027,23 +1036,18 @@ function pointerGone(c, full, dflt, mains, t = HOUSE) {
   return Object.keys(rest).filter((id) => [...rest[id].decls.values()].some((d) => !d.given) && restA[id] && !nowA[id] && !id.includes('::') && (!restA[id].parent || restA[id].parent === 'root' || nowA[restA[id].parent]));
 }
 
-// the parts a pointer state puts in that the rest of the grid draws too (to-markup's partsOf `pointerShown`): the markup
-// holds each wherever a pointer state of that combination draws it, so the sheet hides it at this combination where the
-// contract draws none (outermost only, its insides with it). A part only pointer states draw is a gap, not this
+// the parts a pointer state puts in (to-markup's partsOf `pointerShown`), whether the rest of the grid draws them too or
+// not: the markup holds each wherever a pointer state of that combination draws it, so the sheet hides it at this
+// combination where the contract draws none (outermost only, its insides with it). A ring is the ringed element's outline
 const shownMemo = new WeakMap();
 function shownParts(c, t = HOUSE) {
   const k = shownMemo.get(c); if (k && k.t === t) return k.ids;
   const ids = shownPartsOf(c, t); shownMemo.set(c, { t, ids }); return ids;
 }
 function shownPartsOf(c, t) {
-  const pointer = ([k, v]) => ((c.props || {})[k] || {}).role === 'interaction' && (c.props[k].pointer || []).includes(v);
-  const rest = new Set(Object.keys(c.anatomy || {})), byPointer = new Set();
-  // (a pointer state's add drawn as a ring is the ringed element's outline there, which the markup holds no element for)
-  for (const v of c.variants || []) for (const [id, e] of Object.entries(v.add || {})) {
-    if (!Object.entries(v.when || {}).some(pointer)) rest.add(id);
-    else if (!ringOf(c, v.when || {}, id, e, { ...c.anatomy, ...v.add }, t)) byPointer.add(id);
-  }
-  return [...byPointer].filter((id) => rest.has(id) && !id.includes('::'));
+  // (partsOf's own reading: a ring is no element, and a part inside a placed component or a slot only pointer states
+  // draw is no element this markup holds)
+  return [...partsOf(c, t).values()].filter((p) => p.pointerShown && !p.id.includes('::')).map((p) => p.id);
 }
 function pointerShown(c, full, t = HOUSE) {
   const ids = shownParts(c, t);

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn, paintsAny } from './to-code.mjs';
+import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn, paintsAny, partsOf, childrenOf, markupOrder } from './to-code.mjs';
 import { declarations } from './css.mjs';
 import { toElement } from './to-markup.mjs';
 import { ELEMENT } from './site.mjs';
@@ -803,7 +803,18 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const lg = { ...c, props: { ...c.props, size: { type: 'enum', values: ['md', 'lg'], default: 'md' } }, variants: [...c.variants, { when: { size: 'lg' }, set: { 'down.layout': { direction: 'row' } } }] };
   ok('and stays hidden where a rule of the same weight gives the part a display of its own (a layout at a size)', selfCheck(lg, rulesOf(lg).rules).length === 0);
   ok('a part a pointer state takes away is hidden by the sheet at that state, its insides with it, once',
-    /:focus-visible[^{]*> \.pick__down \{[^}]*display: none/.test(css) && !/pick__dot \{[^}]*display: none/.test(css) && (css.match(/display: none/g) || []).length === 1); }
+    /:focus-visible[^{]*> \.pick__down \{[^}]*display: none/.test(css) && !/pick__dot \{[^}]*display: none/.test(css) && (css.match(/__down \{\s*display: none/g) || []).length === 1);
+  // a part only a pointer state draws (the up arrow at focus): the markup holds it, so the sheet hides it at rest and
+  // draws it at that state's pseudo-class, where a page forced to the state reads it
+  ok('a part only a pointer state draws is hidden by the sheet at rest and drawn at that state alone',
+    /:not\(:is\(:focus-visible[^{]*> \.pick__up \{\s*display: none;\s*\}/.test(css) && /:where\(:is\(:focus-visible[^{]*\) > \.pick__up \{\s*inline-size/.test(css) && selfCheck(c, rulesOf(c).rules).length === 0); }
+// a part only a pointer state draws takes its place among the parts another variant places at that state's combination:
+// a grip a variant puts after the icons a hover adds stands after them in the markup, though that variant adds none
+{ const c = { contract: 1, component: 'Btn', props: { grip: { type: 'boolean', default: false }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, label: { kind: 'text', parent: 'root', content: 'Go', order: 0 } },
+    variants: [{ when: { grip: true }, add: { grip: { kind: 'container', parent: 'root', order: 1 } } }, { when: { state: 'hover' }, add: { icon: { kind: 'container', parent: 'root', order: 1 } } }, { when: { grip: true, state: 'hover' }, set: { 'grip.order': 2 } }] };
+  const ids = markupOrder(c, childrenOf(partsOf(c)).get('root')).order.map((p) => p.id);
+  ok('a part only a pointer state draws is placed among the parts its combination places', JSON.stringify(ids) === JSON.stringify(['label', 'icon', 'grip'])); }
 // a part the rest of the grid draws that a pointer state also puts in (a tile's border, framed or hovered): the markup
 // holds it, so the sheet hides it where the contract draws none and shows it at the pointer state (carbon tile, 2026-11-21)
 { const border = { kind: 'graphic', shape: 'rectangle', parent: 'root', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'C/s', width: 1 } };

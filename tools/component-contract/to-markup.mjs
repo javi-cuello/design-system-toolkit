@@ -587,7 +587,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     if (part.pointerOnly) { gaps.push(`${partName(id)} is drawn only at a pointer state: the stylesheet's, or frontend-build's to add`); return { comment: `frontend-build: ${partName(id)}, drawn only at a pointer state` }; }
     const { when, unknown, known } = conditionOf(c, part, props, holds, lang);
     if (part.pointerGone) gaps.push(`${partName(id)} is taken away at a pointer state: the stylesheet's, or frontend-build's to take away`);
-    if (part.pointerShown && (!part.base || part.removes.length)) gaps.push(`${partName(id)} is also drawn at a pointer state: held here, the stylesheet's to show there and hide elsewhere`);
+    if (part.pointerHeld) gaps.push(`${partName(id)} is drawn only at a pointer state: held here, the stylesheet's to show there and hide elsewhere`);
+    else if (part.pointerShown && (!part.base || part.removes.length)) gaps.push(`${partName(id)} is also drawn at a pointer state: held here, the stylesheet's to show there and hide elsewhere`);
     if (unknown) gaps.push(`${partName(id)} is drawn by whether the field holds a value: the input's own :placeholder-shown, or frontend-build's to say`);
     if (when === 'false') return null;
     const icon = props.find((x) => x.type === 'icon' && (x.p.swaps || []).includes(id));

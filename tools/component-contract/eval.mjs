@@ -129,13 +129,14 @@ export function mechanisms(by) {
   return [...out].map(([key, g]) => ({ key, components: g.components.size, finishes: finishes(g), rows: g.rows, examples: g.examples })).sort((a, b) => b.finishes - a.finishes || b.components - a.components || b.rows - a.rows);
 }
 
-/* What the toolkit's own markup leaves to the code that uses it, by design: a part drawn only at a pointer state (a menu
-   open at focus: frontend-build's, said as a gap in the markup), but a focus ring, which to-code draws as an outline.
+/* What the toolkit's own markup leaves to the code that uses it, by design: a part drawn only at a pointer state inside a
+   placed component or a slot (that component's or a caller's: frontend-build's, said as a gap in the markup; one of this
+   component's own the markup holds and the sheet shows at that state alone, and a focus ring is an outline).
    (What a slot holds in the design is no gap: the markup draws it as the slot's fallback.) The self legs count the
    rows of these apart (`left`), never among the differences, and never dropped. `settings`: the library's, as the sheet
    is written under (which pointer state is focus, so which part is a ring). */
 export const GAPS = {
-  'pointer-only-part': 'a part drawn only at a pointer state (a menu open at focus): no markup holds it',
+  'pointer-only-part': 'a part drawn only at a pointer state inside a placed component or a slot: no markup here holds it',
   'unexposed-override': 'an override inside a placed component that no prop of it carries',
   'pointer-words': 'words only a pointer state changes (a field\'s "Search" at focus)',
   'pointer-with': 'a placed instance\'s props only a pointer state gives',
