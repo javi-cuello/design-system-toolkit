@@ -39,7 +39,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
-import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, looksLikeValue, CLEARED } from './rules.mjs';
+import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, looksLikeValue, CLEARED, negative } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 import { turnedParts } from './to-code.mjs';
 import { geometry } from './geometry.mjs';
@@ -480,6 +480,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // (the drawn side held to the library as filled, so a part filled there is the library's to compare a field of too)
     const A2 = loose.length ? ownInPlaced(theirsIn, A, mains, here) : A;
     const a = same(A2), b = unaligned(same(ownInPlaced(A2, B, mains, whole)), a, layoutUnit);
+    if (layoutUnit) lone(a, b);
     diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
@@ -495,6 +496,22 @@ function spread(x) {
   const out = { ...x };
   for (const [id, e] of Object.entries(x)) if (e && e.layout && e.layout.align === 'space-between' && 'gap' in e.layout) { const { gap: _, ...l } = e.layout; out[id] = { ...e, layout: l }; }
   return out;
+}
+/* A gap below 0 on a box with fewer than two children in the flow draws nothing, and CSS says such a gap only as the
+   second child's pull back (rules.mjs), which has no child to say it on: no value of either side there. Both sides at
+   once, as the other reads it back as no pull (0); only against a reading from code (`layoutUnit`), as Figma stores
+   such a gap. Tested by test-to-figma.mjs. */
+function lone(a, b) {
+  const flow = (x) => { const n = {}; for (const e of Object.values(x)) if (e && e.parent && !(e.position === 'absolute' || e.absolute)) n[e.parent] = (n[e.parent] || 0) + 1; return n; };
+  const fa = flow(a), fb = flow(b);
+  for (const [id, e] of Object.entries(a)) {
+    // (not a slot, whose callers put more children in at run time, nor a placed component, whose children its component
+    // draws and this contract lists only where overridden; and only where the code's side says no gap of its own)
+    if (!(e && e.layout && e.kind !== 'slot' && e.kind !== 'instance' && negative(e.layout.gap) && (fa[id] || 0) < 2 && (fb[id] || 0) < 2)) continue;
+    const g = b[id] && b[id].layout && b[id].layout.gap;
+    if (g != null && g !== 0 && !negative(g)) continue;
+    for (const x of [a, b]) if (x[id] && x[id].layout && 'gap' in x[id].layout) { const { gap: _, ...l } = x[id].layout; x[id] = { ...x[id], layout: l }; }
+  }
 }
 /* A text's vertical alignment no CSS writes: where the design's text grows to its words it shows nowhere, so a
    browser's reading (`layoutUnit`) takes the design's there, as from-code takes its horizontal one where the width hugs;

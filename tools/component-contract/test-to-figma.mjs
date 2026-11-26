@@ -602,6 +602,13 @@ delete globalThis.figma;
   { const box = (gap, align, orders) => ({ component: 'Bar', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap, align } }, ...Object.fromEntries(orders.map((o, i) => [`c${i}`, { kind: 'container', parent: 'root', order: o }])) }, variants: [] });
     ok('a gap under space-between is no value: Figma spaces the children itself', roundTrip(box(12, 'space-between', [0, 1]), box('Spacing/0', 'space-between', [0, 1])).rows.length === 0 && roundTrip(box(12, 'start', [0, 1]), box('Spacing/0', 'start', [0, 1])).rows.length === 1);
     ok('a child\'s order is its place among its siblings: ties and gaps are the same places; another place is a difference', roundTrip(box(0, 'start', [0, 0, 2]), box(0, 'start', [0, 1, 2])).rows.length === 0 && roundTrip(box(0, 'start', [1, 0]), box(0, 'start', [0, 1])).rows.length === 2);
+    { const L = { layoutUnit: true }, abs = (x) => { x.anatomy.c1.position = 'absolute'; return x; }, slot = (x) => { x.anatomy.root.kind = 'slot'; return x; };
+      ok('a gap below 0 with fewer than two children in the flow is no value against a reading from code: there is nothing to space', roundTrip(box(-8, 'start', [0]), box(0, 'start', [0]), L).rows.length === 0
+        && roundTrip(abs(box(-8, 'start', [0, 1])), abs(box(0, 'start', [0, 1])), L).rows.length === 0
+        && roundTrip(box(-8, 'start', [0, 1]), box(0, 'start', [0, 1]), L).rows.length === 1
+        && roundTrip(box(-8, 'start', [0]), box(0, 'start', [0])).rows.length === 1
+        && roundTrip(slot(box(-8, 'start', [0])), slot(box(0, 'start', [0])), L).rows.length === 1
+        && roundTrip(box(-8, 'start', [0]), box(4, 'start', [0]), L).rows.length === 1); }
     const less = box(0, 'start', [0, 1]); delete less.anatomy.c0;
     ok('a sibling one side lacks is its own row, not a shift of every place after it', roundTrip(box(0, 'start', [0, 1]), less).rows.length === 1); }
   { const placed = (rootW, cons, at) => ({ component: 'Spin', props: {}, anatomy: { root: { kind: 'container', width: rootW, layout: { direction: 'row' } }, dot: { kind: 'container', parent: 'root', order: 0, constraints: cons, absolute: at } }, variants: [] });
