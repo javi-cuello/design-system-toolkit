@@ -86,7 +86,7 @@ export async function heal(stale, { ask = (r) => Promise.race([call(r, '/restart
     try { a = await ask(s.r); } catch (e) { left.push(`${s.msg} (it could not be asked to restart: ${e.message})`); continue; }
     if (a && a.stale === false) continue; // restarted since the process list was read
     if (!a || !a.supervised) left.push(`${s.msg} (nothing supervises it to bring it back)`);
-    else if (a.plugin) held.push(s);
+    else if (a.plugin === true) held.push(s);
     else waiting.push(s);
   }
   const back = (s, now) => now.some((x) => x.data === s.r.data && x.port === s.r.port && x.started instanceof Date && x.started > newest.mtime);
@@ -102,13 +102,14 @@ export async function heal(stale, { ask = (r) => Promise.race([call(r, '/restart
   return { left, held };
 }
 
-/* bin/check's judge, which restarts nothing: the stale services a plugin holds, asked of each one's /status. One that
-   cannot answer is not held, and stays a failure. `status` is its test's to replace. */
+/* bin/check's judge, which restarts nothing: the stale services a plugin holds and a supervisor will bring back, asked
+   of each one's /status. One that cannot answer, or that nothing supervises, is not held, and stays a failure. `status`
+   is its test's to replace. */
 export async function pluginHeld(stale, { status = (r) => Promise.race([statusOf(r), new Promise((_, no) => setTimeout(() => no(new Error('no answer in 5 s')), 5000).unref())]) } = {}) {
   const held = [];
   for (const s of stale) {
     if (!s.r.port) continue;
-    try { if ((await status(s.r)).plugin === true) held.push(s); } catch { /* unanswered: a failure, as judged */ }
+    try { const st = await status(s.r); if (st.plugin === true && st.supervised === true) held.push(s); } catch { /* unanswered: a failure, as judged */ }
   }
   return held;
 }

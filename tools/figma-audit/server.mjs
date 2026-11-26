@@ -826,7 +826,9 @@ const server = createServer(held(async (req, res) => {
         plugin: files.length > 0,
         files,                                   // every library currently open
         file: files[0] || null,                  // kept for the page's simple case
-        data: AUDIT_DIR, claude: !!ANTHROPIC_KEY, buildError: lastBuildError, loopback6Clash
+        data: AUDIT_DIR, claude: !!ANTHROPIC_KEY, buildError: lastBuildError, loopback6Clash,
+        // whether a supervisor brings it back when it restarts itself (check-services' judge, a plugin-held stale service)
+        supervised: selfRestart.supervised()
       });
     }
 

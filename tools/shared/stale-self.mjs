@@ -75,6 +75,8 @@ export function restartWhenStale(entries, { servers = [], busy = () => false, on
     if (stale && supervisedNow && !stopping) { clearTimeout(handle.timer); handle.timer = setTimeout(tick, 0); if (handle.timer.unref) handle.timer.unref(); }
     return { stale, supervised: supervisedNow };
   };
+  // whether something would bring it back, read without looking or restarting (a service's /status: check-services' judge)
+  handle.supervised = () => !!sup();
   // a parent that is itself stale asks whether its children are idle before it stops them (askIdle below)
   if (typeof process.send === 'function') process.on('message', (m) => { if (m && m.idleAsked) try { process.send({ idleSaid: m.idleAsked, idle: idle() }); } catch {} });
   handle.timer = setTimeout(tick, every);

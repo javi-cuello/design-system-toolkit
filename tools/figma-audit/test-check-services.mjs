@@ -63,9 +63,10 @@ ok('a start time ps did not give is not read as stale', undated.bad.length === 0
 {
   const { pluginHeld } = await import('./check-services.mjs');
   const svc = (data, port) => ({ r: { data, port, started: before }, label: data, msg: `${data} runs the old file` });
-  const status = async (r) => { if (r.port === 'z') throw new Error('ECONNREFUSED'); return { plugin: r.port === 'p' }; };
-  const held = await pluginHeld([svc('P', 'p'), svc('Q', 'q'), svc('Z', 'z'), svc('N', null)], { status });
-  ok('the judge holds back only a service whose /status says a plugin is connected; one that cannot answer stays a failure', held.map((s) => s.label).join() === 'P');
+  const said = { p: { plugin: true, supervised: true }, q: { plugin: false, supervised: true }, u: { plugin: true, supervised: false }, y: { plugin: 'yes', supervised: true }, o: { plugin: true } };
+  const status = async (r) => { if (r.port === 'z') throw new Error('ECONNREFUSED'); return said[r.port]; };
+  const held = await pluginHeld([svc('P', 'p'), svc('Q', 'q'), svc('U', 'u'), svc('Y', 'y'), svc('O', 'o'), svc('Z', 'z'), svc('N', null)], { status });
+  ok('the judge holds back only a supervised service whose /status says a plugin is connected; no plugin, none supervising, a non-boolean, an older service that does not say, or no answer stays a failure', held.map((s) => s.label).join() === 'P', held.map((s) => s.label).join());
 }
 
 // a service too old to have the route answers not_found through the real client: the check fails closed
