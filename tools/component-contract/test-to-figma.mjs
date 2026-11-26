@@ -182,7 +182,11 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     // (a size too: a checkbox's mark drawn 8.65 wide lays out at 553/64 px, read back 8.64)
     const box = (w) => ({ contract: 1, component: 'P', props: {}, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', width: w, height: 7.23 } }, variants: [] });
     const m = (a, b, o = { layoutUnit: true }) => roundTrip(box(a), box(b), o).rows.length;
-    ok('a size within a browser\'s layout unit of the design\'s is the same size where a browser read it; one further is not, nor between Figma\'s own', m(8.65, 8.64) === 0 && m(8.65, 8.62) === 1 && m(8.65, 8.64, {}) === 1 && m('hug', 8.64) === 1); }
+    ok('a size within a browser\'s layout unit of the design\'s is the same size where a browser read it; one further is not, nor between Figma\'s own', m(8.65, 8.64) === 0 && m(8.65, 8.62) === 1 && m(8.65, 8.64, {}) === 1 && m('hug', 8.64) === 1);
+    const corner = (r) => ({ contract: 1, component: 'P', props: {}, anatomy: { root: { kind: 'container', radius: r } }, variants: [] });
+    const k = (a, b, o = { layoutUnit: true }) => roundTrip(corner(a), corner(b), o).rows.length;
+    ok('any number a browser read to two decimals is the same within half its last digit (a corner stored 7.800317, read 7.8); one a hundredth off is not, nor between Figma\'s own',
+      k(7.800317, 7.8) === 0 && k(7.806, 7.81) === 0 && k(7.8, 7.81) === 1 && k(7.800317, 7.8, {}) === 1); }
   ok('and the round trip compares no combination of it', roundTrip(two, two).combinations === 2);
   { // Figma's own floors: a 0 the plugin API cannot resize to (it draws 0.01), and a text the library's snapshot recorded
     // no values for; the text not where one side is a browser's reading (a 0.01 there is within its layout unit anyway)

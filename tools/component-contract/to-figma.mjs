@@ -423,6 +423,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // (the room about a centred part sums two such places: within two units)
     // (and so is an element's size the browser lays out: a mark drawn 8.65 wide is 553/64 px, read 8.64)
     if (layoutUnit && /(\.absolute\.(x|y|end|bottom|xFromCentre|yFromCentre|xRoom|yRoom)|^[^.]+\.(width|height))$/.test(at) && typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= (/Room$/.test(at) ? 2 : 1) / 64 + 0.005) return;
+    // and any number a browser's reading gives, which it reads to two decimals (from-code's px): within half its last
+    // digit, the same (a corner Figma stores as 7.800317, read 7.8)
+    if (layoutUnit && typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= 0.005 + 1e-9) return;
     // a size the library holds at 0 is drawn at 0.01, the least the plugin API resizes to (@figma/plugin-typings
     // plugin-api.d.ts, LayoutMixin.resize: "Must be >= 0.01"): the same, on Figma's side only (a browser lays out a 0)
     if (!layoutUnit && /^[^.]+\.(width|height)$/.test(at) && a === 0 && b === 0.01) return;
