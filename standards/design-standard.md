@@ -159,7 +159,7 @@ Good interaction answers every action at once, keeps the screen still under the 
 
    *Why:* a dialog pinned to the top for one case sits somewhere other than every other dialog in the product. The jump it was meant to fix has a fix that keeps the centre.
 
-   *Evidence:* maintainer-decreed 2026-10-18, in every project, after a dialog was pinned to the top to stop it jumping as a field appeared. It decides the knowledge base's contested item *Centred or anchored to the top* for centring, with Primer and Material and Polaris ("cannot be repositioned"), and against Atlassian's 60px top anchor and Primer's top option (rule 14).
+   *Evidence:* maintainer-decreed 2026-10-18, in every project, after a dialog was pinned to the top to stop it jumping as a field appeared. It decides the knowledge base's contested item *Centred or anchored to the top* for centring (rule 14). Primer, Material and Polaris centre ("cannot be repositioned"); Atlassian anchors 60px from the top, and Primer offers that as an option.
 
    *Applies to:* design file and built page.
 
