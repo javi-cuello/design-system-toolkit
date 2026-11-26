@@ -155,11 +155,11 @@ Good interaction answers every action at once, keeps the screen still under the 
 
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the review of any list or table with per-item detail.
 
-21. **A modal sits centred on both axes, and is never pinned or offset.** A dialog that would jump as its content changes keeps the centre and opens at the height of its largest state, its body scrolling inside it (`knowledge/ui/components/modal-dialog.md` *Maximum height and position*, its item "Centred without jumping").
+21. **A modal sits centred on both axes, and is never pinned or offset.** A dialog that would jump as its content changes keeps the centre. It opens at the height of its largest state, under the height cap, and its body scrolls (`knowledge/ui/components/modal-dialog.md` *Maximum height and position*). Full screen or a sheet on a narrow screen is not pinning.
 
-   *Why:* a dialog pinned to the top or nudged off centre for one case makes each dialog in the product sit somewhere else, and the jump it was meant to fix has a fix that keeps the centre.
+   *Why:* a dialog pinned to the top for one case sits somewhere other than every other dialog in the product. The jump it was meant to fix has a fix that keeps the centre.
 
-   *Evidence:* maintainer-decreed 2026-10-18, in every project, after a dialog was pinned to the top to stop it jumping as a field appeared. Polaris centres always ("cannot be repositioned"); the knowledge item rates the fixed-height fix moderate, and this rule settles it for the toolkit.
+   *Evidence:* maintainer-decreed 2026-10-18, in every project, after a dialog was pinned to the top to stop it jumping as a field appeared. It decides the knowledge base's contested item *Centred or anchored to the top* for centring, with Primer and Material and Polaris ("cannot be repositioned"), and against Atlassian's 60px top anchor and Primer's top option (rule 14).
 
    *Applies to:* design file and built page.
 

@@ -288,6 +288,7 @@ test('plan gate: a small session passes, and skill-evals copies are never gated'
 test('review gate: a turn with full-size edits since the last review is blocked; a fresh review after them clears it', () => {
   const s = session([user('build it'), edit('a.mjs', 200)]);
   assert.match(stopGate(s.id, s.file, REPOS, 'Done.'), /^Not done yet: 200 lines[\s\S]*Explore, never a fork/);
+  assert.match(stopGate(s.id, s.file, REPOS, 'Done.'), /Mediums and Lows too/, 'a review leaves no Medium or Low behind (toolkit-standard §D 13)');
   s.clean();
   const forked = session([user('build it'), edit('a.mjs', 200), review({ subagent_type: 'fork' })]);
   assert.match(stopGate(forked.id, forked.file, REPOS, 'Done.'), /^Not done yet/, 'a fork shares the reasoning, so it is not a review');

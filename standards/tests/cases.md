@@ -345,8 +345,13 @@ Assert: the folder in shape passes and each break is a finding with its file; tw
 Walked 2026-11-26 for toolkit-standard 2.50.0: test-check 8 passed, test-sessions 2 passed, test-hooks 7 passed (after review: the Stop blocks only on files written and the index, once per file and rule; a session open in ~/.claude/sessions is live however idle); the frontmatter case caught a real bug (an empty description read the next line); on the machine the check found 7 findings and 3 warnings across eleven folders before the refactor.
 Runs: node tools/memory-check/test-check.mjs — "two memory files are one too many", "a dated heading"; node tools/memory-check/test-sessions.mjs — "--prune deletes the stale one"; node --test tools/claude-hooks/test-hooks.mjs — "breaks toolkit-standard §D 25 is blocked once"
 
-## S26 · A review leaves no Low behind, and a modal stays centred — WALKED 2026-11-26
-Fixture: a review round that returns one High and two Lows; a dialog pinned to the top to stop it jumping.
-Assert: the gate's message asks for the Lows too ("Lows too"); the round closes with both Lows fixed or each named under Open: with its blocker; the dialog review cites design-standard rule 21 and the fix is the largest state's height, centred.
-Walked 2026-11-26 for toolkit-standard 2.51.0 and design-standard 1.8.0: test-hooks run after the message change.
-Runs: node --test tools/claude-hooks/test-hooks.mjs; node tools/toolkit-check/check-standards.mjs.
+## S26 · A review leaves no Medium or Low behind — WALKED 2026-11-26
+Fixture: a review round that returns one High, one Medium and two Lows.
+Assert: the gate's message asks for them too ("Mediums and Lows too"); the round closes with each fixed or named under Open: with its blocker.
+Walked 2026-11-26 for toolkit-standard 2.51.0: test-gates passes with the new assertion.
+Runs: node tools/claude-hooks/test-gates.mjs — "a review leaves no Medium or Low behind".
+
+## S27 · A modal stays centred — TRACED 2026-11-26
+Fixture: a dialog pinned to the top to stop it jumping as a field appears.
+Assert: the review cites design-standard rule 21; the fix is the largest state's height, centred, under the cap; a narrow screen's full-screen or sheet form is not flagged.
+Traced: 2026-11-26 for design-standard 1.8.0 — read by `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" at a dialog's review.
