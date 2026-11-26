@@ -1083,10 +1083,7 @@ export function instanceWrites(field, selector, byHolder, inline = null) {
 
 // (`here`: the part as the design draws it at the combination read, where it draws it there: a variant that takes its
 // rectangle away leaves a shape of no kind, as derive reads a vector; `fa`, the design's part, still says whether to ask)
-// (`here` false: the design draws no such part at that combination, one it leaves to a placed component there, which
-// may draw it as a frame: no shape of the design's to read it as)
 export function asShape(x, fa, hasChildren, here = null) {
-  if (here === false) return x;
   if (fa && here) fa = here;
   if (x.kind !== 'container' || !fa || fa.kind !== 'graphic' || hasChildren) return x;
   if (fa.shape === 'ellipse') { if (x.full) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; } }
@@ -2626,7 +2623,7 @@ async function main() {
           if (mine && f === 'ownOutline' && ringKnobbed(await authoredValue(L.tab, await boxOf({ id, kind: x.kind }), 'outline', styles))) mine = false;
           if (!mine) delete x[f];
         }
-        A.take('design-shape', { anatomy: { [id]: x } }, () => asShape(x, fa, raw.some((r) => r.parent === id), fa && (drawnHere()[id] || false)));
+        A.take('design-shape', { anatomy: { [id]: x } }, () => asShape(x, fa, raw.some((r) => r.parent === id), fa && drawnHere()[id]));
         drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box, layers: !!x.paint };
         delete x.box;
         if (x.layout) {
