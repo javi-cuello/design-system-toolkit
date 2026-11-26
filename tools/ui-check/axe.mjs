@@ -64,7 +64,10 @@ export async function axePages(urls, { disable = [] } = {}) {
           await tab.evaluate(AXE);
           for (const v of await call(tab, run, TAGS, disable)) {
             const key = v.id + '\n' + v.targets.map((t) => t.replace(/ \([\d.]+:1, .*\)$/, '')).join('\n');
-            if (seen.has(key)) seen.get(key).schemes.push(scheme); else seen.set(key, { ...v, schemes: [scheme] });
+            if (!seen.has(key)) { seen.set(key, { ...v, schemes: [scheme] }); continue; }
+            // the same nodes in the other scheme: a contrast pair that differs there is kept beside the first, marked
+            const kept = seen.get(key); kept.schemes.push(scheme);
+            kept.targets = kept.targets.map((t, i) => (v.targets[i] && v.targets[i] !== t ? `${t} · ${scheme}${v.targets[i].slice(v.targets[i].lastIndexOf(' ('))}` : t));
           }
         }
         results.push({ url, violations: [...seen.values()].map(({ schemes, ...v }) => ({ ...v, help: `${v.help} (${schemes.join(', ')})` })) });

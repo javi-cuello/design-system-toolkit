@@ -1102,7 +1102,7 @@ const server = createServer(held(async (req, res) => {
       const records = LEGACY ? [DATA_ARG] : (existsSync(AUDIT_DIR) ? readdirSync(AUDIT_DIR).filter((n) => n.endsWith(".json") && !n.endsWith(".tmp")) : []).map((f) => join(AUDIT_DIR, f));
       for (const f of records) {
         try { for (const r of Object.values(JSON.parse(await readFile(f, "utf8")).rows || {})) if (r && typeof r.ruledOn === "string") heldDates.push(r.ruledOn); }
-        catch (e) { console.warn("ruling: could not read " + f + " for the dates its rows hold \u2014 " + e.message); }
+        catch (e) { if (e.code !== "ENOENT") console.warn("ruling: could not read " + f + " for the dates its rows hold \u2014 " + e.message); } // (none yet: nothing held)
       }
       const next = appendRuling(md, clean, on, undefined, heldDates);
       if (!next) return [200, { ok: false, error: "the context document has no rulings table in §6" }];
