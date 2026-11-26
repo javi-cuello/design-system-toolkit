@@ -326,6 +326,22 @@
   },
   {
     "keys": [
+      "checkout"
+    ],
+    "task": "End-of-session housekeeping: closing, memory, stale sessions and worktrees",
+    "skills": [
+      "checkout"
+    ],
+    "model": "Sonnet",
+    "effort": "Medium",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Scripts do the listing and pruning; the judgement is folding a session's lessons into one memory file, which is short and checked; not yet measured"
+  },
+  {
+    "keys": [
       "design-system-research:light"
     ],
     "task": "Light design systems research (few searches, cited answer)",
