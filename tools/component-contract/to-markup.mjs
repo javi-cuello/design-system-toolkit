@@ -107,10 +107,11 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
   }
   // one icon in code where Figma keeps a swap for each size of one part (Icon (16), Icon (20)): the first stays, named
   // without its size, and answers to each one's Figma name; the sheet sizes the icon. Never two swaps that each drive
-  // a layer drawn at one combination (an Icon and an Icon (selected), each on its own layer): each stays its own prop
+  // a layer drawn at one combination (an Icon and an Icon (selected), each on its own layer, both drawn there; the
+  // layers of a size each, drawn at their own sizes only, still merge): each stays its own prop. The combinations
+  // asked: the defaults and each variant's own (layers.mjs expand), where a layer is drawn or not and its swappedBy
   const icons = new Map();
-  const drivers = [c.anatomy || {}, ...(c.variants || []).map((v) => Object.fromEntries(Object.entries(v.set || {}).filter(([k]) => k.endsWith('.swappedBy')).map(([k, x]) => [k.slice(0, -'.swappedBy'.length), { swappedBy: x }])))]
-    .map((a) => new Set(Object.values(a).map((e) => e && e.swappedBy).filter(Boolean)));
+  const drivers = [{}, ...(c.variants || []).map((v) => v.when || {})].map((w) => new Set(Object.values(expand(c, w)).map((e) => e && e.swappedBy).filter(Boolean)));
   for (const x of [...out]) {
     const part = x.type === 'icon' && (x.p.swaps || [])[0];
     if (!part) continue;
