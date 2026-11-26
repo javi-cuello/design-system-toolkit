@@ -287,6 +287,31 @@ export function ownInPlaced(library, drawn, mains, whole = new Set()) {
       break;
     }
   }
+  // and a part both sides hold there whose look field the drawn side leaves unsaid: a reading says a field of a layer
+  // inside a placed component only where this component writes it, so unsaid it is that component's own there, compared
+  // as that (a focus ring's stroke and corners its placed radio icon draws, kept on the design's side beside a place of
+  // its own): the outermost instance that holds the part, as above. Only a nested instance in an instance kept whole: a
+  // reading reads every other layer there as drawn, but a nested instance's styling still only where this component
+  // writes it (from-code's INSTANCE_CSS)
+  const LOOKS = ['layout', 'radius', 'background', 'border', 'shadow', 'overflow', 'opacity'], theirs = new Map();
+  for (const id of Object.keys(library).filter((k) => k.includes('/') && k in drawn && drawn[k] && library[k] && LOOKS.some((f) => library[k][f] !== undefined && drawn[k][f] === undefined))) {
+    const segs = id.split('/'), ups = segs.slice(0, -1).map((_, i) => segs.slice(0, i + 1).join('/'));
+    if (library[id].kind !== 'instance' && ups.some((h) => whole.has(h))) continue;
+    // (at the props the library places it with: where the reading's differ, that is a row of its own)
+    for (const h of ups) {
+      const e = library[h], m = e && e.kind === 'instance' && e.component && mains(e.component, e.key);
+      if (!m) continue;
+      if (!theirs.has(h)) theirs.set(h, placedAs(library, h, m, mains).M);
+      const x = theirs.get(h)[id.slice(h.length + 1)], y = library[id];
+      if (!x) continue;
+      if (x.kind === y.kind && (x.kind !== 'instance' || String(x.component).toLowerCase() === String(y.component).toLowerCase())) {
+        const f = { ...out[id] };
+        for (const k of LOOKS) if (y[k] !== undefined && f[k] === undefined && x[k] !== undefined) f[k] = x[k];
+        out[id] = f;
+      }
+      break;
+    }
+  }
   return out;
 }
 
@@ -449,7 +474,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     if (mains) req('./derive.cjs').ownInsides(JSON.parse(JSON.stringify(A)), mains, { found: here });
     const loose = [...whole].filter((h) => !here.has(h));
     const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k))));
-    const a = same(loose.length ? ownInPlaced(theirsIn, A, mains, here) : A), b = unaligned(same(ownInPlaced(A, B, mains, whole)), a, layoutUnit);
+    // (the drawn side held to the library as filled, so a part filled there is the library's to compare a field of too)
+    const A2 = loose.length ? ownInPlaced(theirsIn, A, mains, here) : A;
+    const a = same(A2), b = unaligned(same(ownInPlaced(A2, B, mains, whole)), a, layoutUnit);
     diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));

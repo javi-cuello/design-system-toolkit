@@ -707,6 +707,14 @@ delete globalThis.figma;
     JSON.stringify(rows) === '["i/box/dot.width","i/head.layout"]');
   const other = host({ 'i/head': { kind: 'graphic', parent: 'i', order: 0 } });
   ok('one its component draws as another kind stays missing', roundTrip(other, host({}), { mains }).rows.some((r) => r.at === 'i/head' && r.drawn == null));
+  // a nested instance both sides hold, whose look the reading leaves unsaid (it says an instance's styling only where
+  // this component writes it): that field is the placed component's own record of it, compared as that, in an instance
+  // kept whole too; one the library overrides stays a row
+  const itemR = { ...item, anatomy: { ...item.anatomy, head: { ...item.anatomy.head, radius: 3 } } }, mainsR = (n) => ({ Head: head, Item: itemR }[n] || null);
+  const said = host({ 'i/head': { kind: 'instance', parent: 'i', component: 'Head', order: 0, width: 'fill', radius: 3 }, 'i/box': { kind: 'container', parent: 'i', order: 1 } });
+  const read = host({ 'i/head': { kind: 'instance', parent: 'i', component: 'Head', order: 0, width: 'fill' }, 'i/box': { kind: 'container', parent: 'i', order: 1 } });
+  ok('a nested instance\'s look a reading leaves unsaid is its placed component\'s own record of it; an override of it stays a row',
+    !roundTrip(said, read, { mains: mainsR }).rows.some((r) => /head\.radius/.test(r.at)) && roundTrip(said, read, { mains }).rows.some((r) => r.at === 'i/head.radius'));
   // an instance the library keeps whole (it lists a layer equal to its component's, i/box, so dot is hidden there): the
   // reading keeps it whole too, so a part it lacks there is one code did not draw
   const kept = host({ 'i/head': { kind: 'instance', parent: 'i', component: 'Head', order: 0, width: 'fill', layout: { direction: 'row', padding: { start: 0 } } }, 'i/box': { kind: 'container', parent: 'i', order: 1 } });
