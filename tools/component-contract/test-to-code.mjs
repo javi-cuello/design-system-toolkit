@@ -1035,5 +1035,9 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a part only focus draws is hidden by the base and shown at focus, never hidden at hover (CSS holds both at once)', /\.ds-pik > \.ds-pik__menu \{\s*display: none/.test(css) && /:focus-visible[^{]*> \.ds-pik__menu \{\s*display: flex/.test(css) && !/:hover[^{]*> \.ds-pik__menu/.test(css), css);
   const odd = { ...c, props: { state: { ...c.props.state, values: ['rest', 'hovered'], pointer: ['hovered'] } }, variants: [{ when: { state: 'hovered' }, add: { hint: { kind: 'text', parent: 'root', content: 'Hi' } } }] };
   ok('…and a state with no pseudo-class leaves such a part a gap, never hidden for good', !partsOf(odd).get('hint').pointerHeld);
+  // (drawn also at hover at one size: no combination of the rest hides it, which the browser would match at focus too)
+  const both = { ...c, props: { ...c.props, size: { type: 'enum', values: ['md', 'sm'], default: 'md' } }, variants: [...c.variants, { when: { state: 'hover', size: 'md' }, add: { menu: c.variants[0].add.menu } }] };
+  const bc = toCss(both, 'pik', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('…nor at a combination of another pointer state that does not draw it', !/:hover[^{]*sm[^{]*> \.ds-pik__menu \{\s*display: none/.test(bc) && !/sm[^{]*:hover[^{]*> \.ds-pik__menu \{\s*display: none/.test(bc) && selfCheck(both, rulesOf(both).rules).length === 0, bc);
 }
 console.log(`${n} passed`);

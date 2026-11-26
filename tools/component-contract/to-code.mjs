@@ -1066,7 +1066,8 @@ function shownParts(c, t = HOUSE) {
 function shownPartsOf(c, t) {
   // (partsOf's own reading: a ring is no element, and a part inside a placed component or a slot only pointer states
   // draw is no element this markup holds)
-  return [...partsOf(c, t).values()].filter((p) => p.pointerShown && !p.id.includes('::')).map((p) => p.id);
+  // (one only a pointer state draws is the base's to hide, never a combination's: rulesOf `held`)
+  return [...partsOf(c, t).values()].filter((p) => p.pointerShown && !p.pointerHeld && !p.id.includes('::')).map((p) => p.id);
 }
 function pointerShown(c, full, t = HOUSE) {
   const ids = shownParts(c, t);
@@ -1114,9 +1115,8 @@ export function rulesOf(c, mains, t = HOUSE) {
   // which CSS can hold at once with its own (a menu open at focus stays open while the box is also hovered)
   const held = [...partsOf(c, t).values()].filter((x) => x.pointerHeld && !x.id.includes('::') && !(partsOf(c, t).get(x.e.parent) || {}).pointerHeld).map((x) => x.id);
   if (held.length) {
-    let base = rules.find((r) => !Object.keys(r.when).length);
-    if (!base) { base = { when: {}, weight: 0, parts: {} }; rules.unshift(base); }
-    for (const id of held) (base.parts[id] ||= new Map()).set('display', { v: 'none' });
+    const base = rules.find((r) => !Object.keys(r.when).length);
+    for (const id of withTurns(c, held)) (base.parts[id] ||= new Map()).set('display', { v: 'none' });
   }
   for (const [key, miss] of groupBy(selfCheck(c, rules, mains, t), (o) => JSON.stringify(o.when))) {
     const when = JSON.parse(key), parts = {};
