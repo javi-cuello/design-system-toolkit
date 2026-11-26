@@ -764,6 +764,11 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   stackLikeDesign(code, design, (t) => t);
   ok('stacking at the design\'s default state goes on the reading\'s rest, its own word for it',
     !code.variants.some((v) => v.when.state === 'enabled') && expand(code, { state: 'rest' }).root.layout.firstOnTop === true && !expand(code, { state: 'hover' }).root.layout.firstOnTop); }
+{ // an icon coloured with nothing (to-code's transparent, for a glyph Figma paints with nothing) reads with no colour;
+  // one drawn in a colour reads that colour's token
+  const { iconColour } = await import('./from-code.mjs');
+  const tokOf = async (v) => (v === 'rgb(10, 20, 30)' ? 'Icon/strong' : v);
+  ok('a transparent icon reads no colour; a coloured one its token', (await iconColour('rgba(0, 0, 0, 0)', tokOf)) === undefined && (await iconColour('transparent', tokOf)) === undefined && (await iconColour('rgb(10, 20, 30)', tokOf)) === 'Icon/strong'); }
 { // a placed component's slot this one fills keeps no binding: the slot prop is that component's own, which derive states
   // only on a component's own slots (a list item's content slot, filled by the component placing it)
   const c = { component: 'S', props: { body: { type: 'slot' } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Item' }, 'i/content': { kind: 'slot', parent: 'i', content: '{content}' }, body: { kind: 'slot', parent: 'root', content: '{body}' } },

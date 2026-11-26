@@ -270,6 +270,10 @@ export function roomTaken(e, room) {
 
 /* Whether a layer's name in the reading is the design's rather than the markup's (nameInside with the design's names
    against without): one only the design gives, or the markup's own the design drops. */
+/* An icon's colour as read: the token `tokOf` finds for the colour it is drawn in; none (undefined) for one coloured
+   with nothing (transparent: to-code's icon whose glyph Figma paints with nothing, its fills emptied) or none read.
+   Tested by test-from-code.mjs. */
+export const iconColour = async (v, tokOf) => (!v || clearValue(v) ? undefined : tokOf(v));
 /* A placed component the page draws no stroke on (no border, ring or outline read: `strokeless`) where its component's
    root has one at its props has had it cleared, as to-code writes a contract's `none` (rules.mjs CLEARED): read back so.
    Its fill likewise. The mark goes from every part. (A colour style code has none of: never read.) */
@@ -2702,10 +2706,10 @@ async function main() {
           delete x.paint;
           if (named.length) x.background = named.length === 1 ? named[0] : named;
         } else if (x.background) x.background = await tok('background', x.background, `${id}.background`, ['background-color', 'background']);
-        // (a glyph coloured with nothing, transparent, paints nothing: no colour, as Figma's glyph with its fills emptied)
-        if (clearValue(x.icon)) delete x.icon;
-        if (x.icon) {
-          x.background = await tok('icon', x.icon, `${id}.icon`, ['fill', 'color']); delete x.icon;
+        const icon = await iconColour(x.icon, (v) => tok('icon', v, `${id}.icon`, ['fill', 'color']));
+        delete x.icon;
+        if (icon !== undefined) {
+          x.background = icon;
           // a glyph whose colour the code sets on it, in any render: else it is the colour around it (asIcon)
           const at = `[data-contract-id="${id}"]`;
           // (a reset that hands it on, svg { fill: currentColor } or color: inherit, or a stroke icon's fill: none, sets none of its own)
