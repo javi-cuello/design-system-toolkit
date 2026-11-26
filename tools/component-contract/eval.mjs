@@ -260,11 +260,13 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
       && (words.get(`${el}.with`) || []).some((w) => w && typeof w === 'object' && Object.entries(lib).every(([k, v]) => same(w[k], v)));
     return byMine || Object.entries(lib).every(([k, v]) => ownPointer(el, k, v));
   };
-  // modes a pointer state's variant sets on that layer at the design's value, at every combination the row was found in
-  // (roundTrip's `pointer`): one no pointer state sets there stays a difference
+  // modes a pointer state's variant sets on that layer at the design's value, or drops by adding the layer again, at every
+  // combination the row was found in (roundTrip's `pointer`): one no pointer state sets there stays a difference. (Any
+  // pointer variant of the contract is read, not only those at the row's combinations: the row's `pointer` already says
+  // the pointer state decides it there, and the value must match; accepted, review of 2026-11-27.)
   const pointerModes = (el, field, row) => {
     if (!row || row.pointer !== true || !/^modes(\.|$)/.test(field)) return false;
-    const at = (x) => { const m = (x.set || {})[`${el}.modes`] !== undefined ? x.set[`${el}.modes`] : (x.add || {})[el] ? x.add[el].modes || null : undefined; return field === 'modes' ? m : m && m[field.slice(6)]; };
+    const at = (x) => { const m = (x.set || {})[`${el}.modes`] !== undefined ? x.set[`${el}.modes`] : (x.add || {})[el] ? x.add[el].modes || null : undefined; return field === 'modes' || m === undefined ? m : m == null ? null : m[field.slice(6)] ?? null; };
     const key = (v) => JSON.stringify(v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : w));
     return vs.some((x) => pointerWords(contract, x.when) && at(x) !== undefined && key(at(x)) === key(row.library));
   };

@@ -268,6 +268,11 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const sib = (pc, dc) => ({ ...lk([]), anatomy: { root: { kind: 'container' } }, variants: [{ when: { blank: true }, set: { 'root.modes': { c: 'x', d: 'y' } } }, { when: { state: 'press', blank: true }, set: { 'root.modes': { c: pc, d: dc } } }] });
     const sr = roundTrip(sib('x', 'q'), sib('z', 'q'), { layoutUnit: true }).rows.find((y) => y.at === 'root.modes.c' || y.at === 'root.modes');
     const same = roundTrip(sib('x', 'y'), sib('z', 'y'), { layoutUnit: true }).rows.find((y) => y.at.startsWith('root.modes'));
+    // (a press's set that a later state's adding the part again wipes is not the press's)
+    const wipe = { ...lk([]), variants: [{ when: { state: 'press', blank: true }, set: { 'icon.modes': { theme: 'p' } } }, { when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', modes: { theme: 'link' } } } }] };
+    const drawnAtPress = { ...lk([]), variants: [{ when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', modes: { theme: 'link' } } } }, { when: { state: 'press', blank: true }, set: { 'icon.modes': { theme: 'q' } } }] };
+    const wr = roundTrip(wipe, drawnAtPress, { layoutUnit: true }).rows.find((y) => y.at.startsWith('icon.modes'));
+    ok('a pointer state\'s set wiped by a later state adding the part again is not that state\'s row', wr && wr.pointer === undefined, wr);
     ok('…never where another state there gives the same value at the row (a sibling key the press changes, or the same value)', sr && sr.pointer === undefined && same && same.pointer === undefined, [sr, same]);
     ok('…the last variant to touch it decides, as expand() layers them, a combination last', (!laterSet || laterSet.pointer === undefined) && (!laterAdd || laterAdd.pointer === undefined) && combo && combo.pointer === true, [laterSet, laterAdd, combo]); }
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());

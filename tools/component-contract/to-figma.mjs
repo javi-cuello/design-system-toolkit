@@ -501,9 +501,11 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     const touches = (v, at) => Object.keys(v.set || {}).some((k) => k === at || at.startsWith(`${k}.`) || k.startsWith(`${at}.`));
     byPointer = (at) => {
       const ss = atC.filter((v) => touches(v, at));
-      if (ss.length > 0 && ss.every((v) => pointerAt(v.when))) return true;
+      // (whatever else holds, the last variant to touch the row or put its part there decides it: a pointer state's set
+      // that a later state's adding the part again wipes is not the pointer state's; review of 2026-11-27)
       const el = at.split('.')[0], last = layered.filter((v) => (v.add || {})[el] || touches(v, at)).pop();
       if (!last || !pointerAt(last.when)) return false;
+      if (ss.every((v) => pointerAt(v.when))) return true;
       if ((last.add || {})[el]) return true;
       // (a pointer state's set, last, whose value no other state there gives: a link's colour mode at press, over the one
       // it has at rest; where another state gives the same, the markup holds it through that one)
