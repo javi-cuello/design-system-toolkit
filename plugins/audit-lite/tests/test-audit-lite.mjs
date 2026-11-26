@@ -131,6 +131,11 @@ ok('the instructions say what a draft request and the closing files are', LITE.i
   const withDoc = (LITE.instructions.split('**From the project\'s context document.**')[1] || '').split('**From the toolkit\'s defaults.**')[0];
   ok('with a context document the closing offer is stated: record an intended row as a ruling, its example a shown row, never a dropped one', /offer to record any row the person says is intended as a ruling/.test(withDoc) && /never a candidate you dropped/.test(withDoc), withDoc);
 }
+{
+  const steps = (LITE.instructions.split('6. **In the chat:**')[1] || '').split('## Rules for the rows')[0];
+  const [s6, s7, s8] = ['', '7. **', '8. **'].map((k, i, a) => (k ? steps.split(k)[1] || '' : steps).split(a[i + 1] || '\u0000')[0]);
+  ok('with rulings, the tables and the results file say how many were applied, and the closing lines which finding each removed or that it matched nothing', /When \*Run\* lists rulings[^.]*the line above the tables says how many rulings were applied/.test(s6) && /under the same line of rulings applied/.test(s8) && /five when \*Run\* lists rulings/.test(s7) && /which finding each ruling removed this run[^.]*or that it matched nothing this run/.test(s7), steps);
+}
 
 // The clicks: Done and Record as ruling change what the page shows and what it stores.
 {

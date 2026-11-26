@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.21] - 2026-11-26
+### Fixed
+- With rulings in the context document, the chat tables and the results file now say how many rulings were applied ("1 ruling applied"), and the closing lines say which finding each ruling removed this run, or that it matched nothing (a fifth sentence is allowed for it). One of two live runs with a ruling never mentioned it, so the person could not confirm it worked. The page has no field for the count, so it is unchanged.
+
 ## [0.14.20] - 2026-11-26
 ### Changed
 - Carries figma-context-capture 2.17.1: the context template says when to set `pages.componentPages` (icon or documentation pages marked like component pages).
