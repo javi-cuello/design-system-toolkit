@@ -685,6 +685,16 @@ export function carries(attrs, k, v) {
   return Object.entries(attrs).some(([n, x]) => n.startsWith('data-') && !/^data-(contract-id|figma-)/.test(n) && x === String(v));
 }
 
+/* A mapping's axes with each arg named as the attribute the toolkit's markup writes it as on its host: a prop renamed in
+   code (to-markup's `renamed`, Type as typeOption, as type is the element's own) keeps its contract name there, so a
+   placed one's attributes are read by that name. `props`: to-markup's propsOf. Tested by test-from-code.mjs. */
+export function attrsByArg(axes, props) {
+  if (!axes) return axes;
+  const by = new Map(props.filter((x) => x.attr && x.renamed).map((x) => [x.name, x.key]));
+  if (!by.size) return axes;
+  return Object.fromEntries(Object.entries(axes).map(([ax, vals]) => [ax, Object.fromEntries(Object.entries(vals).map(([v, a]) => [v, a && typeof a === 'object' ? Object.fromEntries(Object.entries(a).map(([k, x]) => [by.get(k) ?? k, x])) : a]))]));
+}
+
 /* An axis's value from the attributes an element carries: the value whose args it all carries, else the one that asks
    for none. The host's own attributes first; only where they say none, an inner control's disabled (a loading button
    whose <button> is disabled because it is busy stays loading). Tested by test-from-code.mjs. */
@@ -1765,7 +1775,9 @@ async function selfSource(project, name, { second = false } = {}) {
     // (a swap's layers alone by the writer's ids: a boolean keeps the lookup by stored paths, since a layer drawn is not
     // what the boolean says, where its host states it and a variant draws the layer anyway)
     swapPartsOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); return x ? partsById(() => drawnMapping(x), container) : null; },
-    axesOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); return x ? mappingOf(x).axes || null : null; },
+    // (each arg by the attribute its host carries it as: a prop renamed in code, Type as typeOption, keeps its own name
+    // there, type="square", which is what a reading of the placed one finds: attrsByArg)
+    axesOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); return x ? attrsByArg(mappingOf(x).axes || null, propsOf(x, library)) : null; },
     combosOf: () => null,
     // each read on a clean page (render, below): a forced pointer state never outlives the args it was forced for
     statesAsArg: true,

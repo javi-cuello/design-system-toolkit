@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -539,6 +539,9 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
 {
   const state = { default: {}, loading: { loading: true }, disabled: { disabled: true } };
   ok('an axis takes the value whose args the host carries', axisValueOf(state, { loading: '' }) === 'loading');
+  // a prop the markup renames in code (Type as typeOption) is carried on its host under its own name, type="square"
+  { const axes = attrsByArg({ Type: { Round: {}, Square: { typeOption: 'square' } } }, [{ key: 'type', name: 'typeOption', renamed: 'type', attr: true }]);
+    ok('a renamed prop\'s arg is read by the attribute its host carries it as', axisValueOf(axes.Type, { type: 'square' }) === 'Square' && axisValueOf(axes.Type, {}) === 'Round'); }
   ok('an inner control\'s disabled counts only where the host says none: a busy loading button stays loading', axisValueOf(state, { loading: '' }, true) === 'loading' && axisValueOf(state, {}, true) === 'disabled');
   ok('no args carried is the value that asks for none', axisValueOf(state, {}) === 'default');
   const design = { icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon'] }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon'] }, label: { type: 'text', figma: 'Label' }, label2: { type: 'instance', figma: 'Label 2' } };
