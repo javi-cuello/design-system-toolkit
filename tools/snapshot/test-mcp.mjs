@@ -55,7 +55,7 @@ ok(`parts are sized at the limit given (1500 here), a set over the limit alone, 
   JSON.stringify(parts.map((p) => [p.pages, p.scope])) === JSON.stringify([[[1], null], [[2], null], [[4], ['4:1', '4:2']], [[4], ['4:3']]]) && parts.map((p) => p.walks).join() === '1200,4000,1100,500');
 const made = calls(plan);
 ok('the calls are the tokens call, the store call with the first part, then one call a part', made.length === 7 && made[0].call === 'tokens' && /storing the walk/.test(made[1].call) && /^part 6 of 6: 500 walks on page 4$/.test(made[6].call));
-ok(`parts default to ${LIMIT} walks, the most a 117-page library's parts held without running Figma out of memory`, LIMIT === 600 && sized(plan).every((p) => p.walks <= LIMIT || p.scope?.length === 1 || p.pages.length === 1));
+ok(`parts default to ${LIMIT} walks, and a set over that, which no part size splits, is named in its call as one that may run Figma out of memory`, LIMIT === 600 && made.filter((c) => /cannot be split/.test(c.call)).map((c) => c.call.split(':')[0]).join() === 'part 3 of 6,part 5 of 6');
 const every = [planCode(), ...made.map((c) => c.code)];
 ok(`every call fits use_figma's ${CAP} characters, and holds no \\u or \\\\ escape`, every.every((c) => c.length <= CAP && !/\\u|\\\\/.test(c)));
 let allParse = true; for (const c of every) { try { new vm.Script(`(async () => {\n${c}\n})`); } catch { allParse = false; } }
@@ -117,7 +117,7 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   const b = part('b', { unrecorded: [['late']], unreadable: [{ name: 'Bad', reason: 'r' }, { name: 'Worse', reason: 'r' }, { name: 'Set', page: 'P', reason: 'r' }], unanswered: 1 });
   const j = join([head, b, a]);
   ok('the unrecorded are kept as the whole walk keeps them: a node\'s all while fewer than 200 are kept, in plan order, then the first 40 kinds', j.tokens._meta.unrecorded.join() === 'x0,x1,x2,over1,over2');
-  ok('the run\'s unanswered count is the tokens call\'s plus what each part added, so parts run side by side lose none', j.tokens._meta.variablesUnanswered === 4);
+  ok('the run\'s unanswered count is the tokens call\'s plus what each part added, whatever order the parts ran in', j.tokens._meta.variablesUnanswered === 4);
   ok('a variant unreadable in two parts is listed once, as the walk lists it; a set\'s entry, which says its page, each time', j.unreadable.map((x) => x.name).join() === 'Bad,Set,Worse,Set');
   const c = part('a', { unreadable: [{ name: 'Card', page: 'P', reason: 'r' }] }), d = part('b', { unreadable: [{ name: 'Card', reason: 'r' }] });
   ok('a variant\'s entry after a set\'s of the same name, in another part, is dropped, as the walk drops it', join([head, c, d]).unreadable.length === 1);

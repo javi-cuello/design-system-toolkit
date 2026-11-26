@@ -112,7 +112,7 @@ p.remove();
 return { removedNodeIds: [id] };`;
 
 /* ---- A large library, in parts. One run outlasts use_figma's time limit on a large library (64 pages, 2026-11-25:
-   a generic Figma error), while parts of up to about 2 000 variant walks each took 17–132 s. So: a read-only plan;
+   a generic Figma error), while parts of up to about 2 000 variant walks each took 17–132 s there. So: a read-only plan;
    a tokens call; a store call that keeps the walk on the temporary page as a function and runs the first part; and
    part calls of a few lines that run what is stored. Each leaves a holder, and collect joins them.
    600, not 1 500: on a 117-page library (2026-11-26) a part of 1 485 walks ran Figma out of memory even alone, and
@@ -243,7 +243,7 @@ return await (new Function('return ' + __src)())(${args(part)});`, 'part call');
 export function calls(plan) {
   const parts = sized(plan);
   if (!parts.length) throw new Error('the plan holds no component set');
-  const say = (p, i) => `part ${i + 1} of ${parts.length}: ${p.walks} walks on page${p.pages.length > 1 ? 's' : ''} ${p.pages.join(', ')}`;
+  const say = (p, i) => `part ${i + 1} of ${parts.length}: ${p.walks} walks on page${p.pages.length > 1 ? 's' : ''} ${p.pages.join(', ')}${p.walks > LIMIT ? `, one set over ${LIMIT} walks that cannot be split: it may run Figma out of memory` : ''}`;
   return [
     { call: 'tokens', code: tokensCode() },
     { call: `${say(parts[0], 0)}, storing the walk`, code: storeCode(parts[0]) },
@@ -275,7 +275,7 @@ export function join(found) {
   const kept = [];
   for (const group of parts.flatMap((p) => p.unrecorded)) if (kept.length < 200) kept.push(...group);
   tokens._meta.unrecorded = [...new Set(kept)].slice(0, 40);
-  // each part says how many it added, from the count the calls before it left: parts run side by side all add
+  // each part says how many it added, from the count the calls before it left: whatever order the parts ran in, none is lost
   const unanswered = parts.reduce((n, p) => n + p.unanswered, head.unanswered);
   if (unanswered) tokens._meta.variablesUnanswered = unanswered;
   // as the walk lists them: a set's entry, which says its page, each time; a variant's only when no entry before it has its name
