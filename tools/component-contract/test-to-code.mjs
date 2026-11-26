@@ -1021,4 +1021,11 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const c = { anatomy: { a: { kind: 'instance', border: 'none', fillStyle: 'none' }, b: { kind: 'instance', border: { color: 'x' } } }, variants: [{ set: { 'c.border': 'none' } }] };
   ok('a stroke cleared (`none`) paints nothing; a stroke paints', !paintsAny(c, 'a') && paintsAny(c, 'b') && !paintsAny(c, 'c'));
 }
+// the rest state rules out only the pointer states the component has: hovering one with no Hover value draws it at rest
+{
+  const c = { contract: 1, component: 'Pin', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } } }, variants: [{ when: { state: 'focus' }, add: { hint: { kind: 'text', parent: 'root', content: 'Hi' } } }] };
+  const css = toCss(c, 'pin', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('a part only focus draws is hidden at rest, the rest ruling out only the component\'s own pointer states, never a hover it has no value for', /\.ds-pin:where\(:not\(:is\(:focus-visible, :has\(:focus-visible\)\)\)\) > \.ds-pin__hint \{\s*display: none/.test(css) && !/:hover/.test(css), css);
+}
 console.log(`${n} passed`);

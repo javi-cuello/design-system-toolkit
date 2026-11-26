@@ -425,7 +425,9 @@ export function condition(c, n, key, value, t = HOUSE, mains = null, library = {
     // (and where the product sets values of its own too, a disabled or read-only state, the default is not those:
     // its attribute at the default, or none; a rule for the rest state would otherwise reach a disabled box)
     const set = (p.values || []).filter((v) => v !== p.default && !PS[v]);
-    if (value === p.default) return Object.keys(PS).map((v) => `:not(${live(v)})`).join('') + (set.length ? `:is([${n.attr(key)}="${value}"], :not([${n.attr(key)}]))` : '');
+    // (the rest state is not only this prop's own pointer states: one it has no value for, hovering a box with no Hover,
+    // draws it at rest)
+    if (value === p.default) return Object.keys(PS).filter((v) => (p.values || []).includes(v)).map((v) => `:not(${live(v)})`).join('') + (set.length ? `:is([${n.attr(key)}="${value}"], :not([${n.attr(key)}]))` : '');
   }
   if (entry && key === entry.flag) return (value === entry.on) ? `:has(> ${control}:not(:placeholder-shown))` : `:has(> ${control}:placeholder-shown)`;
   if (key === dis) return value ? disabled : `:not(${disabled})`;
