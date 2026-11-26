@@ -157,7 +157,7 @@ export const GAPS = {
 export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true } = {}) {
   // (a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
   const parts = partsOf(contract, settings);
-  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : mainOf && unexposed(contract, p.id, mainOf) ? (unexposed(contract, p.id, mainOf) === 'exposed' ? 'exposed-unforwarded' : 'unexposed-override') : null);
+  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : mainOf && unexposed(contract, p.id, mainOf) ? (/^exposed/.test(unexposed(contract, p.id, mainOf)) ? 'exposed-unforwarded' : 'unexposed-override') : null);
   const reasons = new Map([...parts.values()].map((p) => [p.id, reasonOf(p)]).filter(([, r]) => r));
   const ids = [...reasons.keys()];
   // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them
@@ -178,7 +178,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const passed = new Set(['', 'kind', 'component', 'content', 'with']);
   // (a placed instance the markup cannot place at all, a swap no prop passes: its key, modes and look are the swapped-in
   // component's own, gone with it; its size and place in this one stay, as the sheet reaches them)
-  const swappedOwn = (el, field) => over.get(el) === 'part' && (all[el] || {}).kind === 'instance' && /^(key|modes|background|radius|border|shadow|layout|overflow|smoothing)(\.|$)/.test(field);
+  const swappedOwn = (el, field) => /^(exposed-)?part$/.test(String(over.get(el))) && (all[el] || {}).kind === 'instance' && /^(key|modes|background|radius|border|shadow|layout|overflow|smoothing)(\.|$)/.test(field);
   // (a whole part the component does not draw takes its insides with it; a field it draws otherwise, only that field)
   // a part of a placed component's own that the design keeps only as the way down to such an override (an item's
   // content, holding the avatar it has no prop for): its whole-part row goes with the override, its fields stay
@@ -270,7 +270,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   };
   return (at, row) => {
     const el = at.split('.')[0], field = at.slice(el.length + 1);
-    const id = ids.find((x) => (el === x || el.startsWith(`${x}/`)) && !(over.has(x) && !((el !== x && over.get(x) === 'part') || passed.has(field) || (field.startsWith('with.') && el === x))));
+    const id = ids.find((x) => (el === x || el.startsWith(`${x}/`)) && !(over.has(x) && !((el !== x && /^(exposed-)?part$/.test(String(over.get(x)))) || passed.has(field) || (field.startsWith('with.') && el === x))));
     // (modes, the markup's attributes, that only pointer states' variants set at every combination the row was found in:
     // roundTrip's `pointer`)
     return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) ? 'inside-foreign'
@@ -875,7 +875,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     console.log('(readings ranked as stored: a reading whose inputs moved since is not marked here; the report says which)');
     if (stale.length) console.log(`warning: ${stale.length} stale reading(s) ranked with the rest (${stale.slice(0, 3).join(', ')}${stale.length > 3 ? ', …' : ''}): read them again for a true ranking`);
     const all2 = Object.values(by);
-    console.log(`${all2.length} measured, ${same.length} the same, ${apart.length} the same apart from another library's insides, ${held.length} apart from what the library holds back, ${all2.reduce((a, r) => a + r.length, 0)} rows`);
+    console.log(`${all2.length} measured, ${same.length} the same, ${apart.length} the same apart from another library's insides, ${held.length} the same apart from what the library holds back, ${all2.reduce((a, r) => a + r.length, 0)} rows`);
     console.log('finishes components  rows  mechanism (finishes: components whose every row is this one)');
     for (const g of mechanisms(by).slice(0, +(opt('--top') || 25))) console.log(`${String(g.finishes).padStart(8)} ${String(g.components).padStart(10)} ${String(g.rows).padStart(5)}  ${g.key}\n            ${g.examples.join('\n            ')}`);
     // most components carry several mechanisms, so a single one finishes few: the components nearest the same, by how

@@ -197,9 +197,9 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     const at = (w, fill) => ({ component: 'Toggle', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item' }, 'item/sw': { kind: 'instance', parent: 'item', component: 'Switch', with: w }, 'item/sw/knob': { kind: 'graphic', parent: 'item/sw', fill: [fill] } }, variants: [] });
     const of = (m) => (n) => (n === 'Item' ? m : null);
     ok('an exposed nested instance\'s prop overridden is one to forward; the same on an unexposed one is the library\'s',
-      unexposed(at({ Toggled: 'True' }, 'a'), 'item/sw', of(main(true))) === 'exposed' && unexposed(at({ Toggled: 'True' }, 'a'), 'item/sw', of(main(false))) === 'field');
+      unexposed(at({ Toggled: 'True' }, 'a'), 'item/sw', of(main(true))) === 'exposed-field' && unexposed(at({ Toggled: 'True' }, 'a'), 'item/sw', of(main(false))) === 'field');
     ok('…another component swapped into an exposed instance is one to forward too',
-      (() => { const c = at({ Toggled: 'False' }, 'a'); c.anatomy['item/sw'].component = 'Checkbox'; return unexposed(c, 'item/sw', of(main(true))) === 'exposed'; })()); }
+      (() => { const c = at({ Toggled: 'False' }, 'a'); c.anatomy['item/sw'].component = 'Checkbox'; return unexposed(c, 'item/sw', of(main(true))) === 'exposed-part'; })()); }
   { const date = { component: 'Date', folder: 'date', props: { value: { type: 'string', default: 'Value', figma: 'Value', sets: ['label'] }, hasValue: { type: 'boolean', default: false, figma: 'Has value' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Select a date' } }, variants: [{ when: { hasValue: true }, set: { 'label.content': '{value}' } }] };
     const out = toElement(date, 'date', { naming: ELEMENT, library: { Date: date } });
     ok('a text that holds a literal until a variant swaps a prop in draws the literal there, never the prop on both sides', /hasValue \? value : "Select a date"/.test(out) && !/hasValue \? value : value/.test(out)); }

@@ -649,6 +649,13 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   ok('an exposed instance\'s overridden prop is left to code as exposed-unforwarded, an unexposed one\'s as unexposed-override',
     leftToCode(c, (n) => (n === 'Item' ? main(true) : null))('item/sw') && gapOf(c, (n) => (n === 'Item' ? main(true) : null))('item/sw') === 'exposed-unforwarded'
     && gapOf(c, (n) => (n === 'Item' ? main(false) : null))('item/sw') === 'unexposed-override'); }
+// (and a component swapped into an exposed instance: its key, modes and look are swapped-own and its insides left to
+// code, as on an unexposed one, never difference rows; review of 2026-11-26)
+{ const main = (exposed) => ({ component: 'Item', props: {}, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switch', ...(exposed && { exposed: true }) } }, variants: [] });
+  const c = { contract: 1, component: 'Toggle', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item' }, 'item/sw': { kind: 'instance', parent: 'item', component: 'Checkbox', key: 'K' }, 'item/sw/box': { kind: 'container', parent: 'item/sw', width: 16 } }, variants: [] };
+  const g = (e) => gapOf(c, (n) => (n === 'Item' ? main(e) : null));
+  ok('a swap into an exposed instance excuses its key, modes and insides as a swap into an unexposed one does',
+    ['item/sw.key', 'item/sw.modes', 'item/sw/box.width'].every((at) => !!g(true)(at) === !!g(false)(at) && !!g(true)(at)), ['item/sw.key', 'item/sw.modes', 'item/sw/box.width'].map((at) => [g(true)(at), g(false)(at)])); }
 ok('every gap id is met by a fixture', Object.keys(GAPS).every((g) => seenGaps.has(g)), [...Object.keys(GAPS)].filter((g) => !seenGaps.has(g)));
 
 ok('--check: only a strict count absent from accepted.json is spared; a `left` or `predicted` count absent still fails',

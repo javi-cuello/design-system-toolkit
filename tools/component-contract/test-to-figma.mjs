@@ -183,6 +183,9 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const box = (w) => ({ contract: 1, component: 'P', props: {}, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', width: w, height: 7.23 } }, variants: [] });
     const m = (a, b, o = { layoutUnit: true }) => roundTrip(box(a), box(b), o).rows.length;
     ok('a size within a browser\'s layout unit of the design\'s is the same size where a browser read it; one further is not, nor between Figma\'s own', m(8.65, 8.64) === 0 && m(8.65, 8.62) === 1 && m(8.65, 8.64, {}) === 1 && m('hug', 8.64) === 1);
+    // 2026-11-26: whether a nested instance is exposed is the Figma component's API, which no drawing or reading holds
+    const sw = (x) => ({ contract: 1, component: 'P', props: {}, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switch', ...x } }, variants: [] });
+    ok('an exposed nested instance is never a row against a side that does not say it', roundTrip(sw({ exposed: true }), sw({})).rows.length === 0 && roundTrip(sw({ exposed: true }), sw({}), { layoutUnit: true }).rows.length === 0);
     const corner = (r) => ({ contract: 1, component: 'P', props: {}, anatomy: { root: { kind: 'container', radius: r } }, variants: [] });
     const k = (a, b, o = { layoutUnit: true }) => roundTrip(corner(a), corner(b), o).rows.length;
     ok('any number a browser read to two decimals is the same within half its last digit (a corner stored 7.800317, read 7.8); one a hundredth off is not, nor between Figma\'s own',

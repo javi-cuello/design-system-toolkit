@@ -418,6 +418,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // a placed instance's key is which component it is, compared only where both sides hold one (a reading from code
     // may hold none): two that differ are two components of one name
     if (/^[^.]+\.key$/.test(at) && (a == null || b == null)) return;
+    // whether a nested instance is exposed is the Figma component's API, which no drawing or reading from code holds:
+    // never compared
+    if (/^[^.]+\.exposed$/.test(at)) return;
     // a colour style is Figma's alone: where one side is a browser's reading (`layoutUnit`), it is not held to one
     if (layoutUnit && /^[^.]+\.fillStyle$/.test(at)) return;
     // another library component, named in the drawing's file by its set alone (house): the library's stored name

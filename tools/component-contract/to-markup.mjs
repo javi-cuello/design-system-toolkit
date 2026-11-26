@@ -188,10 +188,10 @@ export function unexposed(c, id, mainOf) {
   const differs = (k) => JSON.stringify(own[k] ?? null) !== JSON.stringify(part.e[k] ?? null);
   if (differs('kind')) return 'part';
   // a nested instance the component exposes (Figma's exposed instances) hands its own props and swaps to the caller:
-  // an override of those is a prop the component declares, which the markup does not forward yet ('exposed', the
+  // an override of those is a prop the component declares, which the markup does not forward yet ('exposed-part', 'exposed-field', the
   // toolkit's to close); one on an instance it does not expose is the library's, which no markup can pass
-  const exposed = !!own.exposed;
-  if (differs('component') && !by('swaps') && !varied('component')) return exposed ? 'exposed' : 'part';
+  const exposed = !!((added ? atProps(main, he.with)[rel] : null) || own).exposed;
+  if (differs('component') && !by('swaps') && !varied('component')) return exposed ? 'exposed-part' : 'part';
   if (differs('content') && !by('sets') && !varied('content')) return 'field';
   // a nested instance's own props reach it through a prop the component passes down to it
   // (each prop it is given on its own: one a variant of the component sets to that value is passed by that variant's
@@ -199,7 +199,7 @@ export function unexposed(c, id, mainOf) {
   const mine = (part.e.with && typeof part.e.with === 'object') ? part.e.with : {}, theirs = (own.with && typeof own.with === 'object') ? own.with : {};
   const reached = (k) => passing.some((v) => { const w = (v.set || {})[`${rel}.with`] ?? ((v.add || {})[rel] || {}).with; return w && typeof w === 'object' && JSON.stringify(w[k]) === JSON.stringify(mine[k]); });
   const unreached = Object.keys(mine).some((k) => JSON.stringify(mine[k]) !== JSON.stringify(theirs[k] ?? null) && !reached(k));
-  if (differs('with') && (!varied('with') || unreached) && !props.some((q) => [...(q.sets || []), ...(q.swaps || [])].some((l) => l.startsWith(`${rel}/`) || l === rel))) return exposed ? 'exposed' : 'field';
+  if (differs('with') && (!varied('with') || unreached) && !props.some((q) => [...(q.sets || []), ...(q.swaps || [])].some((l) => l.startsWith(`${rel}/`) || l === rel))) return exposed ? 'exposed-field' : 'field';
   return false;
 }
 
@@ -831,7 +831,13 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const children = (kids.get('root') || []).flatMap((k) => node(k)).filter(Boolean);
   // an override a placed component has no prop for: the markup cannot pass it (only the outermost such part is named)
   const ancestors = (id) => { const out = []; for (let up = (at(c, id) || {}).parent; up && up !== 'root'; up = (at(c, up) || {}).parent) out.push(up); return out; };
-  for (const part of partsOf(c).values()) if (!carried.has(part.id) && unexposed(c, part.id, (name, key) => placedOf(library, { component: name, key })) && !ancestors(part.id).some((up) => unexposed(c, up, (name, key) => placedOf(library, { component: name, key })) === 'part')) gaps.push(`${partName(part.id)}: drawn here inside ${partName(overrideHost(c, part.id))}, which has no prop for it — an override frontend-build adds, or a prop to give that component`);
+  { const placed = (name, key) => placedOf(library, { component: name, key });
+    // (a part inside one no prop passes as a whole is said once, as that part; one the component exposes, as its own)
+    for (const part of partsOf(c).values()) {
+      const u = !carried.has(part.id) && unexposed(c, part.id, placed);
+      if (!u || ancestors(part.id).some((up) => /^(exposed-)?part$/.test(String(unexposed(c, up, placed))))) continue;
+      gaps.push(/^exposed/.test(u) ? `${partName(part.id)}: inside ${partName(overrideHost(c, part.id))}, which exposes it in Figma: forward its props` : `${partName(part.id)}: drawn here inside ${partName(overrideHost(c, part.id))}, which has no prop for it — an override frontend-build adds, or a prop to give that component`);
+    } }
   if (!control && !entry) gaps.push(`its element and role: a ${n.element ? 'custom element' : inline ? 'span' : 'div'} until frontend-build says what it is (code-standard rule 8)`);
   if (!entry && props.some((x) => /^placeholder$/i.test(x.key))) gaps.push('a field drawn with a Placeholder and no Value text: its <input>, and its text the input\'s ::placeholder (to-code reads a text entry from the two texts)');
   for (const x of props) if (x.type === 'event') gaps.push(`${x.name}: when it fires, frontend-build's to wire (taken here, so it reaches no element)`);
