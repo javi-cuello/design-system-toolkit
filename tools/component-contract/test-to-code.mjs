@@ -553,6 +553,19 @@ else console.log('skip: no stored contracts on this machine');
     nestedSelector(split, namer('split'), 'btn/ring', mains) === '.split > .split__btn > .ib__ring');
 }
 
+// a placed instance this component puts in a placed component's slot (a list item's content) is placed as its own: its
+// own styling over its component's root (an alignment) written on it, reached through the slot by this component's hook
+{
+  const content = { contract: 1, component: 'Content', folder: 'content', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column', align: 'center' } } }, variants: [] };
+  const item = { contract: 1, component: 'Item', folder: 'item', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, body: { kind: 'slot', parent: 'root', layout: { direction: 'column' } } }, variants: [] };
+  const swipe = { contract: 1, component: 'Swipe', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, item: { kind: 'instance', parent: 'root', component: 'Item' }, 'item/body': { kind: 'slot', parent: 'item', layout: { direction: 'column' } },
+    'item/body/text': { kind: 'instance', parent: 'item/body', component: 'Content', layout: { direction: 'column', align: 'start' } } }, variants: [] };
+  const mains = (n) => ({ Content: content, Item: item })[n] || null;
+  const sheet = toCss(swipe, 'swipe', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('a placed instance put in a placed component\'s slot writes its own override on itself, under the slot',
+    /\.ds-swipe > \.ds-swipe__item > \.ds-item__body > \.ds-swipe__text \{\s*justify-content: flex-start;/.test(sheet), sheet);
+}
+
 // a part inside a numbered copy the placed component draws, which shares its first's hook (copyOf): named by that hook,
 // counted among the copies, as the placed component's markup draws it, never by a number no markup writes
 {

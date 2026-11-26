@@ -750,6 +750,13 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
       // an override inside a placed component this library holds (derive keeps only a part that differs from that
       // component drawn at the instance's props): what it changes there, on that component's own part, reached through
       // the instance (chain); at any depth of placing (each placed component names its own parts down to the next it holds), a part the placed component no longer has said, not guessed
+      // a placed instance this component puts in a placed component's slot (its fill) is placed as any of its own: its
+      // own styling over its component's root at its props written on it (ownOverride), the slot's selector its way in
+      if (e.kind === 'instance' && (a[e.parent] || {}).kind === 'slot' && hostOf(a, e.parent) && mains(e.component, e.key) && !copyOf(c, id)) {
+        const par = a[e.parent], over = ownOverride(e, { root: false, holds: holds(e.kind), row: (par.layout || {}).direction !== 'column', wrap: !!(par.layout && par.layout.wrap), anchors: false, box: null, pull: null }, mains);
+        if (over.changed.length) out[id] = { decls: new Map(over.changed.map(([p, v]) => [p, { v }])), unread: [] };
+        continue;
+      }
       const host = hostOf(a, id), m = host && a[host].component && mains(a[host].component, a[host].key);
       // (inside one placed inside another: the inner one is reached as the outer one's own part, or not at all)
       if (!m || (hostOf(a, host) && !hostIn(c, host, mains))) continue;
@@ -1152,6 +1159,12 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
   // a part inside a placed component is that component's own: named as its own sheet names it, under the instance
   const hostAt = segs.findIndex((s) => (c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance');
   const host = hostAt >= 0 && hostAt < segs.length - 1 && segs[hostAt], m = host && (() => { const he = c.anatomy[host] || findAdded(c, host); return mains(he.component, he.key); })();
+  // what this component puts in that placed component's slot (its fill: a list item's content) is this component's own,
+  // under the slot as the placed component names it, by this component's own hooks, as the markup draws it (to-markup's
+  // fillSelector)
+  const upOf = (s) => (c.anatomy[s] || findAdded(c, s) || {}).parent;
+  const fillAt = m ? segs.findIndex((s, i) => i > hostAt && (c.anatomy[upOf(s)] || findAdded(c, upOf(s)) || {}).kind === 'slot') : -1;
+  if (fillAt > 0) return [chain(c, n, upOf(segs[fillAt]), rootCond, given, library), ...segs.slice(fillAt).map((s, i) => seg(s, fillAt + i))].join(' > ') + pseudoSel(pseudo);
   if (m) {
     // (the placed component as the combination that adds this part draws it: a host each variant adds at its own props
     // names the part by the variant that draws it there, never by whichever variant allOf meets first)
