@@ -192,43 +192,47 @@ const files = dashboardStatic.libraries;
         </table>
       </div>
       <p class="empty" id="runsEmpty" hidden>No runs recorded yet.</p>
-      <Modal id="runDialog" title="Run">
-        <ul class="run-notes" id="runDialogList"></ul>
-      </Modal>
-      <!-- The Audit's choices: which files, and whole or changed (audit.js runFiles). -->
-      <Modal id="auditDialog" title="Audit">
-        <form method="dialog" class="audit-form">
-          <fieldset class="audit-files">
-            <legend>Files</legend>
-            <ul id="auditFiles"></ul>
-          </fieldset>
-          <fieldset class="audit-scope">
-            <legend>What to audit</legend>
-            <label><input type="radio" name="auditScope" value="full" checked> The whole file</label>
-            <label><input type="radio" name="auditScope" value="changed"> Only what changed since the last audit</label>
-          </fieldset>
-          <div class="fix-actions">
-            <button class="button" value="cancel">Cancel</button>
-            <button class="button button--primary" value="run" id="auditStart" autofocus>Start audit</button>
-          </div>
-        </form>
-      </Modal>
-      <!-- Fix this: the code Claude wrote, shown before it runs in Figma (queue.js approveFix) -->
-      <Modal id="fixDialog" title="Run this change in Figma?">
-        <form method="dialog" class="fix-approve">
-          <p id="fixDialogSummary"></p>
-          <p class="fix-where" id="fixDialogWhere"></p>
-          <pre class="fix-code" id="fixDialogCode" tabindex="0" aria-label="The code that will run"></pre>
-          <div class="fix-actions">
-            <button class="button" value="cancel" autofocus>Cancel</button>
-            <button class="button button--primary" value="run">Run in Figma</button>
-          </div>
-        </form>
-      </Modal>
     </div>
   </div>
 
   </div><!-- /view-queue -->
+
+  <!-- The page's dialogs, outside every view and pane: a dialog inside a hidden element opens but draws nothing
+       (0 by 0), so inside the History pane the Audit, Run and Fix this approval dialogs were invisible on the queue,
+       and a Fix this waited on an approval nobody could see (2026-11-26). check.mjs holds it. -->
+  <Modal id="runDialog" title="Run">
+    <ul class="run-notes" id="runDialogList"></ul>
+  </Modal>
+  <!-- The Audit's choices: which files, and whole or changed (audit.js runFiles). -->
+  <Modal id="auditDialog" title="Audit">
+    <form method="dialog" class="audit-form">
+      <fieldset class="audit-files">
+        <legend>Files</legend>
+        <ul id="auditFiles"></ul>
+      </fieldset>
+      <fieldset class="audit-scope">
+        <legend>What to audit</legend>
+        <label><input type="radio" name="auditScope" value="full" checked> The whole file</label>
+        <label><input type="radio" name="auditScope" value="changed"> Only what changed since the last audit</label>
+      </fieldset>
+      <div class="fix-actions">
+        <button class="button" value="cancel">Cancel</button>
+        <button class="button button--primary" value="run" id="auditStart" autofocus>Start audit</button>
+      </div>
+    </form>
+  </Modal>
+  <!-- Fix this: the code Claude wrote, shown before it runs in Figma (queue.js approveFix) -->
+  <Modal id="fixDialog" title="Run this change in Figma?">
+    <form method="dialog" class="fix-approve">
+      <p id="fixDialogSummary"></p>
+      <p class="fix-where" id="fixDialogWhere"></p>
+      <pre class="fix-code" id="fixDialogCode" tabindex="0" aria-label="The code that will run"></pre>
+      <div class="fix-actions">
+        <button class="button" value="cancel" autofocus>Cancel</button>
+        <button class="button button--primary" value="run">Run in Figma</button>
+      </div>
+    </form>
+  </Modal>
 
   <div class="view about" id="view-about" hidden>
 

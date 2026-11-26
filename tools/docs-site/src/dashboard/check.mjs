@@ -348,5 +348,22 @@ for (const [file, text] of [["stock-ui.css", system], ["site.scss", site]]) {
   }
 }
 
+// A dialog sits outside every hidden element: inside one it opens but draws nothing (0 by 0). The Audit, Run and
+// Fix this approval dialogs sat in the History pane, hidden on the queue, and a Fix this waited on an approval
+// nobody could see (2026-11-26).
+{
+  const open = [];
+  const idOf = (attrs) => (attrs.match(/id="([^"]+)"/) || [])[1];
+  for (const m of html.replace(/<!--[\s\S]*?-->/g, "").matchAll(/<(\/?)(div|section|Modal|dialog)\b([^>]*)>/g)) {
+    const [, close, tag, attrs] = m;
+    if (close) { const at = open.map((o) => o.tag).lastIndexOf(tag); if (at >= 0) open.length = at; continue; }
+    if (tag === "Modal" || tag === "dialog") {
+      const hider = open.find((o) => /(^|\s)hidden(\s|$|=)/.test(o.attrs));
+      if (hider) fail.push(`Dashboard.astro: dialog ${idOf(attrs) || tag} sits inside a hidden ${hider.tag}${idOf(hider.attrs) ? " #" + idOf(hider.attrs) : ""}, where it opens at 0 by 0`);
+    }
+    if (!/\/\s*$/.test(attrs)) open.push({ tag, attrs });
+  }
+}
+
 if (fail.length) { for (const f of fail) console.error("FAIL  " + f); process.exit(1); }
 console.log(`pass — dashboard: ${moduleFiles.length} modules, every name and import resolves, ${ids.size} ids`);
