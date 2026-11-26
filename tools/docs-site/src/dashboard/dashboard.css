@@ -595,7 +595,8 @@
   /* One line, in the order they are reached for: fix this, fix the rest like
      it, or rule that it is not a defect. All three read the note above them. */
   .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin-block-start: var(--space-4);
-    /* the first ghost button's label on the findings' left edge: its padding pulled back */
+    /* the first ghost button's label on the findings' left edge: its padding pulled back. The row as a whole (ghost
+       actions, columns aligned, no rule) was approved by the maintainer on a screenshot of the live page, 2026-11-26 */
     margin-inline-start: calc(-1 * var(--space-12)); }
   /* Every row action is the plain .button: they are peers, and a heavier one
      would answer for the reader which to reach for. */
