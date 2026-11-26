@@ -1095,7 +1095,12 @@ const server = createServer(held(async (req, res) => {
       // component and to the same finding on any other.
       // one line, always: a newline in `where` would split the §6 row and write lines of its own into the document
       const on = String(where || "the queue").replace(/\s+/g, " ").trim() + (about ? ", about: " + String(about).replace(/\s+/g, " ").trim().slice(0, 140) : "");
-      const next = appendRuling(md, clean, on);
+      // the date cells a row still holds after its line went (a take-back whose reopen failed) are not handed out again
+      const held = [];
+      for (const f of existsSync(AUDIT_DIR) ? readdirSync(AUDIT_DIR).filter((n) => n.endsWith(".json") && !n.endsWith(".tmp")) : []) {
+        try { for (const r of Object.values(JSON.parse(await readFile(join(AUDIT_DIR, f), "utf8")).rows || {})) if (r && typeof r.ruledOn === "string") held.push(r.ruledOn); } catch {}
+      }
+      const next = appendRuling(md, clean, on, undefined, held);
       if (!next) return [200, { ok: false, error: "the context document has no rulings table in §6" }];
       // A dry run answers every check above and writes nothing — the way to
       // probe a live service, after a probe appended a row to a real document.

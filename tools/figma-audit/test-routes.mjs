@@ -203,6 +203,17 @@ try {
     // the same under its own name: the date cell first, so the other day's row on Badge still stays
     { const r = (await post("/ruling", { text: "Fifth at once", where: "Badge", ruledOn: dateOf("Fifth"), remove: true })).json;
       ok("/ruling remove under its own name keeps that component's row of another day", r.removed === true && fs.readFileSync(ctxFile, "utf8").includes("| 2026-01-02 |"), JSON.stringify(r)); }
+    // a take-back that removed its line while its row did not reopen: the row still holds the date cell, so the next
+    // ruling that day is not given it (a retry of that take-back would otherwise remove the newer ruling)
+    { const rec = (await post("/ruling", { text: "Held date", where: "Tag" })).json;
+      const recFile = fs.readdirSync(path.join(dir, "audit")).filter((f) => f.endsWith(".json"))[0];
+      const data = JSON.parse(fs.readFileSync(path.join(dir, "audit", recFile), "utf8"));
+      data.rows = data.rows || {}; data.rows["held-row"] = { ruledOn: rec.date, ruling: "Held date", done: true };
+      fs.writeFileSync(path.join(dir, "audit", recFile), JSON.stringify(data));
+      const back = (await post("/ruling", { text: "Held date", where: "Tag", ruledOn: rec.date, remove: true })).json;
+      const next = (await post("/ruling", { text: "After the held date", where: "Tag" })).json;
+      ok("a date cell a row still holds is not given to the next ruling", rec.ok && back.removed === true && next.ok === true && next.date && next.date !== rec.date, JSON.stringify({ rec, back, next }));
+      delete data.rows["held-row"]; fs.writeFileSync(path.join(dir, "audit", recFile), JSON.stringify(data)); }
     // written by hand: the maintainer strikes it in the document, the page never removes it
     const hand = before.replace(/^(\| \{date\} \|.*\n)/m, "$1| 2026-11-10 | Audit | Hand rule | Decided in review | Maintainer |  |  |\n");
     fs.writeFileSync(ctxFile, hand);

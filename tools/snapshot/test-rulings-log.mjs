@@ -49,5 +49,11 @@ for (const text of ['use `foo for x', 'a \\| b', 'a \\ b `c` | d']) {
   ok(`${JSON.stringify(text)} reads back as typed, its Why whole`, r.length === 1 && r[0].key === textKey(text) && r[0].text === text && r[0].why === 'Recorded from the audit dashboard, on Button `x.');
   ok(`${JSON.stringify(text)} recorded then taken back leaves the document as before`, removeRuling(md, text, 'Button `x') === template);
 }
+{
+  // a date a row still holds (its take-back removed the line, its reopen failed) is not given to the next ruling that day
+  const one = appendRuling(template, 'First', 'Button', '2026-11-11');
+  const held = appendRuling(template, 'Second', 'Chip', '2026-11-11', ['2026-11-11']);
+  ok('a held date cell is skipped: the next ruling that day takes the next letter', rulingsOf(one)[0].date === '2026-11-11' && rulingsOf(held)[0].date === '2026-11-11b', rulingsOf(held).map((r) => r.date).join());
+}
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

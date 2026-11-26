@@ -690,7 +690,9 @@ const textKey = (s) => rulingKey(cellEsc(s));
 // The audit dashboard's writer for §6 (its POST /ruling): a row under the last ruling, its cells by the
 // header, a day's second ruling lettered (2026-11-11b), every cell one line. Beside the parser so the
 // two read the same table.
-function appendRuling(md, text, where, today = new Date().toISOString().slice(0, 10)) {
+// `held`: date cells a row of the audit still carries (its ruledOn) though the line is gone, a take-back whose row did
+// not reopen: never given to another ruling, whose row that row's retry would then take back
+function appendRuling(md, text, where, today = new Date().toISOString().slice(0, 10), held = []) {
   const lines = md.split("\n"); let at = -1, header = null;
   walkRulings(lines, (i, c, h) => { at = i; header = h; });
   // a log with no ruling yet (only the template's placeholder row, which no reader counts): the row goes under the table
@@ -707,7 +709,7 @@ function appendRuling(md, text, where, today = new Date().toISOString().slice(0,
   }
   if (at < 0) return null;
   // a day's second decision takes a letter (the context template's §6): 2026-11-11, then 2026-11-11b
-  const taken = new Set(); walkRulings(lines, (i, c, h) => taken.add(c[h.indexOf("date")] || ""));
+  const taken = new Set(held); walkRulings(lines, (i, c, h) => taken.add(c[h.indexOf("date")] || ""));
   let date = today;
   // one letter, as every reader of §6 dates expects: past z it refuses rather than write `undefined`
   for (let k = 0; taken.has(date); k++) {
