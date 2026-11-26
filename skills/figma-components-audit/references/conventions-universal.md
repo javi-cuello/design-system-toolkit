@@ -61,7 +61,7 @@ Where a reason cites no incident, it states the mechanism instead. Rules that ca
 - **[scanner]** Boolean-style axes contain exactly their two options, default first.
 - **[scanner]** No stray options left over from renames.
 - **[scanner→agent]** Sparse variant grids (fewer variants than the axis product) are candidates only. If the sparseness follows a consistent file-wide pattern, it is a house convention, not a gap.
-- **[scanner→agent]** A variant axis whose only effect is toggling one subtree's visibility should be a boolean property. *Why:* it doubles the variant count for something a boolean expresses, and every later axis multiplies against it. The agent confirms, because the diff may have missed a second difference that justifies the axis.
+- **[scanner→agent]** A variant axis whose only effect is toggling one subtree's visibility should be a boolean property. *Why:* it doubles the variant count for something a boolean expresses, and every later axis multiplies against it. The agent confirms, because the diff may have missed a second difference that justifies the axis. The change is breaking: instances on the deleted side's variants are orphaned silently.
 
 **[scanner] No unused component properties**. An unused property is one declared on the component but applied to no layer: no descendant's `componentPropertyReferences` holds it. *Why:* **Figma ignores the whole component when the library is published** (maintainer-confirmed, reproduced on a live file). Not the property: the component. Consumers never receive it, and the library reports a successful publish.
 
@@ -174,7 +174,8 @@ Annotations are distinct from descriptions. A description explains the *componen
 Hidden layers still ship through the MCP payload. An AI reading the file cannot tell "hidden because conditional" from "hidden because dead", and both confuse generation.
 
 - **[scanner]** Flag any `visible: false` layer inside a component set that no boolean property references: nothing in `componentPropertyReferences` ties its visibility to a toggle. Hidden and not conditionally controlled is the signature of dead weight.
-- **[agent]** Two legitimate outcomes. The layer is dead: delete it, which is safe and non-breaking. Or it is a real conditional the property model never captured: model it as a boolean property, a bigger, Decide-level change. Never delete without ruling out the second.
+- **[agent]** Two legitimate outcomes. The layer is dead: delete it. Or it is a real conditional the property model never captured: model it as a boolean property, a bigger, Decide-level change. Never delete without ruling out the second.
+- **[agent]** Deleting the layer is breaking unless no instance shows it: a consumer can turn a hidden layer on and type into it. Library analytics or a search of consuming files tells.
 - **[scanner]** Orphan layers are a lighter version of the same candidate. They are in the tree and visible, but disconnected from any property, slot or layout role a same-type sibling has. Report them as hygiene unless they visibly affect layout.
 
 **[scanner] Disabled paints: any entry in `fills`, `strokes` or `effects` whose own `visible` is `false`**. *Why:* toggling a fill off in the panel does not remove it. The paint stays in the array, adding nothing visible while carrying a colour, a binding and a maintenance cost. A later editor cannot tell an abandoned experiment from a staged alternative.

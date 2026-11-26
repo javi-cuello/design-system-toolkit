@@ -2,6 +2,16 @@
 
 Everything the scanner cannot decide. Scanner output is hypotheses: nothing reaches the user without passing this layer. [SKILL.md](../SKILL.md) steps 2, 5 and 7 point here.
 
+## Contents
+
+- [1. Discovery](#1-discovery-only-for-what-the-rulebook-does-not-already-record)
+- [2. Verification](#2-verification-every-candidate-no-exceptions)
+- [3. Mechanism recognition](#3-mechanism-recognition)
+- [4. Judgment-only checks](#4-judgment-only-checks)
+- [5. Classification into the fix queue](#5-classification-into-the-fix-queue)
+- [6. After the user rules](#6-after-the-user-rules)
+- [7. Applying fixes](#7-applying-fixes)
+
 ## 1. Discovery (only for what the rulebook does not already record)
 
 Discovery fills a library's rulebook in the project's context document the first time this skill audits it. Where a local cache is in use, the rulebook is copied into `systems/<library-name>.md`.
@@ -79,7 +89,9 @@ A state fill on the root or a `Content` frame is the commonest Hover and Press t
 - deleting or retyping a component property: instances fall back to the default, so typed text is gone;
 - pointing a nested instance at another component or variant: overrides on it are dropped;
 - deleting a slot property: slot content is deleted;
-- a layer rename that leaves one layer named differently across variants: overrides are dropped when a consumer switches variant.
+- a layer rename that leaves one layer named differently across variants: overrides are dropped when a consumer switches variant;
+- deleting a hidden layer: an instance that turned it on loses it and its text (tested on local instances);
+- making an axis a boolean by deleting one side's variants: their instances lose their main component unseen (tested on local instances).
 
 **Breaking, kind 2: changes the API, keeps the file.** Renaming a variant property or option keeps every instance and override. It still breaks Code Connect enum mappings silently, since the CLI does not check mapping keys. It also breaks scripts that set properties by name, and Swap library, which matches by name. Structural rework belongs to whichever kind it does.
 

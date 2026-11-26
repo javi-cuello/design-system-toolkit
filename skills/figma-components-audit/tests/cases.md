@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.54.0)
+# Eval cases — figma-components-audit (v2.54.2)
+
+**Reviewed against v2.54.2 on 2026-11-26** — A142 added: deleting a hidden layer and turning a visibility-only axis into a boolean are kind-1 breaking.
 
 **Reviewed against v2.54.0 on 2026-11-23** — references/record.md: the Audit is one button over the ticked files, Whole or Changed; A92's menu assertion is superseded by figma-project-audit O8 (executed there, `tests/test-stages.mjs`), its run trigger and cost unchanged.
 
@@ -2035,3 +2037,9 @@ Fixture: the library slice, one `Chip` fill unbound and set raw; `file.colours` 
 Assert: the exact colour names the semantic variable; a near copy names the closest and asks why it differs; a far colour names none and says so; no `file.colours` gives the plain advice; a colour only a primitive holds is still named; with no semantic collection any collection's variable may be named.
 Negative: a variable suggested across a visible difference (over OKLab 0.03); a second OKLab conversion beside colour.js's.
 Runs: node tests/test-audit.mjs — "an exact colour names the semantic variable holding it", "a colour a hand's breadth off names the closest, and asks why it differs", "a colour far from every variable names none, and says so", "without the file's colours the advice is the plain one", "a colour only a primitive holds is still named, after the semantic collections", "with no semantic collection named, any collection's variable is offered"; node ../../tools/shared/test-colour.mjs.
+
+## A142 · Deleting a hidden layer, or making a visibility-only axis a boolean, is breaking — WALKED 2026-11-26
+Fixture: local instances in Figma: `Table cell` / Default with a hidden `Secondary text` layer no boolean controls, an instance that turned it on and typed "Due 3 Dec"; an `Alert` with `Has title=False/True`, one instance on each side.
+Assert: deleting the hidden layer from the main component removes the instance's text, so §10's "dead layer" outcome is breaking unless no instance shows it; deleting the 4 `Has title=False` variants, removing the axis and binding a `Has title` boolean to `Title` keeps the True instance's text and overrides, while the False instance keeps its look and silently loses its main component. Both are in judgment-protocol §5's kind-1 list, and conventions §3's visibility-only check says the change is breaking.
+Negative: a hidden-layer deletion filed as safe and non-breaking, or batched with safe fixes; an axis-to-boolean change filed as a batch fix.
+Walked live: 2026-11-26 — both run on local instances (a copy of each set); publishing to a separate consuming file not tested.

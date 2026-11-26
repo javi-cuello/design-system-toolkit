@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.54.2 (2026-11-26): deleting a hidden layer is breaking unless no instance shows it (conventions §10); a visibility-only axis made a boolean orphans its deleted variants' instances (§3); both in judgment-protocol's kind-1 list. A142.
 - 2.54.1 (2026-11-24): scripts/probes.js `resolveInMode`: an alias into a collection with no mode of that name reads its default mode in Figma (`defaultModeId`), not its first. Case A10 updated.
 - 2.54.0 (2026-11-23): references/record.md: the dashboard's Audit is one button over the ticked files, Whole or Changed; the *Audit changes* / *Audit all* menu is gone. Case A92 superseded by figma-project-audit O8.
 - 2.53.0 (2026-11-21): references conventions-universal.md, scanner-checks.md and judgment-protocol.md rewritten to skill-standard §A clause I: contents lists, tables for traps, rule ids and exceptions, dated stories dropped; every rule id, threshold and section number kept; no rule changed.

@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.15.2] - 2026-11-26
+### Changed
+- Carries figma-components-audit 2.54.2: deleting a hidden layer is breaking unless no instance shows it.
+
 ## [0.15.1] - 2026-11-26
 ### Changed
 - Re-synced with the audit dashboard: its severities in the order its menu lists them (Needs ruling after Warning).
