@@ -29,6 +29,7 @@ Every Figma call below is a script in `scripts/`, sent whole as the `figma_execu
 
 **0. Confirm the target and load the settings**.
 
+- Turn on the bridge tools this skill uses that are off at start (skill-standard clause J): `figma_enable_toolsets({ toolsets: ["components", "inspect"] })`, for `figma_set_description` and `figma_get_component_details`.
 - List the connected files with `figma_list_open_files`, and ask if more than one is connected. Pin the target with `figma_navigate({ lock: true })`.
 - Probe the bridge with `figma_get_status({ probe: true })` before the run. After a connection error mid-run, probe again before retrying; never assume the write landed or failed.
 - Load the settings from the context document, matched by `fileKey` (*Project context first*). With no document, or a `systems/` cache with no entry for this `fileKey`, run discovery: [subjects.md](references/subjects.md), *Discovery*.
@@ -75,7 +76,7 @@ A virtual set's members are left out of `duplicates`, since they share their tex
 
 **6. Apply the description**. Detail: [scripts.md](references/scripts.md), *apply.js*.
 
-- For one component, use `figma_set_description`, after `figma_enable_toolsets({ toolsets: ["components", "inspect"] })` (`"inspect"` for `figma_get_component_details`). Beyond about three, send `scripts/apply.js` in batches of six to nine.
+- For one component, use `figma_set_description`. Beyond about three, send `scripts/apply.js` in batches of six to nine.
 - Re-read what was written before moving on.
 - To clear a description, set both fields.
 

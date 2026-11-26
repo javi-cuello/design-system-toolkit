@@ -204,6 +204,8 @@ An input it cannot read, or a flag with no value, exits 2 in one line. **Never d
 
 ## MCP tools
 
+`figma_get_component_details` and `figma_set_description` are off at start: step 0 turns them on with `figma_enable_toolsets({ toolsets: ["components", "inspect"] })`.
+
 | Tool | Used for |
 |---|---|
 | `figma_list_open_files` | Listing connected files before assuming the target (step 0) |
