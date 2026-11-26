@@ -1,4 +1,4 @@
-# Eval cases — design-system-research (v3.13.0)
+# Eval cases — design-system-research (v3.15.0)
 
 **Walked: 2026-11-21 for 3.13.0** — SKILL.md and its references rewritten to skill-standard §A clause I; no rule changed. Step names, the voice file's §1 to §13 and the roster's section titles are kept, so most pointers stand. The research-collection rules moved to `references/research-collection.md`, and the register greps now live once, in voice §13, which the checklist points to. Traced lines re-pointed: A4, A14, A17, A23, A27, A29, A34, A35. Every case read against the new text: each Assert still follows from it (A10's and A23's greps match voice §13 character for character; A11's checklist keeps its 16 lines, no new one).
 

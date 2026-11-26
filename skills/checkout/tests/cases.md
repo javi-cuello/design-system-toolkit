@@ -1,4 +1,4 @@
-# Eval cases — checkout (v1.0.0)
+# Eval cases — checkout (v1.1.0)
 
 **Walked: 2026-11-26 for 1.0.0** — C1–C4 traced to the steps; the scripts' own suites: `node tools/memory-check/test-check.mjs` 8 of 8, `node tools/memory-check/test-sessions.mjs` 2 of 2. Run once by hand on the machine the same day: the memory check found 7 findings and 3 warnings across eleven folders, and the session list named the toolkit's three main sessions.
 

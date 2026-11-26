@@ -1,4 +1,4 @@
-# Eval cases — kirby-cms (v1.10.0)
+# Eval cases — kirby-cms (v1.11.0)
 
 **Walked: 2026-11-21 for 1.10.0** — SKILL.md and references rewritten to skill-standard §A clause I; every case read against the new text. The folder layout, content format and UUIDs moved to `references/content-store.md`; signed tokens and the opcache restore moved to `gotchas.md`; the page-model fixture moved to `templating.md`; the plugin example moved to `plugins-hooks-routes.md`. Each case's asserted behaviour is still stated: K6 in SKILL.md's *No context document, no engine*, K14 in gotchas.md's *A restored file serves the old version*, K18 in its *Every model gets the same signed token*. K14's pointer updated; all hold.
 
