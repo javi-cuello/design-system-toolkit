@@ -1,12 +1,12 @@
 # Memory check
 
-Claude Code keeps a memory folder and session transcripts for each project, under `~/.claude/projects/<folder>/`. Nothing else in the toolkit reads them. This folder holds the memory folders to one shape, toolkit-standard §D 25, and lists a project's sessions so the `/checkout` skill can prune the stale ones.
+Claude Code keeps a memory folder and session transcripts for each project, under `~/.claude/projects/<folder>/`. Nothing else in the toolkit checks them. This folder holds the memory folders to one shape, toolkit-standard §D 25. It also lists a project's sessions, so the `/checkout` skill can prune the stale ones.
 
 ## Use
 
 ```sh
 node tools/memory-check/check.mjs [--root <dir>] [--today YYYY-MM-DD]
-node tools/memory-check/sessions.mjs [--folder <dir>] [--prune]
+node tools/memory-check/sessions.mjs [--folder <dir>] [--keep <session id>] [--prune]
 ```
 
 `check.mjs` checks every memory folder and prints one line per finding. It exits 1 on any error. A dated section past its age is a warning: re-check it, nothing refuses it.

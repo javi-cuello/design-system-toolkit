@@ -51,6 +51,8 @@ Claude Code then loads each skill when a task matches its `description`. To use 
 | [design-system-research](design-system-research/SKILL.md) | Researches how real design systems handle a topic, from primary sources. |
 | [humanizer](humanizer/SKILL.md) | Removes the signs of AI-generated writing from a text. |
 | [ds-model-routing](ds-model-routing/SKILL.md) | Advises which Claude model and effort suit a design-system task. |
+| **Sessions** | |
+| [checkout](checkout/SKILL.md) | The housekeeping when a session ends: closes the work, keeps the project's one memory in shape, prunes stale side sessions and worktrees. Run by typing `/checkout`. |
 
 ## Writing or changing a skill
 
