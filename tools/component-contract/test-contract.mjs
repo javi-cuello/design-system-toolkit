@@ -1026,4 +1026,22 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const placed = ownStyling({ chip: { kind: 'instance', component: 'Chip', background: 'Schemes/Error', fillStyle: 'Sys/error' } }, byComponentName([main]));
   ok('…and a placed instance whose style is its component\'s own leaves it to the component', placed.chip.fillStyle === undefined && placed.chip.background === undefined);
 }
+// a reading's placed layer kept for another field whose modes are its component's part's leaves them out, as the walk does;
+// an override of them stays
+{
+  const cb = { component: 'Check', props: {}, variants: [], anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', order: 0 }, box: { kind: 'container', parent: 'root', order: 1, width: 10, modes: { theme: 'a' } } } };
+  const mk = (modes) => ({ root: { kind: 'container' }, c: { kind: 'instance', parent: 'root', component: 'Check' }, 'c/label': { kind: 'text', parent: 'c', order: 0 }, 'c/box': { kind: 'container', parent: 'c', order: 0, width: 12, modes } });
+  const a = mk({ theme: 'a' }), b = mk({ theme: 'b' });
+  ownInsides(a, byComponentName([cb]), { reading: true }); ownInsides(b, byComponentName([cb]), { reading: true });
+  ok('a reading\'s placed layer kept for another field leaves out the modes its component\'s part has; an override stays', a['c/box'] && a['c/box'].modes === undefined && b['c/box'].modes.theme === 'b');
+}
+// a reading's placed line drawn dashed, as code says a [1, 1] square-capped dash, is its component's own; a cap on a solid
+// stroke, and an inside stroke on a shape of no size, stay the reading's to compare
+{
+  const part = (border, h = 0) => ({ component: 'Rule', props: {}, variants: [], anatomy: { root: { kind: 'container' }, line: { kind: 'graphic', parent: 'root', width: 40, height: h, border } } });
+  const kept = (lib, read, h = 0) => { const x = { root: { kind: 'container' }, r: { kind: 'instance', parent: 'root', component: 'Rule' }, 'r/line': { kind: 'graphic', parent: 'r', width: 40, height: h, border: read } }; ownInsides(x, byComponentName([part(lib, h)]), { reading: true }); return !!x['r/line']; };
+  ok('a dash with its pattern and cap reads as code\'s dashed: its component\'s own', !kept({ color: 'C/line', width: 1, dash: [1, 1], cap: 'square', align: 'center' }, { color: 'C/line', width: 1, dash: 'dashed' }));
+  ok('…a cap on a solid stroke stays a difference', kept({ color: 'C/line', width: 1, cap: 'round' }, { color: 'C/line', width: 1 }));
+  ok('…and an inside stroke on a shape of no size keeps its alignment', kept({ color: 'C/line', width: 1, align: 'inside' }, { color: 'C/line', width: 1 }));
+}
 console.log(`${n}/${n} passed`);

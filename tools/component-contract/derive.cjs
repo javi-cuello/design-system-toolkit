@@ -745,6 +745,17 @@ function asGlyphOf(e, x, reading) {
 // a part without the size it keeps only while empty (whileEmpty): an instance's layer keeps none (anatomies), so its
 // component's part is compared without it
 const emptyless = (e) => { if (!e || !e.whileEmpty) return e; const r = { ...e }; for (const f of e.whileEmpty) delete r[f]; delete r.whileEmpty; return r; };
+/* A stroke in the form a reading from code can say it, for a reading only (to-figma's dashes and line equivalences): a
+   dash as dashed, its pattern and cap unstated in CSS; a line's stroke (a graphic of no width or height) without its
+   alignment, which draws it nowhere else. So a placed layer code draws as its component does is its component's. */
+function strokeForm(e, reading) {
+  if (!reading || !e || !e.border || typeof e.border !== 'object') return e;
+  const b = { ...e.border };
+  if (b.dash) { b.dash = 'dashed'; delete b.cap; }
+  // (only a centred one: an inside or outside stroke on a shape of no size draws nothing in Figma, while CSS draws an edge)
+  if (e.kind === 'graphic' && (e.width === 0 || e.height === 0) && b.align === 'center') delete b.align;
+  return { ...e, border: b };
+}
 function ownInsides(anatomy, mains, { partial = false, whole = new Set(), coloured = null, reading = false, found = null } = {}) {
   ownStyling(anatomy, mains);
   // (a nested instance an outer instance's turn kept as drawing another style, stroke, fill or effect than that
@@ -852,12 +863,12 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       // (a vector's paths are its component's: the walk records none inside an instance, snapshot 0.86.0, so a placed
       // layer is held to its part without them where it states none)
       // (and a slot's placeholder is its component's own property, which a layer inside the instance never names: flatten)
-      const mk = match[k.slice(id.length + 1)], x1 = mk && M[mk], x2 = x1 && emptyless(x1), x0 = x2 && x2.kind === 'slot' && anatomy[k].content === undefined ? (({ content: _, ...r }) => r)(x2) : x2, x = x0 && x0.paths && !anatomy[k].paths ? (({ paths: _, ...r }) => r)(x0) : x0;
+      const mk = match[k.slice(id.length + 1)], x1 = mk && M[mk], x2 = x1 && emptyless(x1), x0 = x2 && x2.kind === 'slot' && anatomy[k].content === undefined ? (({ content: _, ...r }) => r)(x2) : x2, x3 = x0 && x0.paths && !anatomy[k].paths ? (({ paths: _, ...r }) => r)(x0) : x0;
       // (a key is no look, but two that differ are two components: a swap to another library's Icon of one name)
-      if (!x || !keyMatches(anatomy[k].key, x.key)) return false;
+      if (!x3 || !keyMatches(anatomy[k].key, x3.key)) return false;
       // (a layer of an instance nested in this one has its position-less constraints left out at that instance's own
       // turn, as this component's own contract already has them: compared so, where the component's part has none)
-      const y0 = asGlyphOf(anatomy[k], x, reading);
+      const y1 = asGlyphOf(anatomy[k], x3, reading), x = strokeForm(x3, reading), y0 = strokeForm(y1, reading);
       const y = host(k) !== id && y0.constraints && !y0.absolute && !x.constraints ? (({ constraints: _, ...r }) => r)(y0) : y0;
       if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(arcForm(bare(y))) === look(arcForm(bare(x))); }
       if (look(arcForm(y)) === look(arcForm(x))) return true;
@@ -880,6 +891,14 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     const kept = new Set(inner.filter((k) => stated.has(k) || !own(k)));
 
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
+    // a layer kept for another field whose variable modes are its component's part's there: those modes are that
+    // component's, as the walk leaves them unsaid inside an instance (it records a placed layer's modes only where
+    // overridden), so a reading's, drawn as the component draws them, are left out too (a reading's only: the design's
+    // already says none there)
+    if (reading) for (const k of kept) {
+      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+      if (e && x && e.kind !== 'instance' && e.modes && sorted(e.modes) === sorted(x.modes)) { const { modes: _, ...rest } = e; anatomy[k] = rest; }
+    }
     sayCleared(kept);
     // and one kept that does not clip where its component's part does has stopped it (an override): said `visible`
     // (UNCLIPPED), or a reader would take the part's clip as its component's. Both readings: each reads a clip wherever

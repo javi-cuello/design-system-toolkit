@@ -86,9 +86,13 @@ const sameColour = (a, b) => { const x = parseColour(a), y = parseColour(b); ret
    Run in the page, so it names nothing outside itself. */
 /* Another component's instance, its words: the props that put words in that component's texts, in its tree's order,
    one for each word it shows (counted alike, else none is guessed); a word this component's own prop put there (its
-   stand-in, slotMark) is that prop, as a text's content says it: {prop}. Tested by test-from-code.mjs. */
-export function wordsOf(fc, texts, own = {}) {
-  const said = Object.values(fc.anatomy).filter((t) => t.kind === 'text' && typeof t.content === 'string').map((t) => /^\{(.+)\}$/.exec(t.content)).filter(Boolean).map((m) => fc.props[m[1]]).filter((q) => q && q.type === 'string');
+   stand-in, slotMark) is that prop, as a text's content says it: {prop}. A text under a layer the instance is read not
+   to draw (`shown`: a boolean read off, or unseen as a box around it is not drawn, null) shows no word and is no
+   one of them. Tested by test-from-code.mjs. */
+export function wordsOf(fc, texts, own = {}, shown = {}) {
+  const off = Object.values(fc.props).filter((q) => q.type === 'boolean' && q.figma in (shown || {}) && shown[q.figma] !== true).flatMap((q) => q.shows || []);
+  const under = (id) => off.some((l) => id === l || id.startsWith(`${l}/`));
+  const said = Object.entries(fc.anatomy).filter(([id, t]) => t.kind === 'text' && typeof t.content === 'string' && !under(id)).map(([, t]) => /^\{(.+)\}$/.exec(t.content)).filter(Boolean).map((m) => fc.props[m[1]]).filter((q) => q && q.type === 'string');
   if (!texts.length || said.length !== texts.length) return {};
   const ownProp = (t) => { const m = /^slot·(.+)·here$/.exec(t); const k = m && Object.keys(own).find((k) => own[k].code === m[1] || k === m[1]); return k ? `{${k}}` : t; };
   return Object.fromEntries(said.map((q, i) => [q.figma, ownProp(texts[i])]));
@@ -511,6 +515,21 @@ export function elementOfLayer(q, id, kind, rootRe, others) {
 /* The selector of a part's box in its parent's flow: the element the walk marks, or, where it is a host that draws no box
    of its own (display: contents, a placed component's custom element around its control), that control, which to-code
    writes the part's sizing and pull back on. */
+/* A line (a shape no wide or no tall): css.mjs draws its stroke as the one edge it has, the leading one, so that edge is
+   the shape's whole stroke (no wide: 0, or the edge's own width where a border-box reset counts it in); and its size
+   across that edge the line's own 0, as a size read off the box (a share of its parent's, a line scaled with it at
+   `0%`) counts the edge in, which the design's line draws across no size. `width`: the stroke's widths per side, read;
+   `raw`: as the box measured them. Changes the part in place. Tested by test-from-code.mjs. */
+export function lineEdge(x, width, raw0) {
+  if (!x || !x.border) return x;
+  const raw = Array.isArray(raw0) ? raw0 : [], thin = (n, i) => n === 0 || (typeof n === 'number' && n === raw[i]);
+  const lead = thin(x.width, 3) ? 3 : thin(x.height, 0) ? 0 : -1;
+  if (!(x.kind === 'graphic' && lead >= 0 && Array.isArray(width) && width.every((v, i) => (i === lead) === !!v))) return x;
+  x.border = { color: x.border.color, width: width[lead], ...(x.border.dash && { dash: x.border.dash }) };
+  const across = lead === 3 ? 'width' : 'height';
+  if (x[across] !== 0 && thin(x[across], lead)) x[across] = 0;
+  return x;
+}
 export const boxSelector = (id, display) => (display === 'contents' ? `[data-contract-id="${id}"] > :first-child` : `[data-contract-id="${id}"]`);
 /* The box a part's parent lays out: a part turned a quarter, its wrapper (turnOf, marked data-contract-turn), where to-code
    writes its flow (its size on the parent's axes, its pull back); else its own box (boxSelector). */
@@ -820,11 +839,13 @@ export function asDesignSwaps(props, design, read = {}) {
 
 /* A placed component's booleans read from whether their layers are drawn in it: only where its main draws that layer
    at the props read so far with the boolean on; where it draws it there at no value (a checkbox's error part, drawn
-   only when invalid), being unseen says nothing, and the boolean is left unread. Tested by test-from-code.mjs. */
+   only when invalid), being unseen says nothing, and the boolean is left unread; so where it is unseen only as a box
+   around its layer is not drawn (null). Tested by test-from-code.mjs. */
 export function shownRead(fc, w, shown) {
   const out = {};
   for (const [p, v] of Object.entries(shown || {})) {
     const q = fc && Object.values(fc.props || {}).find((x) => x.type === 'boolean' && (x.figma || '') === p);
+    if (v === null) continue;
     if (!q || !q.shows || atProps(fc, { ...w, [p]: true })[q.shows[0]]) out[p] = v;
   }
   return out;
@@ -2223,9 +2244,15 @@ async function main() {
               // its words, in the order it shows them: each element's own text, where it is drawn
               // each boolean that shows a layer: whether that layer is drawn in it, found where its own mapping places it
               // (not one of another instance nested in it, and drawn: seen, not merely present)
+              // (unknown, null, where each such layer is unseen only as a box around it is not drawn: one this component
+              // hides inside the instance, a checkbox's box and value taken away whole, says nothing of the boolean)
               shown: Object.fromEntries(Object.entries(shownSel[other] || {}).map(([p, q]) => {
                 const seen = (m) => { const cs = getComputedStyle(m); return m.getClientRects().length && cs.visibility !== 'hidden' && +cs.opacity > 0; };
-                return [p, [...n.querySelectorAll(q)].some((m) => ownLayer(m, n, q, isRoot) && seen(m))];
+                const ms = [...n.querySelectorAll(q)].filter((m) => ownLayer(m, n, q, isRoot));
+                // (a box not drawn: computed display none, the hidden attribute's too unless CSS draws it again; a display: contents
+                // wrapper has no box of its own and hides nothing)
+                const boxedOut = (m) => { for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (getComputedStyle(up).display === 'none') return true; return false; };
+                return [p, ms.some(seen) ? true : ms.length && ms.every(boxedOut) ? null : false];
               })),
               // (its own root's included; none hidden, read to screen readers only, or of another instance nested in it)
               texts: [n, ...n.querySelectorAll('*')].filter((t) => {
@@ -2618,7 +2645,7 @@ async function main() {
             const best = fit.sort((a, b) => Object.keys(b[1].args || b[1]).length - Object.keys(a[1].args || a[1]).length)[0];
             if (best) for (const part of best[0].split(', ')) { const [ax, v] = part.split('='); if (ax && v) w[ax] = v; }
           }
-          if (fc && x.texts) Object.assign(w, wordsOf(fc, x.texts, props));
+          if (fc && x.texts) Object.assign(w, wordsOf(fc, x.texts, props, x.shown));
           Object.assign(w, shownRead(fc, w, x.shown));
           const glyphOf = [];
           // the glyph goes to the swap that drives a layer drawn at these props: a button's Icon (16) or Icon (20), by its
@@ -2710,12 +2737,7 @@ async function main() {
           // (a clear side ring is a stroke only where the code names its colour, a Transparent token as to-code writes
           // one; a raw transparent ring is a placeholder a transition starts from, drawing nothing: no border)
           if (clearRing && typeof x.border.color === 'string' && /^(rgba?\(|transparent$)/.test(x.border.color)) delete x.border;
-          // a line (a shape no wide or no tall): css.mjs draws its stroke as the one edge it has, the leading one, so that
-          // edge is the shape's whole stroke
-          // (no wide: 0, or the edge's own width where a border-box reset counts it in)
-          const raw = Array.isArray(raw0) ? raw0 : [], thin = (n, i) => n === 0 || (typeof n === 'number' && n === raw[i]);
-          const lead = thin(x.width, 3) ? 3 : thin(x.height, 0) ? 0 : -1;
-          if (x.kind === 'graphic' && lead >= 0 && Array.isArray(width) && width.every((v, i) => (i === lead) === !!v)) x.border = { color: x.border.color, width: width[lead], ...(x.border.dash && { dash: x.border.dash }) };
+          lineEdge(x, width, raw0);
         }
         // an outline is the design's focus ring: a stroke-only box stretched past this one by how far the outline's outer
         // edge clears it, its corners this box's own grown by as much, as to-code's ringOf writes it the other way

@@ -160,7 +160,9 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     const out = toElement(date, 'date', { naming: ELEMENT, library: { Date: date } });
     ok('a text that holds a literal until a variant swaps a prop in draws the literal there, never the prop on both sides', /hasValue \? value : "Select a date"/.test(out) && !/hasValue \? value : value/.test(out)); }
   { const f = { component: 'F', folder: 'f', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, t: { kind: 'text', parent: 'root', content: 'Select' } }, variants: [{ when: { state: 'focus' }, set: { 't.content': 'Search' } }] };
-    ok('words a pointer state draws are named as a gap, never dropped without a word', /words change at a pointer state/.test(toElement(f, 'f', { naming: ELEMENT, library: { F: f } }))); }
+    ok('words a pointer state draws are named as a gap, never dropped without a word', /words change at a pointer state/.test(toElement(f, 'f', { naming: ELEMENT, library: { F: f } })));
+    const m = { ...f, variants: [{ when: { state: 'focus' }, set: { 'root.modes': { theme: 'a' } } }] };
+    ok('variable modes a pointer state sets are named as a gap, never dropped without a word', /variable modes change at a pointer state/.test(toElement(m, 'f', { naming: ELEMENT, library: { F: m } })) && !/variable modes change/.test(toElement(f, 'f', { naming: ELEMENT, library: { F: f } }))); }
   { const link = { component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
     const holder = (variants, w) => ({ component: 'Card', folder: 'card', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, link: { kind: 'instance', parent: 'root', component: 'Link', with: w } }, variants });
     const out = (h) => toElement(h, 'card', { naming: ELEMENT, library: { Card: h, Link: link } });
@@ -274,6 +276,21 @@ ok('a layer whose name its id does not give back carries the design\'s name (dat
 { const flush = { ...renamed, props: { flush: { type: 'boolean', default: false, figma: 'Flush' } }, variants: [{ when: { flush: true }, set: { 'mark.name': null } }] };
   const out = toReact(flush, 'tag', { naming: CLASS, library: {} });
   ok('a name a variant takes away is empty there, the design\'s elsewhere: the reading names the layer as each combination does', /data-figma-name=\{flush \? "" : "Icon"\}/.test(out), out); }
+// a part only variants add, under a name of its own in one and none in another (a spacer's "Rectangle " at one size)
+{ const sized = { ...renamed, props: { size: { type: 'enum', values: ['s', 'm', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' } },
+    variants: [{ when: { size: 'm' }, add: { mark: { kind: 'graphic', parent: 'root' } } }, { when: { size: 'l' }, add: { mark: { kind: 'graphic', parent: 'root', name: 'Rectangle ' } } }] };
+  const out = toReact(sized, 'tag', { naming: CLASS, library: {} });
+  ok('a part variants add under names of their own carries each add\'s name there, none where it has none', out.includes('(size === "l") ? "Rectangle " : ') && out.includes('(size === "m") ? ""'), out); }
+// an add after a rename, both at one combination: the later one names the part there, as expand applies them
+{ const later = { ...renamed, props: { tone: { type: 'enum', values: ['a', 'b'], default: 'a', figma: 'Tone' }, size: { type: 'enum', values: ['s', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', name: 'Mark' } },
+    variants: [{ when: { tone: 'b' }, set: { 'mark.name': 'Bar' } }, { when: { size: 'l' }, add: { mark: { kind: 'graphic', parent: 'root', name: 'Rectangle ' } } }] };
+  const out = toReact(later, 'tag', { naming: CLASS, library: {} });
+  ok('an add after a rename names the part where both hold, as the design applies them', /data-figma-name=\{\(size === "l"\) \? "Rectangle " : \(\(tone === "b"\) \? "Bar" : "Mark"\)\}/.test(out), out); }
+// a rename a variant sets where an add gives its own name: the rename is the layer's name there
+{ const both = { ...renamed, props: { size: { type: 'enum', values: ['s', 'm', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' } },
+    variants: [{ when: { size: 'm' }, add: { mark: { kind: 'graphic', parent: 'root' } } }, { when: { size: 'l' }, add: { mark: { kind: 'graphic', parent: 'root', name: 'Rectangle ' } } }, { when: { size: 'l' }, set: { 'mark.name': 'Bar' } }] };
+  const out = toReact(both, 'tag', { naming: CLASS, library: {} });
+  ok('a rename set where an add names its part wins there', /data-figma-name=\{\(size === "l"\) \? "Bar" : /.test(out), out); }
 const quoted = { ...renamed, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', name: 'Say "hi" {x}' }, label: { kind: 'text', parent: 'root', content: 'Tag' } } };
 const placedNamed = { component: 'Row', props: {}, anatomy: { root: { kind: 'container' }, lead: { kind: 'instance', parent: 'root', component: 'Pill', name: 'Leading pill' } }, variants: [], folder: 'row' };
 ok('the name travels in React too, braced where it holds quotes, on a placed component, and a part with no name has none',

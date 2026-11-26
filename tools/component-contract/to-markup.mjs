@@ -434,10 +434,14 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // reading the code back names it as the design does
   // (and where a variant renames it, that variant's name there, the later variant first, as modeAttrs says a mode; one
   // a variant takes away, null, is empty there, which names nothing)
+  // (and a part variants add under names of their own, a "Rectangle " in one and none in another: each add's; adds and
+  // renames taken in the order expand applies them, every variant in its stored order and a combination last, a
+  // variant's rename over its own add, so the later one is the name there as in the design)
   const nameAttr = (id) => {
     const nm = ((parts.get(id) || {}).e || {}).name;
-    const sets = (c.variants || []).filter((v) => v.set && `${id}.name` in v.set).sort((x, y) => !!x.combination - !!y.combination);
-    const code = byVariant(sets, (v) => lang.str(v.set[`${id}.name`] || ''), lang.str(nm || ''));
+    const vs = c.variants || [], addNamed = vs.some((v) => v.add && v.add[id] && (v.add[id].name ?? '') !== (nm ?? ''));
+    const sets = [...vs.filter((v) => !v.combination), ...vs.filter((v) => v.combination)].filter((v) => (v.set && `${id}.name` in v.set) || (addNamed && v.add && v.add[id]));
+    const code = byVariant(sets, (v) => lang.str((v.set && `${id}.name` in v.set ? v.set[`${id}.name`] : v.add[id].name) || ''), lang.str(nm || ''));
     return code ? [['data-figma-name', { code }]] : nm ? [['data-figma-name', { lit: nm }]] : [];
   };
   const hook = (id) => [...(n.element ? [['data-part', { lit: seg(id) }]] : [['className', { lit: n.part(seg(id)).slice(1) }]]), ...nameAttr(id), ...modeAttrs(id)];
@@ -494,6 +498,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     const e = id === 'root' ? (c.anatomy || {}).root || {} : ((parts.get(id) || {}).e || {});
     // (as expand() layers them: a combination last, over the rest)
     const sets = (c.variants || []).filter((v) => v.set && `${id}.modes` in v.set).sort((x, y) => !!x.combination - !!y.combination);
+    // (modes a pointer state sets, a card's at focus: the markup's attributes, which no pointer state changes, so a gap)
+    if (sets.some((v) => pointerWords(c, v.when))) gaps.push(`${partName(id)}'s variable modes change at a pointer state: frontend-build's to add, or the design's to drop`);
     const keys = new Set([...Object.keys(e.modes || {}), ...sets.flatMap((v) => Object.keys(v.set[`${id}.modes`] || {}))]);
     // (on a placed instance, unset is no attribute at all (null, which h() leaves out): its component's own mode stands
     // there, as an instance with no mode override keeps its component's)

@@ -593,7 +593,16 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
     && g('tip.shadow', { library: 'literal', drawn: null }) === 'unrecorded-effect' && leftToCode(c)('tip.shadow', { library: 'literal', drawn: null }) && g('tip.shadow', { library: 'literal', drawn: 'Shadow/1' }) === null
     // (a token spelt as the same custom property as the one read back: the gap; another token, or words told apart by case, stay a difference)
     && g('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) === 'one-css-name' && leftToCode(c)('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) && g('tip.layout.padding.start', { library: 'Space050', drawn: 'Space025' }) === null && g('slot/sample.content', { library: 'Label', drawn: 'label' }) === null && g('tip.content', { library: 'Label', drawn: 'label' }) === null);
-  ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'pointer-words', 'pointer-with', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
+  // (modes only pointer states set where the row was found, roundTrip's `pointer`: the gap; modes found apart from them stay a difference)
+  const cm = { ...c, variants: [...c.variants, { when: { state: 'focus' }, set: { 'root.modes': { theme: 'a' } } }] }, gm = gapOf(cm);
+  ok('variable modes only a pointer state sets are left to code; any other mode row is a difference', gm('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true }) === 'pointer-modes'
+    && leftToCode(cm)('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true }) && gm('root.modes', { library: { theme: 'a' }, drawn: null }) === null && gm('root.width', { library: 1, drawn: 2, pointer: true }) === null
+    // (and only at a value a pointer state's variant sets on that layer: another value, or none set, stays a difference)
+    && gm('root.modes', { library: { theme: 'b' }, drawn: null, pointer: true }) === null && g('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true }) === null
+    && gm('root.modes.theme', { library: 'a', drawn: null, pointer: true }) === 'pointer-modes'
+    // (modes of several keys match in any key order)
+    && gapOf({ ...c, variants: [{ when: { state: 'focus' }, set: { 'root.modes': { theme: 'a', density: 'b' } } }] })('root.modes', { library: { density: 'b', theme: 'a' }, drawn: null, pointer: true }) === 'pointer-modes');
+  ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'pointer-words', 'pointer-with', 'pointer-modes', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
   ok('leftToCode is gapOf said as yes or no', leftToCode(c)('picker/hint') === true && leftToCode(c)('root.width') === false); }
 
 // a count derived from an accepted leg (`self strict`) that accepted.json does not hold yet is said, never failed on: it

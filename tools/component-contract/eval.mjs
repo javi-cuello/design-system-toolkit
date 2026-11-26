@@ -140,6 +140,7 @@ export const GAPS = {
   'unexposed-override': 'an override inside a placed component that no prop of it carries',
   'pointer-words': 'words only a pointer state changes (a field\'s "Search" at focus)',
   'pointer-with': 'a placed instance\'s props only a pointer state gives',
+  'pointer-modes': 'variable modes only a pointer state sets (a card\'s at focus): the markup holds modes as attributes, which no pointer state changes',
   'unwritten-scale': 'a scale constraint the sheet never writes (to-code sharesNeverWritten)',
   'path-radius': 'a radius the design holds only as mixed on a path, which no box\'s corners say',
   'unrecorded-effect': 'an effect with no style, whose values the snapshot does not record: no sheet can draw it',
@@ -266,10 +267,20 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
       && (words.get(`${el}.with`) || []).some((w) => w && typeof w === 'object' && Object.entries(lib).every(([k, v]) => same(w[k], v)));
     return byMine || Object.entries(lib).every(([k, v]) => ownPointer(el, k, v));
   };
+  // modes a pointer state's variant sets on that layer at the design's value, at every combination the row was found in
+  // (roundTrip's `pointer`): one no pointer state sets there stays a difference
+  const pointerModes = (el, field, row) => {
+    if (!row || row.pointer !== true || !/^modes(\.|$)/.test(field)) return false;
+    const at = (x) => { const m = (x.set || {})[`${el}.modes`] !== undefined ? x.set[`${el}.modes`] : ((x.add || {})[el] || {}).modes; return field === 'modes' ? m : m && m[field.slice(6)]; };
+    const key = (v) => JSON.stringify(v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : w));
+    return vs.some((x) => pointerWords(contract, x.when) && at(x) !== undefined && key(at(x)) === key(row.library));
+  };
   return (at, row) => {
     const el = at.split('.')[0], field = at.slice(el.length + 1);
     const id = ids.find((x) => (el === x || el.startsWith(`${x}/`)) && !(over.has(x) && !((el !== x && over.get(x) === 'part') || passed.has(field) || (field.startsWith('with.') && el === x))));
-    return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) ? 'inside-foreign'
+    // (modes, the markup's attributes, that only pointer states' variants set at every combination the row was found in:
+    // roundTrip's `pointer`)
+    return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) ? 'inside-foreign'
       : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? reasons.get(id) : null);
   };
 }

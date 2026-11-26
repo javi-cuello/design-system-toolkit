@@ -159,7 +159,8 @@ function outer(x) {
 }
 
 /* A dash said two ways: the design's pattern ([2, 2]), and code's dashed outline, whose length CSS does not state (the
-   user's ruling, 2026-11-17): compared as dashed or not. */
+   user's ruling, 2026-11-17): compared as dashed or not. Its cap with it: on a dashed stroke the cap shapes each dash's
+   ends, part of the pattern CSS does not state (no border property says a cap). */
 // the page a drawing goes on: the component's name, or in the library's own file (where a page of that name is the
 // library's own, which a drawing must never touch) that name marked as the round trip's. Every reader of a drawing asks
 // this, never the bare name
@@ -170,7 +171,7 @@ export const drawingPage = (name, own) => (own ? `${DRAWING_PAGE}${name}` : name
 export function dashes(x) {
   if (!x) return x;
   const out = { ...x };
-  for (const [id, e] of Object.entries(x)) if (e && e.border && e.border.dash) out[id] = { ...e, border: { ...e.border, dash: 'dashed' } };
+  for (const [id, e] of Object.entries(x)) if (e && e.border && e.border.dash) { const { cap: _, ...border } = e.border; out[id] = { ...e, border: { ...border, dash: 'dashed' } }; }
   return out;
 }
 

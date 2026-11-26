@@ -698,7 +698,9 @@ delete globalThis.figma;
     JSON.stringify(a(270, 0)) === JSON.stringify(a(270, 360)) && JSON.stringify(a(-90, 0)) === JSON.stringify(a(270, 360)) && a(0, 360).end === 360 && a(0, 0).end === 360 && a(270, 90).end === 450); }
 { const { dashes } = await import('./to-figma.mjs');
   ok('a dash is compared as dashed or not: the design\'s pattern and code\'s dashed outline are one',
-    JSON.stringify(dashes({ a: { border: { dash: [2, 2] } } })) === JSON.stringify(dashes({ a: { border: { dash: 'dashed' } } })) && !dashes({ a: { border: { color: 'x' } } }).a.border.dash); }
+    JSON.stringify(dashes({ a: { border: { dash: [2, 2] } } })) === JSON.stringify(dashes({ a: { border: { dash: 'dashed' } } })) && !dashes({ a: { border: { color: 'x' } } }).a.border.dash);
+  ok('a dash\'s cap goes with its pattern: a square-capped dash and code\'s dashed outline are one, a cap on a solid stroke stays',
+    JSON.stringify(dashes({ a: { border: { dash: [1, 1], cap: 'square' } } })) === JSON.stringify(dashes({ a: { border: { dash: 'dashed' } } })) && dashes({ a: { border: { cap: 'round' } } }).a.border.cap === 'round'); }
 { const byKey = { k1: 'Graphic/gold cup', k2: 'Button', k3: 'Icons/Icon/arrow' };
   const walk = { children: [{ instanceOf: 'gold cup', instanceOfKey: 'k1' }, { instanceOf: 'Button / Size=md', instanceOfKey: 'k2' }, { instanceOf: 'gold cup', instanceOfKey: 'other' }, { instanceOf: 'Close', instanceOfKey: 'k1' }, { instanceOf: 'Icon/arrow', instanceOfKey: 'k3' }] };
   namedByKey(walk, byKey);

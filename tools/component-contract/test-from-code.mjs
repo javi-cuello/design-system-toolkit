@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -11,6 +11,14 @@ import { judge, shadowKey } from '../parity/external.mjs';
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
 
+// a line's stroke is its one leading edge, and its size across that edge 0 even where the box counts the edge in (a
+// line scaled with its parent, sized 0%, read off a box one edge tall)
+{ const scaled = lineEdge({ kind: 'graphic', width: 80, height: 1, border: { color: 'c', width: [1, 0, 0, 0], dash: 'dashed' } }, [1, 0, 0, 0], [1, 0, 0, 0]);
+  ok('a line read off a box its edge makes tall is no tall: its stroke the edge, its height 0', scaled.height === 0 && scaled.width === 80 && JSON.stringify(scaled.border) === JSON.stringify({ color: 'c', width: 1, dash: 'dashed' }));
+  const box = lineEdge({ kind: 'graphic', width: 80, height: 3, border: { color: 'c', width: [1, 0, 0, 0] } }, [1, 0, 0, 0], [1, 0, 0, 0]);
+  ok('a box taller than its one edge is no line: its height and stroke stay as read', box.height === 3 && Array.isArray(box.border.width));
+  const upright = lineEdge({ kind: 'graphic', width: 1, height: 80, border: { color: 'c', width: [0, 0, 0, 1] } }, [0, 0, 0, 1], [0, 0, 0, 1]);
+  ok('…and an upright line read off a box its left edge makes wide is no wide: its stroke the edge, its width 0', upright.width === 0 && upright.height === 80 && upright.border.width === 1); }
 // a placed icon's colour the code only inherits (currentColor, no rule of the sheet's) is dropped unless the design sets
 // one for it: Atlassian's EpicObject places Epic, an icon the library holds no contract for, whose glyph inside is purple
 // in its own drawing; that is Epic's own, not this design's, so the inherited black is no override to compare
@@ -227,6 +235,10 @@ ok('a slot\'s stand-in is one word per prop, which no component draws', slotMark
   const badge = { props: { label: { type: 'string', figma: 'Label' }, tone: { type: 'enum', figma: 'Tone' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', content: '{label}' }, dot: { kind: 'graphic' } } };
   ok('an instance\'s word is the prop its text shows', JSON.stringify(wordsOf(badge, ['New'])) === '{"Label":"New"}');
   ok('a word this component passes down from its own prop is that prop', JSON.stringify(wordsOf(badge, [slotMark('status')], { badge: { code: 'status' } })) === '{"Label":"{badge}"}');
+  { const cb = { props: { labelText: { type: 'string', default: 'Label', figma: 'Heading' }, valueText: { type: 'string', default: 'Value', figma: 'Detail' }, value: { type: 'boolean', default: true, figma: 'Value', shows: ['box/value'] } },
+      anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: '{labelText}' }, box: { kind: 'container', parent: 'root' }, 'box/value': { kind: 'text', parent: 'box', content: '{valueText}' } } };
+    ok('a text under a layer the instance is read not to draw shows no word: the words left count out one for one', JSON.stringify(wordsOf(cb, ['Group'], {}, { Value: null })) === '{"Heading":"Group"}'
+      && JSON.stringify(wordsOf(cb, ['Group'], {}, { Value: false })) === '{"Heading":"Group"}' && JSON.stringify(wordsOf(cb, ['Group'], {}, { Value: true })) === '{}'); }
   ok('words that do not count out one for one are not guessed', JSON.stringify(wordsOf(badge, ['New', 'Extra'])) === '{}' && JSON.stringify(wordsOf(badge, [])) === '{}');
 }
 
@@ -591,6 +603,7 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
   ok('a boolean whose layer the main draws not at the placed props, on or off, is left unread; one it draws there is read from being seen',
     JSON.stringify(shownRead(cb, { State: 'Enabled' }, { 'Error message': false, Label: false })) === '{"Label":false}'
     && JSON.stringify(shownRead(cb, { State: 'Invalid' }, { 'Error message': false })) === '{"Error message":false}');
+  ok('a boolean whose layer is unseen only as a box around it is not drawn (null) is left unread', JSON.stringify(shownRead(cb, { State: 'Enabled' }, { Label: null })) === '{}');
   {
     // two effect styles of one geometry, each recording its colour in one mode: the code names the first, whose
     // variable draws the second's recorded colour under the modes drawn
