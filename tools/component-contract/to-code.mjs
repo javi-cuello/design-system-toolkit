@@ -161,7 +161,7 @@ export function copyOf(c, id) {
 /* Each part, base and added, with its parent and the conditions it is drawn under: the variants that add it and those
    that take it away, a pointer state's left to the stylesheet. A part only a pointer state draws is a gap; a focus ring
    drawn as a layer of its own is the ringed element's outline; a part inside a placed component is that component's;
-   one inside a slot is a caller's sample. */
+   one inside a slot is its sample, drawn while the caller passes nothing (`slotted`). */
 export function partsOf(c, t = HOUSE) {
   const props = c.props || {};
   const pointer = (k, v) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v);
@@ -873,8 +873,8 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     const pull = e.parent && pulling.has(e.parent) ? (e.position === 'absolute' || e.absolute || firstInFlow(e.parent) === id || !pulls(parent) ? 0 : parent.layout.gap) : null;
     // a size Figma keeps only while the part is empty (derive's whileEmpty): written under `::empty` (chain: while it holds
     // no element), never as a minimum the filled part keeps
-    // (a slot's sample frame says nothing of what a caller puts there: its empty size is the sample's, written nowhere,
-    // or every leaf a caller places, a <p> or an <img>, would take it)
+    // (a slot's sample frame says nothing of what a caller puts there: its empty size is the sample's, written on its own
+    // rule alone, never on the rule for any child, or every leaf a caller places, a <p> or an <img>, would take it)
     // (and a combination that drops the sample's mark but keeps its size has the defaults' kept size still: dropped too)
     const empty = [...new Set([...(e.whileEmpty || []), ...(slotted && B[id] ? (B[id].whileEmpty || []).filter((f) => e[f] === B[id][f]) : [])])].filter((f) => e[f] !== undefined);
     if (empty.length) { e = { ...e }; for (const f of empty) delete e[f]; delete e.whileEmpty; }

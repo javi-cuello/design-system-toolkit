@@ -206,8 +206,8 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
   const { M, back } = placedAs(a, hid, m, mainOf);
   const inner = Object.fromEntries(Object.keys(a).filter((k) => k.startsWith(`${hid}/`)).map((k) => [k.slice(hid.length + 1), a[k]]));
   const match = placedMatch(M, inner);
-  // (a part of the component's own, not one inside a nested instance, which that instance's entry carries, nor a slot's
-  // sample, which the slot's filler draws)
+  // (a part of the component's own, not one inside a nested instance, which that instance's entry carries, nor its slot's
+  // sample, which it draws itself as the slot's fallback, or which what this one puts there replaces)
   const own = (mk) => { for (let up = (M[mk] || {}).parent; up && up !== 'root'; up = (M[up] || {}).parent) if (['instance', 'slot'].includes((M[up] || {}).kind)) return false; const id = back[mk] || mk; return mk !== 'root' && !!(m.anatomy[id] || (m.variants || []).some((v) => (v.add || {})[id])); };
   // (a numbered copy by its own name, as its holder looks it up: each copy set apart)
   const segOf = (mk) => partSeg(m, back[mk] || mk);
