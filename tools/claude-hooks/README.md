@@ -34,7 +34,7 @@ Small work that is committed as it goes never meets a gate. Full-size work is me
 
 Each gate in full is under [Full-size work](REFERENCE.md#full-size-work).
 
-At every stop the hooks do two more things. Files the session wrote but did not commit block the turn once. See [The session's own edits](REFERENCE.md#the-sessions-own-edits-committed-before-a-turn-ends). In a project with a built docs site, the turn's code also goes through the system's checker. See [The system's checker](REFERENCE.md#the-systems-checker-at-the-end-of-a-turn).
+At every stop the hooks do three more things. A memory file the session wrote, in a folder that breaks toolkit-standard §D 25, blocks the turn once with the findings (`tools/memory-check`). Files the session wrote but did not commit block the turn once. See [The session's own edits](REFERENCE.md#the-sessions-own-edits-committed-before-a-turn-ends). In a project with a built docs site, the turn's code also goes through the system's checker. See [The system's checker](REFERENCE.md#the-systems-checker-at-the-end-of-a-turn).
 
 ## Switches
 
