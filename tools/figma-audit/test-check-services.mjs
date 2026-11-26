@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { judge, heal } from './check-services.mjs';
 
 let n = 0;
-const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
+const ok = (name, cond, why = '') => { n++; assert.ok(cond, `${name}${why ? `\n${why}` : ''}`); console.log('ok', name); };
 
 const A = '/x/alpha/figma-design-system/audit', B = '/x/beta/figma-design-system/audit';
 const wanted = new Map([[A, 'alpha'], [B, 'beta']]);

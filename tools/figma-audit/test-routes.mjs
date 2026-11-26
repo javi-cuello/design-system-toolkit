@@ -85,6 +85,7 @@ try {
   const st = (await ask("GET", "/status")).json;
   ok("/status with no plugin: no file open, no Claude key, the audit folder",
     st.plugin === false && Array.isArray(st.files) && st.files.length === 0 && st.file === null && st.claude === false
+    && st.supervised === false /* run by hand, no IPC parent: nothing brings it back (check-services' judge reads it) */
     && fs.realpathSync(st.data) === fs.realpathSync(path.join(dir, "audit")), JSON.stringify(st));
   // a folder no project list holds: the docs build is not started to crash, and /status says why there is no site
   ok("/status says the site is not built because the project does not resolve, rather than a build's crash",

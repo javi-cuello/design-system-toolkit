@@ -150,4 +150,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('by default the start is the process\'s own: a file older than it is not stale, a newer one is', earlier === false && later === true);
 }
 fs.rmSync(dir, { recursive: true, force: true });
+// handle.supervised() says only whether something brings it back: no look, no restart (a service's /status reads it)
+{
+  const said = [];
+  const h = restartWhenStale([], { supervised: true, every: 3600000, log: (m) => said.push(m), exit: () => said.push('exit') });
+  const h2 = restartWhenStale([], { supervised: false, every: 3600000, log: (m) => said.push(m), exit: () => said.push('exit') });
+  ok('handle.supervised() reads the supervisor, and starts nothing', h.supervised() === true && h2.supervised() === false && !said.length);
+  clearTimeout(h.timer); clearTimeout(h2.timer);
+}
 console.log(`${n}/${n} passed`);
