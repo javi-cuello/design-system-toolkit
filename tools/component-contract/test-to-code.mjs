@@ -819,6 +819,14 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const out = { ...c, variants: c.variants.map((v) => (v.add && v.add.icon ? { ...v, add: { icon: { ...v.add.icon, position: 'absolute', absolute: { x: 2, y: 2 } } } } : v)) };
   const css = toCss(out, 'btn');
   ok('and is stacked by that place where it stands out of the flow', /isolation: isolate/.test(css) && /:where\(:hover\) > \.btn__grip \{[^}]*z-index: 3/.test(css)); }
+// two parts a combination numbers alike (each placed by a variant of its own) stack as they are listed, as the compare
+// ranks them, never both at one z-index left to the markup's order
+{ const c = { contract: 1, component: 'Btn', props: { grip: { type: 'boolean', default: false }, big: { type: 'boolean', default: false }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, label: { kind: 'text', parent: 'root', content: 'Go', order: 0 } },
+    variants: [{ when: { grip: true }, add: { grip: { kind: 'container', parent: 'root', order: 1, width: 4, height: 4 } } }, { when: { state: 'hover' }, add: { icon: { kind: 'container', parent: 'root', order: 1, width: 4, height: 4, position: 'absolute', absolute: { x: 0, y: 0 } } } },
+      { when: { grip: true, big: true, state: 'hover' }, set: { 'grip.order': 3 }, combination: true }] };
+  const css = toCss(c, 'btn');
+  ok('two parts a combination numbers alike stack in the order they are listed', /isolation: isolate/.test(css) && /\[data-grip\][^{]*:hover[^{]*> \.btn__icon \{[^}]*z-index: 3/.test(css) && selfCheck(c, rulesOf(c).rules).length === 0); }
 // a part the rest of the grid draws that a pointer state also puts in (a tile's border, framed or hovered): the markup
 // holds it, so the sheet hides it where the contract draws none and shows it at the pointer state (carbon tile, 2026-11-21)
 { const border = { kind: 'graphic', shape: 'rectangle', parent: 'root', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'C/s', width: 1 } };

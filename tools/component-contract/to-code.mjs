@@ -723,6 +723,12 @@ const hostIn = (c, id, mains, copies = false) => { const a = allOf(c); const h =
 /* Each part's declarations at one combination, as a map property → value (with its note). */
 // no store given: what a placed component draws is not known, so none is taken to be missing from it
 const NO_MAINS = () => null;
+/* A part's place among its siblings in an expanded anatomy: by order, a tie kept in the order they are listed (to-figma
+   ranked, the compare's rule), 0 first. */
+function rankIn(a, id) {
+  const up = a[id].parent, sibs = Object.keys(a).map((k, i) => [k, a[k].order ?? 0, i]).filter(([k]) => a[k].parent === up);
+  return sibs.sort((x, y) => x[1] - y[1] || x[2] - y[2]).findIndex(([k]) => k === id);
+}
 export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
   mains ||= NO_MAINS;
   const a = expand(c, when);
@@ -918,7 +924,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
     if (parent && parent.layout && reordered(c).has(e.parent) && typeof e.order === 'number' && !(e.position === 'absolute' || e.absolute)) kept.push(['order', String(e.order)]);
     // where the browser would paint the box's children in another order than the design (restacked), each says its place
     // by z-index, one over its order (above the box's unpositioned children, which take none); the box is isolated, below
-    if (e.parent && restacked(c, t, mains).has(e.parent) && !slotted) kept.push(['z-index', String((e.order ?? 0) + 1)]);
+    // (its place, as the design ranks it: by order, a tie kept in the order the layers are listed, as the compare ranks
+    // them (to-figma ranked), so two a variant numbers alike paint as listed, never by the markup's order)
+    if (e.parent && restacked(c, t, mains).has(e.parent) && !slotted) kept.push(['z-index', String(rankIn(a, id) + 1)]);
     if (restacked(c, t, mains).has(id)) kept.push(['isolation', 'isolate']);
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: (e.kind === 'instance' && !unheld) || slotted ? [] : unheld ? unread.filter((f) => !/^(key|component|with|swappedBy)\b/.test(f)) : unread,
       // (the axes a scale constraint went unwritten on: eval.mjs leftToCode leaves what code draws there to code)
