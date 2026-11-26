@@ -682,7 +682,9 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
   ok('an empty box takes the shape the design draws at the combination read: none where a variant takes its rectangle away',
     asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false, { kind: 'graphic' }).shape === undefined
     && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false).shape === 'rectangle'
-    && asShape({ kind: 'container' }, null, false, { kind: 'graphic', shape: 'rectangle' }).kind === 'container');
+    && asShape({ kind: 'container' }, null, false, { kind: 'graphic', shape: 'rectangle' }).kind === 'container'
+    // (and none where the design draws no such part at the combination read: a placed component's there, maybe a frame)
+    && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false, false).kind === 'container');
   ok('a full-round empty box where the design draws an ellipse is the ellipse', asShape({ kind: 'container', full: true, radius: 99 }, { kind: 'graphic', shape: 'ellipse' }, false).shape === 'ellipse');
   ok('an empty box where the design draws a line is the line; one holding parts, or under an icon, stays a box', asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, false).kind === 'graphic' && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, true).kind === 'container' && asShape({ kind: 'container' }, { kind: 'graphic', icon: true }, false).kind === 'container');
 }
