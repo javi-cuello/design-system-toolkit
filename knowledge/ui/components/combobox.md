@@ -24,7 +24,9 @@ A combobox is a text field with a list of suggestions: the person types to narro
 
 **How**
 - [moderate] **Model.** A text input with a popup list ([W3C APG combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)). Pick one of the APG's autocomplete behaviours and keep it: list with manual selection (suggestions shown, the person picks) is the safe default; inline completion and automatic selection suit expert tools.
-- [weak] **Matching.** Match anywhere in the option text, accept common synonyms and abbreviations ("UK" finds "United Kingdom"), and ignore case and accents.
+- [contested] **Matching: from the start, or anywhere.** Fluent's combobox moves the active option to the first one that starts with the typed text (`optionText.toLowerCase().indexOf(searchString) === 0`) and keeps the whole list ([Fluent useInputTriggerSlot](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-combobox/library/src/components/Combobox/useInputTriggerSlot.ts)). react-select, under Atlassian's Select, filters to options containing the text anywhere by default (`matchFrom: 'any'`) ([react-select filters](https://github.com/JedWatson/react-select/blob/master/packages/react-select/src/filters.ts)). The project decides; from the start suits times ("9" finds 9:00, not 19:00), anywhere suits names.
+- [weak] **Synonyms, case and accents.** Accept common synonyms and abbreviations ("UK" finds "United Kingdom"), and ignore case and accents.
+- [weak] **The list opens on the chosen option.** MUI's slot list scrolls the selected option into view, or its reference value when empty ([MUI DigitalClock source](https://github.com/mui/mui-x/blob/master/packages/x-date-pickers/src/DigitalClock/DigitalClock.tsx)).
 - [moderate] **Keyboard.** Down Arrow enters the list, Enter accepts, Escape closes the popup; Alt + Down opens it without moving focus ([APG](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)).
 - [weak] **No results.** Say so in the popup ("No countries match 'Atl'"), never an empty box.
 - [moderate] **Without script.** Start from a native `select` or a text input with a `datalist` and enhance it, so the form still works.
@@ -33,7 +35,7 @@ A combobox is a text field with a list of suggestions: the person types to narro
 
 **Cases**
 - A country field as a 250-option select → a combobox enhancing the select; Baymard and NN/g both favour typing for countries.
-- A people picker that only finds names from their start ("Ann" misses "Mary-Ann") → match anywhere in the string.
+- A people picker that only finds names from their start ("Ann" misses "Mary-Ann") → anywhere matching, the side that suits names (above).
 - A combobox that selects the first suggestion on blur → leave the typed text and show an error on submit if it matches nothing; silent selection fills in a value the person never chose.
 - A tag field that accepts new values → show "Create 'design-ops'" as the last option, so creating is explicit.
 
@@ -52,7 +54,7 @@ A combobox is a text field with a list of suggestions: the person types to narro
 - *Script:* could check `role="combobox"` with `aria-expanded` and `aria-controls`, that Escape closes the popup, that a no-match message appears, and that the field is a working native control with script disabled.
 - *Judgement:* Is the list long enough to need typing, and does matching find what people type?
 
-**Sources:** APG, Baymard and Carbon as linked; they agree.
+**Sources:** APG, Baymard, Carbon, Fluent, react-select and MUI as linked; they split on matching from the start or anywhere.
 
 ## List size and placement
 
