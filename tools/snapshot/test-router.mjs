@@ -20,7 +20,7 @@ import contract from './projects.cjs';
 // Deliveries are timed on the machine (deliver.cjs RUNS); a test's go to a scratch file, never the real one.
 process.env.TOOLKIT_SNAPSHOT_RUNS = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'snapshot-runs-')), 'runs.json');
 
-const { identify, projects, route, routing } = contract;
+const { identify, projects, route, routing, assetOf } = contract;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 /* This machine's pairing code, for the routers the suite starts: a file of
@@ -156,7 +156,7 @@ test('only the paired plugin may post or ask about a file: no code, a wrong code
     assert.equal((await fetch(at, { headers: { Origin: 'null' } })).status, 200);
     // and with the code, the same post is routed and written
     assert.equal((await fetch(`${at}${paired('/library')}`, { method: 'POST', headers: { Origin: 'null' }, body: JSON.stringify(lib('IDA')) })).status, 200);
-    assert.equal((await (await fetch(`${at}/${paired('?file=KEYA')}`)).json()).kind, 'library');
+    { const said = await (await fetch(`${at}/${paired('?file=KEYA')}`)).json(); assert.equal(said.kind, 'library'); assert.equal(said.asset, false, 'a file no project lists as an asset library is not one'); }
   });
 });
 
@@ -208,6 +208,17 @@ test('a routing block that is not valid JSON is reported, never skipped in silen
   fs.mkdirSync(path.join(dir, 'projects', 'broken'), { recursive: true });
   fs.copyFileSync(doc, path.join(dir, 'projects', 'broken', 'design-system-context.md'));
   assert.match(projects(path.join(dir, 'projects')).errors[0], /not valid JSON/);
+});
+
+test('a file is an asset library only where its project lists it with the icons role and not components', () => {
+  const list = [
+    { name: 'a', files: { library: [{ key: 'ICONS', id: 'IDI', roles: ['icons'] }, { key: 'COMP', id: 'IDC', roles: ['components', 'icons'] }, { key: 'BARE', id: 'IDN' }] } },
+  ];
+  assert.equal(assetOf(list, ['ICONS']), true);
+  assert.equal(assetOf(list, ['x', 'IDI']), true, 'by its id too');
+  assert.equal(assetOf(list, ['COMP']), false, 'a components library with icons is not one');
+  assert.equal(assetOf(list, ['BARE']), false, 'a file with no roles is not one');
+  assert.equal(assetOf(list, ['NONE']), false);
 });
 
 test("either of a file's two names addresses it, and the routes do not cross", () => {

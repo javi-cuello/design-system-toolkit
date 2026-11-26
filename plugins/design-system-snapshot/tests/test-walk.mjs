@@ -329,6 +329,16 @@ ok("the manifest asks for the file key, and both payloads send it", manifest.ena
   const none = vm.runInContext(src + "\n;reachable()", vm.createContext({ figma, console, fetch: async () => { throw new TypeError("Failed to fetch"); } }));
   ok("…and only no answer at all is nobody listening", (await none) === false);
 }
+// 0.92.0: every variant was rendered as an asset wherever the file had an icon page; a components library with one
+// rendered 4 778 at 2x and crashed Figma. Now only a file the router says its project lists as an asset library.
+{
+  const asked = (answer) => vm.runInContext(src + "\n;kind().then(() => assetFile)", vm.createContext({ figma: { ...figma, fileKey: "K", root: { ...figma.root, getPluginData: () => "F" }, variables: { getLocalVariableCollectionsAsync: async () => [{}] } }, console, fetch: answer }));
+  const reply = (body) => async () => ({ status: 200, json: async () => body });
+  ok("a file the router names an asset library renders each variant", (await asked(reply({ ok: true, kind: "library", asset: true }))) === true);
+  ok("…one it does not, icon page or not, renders the default alone", (await asked(reply({ ok: true, kind: "library", asset: false }))) === false && (await asked(reply({ ok: true, kind: "library" }))) === false);
+  ok("…and with no router, none is one", (await asked(async () => { throw new TypeError("Failed to fetch"); })) === false);
+  ok("…the walk reads the router's word, not the icon page", /const assetLibrary = assetFile;/.test(src) && !/assetLibrary = figma\.root\.children\.some\(isIconPage\)/.test(src));
+}
 // 2026-11-05: a mirrored illustration was recorded as rotation -180, the
 // angle Figma reports for a flip, and its code's scaleX(-1) was waived.
 const leaf = (relativeTransform, rotation) => ({ name: "Art", type: "RECTANGLE", width: 72, height: 72, x: 0, y: 0, rotation, relativeTransform, boundVariables: {} });

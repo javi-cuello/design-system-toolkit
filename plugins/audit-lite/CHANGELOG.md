@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.15.0] - 2026-11-26
+### Changed
+- Carries snapshot 0.92.0: each variant rendered as an asset only where the project lists the file as an asset library.
+
 ## [0.14.23] - 2026-11-26
 ### Changed
 - Carries snapshot 0.91.1: another library's effect styles read off the stored components alone.

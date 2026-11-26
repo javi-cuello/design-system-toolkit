@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.92.0] - 2026-11-26
+### Changed
+- **Each variant of a set is rendered as an asset only in a file its project lists as an asset library** (the `icons` role without `components`, which the router now answers as `asset` beside `kind`). It was guessed from an icon page, so a components library with one rendered all 4 778 of its variants at 2x beside its defaults and crashed Figma at the end of the walk. A file snapshotted with no router renders each set's default alone. Takes effect with the next snapshot.
+
 ## [0.91.1] - 2026-11-26
 ### Fixed
 - **The effect styles another library gives are read off the components alone.** 0.91.0 searched every layer of every page for them, the round trip's drawing pages too, and crashed Figma on a large library; they are now read as the variables the components bind are, off the components on the pages a snapshot stores. A remote text style's texts, and the drawn texts a line height is measured from, are looked for on those pages too, never on a drawing or Scratch page.

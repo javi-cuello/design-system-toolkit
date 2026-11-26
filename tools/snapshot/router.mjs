@@ -188,14 +188,14 @@ const server = (req, res) => {
     // Asked with ?file=<id>, it also says which kind the routing records that
     // file as, so the plugin collects the right thing without guessing.
     // a module that fails to load is answered as the post's failure is, never a crash
-    let list, contract, kind;
+    let list, contract, kind, asset;
     const ids = url.searchParams.getAll('file');
     // which kind a file is names a project's file, so only the paired plugin is told
     if (ids.length && !paired(url)) {
       res.writeHead(401, { 'content-type': 'application/json', ...cors(req) });
       return res.end(JSON.stringify({ ok: false, paired: false, error: UNPAIRED }));
     }
-    try { ({ contract } = load()); ({ list } = contract.projects(PROJECTS)); kind = ids.length ? contract.kindOf(list, ids) : null; } catch (e) {
+    try { ({ contract } = load()); ({ list } = contract.projects(PROJECTS)); kind = ids.length ? contract.kindOf(list, ids) : null; asset = ids.length ? contract.assetOf(list, ids) : false; } catch (e) {
       console.error(`  failed: ${e.message}`);
       res.writeHead(500, { 'content-type': 'application/json', ...cors(req) });
       return res.end(JSON.stringify({ ok: false, error: e.message }));
@@ -203,7 +203,7 @@ const server = (req, res) => {
     res.writeHead(200, { 'content-type': 'application/json', ...cors(req) });
     // a count, never the names: a sandboxed iframe on any page also sends `Origin: null`,
     // and the list of projects is the list of the people this machine works for
-    return res.end(JSON.stringify({ ok: true, projects: list.length, kind }));
+    return res.end(JSON.stringify({ ok: true, projects: list.length, kind, asset }));
   }
   if (req.method !== 'POST') { res.writeHead(405); return res.end(); }
   // refused before a byte is held, routed or kept: a page that posts gets this and nothing else

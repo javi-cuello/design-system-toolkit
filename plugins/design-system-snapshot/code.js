@@ -1,4 +1,4 @@
-// Design system snapshot — v0.91.1 · plugin-standard v1.1.0
+// Design system snapshot — v0.92.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -887,7 +887,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.91.1';
+const VERSION = '0.92.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1547,12 +1547,17 @@ async function detect() {
  * detect() is the guess for a file no project claims yet, where the router
  * will refuse it whichever kind it is sent as.
  */
+// Whether the project lists this file as an asset library (the router's word, asked by kind): only then is each
+// variant of a set rendered as an asset of its own. Unrouted, it is not.
+let assetFile = false;
 async function kind() {
+  assetFile = false;
   try {
     const q = [figma.fileKey, fileId()].filter(Boolean).map((id) => `file=${encodeURIComponent(String(id))}`).join('&');
     const res = await fetch(routed(`/?${q}`), { method: 'GET' });
     const said = await res.json();
     unpaired = res.status === 401 ? String(said.error || 'The router does not know this plugin: paste its pairing code.') : '';
+    assetFile = said.asset === true;
     const known = said.kind;
     if (known === 'library' || known === 'screens') return known;
   } catch (e) { /* not listening: the guess stands, and the button says so */ }
@@ -1663,10 +1668,10 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
   // a run names from the file as it is now: a component renamed since the last run is read again
   localKeys = null; prefNames.clear(); unreadable = [];
   const components = [];
-  // A file with an icon page is an asset library (illustrations, photos,
-  // graphics): each variant of its sets is an asset of its own, so each gets
-  // a preview, not only the default.
-  const assetLibrary = figma.root.children.some(isIconPage);
+  // An asset library (illustrations, photos, graphics), as its project lists it: each variant of its sets is an
+  // asset of its own, so each gets a preview, not only the default. Guessed from an icon page until 0.92.0, which
+  // rendered every variant of a components library that has one, 4 778 at 2x, and crashed Figma.
+  const assetLibrary = assetFile;
   // A page's section is the last header before it, the same walk the audit
   // scanners make; a page under an excluded section is not a component page.
   let current = null;

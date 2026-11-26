@@ -418,6 +418,13 @@ function projects(projectsDir) {
  * collects, because its own guess from the file's contents cannot tell a
  * components file from a screens file whose frames are not marked yet.
  */
+/* Whether a project lists this file as an asset library: the "icons" role without "components", the files the docs
+   site shows as assets, each variant a render of its own. Never guessed from a page name: a components library with an
+   icon page rendered all 4 778 of its variants at 2x and ran Figma out of memory (2026-11-26). */
+function assetOf(list, ids) {
+  return list.some((p) => entries(p.files.library).some((e) => names(e).some((n) => ids.includes(n)) && Array.isArray(e.roles) && e.roles.includes('icons') && !e.roles.includes('components')));
+}
+
 function kindOf(list, ids) {
   for (const kind of ['library', 'screens']) {
     if (list.some((p) => namesOf(p.files[kind]).some((n) => ids.includes(n)))) return kind;
@@ -1136,7 +1143,7 @@ function auditRecords(where) {
   return list.map((l, i) => ({ ...l, path: single && i === 0 ? legacy : path.join(where.audit, `${l.key}.json`) }));
 }
 
-module.exports = { siblings, repoDirOf, storeLibraries, tokensOf, mainsIn, appendRuling, removeRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
+module.exports = { siblings, repoDirOf, storeLibraries, tokensOf, mainsIn, appendRuling, removeRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, assetOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
 
 // Every project and its home, one per line, for the shell scripts:
 //   node tools/snapshot/projects.cjs homes    → <label><TAB><home>
