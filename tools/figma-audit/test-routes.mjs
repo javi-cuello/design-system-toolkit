@@ -148,6 +148,16 @@ try {
     && (await ask("GET", "/data")).json.rows["n1-1"].done === true && (await ask("GET", "/data")).json.rows["n1-1"].comp === "Button");
   ok("/ruling with no text is a 400", (await post("/ruling", { text: "  " })).code === 400);
   ok("/ruling with no context document says where it looked, and writes nothing", /no context document/.test((await post("/ruling", { text: "a ruling" })).json.error));
+  {
+    // a ruling recorded, then taken back: the document reads as it did before, and taking back one not there says so
+    const ctxFile = path.join(dir, "design-system-context.md");
+    const before = fs.readFileSync(path.join(HERE, "..", "..", "skills", "figma-context-capture", "assets", "context-template.md"), "utf8");
+    fs.writeFileSync(ctxFile, before);
+    ok("/ruling records a ruling", (await post("/ruling", { text: "Keep the raw stroke", where: "Alert" })).json.ok === true && fs.readFileSync(ctxFile, "utf8").includes("Keep the raw stroke"));
+    ok("/ruling with remove takes it back, the document as before it", (await post("/ruling", { text: "Keep the raw stroke", remove: true })).json.removed === true && fs.readFileSync(ctxFile, "utf8") === before);
+    ok("/ruling with remove on a ruling not there says absent and writes nothing", (await post("/ruling", { text: "Keep the raw stroke", remove: true })).json.absent === true && fs.readFileSync(ctxFile, "utf8") === before);
+    fs.rmSync(ctxFile);
+  }
 
   // the site it serves
   const building = await ask("GET", "/");

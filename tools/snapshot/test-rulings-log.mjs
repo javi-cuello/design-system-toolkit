@@ -1,7 +1,7 @@
 // projects.cjs's §6 reader and writer over the context template and a filled log. Run by bin/check.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-const { appendRuling, rulingsOf } = createRequire(import.meta.url)('./projects.cjs');
+const { appendRuling, removeRuling, rulingsOf } = createRequire(import.meta.url)('./projects.cjs');
 let pass = 0, fail = 0;
 const ok = (name, c) => { if (c) { pass++; console.log('ok', name); } else { fail++; console.log('FAIL', name); } };
 const template = readFileSync(new URL('../../skills/figma-context-capture/assets/context-template.md', import.meta.url), 'utf8');
@@ -19,6 +19,12 @@ ok('a document with no rulings table is refused', appendRuling('# X\n', 'y', 'z'
   for (let i = 0; i < 26; i++) full = appendRuling(full, 'r' + i, 'C' + i, '2026-12-01');
   try { appendRuling(full, 'one more', 'C', '2026-12-01'); } catch (e) { msg = e.message; }
   ok('a day takes 26 rulings, 2026-12-01 to 2026-12-01z; the 27th is refused by name, never dated undefined', /26 decisions already recorded on 2026-12-01/.test(msg) && full.includes('2026-12-01z') && !full.includes('undefined'));
+}
+{
+  const two = appendRuling(appendRuling(template, 'Keep the fill', 'Button', '2026-11-11'), 'a | b', 'Chip', '2026-11-11');
+  const back = removeRuling(two, 'a | b');
+  ok('a ruling taken back leaves the others and the table, and reads as before it', back !== null && rulingsOf(back).map((x) => x.text).join() === 'Keep the fill' && back === appendRuling(template, 'Keep the fill', 'Button', '2026-11-11'));
+  ok('taking back a ruling the log does not hold changes nothing', removeRuling(two, 'not there') === null);
 }
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

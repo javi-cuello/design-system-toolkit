@@ -62,7 +62,7 @@ import { decoder, MAX_MESSAGE } from "./frames.mjs";
 import specTool from "../snapshot/spec.cjs";
 import { lucideVersion } from "./lucide.mjs";
 import store from "../snapshot/store.cjs";
-const { walkRulings, rulingsOf, rulingKey, appendRuling } = contract;
+const { walkRulings, rulingsOf, rulingKey, appendRuling, removeRuling } = contract;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -792,6 +792,19 @@ const sameOrigin = (req) => {
 };
 
 // held(): a request is work until its handler settles, so a stale dashboard restarts only between requests
+// The context document written whole: through a tmp name only this write uses, as `CONTEXT + ".tmp"` was one path
+// for every writer. Six concurrent rulings: three failed with ENOENT renaming a tmp another had already moved, and
+// of the three that answered ok only two reached the document, the project's source of truth.
+async function writeContext(next) {
+  const tmp = CONTEXT + "." + process.pid + "." + (globalThis.__rulingN = (globalThis.__rulingN || 0) + 1) + ".tmp";
+  try {
+    await writeFile(tmp, next, "utf8");
+    await rename(tmp, CONTEXT);
+  } catch (e) {
+    try { await rm(tmp, { force: true }); } catch {}
+    throw e;
+  }
+}
 const server = createServer(held(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   try {
@@ -1022,11 +1035,19 @@ const server = createServer(held(async (req, res) => {
 
     // A ruling goes to the document's rulings log, the one place it lives.
     if (url.pathname === "/ruling" && req.method === "POST") {
-      const { text, where, about, dryRun } = JSON.parse(await body(req)) || {};
+      const { text, where, about, dryRun, remove } = JSON.parse(await body(req)) || {};
       const clean = String(text || "").replace(/\s+/g, " ").trim();
       if (!clean) return json(res, 400, { error: "text required" });
       if (!existsSync(CONTEXT)) return json(res, 200, { ok: false, error: "no context document at " + CONTEXT });
       const md = await readFile(CONTEXT, "utf8");
+      // Taken back (the note's ruling box unticked): its §6 row goes; one no longer there is said, not refused.
+      if (remove) {
+        const back = removeRuling(md, clean);
+        if (!back) return json(res, 200, { ok: true, absent: true });
+        if (dryRun) return json(res, 200, { ok: true, dryRun: true, file: CONTEXT });
+        await writeContext(back);
+        return json(res, 200, { ok: true, removed: true, file: CONTEXT });
+      }
       // Said as a fact the page can act on: a ruling already recorded still closes the row it is written under.
       if (rulingsOf(md).some((r) => r.key === rulingKey(clean))) return json(res, 200, { ok: false, already: true, error: "that ruling is already in the document" });
       // The Why column names the component the ruling was made on and the
@@ -1039,20 +1060,7 @@ const server = createServer(held(async (req, res) => {
       // A dry run answers every check above and writes nothing — the way to
       // probe a live service, after a probe appended a row to a real document.
       if (dryRun) return json(res, 200, { ok: true, dryRun: true, file: CONTEXT, wouldAppend: next.split("\n").find((l, i) => l !== md.split("\n")[i]) || "" });
-      // A tmp name only this write uses — `CONTEXT + ".tmp"` is one path for
-      // every writer, which is the defect `writeData` carries a long comment
-      // about. Six concurrent rulings: three failed with ENOENT renaming a
-      // tmp another had already moved, and of the three that answered ok only
-      // two reached the document. This file is the project's source of truth
-      // and was the least protected writer in the service.
-      const tmp = CONTEXT + "." + process.pid + "." + (globalThis.__rulingN = (globalThis.__rulingN || 0) + 1) + ".tmp";
-      try {
-        await writeFile(tmp, next, "utf8");
-        await rename(tmp, CONTEXT);
-      } catch (e) {
-        try { await rm(tmp, { force: true }); } catch {}
-        throw e;
-      }
+      await writeContext(next);
       return json(res, 200, { ok: true, file: CONTEXT });
     }
 
