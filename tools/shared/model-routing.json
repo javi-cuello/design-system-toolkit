@@ -328,7 +328,7 @@
     "keys": [
       "checkout"
     ],
-    "task": "End-of-session housekeeping: closing, memory, stale sessions and worktrees",
+    "task": "End-of-session housekeeping over the session it runs in: its work, its project's memory, its plan",
     "skills": [
       "checkout"
     ],
@@ -338,7 +338,7 @@
       "model": "sonnet",
       "effort": "medium"
     },
-    "why": "Scripts do the listing and pruning; the judgement is folding a session's lessons into one memory file, which is short and checked; not yet measured"
+    "why": "Scripts do the checks; the judgement is folding a session's lessons into one memory file, which is short and checked; not yet measured"
   },
   {
     "keys": [

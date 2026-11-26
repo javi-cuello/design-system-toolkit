@@ -1,12 +1,12 @@
 # Eval cases — checkout (v2.0.0)
 
-**Walked: 2026-11-27 for 2.0.0** — C1, C2, C5 and C6 traced to the new steps; C3 and C4 retired with the steps they held. `node tools/memory-check/test-check.mjs` re-run.
+**Walked: 2026-11-27 for 2.0.0** — C1, C2, C5 and C6 traced to the new steps; C3 and C4 retired with the steps they held. `node tools/memory-check/test-check.mjs` 11 of 11, `node tools/memory-check/test-sessions.mjs` 3 of 3.
 
 **Walked: 2026-11-26 for 1.0.0** — C1–C4 traced to the steps; the scripts' own suites: `node tools/memory-check/test-check.mjs` 8 of 8, `node tools/memory-check/test-sessions.mjs` 2 of 2. Run once by hand on the machine the same day: the memory check found 7 findings and 3 warnings across eleven folders, and the session list named the toolkit's three main sessions.
 
 ## C1 · Open work is closed before anything is tidied — *traced*
 Fixture: a session in the toolkit with its own uncommitted edit in a worktree, and another session's uncommitted file in a project.
-Assert: step 1 runs `bin/closing` first; the session's own edit is committed on its branch and landed with `bin/land`; the other session's file is left as it is, neither committed nor named in the report.
+Assert: step 1 lists the session's own items before `bin/closing`'s cross-check; the session's own edit is committed on its branch and landed with `bin/land`; the other session's file is left as it is, neither committed nor named in the report.
 Negative: memory written before the work is closed; another session's file committed under this session's message, or listed in the report.
 Traced: 2026-11-27 for 2.0.0 — to *Steps* 1.
 
@@ -22,7 +22,7 @@ Retired: checkout covers its own session only; pruning is `sessions.mjs --prune`
 Fixture: the project has this session (live, unnamed), a named main session 40 days old, an unnamed session from yesterday, and an unnamed session 10 days old whose last message leaves an item open.
 Assert: step 4 lists all four with this session kept; step 5 reads only the 10-day-old session's own messages, folds its open item into the memory, then `--prune` deletes it and its folder; the named, the recent and this session stay.
 Negative: a named or live session deleted; the stale one pruned before its open item is folded; a transcript read whole.
-Traced: 2026-11-26 for 1.0.0 — to *Steps* 4 and 5; `tools/memory-check/test-sessions.mjs` holds the pruning.
+Traced: 2026-11-26 for 1.0.0 — to *Steps* 4 and 5 (1.0.0 numbering); `tools/memory-check/test-sessions.mjs` holds the pruning.
 
 ## C4 · A project with no named main session is asked to name one — *retired 2026-11-27 (2.0.0)*
 Retired: checkout no longer lists the project's sessions.
@@ -30,7 +30,7 @@ Retired: checkout no longer lists the project's sessions.
 Fixture: a project whose sessions are all unnamed.
 Assert: the report asks the user, under "Needed from you:", to run `/rename <project>` in the main session; nothing is renamed for them.
 Negative: the request buried in a paragraph; a session's transcript edited to name it.
-Traced: 2026-11-26 for 1.0.0 — to *Steps* 4.
+Traced: 2026-11-26 for 1.0.0 — to *Steps* 4 (1.0.0 numbering).
 
 ## C5 · A working preference found at checkout goes to CLAUDE.md, and the report asks for /clear — *traced*
 Fixture: a session in which the user said "always show me a screenshot before pushing UI".
