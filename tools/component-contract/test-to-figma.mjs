@@ -521,7 +521,12 @@ delete globalThis.figma;
     ok('a lone glyph\'s opacity is the instance\'s, times the instance\'s own; another opacity differs',
       roundTrip(held({}, { opacity: 0.38 }), held({ background: 'Icon/strong', opacity: 0.38 }, null)).rows.length === 0
       && roundTrip(held({ opacity: 0.38 }, { opacity: 0.38 }), held({ background: 'Icon/strong', opacity: 0.144 }, null)).rows.length === 0
-      && roundTrip(held({}, { opacity: 0.38 }), code('Icon/strong')).rows.length === 1);    // a lone glyph painted with nothing (its fills emptied, behind its swap's other layer) is the instance's no colour:
+      && roundTrip(held({}, { opacity: 0.38 }), code('Icon/strong')).rows.length === 1);    // a stroke of no width on every side draws nothing: no stroke, as a reading reads none; one side drawn stays a stroke
+    const box = (b) => ic({ frame: { kind: 'container', parent: 'root', ...(b && { border: b }) } });
+    ok('a stroke of no width on every side is no stroke; one with a side drawn differs from none',
+      roundTrip(box({ color: 'C/line', sides: { top: 0, end: 0, bottom: 0, start: 0 }, align: 'center' }), box()).rows.length === 0
+      && roundTrip(box({ color: 'C/line', sides: { top: 1, end: 0, bottom: 0, start: 0 }, align: 'center' }), box()).rows.length === 1);
+    // a lone glyph painted with nothing (its fills emptied, behind its swap's other layer) is the instance's no colour:
     // code's transparent, read as none; one the code colours stays a row, and so does such a glyph in a held component
     const bare = ic({ icon: { kind: 'instance', parent: 'root', component: 'Icon/house' }, 'icon/vector': { kind: 'graphic', parent: 'icon' } });
     ok('a lone glyph painted with nothing is its icon\'s no colour; an icon code colours differs; one in a held component stays',

@@ -213,6 +213,18 @@ function paint(x) {
   return out;
 }
 
+/* A stroke of no width on every side draws nothing (Figma's individual stroke weights all 0): no stroke, on both sides, as
+   a reading reads none there. Tested by test-to-figma.mjs. */
+function unstroked(x) {
+  if (!x) return x;
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) {
+    const b = e && e.border;
+    if (b && typeof b === 'object' && b.sides && Object.values(b.sides).every((w) => w === 0) && !(b.width > 0)) { const { border: _, ...rest } = e; out[id] = rest; }
+  }
+  return out;
+}
+
 /* A text's words with a space at either end: HTML collapses it (css-text-3 §4.1.1, white-space: normal), so code shows
    the words alone. Compared trimmed, on both sides; a space inside the words still counts. */
 function words(x) {
@@ -469,7 +481,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     const atC = (library.variants || []).filter((v) => applies(v.when, c));
     byPointer = (at) => { const ss = atC.filter((v) => at in (v.set || {})); return ss.length > 0 && ss.every((v) => pointerAt(v.when)); };
     // the named equivalences, each the same on both sides
-    const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))), mains)), mains));
+    const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(unstroked(room(x)))))))), mains)), mains));
     const A = expanded[i], B = expand(drawn, { ...variantDefaults(drawn), ...theirs });
     // a host kept whole over the whole contract (the reading keeps it so in every combination) that this combination
     // may hide no layer in: derive's own test of a hidden layer (ownInsides `found`: a part of its component not drawn
