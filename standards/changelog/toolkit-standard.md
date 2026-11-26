@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.50.0 (2026-11-26): §D 25 added: memory is one file per project in one shape (index, frontmatter, size, dated state), holding only what has no other home; side sessions pruned by /checkout; checked by tools/memory-check and the Stop hook.
 - 2.49.0 (2026-11-24): §D 21: a sample or demonstration file (a tool vendor's example design system, such as Figma's Simple Design System) is never evidence; only systems a product ships count.
 - 2.48.1 (2026-11-21): §D 22: a skill is no longer exempt; its SKILL.md is held to these numbers by skill-standard §A clause I.
 - 2.48.0 (2026-11-20): §D 21: a commit's `Knowledge:` trailer names only pages the session read whole; the edit hook refuses one that names a page read in part or not at all.

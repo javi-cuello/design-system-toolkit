@@ -198,7 +198,9 @@ if (mode === 'stop') {
       const { ownFiles } = await import('./stop-items.mjs');
       const { validateTurn } = await import('./validate-turn.mjs');
       const seen = new Set(fs.existsSync(seenFile) ? fs.readFileSync(seenFile, 'utf8').split('\n').filter(Boolean) : []);
-      found = validateTurn(await ownFiles(payload.transcript_path), { seen });
+      const own = await ownFiles(payload.transcript_path);
+      // then the memory files it wrote, held to toolkit-standard §D 25 the same way: once a finding
+      found = validateTurn(own, { seen }) || (await import('../memory-check/check.mjs')).checkWritten([...(own || [])], { seen });
       // the kept keys are what end the loop: a block whose keys could not be kept is not made
       if (found) fs.appendFileSync(seenFile, found.keys.join('\n') + '\n');
     } catch { found = null; /* the push gate still reads the same files */ }

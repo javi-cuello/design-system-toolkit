@@ -184,3 +184,21 @@ test('the loop runs end to end: plan, edit, review, close, push', (t) => {
   out = hook('edit', push);
   assert.ok(!denied(out) && !/failed/.test(out.stdout), 'reviewed work is pushed');
 });
+
+test('a stop after writing a memory file that breaks toolkit-standard §D 25 is blocked once', () => {
+  const session_id = `test-${process.pid}-${Date.now()}-mem`;
+  const home = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mem-home-')));
+  const dir = path.join(home, '.claude', 'projects', '-p', 'memory');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'MEMORY.md'), '- [A](a.md) — a\n');
+  fs.writeFileSync(path.join(dir, 'a.md'), 'no frontmatter\n');
+  const transcript = path.join(home, 't.jsonl');
+  fs.writeFileSync(transcript, JSON.stringify({ cwd: home, message: { content: [{ type: 'tool_use', name: 'Write', input: { file_path: path.join(dir, 'a.md') } }] } }) + '\n');
+  const stop = () => spawnSync('node', [path.join(HERE, 'hooks.mjs'), 'stop'], { input: JSON.stringify({ session_id, transcript_path: transcript, cwd: home }), encoding: 'utf8', env: { ...process.env, HOME: home, TOOLKIT_GATES: 'off' } });
+  const first = JSON.parse(stop().stdout);
+  assert.equal(first.decision, 'block');
+  assert.match(first.reason, /§D 25[\s\S]*-p\/memory\/a\.md: no frontmatter/);
+  assert.doesNotMatch(stop().stdout, /§D 25/, 'once: the same finding does not block the next stop');
+  fs.rmSync(home, { recursive: true, force: true });
+  fs.rmSync(path.join(os.tmpdir(), `toolkit-validate-${session_id}`), { force: true });
+});
