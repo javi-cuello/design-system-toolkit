@@ -3,7 +3,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
 ## [0.91.1] - 2026-11-26
 ### Fixed
-- **The effect styles another library gives are read off the components alone.** 0.91.0 searched every layer of every page for them, the round trip's drawing pages too, and crashed Figma on a large library; they are now read as the variables the components bind are, off the components on the pages a snapshot stores. A remote text style's texts are looked for on those pages too.
+- **The effect styles another library gives are read off the components alone.** 0.91.0 searched every layer of every page for them, the round trip's drawing pages too, and crashed Figma on a large library; they are now read as the variables the components bind are, off the components on the pages a snapshot stores. A remote text style's texts, and the drawn texts a line height is measured from, are looked for on those pages too, never on a drawing or Scratch page.
 
 ## [0.91.0] - 2026-11-26
 ### Added

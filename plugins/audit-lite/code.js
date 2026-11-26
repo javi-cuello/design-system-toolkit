@@ -1846,8 +1846,8 @@ const measureStyle = (s, font) => new Promise((resolve) => {
    which is the same line, set by the same metrics. Null where none is, and the metric stands. */
 /** @param {TextStyle} s @returns {number | null} */
 const drawnIn = (s) => {
-  for (const p of figma.root.children) {
-    if (p.name === SCRATCH) continue;
+  // (the pages a snapshot stores: a drawing page of the round trip searched whole crashed Figma on a large library)
+  for (const p of storedPages()) {
     const t = /** @type {TextNode[]} */ (p.findAllWithCriteria({ types: ['TEXT'] }))
       .find((x) => x.textStyleId === s.id && x.textAutoResize === 'WIDTH_AND_HEIGHT' && x.characters && !/\n/.test(x.characters) && !x.characters.includes(String.fromCharCode(0x2028)));
     if (t) return t.height;
@@ -1863,8 +1863,8 @@ const drawnIn = (s) => {
 /** @param {string | undefined} family @returns {[number, number] | null} */
 const familyMetric = (family) => {
   let lo = -Infinity, hi = Infinity;
-  for (const p of figma.root.children) {
-    if (p.name === SCRATCH) continue;
+  // (the pages a snapshot stores: a drawing page of the round trip searched whole crashed Figma on a large library)
+  for (const p of storedPages()) {
     for (const t of /** @type {TextNode[]} */ (p.findAllWithCriteria({ types: ['TEXT'] }))) {
       const f = t.fontName, lh = t.lineHeight, size = t.fontSize;
       if (typeof f !== 'object' || f.family !== family || typeof lh !== 'object' || lh.unit !== 'AUTO' || typeof size !== 'number' || !size) continue;
