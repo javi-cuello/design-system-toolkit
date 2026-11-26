@@ -141,7 +141,7 @@ export const GAPS = {
   'exposed-unforwarded': 'an override of a nested instance the placed component exposes, whose props the markup does not forward yet',
   'pointer-words': 'words only a pointer state changes (a field\'s "Search" at focus)',
   'pointer-with': 'a placed instance\'s props only a pointer state gives',
-  'pointer-modes': 'variable modes only a pointer state sets (a card\'s at focus): the markup holds modes as attributes, which no pointer state changes',
+  'pointer-modes': 'variable modes only a pointer state sets, or drops by drawing the part again (a card\'s at focus, a link\'s icon at press): the markup holds modes as attributes, which no pointer state changes',
   'unwritten-scale': 'a scale constraint the sheet never writes (to-code sharesNeverWritten)',
   'path-radius': 'a radius the design holds only as mixed on a path, which no box\'s corners say',
   'unrecorded-effect': 'an effect with no style, whose values the snapshot does not record: no sheet can draw it',

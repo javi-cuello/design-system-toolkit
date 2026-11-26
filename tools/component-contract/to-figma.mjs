@@ -486,7 +486,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   // the second leg names a state it forces, disabled among them, a pointer state of its own)
   const P = pointerFrom || library, pq = (k) => { const q = library.props[k] || {}; return P === library ? q : Object.values(P.props || {}).find((d) => low(d.figma || '') === low(q.figma || k)) || {}; };
   const pointerAt = (w) => Object.entries(w || {}).some(([k, v]) => pq(k).role === 'interaction' && (pq(k).pointer || []).some((x) => low(x) === low(v)));
-  const applies = (w, c) => Object.entries(w || {}).every(([k, v]) => String(c[k]) === String(v));
+  // (as expand() reads a variant's `when`: over the props' defaults, so one naming a prop no axis varies still applies)
+  const defaults = variantDefaults(library);
+  const applies = (w, c) => Object.entries(w || {}).every(([k, v]) => String({ ...defaults, ...c }[k]) === String(v));
   for (const [i, c] of combos.entries()) {
     const theirs = inTheirs(c);
     // (every variant that sets the field there a pointer state's: where another that applies sets it too, a focus and a
@@ -495,10 +497,12 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // (or the part itself put there last by a pointer state's variant, as expand() layers them, a combination last: a
     // press drawn from another layer, which carries none of what the rest set on the part)
     const layered = [...atC.filter((v) => !v.combination), ...atC.filter((v) => v.combination).slice(0, 1)];
+    // (a set touches the row where one names the other or holds it: `icon.modes` a row at `icon.modes.theme`)
+    const touches = (v, at) => Object.keys(v.set || {}).some((k) => k === at || at.startsWith(`${k}.`) || k.startsWith(`${at}.`));
     byPointer = (at) => {
-      const ss = atC.filter((v) => at in (v.set || {}));
+      const ss = atC.filter((v) => touches(v, at));
       if (ss.length > 0 && ss.every((v) => pointerAt(v.when))) return true;
-      const el = at.split('.')[0], last = layered.filter((v) => (v.add || {})[el] || at in (v.set || {})).pop();
+      const el = at.split('.')[0], last = layered.filter((v) => (v.add || {})[el] || touches(v, at)).pop();
       return !!last && !!(last.add || {})[el] && pointerAt(last.when);
     };
     // the named equivalences, each the same on both sides

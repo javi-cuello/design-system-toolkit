@@ -253,7 +253,13 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const pressAdd = [{ when: { state: 'press', blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' } } }];
     const [r] = roundTrip(lk(pressAdd), lk([]), { layoutUnit: true }).rows;
     const [n] = roundTrip(lk([{ when: { blank: true }, set: { 'icon.modes': null } }]), lk([]), { layoutUnit: true }).rows;
-    ok('a field on a part a pointer state\'s variant adds again, last, is that state\'s; one another state sets is not', r && r.at === 'icon.modes' && r.pointer === true && n && n.pointer === undefined, [r, n]); }
+    // (the last to touch it wins: a state that sets the field after the press add, or re-adds the part, makes it no
+    // pointer state's; a press add as the combination, layered last, is the press's even listed first; review)
+    const after = (x) => roundTrip(lk([...pressAdd, x]), lk([]), { layoutUnit: true }).rows.find((y) => y.at === 'icon.modes');
+    const laterSet = after({ when: { blank: true }, set: { 'icon.modes': null } }), laterAdd = after({ when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' } } });
+    const combo = roundTrip(lk([{ ...pressAdd[0], combination: true }, { when: { blank: true }, set: { 'icon.modes': { theme: 'link' } } }]), lk([]), { layoutUnit: true }).rows.find((y) => y.at === 'icon.modes');
+    ok('a field on a part a pointer state\'s variant adds again, last, is that state\'s; one another state sets is not', r && r.at === 'icon.modes' && r.pointer === true && n && n.pointer === undefined, [r, n]);
+    ok('…the last variant to touch it decides, as expand() layers them, a combination last', (!laterSet || laterSet.pointer === undefined) && (!laterAdd || laterAdd.pointer === undefined) && combo && combo.pointer === true, [laterSet, laterAdd, combo]); }
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());
   { // a placed instance's key is compared only where both sides hold one: a reading from code holds none
     const placed = (key) => ({ ...two, anatomy: { ...two.anatomy, i: { kind: 'instance', parent: 'root', component: 'Button', ...(key && { key }) } } });
