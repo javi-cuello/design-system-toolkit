@@ -389,9 +389,12 @@ function atDefault(x, mains) {
    stackLikeDesign too. Tested by test-to-figma.mjs. */
 export function inWordsOf(library, drawn) {
   const low = (x) => String(x).toLowerCase();
-  const named = Object.fromEntries(Object.entries(drawn.props || {}).map(([k, q]) => [low(q.figma || k), k]));
+  // (its own spelling first, then any case among the drawing's props of its type: a boolean title beside a string Title
+  // is the boolean, never the words)
+  const ds = Object.entries(drawn.props || {});
+  const nameOf = (lq, k) => { const f = lq.figma || k; return (ds.find(([dk, q]) => (q.figma || dk) === f) || ds.find(([dk, q]) => low(q.figma || dk) === low(f) && q.type === lq.type) || ds.find(([dk, q]) => low(q.figma || dk) === low(f)) || [k])[0]; };
   return (c) => Object.fromEntries(Object.entries(c).map(([k, v]) => {
-    const lq = library.props[k], dk = named[low(lq.figma || k)] || k, dq = (drawn.props || {})[dk];
+    const lq = library.props[k], dk = nameOf(lq, k), dq = (drawn.props || {})[dk];
     const rest = lq.role === 'interaction' && dq && dq.role === 'interaction' && v === lq.default;
     return [dk, dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? (rest ? dq.default : v) : v];
   }));

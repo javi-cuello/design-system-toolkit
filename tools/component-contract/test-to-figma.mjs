@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf, arrangementOf, placeVariants, LOOKUP, lookupWants, keptFor, covers, clearedLook, blendLook } from './to-figma.mjs';
+import { drawingPage, sizingAxes, varNamer, plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole, modeSets, styleColours, styleIdsOf, arrangementOf, placeVariants, LOOKUP, lookupWants, keptFor, covers, clearedLook, blendLook, inWordsOf } from './to-figma.mjs';
 import { isDeepStrictEqual } from 'node:util';
 
 let n = 0;
@@ -1106,4 +1106,8 @@ delete globalThis.figma;
     && roundTrip(c('#ae2a19'), c('rgb(174 42 25 / 1)'), { layoutUnit: true }).rows.length === 0 && roundTrip(c('#ae2a19'), c('rgba(0, 0, 0, 1)'), { layoutUnit: true }).rows.length === 1
     && roundTrip(c('Text/strong'), c('rgba(0, 0, 0, 1)'), { layoutUnit: true }).rows.length === 1); }
 
+{ const lib = { props: { showTitle: { type: 'boolean', figma: 'title' } } }, drawn = { props: { showTitle: { type: 'boolean', figma: 'title' }, title: { type: 'string', figma: 'Title' } } };
+  ok('a combination takes the drawing\'s prop of its own spelling, else of its type in any case: a boolean title beside a string Title is the boolean',
+    JSON.stringify(inWordsOf(lib, drawn)({ showTitle: false })) === '{"showTitle":false}'
+    && JSON.stringify(inWordsOf(lib, { props: { title: drawn.props.title, show: { type: 'boolean', figma: 'TITLE' } } })({ showTitle: false })) === '{"show":false}'); }
 console.log(`${n}/${n} passed`);
