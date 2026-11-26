@@ -1,4 +1,6 @@
-# Eval cases — figma-prototype (v1.2.0)
+# Eval cases — figma-prototype (v1.3.0)
+
+**Walked: 2026-11-26 for 1.3.0** — one line of prose naming the enable call; P1–P5 assert the receipt, the feedback test and the components used, not how a tool is reached, so each holds.
 
 **Walked: 2026-11-21 for 1.2.0** — SKILL.md rewritten to skill-standard §A clause I; each step's detail moved to `references/compose.md` and `references/feedback.md`, section names and step numbers unchanged. P1–P5's assertions hold, each traced to the same step, now in its reference.
 

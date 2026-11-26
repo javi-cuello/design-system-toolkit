@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.23.0)
+# Eval cases — figma-component-descriptions (v1.24.0)
+
+**Walked: 2026-11-26 for 1.24.0** — one line of prose naming the enable call; D24 and D25 assert what apply.js writes and verifies, not how the single-component tool is reached, so each holds.
 
 **Walked: 2026-11-21 for 1.23.0** — wording and layout only: SKILL.md is the lead and the numbered steps; step 2 and discovery moved to `references/subjects.md`, the scripts' detail to `references/scripts.md`, the checklist to `references/quality-checklist.md`, dialect rules to the guide's *Language and dialect*. Every case read against the new text: each asserted rule survives (D1's quote now sits in `subjects.md`, pointer fixed). `test-engines.mjs` 55/55, `test-sections.mjs` 33, `test-verify.mjs` 19/19.
 

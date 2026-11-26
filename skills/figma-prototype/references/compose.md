@@ -38,7 +38,7 @@ Read these in order. A project may lack any piece but the context document (no p
 node skills/figma-prototype/scripts/figma-feedback.mjs <fileKey>
 ```
 
-Without the toolkit, use `figma_get_comments` and apply the same test.
+Without the toolkit, use `figma_get_comments` and apply the same test. It and `figma_get_library_components` (Step 1) need `figma_enable_toolsets({ toolsets: ["docs", "inspect"] })` first, or `figma_call({ tool, arguments })` when the tool list did not refresh.
 
 ## Step 1 — know the whole system
 

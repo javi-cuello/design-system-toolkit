@@ -1,5 +1,6 @@
 # History — skill-standard
 
+- 1.12.0 (2026-11-26): §A clause J: a skill calling a Figma Console bridge tool outside the core set names, at its first use, the `figma_enable_toolsets` call that enables it, or `figma_call` for a read when the tool list did not refresh.
 - 1.11.0 (2026-11-26): §B 13 gains two traps: binding a variable on a styled node detaches its text or effect style, and a remote component that hangs on import by key can be `clone()`d from its instance's main.
 - 1.10.0 (2026-11-21): §A clause I: a skill is written to be read, held to §D 22's numbers with a 500-line body in place of the word cap; readability.mjs measures it.
 - 1.9.0 (2026-11-11): §B 4: no hand-made control (`.text-btn` retired for `fig-button variant="link"`); footer buttons large and the footer inset like the panels; a switch in a field row holds no text.

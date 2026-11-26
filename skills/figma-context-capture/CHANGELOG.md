@@ -1,5 +1,6 @@
 # Changelog — figma-context-capture
 
+- 2.18.0 (2026-11-26): references/discovery-passes.md names the Figma Console 2.0 enable call before its first non-core bridge tool, toolsets `debug` and `docs`, for `figma_execute_across_files` and `figma_get_annotations` (skill-standard §A clause J).
 - 2.17.1 (2026-11-26): the template's audit settings say when to set `pages.componentPages`: icon or documentation pages marked like component pages are audited as components without it, with an example regex. Template only.
 - 2.17.0 (2026-11-26): references/project-documents.md: a decision deletes the open item it resolves; open-items lists hold only what is open (moved from memory).
 - 2.16.1 (2026-11-23): the template's rule 1 override example names the look axis `Appearance` (figma-standard 2.33.0); case C4's fixture too. Template only.

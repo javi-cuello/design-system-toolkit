@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.54.2)
+# Eval cases — figma-components-audit (v2.55.0)
+
+**Walked: 2026-11-26 for 2.55.0** — one line of prose naming the enable call; no case reads the Tools table or how a bridge tool is reached, so each holds.
 
 **Reviewed against v2.54.2 on 2026-11-26** — A142 added: deleting a hidden layer and turning a visibility-only axis into a boolean are kind-1 breaking.
 

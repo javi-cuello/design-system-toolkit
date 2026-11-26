@@ -4,6 +4,8 @@ Cases for the standards themselves, not for any one skill (toolkit-standard §C 
 
 Three scripts live in this directory, all run from the repo root: `check-frontmatter.sh` (clause F), `check.sh` (skills, plugins, markdown shape and each standard's scope line, delegating clause F), and `scan-clause-d.py` (advisory: clause D needs a read). Rules, citations, histories and settings are `tools/toolkit-check/check-standards.mjs`'s, run by `bin/check`.
 
+**Walked: 2026-11-26, for skill-standard 1.12.0** — §A clause J: a skill names the enable call for a bridge tool outside the core set; a judgement rule with no script, so no new case (§C clause E). F, D and G cases read against it: none asserts which bridge tools a skill names, so each holds.
+
 **Walked: 2026-11-26, for skill-standard 1.11.0** — §B 13 gains two traps (a style detached by binding, a remote component cloned when import by key hangs); a judgement rule with no script, so no new case (§C clause E). P1–P7 read against it: none asserts §B 13's list, so each holds.
 
 **Walked: 2026-11-24, for toolkit-standard 2.49.0** — §D 21 says a sample or demonstration file is never evidence; a judgement rule with no script, so no new case (§C clause E). S22 read against it: it asserts weights and sources, not which systems count, so it holds. `knowledge/` grep for "Simple Design System", "figma/sds", "SDS": 0. `check-standards.mjs`: clean.

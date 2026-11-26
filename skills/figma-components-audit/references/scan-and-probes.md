@@ -82,6 +82,8 @@ Before composing, `FCA.references(template)` lists every screen in the file buil
 
 ## Tools
 
+Before the annotation tools, run `figma_enable_toolsets({ toolsets: ["docs"] })`; `figma_get_file_data` is in `"inspect"`. If the tool list did not refresh, send a read through `figma_call({ tool, arguments })`, never a write (skill-standard §A clause J).
+
 | Tool | Use |
 |---|---|
 | `figma_list_open_files()` | List the connected files before assuming which is the target. |

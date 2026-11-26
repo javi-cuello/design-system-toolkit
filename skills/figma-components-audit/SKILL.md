@@ -5,7 +5,7 @@ description: Audit and fix components in a Figma component-library file, reporti
 
 # Figma Components Audit
 
-**Version 2.54.2** — history in CHANGELOG.md.
+**Version 2.55.0** — history in CHANGELOG.md.
 
 This skill audits the components in a Figma library file and reports only what needs attention. A script scans every variant, and the agent verifies each candidate before it reaches the maintainer. The output is a fix queue, grouped by the action each finding needs. Use it to check, lint, review or fix how components are built, or to update the audit a previous run left. On request only, it also scores components from 0 to 100.
 

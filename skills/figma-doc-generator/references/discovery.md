@@ -81,7 +81,7 @@ Try each route in order from inside the target file, and stop at the first that 
 | 1. Local | The contract names exist as local `COMPONENT` or `COMPONENT_SET` nodes. `findAll` across pages | Unpublished components too |
 | 2. Cached keys | `figma.root.getPluginData("docComponentKeys")` on the target | Published only |
 | 3. Instances in the file | `getMainComponentAsync()` on one instance per contract name, then import by key | Published only |
-| 4. Ask, then REST | Ask which file holds the doc components. Then `figma_get_library_components({libraryFileKey})` | Published only |
+| 4. Ask, then REST | Ask which file holds the doc components. Then `figma_get_library_components({libraryFileKey})`, after `figma_enable_toolsets({ toolsets: ["inspect"] })` | Published only |
 
 **Route 2**. Validate the map with a single `importComponentByKeyAsync` before trusting it. Keys survive library updates, but an unpublished or revoked library makes every import throw.
 

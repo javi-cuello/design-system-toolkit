@@ -1,5 +1,6 @@
 # Changelog — figma-doc-generator
 
+- 1.27.0 (2026-11-26): references/discovery.md route 4 names the Figma Console 2.0 enable call before its first non-core bridge tool, toolsets `inspect`, for `figma_get_library_components` (skill-standard §A clause J).
 - 1.26.1 (2026-11-23): discovery's example `Pill` carries an `Appearance` variant, the house name since figma-standard 2.33.0. References only.
 - 1.26.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I; Steps 0–4 detail moves to four new references (discovery, colour-and-units, structure, generation).
 - 1.25.1 (2026-11-19): `wrongWord` finds the shared namespace over the names deep enough to carry a role, so one short name beside them (`Elevation`) no longer makes the type and property read as roles.

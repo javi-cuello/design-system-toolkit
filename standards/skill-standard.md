@@ -1,6 +1,6 @@
 # Skill standard — definition of done for a skill and a plugin
 
-**Version 1.11.0** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
+**Version 1.12.0** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
 
 What a skill (`skills/`) and a plugin (`plugins/`) must be before they are committed. What every standard shares, including how these clauses are enforced and changed, is [`toolkit-standard.md`](toolkit-standard.md)'s; this file adds only what is particular to a skill or a plugin.
 
@@ -214,6 +214,16 @@ A `SKILL.md` and its `references/*.md` are read by a model on every run and by t
 *Evidence:* maintainer-decreed 2026-11-21, after the README rewrite (§D 22): skills held "not only to limits — to readability and everything else that applies".
 
 *Checked:* `tools/toolkit-check/readability.mjs` "lines in the SKILL.md body", "no contents list at the top", "dated stor" (run by `bin/check`; the skills written before the clause are held by the ratchet in `readability.json`, which only tightens); `tools/toolkit-check/test-readability.mjs` "a skill has no word cap but a 500-line body". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — the lead, one action per step, references one level deep, three or more like things as a table, one term per concept and one home per rule are a read when a skill changes.
+
+### J — A bridge tool outside the core set is enabled before it is called
+
+A skill that calls a Figma Console bridge tool outside the core set says, at its first use, the call that enables it, `figma_enable_toolsets({ toolsets: [...] })` naming the toolsets, or that it goes through `figma_call({ tool, arguments })` when the client's tool list did not refresh. `figma_call` runs neither a core tool nor one that deletes or overwrites, so a write is always enabled first. The toolsets: `inspect` (`figma_get_file_data`, `figma_get_component_details`, `figma_get_library_components`, `figma_find_usages`), `docs` (`figma_diff_versions`, `figma_get_comments`, `figma_get_annotations`, `figma_set_annotations`, `figma_get_annotation_categories`), `debug` (`figma_execute_across_files`), `components` (`figma_set_description`).
+
+*Why:* from 2.0 the server lists only the core tools at start (`figma_execute`, `figma_navigate`, `figma_list_open_files`, `figma_get_status`, `figma_capture_screenshot`, `figma_search_components`, `figma_get_variables`, `figma_reconnect` and the text-style, selection and edit tools), so a skill that names any other tool reads to the model as a tool that does not exist.
+
+*Evidence:* Figma Console MCP 2.0, each tool above checked against its toolset by a session on 2026-11-26.
+
+*Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — a skill naming a bridge tool is read for its enable call when it changes.
 
 ### Verifying a skill
 

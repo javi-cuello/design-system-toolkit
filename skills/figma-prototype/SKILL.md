@@ -5,7 +5,7 @@ description: Compose a screen or short flow in Figma from a project's own compon
 
 # Figma prototype — screens composed from the library, for a designer to continue
 
-**Version 1.2.0** — history in CHANGELOG.md.
+**Version 1.3.0** — history in CHANGELOG.md.
 
 This skill composes a screen or short flow in Figma from a project's own library, on a scratch page, for a designer to continue. It reads what the project decided first, starts from the closest existing screen and leaves a receipt on each frame. It also handles the comments people leave on a composed prototype. Use it to prototype a screen or flow from the library, or to act on feedback left on one. The result is never a source of truth and never converted to code: code is built from the same template.
 

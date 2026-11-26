@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.5.0)
+# Eval cases — figma-file-diff (v1.6.0)
+
+**Walked: 2026-11-26 for 1.6.0** — one line of prose naming the enable call; no case reads the not-for list, so each holds.
 
 **Walked: 2026-11-21 against v1.5.0** — prose rewritten to skill-standard §A clause I; Step 7's table shape and row rules moved to `references/output-tables.md`. Each case read against the new text: A1 (Step 1, identity asserted), A2 (Step 3 "stop, and don't spend calls listing them"; Step 4 skip on identical hash), A3 (Step 4's node-count check and 529-against-1,850 example), A4 (failure modes 4 and 6), A5 (*Why this doesn't sync*), A6 (Step 6, Step 7, failure mode 9), A7 (Step 7 runs `report.mjs`, meaning cells only) and A9 (*Validating the serialiser*, its heading shortened) all hold. `test-report.mjs`, `test-serialise.mjs` and `test-coverage-body.mjs` pass.
 

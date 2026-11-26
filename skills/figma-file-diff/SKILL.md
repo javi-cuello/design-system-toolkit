@@ -5,7 +5,7 @@ description: Compare two Figma files against each other and report exactly how t
 
 # Figma file diff (two files, read-only)
 
-**Version 1.5.0** — history in CHANGELOG.md.
+**Version 1.6.0** — history in CHANGELOG.md.
 
 This skill compares two Figma files and reports exactly how they differ, and what each difference means. It reads variables, styles, component APIs and full component layer trees, through scripts run in each file. Use it to check that a duplicate is a true copy, or to find drift between a master library and a project's fork. It is read-only: it reports and never writes to either file.
 
@@ -26,7 +26,7 @@ It does **not**:
 - Write to either file. See *Why this doesn't sync*.
 - Compare canvas content on example or documentation pages, unless the user asks.
 - Check whether token links resolve against a library. That is `figma-variable-audit`.
-- Compare two versions of one file. That is `figma_diff_versions`.
+- Compare two versions of one file. That is `figma_diff_versions`, after `figma_enable_toolsets({ toolsets: ["docs"] })`.
 
 ## Why this doesn't sync
 

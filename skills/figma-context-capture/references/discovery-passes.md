@@ -24,6 +24,7 @@ Every pass is **read-only**: nothing in this skill ever writes to a Figma file.
 **Call sizing is a hard rule**, learned from a bridge crash:
 
 - Run passes as small, single-file `figma_execute` calls with an explicit `fileKey`.
+- `figma_execute_across_files` and `figma_get_annotations` need `figma_enable_toolsets({ toolsets: ["debug", "docs"] })` first, or `figma_call({ tool, arguments })` when the tool list did not refresh.
 - Never combine page loads (`loadAllPagesAsync`, `page.loadAsync`) or `mainComponent` walks with `figma_execute_across_files`. Parallel heavy calls can crash the Desktop Bridge.
 - Cross-file parallelism is only for light reads that load no pages.
 - Batch per page group, with a timeout of 20000–30000.

@@ -1,5 +1,6 @@
 # Changelog — figma-file-diff
 
+- 1.6.0 (2026-11-26): SKILL.md's not-for list names the Figma Console 2.0 enable call before its first non-core bridge tool, toolsets `docs`, for `figma_diff_versions` (skill-standard §A clause J).
 - 1.5.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I: workflow as numbered steps, compared areas and scripts as tables, Step 7's table shape and row rules moved to `references/output-tables.md`, the dated clientStorage note undated. No rule changed.
 - 1.4.7 (2026-11-12): two bridge facts in prose: `figma.clientStorage` crosses files where nodes cannot, and a screenshot captures only the active file.
 - 1.4.6 (2026-11-11): `coverage-body.mjs` builds the URL inside the guard's try too (landed unbumped on 2026-11-06).

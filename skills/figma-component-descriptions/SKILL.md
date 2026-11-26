@@ -5,7 +5,7 @@ description: Write and apply high-quality descriptions to Figma design system co
 
 # Figma Component Descriptions
 
-**Version 1.23.1** — history in CHANGELOG.md.
+**Version 1.24.0** — history in CHANGELOG.md.
 
 This skill writes the descriptions of the components in a Figma library and applies them through the Figma bridge. A public component gets the full structured form. A private part gets a compact form of one or two sentences. Scripts read the file, generate the Behaviour and Composition lists, write the text and check it. Use it to document, fill in, audit or review component descriptions; auditing how a component is built is `figma-components-audit`'s job.
 
@@ -75,7 +75,7 @@ A virtual set's members are left out of `duplicates`, since they share their tex
 
 **6. Apply the description**. Detail: [scripts.md](references/scripts.md), *apply.js*.
 
-- For one component, use `figma_set_description`. Beyond about three, send `scripts/apply.js` in batches of six to nine.
+- For one component, use `figma_set_description`, after `figma_enable_toolsets({ toolsets: ["components", "inspect"] })` (`"inspect"` for `figma_get_component_details`). Beyond about three, send `scripts/apply.js` in batches of six to nine.
 - Re-read what was written before moving on.
 - To clear a description, set both fields.
 

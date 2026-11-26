@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.17.1)
+# Eval cases — figma-context-capture (v2.18.0)
+
+**Walked: 2026-11-26 for 2.18.0** — one line of prose naming the enable call; C1–C19 assert the passes and the document they fill, not how a tool is reached, so each holds.
 
 **Walked: 2026-11-26 for 2.17.1** — template only: one paragraph on `pages.componentPages` outside the JSON block, which stays valid; C7–C9's template shape holds; `node tests/test-passes.mjs` 78/78.
 
