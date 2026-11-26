@@ -3304,7 +3304,11 @@ async function main() {
         // (where the design lists nothing inside it, a placed component's own contract that does: its nearest)
         const keysOf = () => { const ks = swapKeysOf(figmaContract, id), segs = id.split('/'); for (let i = segs.length - 1; !ks.size && i > 0; i--) { const h = figmaEl(segs.slice(0, i).join('/')), m = h && h.kind === 'instance' && mainOf(h.component, h.key); if (m) return swapKeysOf(m, segs.slice(i).join('/')); } return ks; };
         const wk = !swapped && !mainOf(fe.component, fe.key) && [...keysOf()][0];
-        const spelt = wk && new Map([fe.with, ...(figmaContract.variants || []).flatMap((v) => [(v.set || {})[`${id}.with`], ((v.add || {})[id] || {}).with])]
+        // (and the glyph a placed component draws there of its own, where the design overrides it and code cannot pass the
+        // override: that glyph, read as such, so the override stays the difference it is)
+        const host = (() => { const segs = id.split('/'); for (let i = segs.length - 1; i > 0; i--) { const h = figmaEl(segs.slice(0, i).join('/')), m = h && h.kind === 'instance' && mainOf(h.component, h.key); if (m) return { m, rel: segs.slice(i).join('/') }; } return null; })();
+        const withsOf = (c, k) => [((c.anatomy || {})[k] || {}).with, ...(c.variants || []).flatMap((v) => [(v.set || {})[`${k}.with`], ((v.add || {})[k] || {}).with])];
+        const spelt = wk && new Map([...withsOf(figmaContract, id), ...(host ? withsOf(host.m, host.rel) : [])]
           .filter((w) => w && typeof w === 'object' && typeof w[wk] === 'string').map((w) => [w[wk].toLowerCase(), w[wk]]));
         const wrapped = spelt && [e.asset, ...glyphs].every((g) => spelt.has(String(g).toLowerCase()));
         if (!swapped && !wrapped && (!held(named) || !glyphs.every((g) => held(whole(g))))) return;
