@@ -505,6 +505,12 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
       // that a later state's adding the part again wipes is not the pointer state's; review of 2026-11-27)
       const el = at.split('.')[0], last = layered.filter((v) => (v.add || {})[el] || touches(v, at)).pop();
       if (!last || !pointerAt(last.when)) return false;
+      // (and only where that variant changes the value at the row: drawn without it, the row's value the same, the rest
+      // already says it, a press repeating its mode or leaving out one it never had; review of 2026-11-27)
+      const valueAt = (anat) => JSON.stringify(at.split('.').slice(1).reduce((y, q) => (y == null ? undefined : y[q]), anat[el]) ?? null);
+      const without = expand(library, { ...defaults, ...c }, { skip: last });
+      // (a part only that variant draws there is its change, whatever the field reads)
+      if (without[el] && valueAt(without) === valueAt(expanded[i])) return false;
       if (ss.every((v) => pointerAt(v.when))) return true;
       if ((last.add || {})[el]) return true;
       // (a pointer state's set, last, whose value no other state there gives: a link's colour mode at press, over the one

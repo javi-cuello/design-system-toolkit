@@ -273,6 +273,15 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const drawnAtPress = { ...lk([]), variants: [{ when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', modes: { theme: 'link' } } } }, { when: { state: 'press', blank: true }, set: { 'icon.modes': { theme: 'q' } } }] };
     const wr = roundTrip(wipe, drawnAtPress, { layoutUnit: true }).rows.find((y) => y.at.startsWith('icon.modes'));
     ok('a pointer state\'s set wiped by a later state adding the part again is not that state\'s row', wr && wr.pointer === undefined, wr);
+    // (nor where the press's set leaves the row's value as the rest draws it: a key it never had, or the mode repeated)
+    const noMode = (press) => ({ ...lk([]), variants: [{ when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', ...(press === 'repeat' && { modes: { theme: 'link' } }) } } }, { when: { state: 'press', blank: true }, set: { 'icon.modes': press === 'repeat' ? { theme: 'link' } : { d: 'a' } } }] });
+    const drawnQ = (press) => ({ ...noMode(press), variants: [...noMode(press).variants.slice(0, 1), { when: { state: 'press', blank: true }, set: { 'icon.modes': { d: 'a', theme: 'q' } } }] });
+    const kept = ['absent', 'repeat'].map((k) => roundTrip(noMode(k), drawnQ(k), { layoutUnit: true }).rows.find((y) => y.at === 'icon.modes.theme' || y.at === 'icon.modes'));
+    ok('…nor where the press leaves the row\'s value as the rest draws it (a key it never had, a mode repeated)', kept.every((y) => y && y.pointer === undefined), kept);
+    // (but a part only the press draws there is the press's change, whatever its field reads: a link's icon at press)
+    const only = (m) => ({ ...lk([]), variants: [{ when: { state: 'press', blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', ...(m && { modes: m }) } } }] });
+    const op = roundTrip(only(null), only({ theme: 'link' }), { layoutUnit: true }).rows.find((y) => y.at.startsWith('icon.modes'));
+    ok('…but a part only the press draws there is the press\'s, its fields with it', op && op.pointer === true, op);
     ok('…never where another state there gives the same value at the row (a sibling key the press changes, or the same value)', sr && sr.pointer === undefined && same && same.pointer === undefined, [sr, same]);
     ok('…the last variant to touch it decides, as expand() layers them, a combination last', (!laterSet || laterSet.pointer === undefined) && (!laterAdd || laterAdd.pointer === undefined) && combo && combo.pointer === true, [laterSet, laterAdd, combo]); }
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());
