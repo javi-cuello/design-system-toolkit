@@ -56,7 +56,8 @@ How a timesheet records work billed or planned by the day beside work billed by 
 
 **Build**
 - [moderate] Days are computed from hours and the day length where they are shown, as Productive's reports and Resource Guru's "40h (5d)" are (sources above).
-- [required] The setting is a number `input` with a visible label and a hint as its description ([forms: *Input types and autocomplete attributes*](forms.md#input-types-and-autocomplete-attributes); code-standard rule 15).
+- [required] The setting has a visible label and a hint as its description (code-standard rule 15).
+- [weak] It is a text input with `inputmode="decimal"`, since a day length such as 7.5 is a decimal and GOV.UK advises against `type="number"` ([forms: *Input types and autocomplete attributes*](forms.md#input-types-and-autocomplete-attributes)).
 
 **Check**
 - *Script* could: change the day length and assert stored hours are unchanged while day figures follow.
@@ -116,7 +117,7 @@ How a timesheet records work billed or planned by the day beside work billed by 
 - [required] 3.3.2: the duration field's hint gives the accepted forms ("For example, 1.5 or 1:30"). 3.3.1 Error Identification: an error names what is wrong, such as an end before the start.
 
 **Build**
-- [required] Start and end are labelled time fields and the duration a text `input`, all parsed on the server (code-standard rule 20; [selection: *Time entry*](selection.md#time-entry)); a start and end grouped under the date are a `fieldset` with a `legend` ([HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)).
+- [required] Start and end are labelled time fields and the duration a text `input`, all working with scripts off and so read on the server (code-standard rule 20; [selection: *Time entry*](selection.md#time-entry)); a start and end grouped under the date are a `fieldset` with a `legend` ([HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)).
 - [required] The hint is the field's description (code-standard rule 15).
 - [moderate] Durations are stored as a number, not text: FreshBooks' API holds "The length of time in seconds" ([FreshBooks API, time entries](https://www.freshbooks.com/api/time_entries)); Harvest's holds "Number of (decimal time) hours" ([Harvest API, time entries](https://help.getharvest.com/api-v2/timesheets-api/timesheets/time-entries/)).
 
@@ -145,7 +146,7 @@ Entries with no time of day get a row above the timed grid, in Productive's time
 - [required] 1.3.1: an entry's name says "full day", "half day" or its times ("Project A, full day"; "Project B, 9:00 to 12:30"), not only its row ([calendar events: *Opening and editing an entry*](calendar-events.md#opening-and-editing-an-entry)).
 
 **Build**
-- [strong] An entry with no times carries its date only; one with times carries a start and an end, so the data tells the two apart. RFC 5545 gives an all-day event "a DATE value type for the "DTSTART" property instead of the default value type of DATE-TIME" ([RFC 5545 §3.6.1](https://www.rfc-editor.org/rfc/rfc5545#section-3.6.1)); Google: "For all-day events, use start.date and end.date instead" ([Google Calendar API, create events](https://developers.google.com/workspace/calendar/api/guides/create-events)).
+An entry with no times carries its date only, and one with times a start and an end, so the data tells the two apart: [calendars: *All-day and timed entries together*](calendars.md#all-day-and-timed-entries-together) holds that item and its sources.
 
 **Check**
 - *Script* could: render a date with a day entry and a ranged entry and assert the day entry is in the top row and the ranged one in the grid.
@@ -268,7 +269,7 @@ The invoice bills the entries' hours, by task, project or person, or one line pe
 - [required] 3.3.1 Error Identification and 3.3.3 Error Suggestion: a refusal says what was refused and what would be allowed ([forms: *Error messages and the error summary*](forms.md#error-messages-and-the-error-summary)). 4.1.3: a warning that does not stop the save is announced without moving focus.
 
 **Build**
-- [required] The server enforces locks, limits and required fields, so a request that skips the page is refused too ([security server: *Access control on every object and action*](../../code/security-server.md#access-control-on-every-object-and-action); [*Validation and injection*](../../code/security-server.md#validation-and-injection)).
+- [strong] The server enforces locks, limits and required fields, so a request that skips the page is refused too ([security server: *Access control on every object and action*](../../code/security-server.md#access-control-on-every-object-and-action); [*Validation and injection*](../../code/security-server.md#validation-and-injection)).
 - [required] A locked entry shows the reason in text (WCAG 3.3.1, above); a control kept focusable to explain itself uses `aria-disabled`, not `disabled` (code-standard rule 9).
 
 **Check**
