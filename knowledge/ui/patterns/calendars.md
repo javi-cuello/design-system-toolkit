@@ -111,6 +111,39 @@ How time is shown on a calendar: choosing between the month grid, the week and d
 
 **Sources:** RFC 5545, Google, Microsoft, FullCalendar, Basecamp and the University of Michigan guide as linked. Google's own appearance for tentative events could not be checked and is left out.
 
+## All-day and timed entries together
+
+**Use when / don't use**
+- [strong] An all-day entry is a date with no time, kept apart from a timed one in the data. RFC 5545: such events "have a DATE value type for the "DTSTART" property instead of the default value type of DATE-TIME" ([RFC 5545 §3.6.1](https://www.rfc-editor.org/rfc/rfc5545#section-3.6.1)); Google: "For all-day events, use start.date and end.date instead" ([Google Calendar API, create events](https://developers.google.com/workspace/calendar/api/guides/create-events)); FullCalendar's `allDay` decides whether "the event is shown in the "all-day" section of relevant views" ([FullCalendar event object](https://fullcalendar.io/docs/event-object)).
+
+**How**
+- [strong] **Week and day views give all-day entries a row at the top.** Apple: "In Day or Week view, double-click in the "all-day" section at the top of the calendar" ([Apple Calendar, all-day events](https://support.apple.com/guide/calendar/set-up-all-day-multiday-or-repeating-events-icl1018/mac)); Outlook: a free all-day event "appears at the top of each day" ([Outlook out of office event](https://support.microsoft.com/en-us/outlook/calendar/add-your-out-of-office-event-to-the-outlook-calendar-of-others)); FullCalendar's `allDaySlot` shows the "all-day" slot "at the top of the calendar", default true ([FullCalendar allDaySlot](https://fullcalendar.io/docs/allDaySlot)); Productive's time calendar has a "Top section" for entries "without a defined time of day" ([timesheets: *Day entries beside timed entries*](timesheets.md#day-entries-beside-timed-entries)).
+- [weak] **In a month cell, all-day and multi-day entries are bars and timed ones a dot with the time.** FullCalendar's default `eventDisplay` "renders the event as a solid rectangle if it is all-day or multi-day. If a timed event, will render it with a dot" ([FullCalendar eventDisplay](https://fullcalendar.io/docs/eventDisplay)). Google's and Apple's month views look this way, but no help page from either was found that says so.
+- [moderate] **An all-day entry shows no time.** FullCalendar: with `allDay` true "the time text is not displayed with the event" ([FullCalendar event object](https://fullcalendar.io/docs/event-object)); Google's and Outlook's forms swap the times for an "All day" checkbox ([calendar events: *The create form*](calendar-events.md#the-create-form-first-field-and-defaults)).
+- [strong] **The end date is exclusive.** RFC 5545: DTEND "specifies the non-inclusive end of the event", so 28 June to 8 July is stored with an end of 9 July ([RFC 5545 §3.6.1](https://www.rfc-editor.org/rfc/rfc5545#section-3.6.1)); Google's end is "The (exclusive) end time of the event" ([Google Calendar API, events](https://developers.google.com/workspace/calendar/api/v3/reference/events)); FullCalendar's end "value is exclusive" ([FullCalendar event object](https://fullcalendar.io/docs/event-object)).
+- [weak] **A phone's month view chooses how much each day shows.** Apple's iPhone month view offers Compact ("a single bar indicator for the events on each day"), Stacked, Details ("Show event titles") and List ([Apple, change how you view events](https://support.apple.com/guide/iphone/change-how-you-view-events-iphfd1054569/ios)).
+- [moderate] **The all-day row overflows like a cell.** FullCalendar's `dayMaxEvents` in the all-day section "limits the section to 5 rows, including the +more link" ([FullCalendar dayMaxEvents](https://fullcalendar.io/docs/dayMaxEvents)); the "+N more" pattern is *What an entry shows* above.
+
+**Cases**
+- A Full day booking and two calls on one date in the month view → the booking as a bar at the top of the cell; each call below as a dot, its time and title.
+- A three-day booking → one bar spanning the three cells, not three separate chips.
+- A booking from 28 June to 8 July stored with an end of 8 July → it shows a day short; the end is exclusive, so store 9 July.
+- An all-day entry stored as 00:00 to 23:59 → it is drawn in the timed grid and spills across midnight in other time zones ([calendar events: *The create form*](calendar-events.md#the-create-form-first-field-and-defaults)).
+
+**Accessibility**
+- [required] 1.3.1 Info and Relationships: "all day" or the times are in the entry's text or name, not told only by bar against dot. 1.4.1 Use of Color: the bar's fill is not the only mark of an all-day entry.
+
+**Build**
+- [strong] *Elements:* a date without a time is written `<time datetime="2026-11-23">`, a timed one `<time datetime="2026-11-23T09:00">` ([WHATWG, the time element](https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-time-element)); the all-day row comes before the timed entries in the DOM, as it does on screen (code-standard rule 2).
+- [moderate] *States:* all-day is a flag of the entry (`data-all-day`), as FullCalendar's `allDay` is, and the stylesheet draws the bar from it.
+- [required] *Rules:* code-standard rule 2 (DOM order is reading order), code-standard rule 12 (the "+N more" link only when there is more).
+
+**Check**
+- *Script:* could render a day with an all-day and a timed entry and assert the all-day one comes first in the DOM, carries "all day" in its name, and has a date-only `datetime`; store a multi-day entry and assert its end is the day after the last.
+- *Judgement:* can a reader of the month tell the whole-day entries from the timed ones without colour?
+
+**Sources:** RFC 5545, Google's API, Apple, Outlook, FullCalendar and WHATWG as linked. How Google and Apple draw a month cell is not described in either's help; the month-cell item rests on FullCalendar alone.
+
 ## Period navigation
 
 **Use when / don't use**

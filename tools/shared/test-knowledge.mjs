@@ -25,7 +25,7 @@ ok('a stylesheet gets the visual and code fundamentals; markup the five design a
   && ['ux.md', 'interaction.md', 'visual.md', 'content.md', 'accessibility.md', 'html-semantics.md'].every((x) => p('src/a.tsx').includes(x)));
 ok('no pattern from a word that only contains one: a table is not tabs, design is not sign-in',
   !p('src/table.tsx').includes('navigation.md') && !p('src/design-system/x.tsx').includes('authentication.md'));
-const all = 'src/dialog-upload-form-settings-nav-sidebar-menu-pager-search-filter-select-chip-step-login-consent-button-accordion-toast-table-grid-chart-stats-inspector-calendar-event.tsx';
+const all = 'src/dialog-upload-form-settings-nav-sidebar-menu-pager-search-filter-select-chip-step-login-consent-button-accordion-toast-table-grid-chart-stats-inspector-calendar-event-timesheet.tsx';
 ok('every page named exists, and every pattern page has a word that names it',
   ['src/a.scss', all].flatMap(pagesFor).every((x) => fs.existsSync(path.join(TK, x)))
   && pagesFor(all).filter((x) => x.includes('/patterns/')).length === fs.readdirSync(path.join(TK, 'knowledge/ui/patterns')).filter((f) => f.endsWith('.md')).length);

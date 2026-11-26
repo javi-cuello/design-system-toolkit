@@ -55,6 +55,7 @@ const PATTERNS = [
   [/^(inspector|properties|property)/, 'property-editors'],
   [/^(calendar|agenda|schedule|month|week)/, 'calendars'],
   [/^(events?|bookings?|appointments?|timeoff)$/, 'calendar-events'],
+  [/^(timesheets?|timelogs?|durations?)$/, 'timesheets'],
 ];
 
 // a word of the path → the component page it names, listed before the patterns: the component is what is being built.
