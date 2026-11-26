@@ -2,7 +2,7 @@
 // tools/component-contract/rules.mjs: the translation table, each row read both ways.
 import assert from 'node:assert/strict';
 import { declarations } from './css.mjs';
-import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, growsDown, writtenNowrap, linesFromCss, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss, pathsToCss, pathsFromCss, pathsOfBox, pathsToMask, pathsFromMask, blendToCss, blendFromCss, typeValue, typeOfValue, familyToCss, firstFamily, typeFromFigma, spacingToCss, spacingFromCss, spacingFromFigma, CASE_ROWS, DECORATION_ROWS, textToCss, textFromCss } from './rules.mjs';
+import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, growsDown, writtenNowrap, linesFromCss, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss, pathsToCss, pathsFromCss, pathsOfBox, pathsToMask, pathsFromMask, blendToCss, blendFromCss, typeValue, typeOfValue, familyToCss, firstFamily, typeFromFigma, spacingToCss, spacingFromCss, spacingFromFigma, CASE_ROWS, DECORATION_ROWS, textToCss, textFromCss, sameAsRead } from './rules.mjs';
 import { tokenNames } from './to-code.mjs';
 
 let n = 0;
@@ -182,4 +182,6 @@ ok('corner smoothing goes to corner-shape and back the same, 0.1 to 1; none, 0 a
   ok('case and decoration read back as written', CASE_ROWS.every(([w]) => { const [p, v] = textToCss(CASE_ROWS, w); return textFromCss(CASE_ROWS, { [p]: v, 'text-transform': p === 'text-transform' ? v : 'none' }) === w; })
     && textFromCss(DECORATION_ROWS, { 'text-decoration-line': 'underline line-through' }) === 'underline' && textFromCss(CASE_ROWS, { 'text-transform': 'none', 'font-variant-caps': 'normal' }) === undefined);
 }
+ok('a number read to two decimals is the same within half the last digit, at the edge too; a hundredth off is not, nor a word',
+  sameAsRead(4.800000190734863, 4.8) && sameAsRead(7.805, 7.8) && !sameAsRead(4.81, 4.8) && !sameAsRead('4.8', 4.8));
 console.log(`${n}/${n} passed`);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, markFill, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -52,10 +52,12 @@ ok('a value takes the token its field offers that holds it: a background among t
   designTokenFor('background', 'rgb(238, 238, 238)', table, {}, null, null, offered).token === 'Color/Background/Neutral/secondary'
   && designTokenFor('space', 8, table, {}, null, null, offered).token === 'Spacing/8' && designTokenFor('radius', 8, table, {}, null, null, offered).token === 'Corner radius/8'
   && designTokenFor('text', '#5e0007', table, {}, null, null, offered).token === 'Color/Text/Feedback/Danger/primary' && designTokenFor('space', 7, table, {}, null, null, offered).value === 7);
-{ const gap = [['Link/gap', 4.800000190734863, null, 'Link', [4.199999809265137, 4.800000190734863]]];
-  ok('the token the code wrote holds the value read to two decimals: Figma\'s 4.800000190734863 is the 4.8 read back, 4.9 is not',
+{ const gap = [['Link/gap', 4.800000190734863, null, 'Link', [4.199999809265137, 4.800000190734863]], ['Link/gapWide', 4.809999942779541, null, 'Link']];
+  const both = [cssName('Link', 'Link/gapWide'), cssName('Link', 'Link/gap')];
+  ok('the token the code wrote holds the value read to two decimals: Figma\'s 4.800000190734863 is the 4.8 read back, 4.9 is not; of two the code wrote, 4.8 is the one that holds it, never the 4.81 beside it',
     designTokenFor('space', 4.8, gap, {}, null, null, null, [cssName('Link', 'Link/gap')]).token === 'Link/gap'
-    && designTokenFor('space', 4.9, gap, {}, null, null, () => null, [cssName('Link', 'Link/gap')]).token === undefined); }
+    && designTokenFor('space', 4.9, gap, {}, null, null, () => null, [cssName('Link', 'Link/gap')]).token === undefined
+    && designTokenFor('space', 4.8, gap, {}, null, null, null, both).token === 'Link/gap' && designTokenFor('space', 4.81, gap, {}, null, null, null, both).token === 'Link/gapWide'); }
 ok('the token the code wrote wins over the field\'s guess, where it holds the value: a dot painted with an icon token is not given the palette colour the background field offers',
   (() => { const t = [['Palette/Red/10', '#c00', ['ALL_SCOPES'], 'Primitives'], ['Colour/Icon/Feedback/Danger/strong', '#c00', ['SHAPE_FILL'], 'Semantic']];
     const off = offerFor([['Palette/Red/10', '#c00', ['FRAME_FILL']]]);
@@ -719,11 +721,33 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
       && placedHere({ ...A, 'i/box': { kind: 'container', parent: 'i' } }, 'i/box/dot', mainOf) === null
       && placedHere({ ...A, i: { ...A.i, with: { checked: 'false' } } }, 'i/box/dot', mainOf).kind === 'graphic');
   }
-  ok('a layer a boolean shows is shown at opacity 0 (a tooltip drawn until hovered), not where hidden or not laid out',
-    layerShown(1, { visibility: 'visible', opacity: '0' }) && !layerShown(1, { visibility: 'hidden', opacity: '1' }) && !layerShown(0, { visibility: 'visible', opacity: '1' }));
+  ok('a layer a boolean shows is shown at opacity 0 where its design draws it at 0 (a tooltip drawn until hovered), not where hidden or not laid out',
+    layerShown(1, { visibility: 'visible', opacity: '0' }, true) && layerShown(1, { visibility: 'visible', opacity: '1' }) && !layerShown(1, { visibility: 'hidden', opacity: '1' }, true) && !layerShown(0, { visibility: 'visible', opacity: '1' }));
+  ok('…and one code draws at 0 for good, where the design paints it, is not shown', !layerShown(1, { visibility: 'visible', opacity: '0' }));
+  { const tip = { anatomy: { root: { kind: 'container' }, tip: { kind: 'instance', parent: 'root', opacity: 0 }, dot: { kind: 'graphic', parent: 'root' } }, variants: [{ when: { state: 'hover' }, set: { 'tip.opacity': null } }, { when: { size: 'l' }, add: { badge: { kind: 'graphic', parent: 'root', opacity: 0 } } }] };
+    ok('a design draws a layer at 0 in its anatomy, as a variant sets it or adds it; one it paints throughout, never',
+      drawnAtZero(tip, 'tip') && drawnAtZero(tip, 'badge') && drawnAtZero({ anatomy: { dot: {} }, variants: [{ set: { 'dot.opacity': 0 } }] }, 'dot') && !drawnAtZero(tip, 'dot') && !drawnAtZero(null, 'tip')); }
   ok('an icon mark painted with a fill of its own keeps it as its fill; a clear one, or one a mask cuts a glyph from, has none',
-    markFill({ backgroundColor: 'rgb(255, 255, 255)', maskImage: 'none' }) === 'rgb(255, 255, 255)' && markFill({ backgroundColor: 'rgba(0, 0, 0, 0)' }) === null
-    && markFill({ backgroundColor: 'rgb(0, 0, 0)', maskImage: 'url(x.svg)' }) === null);
+    markFill({ backgroundColor: 'rgb(255, 255, 255)', maskImage: 'none' }, seeThrough) === 'rgb(255, 255, 255)' && markFill({ backgroundColor: 'rgba(0, 0, 0, 0)' }, seeThrough) === null
+    && markFill({ backgroundColor: 'rgb(0, 0, 0)', maskImage: 'url(x.svg)' }, seeThrough) === null
+    && ['oklch(0.5 0.1 20 / 0)', 'rgb(0 0 0 / 0)', 'color(srgb 1 1 1 / 0)', 'transparent'].every((c) => markFill({ backgroundColor: c }, seeThrough) === null));
+{ // a glyph read as the wrapper the design places, whose own prop names it (a <icon>: Warning)
+  const design = { anatomy: { icon: { kind: 'instance', component: 'Wrap', with: { '<icon>': 'Warning', size: 'm' } } },
+    variants: [{ when: { tone: 'error' }, set: { 'icon.with': { '<icon>': 'Error', size: 'm' } } }, { when: { tone: 'new' }, add: { icon: { kind: 'instance', with: { '<icon>': 'Sparkle' } } } }] };
+  ok('each with a contract gives a layer: its anatomy\'s, a variant\'s set and a variant\'s add', withsOf(design, 'icon').filter(Boolean).map((w) => w['<icon>']).join() === 'Warning,Error,Sparkle');
+  const read = () => ({ e: { asset: 'warning' }, vs: [{ when: { tone: 'error' }, set: { 'icon.asset': 'error' } }, { when: { tone: 'info' }, set: {} }] });
+  { const { e, vs } = read();
+    ok('a glyph drawn is the wrapper at its prop, in the design\'s spelling, each variant\'s glyph too, its asset taken away',
+      wrapGlyph('icon', e, vs, ['<icon>'], withsOf(design, 'icon')) && e.with['<icon>'] === 'Warning' && JSON.stringify(vs[0].set) === JSON.stringify({ 'icon.with': { '<icon>': 'Error' } }) && JSON.stringify(vs[1].set) === '{}'); }
+  { const { e, vs } = read();
+    ok('…the first swap prop whose values cover every glyph drawn, not merely the first', wrapGlyph('icon', e, vs, ['size', '<icon>'], withsOf(design, 'icon')) && e.with['<icon>'] === 'Warning'); }
+  { const { e, vs } = read();
+    ok('…and where a glyph is one the design gives no prop, nothing changes', !wrapGlyph('icon', e, vs, ['<icon>'], [{ '<icon>': 'Warning' }]) && !e.with && vs[0].set['icon.asset'] === 'error'); }
+  { const e = { asset: 'house' }, host = { anatomy: { 'nav/icon': { kind: 'instance', with: { '<icon>': 'House' } } }, variants: [] };
+    ok('…a glyph the placed component draws there of its own counts, where the design overrides it (its with read beside the design\'s)',
+      !wrapGlyph('icon', { asset: 'house' }, [], ['<icon>'], withsOf(design, 'icon')) && wrapGlyph('icon', e, [], ['<icon>'], [...withsOf(design, 'icon'), ...withsOf(host, 'nav/icon')]) && e.with['<icon>'] === 'House'); } }
+  ok('a mark draws no glyph of its own where it has no child and no pseudo-element with content; one with either keeps its glyph\'s colour',
+    glyphless(0, ['none', 'normal']) && !glyphless(1, ['none', 'none']) && !glyphless(0, ['"\\e900"', 'none']));
   ok('a full-round empty box where the design draws an ellipse is the ellipse', asShape({ kind: 'container', full: true, radius: 99 }, { kind: 'graphic', shape: 'ellipse' }, false).shape === 'ellipse');
   ok('an empty box where the design draws a line is the line; one holding parts, or under an icon, stays a box', asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, false).kind === 'graphic' && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, true).kind === 'container' && asShape({ kind: 'container' }, { kind: 'graphic', icon: true }, false).kind === 'container');
 }
@@ -756,7 +780,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const k = modeKeysOf([{ key: 'theme' }, { key: 'color-palette' }], c);
   ok('the mode keys read are the tokens\' axes and every key the contract sets a mode under, a collection the tokens lack (its own slug), one a variant sets and one on a part a variant adds included',
     ['theme', 'color-palette', 'color-palette-1', 'color-palette-2'].every((x) => k.includes(x)) && k.length === 4 && modeKeysOf([{ key: 'theme' }], null).join() === 'theme'
-    && modeKeysOf([], { anatomy: {}, variants: [{ when: { x: true }, add: { icon: { kind: 'instance', modes: { 'icon-color-helper': 'link' } } } }] }).join() === 'icon-color-helper'); }
+    && modeKeysOf([], { anatomy: {}, variants: [{ when: { x: true }, add: { icon: { kind: 'instance', modes: { 'glyph-colour': 'link' } } } }] }).join() === 'glyph-colour'); }
 { // stacking first on top per combination, where the children cannot overlap
   const design = { props: { size: { type: 'enum', values: ['md', 'sm'], default: 'md' }, open: { type: 'boolean', default: false } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, firstOnTop: true } }, bar: { kind: 'container', parent: 'root', layout: { direction: 'row', firstOnTop: true } },

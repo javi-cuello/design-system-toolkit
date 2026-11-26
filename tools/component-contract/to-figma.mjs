@@ -39,7 +39,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
-import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, bareGlyph, looksLikeValue, CLEARED, negative } from './rules.mjs';
+import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, bareGlyph, looksLikeValue, CLEARED, negative, sameAsRead } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 import { turnedParts } from './to-code.mjs';
 import { geometry } from './geometry.mjs';
@@ -400,6 +400,10 @@ export function inWordsOf(library, drawn) {
   }));
 }
 
+// a field the contract holds in px: a corner, a size and its limits, a gap, a side's padding, a place, a stroke's or a
+// shadow's width (roundTrip holds such a number a browser read to its two decimals: sameAsRead)
+const PX_FIELD = /(^|\.)(radius|topLeft|topRight|bottomRight|bottomLeft|width|height|minWidth|maxWidth|minHeight|maxHeight|gap|top|end|bottom|start|x|y|blur|spread|weight)$/;
+
 export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false, pointerFrom = null } = {}) {
   const design = library.code?.from !== 'code';
   library = figmaSide(library); drawn = figmaSide(drawn);
@@ -426,9 +430,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // (the room about a centred part sums two such places: within two units)
     // (and so is an element's size the browser lays out: a mark drawn 8.65 wide is 553/64 px, read 8.64)
     if (layoutUnit && /(\.absolute\.(x|y|end|bottom|xFromCentre|yFromCentre|xRoom|yRoom)|^[^.]+\.(width|height))$/.test(at) && typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= (/Room$/.test(at) ? 2 : 1) / 64 + 0.005) return;
-    // and any number a browser's reading gives, which it reads to two decimals (from-code's px): within half its last
-    // digit, the same (a corner Figma stores as 7.800317, read 7.8)
-    if (layoutUnit && typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= 0.005 + 1e-9) return;
+    // and any size in px a browser's reading gives, which it reads to two decimals (from-code's px): within half its last
+    // digit, the same (a corner Figma stores as 7.800317, read 7.8); never an opacity or a turn, read as they are
+    if (layoutUnit && PX_FIELD.test(at) && sameAsRead(a, b)) return;
     // a size the library holds at 0 is drawn at 0.01, the least the plugin API resizes to (@figma/plugin-typings
     // plugin-api.d.ts, LayoutMixin.resize: "Must be >= 0.01"): the same, on Figma's side only (a browser lays out a 0)
     if (!layoutUnit && /^[^.]+\.(width|height)$/.test(at) && a === 0 && b === 0.01) return;

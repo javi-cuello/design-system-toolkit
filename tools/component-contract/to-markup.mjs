@@ -132,7 +132,7 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
   return out;
 }
 /* The props of a placed instance whose value names the component placed straight inside it, in any variant (a wrapper's
-   <icon>: Status warning, placing Status warning): its swaps, which say the glyph it draws. One source for the markup's
+   <icon>: Warning, placing Warning): its swaps, which say the glyph it draws. One source for the markup's
    mark of a component the library does not hold, the reading of it and eval's gapOf. Tested by test-to-markup.mjs. */
 export function swapKeysOf(c, el) {
   const vs = c.variants || [], low = (v) => String(v).toLowerCase();
@@ -633,8 +633,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       let glyph = icon ? { code: ref(icon.name) } : { lit: e.component };
       // (a variant that hands this layer to another of its swaps: that one's name where it holds)
       if (icons.length > 1) { const code = byVariant((c.variants || []).filter((v) => icons.some((x) => x.key === (v.set || {})[`${id}.swappedBy`])), (v) => ref(icons.find((x) => x.key === v.set[`${id}.swappedBy`]).name), glyph.code); if (code) glyph = { code }; }
-      // (a wrapper the library does not hold, its glyph named by a prop of its own (a <icon>: Status warning that places
-      // Status warning): that glyph, as its variants change it)
+      // (a wrapper the library does not hold, its glyph named by a prop of its own (a <icon>: Warning that places
+      // Warning): that glyph, as its variants change it)
       const wrapped = !icon && [...swapKeysOf(c, id)].find((k) => e.with && typeof e.with[k] === 'string');
       if (wrapped) {
         glyph = { lit: e.with[wrapped] };

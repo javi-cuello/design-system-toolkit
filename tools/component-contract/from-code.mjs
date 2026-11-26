@@ -48,7 +48,7 @@ import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
 import { swapKeysOf } from './to-markup.mjs';
 import { inWordsOf } from './to-figma.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, growsDown, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
+import { sameAsRead, layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, growsDown, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -173,19 +173,31 @@ export function wordsAsDrawn(n, s) {
    another instance nested in it (`isRoot`). A layer that is itself a placed component is reached through its host
    (`[data-part=button] > button`): that host is the layer's own, so a selector that ends in a bare tag under the
    component's root also takes a nested copy's. Runs in the page (passed as source). */
-/* Whether a layer a boolean shows is drawn: laid out and not hidden, at any opacity, as Figma's boolean shows a layer by
-   its visibility alone and a design may draw one shown at 0 (a tooltip until hovered). `rects` its client rects' count,
-   `cs` its computed style. Tested by test-from-code.mjs. */
-export function layerShown(rects, cs) { return rects > 0 && cs.visibility !== 'hidden'; }
+/* Whether a layer a boolean shows is drawn: laid out, not hidden and painted, or at opacity 0 where the design draws
+   that layer at 0 too (`atZero`: a tooltip until hovered, as Figma's boolean shows a layer by its visibility alone);
+   one code draws at 0 for good, where the design paints it, is not drawn. `rects` its client rects' count, `cs` its
+   computed style. Tested by test-from-code.mjs. */
+export function layerShown(rects, cs, atZero = false) { return rects > 0 && cs.visibility !== 'hidden' && (atZero || +cs.opacity > 0); }
 
-/* An icon mark's fill of its own (`cs` its computed style): its box painted, where no mask cuts a glyph out of it, so a
-   placed component the library does not hold keeps the fill to-code writes on it as a box's (a navigation bar's
-   surface), never read as the glyph's colour; else null. Tested by test-from-code.mjs. */
-export function markFill(cs) {
+/* Whether a contract draws its layer `id` at opacity 0 at some combination: in its anatomy, as a variant sets it or as a
+   variant adds it (a tooltip drawn at 0 until hovered). Tested by test-from-code.mjs. */
+export function drawnAtZero(c, id) {
+  return !!c && [((c.anatomy || {})[id] || {}).opacity, ...(c.variants || []).flatMap((v) => [(v.set || {})[`${id}.opacity`], ((v.add || {})[id] || {}).opacity])].some((o) => o === 0);
+}
+
+/* An icon mark's fill of its own (`cs` its computed style, `clear` whether a colour paints nothing: seeThrough): its box
+   painted, where no mask cuts a glyph out of it, so a placed component the library does not hold keeps the fill to-code
+   writes on it as a box's (a navigation bar's surface), never read as the glyph's colour; else null. Tested by
+   test-from-code.mjs. */
+export function markFill(cs, clear) {
   const c = String(cs.backgroundColor || '');
-  if (!c || /rgba\(.*,\s*0\)$|transparent/.test(c)) return null;
+  if (!c || clear(c)) return null;
   return [cs.maskImage, cs.webkitMaskImage].every((m) => !m || m === 'none') ? c : null;
 }
+
+/* Whether a mark draws no glyph of its own: no child element, and no pseudo-element with content (`pseudo` each one's
+   computed content), so the colour it is read at is no glyph's. Tested by test-from-code.mjs. */
+export function glyphless(children, pseudo) { return !children && pseudo.every((c) => !c || c === 'none' || c === 'normal'); }
 
 export function ownLayer(m, n, q, isRoot) {
   const host = q.replace(/\s*>\s*[a-z][a-z0-9-]*\s*$/i, '');
@@ -620,7 +632,7 @@ export function designTokenFor(kind, value, table, usage, under = null, judge = 
   if (vars && vars.length) for (const v of vars) {
     // (in any of its modes: a contextual field token is one colour on the background and another on a layer)
     // (a number to the reading's two decimals: Figma stores 4.8 as 4.800000190734863, read back 4.8)
-    const holds = (t) => (t[4] || [t[1]]).some((x) => (colour ? sameColour(x, value) : typeof x === 'number' && Math.abs(x - +value) < 0.005));
+    const holds = (t) => (t[4] || [t[1]]).some((x) => (colour ? sameColour(x, value) : sameAsRead(x, +value)));
     // the toolkit's own css name for the token first; else the longest name the property ends in
     const said = table.find((t) => v === cssName(t[3] || '', t[0]) && holds(t)) || table.filter((t) => writtenAs(v, t[0], t[3]) && holds(t)).sort((a, b) => b[0].length - a[0].length)[0];
     if (said) return { token: said[0] };
@@ -1148,6 +1160,27 @@ export function asShape(x, fa, hasChildren, here = null) {
    the part as the design draws it there, for asShape (a dot's box, a container in its checked variant, is no rectangle
    for having no child the mapping reads). The outermost such instance; null where none is, or one lists a layer inside.
    `A` is the design's anatomy at the combination (expand). Tested by test-from-code.mjs. */
+/* Each `with` a contract gives its layer `k`: in its anatomy, as a variant sets it and as a variant adds it. Tested by
+   test-from-code.mjs. */
+export function withsOf(c, k) { return [((c.anatomy || {})[k] || {}).with, ...(c.variants || []).flatMap((v) => [(v.set || {})[`${k}.with`], ((v.add || {})[k] || {}).with])]; }
+
+/* A glyph the code draws in `id` (`e`, its reading, and each variant's `${id}.asset`), read as the wrapper the design
+   places there, the library holding no contract for it, whose own prop names the glyph (a <icon>: Warning): the first
+   of its swap props (`keys`, swapKeysOf) whose values among the design's `withs` (withsOf) cover every glyph drawn, in
+   any case, gives `e.with` and each variant's `${id}.with` at that prop in the design's spelling, the variant's asset
+   taken away. Returns whether it did; else nothing changes. Tested by test-from-code.mjs. */
+export function wrapGlyph(id, e, variants, keys, withs) {
+  const drawn = [e.asset, ...variants.map((v) => (v.set || {})[`${id}.asset`]).filter((g) => typeof g === 'string')];
+  for (const wk of keys) {
+    const spelt = new Map(withs.filter((w) => w && typeof w === 'object' && typeof w[wk] === 'string').map((w) => [w[wk].toLowerCase(), w[wk]]));
+    if (!drawn.every((g) => spelt.has(String(g).toLowerCase()))) continue;
+    e.with = { [wk]: spelt.get(String(e.asset).toLowerCase()) };
+    for (const v of variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.with`] = { [wk]: spelt.get(v.set[`${id}.asset`].toLowerCase()) }; delete v.set[`${id}.asset`]; }
+    return true;
+  }
+  return false;
+}
+
 export function placedHere(A, id, mainOf) {
   if (!A || !mainOf || A[id]) return null;
   const { placedAs } = req('./derive.cjs'), segs = id.split('/');
@@ -1161,7 +1194,9 @@ export function placedHere(A, id, mainOf) {
 }
 
 // a token whose value paints nothing (rgba(…, 0), rgb(… / 0), #rrggbb00, transparent): the browser reads no fill there
-const seeThroughIn = (value, t) => { const v = String(value(t) ?? ''); return /rgba?\((?:[^,)]*,){3}\s*0(\.0+)?%?\s*\)$|\/\s*0(\.0+)?%?\s*\)$|^\s*transparent\s*$/i.test(v) || /^#[0-9a-f]{6}00$/i.test(v) || /^#[0-9a-f]{3}0$/i.test(v); };
+// (`seeThrough` the colour itself, passed into the page as source; tested by test-from-code.mjs)
+export function seeThrough(v) { v = String(v ?? ''); return /rgba?\((?:[^,)]*,){3}\s*0(\.0+)?%?\s*\)$|\/\s*0(\.0+)?%?\s*\)$|^\s*transparent\s*$/i.test(v) || /^#[0-9a-f]{6}00$/i.test(v) || /^#[0-9a-f]{3}0$/i.test(v); }
+const seeThroughIn = (value, t) => seeThrough(value(t));
 
 /* Whether a name is a token: by its path, or, at the top of its collection (no group, so no slash: a radius named None),
    by having a value, as a word (mixed, hug) has none. `value` a token's value by its name (the name itself, or
@@ -2080,6 +2115,11 @@ async function main() {
       if (!fc || !parts) return [slug, {}];
       return [slug, Object.fromEntries(Object.values(fc.props).filter((q) => q.type === 'boolean' && q.shows && parts[q.shows[0]]).map((q) => [q.figma, parts[q.shows[0]]]))];
     }));
+    // (and those its own design draws at opacity 0, a tooltip until hovered: shown there at 0, layerShown)
+    const zeroShown = Object.fromEntries(Object.keys(others).map((slug) => {
+      const fc = official.get(slug);
+      return [slug, fc ? Object.values(fc.props).filter((q) => q.type === 'boolean' && q.shows && drawnAtZero(fc, q.shows[0])).map((q) => q.figma) : []];
+    }));
     // and the layers its swaps swap, so a glyph goes to the swap of the layer it is drawn in (a select's caret is no
     // glyph of its menu's slot), as to-markup draws a swap's icon in its own layer
     const swapSel = Object.fromEntries(Object.keys(others).map((slug) => [slug, swappedLayers(official.get(slug), L, slug)]));
@@ -2164,7 +2204,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
@@ -2178,7 +2218,7 @@ async function main() {
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
         const elementOfLayer = new Function(`return ${elementOfLayerSrc}`)();
         const opensPlaced = new Function(`return ${opensPlacedSrc}`)();
-        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), layerShown = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)();
+        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), layerShown = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)(); const seeThrough = new Function(`return ${seeThroughSrc}`)(), glyphless = new Function(`return ${glyphlessSrc}`)();
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -2282,11 +2322,11 @@ async function main() {
               innerDisabled: !n.hasAttribute('disabled') && [...n.querySelectorAll('button[disabled], input[disabled], select[disabled], textarea[disabled], fieldset[disabled]')].some((m) => { for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (isRoot(up)) return false; return true; }),
               // its words, in the order it shows them: each element's own text, where it is drawn
               // each boolean that shows a layer: whether that layer is drawn in it, found where its own mapping places it
-              // (not one of another instance nested in it, and drawn: layerShown)
+              // (not one of another instance nested in it, and drawn: layerShown, at 0 too where its design draws it at 0)
               // (unknown, null, where each such layer is unseen only as a box around it is not drawn: one this component
               // hides inside the instance, a checkbox's box and value taken away whole, says nothing of the boolean)
               shown: Object.fromEntries(Object.entries(shownSel[other] || {}).map(([p, q]) => {
-                const seen = (m) => layerShown(m.getClientRects().length, getComputedStyle(m));
+                const seen = (m) => layerShown(m.getClientRects().length, getComputedStyle(m), (zeroShown[other] || []).includes(p));
                 const ms = [...n.querySelectorAll(q)].filter((m) => ownLayer(m, n, q, isRoot));
                 // (a box not drawn: computed display none, the hidden attribute's too unless CSS draws it again; a display: contents
                 // wrapper has no box of its own and hides nothing)
@@ -2322,9 +2362,10 @@ async function main() {
           // is a box to-code styles as the instance's own: its stroke, corners and clipping read as a box's, its fill
           // staying the glyph's colour (above)
           // (a fill of its own, its box painted, where no mask cuts a glyph out of it: a placed component's own fill, a
-          // navigation bar's surface, which to-code writes as a box's, never the glyph's colour)
+          // navigation bar's surface, which to-code writes as a box's, never the glyph's colour, which it keeps only where
+          // something inside draws one: glyphless)
           if (kind === 'graphic' && e.mark) { const own = {}; boxStyling(own); for (const k of ['radius', 'full', 'cornerShape', 'outline', 'ownOutline', 'border', 'overflow', 'shadow', 'shadowAll', 'ringsUsed']) if (own[k] !== undefined) e[k] = own[k];
-            const fill = markFill(s); if (fill) { e.background = fill; delete e.icon; } }
+            const fill = markFill(s, seeThrough); if (fill) { e.background = fill; if (glyphless(n.children.length, ['::before', '::after'].map((p) => getComputedStyle(n, p).content))) delete e.icon; } }
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             boxStyling(e);
             // a box no flex lays out, or one with nothing to hug, has a size of its own (a switch's thumb, an avatar's image)
@@ -2430,7 +2471,7 @@ async function main() {
         const siblingOrder = new Function(`return ${siblingOrderSrc}`)();
         for (const xs of Object.values(byParent)) siblingOrder(xs).forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -3298,24 +3339,16 @@ async function main() {
         const held = (n) => fe.component === n || (set ? JSON.stringify(figmaContract).includes(JSON.stringify(n)) : placed().includes(n));
         // and every glyph a variant changes it to, held the same way, or the whole layer stays the code's graphic
         const glyphs = fromCode.variants.map((v) => (v.set || {})[`${id}.asset`]).filter((g) => typeof g === 'string');
-        // a wrapper the library does not hold whose own prop names the glyph it places (a <icon>: Status warning): that
+        // a wrapper the library does not hold whose own prop names the glyph it places (a <icon>: Warning): that
         // wrapper, its prop at the glyph the code draws, in the design's spelling, where every glyph drawn is one the
         // design gives that prop (to-markup marks the glyph, swapKeysOf)
         // (where the design lists nothing inside it, a placed component's own contract that does: its nearest)
         const keysOf = () => { const ks = swapKeysOf(figmaContract, id), segs = id.split('/'); for (let i = segs.length - 1; !ks.size && i > 0; i--) { const h = figmaEl(segs.slice(0, i).join('/')), m = h && h.kind === 'instance' && mainOf(h.component, h.key); if (m) return swapKeysOf(m, segs.slice(i).join('/')); } return ks; };
-        const wk = !swapped && !mainOf(fe.component, fe.key) && [...keysOf()][0];
         // (and the glyph a placed component draws there of its own, where the design overrides it and code cannot pass the
         // override: that glyph, read as such, so the override stays the difference it is)
         const host = (() => { const segs = id.split('/'); for (let i = segs.length - 1; i > 0; i--) { const h = figmaEl(segs.slice(0, i).join('/')), m = h && h.kind === 'instance' && mainOf(h.component, h.key); if (m) return { m, rel: segs.slice(i).join('/') }; } return null; })();
-        const withsOf = (c, k) => [((c.anatomy || {})[k] || {}).with, ...(c.variants || []).flatMap((v) => [(v.set || {})[`${k}.with`], ((v.add || {})[k] || {}).with])];
-        const spelt = wk && new Map([...withsOf(figmaContract, id), ...(host ? withsOf(host.m, host.rel) : [])]
-          .filter((w) => w && typeof w === 'object' && typeof w[wk] === 'string').map((w) => [w[wk].toLowerCase(), w[wk]]));
-        const wrapped = spelt && [e.asset, ...glyphs].every((g) => spelt.has(String(g).toLowerCase()));
+        const wrapped = !swapped && !mainOf(fe.component, fe.key) && wrapGlyph(id, e, fromCode.variants, [...keysOf()], [...withsOf(figmaContract, id), ...(host ? withsOf(host.m, host.rel) : [])]);
         if (!swapped && !wrapped && (!held(named) || !glyphs.every((g) => held(whole(g))))) return;
-        if (wrapped) {
-          e.with = { [wk]: spelt.get(e.asset.toLowerCase()) };
-          for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.with`] = { [wk]: spelt.get(v.set[`${id}.asset`].toLowerCase()) }; delete v.set[`${id}.asset`]; }
-        }
         e.kind = 'instance'; e.component = swapped || wrapped ? fe.component : named; delete e.asset;
         // (with the design's key, so it stays that icon and is never a same-named component of the library: designKeyOf)
         { const k = designKeyOf(figmaContract, fe, e.component); if (k) e.key = k; else delete e.key; }

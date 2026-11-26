@@ -186,7 +186,9 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const corner = (r) => ({ contract: 1, component: 'P', props: {}, anatomy: { root: { kind: 'container', radius: r } }, variants: [] });
     const k = (a, b, o = { layoutUnit: true }) => roundTrip(corner(a), corner(b), o).rows.length;
     ok('any number a browser read to two decimals is the same within half its last digit (a corner stored 7.800317, read 7.8); one a hundredth off is not, nor between Figma\'s own',
-      k(7.800317, 7.8) === 0 && k(7.806, 7.81) === 0 && k(7.8, 7.81) === 1 && k(7.800317, 7.8, {}) === 1); }
+      k(7.800317, 7.8) === 0 && k(7.806, 7.81) === 0 && k(7.8, 7.81) === 1 && k(7.800317, 7.8, {}) === 1);
+    const faded = (o) => ({ contract: 1, component: 'P', props: {}, anatomy: { root: { kind: 'container', opacity: o } }, variants: [] });
+    ok('…a size in px only: an opacity a hair off is a difference', roundTrip(faded(0.501), faded(0.5), { layoutUnit: true }).rows.length === 1); }
   ok('and the round trip compares no combination of it', roundTrip(two, two).combinations === 2);
   { // Figma's own floors: a 0 the plugin API cannot resize to (it draws 0.01), and a text the library's snapshot recorded
     // no values for; the text not where one side is a browser's reading (a 0.01 there is within its layout unit anyway)

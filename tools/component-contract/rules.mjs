@@ -44,6 +44,11 @@ export const UNCLIPPED = 'visible';
    blends (from-code readCleared). */
 export const UNBLENDED = 'normal';
 
+/* A number a browser read, held to the two decimals from-code's px reads it to: within half the last digit, the same
+   (Figma stores 4.8 as 4.800000190734863, a corner as 7.800317; both read back to two decimals). One cut-off for both
+   sides of the round trip: from-code's token for a number the code wrote, to-figma's roundTrip over a browser's reading. */
+export const sameAsRead = (a, b) => typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= 0.005 + 1e-9;
+
 /* A colour written as itself (no variable): css.mjs writes it so, and the editor's preview draws it so. */
 export const rawColour = (f) => typeof f === 'string' && /^(#|rgba?\(|hsla?\()/.test(f);
 
