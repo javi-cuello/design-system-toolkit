@@ -1,6 +1,6 @@
 # Timesheets: time by the day and by the hour
 
-How a timesheet records work billed or planned by the day beside work billed by the hour: which unit an entry records, the setting that turns hours into days, logging tasks under a day, entering hours as a duration or a start–end range, and showing entries with no time of day beside timed ones. The calendar views, the day cell and how an entry is drawn are [`calendars.md`](calendars.md), and how all-day and timed entries share a view is its [*All-day and timed entries together*](calendars.md#all-day-and-timed-entries-together). Adding, editing and deleting an entry are [`calendar-events.md`](calendar-events.md); a day nobody filled in, a day logged as 0 and a day off are [data: *No entry, zero and none*](data.md#no-entry-zero-and-none). Totals, rounding and invoice lines from logged time are [`../profiles/reports.md`](../profiles/reports.md). Time fields are [selection: *Time entry*](selection.md#time-entry).
+How a timesheet records work billed or planned by the day beside work billed by the hour: which unit an entry records, the setting that turns hours into days, logging tasks under a day, entering hours as a duration or a start–end range, showing entries with no time of day beside timed ones, task time against project time, fixed-fee and retainer work, planned against logged time, and what a timesheet refuses or warns about. The calendar views, the day cell and how an entry is drawn are [`calendars.md`](calendars.md), and how all-day and timed entries share a view is its [*All-day and timed entries together*](calendars.md#all-day-and-timed-entries-together). Adding, editing and deleting an entry are [`calendar-events.md`](calendar-events.md); a day nobody filled in, a day logged as 0 and a day off are [data: *No entry, zero and none*](data.md#no-entry-zero-and-none). Totals, rounding and invoice lines from logged time are [`../profiles/reports.md`](../profiles/reports.md). Time fields are [selection: *Time entry*](selection.md#time-entry).
 
 ## Day or hour: the unit an entry records
 
@@ -152,3 +152,123 @@ Entries with no time of day get a row above the timed grid, in Productive's time
 - *Judgement*: can the reader tell at a glance which of a day's entries are billed by the day?
 
 **Sources.** Productive, Clockify, Float, Harvest Forecast, RFC 5545 and Google's API as linked. Toggl's calendar does not import all-day events from a linked calendar ([Toggl calendar integration](https://support.toggl.com/integrating-calendar-view-with-google-and-outlook-calendars)), which says nothing of its own entries, so it is not counted. Teamwork's timesheet calendar and Harvest's calendar view were opened, but neither page says where a duration-only entry is drawn.
+
+## Task time and project time
+
+**Use when / don't use**
+- [strong] An entry names its project and its task, and the task's time is the entry's time: one figure, not task hours inside a longer project block. Toggl's tasks are "a sub-project", picked "from the "Project" field when creating time entries" ([Toggl tasks](https://support.toggl.com/tasks)); Clockify's tasks are "an extra layer of hierarchy within a project, functioning like sub-projects" ([Clockify tasks](https://clockify.me/help/projects/working-with-tasks)); Harvest's entry asks "Choose your project and task" ([Harvest day view](https://support.getharvest.com/hc/en-us/articles/360048181892-Tracking-time-Day-view)); Bonsai's form asks "Project Task Hours Description" ([Bonsai manual entries](https://intercom.help/bonsai/en/articles/3438791-manually-adding-time-tracking-entries)); Productive lets an entry "Pin a task to the time entry" ([Productive time entries](https://help.productive.io/en/articles/2179623-time-entries-in-a-budget)).
+- [strong] A project's time is its entries' time, those with a task and those without. Teamwork: "The Time section shows all time logged to the project itself (or to any of its tasks)" ([Teamwork tracked time](https://support.teamwork.com/projects/time-tracking/view-tracked-time)); Clockify: entries of a deleted task "will become without a task but will still be linked to the project" ([Clockify tasks](https://clockify.me/help/projects/working-with-tasks)); Everhour: "You can start a timer or log manual time directly to a selected project without assigning it to any task" ([Everhour time without a task](https://support.everhour.com/article/175-tracking-time-without-a-task)).
+
+**How**
+- [contested] **Whether a task is required.** Harvest requires one: "task_id integer required" ([Harvest API, time entries](https://help.getharvest.com/api-v2/timesheets-api/timesheets/time-entries/)). Teamwork makes it optional: "choose a project and, optionally, a task" ([Teamwork track time](https://support.teamwork.com/projects/time-tracking/track-time)). Toggl, Clockify, Everhour and Productive make it a setting ([Toggl required fields](https://support.toggl.com/en/articles/2206946-required-fields-for-time-entries); [Clockify required fields](https://clockify.me/help/track-time-and-expenses/required-fields); [Everhour](https://support.everhour.com/article/175-tracking-time-without-a-task); [Productive required fields](https://help.productive.io/en/articles/15176383-required-time-entry-fields)). The project decides.
+- [strong] **Time with no task keeps its project and gets its own group.** Toggl: "the "without task" filter in reports" ([Toggl tasks](https://support.toggl.com/tasks)); Clockify's task filter "Includes filters for All, Active, Done, and Without task" ([Clockify reports](https://clockify.me/help/getting-started/understand-use-your-reports)); Bonsai's invoice: "Entries without tasks appear under "No task"" ([Bonsai invoicing](https://intercom.help/bonsai/en/articles/1898575-invoicing-your-tracked-time)); Everhour's invoice shows project-level entries "under the line item "No task"" ([Everhour](https://support.everhour.com/article/175-tracking-time-without-a-task)).
+- [strong] **The second figure beside logged time is the estimate.** Toggl: "Each task will show you the actual hours logged against its estimate" ([Toggl estimates](https://support.toggl.com/project-time-estimates)); Clockify: "compare estimated vs tracked in a project's Status tab" ([Clockify project progress](https://clockify.me/help/projects/tracking-project-progress)); Everhour shows "total time spent on a task vs. original estimate" ([Everhour estimates](https://support.everhour.com/article/131-task-estimates)); Harvest sets "an hourly budget for every task" ([Harvest budgets](https://support.getharvest.com/hc/en-us/articles/360048686811)).
+- [strong] **The invoice bills the entries' hours, grouped.** Harvest's import summarises the time entries "per line item. Options: project , task , people , or detailed" ([Harvest invoices API](https://help.getharvest.com/api-v2/invoices-api/invoices/invoices/)); Bonsai: "Invoice totals remain the same; only the way time is grouped into line items changes" ([Bonsai invoicing](https://intercom.help/bonsai/en/articles/1898575-invoicing-your-tracked-time)); Everhour groups line items "by task, project, user, etc." ([Everhour invoices](https://support.everhour.com/article/432-creating-an-invoice)); Clockify groups "such as project or task" ([Clockify invoice from reports](https://clockify.me/help/reports/create-invoice-from-reports)).
+- [moderate] **Work sold by the day bills the day apart from the task hours.** Productive's entries are "always connected to a service" and may pin a task, and a day service is still tracked in hours ([Productive service and task](https://intercom.help/productive/en/articles/13723255-assigning-a-service-to-a-task); [Productive tracking units](https://help.productive.io/en/articles/12049022-tracking-units-hours-days-or-pieces)); Harvest tracks the day rate "as an expense" and the hours "to a non-billable project or task" ([Harvest day rates](https://support.getharvest.com/hc/en-us/articles/360048181872-How-do-I-track-day-rates-in-Harvest)).
+
+**Cases**
+- An hourly project with 9:00–17:00 logged and a task given 3 h on a separate tab → two figures for one day; the products above record the 3 h as one of the day's entries (9:00–12:00, with its task) and the rest with another task or none, so 8 h is one total.
+- Invoicing that project by task → a line for each task and one for "No task", adding to the same 8 h.
+- A day project with tasks → the day is the billed line; the task hours are a record beside it, as Harvest's and Productive's set-ups keep them.
+
+**Accessibility**
+- [required] 1.3.1: in a report grouped by task, the group of entries with no task is a named row ("No task"), not a blank cell ([data: *No entry, zero and none*](data.md#no-entry-zero-and-none)).
+
+**Build**
+- [moderate] The task is a field of the entry, not a separate record of hours: Harvest's entry holds `task_id` ([Harvest API, time entries](https://help.getharvest.com/api-v2/timesheets-api/timesheets/time-entries/)), and Toggl and Clockify pick the task in the entry's own project field (sources above).
+- [required] The project and task fields are labelled native controls, or a [combobox](../components/combobox.md) where the list is long (code-standard rule 8).
+
+**Check**
+- *Script* could: sum a project's entries by task and assert the groups, "No task" included, add to the project total.
+- *Judgement*: does any screen show task hours that are not entries?
+
+**Sources.** Toggl, Clockify, Harvest, Bonsai, Everhour, Teamwork and Productive as linked; FreshBooks' item on an entry is a service, and optional ([FreshBooks time](https://support.freshbooks.com/hc/en-us/articles/225525527-How-do-I-track-my-time)). No product opened records task hours inside a longer project entry; that is a failed search, not proof none does. Productive's required-fields page says both that an entry missing a required field is "blocked" and that it "saves as a draft"; it is counted only for the setting.
+
+## Fixed fee and retainer work
+
+**Use when / don't use**
+- [strong] Time is logged on fixed-fee work too, and the fee, not the hours, is invoiced. Harvest: "Fixed Fee projects bill a set price, no matter how many hours are worked" ([Harvest project types](https://support.getharvest.com/hc/en-us/articles/360048686931)); Everhour: "These projects will have a set price, no matter how many hours are worked" ([Everhour billing](https://support.everhour.com/article/502-ways-to-bill-your-project)); Bonsai: "Revenue is fixed regardless of time spent", while "Costs still track time and expenses" ([Bonsai billing types](https://intercom.help/bonsai/en/articles/9948855-project-billing-types)); FreshBooks shows a flat rate as one invoice line, however many entries are tracked ([FreshBooks billing methods](https://support.freshbooks.com/hc/en-us/articles/115005920788-What-are-billing-methods)).
+
+**How**
+- [strong] **Logged hours are read against the fee as a budget.** Harvest's "If billed hourly column" shows "what your hypothetical fees would be if the project were billed hourly" ([Harvest project types](https://support.getharvest.com/hc/en-us/articles/360048686931)); Toggl's chart "shows the progress against the Fixed fee amount set for the project" ([Toggl project dashboard](https://support.toggl.com/en-us/article/project-dashboard-xmtsal/)); Clockify's budget bar shows "how much was spent and how much remains" ([Clockify project budget](https://clockify.me/help/projects/project-budget)); Bonsai's budget shows the total, the amount used and the remaining amount ([Bonsai budgets](https://intercom.help/bonsai/en/articles/8916128-project-budgets)).
+- [contested] **Whether fixed-fee time is billable.** FreshBooks marks every entry on a flat-rate project non-billable ([FreshBooks billing methods](https://support.freshbooks.com/hc/en-us/articles/115005920788-What-are-billing-methods)); Bonsai's retainer advice is to enter hours as billable "as a $0/hour rate" ([Bonsai billing types](https://intercom.help/bonsai/en/articles/9948855-project-billing-types)); Productive keeps worked and billable time apart on each entry: "Adjust the worked time and its range. Adjust the billable time" ([Productive time entries](https://help.productive.io/en/articles/2179623-tracking-and-managing-time-entries-in-budgets)). The project decides.
+- [strong] **A recurring fee or budget resets each period.** Harvest: with "Fees reset monthly" turned on, "Harvest bills that fee every calendar month" ([Harvest recurring fee](https://support.getharvest.com/hc/en-us/articles/47889121432461)); Toggl multiplies a recurring fee "by the number of billing periods that fall within your selected date range" ([Toggl fixed fee](https://support.toggl.com/en/articles/6361632-fixed-fee-projects)); Clockify resets an estimate by week, month or year ([Clockify project budget](https://clockify.me/help/projects/project-budget)); Everhour resets a budget "every Day, week, Month, Quarter and Year" ([Everhour budgeting](https://support.everhour.com/article/501-budgeting)).
+- [contested] **Unused retainer hours: carried over or lost.** Teamwork can "Add unspent hours to next period's budget" ([Teamwork retainers](https://support.teamwork.com/projects/project-budgets/retainer-budgets)); Productive rolls over "the deficit/surplus of billable (approved) hours" ([Productive rollover](https://help.productive.io/en/articles/9902502-retainer-hours-rollover)). FreshBooks carries no unused retainer time into the next period, and bills time over it as excess hours at another rate ([FreshBooks retainers](https://support.freshbooks.com/hc/en-us/articles/360015379391-What-are-retainers)). The project decides.
+
+**Cases**
+- A fixed-fee site build logged at 62 h against a fee worth 50 h at the usual rate → the invoice carries the fee; the report shows 62 h used against the budget.
+- A monthly retainer of 20 h with 14 h used → 6 h carried into next month, or lost, by the project's rule, stated on the report.
+
+**Accessibility**
+- [required] 1.4.1 and 1.3.1: budget used and remaining are said in text ("14 h of 20 h used"), not by a bar's fill alone ([data: *KPI tiles*](data.md#kpi-tiles)).
+
+**Build**
+- [moderate] The billing type belongs to the project, and an entry's billable flag follows it: on Harvest's non-billable projects "all hours tracked to this type of project will also be non-billable" ([Harvest project types](https://support.getharvest.com/hc/en-us/articles/360048686931)); FreshBooks marks flat-rate entries non-billable (above).
+- [required] A budget bar is a `meter` or `progress` with its figures in text ([HTML semantics: *Charts in markup*](../../code/html-semantics.md#charts-in-markup)).
+
+**Check**
+- *Script* could: invoice a fixed-fee project and assert one fee line and no hour lines.
+- *Judgement*: does the reader see hours used against the fee, apart from what is billed?
+
+**Sources.** Harvest, Everhour, Bonsai, FreshBooks, Toggl, Clockify, Productive and Teamwork as linked; FreshBooks' help could not be read raw here, so its lines are paraphrased. Hubstaff's budgets take cost or hours and a reset, but no fixed-price type was found in its help ([Hubstaff projects](https://support.hubstaff.com/projects-overview/)).
+
+## Planned and logged time
+
+**Use when / don't use**
+- [strong] Planned and logged time are kept apart and compared. Float: "Scheduled hours show what was planned, logged hours show what actually happened" ([Float log team](https://support.float.com/en/articles/16603855-log-team-close-the-gap-between-planned-and-actual)); Harvest with Forecast: "The Delta column highlights the difference between the scheduled and tracked hours for the project" ([Harvest and Forecast](https://support.getharvest.com/hc/en-us/articles/360048686031)); Clockify's report compares "the assignments you've scheduled with the time you've actually spent on them" ([Clockify scheduled vs tracked](https://clockify.me/help/reports/scheduled-vs-tracked-report)).
+
+**How**
+- [strong] **A plan becomes logged time only by a step.** Float's suggestions are "log time recommendations based on the Schedule" that "can be edited or deleted as needed" ([Float time tracking](https://support.float.com/en/articles/3616990-time-tracking)); Clockify copies a calendar event "as time entry" ([Clockify calendar integration](https://clockify.me/help/getting-started/integrate-google-outlook-with-your-clockify-account)); Harvest greys out an event once used, and it "can't be used to make more time entries" ([Harvest calendar](https://support.getharvest.com/hc/en-us/articles/360048180932)); Toggl's copy needs "a project, tags, and other details" assigned "manually" ([Toggl calendar integration](https://support.toggl.com/integrating-calendar-view-with-google-and-outlook-calendars)).
+- [moderate] **Automatic logging is opt-in.** Float: "When Automatic time logging is enabled, Float automatically logs all log time suggestions for the selected period" ([Float settings](https://support.float.com/en/articles/13619139-time-tracking-settings)); Productive's auto-tracked entries "will still need to be approved to become recognized" ([Productive automatic tracking](https://help.productive.io/en/articles/3158736-automatic-time-tracking)).
+- [moderate] **Tentative plans produce no logged time.** Float: "No logged time suggestions will appear for tentative allocations" ([Float time tracking](https://support.float.com/en/articles/3616990-time-tracking)); Productive's tentative bookings "do not count toward a person's total scheduled hours" ([Productive tentative bookings](https://help.productive.io/en/articles/8582323-tentative-bookings)).
+- [weak] **Logging leaves the plan alone.** Float: adding or removing a suggestion "does not affect the allocation on the Schedule" ([Float time tracking](https://support.float.com/en/articles/3616990-time-tracking)).
+
+**Cases**
+- A day booked for next Tuesday → planned; on Tuesday it is offered as a suggestion and becomes logged when confirmed.
+- A tentative half day → shown on the plan, offered for nothing until confirmed ([calendar events: *Entry status and conflicts*](calendar-events.md#entry-status-and-conflicts)).
+- A billing report for last month → logged figures, with planned beside them only where asked ([reports: *What counts*](../profiles/reports.md#what-counts-billable-non-billable-and-booked)).
+
+**Accessibility**
+- [required] 1.4.1: planned and logged entries differ in text or a named pattern ("Planned"), not by a paler fill alone.
+
+**Build**
+- [moderate] Planned and logged are two records, linked, not one record with a flag: Float's suggestion leaves its allocation unchanged, and to change Productive's auto-tracked hours you "update the booking itself" ([Productive automatic tracking](https://help.productive.io/en/articles/3158736-automatic-time-tracking)).
+- [required] The status is in the entry's accessible name ("Planned, Project A, full day") ([accessibility: *Accessible names and descriptions*](../../code/accessibility.md#accessible-names-and-descriptions)).
+
+**Check**
+- *Script* could: confirm a suggestion and assert a logged entry exists and the plan is unchanged.
+- *Judgement*: can the reader tell what was planned from what was done on any day?
+
+**Sources.** Float, Harvest with Forecast, Clockify, Toggl and Productive as linked. Everhour can sync calendar events into entries automatically, a further opt-in ([Everhour calendar](https://support.everhour.com/article/603-calendar-integrations)).
+
+## What a timesheet refuses or warns about
+
+**Use when / don't use**
+- [strong] Past periods can be locked. Toggl: "stop members from adding, editing or deleting entries on or before a date you choose. Admins can still change locked entries" ([Toggl admin guide](https://support.toggl.com/premium-onboarding-guide-for-toggl-track-admin)); Harvest: "no one can add, edit, or delete time or expense entries on or before the lock date" ([Harvest timesheet lock](https://support.getharvest.com/hc/en-us/articles/46563687732877)); Clockify: "You cannot use the Lock feature for current or future dates" ([Clockify lock](https://clockify.me/help/track-time-and-expenses/lock-timesheets)); Everhour's lock "can be applied to members, but not admins or supervisors" ([Everhour lock](https://support.everhour.com/article/492-lock-time-editing)).
+- [strong] Approval and invoicing lock what they cover. Harvest: "Approving a timesheet locks all the time and expense entries for that calendar week" ([Harvest approval](https://support.getharvest.com/hc/en-us/articles/360048181912)); Teamwork: "After a timesheet is approved, it is locked for the submitter" ([Teamwork approvals](https://support.teamwork.com/projects/time-tracking/time-approvals)); Everhour's approved weeks "are locked and can only be edited by admins" ([Everhour approval](https://support.everhour.com/article/473-time-approval-admin)); Productive: invoiced entries "can't be edited, moved or deleted" ([Productive time entries](https://help.productive.io/en/articles/2179623-time-entries-in-a-budget)).
+
+**How**
+- [strong] **Required fields let a timer start but not stop.** Toggl: "Time entries can be started without defined fields but can only be stopped once the required fields are filled" ([Toggl required fields](https://support.toggl.com/en/articles/2206946-required-fields-for-time-entries)); Clockify: "The timer can be started but can't be stopped until you add a project and tag" ([Clockify required fields](https://clockify.me/help/track-time-and-expenses/required-fields)); Productive: "If a required field is empty, the entry saves as a draft instead of a confirmed entry" ([Productive required fields](https://help.productive.io/en/articles/15176383-required-time-entry-fields)).
+- [contested] **Overlapping entries: allowed, refused or overwritten.** Clockify: "By default, Clockify allows overlapping entries" ([Clockify overlapping](https://clockify.me/help/troubleshooting/permissions/overlapping-entries)); Productive's policy refuses them: "a warning message appears and the time range of the new entry is cleared" ([Productive policies](https://help.productive.io/en/articles/11769095-setting-up-time-tracking-policies)); Hubstaff: "Manual time entries added over existing time entries will overwrite them" ([Hubstaff manual time](https://support.hubstaff.com/how-to-add-delete-and-edit-manual-time-entries/)). The project decides.
+- [moderate] **A limit on hours a day or week.** Everhour: "Limit is the number of hours that a user is allowed to track per day, week or month. Once reached, it cannot be overridden by a member" ([Everhour limits](https://support.everhour.com/article/522-member-capacity-and-limits)); Hubstaff can "set member limits for the maximum number of hours that can be logged in a week, or a day" ([Hubstaff limits](https://support.hubstaff.com/user-limits/)); Productive can "Disable time tracking completely by setting the maximum value to 0h" ([Productive policies](https://help.productive.io/en/articles/11769095-setting-up-time-tracking-policies)).
+- [contested] **Past the budget: refused or allowed.** Productive refuses: "You can't track this amount of time on this service because it would exceed the limit" ([Productive budget limit](https://help.productive.io/en/articles/12570473-budget-overrun-limitations-disable-time-tracking-at-the-service-limit)); Everhour can "prohibit reporting time for anyone (including admins) if the budget is exceeded" ([Everhour budgeting](https://support.everhour.com/article/501-budgeting)). Harvest "does not have a way to automatically prevent your teammates from tracking time to a project that's met its budget" ([Harvest budget](https://support.getharvest.com/hc/en-us/articles/4407035124749)). The project decides.
+- [moderate] **A timer and a manual entry make the same entry, told apart by its record.** Productive lists "both timer and manual entries" making up one entry ([Productive timer](https://help.productive.io/en/articles/3903111-using-the-timer-to-track-time)); Hubstaff: "Time added manually will always be recorded with 0% activity" ([Hubstaff manual time](https://support.hubstaff.com/how-to-add-delete-and-edit-manual-time-entries/)); Clockify's Force timer, where set, "disables manual time entries" ([Clockify force timer](https://clockify.me/help/track-time-and-expenses/force-timer)).
+- [moderate] **Idle time is offered back.** Harvest: "By default, the idle timer alert will go off at 10 minutes", with an option to add the minutes as a new entry ([Harvest idle](https://support.getharvest.com/hc/en-us/articles/360048685231)); Clockify offers to discard idle time, keep it or add it as a new entry ([Clockify desktop app](https://clockify.me/help/apps/windows-desktop-app)).
+
+**Cases**
+- An edit to an entry in an approved week → refused with the reason ("This week is approved"), not a silent failure.
+- Two entries, 9:00–12:00 and 11:00–13:00 → shown side by side, refused or overwritten, by the project's rule (above).
+- A timer stopped with no project where a project is required → the stop asks for the project; the time is kept.
+
+**Accessibility**
+- [required] 3.3.1 Error Identification and 3.3.3 Error Suggestion: a refusal says what was refused and what would be allowed ([forms: *Error messages and the error summary*](forms.md#error-messages-and-the-error-summary)). 4.1.3: a warning that does not stop the save is announced without moving focus.
+
+**Build**
+- [required] The server enforces locks, limits and required fields, so a request that skips the page is refused too (code-standard rule 20).
+- [required] A locked entry is shown with the reason in text; a control kept focusable to explain itself uses `aria-disabled`, not `disabled` (code-standard rule 9).
+
+**Check**
+- *Script* could: post an edit to a locked date and assert the server refuses it with a message; post overlapping entries and assert the project's rule holds.
+- *Judgement*: is each refusal one the person can understand and act on?
+
+**Sources.** Toggl, Harvest, Clockify, Everhour, Teamwork, Productive and Hubstaff as linked. No product opened refuses an entry on a future date; Productive accepts them for later approval ([Productive approvals](https://help.productive.io/en/articles/2179594-approving-time-overview)).
