@@ -34,7 +34,7 @@ Append a dated row to the context document's §6, under its columns. A product d
 
 Then, in the same edit:
 
-- Delete an open item the decision resolves: an open-items list holds only what is open, and the decision row keeps the outcome.
+- Delete an open item the decision resolves: an open-items list holds only what is open, and the decision row keeps the outcome. After deleting numbered items, find every cross-reference to them and re-read each sentence that held one; a regex sweep breaks grammar silently.
 
 - Strike through the decision of any older row it supersedes, and replace that row's line on a guidance page.
 - Where it settles a word, change the product file's *Words* line.

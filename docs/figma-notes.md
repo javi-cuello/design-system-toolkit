@@ -5,7 +5,7 @@ What Figma and the toolkit's bridges do that no tool's own docs say. Each item w
 ## The two bridges
 
 - **figma-console MCP**: `figma_execute`, 5 s by default, `timeout` up to 300 s. If it failed to connect when the session started, it stays down until `/mcp` reconnects it. It can show "No files connected" while a project's dashboard still has them: check the dashboard's `/status` before calling the bridge down.
-- **A project's dashboard**: `POST http://127.0.0.1:<port>/exec` with the header `origin: http://127.0.0.1:<port>` (without it the answer is `cross_origin`) and the body `{ code, fileKey, timeout }`. The value comes back at `result.result`. `GET /status` lists the connected files. Each project's port is in its service settings.
+- **A project's dashboard**: `POST http://127.0.0.1:<port>/exec` with the header `origin: http://127.0.0.1:<port>` (without it the answer is `cross_origin`) and the body `{ code, fileKey, timeout }`. The value comes back at `result.result`. `GET /status` lists the connected files. Each project's port is in its service settings. A big script runs from disk through `/exec`: 280 s worked, and 1,509 icons went in batches instead of about 75 pasted calls.
 - **Batch discovery.** Each `figma_execute` is a round trip through the Desktop Bridge, so eight small probes are far slower than one script that returns everything. Fetch component keys, variant definitions, variable keys and text style keys in one call, then build in one more. Check up front which library collections are enabled in the target file; a sibling file is often different.
 
 ## Five ways a call fails
