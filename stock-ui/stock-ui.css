@@ -353,9 +353,10 @@
   /* One inline inset for head, body and foot, so their edges line up. The head is a slim bar and the
      body has the room, as Primer's dialog draws it (a header of 8px plus 6px, the title at its body
      size and semibold; a body and footer of 16px: Dialog.module.css, primer/react main, read 2026-11-20). */
-  .modal__head, .modal__body, .modal__foot { padding-inline: var(--space-24); }
+  .modal__head, .modal__body, .modal__foot { padding-inline: var(--space-16); } /* 16, Primer's body and footer inset; 24 read as wide margins in a small dialog */
   .modal__head, .modal__foot { flex: none; }
-  .modal__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); padding-block: var(--space-12); padding-inline-end: var(--space-12); border-block-end: var(--stroke-1) solid var(--line); }
+  /* Close ends on the body's and the foot's right edge (the shared inset), one edge down the dialog; at 12px it stood out past them */
+  .modal__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); padding-block: var(--space-12); border-block-end: var(--stroke-1) solid var(--line); }
   /* the title one step over the dialog's small body text (text-md over text-sm), set apart mostly by weight and the bar */
   .modal__head h2 { margin: 0; font-size: var(--text-md); line-height: var(--leading-body); }
   .modal__body { flex: 1 1 auto; overflow: auto; padding-block: var(--space-24); }
@@ -413,6 +414,50 @@
   .button--ghost { border-color: transparent; background: transparent; color: var(--fg-muted); }
   @media (hover: hover) { .button--ghost:hover:not(:disabled, :active) { border-color: transparent; background: var(--hover); color: var(--fg); } }
   .button--ghost:active:not(:disabled) { border-color: transparent; }
+  /* the one checkbox, drawn on the native input (appearance: none keeps its focus, value and label click:
+     checkbox.md, Build); the accent fill when checked, the tick a masked check. A row's done tick restyles it. */
+  .checkbox {
+    appearance: none; -webkit-appearance: none; flex: none; margin: 0;
+    inline-size: 1.25em; block-size: 1.25em; /* (1.25em: the box at its label's size, 20px at the base text) */
+    border: var(--stroke-1) solid var(--control); border-radius: var(--radius-4); background: var(--surface);
+    display: inline-grid; place-items: center; cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  @media (hover: hover) { .checkbox:hover { border-color: var(--fg-muted); } }
+  .checkbox:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+  .checkbox:checked { background: var(--accent); border-color: var(--accent); }
+  /* the tick a drawn check (Lucide's "check" path, stroke 3) masked over the mark colour, so it stays crisp at any size */
+  .checkbox:checked::after {
+    content: ""; inline-size: 80%; block-size: 80%; background: var(--on-accent); /* (80%: the mark's share of the box) */
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  /* Soft: a quiet action that still reads as a button at rest (a row's main action among ghost ones): a neutral fill, no frame. */
+  /* an alpha of the text colour, so the fill reads on any surface under it (a done card's green tint), in both themes */
+  .button--soft { border-color: transparent; background: color-mix(in oklab, var(--fg) 8%, transparent); color: var(--fg); } /* (8%, 13%, 18%: rest, hover, pressed, each a step darker) */
+  @media (hover: hover) { .button--soft:hover:not(:disabled, :active) { border-color: transparent; background: color-mix(in oklab, var(--fg) 13%, transparent); color: var(--fg); } }
+  .button--soft:active:not(:disabled) { border-color: transparent; background: color-mix(in oklab, var(--fg) 18%, transparent); color: var(--fg); }
+
+  /* An empty state: a region with nothing to show says why and offers the way on, in its place (knowledge feedback.md,
+     Empty states: a heading at the region's level, one or two sentences, at most one action; first use, no results,
+     cleared and error said apart in the words, not the look). An outlined, centred box, so it reads as the region it
+     stands in for, as Primer's Blankslate and Carbon's empty states centre theirs; --small inside a panel or a card.
+     <section class="empty-state" aria-labelledby="…">
+       <h3 class="empty-state__title" id="…">Rulings land here</h3>
+       <p class="empty-state__text">One or two sentences.</p>
+       <p class="empty-state__action"><a class="button button--soft" href="…">See open findings</a></p>
+     </section> */
+  .empty-state {
+    display: grid; justify-items: center; gap: var(--space-8);
+    padding: var(--space-48) var(--space-24);
+    border: var(--stroke-1) dashed var(--line-strong); border-radius: var(--radius-12);
+    text-align: center;
+  }
+  .empty-state[hidden] { display: none; }
+  .empty-state__title { margin: 0; font-size: var(--text-lg); }
+  .empty-state__text { margin: 0; max-inline-size: 48ch; color: var(--fg-muted); }
+  .empty-state__action { margin: var(--space-8) 0 0; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-8); }
+  .empty-state--small { padding: var(--space-24) var(--space-16); gap: var(--space-4); }
+  .empty-state--small .empty-state__title { font-size: var(--text-md); }
 
   /* A strip of figures, as Plausible and GitHub Pulse draw theirs: one framed
      row, each figure a label, its value, and a note that gives it context in
@@ -654,6 +699,10 @@
      a pressed segment and a default value are marked; each gets an outline the palette keeps. */
   @media (forced-colors: active) {
     [aria-current="page"], .topnav [aria-current], [aria-pressed="true"], .pill--default { outline: var(--stroke-2) solid Highlight; outline-offset: -2px; }
+    /* a ticked box is its fill and a tick in the fill's contrast, both dropped: kept in the palette's own pair, so
+       ticked never reads as unticked */
+    .checkbox:checked { forced-color-adjust: none; background: Highlight; border-color: Highlight; }
+    .checkbox:checked::after { background: HighlightText; }
   }
 }
 

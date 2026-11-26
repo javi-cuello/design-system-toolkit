@@ -17,6 +17,7 @@ import PropsTable from '../../components/PropsTable.astro';
 import States from '../../components/States.astro';
 import Parity from '../../components/Parity.astro';
 import ChangeLog from '../../components/ChangeLog.astro';
+import EmptyState from '../../components/EmptyState.astro';
 import UpdatedBy from '../../components/UpdatedBy.astro';
 import Time from '../../components/Time.astro';
 import { componentPages, hasStorybook, parity, figmaBehind } from '../../lib/snapshot.js';
@@ -221,7 +222,7 @@ const docTitle = `${part ? `${title} · ${page.title}` : title} component${page.
       {lead.noContract && (
         <section class="section" id="properties" aria-labelledby="properties-h">
           <h2 id="properties-h">Properties</h2>
-          <p class="empty-state">No contract is stored for this component, so its properties cannot be listed. Take a snapshot.</p>
+          <EmptyState title="Properties land here" small id="properties-empty">No contract is stored for this component, so its properties cannot be listed. Take a snapshot to store one.</EmptyState>
         </section>
       )}
       <States props={lead.props} states={lead.states} id="states" />
@@ -248,7 +249,7 @@ const docTitle = `${part ? `${title} · ${page.title}` : title} component${page.
         <Parity result={lead.parity} />
       </section>
     )}
-    {devEmpty && <><h2 class="visually-hidden">Development</h2><p class="empty-state">Nothing for development yet: no implementation notes from the validator, and no difference from the code measured.</p></>}
+    {devEmpty && <><h2 class="visually-hidden">Development</h2><EmptyState title="Notes for development land here" id="development-empty">Nothing yet: no implementation notes from the validator, and no difference from the code measured.</EmptyState></>}
   </div>}
 
   <div class="tabpanel" id="change-log" role="tabpanel" aria-labelledby="tab-change-log">

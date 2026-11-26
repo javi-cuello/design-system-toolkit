@@ -6,9 +6,9 @@ import { DASH, ctx } from './context.js';
 import { api, askClaude, bridge, claudeReady } from './api.js';
 import { pullRecord, store } from './record.js';
 import { contextRules, loadContext, ownerChipLabel as ownerLabel } from './owners.js';
-import { LANDS, ownerKey, isOpen, componentOf, slugOf } from './labels.js';
+import { LANDS, ownerKey, componentOf, slugOf } from './labels.js';
 import { OWNER, OWNER_LABEL } from './labels.js';
-import { renderQueuePane } from './measures.js';
+import { fileOpen, renderQueuePane } from './measures.js';
 import { askInput, openAsk } from './ask.js';
 import { go, setFilterHash } from './views.js';
 import { gatherTimeout, stageById } from '../../../figma-audit/stages.mjs';
@@ -36,12 +36,6 @@ const FILE_WIDE = /^(Whole library|Page list|Layout collection)/i;
 // set there really is one it never reached.
 const WHOLE_FILE_CHECK = new Set(["figma-foundations-audit", "figma-variable-audit", "component-validator"]);
 
-// A note on a row is a note on a row. Until this existed there was no path
-// from "the maintainer ruled on it" to "the audit stops raising it": the note
-// sat on one row, the judgement layer never saw it, and every sibling finding
-// came back on the next run — which is exactly what happened to the icon
-// order ruling. A ruling goes into the context document's rulings log, which the judgement pass
-// reads, so it applies to the whole library rather than to one row.
 // The batch bucket 1 was always specified to have. Sequential, not parallel:
 // each fix writes to Figma and then re-scans its own component, and two of
 // those racing would have them verifying each other's file state.
@@ -58,12 +52,14 @@ const siblingsOf = (id) => {
   });
 };
 let doingAll = false;
-async function doAllLike(id) {
+async function doAllLike(id, shown) {
   if (doingAll) return;
   const ids = siblingsOf(id);
+  // the count the dialog showed is the one approved: rows that changed while it was open are asked about again
+  if (shown !== undefined && ids.length !== shown) { paintDoAll(); return rowMessage(id, "The rows like this one changed while the dialog was open, so nothing ran. Check the count and press Fix all again."); }
   if (!ids.length) return;
-  // Each fix writes to Figma, so the count is confirmed before the first one.
-  if (!window.confirm("Fix all " + ids.length + " rows this check raised? Each one changes the Figma file, using this row's note where a row has none of its own. Each fix's code is shown to you before it runs, and cancelling one stops the rest.")) return;
+  if (closedHere(id, "Fix all")) return;
+  // Confirmed in the note dialog, which names the count, before the first one (each fix writes to Figma).
   // The pressed row's note is the instruction. It travels to siblings that
   // have none of their own; a sibling with its own note keeps it.
   const shared = ((state[id] || {}).note || "").trim();
@@ -73,36 +69,83 @@ async function doAllLike(id) {
   let ok = 0, failed = 0, stopped = 0;
   for (let i = 0; i < ids.length; i++) {
     if (btn) btn.textContent = "Fixing " + (i + 1) + " of " + ids.length + "\u2026";
-    const before = (state[ids[i]] || {}).done;
     if (await doRow(ids[i], shared) === "cancelled") { stopped = ids.length - i; break; }
-    if ((state[ids[i]] || {}).done && !before) ok++; else failed++;
+    // fixed only when its re-check cleared it: doRow ticks a row it applied whatever the re-check said
+    if ((state[ids[i]] || {}).verified === true) ok++; else failed++;
   }
   queueStatus(ok + " fixed" + (failed ? ", " + failed + " left for you \u2014 see their notes" : "") + (stopped ? ", " + stopped + " not run: you cancelled" : "") + ".",
               failed || stopped ? "warn" : "ok");
-  toast(ok + " of " + ids.length + " fixed", failed ? "warn" : "ok",
-        { detail: failed
-            ? failed + " did not land. Each one says why on its own row."
-            : "All re-scanned afterwards. They have moved to the closed list.",
-          linkText: failed ? "See the rows left \u2192" : "See the closed rows \u2192", onLink: () => showBucket("b1", !failed) });
+  toast(ok + " of " + ids.length + " fixed", failed || stopped ? "warn" : "ok",
+        { detail: [failed ? failed + " not confirmed fixed. Each one says why on its own row." : "",
+                   ok ? ok + " re-scanned afterwards and moved to the closed list." : "",
+                   stopped ? stopped + " not run: you cancelled." : ""].filter(Boolean).join(" "),
+          linkText: failed || !ok ? "See the rows left \u2192" : "See the closed rows \u2192", onLink: () => showBucket("b1", !failed && ok > 0) });
   doingAll = false;
   paintDoAll();
 }
+// Whether Claude can answer: the service's word once it has spoken, the last
+// visit's until then (the page's first paint stored it, Dashboard.astro), so
+// the buttons that need it are drawn with the row and do not appear later.
+const askOn = () => (ctx.askKnown ? !!ctx.askSample : DASH.dataset.ask !== "off");
+// The buttons that need Claude, repainted once the service has said (main.js).
+export function paintAskButtons() {
+  paintDoAll();
+  document.querySelectorAll("[data-ask-row]").forEach((b) => { b.hidden = !askOn(); });
+}
+// A closed row is a record and a read-only copy changes nothing: neither offers a fix or a ruling (a ruled row
+// ruled again overwrote its rulingAlready).
+const offers = (id) => DASH.dataset.readonly !== "yes" && (state[id] || {}).verified !== true;
 function paintDoAll() {
   document.querySelectorAll("[data-doall]").forEach((btn) => {
     const n = siblingsOf(btn.dataset.doall).length;
     // One row is not a batch, and without a key nothing can be fixed at all.
-    btn.hidden = n < 2 || !ctx.askSample;
+    btn.hidden = !offers(btn.dataset.doall) || n < 2 || !askOn();
     btn.textContent = "Fix all " + n;
   });
+}
+// Delete ruling on a ruled row's card line: its §6 row goes and the row opens again, as before the ruling (a row
+// ruled before the row kept its ruling's text falls back to its note, which the ruling was made from).
+async function unrecordRuling(id, clearNote) {
+  const r = state[id];
+  if (!r) return false;
+  // a ruling the document already held was not this row's to record, so it is not this row's to take back: the row opens
+  const res = r.rulingAlready ? { ok: true, absent: true } : await api.unrule(r.ruling || r.note || "", r.where || id, r.ruledAt, r.ruledOn);
+  if (!res || !res.ok) { queueStatus("Not taken back — " + ((res && res.error) || "the service did not answer") + ".", "warn"); return false; }
+  const open = { done: false, updatedAt: new Date().toISOString() };
+  for (const k of ["ruledAt", "ruledOn", "ruling", "rulingAlready", "verified", "verifiedAt", "verifyNote"]) open[k] = null;
+  if (clearNote) Object.assign(open, { note: "", noteAnswer: null, noteAnsweredAt: null });
+  try { await writeRow(id, open); }
+  catch (e) { loadContext(); queueStatus("The row did not reopen \u2014 " + e.message + (res.absent ? "." : "; its ruling is already out of the context document."), "warn"); return false; }
+  loadContext();
+  // elsewhere: another component's finding still stands on the ruling's row, so the document keeps it and this row opens
+  if (res.elsewhere) { queueStatus("The row is open again; its ruling stays in the context document, because another component's finding still stands on it.", "ok"); return true; }
+  queueStatus(res.absent ? "That ruling was no longer in the context document; the row is open again." : "Ruling taken back; the row is open again.", "ok");
+  return true;
+}
+// The note deleted, from the card's line: a ruling it was recorded as is taken back with it.
+async function deleteNote(id) {
+  const r = state[id];
+  if (!r) return;
+  // a pending edit's save is folded into this one; on a take-back that failed, it is sent as it stood, note and all
+  clearTimeout(timers[id]);
+  if (r.ruledAt) {
+    // taken back, its note and answer cleared with the row
+    if (!(await unrecordRuling(id, true))) { save(id, staleAnswer.delete(id) ? { noteAnswer: null, noteAnsweredAt: null } : null); return; }
+    staleAnswer.delete(id);
+  } else {
+    // its answer goes with it: an answer to no note reads as one to the next note written
+    staleAnswer.delete(id); state[id].note = ""; await save(id, { noteAnswer: null, noteAnsweredAt: null });
+  }
+  const noteStore = document.getElementById("note-" + id);
+  if (noteStore) noteStore.value = "";
+  paint(id);
 }
 async function recordRuling(id) {
   const r = state[id];
   if (!r) return;
   const text = (r.note || "").trim();
   if (!text) {
-    // The note is closed until asked for: open it where the ruling is written.
-    const wrap = document.getElementById("nwrap-" + id);
-    if (wrap) { wrap.dataset.open = "yes"; paint(id); const n = document.getElementById("note-" + id); if (n) { autosize(n); n.focus(); } }
+    openNote(id, "rule");
     return queueStatus("Write the ruling in the note first \u2014 that is what gets recorded.", "warn");
   }
   try {
@@ -123,16 +166,16 @@ async function recordRuling(id) {
     // — and verification is meaningless for a closure that was a decision
     // rather than a change. The row would be re-checked, found to still
     // reproduce (which is the point of a ruling) and stamped as reproducing.
-    await store.doc("rows/" + id).set(Object.assign({}, r, {
-      done: true, ruledAt: now, updatedAt: now,
+    await writeRow(id, {
+      done: true, ruledAt: now, ruledOn: already ? null : (res.date || null), updatedAt: now, ruling: text, rulingAlready: already,
       verified: true, verifiedAt: now,
       verifyNote: (already ? "Closed by a ruling already in the context document's rulings log, not by a change; " : "Closed by your ruling, not by a change. Recorded in the context document's rulings log, ") + "so the judgement pass suppresses this and its siblings from the next audit on."
-    }));
+    });
     loadContext();
     queueStatus(already ? "That ruling was already in the context document; the row is closed by it." : "Recorded in the context document. The next audit suppresses this across the library.", "ok");
     toast("Ruling recorded", "ok",
           { detail: "This row is closed by your ruling, and the judgement pass suppresses it and its siblings from the next audit on.",
-            linkText: "See the closed rows \u2192", onLink: () => showBucket(r.bucket, true) });
+            linkText: "See the closed rows \u2192", onLink: () => showBucket(r.bucket, "ruled") });
   } catch (e) {
     queueStatus("Could not record the ruling" + (e && e.message ? " \u2014 " + e.message : "") + ".", "warn");
   }
@@ -141,7 +184,6 @@ async function recordRuling(id) {
 // The file URL is per-project and comes from the record, never from this
 // file: a template carrying one project's key quietly audits the wrong
 // library in the next project.
-                       // libraries/<fileKey>.figmaUrl
 // Figma writes a node id as `2204-76` in a URL. `replace` without /g swaps
 // only the first colon, which is enough for a set id and not for anything
 // nested, so this is global.
@@ -157,20 +199,22 @@ const COLUMNS = {
 // ruling to whatever now sits in that position.
 export const state = {}; // id -> {done, note, and whatever a session stamped on it}
 const timers = {};
-async function save(id) {
-  const s = state[id] || { done: false, note: "" };
-  // set() replaces the whole document, so the session-written verification
-  // fields have to be carried through or a tick would erase them.
-  // set() replaces the whole document. Now that the row's DEFINITION lives
-  // here too, a tick that sent only {done, note} would erase the finding
-  // itself — so the whole record is written back, state and definition alike.
-  const body = Object.assign({}, s, { done: !!s.done, note: s.note || "", updatedAt: new Date().toISOString() });
-  delete body.n;   // positional, recomputed on every render
+const staleAnswer = new Set(); // rows whose note was edited after Claude answered it, the answer's clearing not yet sent
+// Every row write sends only the keys it changes; the service merges them into the stored row, so a write built
+// after a long await (the approval dialog, a Claude call) cannot put back what changed meanwhile. null clears a key:
+// one left out keeps its value. `n` is the row's place on screen, never stored.
+function writeRow(id, changes) {
+  const body = Object.assign({}, changes);
+  delete body.n;
+  return store.doc("rows/" + id).set(body);
+}
+async function save(id, also) {
+  const s = state[id] || {};
   try {
-    await store.doc("rows/" + id).set(body);
+    await writeRow(id, Object.assign({ done: !!s.done, note: s.note || "", updatedAt: new Date().toISOString() }, also));
     queueStatus("Saved " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
   } catch (e) {
-    queueStatus("Couldn't save that change — " + (e && e.code ? e.code : "unknown"), "warn");
+    queueStatus("Couldn't save that change \u2014 " + (e && e.message ? e.message : "unknown"), "warn");
   }
 }
 // Grow a textarea to its content. Reset to auto first or it can only ever grow.
@@ -275,8 +319,7 @@ export function rowsIn(bucket) {
     .sort((a, b) => String(state[a].where || a).localeCompare(String(state[b].where || b)));
 }
 // The queue holds every owner's rows. The filter shows one owner's at a time
-// and counts what each has open, so the chips say where the work is; the
-// tiles above stay whole-record.
+// and counts what each has in the tab in view, so the menu says where the rows are.
 
 export function paintOwnerFilter() {
   const host = document.getElementById("ownerFilter");
@@ -286,7 +329,7 @@ export function paintOwnerFilter() {
   const open = {}, labelOf = {};
   // Counted within the component chosen in the menu before it.
   const ids = componentIds();
-  for (const [id, r] of Object.entries(state)) if (isOpen(r) && (!ids || ids.has(id))) {
+  for (const [id, r] of Object.entries(state)) if (r && inTab(r) && inSev(r) && (!ids || ids.has(id))) {
     const k = ownerKey(r.owner || OWNER, r.target);
     open[k] = (open[k] || 0) + 1;
     /*
@@ -345,6 +388,7 @@ export function paintOwnerFilter() {
     host.addEventListener("change", () => { ctx.ownerFilter = host.value; paintOwnerFilter(); applyOwnerFilter(); setFilterHash(filterHash()); });
   }
   paintComponentFilter();
+  paintSevFilter();
   for (const row of document.querySelectorAll("#queuePane [data-row]")) {
     const tag = row.querySelector("[data-owner-tag]");
     if (tag) tag.textContent = ownerLabel(row.dataset.owner || OWNER, row.dataset.target);
@@ -397,13 +441,42 @@ const componentSlug = () => { const m = /[?&]component=([^&]+)/.exec(location.ha
 // The file rides along too, so a reload or a shared link opens the same one.
 const filterHash = (component = componentSlug()) => [ownerSlug(), component && "component=" + component, ctx.libKey && "lib=" + ctx.libKey].filter(Boolean).join("&");
 const inArea = (r) => ctx.ownerFilter === "all" || ownerKey(r.owner || OWNER, r.target) === ctx.ownerFilter;
-// The first menu: the components with findings open in this file, by name,
-// each with how many in the area chosen beside it. Its list is the component pages' baked one above.
+// the third menu, by severity (the maintainer, 2026-11-26): a row's severity is its label, so the writer's
+// two spellings of one (warn, warning) are one choice. Not in the address yet, unlike the other two.
+const sevKey = (r) => SEV_LABEL[r.sev] || "Review";
+const inSev = (r) => ctx.sevFilter === "all" || sevKey(r) === ctx.sevFilter;
+// Where a row stands, so the tab it shows under: open, or closed (verified) by a change or by a ruling. The menus
+// count by it, so a Done tab's menu counts the Done rows.
+const standingOf = (r) => r.verified !== true ? "open" : r.ruledAt ? "ruled" : "done";
+const inTab = (r) => standingOf(r) === ctx.statusTab;
+function paintSevFilter() {
+  const host = document.getElementById("sevFilter");
+  const ids = componentIds();
+  const open = Object.entries(state).filter(([id, r]) => r && inTab(r) && inArea(r) && (!ids || ids.has(id))).map(([, r]) => r);
+  // the labels in the order SEV_LABEL gives them, each once, Review (no severity) last
+  const order = [...new Set(Object.values(SEV_LABEL))].concat("Review");
+  const seen = [...new Set(Object.values(state).filter(Boolean).map(sevKey))].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  host.textContent = "";
+  host.disabled = !open.length && ctx.sevFilter === "all";   // a choice in force stays changeable
+  for (const [key, label] of [["all", "All severities"], ...seen.map((k) => [k, k])]) {
+    const n = key === "all" ? open.length : open.filter((r) => sevKey(r) === key).length;
+    const o = document.createElement("option");
+    o.value = key; o.textContent = label + " (" + n + ")"; o.selected = key === ctx.sevFilter;
+    o.disabled = key !== "all" && !n && key !== ctx.sevFilter;
+    host.appendChild(o);
+  }
+  if (!host.dataset.wired) {
+    host.dataset.wired = "yes";
+    host.addEventListener("change", () => { ctx.sevFilter = host.value; paintOwnerFilter(); applyOwnerFilter(); });
+  }
+}
+// The first menu: the components with findings in this file, by name,
+// each with how many in the tab and area chosen beside it. Its list is the component pages' baked one above.
 function paintComponentFilter() {
   const host = document.getElementById("componentFilter");
   const pages = Object.entries(window.DASH_PAGES || {})
     .filter(([, p]) => p.lib === ctx.libKey)
-    .map(([slug, p]) => [slug, p.title, p.ids.filter((id) => state[id] && isOpen(state[id]) && inArea(state[id])).length])
+    .map(([slug, p]) => [slug, p.title, p.ids.filter((id) => state[id] && inTab(state[id]) && inArea(state[id]) && inSev(state[id])).length])
     .sort((a, b) => a[1].localeCompare(b[1]));
   // A file with no components (tokens, icons) has nothing this menu could
   // ever offer, so it is not shown; one whose components are all clear here
@@ -412,7 +485,7 @@ function paintComponentFilter() {
   host.disabled = !pages.some(([, , n]) => n);
   host.textContent = "";
   const current = componentSlug();
-  for (const [slug, title, n] of [["", "All components", Object.values(state).filter((r) => r && isOpen(r) && inArea(r)).length], ...pages]) {
+  for (const [slug, title, n] of [["", "All components", Object.values(state).filter((r) => r && inTab(r) && inArea(r) && inSev(r)).length], ...pages]) {
     const o = document.createElement("option");
     o.value = slug; o.textContent = title + " (" + n + ")"; o.selected = slug === current;
     o.disabled = Boolean(slug) && !n && slug !== current;
@@ -426,10 +499,10 @@ function paintComponentFilter() {
 // The one test of whether a row is in view, for the rows, the tiles above
 // them and the empty note: the owner chip pressed and the component linked.
 const componentIds = () => { const only = componentFromHash(); return only && only.lib === ctx.libKey ? new Set(only.ids) : null; };
-export const narrowedView = () => ctx.ownerFilter !== "all" || componentIds() !== null;
+export const narrowedView = () => ctx.ownerFilter !== "all" || ctx.sevFilter !== "all" || componentIds() !== null;
 export const shownRows = () => {
   const ids = componentIds();
-  return Object.entries(state).filter(([id, r]) => r && (ctx.ownerFilter === "all" || ownerKey(r.owner || OWNER, r.target) === ctx.ownerFilter) && (!ids || ids.has(id))).map(([, r]) => r);
+  return Object.entries(state).filter(([id, r]) => r && (ctx.ownerFilter === "all" || ownerKey(r.owner || OWNER, r.target) === ctx.ownerFilter) && inSev(r) && (!ids || ids.has(id))).map(([, r]) => r);
 };
 // A filter on where the fix lands existed here and was removed: `code`
 // findings leave the queue for the components' Implementation tables, so its
@@ -440,43 +513,66 @@ function applyOwnerFilter() {
   const pane = document.getElementById("queuePane");
   const only = componentFromHash();
   const ids = only && only.lib === ctx.libKey ? new Set(only.ids) : null;
-  for (const row of pane.querySelectorAll("[data-row]"))
-    row.hidden = (ctx.ownerFilter !== "all" && (row.dataset.ownerKey || row.dataset.owner) !== ctx.ownerFilter)
+  const counts = { open: 0, done: 0, ruled: 0 };
+  for (const row of pane.querySelectorAll("[data-row]")) {
+    const filtered = (ctx.ownerFilter !== "all" && (row.dataset.ownerKey || row.dataset.owner) !== ctx.ownerFilter)
+      || (ctx.sevFilter !== "all" && row.dataset.sev !== ctx.sevFilter)
       || (ids !== null && !ids.has(row.id.slice(4)));
+    const where = standingOf(state[row.id.slice(4)] || {});
+    if (!filtered) counts[where]++;
+    row.hidden = filtered || where !== ctx.statusTab;
+  }
+  for (const k of Object.keys(counts)) document.getElementById("statusCount-" + k).textContent = counts[k];
   // A bucket with nothing to show for these filters steps aside rather than
-  // saying "All clear" about rows it is merely not showing, and its closed
-  // count counts what the filters show, like the tiles above it.
-  const narrowed = ctx.ownerFilter !== "all" || ids !== null;
-  let openShown = 0;
+  // saying "All clear" about rows it is merely not showing.
+  const narrowed = ctx.ownerFilter !== "all" || ctx.sevFilter !== "all" || ids !== null;
   for (const bucket of ["b1", "b2", "b3"]) {
     const sec = document.getElementById(bucket).closest("section");
     const open = document.querySelectorAll("#" + bucket + " > [data-row]:not([hidden])").length;
     const closed = document.querySelectorAll("#clearedRows-" + bucket + " > [data-row]:not([hidden])").length;
-    openShown += open;
-    // a plain disclosure line, not a second bucket number beside the bucket's own
-    document.getElementById("clearedCount-" + bucket).textContent = closed === 1 ? "1 closed row" : closed + " closed rows";
+    // the closed rows: the Done and Rulings tabs' list
     document.getElementById("cleared-" + bucket).hidden = closed === 0;
-    sec.hidden = narrowed && !open && !closed;
+    const msg = sec.querySelector("[data-bucket-empty]");
+    if (msg) msg.hidden = ctx.statusTab !== "open";
+    sec.hidden = (narrowed || ctx.statusTab !== "open") && !open && !closed;
   }
-  // The figures follow the filters, so "Open 11" means open for what is being
-  // looked at.
-  renderQueuePane(ctx.lastMetrics, ctx.lastRuns);
+  // the figures are the project's, every file's rows; redrawn here as a file's rows change
+  renderQueuePane();
   // One line says what the filters are doing, with the way back: the
   // component a link narrowed to, or that nothing open matches them.
   const note = document.getElementById("filterNote");
-  const named = [only && ids ? only.title : null, ctx.ownerFilter !== "all" ? ownerLabel(...String(ctx.ownerFilter).split("|")) : null].filter(Boolean);
+  const named = [only && ids ? only.title : null, ctx.ownerFilter !== "all" ? ownerLabel(...String(ctx.ownerFilter).split("|")) : null, ctx.sevFilter !== "all" ? ctx.sevFilter : null].filter(Boolean);
   // A link naming a component this file has no findings page for (renamed,
   // removed, a typo, another file's) shows everything — and says so, rather
   // than looking like a link that worked.
   const slug = componentSlug();
   const fellBack = Boolean(slug) && ids === null;
-  const text = narrowed && !openShown
-    ? "No open findings match " + named.join(" and ") + "."
-    : ids ? "Showing the findings on " + only.title + "." : "";
+  // what the tab in view shows: its own words when nothing matches, or when it has nothing at all
+  const shownHere = counts[ctx.statusTab];
+  // A tab with nothing to show: no results for the filters, or nothing there yet (KB feedback.md, Empty states). The
+  // Open tab's own empty buckets say All clear, so it takes only the no-results kind.
+  const kind = { open: "open findings", done: "rows closed by a change", ruled: "rulings" }[ctx.statusTab];
+  const empty = !shownHere && (narrowed || ctx.statusTab !== "open")
+    ? narrowed
+      ? { title: "No " + kind + " match these filters", text: "Nothing here for " + named.join(" and ") + ".", action: "Show all", go: () => document.getElementById("filterShowAll").click() }
+      : ctx.statusTab === "done"
+        ? { title: "Fixed rows land here", text: "Tick a row once its fix is in the file; Verify checks it and moves it here.", action: "See open findings", go: () => selectStatus("open") }
+        : { title: "Rulings land here", text: "Press Save as ruling on a finding and write the ruling: the audit stops raising it across the library.", action: "See open findings", go: () => selectStatus("open") }
+    : null;
+  const box = document.getElementById("tabEmpty");
+  box.hidden = !empty;
+  if (empty) {
+    document.getElementById("tabEmptyTitle").textContent = empty.title;
+    document.getElementById("tabEmptyText").textContent = empty.text;
+    const act = document.getElementById("tabEmptyAction");
+    act.textContent = empty.action; act.onclick = empty.go;
+  }
+  const text = ids && shownHere ? "Showing the findings on " + only.title + "." : "";
   document.getElementById("filterNoteText").textContent = fellBack
     ? "No component \u201c" + (() => { try { return decodeURIComponent(slug); } catch (e) { return slug; } })() + "\u201d has findings in this file, so this shows all components." + (text ? " " + text : "")
     : text;
-  note.hidden = !fellBack && (!narrowed || (openShown > 0 && !ids));
+  note.hidden = !fellBack && !text;
+  document.getElementById("filterShowAll").hidden = !narrowed && !fellBack;
   // A file with nothing recorded at all is one empty state, not a toolbar,
   // three tiles and three empty sections.
   const nothing = !Object.keys(state).length && !(ctx.lastRuns || []).length;
@@ -485,10 +581,33 @@ function applyOwnerFilter() {
   if (nothing) document.getElementById("emptyFileWhy").textContent = DASH.dataset.scanned === "no"
     ? "This file is checked from its snapshot, not by an audit run. Its findings appear here once a snapshot of it is stored."
     : "Findings appear here after the first audit of this file. Open it in Figma with the Desktop Bridge plugin running, then press Audit.";
+  // the sections shown changed (a tab, a filter, a file): On this page lists what shows (Base.astro redraws only when
+  // the headings differ)
+  dispatchEvent(new Event("contentchange"));
 }
 // "Show all": both menus back to all, the file kept.
+// The status tabs: a click or an arrow key moves the selection (a tablist's keys, roving tabindex)
+let selectStatus = () => {};
+{
+  const tabs = [...document.querySelectorAll(".status-tabs [role=tab]")];
+  selectStatus = (k) => pick(tabs.find((t) => t.dataset.status === k));
+  const pick = (t) => {
+    ctx.statusTab = t.dataset.status;
+    for (const x of tabs) { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; }
+    document.getElementById("queuePane").setAttribute("aria-labelledby", t.id);
+    paintOwnerFilter();   // the menus count the tab's rows
+    applyOwnerFilter();
+  };
+  for (const t of tabs) {
+    t.addEventListener("click", () => pick(t));
+    t.addEventListener("keydown", (e) => {
+      const i = tabs.indexOf(t), to = e.key === "ArrowRight" ? tabs[(i + 1) % tabs.length] : e.key === "ArrowLeft" ? tabs[(i + tabs.length - 1) % tabs.length] : null;
+      if (to) { e.preventDefault(); to.focus(); pick(to); }
+    });
+  }
+}
 document.getElementById("filterShowAll").addEventListener("click", () => {
-  ctx.ownerFilter = "all";
+  ctx.ownerFilter = "all"; ctx.sevFilter = "all";
   setFilterHash(filterHash(""));
   paintOwnerFilter(); applyOwnerFilter();
   document.getElementById("componentFilter").focus();
@@ -507,12 +626,14 @@ export function build() {
       // Re-render when the FINDING changes, not only when the row is new. A
       // run that corrects a finding's wording used to leave the old text on
       // screen until a reload, because innerHTML was written once.
-      const sig = JSON.stringify([r.sev, r.where, r.node, r.visible, r.fix, r.rec, bucket, r.owner]);
+      const sig = JSON.stringify([r.sev, r.where, r.node, r.visible, r.fix, r.rec, bucket, r.owner, r.failedWhy, r.check, r.contrast, r.target, r.lands]);
       let old = null, focusKey = null;
       if (row && row.dataset.sig !== sig) {
         old = row; row = null;
         const a = document.activeElement;
-        if (old.contains(a)) focusKey = a.id ? "#" + cssEsc(a.id) : "[" + [...a.attributes].find((x) => x.name.startsWith("data-")).name + "]";
+        // a control with neither an id nor a data- attribute has nothing to find it by: focus is not restored
+        const data = old.contains(a) && !a.id && [...a.attributes].find((x) => x.name.startsWith("data-"))?.name;
+        if (old.contains(a)) focusKey = a.id ? "#" + cssEsc(a.id) : data ? "[" + data + "]" : null;
         // A row that changed bucket is rebuilt in its new one.
         if (old.parentElement !== host && old.parentElement !== document.getElementById("clearedRows-" + bucket)) { old.remove(); old = null; }
       }
@@ -524,6 +645,7 @@ export function build() {
         row.dataset.sig = sig;
         row.dataset.owner = r.owner || OWNER;
         row.dataset.ownerKey = ownerKey(r.owner || OWNER, r.target);
+        row.dataset.sev = sevKey(r);
         if (r.target) row.dataset.target = r.target;
         if (r.lands) row.dataset.lands = r.lands;
         row.id = "row-" + id;
@@ -537,14 +659,14 @@ export function build() {
         const row_ = 'rid-' + esc(id) + ' where-' + esc(id);
         const about = (self) => 'id="' + self + '" aria-labelledby="' + self + ' ' + row_ + '"';
         row.innerHTML =
-          '<input class="tick" type="checkbox" id="tick-' + esc(id) + '" aria-labelledby="markDoneLabel ' + row_ + '">' +
+          '<input class="checkbox tick" type="checkbox" id="tick-' + esc(id) + '" aria-labelledby="markDoneLabel ' + row_ + '">' +
           '<div class="row-body">' +
             '<div class="row-top">' +
               '<span class="rid" id="rid-' + esc(id) + '"></span>' +
-              '<span class="sev ' + esc(r.sev || "rule") + '">' + esc(SEV_LABEL[r.sev] || "Review") + '</span>' +
               (r.visible ? '<span class="visible-flag">User-visible</span>' : '') +
               (LANDS[r.lands] ? '<span class="lands-tag" data-lands="' + esc(r.lands) + '" title="' + esc(LANDS[r.lands].why) + '">' + esc(LANDS[r.lands].label) + '</span>' : '') +
               '<a class="where" id="where-' + esc(id) + '" target="_blank" rel="noopener">' + esc(r.where || id) + '<span class="visually-hidden"> (opens in new tab)</span></a>' +
+              '<span class="sev ' + esc(r.sev || "rule") + '">' + esc(SEV_LABEL[r.sev] || "Review") + '</span>' +
             '</div>' +
             '<ul class="verify-note" id="vnote-' + esc(id) + '"></ul>' +
             '<div class="pair">' +
@@ -553,20 +675,21 @@ export function build() {
                 : cell(COLUMNS[bucket][0], problem(r)) + (advice(r.rec).length ? cell(COLUMNS[bucket][1], advice(r.rec)) : '')) +
               (r.failedWhy ? '<p class="row-failed">Last attempt failed \u2014 ' + esc(said(r.failedWhy, r.target)) + '</p>' : '') +
             '</div>' +
-            // The buttons that come and go (Fix all, Verify, Ask) and the
-            // row's stamp come after the ones always there, so ticking a row
-            // never moves those. The note opens on demand, under them, and
-            // stays open once it holds text. Every action is a ghost button:
-            // repeated on each row, a bordered one spends the attention budget
-            // row after row, and an accent link spends the accent (knowledge:
-            // visual, Emphasis and the attention budget; Quiet chrome).
+            // Fix all sits beside Fix this, the two fixes together (the
+            // maintainer's call, 2026-11-26); Ask, which comes and goes with
+            // Claude, and the row's stamp come after them, so neither moves the
+            // fixes. The note is written in its dialog. Every action is a soft button, all
+            // alike (the maintainer's call, 2026-11-26): a bordered one on every
+            // row spends the attention budget row after row, and an accent link
+            // spends the accent (knowledge: visual, Emphasis and the attention
+            // budget; Quiet chrome).
+            '<div class="note-line" id="nline-' + esc(id) + '" hidden><p class="note-line-text" id="nlinet-' + esc(id) + '"></p>' +
+                '<button class="button button--ghost note-delete" type="button" data-note-delete ' + about("ndel-" + esc(id)) + '>Delete</button></div>' +
             '<div class="row-actions">' +
-                (bucket === "b1" ? '<button class="button button--ghost do-row" type="button" data-do="' + esc(id) + '" ' + about("do-" + esc(id)) + '>Fix this</button>' : '') +
-                '<button class="button button--ghost rule-row" type="button" data-rule="' + esc(id) + '" ' + about("rule-" + esc(id)) + '>Record as ruling</button>' +
-                '<button class="button button--ghost note-toggle" type="button" data-note-toggle aria-expanded="false" aria-controls="nwrap-' + esc(id) + '" ' + about("ntoggle-" + esc(id)) + '>Add a note</button>' +
-                (bucket === "b1" ? '<button class="button button--ghost do-all" type="button" data-doall="' + esc(id) + '" ' + about("doall-" + esc(id)) + ' hidden></button>' : '') +
-                '<button class="button button--ghost verify-row" type="button" data-verify="' + esc(id) + '" ' + about("verify-" + esc(id)) + ' hidden>Verify</button>' +
-                '<button class="button button--ghost ask-row" type="button" data-ask-row="' + esc(n) + '" ' + about("askrow-" + esc(id)) + ' hidden>Ask about this row</button>' +
+                (bucket === "b1" ? '<button class="button button--soft do-row" type="button" data-do="' + esc(id) + '" ' + about("do-" + esc(id)) + '>Fix this</button>' : '') +
+                (bucket === "b1" ? '<button class="button button--soft do-all" type="button" data-doall="' + esc(id) + '" ' + about("doall-" + esc(id)) + ' hidden></button>' : '') +
+                '<button class="button button--soft note-toggle" type="button" data-note-toggle aria-haspopup="dialog" ' + about("ntoggle-" + esc(id)) + '>Save as ruling</button>' +
+                '<button class="button button--soft ask-row" type="button" data-ask-row="' + esc(n) + '" ' + about("askrow-" + esc(id)) + ' hidden>Ask about this row</button>' +
                 '<span class="stamp" data-state="pending" id="stamp-' + esc(id) + '" hidden></span>' +
             '</div>' +
             '<div class="note-wrap" id="nwrap-' + esc(id) + '" hidden>' +
@@ -577,45 +700,26 @@ export function build() {
 
         const tick = row.querySelector('input[type="checkbox"]');
         const note = row.querySelector("textarea");
+        // a closed row's tick takes no click (paint), so a tick only ever changes an open row's claim
         tick.addEventListener("change", () => {
           state[id].done = tick.checked;
-          /*
-           * Unticking puts a row BACK IN THE QUEUE. Two comments promise this
-           * — rows.mjs calls it the only way to overturn a ruling, labels.js
-           * calls it the only way out of the cleared state — and nothing
-           * implemented it: `save()` writes the whole row back, `verified`
-           * included, so an unticked row stayed in Cleared with an empty box,
-           * counted as closed, and skipped by every predicate.
-           *
-           * Clearing the verdict and its stamp is what "back in the queue"
-           * means. A RULING is not undone this way: a ruling is a decision,
-           * and its row says so in its own note.
-           */
-          if (!tick.checked && state[id].verified === true && !state[id].ruledAt) {
-            state[id].verified = undefined;
-            state[id].verifiedAt = undefined;
-            state[id].verifyNote = undefined;
-          }
           paint(id);
           save(id);
           paintVerify();
         });
         note.addEventListener("input", () => {
+          // Claude's answer was to the note as it stood: an edited note drops it, to be answered again on the next Verify
+          // (held until the debounced save sends it: a later keystroke finds the answer already gone locally)
+          if (state[id].note !== note.value && state[id].noteAnswer) { staleAnswer.add(id); Object.assign(state[id], { noteAnswer: null, noteAnsweredAt: null }); }
           state[id].note = note.value;
           note.dataset.filled = note.value.trim() ? "true" : "false";
           autosize(note);
           clearTimeout(timers[id]);
-          timers[id] = setTimeout(() => save(id), 700);
+          timers[id] = setTimeout(() => save(id, staleAnswer.delete(id) ? { noteAnswer: null, noteAnsweredAt: null } : null), 700);
         });
-        note.addEventListener("blur", () => paintAll());
         const noteBtn = row.querySelector("[data-note-toggle]");
-        noteBtn.addEventListener("click", () => {
-          const wrap = document.getElementById("nwrap-" + id);
-          // A note holding text stays open; its button only takes you there.
-          if (!(state[id].note || "").trim()) wrap.dataset.open = wrap.hidden ? "yes" : "";
-          paint(id);
-          if (!wrap.hidden) { autosize(note); note.focus(); }
-        });
+        noteBtn.addEventListener("click", () => openNote(id, "rule"));
+        row.querySelector("[data-note-delete]").addEventListener("click", () => deleteNote(id));
         const askBtn = row.querySelector("[data-ask-row]");
         if (askBtn) askBtn.addEventListener("click", () => {
           // Open the drawer first. The composer lives inside `.ask-inner`,
@@ -626,35 +730,20 @@ export function build() {
           askInput.value = "About row " + askBtn.dataset.askRow + ": ";
           askInput.setSelectionRange(askInput.value.length, askInput.value.length);
         });
-        // Verifying one row, from the row. The toolbar and foot buttons take
-        // every ticked row; near the bottom of a long queue the one you just
-        // ticked is the only one you mean.
-        const vBtn = row.querySelector("[data-verify]");
-        if (vBtn) vBtn.addEventListener("click", async () => {
-          vBtn.disabled = true; vBtn.textContent = "Verifying\u2026";
-          await verifyTicked([id]);
-          vBtn.disabled = false; vBtn.textContent = "Verify";
-          paintVerify();
-        });
-        const ruleBtn = row.querySelector("[data-rule]");
-        if (ruleBtn) ruleBtn.addEventListener("click", async () => {
-          ruleBtn.disabled = true;
-          await recordRuling(id);
-          ruleBtn.disabled = false;
-        });
         const allBtn = row.querySelector("[data-doall]");
-        if (allBtn) allBtn.addEventListener("click", () => doAllLike(id));
+        // a fix asks first for anything Claude should know, in the note dialog (the maintainer, 2026-11-26)
+        if (allBtn) allBtn.addEventListener("click", async () => {
+          if (doingAll || closedHere(id, "Fix all")) return;
+          if (!(await claudeReady())) return queueStatus("No API key — this needs Claude.", "warn");
+          openNote(id, "fixall");
+        });
         const doBtn = row.querySelector("[data-do]");
         if (doBtn) doBtn.addEventListener("click", async () => {
-          doBtn.disabled = true; doBtn.textContent = "Working…";
-          await doRow(id);
-          doBtn.disabled = false; doBtn.textContent = "Fix this";
-          paintDoAll();
+          if (closedHere(id, "Fix this")) return;
+          if (!(await claudeReady())) return queueStatus("No API key — this needs Claude.", "warn");
+          openNote(id, "fix");
         });
-        // A rebuilt row keeps an opened note open, and is painted before
-        // focus returns: a hidden note cannot take focus.
-        const oldWrap = old && old.querySelector(".note-wrap");
-        if (oldWrap && oldWrap.dataset.open) document.getElementById("nwrap-" + id).dataset.open = oldWrap.dataset.open;
+        // painted before focus returns: a button paint hides cannot take focus
         if (focusKey) paint(id);
         const back = focusKey && row.querySelector(focusKey);
         if (back) back.focus({ preventScroll: true });
@@ -662,7 +751,7 @@ export function build() {
       const rid = document.getElementById("rid-" + id);
       if (rid) rid.textContent = n;
       const ab = row.querySelector("[data-ask-row]");
-      if (ab) ab.hidden = !ctx.askSample;
+      if (ab) ab.hidden = !askOn();
     });
   }
   paintAll();
@@ -717,38 +806,40 @@ function paint(id) {
     stamp.hidden = false;
     stamp.dataset.state = "failed";
     stamp.textContent = "Verified: still open";
-  } else if (s.done) {
-    stamp.hidden = false;
-    stamp.dataset.state = "pending";
-    stamp.textContent = "Done, not verified";
   } else {
+    // a ticked row says nothing more; its tick and the green card say done, and the toolbar's Verify takes it
+    // (the maintainer, 2026-11-26: the row's Verify and its "Done, not verified" tag removed)
     stamp.hidden = true;
   }
-  // Offered only where pressing it would do something: a row that is ticked,
-  // not closed by a ruling, and not already stamped since its last edit.
-  // Shown on any ticked row that no ruling closed — including one already
-  // stamped "not clear yet", which is precisely the row a maintainer has just
-  // gone and fixed. The toolbar's count stays narrower on purpose: it is a
-  // batch, and re-running every failed row on every press is not what that
-  // button offers.
-  const vBtn = row.querySelector("[data-verify]");
-  if (vBtn) vBtn.hidden = !(s.done && !s.ruledAt);
   const tick = document.getElementById("tick-" + id);
   if (tick.checked !== !!s.done) tick.checked = !!s.done;
   // A read-only copy keeps the controls, unusable by the browser's own means.
   const readOnly = DASH.dataset.readonly === "yes";
-  tick.disabled = readOnly;
+  // a closed row (verified, or ruled) is a record: its tick shows it is done and takes no click; the next audit
+  // reopens it if the finding is back, and Delete ruling takes a ruling back (the maintainer, 2026-11-26)
+  const closed = s.verified === true; // what place() files under the closed rows
+  tick.disabled = readOnly || closed;
+  tick.title = closed && !readOnly ? (s.ruledAt ? "Closed by a ruling" : "Closed: verified fixed") : "";
   const note = document.getElementById("note-" + id);
   note.readOnly = readOnly;
-  // The note shows once it holds text or was opened; a read-only copy offers no empty one.
+  // the note is written in the note dialog; the card shows it as a line, its textarea kept (hidden) as the
+  // row's store, which the saves and the actions read
   const wrap = document.getElementById("nwrap-" + id);
-  const filled = !!(s.note || "").trim() || (document.activeElement === note && !!note.value.trim());
-  wrap.hidden = !(filled || (wrap.dataset.open === "yes" && !readOnly));
-  const noteBtn = row.querySelector("[data-note-toggle]");
-  // Never hidden while usable: hiding it as the note blurs would drop focus.
-  noteBtn.hidden = readOnly;
-  noteBtn.setAttribute("aria-expanded", String(!wrap.hidden));
-  noteBtn.firstChild.textContent = wrap.hidden ? "Add a note" : filled ? "Edit the note" : "Hide the note";
+  wrap.hidden = true;
+  // a ruled row shows its line whenever it has a ruling: the line holds Delete ruling, the closed card's only control
+  const filled = !!(s.note || (s.ruledAt && s.ruling) || "").trim();
+  const line = document.getElementById("nline-" + id);
+  // the note on the card, said as a ruling when it was recorded as one (the maintainer, 2026-11-26)
+  if (line) { line.hidden = !filled; document.getElementById("nlinet-" + id).textContent = filled ? (s.ruledAt ? "Ruling: " + (s.ruling || s.note || "").trim() : s.note.trim()) : ""; }
+  const del = row.querySelector("[data-note-delete]");
+  if (del) { del.textContent = s.ruledAt ? "Delete ruling" : "Delete"; del.hidden = readOnly; }
+  // a ruled row is closed: its card has no footer, and Delete ruling on its line takes the ruling back
+  const shut = !offers(id);
+  row.querySelector("[data-note-toggle]").hidden = shut;
+  const doBtn = row.querySelector("[data-do]");
+  if (doBtn) doBtn.hidden = shut;
+  const allBtn = row.querySelector("[data-doall]");
+  if (allBtn && shut) allBtn.hidden = true;   // shown again only by paintDoAll, which counts the batch
   if (document.activeElement !== note && note.value !== (s.note || "")) {
     note.value = s.note || "";
     autosize(note);                     // a note arriving from the store sizes itself too
@@ -782,11 +873,6 @@ function paintAll() {
       const s = state[r.id] || {};
       if (s.done) done++;
       const row = document.getElementById("row-" + r.id);
-      // A row holding the caret is never moved; it settles on blur instead.
-      if (row.contains(document.activeElement)) {
-        (row.parentElement === clearedHost ? clearedWanted : wanted).push(row);
-        continue;
-      }
       if (s.verified === true) clearedWanted.push(row);
       else wanted.push(row);
     }
@@ -798,16 +884,22 @@ function paintAll() {
     sec.dataset.emptied = empty ? "true" : "false";
     let msg = sec.querySelector("[data-bucket-empty]");
     if (empty && !msg) {
-      msg = document.createElement("p");
-      msg.className = "bucket-empty";
+      // stock-ui's empty state, the small size: a heading under the bucket's and its line
+      msg = document.createElement("div");
+      msg.className = "empty-state empty-state--small";
       msg.dataset.bucketEmpty = "";
+      msg.innerHTML = '<h3 class="empty-state__title"></h3><p class="empty-state__text"></p>';
       host.after(msg);
     } else if (!empty && msg) msg.remove();
     // "All clear" is a claim about a library that was checked. With no run
     // behind it, every bucket said it, and a library nobody has ever audited
     // read as a library with nothing wrong — the most misleading thing this
     // page could say. The runs registry is what separates the two.
-    if (msg) msg.textContent = (ctx.lastRuns || []).length ? "All clear." : "Nothing audited yet.";
+    if (msg) {
+      const ran = (ctx.lastRuns || []).length > 0;
+      msg.querySelector("h3").textContent = ran ? "All clear" : "Nothing audited yet";
+      msg.querySelector("p").textContent = ran ? "Every finding here is fixed or ruled." : "The first audit of this file fills this.";
+    }
   }
   paintOwnerFilter();
   applyOwnerFilter();
@@ -855,8 +947,9 @@ export function toast(title, tone, opts) {
 export const showBucket = (bucket, closed) => {
   go("queue");
   const list = document.getElementById("cleared-" + bucket);
+  // the rows asked for are in their own tab: closed by a ruling, by a change, or still open
+  selectStatus(closed === "ruled" ? "ruled" : closed ? "done" : "open");
   const el = closed && list && !list.hidden ? list : document.getElementById(bucket).closest("section");
-  if (el === list) list.open = true;
   el.scrollIntoView({ behavior: scrollMotion(), block: "start" });
 };
 // After a run or a batch across buckets: the queue's top.
@@ -872,7 +965,8 @@ export function queueStatus(text, tone) {
 }
 // The writer files `error`, `warn` and `pref`, a naming preference (rows.mjs sevOf); `warning`, `rule` and `hygiene` label rows
 // an older writer stored, which stay readable until their next audit rewrites them.
-export const SEV_LABEL = { error: "Error", warn: "Warning", warning: "Warning", pref: "Preference", preference: "Preference", rule: "Needs ruling", hygiene: "Hygiene" };
+// in the order the severity menu lists them
+export const SEV_LABEL = { error: "Error", warn: "Warning", warning: "Warning", rule: "Needs ruling", pref: "Preference", preference: "Preference", hygiene: "Hygiene" };
 // ---- do the work ------------------------------------------------------
 // Bucket 1 means "safe, programmatic, non-breaking — one approval applies the
 // batch". The page has Claude and the plugin, so it can be the thing that
@@ -882,9 +976,30 @@ export const SEV_LABEL = { error: "Error", warn: "Warning", warning: "Warning", 
 //     can be read back and understood rather than guessed at;
 //   * the row is re-scanned afterwards and only stamped if the finding is
 //     actually gone — the fix claims nothing the check does not confirm.
+// A message in a row's footer, under its buttons: an alert, so a screen reader says it when it appears;
+// the next press clears it.
+// The fix runs in the file through the Desktop Bridge: with it closed, a press stops before Claude is asked and
+// says so on the pressed row (Fix all checks once, for the row pressed). Clears the row's last message either way.
+function closedHere(id, button) {
+  document.querySelector('[data-do="' + cssEsc(id) + '"]')?.closest(".row-actions")?.querySelector(".row-msg")?.remove();
+  if (fileOpen(ctx.libKey) !== false) return false;
+  rowMessage(id, (ctx.libName || "This file") + " is not open in Figma. Open it, run the Desktop Bridge plugin in it, then press " + button + " again.");
+  return true;
+}
+function rowMessage(id, text) {
+  const bar = document.querySelector('[data-do="' + cssEsc(id) + '"]')?.closest(".row-actions");
+  if (!bar) return queueStatus(text, "warn");
+  let m = bar.querySelector(".row-msg");
+  if (!m) { m = document.createElement("p"); m.className = "row-msg"; m.setAttribute("role", "alert"); bar.appendChild(m); }
+  m.textContent = text;
+}
 async function doRow(id, sharedNote) {
   const r = state[id];
   if (!r || r.bucket !== "b1") return;
+  // The fix runs in the file through the Desktop Bridge: with the file closed it would be written and then could not run,
+  // so it stops here, before Claude is asked, and says what to do (the maintainer's call, 2026-11-26).
+  // Said in the row's own footer, under the button pressed (the maintainer, 2026-11-26: a toast sat far from the action).
+  if (closedHere(id, "Fix this")) return "closed";
   if (!(await claudeReady())) return queueStatus("No API key — this needs Claude.", "warn");
 
   queueStatus("Working on " + (r.where || id) + "\u2026");
@@ -892,6 +1007,7 @@ async function doRow(id, sharedNote) {
   // status far up in the toolbar, read as a button that did nothing while the
   // plan was being written (2026-11-26).
   const step = (t) => { const b = document.querySelector('[data-do="' + CSS.escape(id) + '"]'); if (b && b.disabled) b.textContent = t; };
+  let ranInFigma = false, recorded = false;   // past each, a failure is not "nothing changed"
   try {
     step("Reading settings\u2026");
     const rules = await contextRules();
@@ -934,10 +1050,11 @@ async function doRow(id, sharedNote) {
     if (!(await approveFix(r, plan))) { queueStatus("Not run: you cancelled it, so nothing changed in Figma."); return "cancelled"; }
 
     // Stored before it runs, so what happened is readable afterwards.
-    await store.doc("rows/" + id).set(Object.assign({}, r, { appliedCode: plan.code, appliedAt: new Date().toISOString() }));
+    await writeRow(id, { appliedCode: plan.code, appliedAt: new Date().toISOString() });
 
     step("Running in Figma\u2026");
     await bridge.exec(plan.code);
+    ranInFigma = true;
 
     /*
      * Verify rather than assume — through the ROW'S OWN check.
@@ -977,17 +1094,20 @@ async function doRow(id, sharedNote) {
     }
 
     const now = new Date().toISOString();
-    const done = Object.assign({}, state[id], {
-      done: true, appliedCode: plan.code, appliedAt: now,
-      verified: stillThere === false ? true : (stillThere === true ? false : undefined),
-      verifiedAt: stillThere === null ? undefined : now,
+    // null, not left out: the write merges, so a verdict a re-check could not reach must clear the last one; and
+    // an attempt that ran is no longer one that failed
+    const done = {
+      done: true, appliedCode: plan.code, appliedAt: now, failedWhy: null, failedAt: null,
+      verified: stillThere === false ? true : (stillThere === true ? false : null),
+      verifiedAt: stillThere === null ? null : now,
       verifyNote: stillThere === false
         ? (plan.summary || "Applied.") + " Re-scanned the component afterwards and the finding is gone."
         : stillThere === true
           ? (plan.summary || "Applied.") + " But the check still reports it — the change did not clear the finding."
           : (plan.summary || "Applied.") + " Not re-checked: " + ownerLabel(r.owner || OWNER, r.target) + "'s own check could not run here, so nothing has confirmed this." + whyNotRun
-    });
-    await store.doc("rows/" + id).set(done);
+    };
+    await writeRow(id, done);
+    recorded = true;
     queueStatus(stillThere === false ? "Done \u2014 " + (plan.summary || "applied") : "Applied, but not verified.",
                 stillThere === false ? null : "warn");
     // Suppressed during a batch: the batch reports once at the end rather
@@ -1007,13 +1127,15 @@ async function doRow(id, sharedNote) {
     // see their notes" against a row with no note tells the maintainer to
     // look somewhere there is nothing to find. The row is where they look.
     const why = (e && e.message) ? e.message : "unknown";
-    queueStatus("Couldn't do it: " + why, "warn");
-    if (!doingAll) toast("Could not fix " + (r.where || id), "error",
-                         { detail: sentence(why) + " Nothing was stamped; the row stays open." });
+    // fixed and stamped, and only what came after (the toast, the re-read) failed: the row's record already says so
+    if (recorded) return queueStatus("Applied and recorded; the page did not refresh \u2014 " + why, "warn");
+    // the fix ran and only its record failed: running it again would apply it twice
+    const said = ranInFigma ? "Applied in Figma but not recorded \u2014 reload before running it again. " + sentence(why) : why;
+    queueStatus(ranInFigma ? said : "Couldn't do it: " + why, "warn");
+    if (!doingAll) toast(ranInFigma ? "Applied to " + (r.where || id) + ", not recorded" : "Could not fix " + (r.where || id), "error",
+                         { detail: ranInFigma ? said : sentence(why) + " Nothing was stamped; the row stays open." });
     try {
-      await store.doc("rows/" + id).set(Object.assign({}, state[id] || r, {
-        failedAt: new Date().toISOString(), failedWhy: why
-      }));
+      await writeRow(id, { failedAt: new Date().toISOString(), failedWhy: said });
     } catch (e2) { /* the failure is already on screen */ }
   }
 }
@@ -1023,6 +1145,57 @@ async function doRow(id, sharedNote) {
  * set as text, never markup: the summary and the code are a model's, written
  * from the file's own names.
  */
+// the note dialog, opened by the action it serves (the maintainer, 2026-11-26): Fix this and Fix all ask for
+// anything Claude should know, then fix; Save as ruling asks for the ruling, then records it. The text is the row's
+// note either way, saved, stamped and read as before.
+async function fixRow(id) {
+  const b = document.querySelector('[data-do="' + CSS.escape(id) + '"]');
+  if (b) { b.disabled = true; b.textContent = "Working\u2026"; }
+  await doRow(id);
+  if (b) { b.disabled = false; b.textContent = "Fix this"; }
+  paintDoAll();
+}
+function openNote(id, mode, blank) {
+  const dlg = document.getElementById("noteDialog");
+  const noteStore = document.getElementById("note-" + id);
+  if (!dlg || !noteStore || dlg.open) return;
+  const r = state[id] || {};
+  const text = document.getElementById("noteDialogText");
+  const where = document.getElementById("where-" + id);
+  const name = ((document.getElementById("rid-" + id) || {}).textContent || "") + " " + (where ? where.firstChild.textContent : "");
+  const n = mode === "fixall" ? siblingsOf(id).length : 0;
+  const words = {
+    fix: { title: "Fix " + name, label: "Note for Claude", hint: "Optional. Claude writes the change and shows it to you before it runs.", go: "Fix", need: false },
+    fixall: { title: "Fix all " + n + " like " + name, label: "Note for Claude", hint: "Optional, used for every row without its own note. Each change is shown to you before it runs; cancelling one stops the rest.", go: "Fix all " + n, need: false },
+    rule: { title: "Save " + name + " as a ruling", label: "The ruling", hint: "The audit stops raising this finding across the library.", go: "Save ruling", need: true },
+  }[mode];
+  document.getElementById("noteDialog-title").textContent = words.title;
+  document.getElementById("noteDialogLabel").textContent = words.label;
+  document.getElementById("noteDialogHint").textContent = words.hint;
+  document.getElementById("noteDialogGo").textContent = words.go;
+  text.placeholder = words.need ? "How this should be" : "Anything Claude should know";
+  text.required = words.need;
+  // reopened after a ruling of spaces: empty, and the hint says why
+  text.value = blank ? "" : r.note || "";
+  if (blank) document.getElementById("noteDialogHint").textContent = "Write the ruling: a ruling of only spaces says nothing. " + words.hint;
+  dlg.returnValue = "";
+  dlg.addEventListener("close", () => {
+    if (dlg.returnValue !== "save") return;
+    // a ruling of spaces is none: the dialog opens again rather than save it
+    if (words.need && !text.value.trim()) return openNote(id, mode, true);
+    if (text.value !== noteStore.value) {
+      noteStore.value = text.value;
+      noteStore.dispatchEvent(new Event("input"));
+      paint(id);
+    }
+    // the action's own write carries the note, so the note's pending save does not race it
+    clearTimeout(timers[id]);
+    const go = mode === "rule" ? () => recordRuling(id) : mode === "fixall" ? () => doAllLike(id, n) : () => fixRow(id);
+    save(id, staleAnswer.delete(id) ? { noteAnswer: null, noteAnsweredAt: null } : null).then(go, go); // the edit's answer clearing, which the cancelled timer held
+  }, { once: true });
+  dlg.showModal();
+  text.focus();
+}
 // One approval at a time: a second Fix this whose code arrives while the dialog is open waits its
 // turn, so one Run can never approve code the maintainer has not seen.
 let approving = Promise.resolve();
@@ -1059,7 +1232,7 @@ function unverified(s) {
   // so re-running the check can only report that it reproduces, which is
   // not news and would overwrite the ruling's own note with a verdict.
   if (s.ruledAt) return false;
-  if (s.verified === undefined) return true;
+  if (s.verified == null) return true;   // null is how a write clears it
   // A REOPENED row carries `verified: false` and no `verifiedAt` — the re-raise
   // clears the stamp on purpose. Without this, the `updatedAt > verifiedAt`
   // test below read a missing stamp as "already checked", so a row the
@@ -1067,7 +1240,11 @@ function unverified(s) {
   // `paintVerify` hides the button entirely at zero, so the board offered
   // nothing while a ticked row waited.
   if (!s.verifiedAt) return true;
-  // Re-ticked after a stamp — the maintainer did more since it was checked.
+  // A row verified closed stays closed: any later save (a note, a merge) moved updatedAt past the stamp and offered a
+  // row in Done for verification again (2026-11-26, "Verify 1 done" with nothing ticked in Open). Reopening it clears
+  // `verified`, so a re-tick is still offered.
+  if (s.verified === true) return false;
+  // Re-ticked after a failed stamp — the maintainer did more since it was checked.
   return !!(s.updatedAt && s.updatedAt > s.verifiedAt);
 }
 function unverifiedRows() {
@@ -1179,7 +1356,7 @@ const textsBySet = (audited) => {
  * So the note is answered too, against the project's own rulings and recorded
  * conventions and nothing else. It is an answer, never a ruling: the reply
  * says what the record does or does not say, and recording it stays the
- * maintainer's own act through "Record as ruling". An invented rule would be
+ * maintainer's own act through the row's "Save as ruling". An invented rule would be
  * worse than no answer, so the prompt is told to say when there is none.
  *
  * AND A NOTE IS NOT ALWAYS A QUESTION. "add to project standards that loading
@@ -1221,8 +1398,8 @@ async function answerNote(r, rules) {
     "The maintainer is making the ruling, not asking whether one exists. Do not weigh it up, do not",
     "argue it against the advice on this row, and never tell them their own decision contradicts",
     "the advice — the advice is what they are overruling, which is theirs to do. Answer in one",
-    "sentence: say that this is a ruling rather than a check, and that pressing \"Record as ruling\"",
-    "writes it into the project's context document, after which the check stops raising it.",
+    "sentence: say that this is a ruling rather than a check, and that \"Save as ruling\" on the row, with the",
+    "ruling written in its dialog, writes it into the project's context document, after which the check stops raising it.",
     "",
     "Any other note is a question about the record.",
     "If the record settles it, quote the ruling that does and say what follows for this row.",
@@ -1233,19 +1410,16 @@ async function answerNote(r, rules) {
   return (out && out.text ? out.text : "").trim();
 }
 
-async function verifyTicked(only) {
+async function verifyTicked() {
   // Never beside an audit: both drive the plugin, and an audit over several
   // files changes the library in view between them.
   if (ctx.running) { queueStatus("Wait for the audit to finish, then re-check.", "warn"); return; }
-  // `only` is one row's id, from its own button. Everything below is the same
-  // path either way — one implementation of "does this still reproduce".
-  // From a row's own button, the maintainer has named the row: re-checking
-  // one that was already checked is exactly what they are asking for, and the
-  // batch's "not since it was stamped" rule would refuse it. A ruled row is
-  // still never re-checked — its check was always going to go on raising it.
-  const ids = only ? only.filter((id) => state[id] && state[id].done && !state[id].ruledAt) : unverifiedRows();
+  // Every ticked row not checked since its last change (a row's own Verify is gone: the maintainer, 2026-11-26).
+  const ids = unverifiedRows();
   if (!ids.length) return queueStatus("No row marked done is waiting to be verified.");
   queueStatus("Verifying " + ids.length + " row" + (ids.length === 1 ? "" : "s") + " marked done\u2026");
+  // what was written, for a run that stops part-way: its words never say nothing was stamped over rows that were
+  let stamped = 0, reproducing = 0;
   try {
     const rulesV = await contextRules();
     // Grouped by the check that owns them, because each is re-run once.
@@ -1255,8 +1429,8 @@ async function verifyTicked(only) {
       (byOwner[o] = byOwner[o] || []).push(id);
     }
     const now = new Date().toISOString();
-    let cleared = 0, reproducing = 0, unchecked = 0, noted = 0, needsAudit = 0, bridgeShut = 0;
-    const unknown = [];
+    let cleared = 0, unchecked = 0, noted = 0, needsAudit = 0, bridgeShut = 0, unsaved = 0;
+    const unknown = [], whyUnsaved = new Set();
     const whyNot = new Set();
     for (const [owner, group] of Object.entries(byOwner)) {
       // A file-wide row names no component to re-read, so the per-component
@@ -1301,21 +1475,25 @@ async function verifyTicked(only) {
         const want = r.check ? [r.check] : (r.fix || []);
         const still = texts.filter((x) => want.some((f) => x && f && (x === f || f.indexOf(x) > -1 || x.indexOf(f) > -1)));
         const ok = still.length === 0;
-        ok ? cleared++ : reproducing++;
         // The check's verdict, then the note's answer where there is one.
         let answered = null;
         if (r.note && r.note.trim() && await claudeReady()) {
           try { answered = await answerNote(r, rulesV); } catch (e) { answered = null; }
-          if (answered) noted++;
         }
-        await store.doc("rows/" + id).set(Object.assign({}, r, {
+        const verdict = {
           verified: ok, verifiedAt: now,
-          noteAnswer: answered || undefined,
-          noteAnsweredAt: answered ? now : undefined,
           verifyNote: (ok
             ? "Re-ran " + ownerLabel(owner) + " on " + t + " and the finding is gone."
             : "Still reproduces on " + t + ": " + still.join("; ") + ".")
-        }));
+        };
+        // left out unless answered: no Claude, or a failed call, is no reason to erase an earlier answer
+        if (answered) Object.assign(verdict, { noteAnswer: answered, noteAnsweredAt: now });
+        // one refused write does not stop the rows after it; each counts only once it is saved
+        try { await writeRow(id, verdict); }
+        catch (e) { unsaved++; whyUnsaved.add(sentence(e && e.message ? e.message : "unknown")); continue; }
+        stamped++;
+        ok ? cleared++ : reproducing++;
+        if (answered) noted++;
       }
     }
     await pullRecord();
@@ -1327,46 +1505,48 @@ async function verifyTicked(only) {
     if (bridgeShut) parts.push(bridgeShut + " need Figma open");
     const stuck = unchecked - needsAudit - bridgeShut;
     if (stuck) parts.push(stuck + " not re-checked" + (unknown.length ? " (" + [...new Set(unknown)].join(", ") + ")" : ""));
-    queueStatus(parts.join(", ") + ".", reproducing || unchecked ? "warn" : null);
+    if (unsaved) parts.push(unsaved + " checked but not saved");
+    queueStatus(parts.join(", ") + ".", reproducing || unchecked || unsaved ? "warn" : null);
     // The headline says what happened, and "0 of 1 verified" does not when
     // nothing could run: it reads as a verdict on the rows rather than as a
     // report that the check never reached them.
-    const nothingRan = !cleared && !reproducing && unchecked === ids.length;
+    const nothingRan = !cleared && !reproducing && !unsaved && unchecked === ids.length;
     toast(
       reproducing ? reproducing + " of " + ids.length + " still reproduce"
       : nothingRan && bridgeShut === ids.length ? "Figma isn\u2019t connected"
       : nothingRan ? "Nothing could be re-checked"
+      : unsaved && !cleared ? unsaved + " of " + ids.length + " not saved"
       : cleared + " of " + ids.length + " verified",
-      reproducing || unchecked ? "warn" : "ok",
+      reproducing || unchecked || unsaved ? "warn" : "ok",
       { detail: (reproducing ? "Each row keeps your tick and now says what is still wrong. " : "")
           + (cleared ? cleared + " re-ran their own check and no longer raise. " : "")
           + (needsAudit ? needsAudit + " " + (needsAudit === 1 ? "is about the file as a whole (its page list, its collections), so no per-component re-read can reach it \u2014 it clears" : "are about the file as a whole (its page list, its collections), so no per-component re-read can reach them \u2014 they clear") + " on the next snapshot and audit. " : "")
           + (bridgeShut ? bridgeShut + " " + (bridgeShut === 1 ? "row runs" : "rows run") + " their check inside Figma, and it could not be reached. " + [...whyNot].join(" ") + " Open the library with the snapshot plugin running, then press Verify again. " : "")
           + (stuck ? stuck + " could not be re-checked and " + (stuck === 1 ? "was left untouched \u2014 nothing was stamped on it. " : "were left untouched \u2014 nothing was stamped on them. ")
-                     + (!bridgeShut && whyNot.size ? [...whyNot].join(" ") : "") : ""),
+                     + (!bridgeShut && whyNot.size ? [...whyNot].join(" ") : "") : "")
+          + (unsaved ? unsaved + " " + (unsaved === 1 ? "was" : "were") + " re-checked, but the service did not save the verdict, so " + (unsaved === 1 ? "it keeps" : "they keep") + " your tick. " + [...whyUnsaved].join(" ") : ""),
         linkText: "See the queue \u2192", onLink: showCleared });
   } catch (e) {
     queueStatus("Couldn't check: " + (e && e.message ? e.message : "unknown"), "warn");
-    toast("Verification did not run", "error",
+    if (stamped && stamped === ids.length) return toast(reproducing ? "Checked; the page did not refresh" : "Verified; the page did not refresh", "warn", { detail: sentence(e && e.message ? e.message : "unknown") + " Every row was stamped" + (reproducing ? ", " + reproducing + " still reproducing" : "") + "; reload to see them." });
+    toast(stamped ? "Verification stopped part-way" : "Verification did not run", "error",
           { detail: sentence(e && e.message ? e.message : "unknown") +
-              " Nothing was stamped, and your ticks are untouched." });
+              (stamped ? " " + stamped + " row" + (stamped === 1 ? " was" : "s were") + " stamped before it stopped; the rest keep your ticks."
+                       : " Nothing was stamped, and your ticks are untouched.") });
   }
 }
-// The toolbar's button: every row marked done. A row near the bottom of the
-// list has its own Verify, so there is no second copy at the foot.
-const verifyBtns = [document.getElementById("verifyBtn")];
-for (const b of verifyBtns) b.addEventListener("click", async () => {
-  verifyBtns.forEach((x) => { x.disabled = true; });
+// The toolbar's button, the one Verify: every row marked done.
+const verifyBtn = document.getElementById("verifyBtn");
+verifyBtn.addEventListener("click", async () => {
+  verifyBtn.disabled = true;
   await verifyTicked();
-  verifyBtns.forEach((x) => { x.disabled = false; });
+  verifyBtn.disabled = false;
   paintVerify();
 });
 // The button appears only when there is something for it to do, and says how
 // much — a control that is always present teaches nothing about state.
 export function paintVerify() {
   const n = unverifiedRows().length;
-  for (const b of verifyBtns) {
-    b.hidden = n === 0;
-    b.textContent = n ? "Verify " + n + " done" : "Verify done";
-  }
+  verifyBtn.hidden = n === 0;
+  verifyBtn.textContent = n ? "Verify " + n + " done" : "Verify done";
 }

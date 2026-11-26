@@ -6,10 +6,13 @@
 // legend, a detail per mark on hover and focus, a caption naming its source,
 // and the same figures as a table for screen readers (visually hidden)
 // (knowledge/ui/patterns/data-visualisation.md *Colour by job*, *Long
-// descriptions and data tables*). The data is lib/activity.js.
+// descriptions and data tables*). The data is lib/activity.js. A view with
+// nothing to plot is the empty state in the plot's place, no axis drawn: an
+// empty axis reads as a zero (feedback.md *Empty states*).
 import { calendar, changeDays, ungraded, findingRuns, FINDINGS_DAYS, lastSnapshot, lastRun } from '../lib/activity.js';
 import { date, day, month, num, plural } from '../lib/format.js';
 import Time from './Time.astro';
+import EmptyState from './EmptyState.astro';
 
 const VIEWS = [['activity', 'Activity'], ['changes', 'Changes'], ['findings', 'Findings']];
 
@@ -116,6 +119,7 @@ const findingsSummary = findingRuns.length ? `Open findings went from ${num(firs
   </div>
   <div data-views="activity" data-views-stack>
     <section data-view="activity" class="chart" aria-label="Activity">
+      {calendar.activeDays.length === 0 ? <EmptyState title="The past year's activity lands here" small>{activitySummary} Each snapshot, audit run and finding filed or closed marks its day.</EmptyState> : <>
       <p class="chart__summary">{activitySummary}</p>
       <div class="chart__plot">
       <svg class="chart__axis" width={LEFT} height={calH} viewBox={`0 0 ${LEFT} ${calH}`} aria-hidden="true">
@@ -143,9 +147,11 @@ const findingsSummary = findingRuns.length ? `Open findings went from ${num(firs
             <tbody>{[...calendar.activeDays].reverse().map((d) => <tr><td><Time at={`${d.day}T00:00:00Z`} /></td>{[d.snapshots, d.runs, d.filed, d.closed].map((n) => <td class="num">{num(n || 0)}</td>)}</tr>)}</tbody>
           </table>
       </div>
+      </>}
     </section>
 
     <section data-view="changes" class="chart" aria-label="Changes">
+      {changeDays.length === 0 ? <EmptyState title="Changes per snapshot day land here" small>{changesSummary} Each snapshot that changes the library adds a bar for its day.</EmptyState> : <>
       <p class="chart__summary">{changesSummary}</p>
       <ul class="chart__legend" aria-label="Legend">
         {DRAWN.map(([, l, cls]) => <li><span class={`chart__key chart__mark--${cls}`} aria-hidden="true"></span>{l}</li>)}
@@ -178,11 +184,12 @@ const findingsSummary = findingRuns.length ? `Open findings went from ${num(firs
             <tbody>{[...changeDays].reverse().map((d) => <tr><td><Time at={`${d.day}T00:00:00Z`} /></td>{SERIES.map(([k]) => <td class="num">{num(d[k] || 0)}</td>)}<td class="num">{num(SERIES.reduce((a, [k]) => a + d[k], 0))}</td></tr>)}</tbody>
           </table>
       </div>
+      </>}
     </section>
 
     <section data-view="findings" class="chart" aria-label="Findings">
+      {findingRuns.length === 0 ? <EmptyState title="Open findings land here" small>{findingsSummary} Each one adds a point for the findings it leaves open, over the last {FINDINGS_DAYS} days.</EmptyState> : <>
       <p class="chart__summary">{findingsSummary}</p>
-      {findingRuns.length > 0 && <>
       <div class="chart__plot">
       <svg class="chart__axis" width={AX} height={PT + FH + XB} viewBox={`0 0 ${AX} ${PT + FH + XB}`} aria-hidden="true">
         {ticks(fMax).map((t) => <text class="chart__tick chart__tick--y" x={AX - 8} y={fy(t) + 4}>{num(t)}</text>)}

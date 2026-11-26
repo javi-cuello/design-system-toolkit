@@ -11,6 +11,7 @@ import Ladder from '../components/Ladder.astro';
 import KpiStrip from '../components/KpiStrip.astro';
 import UpdatedBy from '../components/UpdatedBy.astro';
 import Activity from '../components/Activity.astro';
+import EmptyState from '../components/EmptyState.astro';
 import { project, shows, codeAudit, statusMarker } from '../lib/project.js';
 import { mapped, parityRows, inStep } from '../lib/parity.js';
 import { hasSnapshot } from '../lib/snapshot.js';
@@ -104,7 +105,7 @@ const QUESTIONS = [
   <p class="lede">Where the library stands: how many components are Stable, then one card for each question an owner asks of it, each linked to the page that holds the detail.</p>
 
   {!hasSnapshot ? (
-    <p class="notice">No snapshot yet. Run the Design system snapshot plugin in each of this project's Figma files, with the router running, and rebuild.</p>
+    <EmptyState title="Start by taking a snapshot" level={2}>Run the Design system snapshot plugin in each of this project's Figma files, with the router running, and rebuild: the overview fills from it.</EmptyState>
   ) : (
     <div class="overview-cards">
       <section class="panel" aria-labelledby="components">

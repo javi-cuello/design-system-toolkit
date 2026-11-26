@@ -1,7 +1,7 @@
 // projects.cjs's §6 reader and writer over the context template and a filled log. Run by bin/check.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-const { appendRuling, removeRuling, rulingsOf } = createRequire(import.meta.url)('./projects.cjs');
+const { appendRuling, removeRuling, rulingsOf, textKey } = createRequire(import.meta.url)('./projects.cjs');
 let pass = 0, fail = 0;
 const ok = (name, c) => { if (c) { pass++; console.log('ok', name); } else { fail++; console.log('FAIL', name); } };
 const template = readFileSync(new URL('../../skills/figma-context-capture/assets/context-template.md', import.meta.url), 'utf8');
@@ -27,6 +27,27 @@ ok('a document with no rulings table is refused', appendRuling('# X\n', 'y', 'z'
   ok('taking back a ruling the log does not hold changes nothing', removeRuling(two, 'not there') === null);
   const byHand = two.replace(/\| 2026-11-11 \|([^|]*)\| Keep the fill \|[^|]*\|/, '| 2026-11-11 |$1| Keep the fill | Decided in review |');
   ok('a ruling written by hand is never taken back', byHand !== two && removeRuling(byHand, 'Keep the fill') === null);
+}
+{
+  // the same ruling recorded on two components: taking it back on one leaves the other's, which still closes its row
+  const two = appendRuling(appendRuling(template, 'Keep the fill', 'Button', '2026-11-11'), 'Keep the fill', 'Chip, about: raw fill', '2026-11-11');
+  const back = removeRuling(two, 'Keep the fill', 'Button');
+  ok('taken back on one component, the same ruling on another stays', back !== null && rulingsOf(back).map((x) => x.why).join() === 'Recorded from the audit dashboard, on Chip, about: raw fill.');
+  ok('…and its `about` does not hide the component it was recorded on', removeRuling(two, 'Keep the fill', 'Chip') === appendRuling(template, 'Keep the fill', 'Button', '2026-11-11'));
+  ok('a component that is a prefix of another is not it', removeRuling(appendRuling(template, 'Keep the fill', 'Button group', '2026-11-11'), 'Keep the fill', 'Button') === null);
+  ok('with no component named, every row the dashboard wrote with that ruling goes, as before', rulingsOf(removeRuling(two, 'Keep the fill') || '').length === 0);
+  const one = appendRuling(template, 'Keep the fill', 'Button', '2026-11-11'), struck = one.replace('| Keep the fill |', '| ~~Keep the fill~~ |');
+  ok('a struck row the dashboard wrote is never taken back', struck !== one && removeRuling(struck, '~~Keep the fill~~', 'Button') === null && removeRuling(struck, 'Keep the fill', 'Button') === null && removeRuling(struck, 'Keep the fill') === null);
+  const mixed = appendRuling(template, 'Keep the fill', 'Button', '2026-11-11').replace(/(\| Recorded from the audit dashboard, on Button\. \|.*)$/m, '$1\n| 2026-11-10 | Audit | Keep the fill | Decided in review | Maintainer |  |  |');
+  const left = removeRuling(mixed, 'Keep the fill', 'Button');
+  ok('the same ruling by hand and by the dashboard: only the dashboard\'s goes', left !== null && rulingsOf(left).map((x) => x.why).join() === 'Decided in review');
+}
+for (const text of ['use `foo for x', 'a \\| b', 'a \\ b `c` | d']) {
+  // a backtick, a backslash and a pipe in what was typed: the row splits where it was written, and reads back as typed
+  const md = appendRuling(template, text, 'Button `x', '2026-11-11');
+  const r = rulingsOf(md);
+  ok(`${JSON.stringify(text)} reads back as typed, its Why whole`, r.length === 1 && r[0].key === textKey(text) && r[0].text === text && r[0].why === 'Recorded from the audit dashboard, on Button `x.');
+  ok(`${JSON.stringify(text)} recorded then taken back leaves the document as before`, removeRuling(md, text, 'Button `x') === template);
 }
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

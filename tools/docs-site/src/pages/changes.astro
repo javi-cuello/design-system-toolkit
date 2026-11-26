@@ -15,6 +15,7 @@ import Base from '../layouts/Base.astro';
 import UpdatedBy from '../components/UpdatedBy.astro';
 import ValuesDialog from '../components/ValuesDialog.astro';
 import Filter from '../components/Filter.astro';
+import EmptyState from '../components/EmptyState.astro';
 import { changeRows as rows, title, link } from '../lib/changes.js';
 import Time from '../components/Time.astro';
 import { day } from '../lib/format.js';
@@ -46,7 +47,7 @@ for (const d of days) {
   <UpdatedBy from={['snapshot']} />
   <p class="lede">What each snapshot changed against the one before it, newest first, one row per change. {withCode ? <>Each change is graded twice, as a version number is: for the <strong>Figma files</strong> that use the library, and for the <strong>code</strong> built from it. Breaking means instances lose work, or a name the code uses changes.</> : <>Each change is graded as a version number is, for the <strong>Figma files</strong> that use the library. Breaking means instances lose work.</>}</p>
   {files.length > 1 && <Filter label="Show changes in" groups={[['all', 'All files', total], ...files.map((f) => [f.name, f.name, f.n])]} />}
-  {days.length === 0 ? <p class="empty-state">Nothing recorded yet: the log starts with the next snapshot.</p> : days.map((d) => (
+  {days.length === 0 ? <EmptyState title="Changes land here" level={2}>Nothing recorded yet: the log starts with the next snapshot that changes the library.</EmptyState> : days.map((d) => (
     <section class="section" id={`day-${d.key}`} aria-labelledby={`day-${d.key}-h`} data-filter-part>
       <h2 id={`day-${d.key}-h`}><Time at={d.at} short /></h2>
       {d.files.map((g) => (

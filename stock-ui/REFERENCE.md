@@ -13,10 +13,12 @@ What `stock-ui.css` holds:
 
 | Component | Class |
 |---|---|
-| button | |
+| button | `.button`, `.button--primary`, `.button--soft`, `.button--ghost` |
+| checkbox | `.checkbox` (on a native `input type=checkbox`) |
 | dialog | `.modal` |
 | badge | `.sev`, `.pill` |
 | figures strip | `.kpis` |
+| empty state | `.empty-state`, `__title`, `__text`, `__action`, `.empty-state--small` |
 | sidebar list | `.sidenav` |
 | tabs and toolbar | |
 | segmented control | `.segmented`, `.seg` |

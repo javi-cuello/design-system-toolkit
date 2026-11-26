@@ -7,6 +7,7 @@ import Base from '../layouts/Base.astro';
 import UpdatedBy from './UpdatedBy.astro';
 import DesignShot from './DesignShot.astro';
 import Filter from './Filter.astro';
+import EmptyState from './EmptyState.astro';
 import { componentPages, hasStorybook, categories, slug } from '../lib/snapshot.js';
 import { base } from '../lib/format.js';
 
@@ -28,7 +29,7 @@ const sections = groups.map((g) => ({
 <Base title={name ? `Components · ${name}` : 'Components'}>
   <h1>Components{name && <span class="h1__platform"> · {name}</span>}</h1>
   <UpdatedBy from={['snapshot']} />
-  {count === 0 ? <p class="lede">No components yet: the snapshot holds no component specs. Take a snapshot of the components library and they appear here.</p> : <>
+  {count === 0 ? <EmptyState title="Components land here" level={2}>The snapshot holds no component specs yet. Take a snapshot of the components library and they appear here.</EmptyState> : <>
   <p class="lede">{count} components{categories.length ? ', grouped as the Figma file groups them' : ''}.</p>
   <Filter placeholder={`Filter ${count} components`} searchLabel="Filter components" />
   </>}

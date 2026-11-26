@@ -365,6 +365,15 @@ expect("rowId is the page's old key when free", rowId("Icon button", 'hidden lay
   run("2026-09-04T00:00:00.000Z");
   expect("a second run does not stack another sentence onto the note",
     (rec4.rows[id4].verifyNote.match(/Still raised by/g) || []).length, 1);
+  // Delete ruling on the card: the shape the dashboard writes back (queue.js unrecordRuling). The next run raises it
+  // again and it stays in the queue, open, as before the ruling: not closed, and not counted as reopened.
+  Object.assign(rec4.rows[id4], { done: false, ruledAt: null, ruling: null, rulingAlready: null, verified: null, verifiedAt: null, verifyNote: null });
+  const taken = run("2026-09-05T00:00:00.000Z");
+  expect("a ruling taken back puts the row back in the queue on the next run, open",
+    [taken.closed, taken.reopened, rec4.rows[id4].done, open(rec4.rows[id4]), Object.keys(rec4.rows).length], [0, 0, false, true, 1]);
+  // and a run that no longer raises it closes it as a fix, not as a ruling
+  const fixed = applyRows(rec4, { owner: "figma-variable-audit", full: true, scope: ["Card"], findings: [] }, "2026-09-06T00:00:00.000Z");
+  expect("…and a run that no longer raises it closes it as fixed, with no ruling stamp", [fixed.closed, rec4.rows[id4].done, rec4.rows[id4].ruledAt], [1, true, null]);
 
   // A row closed by a full run, with no ruling, still reopens — a regression
   // is a regression.

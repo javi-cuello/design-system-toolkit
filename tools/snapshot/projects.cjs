@@ -637,14 +637,17 @@ function setRepoConfig(repo, edit) {
   edit(config);
   fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\n');
 }
-// A table row split on pipes outside backtick spans; an escaped \| stays text.
+// A table row split on pipes outside backtick spans; an escaped \| stays text. Outside a span a backslash escape is
+// taken whole: an escaped backtick (cellEsc's) opened a span that swallowed the rest of the row, and an escaped
+// backslash before a pipe hid the pipe's own escape.
 function cells(line) {
   const s = line.trim().replace(/^\|/, "").replace(/\|$/, "");
   const out = []; let cur = "", tick = false;
   for (let i = 0; i < s.length; i++) {
     const c = s[i];
+    if (c === "\\" && !tick && /[\\|`]/.test(s[i + 1] || "")) { cur += c + s[++i]; continue; }
     if (c === "`") tick = !tick;
-    if (c === "|" && !tick && s[i - 1] !== "\\") { out.push(cur.trim()); cur = ""; continue; }
+    if (c === "|" && !tick) { out.push(cur.trim()); cur = ""; continue; }
     cur += c;
   }
   out.push(cur.trim());
@@ -673,11 +676,17 @@ function walkRulings(lines, each) {
     each(i, c, header);
   });
 }
-// One ruling, one form: bold and the table's escaped pipes stripped, whitespace
+// One ruling, one form: bold and the table's escapes (\| \` \\) stripped, whitespace
 // collapsed. The duplicate test compares whole keys — a substring test refused
 // any new ruling that happened to sit inside an older one, and a ruling past
-// the 400-character display cut could be recorded twice.
-const rulingKey = (s) => String(s || "").replace(/\*\*/g, "").replace(/\\\|/g, "|").replace(/\s+/g, " ").trim();
+// the 400-character display cut could be recorded twice. It reads a CELL: text
+// typed on the page is keyed as the cell it would be written as (textKey).
+const rulingKey = (s) => String(s || "").replace(/\*\*/g, "").replace(/\\([\\|`])/g, "$1").replace(/\s+/g, " ").trim();
+// A cell's text: one line, and every backslash, pipe and backtick escaped, so cells() splits the row where
+// appendRuling meant and rulingKey reads back what was typed. An odd backtick left bare opened a span to the row's
+// end, and the duplicate check and the take-back then read the wrong cells.
+const cellEsc = (s) => String(s).replace(/\s+/g, " ").trim().replace(/[\\|`]/g, "\\$&");
+const textKey = (s) => rulingKey(cellEsc(s));
 // The audit dashboard's writer for §6 (its POST /ruling): a row under the last ruling, its cells by the
 // header, a day's second ruling lettered (2026-11-11b), every cell one line. Beside the parser so the
 // two read the same table.
@@ -697,7 +706,6 @@ function appendRuling(md, text, where, today = new Date().toISOString().slice(0,
     }
   }
   if (at < 0) return null;
-  const esc = (s) => String(s).replace(/\s+/g, " ").trim().replace(/\|/g, "\\|");  // one line, pipes escaped: a row never splits
   // a day's second decision takes a letter (the context template's §6): 2026-11-11, then 2026-11-11b
   const taken = new Set(); walkRulings(lines, (i, c, h) => taken.add(c[h.indexOf("date")] || ""));
   let date = today;
@@ -707,21 +715,30 @@ function appendRuling(md, text, where, today = new Date().toISOString().slice(0,
     date = today + "bcdefghijklmnopqrstuvwxyz"[k];
   }
   const row = header.map((h) => h === "date" ? date
-    : h === "scope" ? "Audit" : h === "ruling" ? esc(text)
-    : h === "why" ? esc("Recorded from the audit dashboard, on " + where + ".")
+    : h === "scope" ? "Audit" : h === "ruling" ? cellEsc(text)
+    : h === "why" ? cellEsc("Recorded from the audit dashboard, on " + where + ".")
     : /decided/.test(h) ? "Maintainer" : "");
   lines.splice(at + 1, 0, "| " + row.join(" | ") + " |");
   return lines.join("\n");
 }
 // Takes back a ruling the dashboard recorded (its POST /ruling with remove): the rows whose ruling is `text`, compared
 // as rulingsOf compares, and whose Why says appendRuling wrote them; null when none is. A ruling written by hand is
-// never touched (retiring one is striking it, §6's own convention), nor a struck row.
-const DASHBOARD_WHY = /^Recorded from the audit dashboard\b/;
-function removeRuling(md, text) {
-  const key = rulingKey(text), lines = md.split("\n"), drop = new Set();
+// never touched (retiring one is striking it, §6's own convention), nor a struck row. Given `where` (the component
+// the record call named), only the row recorded on it goes: the same ruling recorded on two components was taken
+// back from both, and the other component's finding lost the ruling that closed it.
+const DASHBOARD_WHY = /^Recorded from the audit dashboard, on .+\.$/; // the exact form appendRuling writes
+function removeRuling(md, text, where, date) {
+  const key = textKey(text), lines = md.split("\n"), drop = new Set();
+  const on = where == null || String(where).trim() === "" ? null : textKey("Recorded from the audit dashboard, on " + where);
   walkRulings(lines, (i, c, h) => {
-    const cell = c[h.indexOf("ruling")] || "";
-    if (!/^~~/.test(cell) && rulingKey(cell) === key && DASHBOARD_WHY.test(c[h.indexOf("why")] || "")) drop.add(i);
+    const cell = c[h.indexOf("ruling")] || "", why = c[h.indexOf("why")] || "";
+    // the Why read as rulingsOf reads it (bold and escapes off), so what it counts as the dashboard's is what goes
+    if (/^~~/.test(cell) || rulingKey(cell) !== key || !DASHBOARD_WHY.test(rulingKey(why))) return;
+    // the record call's `about` follows the component in the Why: "…, on Alert, about: …."
+    if (on && rulingKey(why) !== on + "." && !rulingKey(why).startsWith(on + ", about: ")) return;
+    // given the row's date cell (the one POST /ruling wrote), that row and no other of the same component
+    if (date && (c[h.indexOf("date")] || "") !== date) return;
+    drop.add(i);
   });
   return drop.size ? lines.filter((l, i) => !drop.has(i)).join("\n") : null;
 }
@@ -1143,7 +1160,7 @@ function auditRecords(where) {
   return list.map((l, i) => ({ ...l, path: single && i === 0 ? legacy : path.join(where.audit, `${l.key}.json`) }));
 }
 
-module.exports = { siblings, repoDirOf, storeLibraries, tokensOf, mainsIn, appendRuling, removeRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, assetOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
+module.exports = { DASHBOARD_WHY, textKey, siblings, repoDirOf, storeLibraries, tokensOf, mainsIn, appendRuling, removeRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, assetOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
 
 // Every project and its home, one per line, for the shell scripts:
 //   node tools/snapshot/projects.cjs homes    → <label><TAB><home>

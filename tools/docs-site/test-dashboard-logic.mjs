@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // What the dashboard computes and writes, held on its own source: that it
 // scores with the shared model (scores.js), the words an audit ends with and the sweep's
-// diff (audit.js), and the queue row it writes as markup (queue.js), with a
+// diff (audit.js), the queue row it writes as markup and the writes it sends (queue.js, record.js), with a
 // Figma name in every field that reaches it. Run: node tools/docs-site/test-dashboard-logic.mjs
 //
 // The page is browser-only and its modules reach for the DOM when they load,
@@ -92,4 +92,63 @@ ok('a stored date reads as the page writes dates, in a cell', Q.cell('The fix', 
 ok('a skill named in a row\'s text is said by its chip\'s label', Q.said('Still raised by figma-components-audit on 2026-10-11') === 'Still raised by Components on 11 Oct 2026');
 const two = Q.contrastCells({ fix: ['In Figma — a boolean', 'In MUI — a variant', 'A plain sentence — with a dash'], rec: ['In Figma: make it a variant', 'In code: add a prop', 'See the docs'] }, ['What differs', 'Pick one']);
 ok('a comparison row splits only a labelled side, and offers the options as choices', (two.match(/class="side"/g) || []).length === 2 && two.includes('<li class="opt-note">A plain sentence — with a dash</li>') && (two.match(/class="opt"/g) || []).length === 2);
+// ---- the queue's writes (queue.js) and the record they go through (record.js) ----
+// The service merges a write into the stored row per key: a key left out keeps its value, null clears it.
+const W = run(queue, ['writeRow', 'standingOf', 'unverified'], 'queue.js', { store: { doc: (p) => ({ set: async (b) => { W.sent = [p, b]; } }) }, Object, ctx: { statusTab: 'open' } });
+await W.writeRow('a', { done: true, n: '1.2', verified: null });
+ok('a row write sends only the keys it changes, never the row\'s place on screen', W.sent[0] === 'rows/a' && JSON.stringify(W.sent[1]) === '{"done":true,"verified":null}', JSON.stringify(W.sent));
+ok('an edited note clears its answer in the debounced save, however many keystrokes follow', /staleAnswer\.add\(id\)/.test(queue) && /save\(id, staleAnswer\.delete\(id\) \? \{ noteAnswer: null, noteAnsweredAt: null \}/.test(queue));
+ok('a refused write takes back only its own keys, and only where they still hold what it set', /function restore\(held, coll, id, was, sent\)/.test(read('./src/dashboard/record.js')) && /cur\[k\] !== sent\[k\]/.test(read('./src/dashboard/record.js')));
+ok('every row write goes through that one helper', (queue.match(/store\.doc\("rows\/"/g) || []).length === 1);
+ok('no row write sends undefined, which the merge would read as "keep the old value"',
+  !/\b(verified|verifiedAt|verifyNote|noteAnswer|noteAnsweredAt|failedWhy|failedAt)\s*[:=][^\n]*\bundefined\b/.test(queue));
+ok('a fix that ran clears the last failure, and Fix all counts only the rows its re-check closed',
+  /failedWhy: null, failedAt: null/.test(lift(queue, 'doRow', 'queue.js')) && /\.verified === true\) ok\+\+/.test(lift(queue, 'doAllLike', 'queue.js')));
+ok('a row stands open, done or ruled by its verdict, the tab it shows under and the menus count by',
+  W.standingOf({ done: true }) === 'open' && W.standingOf({ verified: null }) === 'open' && W.standingOf({ verified: true }) === 'done' && W.standingOf({ verified: true, ruledAt: 'x' }) === 'ruled');
+ok('a ticked row whose re-check could not run (verdict cleared to null) is offered to Verify again, a closed one is not',
+  W.unverified({ done: true, verified: null, verifiedAt: null }) === true && W.unverified({ done: true, verified: true, verifiedAt: 'x', updatedAt: 'y' }) === false && W.unverified({ done: true, ruledAt: 'x' }) === false);
+const recSrc = read('./src/dashboard/record.js');
+const recCtx = { libKey: 'L' };
+const R = run(recSrc, ['refused', 'restore', 'docRef'], 'record.js', { Object, Error, ctx: recCtx, RECORD: { rows: { a: { done: false, note: 'n', verified: true } } }, announce: () => { R.announced++; }, pullRecord: async () => {}, api: { patch: async (k, b) => { R.patched = b; if (R.onPatch) R.onPatch(); return R.answer; } } });
+R.announced = 0;
+R.answer = { ok: true };
+await R.docRef('rows/a').set({ verified: null, done: true });
+const kept = (await R.docRef('rows/a').get()).data();
+ok('the record mirrors the service\'s merge: a key left out kept, a key sent null cleared', kept.note === 'n' && kept.done === true && kept.verified === null, JSON.stringify(kept));
+R.answer = { ok: false, error: 'This is a read-only copy of the dashboard.' };
+let threw = null; try { await R.docRef('rows/a').set({ done: false }); } catch (e) { threw = e.message; }
+ok('a write the service refuses throws, so no caller says Saved over it', threw === 'This is a read-only copy of the dashboard.', String(threw));
+const rowA = async () => (await R.docRef('rows/a').get()).data();
+ok('…and puts the entry back as it was, so the next render does not show what the service never kept', (await rowA()).done === true, JSON.stringify(await rowA()));
+threw = null; try { await R.docRef('rows/a').delete(); } catch (e) { threw = e.message; }
+ok('a refused delete puts the entry back too', threw && (await rowA()) && (await rowA()).note === 'n');
+threw = null; try { await R.docRef('rows/new').set({ done: true }); } catch (e) { threw = e.message; }
+ok('a refused write to a new entry leaves no entry behind', threw && (await R.docRef('rows/new').get()).exists === false);
+R.answer = { ok: true };
+await R.docRef('rows/a').set({ note: undefined, done: false });
+ok('a key sent undefined keeps its value locally, as the service keeps it (JSON drops it)', (await rowA()).note === 'n' && (await rowA()).done === false, JSON.stringify(await rowA()));
+R.announced = 0; R.onPatch = () => { recCtx.libKey = 'M'; };
+await R.docRef('rows/a').set({ done: true });
+ok('a write answered after the page moved to another file does not re-render that file with this one\'s record', R.announced === 0);
+R.onPatch = null; recCtx.libKey = 'L';
+
+const vt = lift(queue, 'verifyTicked', 'queue.js');
+ok('Verify writes a note\'s answer only when it answered: no Claude, or a failed call, never erases an earlier one',
+  /if \(answered\) Object\.assign\(verdict, \{ noteAnswer: answered, noteAnsweredAt: now \}\)/.test(vt) && !/noteAnswer: answered \|\| null/.test(vt));
+ok('…a refused row write is counted and the rows after it still run, and a stop part-way never says nothing was stamped',
+  /try \{ await writeRow\(id, verdict\); \}\s*catch \(e\) \{ unsaved\+\+;[^\n]*continue; \}/.test(vt) && /stamped \? /.test(vt));
+ok('a fix that ran in Figma and was refused its record says so, not "Nothing was stamped"', /ranInFigma \? "Applied in Figma but not recorded/.test(lift(queue, 'doRow', 'queue.js')));
+ok('taking a ruling back sends the date cell its record call wrote (and when it was ruled), so the service can tell a renamed component from another',
+  /api\.unrule\(r\.ruling \|\| r\.note \|\| "", r\.where \|\| id, r\.ruledAt, r\.ruledOn\)/.test(queue) && /ruledOn: already \? null : \(res\.date \|\| null\)/.test(queue) && /res\.elsewhere/.test(lift(queue, 'unrecordRuling', 'queue.js')));
+const runAuditSrc = lift(read('./src/dashboard/audit.js'), 'runAudit', 'audit.js');
+ok('an audit\'s measures, scores and changed list are each kept apart, so one refused write never skips the run\'s record',
+  !/^\s*await (recordMeasures|recordScores|consumeMoved)\(/m.test(runAuditSrc) && (runAuditSrc.match(/await keep\("/g) || []).length === 7);
+const mainSrc = read('./src/dashboard/main.js');
+ok('a switch of file forgets whose record the figures counted, and a failed read of the new one is marked for dashes',
+  /ctx\.recordFor = null;/.test(mainSrc) && /ctx\.recordFailed = key;/.test(mainSrc) && /ctx\.recordFailed === ctx\.libKey/.test(read('./src/dashboard/measures.js')));
+ok('a row the record no longer holds leaves the queue on the next read', /if \(!\(id in rows\)\) delete state\[id\]/.test(mainSrc));
+const sig = (b.match(/const sig = JSON\.stringify\(\[([^\]]*)\]\)/) || [])[1] || '';
+ok('a row repaints when anything its markup draws changes: its last failure, check, comparison, target and where it lands',
+  ['r.failedWhy', 'r.check', 'r.contrast', 'r.target', 'r.lands'].every((f) => sig.includes(f)), sig);
 console.log(`${n}/${n} passed`);

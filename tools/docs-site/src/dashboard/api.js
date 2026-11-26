@@ -83,6 +83,16 @@ export const api = {
                                       body: JSON.stringify({ text, where, about }) });
     return r.json();
   },
+  // A ruling taken back out of the context document's log (Delete ruling on a ruled row).
+  // `where` is what the ruling was recorded with, so only that component's row goes (another's still closes its finding);
+  // `ruledOn` (the date cell the record call wrote; `ruledAt` from rows before it) lets a component renamed since be
+  // told from another one
+  async unrule(text, where, ruledAt, ruledOn) {
+    if (readOnly()) return refuse();
+    const r = await fetch("/ruling", { method: "POST", headers: { "content-type": "application/json" },
+                                      body: JSON.stringify({ text, where, ruledAt, ruledOn, remove: true }) });
+    return r.json();
+  },
   // Rows are filed by the service, the same way for every skill that owns them.
   /*
    * Every owner's findings go through here, so the project's dialect is

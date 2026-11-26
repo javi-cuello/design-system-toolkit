@@ -10,6 +10,7 @@
  * that says only that a newer plugin re-stamped the spec is not shown.
  */
 import ChangeLevel from './ChangeLevel.astro';
+import EmptyState from './EmptyState.astro';
 import { changes, componentPages } from '../lib/snapshot.js';
 import ValuesDialog from './ValuesDialog.astro';
 import { factsOf } from '../lib/facts.js';
@@ -82,7 +83,7 @@ const days = [...byDay.values()];
 // A value as a reader needs it: nothing is "none", a colour carries its swatch.
 const blank = (v) => !v || v === 'none' || v === 'present';
 ---
-{days.length === 0 && <p class="empty-state" id={id}>No change recorded yet: the log starts with the next snapshot that changes this component.</p>}
+{days.length === 0 && <EmptyState title="Changes to this component land here" level={2} id={id}>Nothing recorded yet: the log starts with the next snapshot that changes this component.</EmptyState>}
 {days.length > 0 && (
   <div class="section" id={id}>
     {days.map((d, di) => (

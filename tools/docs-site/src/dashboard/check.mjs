@@ -10,7 +10,8 @@ import { dirname, join } from "node:path";
 import { parse } from "@babel/parser";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const html = readFileSync(join(here, "Dashboard.astro"), "utf8");
+// The Audits page holds the dashboard and, in its hero, the actions and the files list: both are its markup
+const html = readFileSync(join(here, "Dashboard.astro"), "utf8") + readFileSync(join(here, "../pages/audits.astro"), "utf8");
 const css = readFileSync(join(here, "dashboard.css"), "utf8");
 // The browser modules; data.js and this file run at build time, in node.
 const moduleFiles = readdirSync(here).filter((f) => f.endsWith(".js") && f !== "data.js");
@@ -25,7 +26,7 @@ const fail = [];
 //    counter took the line declaring `shown` with it. Scope-aware (functions,
 //    blocks, params, destructuring), so a local that shadows a module-level
 //    name is its own.
-const GLOBALS = new Set("Array Boolean CSS Date Error JSON Math Object Promise Set Map String Number clearInterval clearTimeout console document encodeURIComponent decodeURIComponent RegExp fetch localStorage location setInterval setTimeout undefined window history requestAnimationFrame matchMedia IntersectionObserver ResizeObserver Node Event navigator addEventListener dispatchEvent".split(" "));
+const GLOBALS = new Set("Array Boolean CSS Date Error JSON Math Object Promise Set Map String Number clearInterval clearTimeout console document encodeURIComponent decodeURIComponent RegExp fetch localStorage location setInterval setTimeout undefined window history requestAnimationFrame matchMedia IntersectionObserver ResizeObserver MutationObserver Node Event navigator addEventListener dispatchEvent".split(" "));
 const declaredIn = (p, out) => {
   if (!p) return;
   if (p.type === "Identifier") out.push(p.name);
@@ -286,8 +287,8 @@ try {
 }
 
 // Every stylesheet's braces balance. A stray `}` costs nothing standalone —
-// the browser drops it — but the docs site wraps this stylesheet in
-// `@scope (.dash) { … }`, where it closes the scope early: everything after it
+// the browser drops it — but this stylesheet is one `@scope (.dash, .dash-hero) { … }`,
+// where it closes the scope early: everything after it
 // applied to the whole site unscoped, and the scope's own closing brace then
 // swallowed the next rule. One sat after the token block for weeks.
 {

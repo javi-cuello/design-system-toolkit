@@ -1,6 +1,11 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.15.1] - 2026-11-26
+### Changed
+- Re-synced with the audit dashboard: its severities in the order its menu lists them (Needs ruling after Warning).
+- Re-synced with the rulings log: a table cell's escaped backslash, pipe or backtick is read as typed, so a ruling holding one is matched.
+
 ## [0.15.0] - 2026-11-26
 ### Changed
 - Carries snapshot 0.92.0: each variant rendered as an asset only where the project lists the file as an asset library.

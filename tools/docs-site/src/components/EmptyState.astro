@@ -1,0 +1,21 @@
+---
+// A region with nothing to show, in the region's place: stock-ui's .empty-state (knowledge feedback.md, Empty
+// states). The caller picks the kind's words from the data (first use, no results, cleared, error) and the heading
+// level of the region it stands in for; the action, if any, is a link where it goes somewhere.
+interface Props {
+  title: string;
+  level?: 2 | 3 | 4;
+  small?: boolean;
+  action?: { href: string; label: string };
+  id?: string;
+}
+const { title, level = 3, small = false, action, id } = Astro.props;
+const H = `h${level}`;
+// labelled by its heading only when the caller names it: an id made from the title repeats when two share a title
+const headId = id ? id + '-h' : undefined;
+---
+<section class:list={['empty-state', small && 'empty-state--small']} id={id} aria-labelledby={headId}>
+  <H class="empty-state__title" id={headId}>{title}</H>
+  <p class="empty-state__text"><slot /></p>
+  {action && <p class="empty-state__action"><a class="button button--soft" href={action.href}>{action.label}</a></p>}
+</section>

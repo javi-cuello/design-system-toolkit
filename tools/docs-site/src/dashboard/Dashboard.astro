@@ -33,10 +33,9 @@ const pages = Object.fromEntries(rows.filter((r) => r.keys.length).map((r) => {
 // what the first run will fill, and the settings name the library before any
 // run does, which is what the first-run panel needs to say anything useful.
 const baked = `window.DASH_LIBS=${JSON.stringify(dashboardStatic.libraries)};window.DASH_CONTEXT=${JSON.stringify(dashboardStatic.context)};window.DASH_SCRIPTS=${JSON.stringify(dashboardStatic.scripts)};window.DASH_PAGES=${JSON.stringify(pages)};window.DASH_SNAPSHOT=${JSON.stringify(freshness.takenAt || null)};`.replace(/</g, '\\u003c');
-// One record per library file. The switch that chooses between them sits
-// above the queue's filters: which file a finding comes from, then which
-// check raised it. Links, because the file is in the address
-// (`#queue?lib=<key>`): Back and a shared link restore it.
+// One record per library file. The file menu chooses between them, first among the queue's filters: which file a
+// finding comes from, then which check raised it. The file is in the address (`#queue?lib=<key>`), so Back and a
+// shared link restore it.
 const files = dashboardStatic.libraries;
 ---
 <!-- Without script the dashboard has nothing to draw: its queue, history
@@ -62,9 +61,7 @@ const files = dashboardStatic.libraries;
     dash.dataset.ask = available === "0" ? "off" : collapsed ? "collapsed" : "open";
   }
 </script>
-  <!-- The head is the PROJECT's, the same on every tab: its files' status
-       and the one Audit. What belongs to one file (its age, what its last
-       audit read, its Figma link, Check changes) sits under the file tabs. -->
+  <!-- The head is the PROJECT's, the same whatever file is in view: its files' status and the one Audit. -->
   <header class="top">
       <!-- Every file this project's audit reads, always — its libraries and
            the source library the link stage needs open beside them. It used
@@ -73,15 +70,8 @@ const files = dashboardStatic.libraries;
            and only after you had chosen it: a run that needs two files open
            failed at the stage that needed the second. The list also carries
            each file's progress while a run is talking to it. -->
-      <ul class="files" id="fileList" aria-label="Files this project audits"></ul>
+      <!-- the file list sits in the page hero (pages/audits.astro) -->
     <p class="readonly-note">A read-only copy, as of the last build. Run the dashboard service to audit, fix or rule.</p>
-    <div class="head-actions">
-      <!-- ONE Audit, on every tab. It opens the Audit dialog below, where the
-           files and the scope are chosen: a short setup before a run, which
-           is what a modal is for (knowledge: dialogs, Choosing the surface). -->
-      <button class="button button--primary" id="auditBtn" type="button" aria-haspopup="dialog">Audit</button>
-      <p class="sweep-state" id="sweepState" role="status" aria-live="polite"></p>
-    </div>
   </header>
 
   <!-- Words every row's controls share in their names; the row's number and
@@ -97,12 +87,6 @@ const files = dashboardStatic.libraries;
 
   <div class="view" id="view-queue" hidden>
 
-  <section class="first-run-only" aria-labelledby="firstRunH">
-    <div class="sec-head"><h2 id="firstRunH">Nothing measured yet</h2></div>
-    <p class="sec-note">This project has a record and settings in its context document, but no run behind it. Open the library in Figma with the Desktop Bridge plugin running, then <b>Audit</b> — the first run walks every component, writes the measures, and files what it finds as a queue.</p>
-    <p class="sec-note"><b>Check changes</b> needs a previous run to compare against, so it will have nothing to say until then.</p>
-  </section>
-
   <div class="measured-only">
 
     <div id="pane-queue">
@@ -111,69 +95,62 @@ const files = dashboardStatic.libraries;
         <div class="sec-head"><h2 id="changedH">Changed since the last audit</h2></div>
         <div id="changed"></div>
       </section>
-      <!-- What narrows comes FIRST, then the figures it narrows. The tiles
-           count only the rows the filters show, so reading them before the
-           chips is reading an answer before its question: "Open 386" above
-           "Web build 236" invites the two to be read as unrelated totals. -->
-      {files.length > 1 && (
-        <nav aria-label="File">
-          <ul class="tabs tabs--scope">
-            {files.map(({ key, name }) => <li><a class="tab" href={`#queue?lib=${key}`} data-lib-choice={key}>{name}</a></li>)}
-          </ul>
-        </nav>
-      )}
-      <!-- The file in view: its age, what its last audit read, its Figma link
-           and Check changes, which compares its components with the last audit. -->
-      <div class="lib-bar">
-        <p class="measured">
-          <span class="freshness" id="freshness">—</span>
-          <span id="measuredLine">No audit of this file yet.</span>
-          <a class="file-link" id="fileLink" href="#" target="_blank" rel="noopener" hidden>Open in Figma<span class="visually-hidden"> (opens in new tab)</span></a>
-        </p>
-        <button class="button" id="sweepBtn" type="button">Check changes</button>
-      </div>
+      <!-- the figures first, the content's opening (the maintainer, 2026-11-26): the project's, every file's rows,
+           whatever the filters show; each filter's own count says what it narrows to. Then the filters. -->
+      <ul class="kpis kpis--fill" id="queueTiles" aria-label="Findings"></ul>
       <div class="toolbar">
+        <!-- the file is the first menu, beside the filters (the maintainer, 2026-11-26: it was a row of tabs) -->
+        {files.length > 1 && (
+          <select class="filter filter--select" id="libFilter" aria-label="File">
+            {files.map(({ key, name }) => <option value={key}>{name}</option>)}
+          </select>
+        )}
         <select class="filter filter--select" id="componentFilter" aria-label="Show rows on"></select>
         <select class="filter filter--select" id="ownerFilter" aria-label="Show rows raised by"></select>
+        <select class="filter filter--select" id="sevFilter" aria-label="Show rows of severity"></select>
         <div class="toolbar__end"><button class="button verify-btn" id="verifyBtn" type="button" hidden>Verify done</button></div>
       </div>
-      <ul class="kpis kpis--fill" id="queueTiles" aria-label="Findings"></ul>
-      <!-- A file with nothing recorded: one empty state in place of the
-           tiles, the filters and three empty sections. -->
-      <section class="empty-file" id="emptyFile" aria-labelledby="emptyFileH" hidden>
-        <h2 id="emptyFileH">Nothing recorded for this file yet</h2>
-        <p class="sec-note" id="emptyFileWhy"></p>
+      <!-- which rows, by where they stand: open, closed by a change, closed by a ruling (the maintainer, 2026-11-26) -->
+      <div class="tabs status-tabs" role="tablist" aria-label="Rows">
+        <button class="tab" type="button" role="tab" id="statusTab-open" data-status="open" aria-selected="true" aria-controls="queuePane">Open <span class="count" id="statusCount-open"></span></button>
+        <button class="tab" type="button" role="tab" id="statusTab-done" data-status="done" aria-selected="false" aria-controls="queuePane" tabindex="-1">Done <span class="count" id="statusCount-done"></span></button>
+        <button class="tab" type="button" role="tab" id="statusTab-ruled" data-status="ruled" aria-selected="false" aria-controls="queuePane" tabindex="-1">Rulings <span class="count" id="statusCount-ruled"></span></button>
+      </div>
+      <!-- A components file never audited: its first run, in place of the queue (the figures and the file menu stay) -->
+      <section class="empty-state first-run-only" id="firstRun" aria-labelledby="firstRunH">
+        <h2 class="empty-state__title" id="firstRunH">Start with an audit</h2>
+        <p class="empty-state__text">Open the library in Figma with the Desktop Bridge plugin running, then press Audit: the first run walks every component, writes the measures and files what it finds as a queue.</p>
       </section>
-      <div id="queuePane">
+      <!-- A file with nothing recorded: one empty state in place of the filters, the tabs and three empty sections -->
+      <section class="empty-state" id="emptyFile" aria-labelledby="emptyFileH" hidden>
+        <h2 class="empty-state__title" id="emptyFileH">Nothing recorded for this file yet</h2>
+        <p class="empty-state__text" id="emptyFileWhy"></p>
+      </section>
+      <div id="queuePane" role="tabpanel" aria-labelledby="statusTab-open">
+      <!-- a tab with nothing to show says why and offers the way on (KB feedback.md, Empty states: first use and
+           no results said apart; a heading, a sentence, one action) -->
+      <section class="empty-state" id="tabEmpty" aria-labelledby="tabEmptyTitle" hidden>
+        <h2 class="empty-state__title" id="tabEmptyTitle"></h2>
+        <p class="empty-state__text" id="tabEmptyText" role="status"></p><!-- the words announced, not the button -->
+        <p class="empty-state__action"><button class="button button--soft" id="tabEmptyAction" type="button"></button></p>
+      </section>
       <p class="sec-note filter-note" id="filterNote" role="status" hidden><span id="filterNoteText"></span> <button class="link-button" id="filterShowAll" type="button">Show all</button></p>
   <section class="bucket" aria-labelledby="b1H">
     <div class="bucket-head"><span class="bucket-num">1</span><h2 id="b1H">Fix on approval</h2></div>
-    <p class="bucket-note">Safe fixes. Each action reads the row's note first; <b>Record as ruling</b> stops the audit raising it.</p>
     <ul class="rows" id="b1"></ul>
-    <details class="cleared" id="cleared-b1" hidden>
-      <summary class="cleared-summary" id="clearedCount-b1">Closed rows</summary>
-      <ul class="rows" id="clearedRows-b1"></ul>
-    </details>
+    <div class="cleared" id="cleared-b1" hidden><ul class="rows" id="clearedRows-b1"></ul></div>
   </section>
 
   <section class="bucket" aria-labelledby="b2H">
     <div class="bucket-head"><span class="bucket-num">2</span><h2 id="b2H">Quick manual fixes</h2></div>
-    <p class="bucket-note">Drags in Figma's variants panel: the plugin API can't reorder axes or options.</p>
     <ul class="rows" id="b2"></ul>
-    <details class="cleared" id="cleared-b2" hidden>
-      <summary class="cleared-summary" id="clearedCount-b2">Closed rows</summary>
-      <ul class="rows" id="clearedRows-b2"></ul>
-    </details>
+    <div class="cleared" id="cleared-b2" hidden><ul class="rows" id="clearedRows-b2"></ul></div>
   </section>
 
   <section class="bucket" aria-labelledby="b3H">
     <div class="bucket-head"><span class="bucket-num">3</span><h2 id="b3H">Decide</h2></div>
-    <p class="bucket-note">Questions with two fair answers: write yours in the note, then <b>Record as ruling</b>.</p>
     <ul class="rows" id="b3"></ul>
-    <details class="cleared" id="cleared-b3" hidden>
-      <summary class="cleared-summary" id="clearedCount-b3">Closed rows</summary>
-      <ul class="rows" id="clearedRows-b3"></ul>
-    </details>
+    <div class="cleared" id="cleared-b3" hidden><ul class="rows" id="clearedRows-b3"></ul></div>
   </section>
 
       </div>
@@ -191,7 +168,10 @@ const files = dashboardStatic.libraries;
           <tbody id="runs"></tbody>
         </table>
       </div>
-      <p class="empty" id="runsEmpty" hidden>No runs recorded yet.</p>
+      <section class="empty-state empty-state--small" id="runsEmpty" aria-labelledby="runsEmptyH" hidden>
+        <h3 class="empty-state__title" id="runsEmptyH">Runs land here</h3>
+        <p class="empty-state__text">Each audit adds a row: when it ran, on which file, and what it found.</p>
+      </section>
     </div>
   </div>
 
@@ -221,12 +201,28 @@ const files = dashboardStatic.libraries;
       </div>
     </form>
   </Modal>
+  <!-- the one dialog behind Fix this, Fix all and Save as ruling: a note for Claude before a fix, or the ruling
+       itself (the maintainer, 2026-11-26: a note belongs to the action it is for) -->
+  <Modal id="noteDialog" title="Note">
+    <form method="dialog" class="note-form">
+      <label class="visually-hidden" for="noteDialogText" id="noteDialogLabel">Note</label>
+      <textarea class="note note-dialog-text" id="noteDialogText" rows="3"></textarea>
+      <p class="note-dialog-hint" id="noteDialogHint"></p>
+      <div class="fix-actions">
+        <button class="button" value="cancel" formnovalidate>Cancel</button>
+        <button class="button button--primary" value="save" id="noteDialogGo">Save</button>
+      </div>
+    </form>
+  </Modal>
   <!-- Fix this: the code Claude wrote, shown before it runs in Figma (queue.js approveFix) -->
   <Modal id="fixDialog" title="Run this change in Figma?">
     <form method="dialog" class="fix-approve">
       <p id="fixDialogSummary"></p>
       <p class="fix-where" id="fixDialogWhere"></p>
-      <pre class="fix-code" id="fixDialogCode" tabindex="0" aria-label="The code that will run"></pre>
+      <!-- the sentence leads; the code, for whoever wants to read it, folds under it -->
+      <details class="fix-code-more"><summary>Show the code</summary>
+        <pre class="fix-code" id="fixDialogCode" tabindex="0" aria-label="The code that will run"></pre>
+      </details>
       <div class="fix-actions">
         <button class="button" value="cancel" autofocus>Cancel</button>
         <button class="button button--primary" value="run">Run in Figma</button>

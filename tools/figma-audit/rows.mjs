@@ -389,7 +389,7 @@ export function applyRows(record, payload, now = new Date().toISOString()) {
          *
          * The row keeps its state and records the truth instead, the way a
          * dismissed candidate does: the check still raises this, and the
-         * ruling still stands. Untick it to put it back in the queue.
+         * ruling still stands. Delete ruling on its card puts it back in the queue.
          */
         const said = "Still raised by " + owner + " on " + day + ", and still closed by your ruling.";
         rows[id] = Object.assign({}, r, { updatedAt: now, check, ...(key ? { key } : {}),

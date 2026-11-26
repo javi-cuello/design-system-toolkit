@@ -9,6 +9,7 @@
 import ComponentCell from '../../components/ComponentCell.astro';
 import UpdatedBy from '../../components/UpdatedBy.astro';
 import Base from '../../layouts/Base.astro';
+import EmptyState from '../../components/EmptyState.astro';
 import { rows, audit } from '../../lib/tracker.js';
 import { health } from '../../lib/measures.js';
 import { tokenCollections, tokensPublished, tokensDescribed, deprecated, deprecatedClear, agentRuns } from '../../lib/readiness.js';
@@ -122,7 +123,7 @@ const status = (key, field) => { const t = tile(key); return t ? `${t.label}: ${
     <h2 id="runs">Agent runs</h2>
     <p>Everything above is an input. Whether an agent builds from the library is measured only by running one: a task in product words, naming no component, composed in Figma and graded on whether every screen uses the library's components, cites a reference screen and leaves nothing loose (the toolkit's skill evals, Figma tasks).</p>
     {agentRuns.latest.length === 0 ? (
-      <p class="muted">Not measured yet: {agentRuns.tasks ? `${agentRuns.tasks} ${agentRuns.tasks === 1 ? 'task is' : 'tasks are'} written, with no run recorded.` : 'no task is written for this project.'}</p>
+      <EmptyState title="Agent runs land here" small>Not measured yet: {agentRuns.tasks ? `${agentRuns.tasks} ${agentRuns.tasks === 1 ? 'task is' : 'tasks are'} written, with no run recorded.` : 'no task is written for this project.'}</EmptyState>
     ) : (
       <div class="table-wrap" data-scrolls>
         <table class="table">

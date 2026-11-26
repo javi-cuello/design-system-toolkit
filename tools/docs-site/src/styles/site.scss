@@ -280,16 +280,6 @@ $xxl: 90rem;
       // stock-ui's search width, now on the landmark around the field.
       .toolbar > search { inline-size: auto; flex: 1 1 12rem; max-inline-size: 18rem; }
     }
-    // Nothing left: what was asked and the way back, where the list was.
-    .filter-empty {
-      padding: var(--space-32) var(--space-16);
-      border: var(--stroke-1) dashed var(--line);
-      border-radius: var(--radius-8);
-      text-align: center;
-      > p { margin: 0; }
-      > p + p { margin-block-start: var(--space-8); }
-    }
-    .filter-empty__actions { display: flex; justify-content: center; gap: var(--space-16); }
 
     // ---- Content rhythm ------------------------------------------------------
 
@@ -374,11 +364,6 @@ $xxl: 90rem;
     .muted { color: var(--fg-muted); }
     .text-warn { color: var(--warn); }
     .text-bad { color: var(--bad); }
-    .notice {
-      padding: var(--space-16);
-      border: var(--stroke-1) dashed var(--control);
-      border-radius: var(--radius-8);
-    }
 
     // A documentation section: a heading over a hairline, as Primer and GOV.UK
     // separate theirs. Boxes are kept for what is a box: stages, tables, code.
@@ -1505,8 +1490,6 @@ $xxl: 90rem;
   // colour, set off by weight and an accent underline; the browser's yellow
   // <mark> fought both themes.
   .values-dialog mark { background: none; color: inherit; font-weight: var(--weight-semibold); text-decoration: underline var(--accent) var(--stroke-2); text-underline-offset: 0.2em; }
-  // A section with nothing to show says so in one muted line, the same on every page.
-  .empty-state { margin-block: var(--space-16) 0; color: var(--fg-muted); max-inline-size: 66ch; }
   .values-swatch { display: inline-block; inline-size: 1em; block-size: 1em; vertical-align: -0.15em; margin-inline-end: 0.4em; border-radius: var(--radius-4); box-shadow: inset 0 0 0 var(--stroke-1) rgb(0 0 0 / 0.2); }
 
   // Windows high contrast and other forced palettes drop backgrounds and

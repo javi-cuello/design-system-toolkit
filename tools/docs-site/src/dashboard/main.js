@@ -1,7 +1,7 @@
 // Start-up: read the record, wire every renderer to it, then poll.
-import { announce, onRecord, pullRecord, step } from './record.js';
+import { announce, forget, onRecord, pullRecord, step } from './record.js';
 import { DASH, ctx } from './context.js';
-import { build, componentFromHash, paintVerify, queueStatus, state } from './queue.js';
+import { build, componentFromHash, paintAskButtons, paintVerify, queueStatus, state } from './queue.js';
 import { loadMeasures, paintFiles, renderLibrary, renderQueuePane, renderRuns, setFreshness } from './measures.js';
 import { renderChanged, renderChecks } from './scores.js';
 import { loadContext } from './owners.js';
@@ -34,31 +34,41 @@ import './audit.js';
   // The file list comes from the project's settings, not from the service, so
   // it paints before the first request and stays up if that request fails.
   paintFiles();
-  // The file switch is links to `#queue?lib=<key>`: the address says which
-  // file is in view, and a change of it switches the record.
-  const markLib = () => {
-    for (const a of document.querySelectorAll("[data-lib-choice]"))
-      if (a.dataset.libChoice === ctx.libKey) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
-  };
+  // The file menu writes `#queue?lib=<key>`: the address says which file is in view, and a change of it switches
+  // the record.
+  const libFilter = document.getElementById("libFilter");
+  const markLib = () => { if (libFilter) libFilter.value = ctx.libKey; };
   markLib();
-  for (const a of document.querySelectorAll("[data-lib-choice]")) a.addEventListener("click", (e) => {
-    // Never mid-run: the stages file against `ctx.libKey` as they go.
-    if (ctx.running) e.preventDefault();
+  // A choice is a change of the address; never mid-run: the stages file against `ctx.libKey`
+  // as they go, so the menu goes back to the file in view.
+  if (libFilter) libFilter.addEventListener("change", () => {
+    if (ctx.running) return markLib();
+    const to = "#queue?lib=" + encodeURIComponent(libFilter.value);
+    // an address already saying this file fires no hashchange (it moved mid-run): switch directly
+    if (location.hash === to) ctx.switchLib(libFilter.value); else location.hash = to;
   });
   // The library in view becomes `key`: its record, its queue, its prints. The
   // Audit's run over several files calls it too (ctx.switchLib), holding the
-  // run lock, so a tab click cannot move it mid-run.
+  // run lock, so the file menu cannot move it mid-run.
   ctx.switchLib = async (key) => {
     if (!key || key === ctx.libKey || !libs.some((l) => l.key === key)) return;
     ctx.libKey = key;
     try { localStorage.setItem("dashLib", ctx.libKey); } catch (e) {}
+    ctx.sevFilter = "all";                       // the severities are the other file's
     markLib();
     // The queue is the other library's until the record arrives: emptied
     // here so no row from the one survives into the other.
     for (const id of Object.keys(state)) delete state[id];
+    ctx.recordFor = null;                        // the figures wait for this file's record (A to B and back to A included)
+    forget();                                    // the last file's record goes too: a write announced before this one's read would paint it as this file's
     ctx.lastMetrics = null; ctx.lastRuns = []; ctx.storedPrints = null; ctx.printsLoaded = false;
     paintFiles();                                // the marked row moves with it
-    try { await pullRecord(); } catch (e) { queueStatus("Could not read that library's record — " + e.message, "warn"); }
+    try { await pullRecord(); }
+    catch (e) {
+      // the strip says it with dashes rather than keep the last file's numbers (measures.js renderQueuePane)
+      if (key === ctx.libKey) { ctx.recordFailed = key; renderQueuePane(); }
+      queueStatus("Could not read that library's record — " + e.message, "warn");
+    }
   };
   addEventListener("hashchange", () => {
     if (ctx.running) return;
@@ -79,8 +89,11 @@ import './audit.js';
   // something happens: "Saved 14:32", or what failed.
 
   onRecord((rec) => {
-    // rows
-    for (const id of Object.keys(rec.rows || {})) state[id] = rec.rows[id];
+    // rows: one the record no longer holds (removed by the service or another session) goes from the queue too
+    const rows = rec.rows || {};
+    for (const id of Object.keys(state)) if (!(id in rows)) delete state[id];
+    for (const id of Object.keys(rows)) state[id] = rows[id];
+    ctx.recordFor = ctx.libKey; ctx.recordFailed = null; // the figures count this file's rows from here (measures.js renderQueuePane)
     // Before the queue paints: a bucket with nothing in it says "All clear"
     // only where a run stands behind it, and that is what says so.
     ctx.lastRuns = Object.values(rec.runs || {}).filter((d) => d && d.at);
@@ -98,6 +111,8 @@ import './audit.js';
     // audit reads), so they are the fallback.
     const settings = (window.DASH_CONTEXT && window.DASH_CONTEXT.libraries) || {};
     const libId = ctx.libKey || Object.keys(rec.libraries || {})[0] || Object.keys(settings)[0];
+    // each file's last run, for its age in the file list, kept as each file is opened
+    ctx.libRecords = Object.assign({}, ctx.libRecords, rec.libraries || {});
     if (libId) {
       ctx.libKey = libId;
       // No recorded library: one built from the settings, with no metrics,
@@ -110,7 +125,7 @@ import './audit.js';
       DASH.dataset.scanned = file && !(file.roles || []).includes("components") ? "no" : "yes";
       ctx.lastMetrics = data && data.metrics ? data.metrics : null;
       ctx.FILE = (data && data.figmaUrl) || ("https://www.figma.com/design/" + libId);
-      ctx.libName = (data && data.name) || ctx.libName;
+      ctx.libName = (data && data.name) || (file && file.name) || ctx.libName;
       renderLibrary(data);
     }
 
@@ -124,7 +139,7 @@ import './audit.js';
     renderChanged(fp);
 
     renderRuns(ctx.lastRuns);
-    renderQueuePane(ctx.lastMetrics, ctx.lastRuns);
+    renderQueuePane();
 
     loadContext();
     const t = (rec.asks || {}).thread;
@@ -169,6 +184,8 @@ import './audit.js';
   } else {
     DASH.dataset.ask = "off";
   }
+  ctx.askKnown = true;
+  paintAskButtons();
   paintFiles(st);
   // A read-only copy has no service to ask: nothing to poll.
   if (DASH.dataset.readonly === "yes") return;

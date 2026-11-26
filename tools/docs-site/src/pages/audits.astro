@@ -7,11 +7,28 @@
 // the surface more than a project that has one: the same shell, empty, with
 // the Audit button that fills it.
 import Base from '../layouts/Base.astro';
-import UpdatedBy from '../components/UpdatedBy.astro';
+import Time from '../components/Time.astro';
+import { auditedAt } from '../lib/tracker.js';
 import Dashboard from '../dashboard/Dashboard.astro';
 ---
-<Base title="Audits">
-  <h1>Audits</h1>
-  <UpdatedBy from={['snapshot', 'audit']} />
+<Base title="Audits" navMin={0}>
+  <!-- the page's hero band, as a component page has, with the actions on its right. .dash-hero is a root of the
+       dashboard's @scope, and context.js mirrors the dashboard's state onto it, so its rules (read-only, scanned, ready) reach these -->
+  <div class="hero dash-hero" slot="hero">
+    <h1>Audits</h1>
+    <!-- the maintainer's wording; a file the snapshot has moved past says so in the list below (Snapshot again) -->
+    <p class="byline">{auditedAt ? <>Last audited <Time at={auditedAt} /></> : 'Not audited yet'}</p>
+    <div class="head-actions">
+    <!-- ONE Audit, on every tab. It opens the Audit dialog below, where the
+         files and the scope are chosen: a short setup before a run, which
+         is what a modal is for (knowledge: dialogs, Choosing the surface). -->
+    <!-- Check changes beside Audit; it still runs on the file in view -->
+    <button class="button" id="sweepBtn" type="button">Check changes</button>
+    <button class="button button--primary" id="auditBtn" type="button" aria-haspopup="dialog">Audit</button>
+    <p class="sweep-state" id="sweepState" role="status" aria-live="polite"></p>
+  </div>
+    <!-- the files' status in the hero -->
+    <div class="hero__files"><ul class="files" id="fileList" aria-label="Files this project audits"></ul></div>
+  </div>
   <Dashboard />
 </Base>

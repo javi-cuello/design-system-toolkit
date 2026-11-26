@@ -6,16 +6,14 @@
 // the project names its code, with the project filled in, never a
 // placeholder for the reader to complete.
 import { codeOf, project } from '../lib/project.js';
+import EmptyState from './EmptyState.astro';
 
 interface Props { shows: string; needs?: 'code' | 'audit' | 'tokens' }
 const { shows, needs = 'audit' } = Astro.props;
 const named = codeOf.size > 0;
 ---
 {!named ? (
-  <p class="lede lede--empty">Nothing to compare yet: this project names no code. Once its audit settings name the repository and the folder that holds its components, this page shows {shows}.</p>
+  <EmptyState title="The comparison with code lands here" level={2}>This project names no code yet. Once its audit settings name the repository and the folder that holds its components, this page shows {shows}.</EmptyState>
 ) : needs === 'code' ? null : (
-  <>
-    <p class="lede lede--empty">Nothing to compare yet: no code audit has run. Once it has, this page shows {shows}.</p>
-    <p class="section__note">{needs === 'tokens' ? <>Name the code's token files under <code>code.parity.tokens</code> in the context document, then run </> : <>Map the code's stories in the parity mappings (where <code>code.parity.mappings</code> says), then run </>}<code>node tools/parity/external.mjs --project {project.id}</code>.</p>
-  </>
+  <EmptyState title="The comparison with code lands here" level={2}>No code audit has run yet; once it has, this page shows {shows}. {needs === 'tokens' ? <>Name the code's token files under <code>code.parity.tokens</code> in the context document, then run </> : <>Map the code's stories in the parity mappings (where <code>code.parity.mappings</code> says), then run </>}<code>node tools/parity/external.mjs --project {project.id}</code>.</EmptyState>
 )}

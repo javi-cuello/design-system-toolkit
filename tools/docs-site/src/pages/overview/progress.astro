@@ -32,7 +32,7 @@ const sorted = [...rows].sort((a, b) => (a.status?.rank ?? -1) - (b.status?.rank
   </div>
   <section class="panel panel--plain" aria-labelledby="progress-components">
     <header class="panel__head"><h2 id="progress-components">By component</h2></header>
-    <Filter groups={groups} label="Show components that are" placeholder={`Filter ${total} components`} />
+    <Filter level={3} groups={groups} label="Show components that are" placeholder={`Filter ${total} components`} />
     <div class:list={['table-wrap', sorted.length > 20 && 'table-wrap--long']} data-scrolls>
       <table class="table">
         <caption class="visually-hidden">Components and their design status</caption>

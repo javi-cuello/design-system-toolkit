@@ -146,6 +146,15 @@ try {
   ok("/patch with no path is a 400", (await post("/patch", { value: 1 })).code === 400);
   ok("/patch merges one path into the record", (await post("/patch", { path: "rows.n1-1", value: { done: true } })).json.ok === true
     && (await ask("GET", "/data")).json.rows["n1-1"].done === true && (await ask("GET", "/data")).json.rows["n1-1"].comp === "Button");
+  // a key no record and no routing names creates no record of its own (/rows's guard, on every writer)
+  { const r = await post("/patch", { path: "rows.n1-1", value: { done: true }, lib: "NOT-A-LIBRARY" });
+    ok("/patch naming a library this project does not know is refused, and creates no record", r.code === 400 && /does not know the file key/.test(r.json.error) && !fs.existsSync(path.join(dir, "audit", "NOT-A-LIBRARY.json"))); }
+  { const r = await ask("PUT", "/data?lib=NOT-A-LIBRARY", { origin: SELF, body: rec });
+    ok("PUT /data naming a library this project does not know is refused, and creates no record", r.code === 400 && !fs.existsSync(path.join(dir, "audit", "NOT-A-LIBRARY.json"))); }
+  ok("/patch with null at a top-level key is refused, every row kept", (await post("/patch", { path: "rows", value: null })).code === 400
+    && (await post("/patch", { path: "rows" })).code === 400 && (await ask("GET", "/data")).json.rows["n1-1"].comp === "Button");
+  ok("/patch with null inside the record stores null, which readers take as none", (await post("/patch", { path: "rows.n1-1.note", value: null })).json.ok === true
+    && (await ask("GET", "/data")).json.rows["n1-1"].note === null);
   ok("/ruling with no text is a 400", (await post("/ruling", { text: "  " })).code === 400);
   ok("/ruling with no context document says where it looked, and writes nothing", /no context document/.test((await post("/ruling", { text: "a ruling" })).json.error));
   {
@@ -157,6 +166,48 @@ try {
     ok("/ruling with remove takes it back, the document as before it", (await post("/ruling", { text: "Keep the raw stroke", remove: true })).json.removed === true && fs.readFileSync(ctxFile, "utf8") === before);
     ok("/ruling with remove on a ruling not there says absent and writes nothing", (await post("/ruling", { text: "Keep the raw stroke", remove: true })).json.absent === true && fs.readFileSync(ctxFile, "utf8") === before);
     ok("/ruling with remove other than true writes nothing", (await post("/ruling", { text: "Keep the raw stroke", where: "Alert" })).json.ok === true && (await post("/ruling", { text: "Keep the raw stroke", remove: "false" })).json.already === true);
+    // several at once, on a document long enough that its read is an await another request runs in: each reads the
+    // document after the one before wrote, so none is lost (unqueued, six of these lost two to four)
+    fs.writeFileSync(ctxFile, before + "\n<!-- " + "x".repeat(4e6) + " -->\n");
+    const extra = ["Third", "Fourth", "Fifth", "Sixth"].map((w) => post("/ruling", { text: w + " at once", where: "Badge" }));
+    const both = await Promise.all([post("/ruling", { text: "First at once", where: "Alert" }), post("/ruling", { text: "Second at once", where: "Chip" }), ...extra]);
+    const after = fs.readFileSync(ctxFile, "utf8");
+    ok("each /ruling call answers the date cell it wrote, one per row", new Set(both.map((r) => r.json.date)).size === 6 && both.every((r) => /^\d{4}-\d\d-\d\d[b-z]?$/.test(r.json.date)), both.map((r) => r.json.date).join(" "));
+    const dateOf = (w) => both[["First", "Second", "Third", "Fourth", "Fifth", "Sixth"].indexOf(w)].json.date;
+    ok("six /ruling calls at once all land in §6", both.every((r) => r.json.ok === true) && ["First", "Second", "Third", "Fourth", "Fifth", "Sixth"].every((w) => after.includes(w + " at once")), both.map((r) => JSON.stringify(r.json)).join("\n"));
+    // taken back under a name it was not recorded with, and no ruling day: another component's row, whose finding it
+    // still closes (a row closed by it before rulingAlready marked such rows), so it stays
+    const elsewhere = (await post("/ruling", { text: "Second at once", where: "Chip renamed", remove: true })).json;
+    ok("/ruling remove under another component keeps that component's row and says so", elsewhere.ok === true && elsewhere.elsewhere === true && fs.readFileSync(ctxFile, "utf8").includes("Second at once"), JSON.stringify(elsewhere));
+    // the same, with the date cell its record call answered: the component renamed, so its own row goes
+    { const r = (await post("/ruling", { text: "Second at once", where: "Chip renamed", ruledOn: dateOf("Second"), remove: true })).json;
+      ok("/ruling remove under a renamed component, ruled the day the row was recorded, takes it back", r.removed === true && !fs.readFileSync(ctxFile, "utf8").includes("Second at once"), JSON.stringify(r)); }
+    ok("/ruling remove on the component it was recorded on takes it back", (await post("/ruling", { text: "First at once", where: "Alert", remove: true })).json.removed === true && !fs.readFileSync(ctxFile, "utf8").includes("First at once"));
+    // two dashboard rows of one text the same day (a document from before the duplicate refusal), neither on this component: refused
+    const twice = fs.readFileSync(ctxFile, "utf8").replace(/^(\| .*\| Third at once \|.*\n)/m, (row) => row + row.replace("on Badge", "on Card"));
+    fs.writeFileSync(ctxFile, twice);
+    // (a page from before `ruledOn`: the day of its ruledAt, read from the row, so a run across midnight still holds)
+    const which = (await post("/ruling", { text: "Third at once", where: "Chip", ruledAt: dateOf("Third").slice(0, 10) + "T12:00:00.000Z", remove: true })).json;
+    ok("/ruling remove with two rows of that text that day on other components removes nothing and says so", which.ok === false && /2 rows/.test(which.error) && fs.readFileSync(ctxFile, "utf8") === twice, JSON.stringify(which));
+    ok("/ruling remove with two rows takes back the one on its own component", (await post("/ruling", { text: "Third at once", where: "Card", remove: true })).json.removed === true && fs.readFileSync(ctxFile, "utf8").split("Third at once").length === 2);
+    // the same component's row from another day, beside the one ruled: `ruledOn` takes back that row and no other
+    const two = fs.readFileSync(ctxFile, "utf8").replace(/^(\| .*\| Fourth at once \|.*\n)/m, (row) => row + row.replace(/^\| [^|]+\|/, "| 2026-01-02 |").replace("on Badge.", "on Badge, about: other."));
+    fs.writeFileSync(ctxFile, two);
+    { const r = (await post("/ruling", { text: "Fourth at once", where: "Badge renamed", ruledOn: dateOf("Fourth"), remove: true })).json;
+      ok("/ruling remove by its date cell takes back that row and not the same component's row of another day", r.removed === true && fs.readFileSync(ctxFile, "utf8").split("Fourth at once").length === 2 && fs.readFileSync(ctxFile, "utf8").includes("| 2026-01-02 |"), JSON.stringify(r)); }
+    // a row under this very component re-dated by hand: neither taken by name nor called another's
+    { const doc = fs.readFileSync(ctxFile, "utf8"), redated = doc.replace(/^\| [^|]+(\| Audit \| Sixth at once \|)/m, "| 2026-02-03 $1");
+      fs.writeFileSync(ctxFile, redated);
+      const r = (await post("/ruling", { text: "Sixth at once", where: "Badge", ruledOn: dateOf("Sixth"), remove: true })).json;
+      ok("/ruling remove of its own component's row re-dated by hand is refused, not answered elsewhere", redated !== doc && r.ok === false && /another date/.test(r.error) && fs.readFileSync(ctxFile, "utf8") === redated, JSON.stringify(r)); }
+    // the same under its own name: the date cell first, so the other day's row on Badge still stays
+    { const r = (await post("/ruling", { text: "Fifth at once", where: "Badge", ruledOn: dateOf("Fifth"), remove: true })).json;
+      ok("/ruling remove under its own name keeps that component's row of another day", r.removed === true && fs.readFileSync(ctxFile, "utf8").includes("| 2026-01-02 |"), JSON.stringify(r)); }
+    // written by hand: the maintainer strikes it in the document, the page never removes it
+    const hand = before.replace(/^(\| \{date\} \|.*\n)/m, "$1| 2026-11-10 | Audit | Hand rule | Decided in review | Maintainer |  |  |\n");
+    fs.writeFileSync(ctxFile, hand);
+    const byHand = (await post("/ruling", { text: "Hand rule", where: "Alert", remove: true })).json;
+    ok("/ruling remove on a ruling written by hand answers byHand and writes nothing", hand !== before && byHand.ok === false && byHand.byHand === true && fs.readFileSync(ctxFile, "utf8") === hand, JSON.stringify(byHand));
     fs.rmSync(ctxFile);
   }
 

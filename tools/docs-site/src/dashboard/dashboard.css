@@ -15,34 +15,28 @@
 @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } }
 
 @layer components {
-@scope (.dash) {
+@scope (.dash, .dash-hero) { /* .dash-hero, the file list in the page hero */
 
   /* The site's rhythm stops at .dash (its rules are scoped to end here), so
      the gap under the page's title is set from this side. */
   /* --drawer-open: on a phone the open drawer is a sheet the screen's width;
      from 45rem a panel of its own (below). */
-  :scope { --drawer-open: 100vw; --drawer-w: var(--drawer-open); display: block; margin-block-start: var(--space-24); }
+  :scope { --drawer-open: 100vw; --drawer-w: var(--drawer-open); display: block; } /* no top margin, so the first row lines up with On this page beside it (the page body's padding is the gap) */
   /* Unseen until its first render (main.js sets data-ready), so the
      queue appears whole rather than filling in and pushing itself around. */
   :scope:not([data-ready]) :is(header.top, #dash-main, footer.foot) { visibility: hidden; }
 
   /* A read-only copy: the actions go (the rule is at the end of this scope,
      so it outranks the drawer's own display rules by order), and the boxes
-     and notes are disabled and readonly by the script (queue.js paint). An
-     empty note is an invitation to type, which a read-only copy cannot take;
-     a written one is kept, as text the reader cannot change. */
-  :scope[data-readonly="yes"] textarea.note:placeholder-shown { display: none; }
+     are disabled by the script (queue.js paint). */
   .readonly-note { display: none; margin: 0; color: var(--fg-muted); font-size: var(--text-sm); }
   :scope[data-readonly="yes"] .readonly-note { display: block; }
   /* A tokens or icon library has no component fingerprints to check. The
-     Audit stays: it runs the ticked files, whichever tab is in view. Kept in
-     the layout, so switching files never moves the page under you. */
-  :scope[data-scanned="no"] #sweepBtn { visibility: hidden; }
-  /* First run: a library recorded, nothing measured. Hide what has no content
-     rather than rendering headings above empty space. */
-  :scope[data-first-run="yes"] .measured-only,
+     Audit stays: it runs the ticked files, whichever is in view. */
+  :scope[data-scanned="no"] #sweepBtn { display: none; } /* beside Audit, a hidden one leaves no gap */
+  /* First run: a components file recorded, never measured: its first-run state stands in for the queue */
   :scope:not([data-first-run="yes"]) .first-run-only { display: none; }
-  /* The head: the record's freshness on the left, the actions on the right,
+  /* The head: the files on the left, the actions on the right,
      one row while they fit. The actions stack three right-aligned lines (the
      result, the controls, the connection): as one wrapping row they broke into
      a ragged L, a button stranded below its pair. */
@@ -51,11 +45,26 @@
     gap: var(--space-16) var(--space-32);
     padding-block-end: var(--space-24); border-block-end: var(--stroke-1) solid var(--line);
   }
-  header.top .files { flex: 1 1 26rem; } /* two file cells wide before the Audit button wraps under them */
-  .head-actions { display: grid; justify-items: end; align-content: start; gap: var(--space-8); }
-  /* The file in view, under its tab: one row, Check changes at its end. */
-  .lib-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8) var(--space-16); flex-wrap: wrap; margin-block: var(--space-16); }
-  .lib-bar .measured { margin: 0; flex: 1 1 20rem; }
+  .head-actions { display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end; align-content: start; gap: var(--space-8); } /* Check changes and Audit side by side, the status under both */
+  .head-actions .sweep-state { grid-column: 1 / -1; }
+  /* the Audits hero, a second root of this scope (its state mirrored from the dashboard's by context.js):
+     the title on the left, the actions on its right, the files under both across the width */
+  :scope.dash-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-32); margin: 0; }
+  /* the actions on the title's line, centred on it; the date line close under the title, the files a section step below */
+  :scope.dash-hero > h1 { grid-column: 1; grid-row: 1; margin: 0; }
+  :scope.dash-hero > .head-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: start; margin-block-start: var(--space-16); } /* narrow: under the date line; flex, so a hidden Check changes leaves no gap */
+  :scope.dash-hero > .head-actions .sweep-state { flex-basis: 100%; }
+  @media (min-width: 45rem) { :scope.dash-hero > .head-actions { justify-content: end; } } /* (the dashboard's two-column width) */
+  @media (min-width: 45rem) { :scope.dash-hero > .head-actions { grid-column: 2; grid-row: 1; align-self: center; margin: 0; } } /* (the dashboard's two-column width) */
+  :scope.dash-hero > .byline { grid-column: 1 / -1; margin: var(--space-8) 0 0; }
+  :scope.dash-hero > .hero__files { grid-column: 1 / -1; margin-block-start: var(--space-48); }
+  :scope.dash-hero:not([data-ready]) :is(.head-actions, .hero__files) { visibility: hidden; }
+  /* the dashboard's head held the actions and the files; now empty but for the read-only note, it draws nothing */
+  :scope:not([data-readonly="yes"]) header.top { display: none; }
+  .status-tabs { margin-block-end: 0; }
+  /* the shared empty state (stock-ui .empty-state) where a tab, a file or the first run has nothing to show */
+  :is(#tabEmpty, #emptyFile, #firstRun) { margin-block-start: var(--space-32); }
+  .bucket .empty-state { margin-block-start: var(--space-24); }
   /* The status is the flexible part. Left to size itself it widened the whole
      column and wrapped the page title, so it shrinks first and wraps within
      its own box — the buttons never move. */
@@ -63,18 +72,6 @@
      46 characters wide it wrapped into a centred paragraph floating above
      them, which is what a header full of prose looks like. */
   .head-actions .sweep-state { margin: 0; text-align: end; max-inline-size: 34ch; }
-  .measured {
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-8) var(--space-12);
-    font-size: var(--text-sm); color: var(--fg-muted);
-  }
-  /* The freshness, weights and counts are the site's one badge (stock-ui
-     .sev). Its padding and border hang into the row gap, so the head is one
-     height with the badge or without it (a file never run has none). */
-  .freshness { margin-block: calc(-2px - 1px); }
-  .freshness.fresh { color: var(--good); background: var(--good-soft); }
-  .freshness.aging { color: var(--warn); background: var(--warn-soft); }
-  .file-link { color: var(--fg); text-decoration: underline dotted var(--fg-soft); text-underline-offset: 4px; } /* a dotted line sits lower, so its dots clear descenders */
-  @media (hover: hover) { .file-link:hover { color: var(--accent); text-decoration-color: var(--accent); } }
 
 
   /* Bucket 1 is defined as "one approval applies the batch" — the per-row
@@ -96,23 +93,19 @@
   }
   .lands-tag[data-lands="figma"], .lands-tag[data-lands="both"] { color: var(--fg); border-color: var(--fg-soft); }
 
-  /* The file switch: links, the one in view marked as the site marks a
-     selected tab (stock-ui .tab[aria-selected]). */
-  .tabs--scope { margin-block-start: 0; padding: 0; list-style: none; }
-  a.tab { text-decoration: none; }
-  .tab[aria-current] { color: var(--fg); box-shadow: inset 0 -2px 0 var(--fg); } /* the heavier stroke as an underline drawn in a shadow, taking no room */
   /* What the filters are doing, and the way back to everything. */
   .filter-note[hidden] { display: none; }
   .link-button {
     font: inherit; background: none; border: 0; padding: 0; cursor: pointer;
     color: var(--accent); text-decoration: underline; text-underline-offset: var(--underline-offset);
   }
-  /* A file with nothing recorded: the empty state replaces the figures, the
-     filters and the sections, which would all be empty. */
-  :scope[data-nothing="yes"] :is(.toolbar, #queueTiles, #queuePane, #verifyBtn) { display: none; }
-  .empty-file { margin-block-start: var(--space-24); }
-  .empty-file[hidden] { display: none; }
-  .empty-file h2 { font-size: var(--text-lg); line-height: var(--leading-lg); margin: 0; margin-block-end: var(--space-8); }
+  /* A file with nothing recorded, or never audited: its empty state replaces the filters, the tabs and the sections,
+     which would all be empty. The figures stay (the project's), and so does the file menu, the way back to a file
+     with findings (the maintainer, 2026-11-26). Never audited shows the first-run state, not the empty file's. */
+  :scope:is([data-nothing="yes"], [data-first-run="yes"]) :is(.status-tabs, #queuePane, #verifyBtn) { display: none; }
+  :scope:is([data-nothing="yes"], [data-first-run="yes"]) .toolbar > :not(#libFilter) { display: none; }
+  :scope:is([data-nothing="yes"], [data-first-run="yes"]) .toolbar:not(:has(#libFilter)) { display: none; }
+  :scope[data-first-run="yes"] #emptyFile { display: none; }
 
   /* .segmented and .seg come from the UI system (stock-ui). */
   /* In the queue toolbar, aligned with its button: no margins of its own. */
@@ -158,16 +151,8 @@
   /* A rule where the subject changes — the sections above are about what moved,
      this one is about how everything is built. */
   section.ruled { border-block-start: var(--stroke-1) solid var(--line); padding-block-start: var(--space-48); }
-  /* A rule separates two things. When the section before it is hidden, this one
-     leads the view and the rule separates it from nothing — which is what the
-     "Changed since the last audit" section leaves behind every time nothing has
-     moved, which is most of the time. */
-  /* The rule and its padding go; the section's own top margin stays. */
-  [hidden] + section.ruled { border-block-start: 0; padding-block-start: 0; }
-  /* A view's first section follows the page's head directly; the queue's
-     leads after the first-run notice, which is hidden once anything is
-     measured. */
-  .view > section:first-child, .view > .first-run-only + .measured-only { margin-block-start: var(--space-24); }
+  /* a view starts at the page body's top, level with On this page */
+  .view > section:first-child { margin-block-start: 0; }
   .sec-head { display: flex; align-items: baseline; gap: var(--space-12); flex-wrap: wrap; margin-block-end: var(--space-4); }
   .sec-note { color: var(--fg-muted); font-size: var(--text-sm); margin: 0; margin-block-end: var(--space-16); max-inline-size: 66ch; }
 
@@ -241,14 +226,39 @@
   .file-dot::before {
     content: ""; inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--fg-soft); /* a status dot, drawn */
   }
-  /* green: open in Figma. The head is the same on every tab, so the file in
-     view is not marked here; its tab says which it is. */
+  /* green: open in Figma. The hero is the same whatever file is in view; the file menu says which one is. */
   .file[data-on="true"]:not([data-busy]) .file-dot::before { background: var(--good); }
   .file-what { color: var(--fg-muted); }
   /* "Snapshot again": the file was saved in Figma after its last snapshot. */
   .file-stale { color: var(--warn); font-weight: 600; }
   .file-stale[hidden] { display: none; }
   .file-note { font-size: var(--text-xs); }
+  /* in the hero the files share its whole width, a rule between each, in full-contrast text */
+  /* one file a row on a narrow screen; side by side from the two-column width, a rule between each, the first flush */
+  :scope.dash-hero .files { grid-template-columns: minmax(0, 1fr); gap: var(--space-16); }
+  :scope.dash-hero .file { color: var(--fg); }
+  @media (min-width: 45rem) { /* (the dashboard's two-column width) */
+    :scope.dash-hero .files { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0; }
+    :scope.dash-hero .file { padding-inline: var(--space-16); }
+    :scope.dash-hero .file:first-child { padding-inline-start: 0; }
+    :scope.dash-hero .file + .file { border-inline-start: var(--stroke-1) solid var(--line-strong); }
+  }
+  :scope.dash-hero .file-what, :scope.dash-hero .file-note { color: var(--fg); }
+  /* under the name, one list of short lines that look alike: open or not, snapshot again, its age */
+  .file > .file-age { grid-column: 2; }
+  .file-age[hidden] { display: none; }
+  :scope.dash-hero :is(.file-note, .file-stale, .file-age) { font-size: var(--text-xs); font-weight: var(--weight-medium); }
+  .file-age[data-tone="ok"] { color: var(--good); }
+  .file-age[data-tone="warn"] { color: var(--warn); }
+  /* the name across the top; under it each status line has its dot in the one column, so they align and look alike:
+     open or not (green or grey), snapshot again (warn), the age (green, or warn past a week) */
+  :scope.dash-hero .file { grid-template-columns: 12px 1fr; row-gap: var(--space-2); }
+  :scope.dash-hero :is(.file-note, .file-stale, .file-age) { line-height: 1.4; } /* (a stack of short status lines: tighter than body text) */
+  :scope.dash-hero .file-what { grid-column: 1 / -1; grid-row: 1; }
+  :scope.dash-hero .file-dot { grid-column: 1; grid-row: 2; }
+  :scope.dash-hero .file-note { grid-column: 2; grid-row: 2; }
+  :scope.dash-hero :is(.file-stale, .file-age) { grid-column: 1 / -1; position: relative; padding-inline-start: calc(12px + var(--space-8)); } /* the dot's column and the grid's gap */
+  :scope.dash-hero :is(.file-stale, .file-age)::before { content: ""; position: absolute; inset-inline-start: 2px; inset-block-start: calc(0.7em - 4px); inline-size: 8px; block-size: 8px; border-radius: 50%; background: currentColor; } /* the same 8px dot, centred in the 12px column on the first line (0.7em: half its 1.4 line) */
   /* Reading a file: the dot becomes a spinner on that row, and the note says
      the stage and how far through the run it is. */
   .file[data-busy] .file-note { color: var(--fg); }
@@ -275,7 +285,7 @@
     color: var(--accent); padding: 0; cursor: pointer; text-decoration: underline;
     text-underline-offset: var(--underline-offset);
   }
-  .changed-group { padding-block: var(--space-12); border-block-start: var(--stroke-1) solid var(--line-soft); }
+  .changed-group { padding-block: var(--space-12); border-block-start: var(--stroke-1) solid var(--line); }
   .changed-group:first-child { border-block-start: 0; }
   .changed-group h3 {
     font-family: var(--font-display); font-size: var(--text-md); font-weight: 600;
@@ -294,8 +304,10 @@
 
   /* The queue's figures and its toolbar. The figures are the site's KPI
      strip (stock-ui .kpis). */
-  #queueTiles { margin-block-end: var(--space-16); }
-  #metrics { margin-block-start: var(--space-16); }
+  #queueTiles { margin-block-end: var(--space-32); } /* the figures one group, the controls under them another */
+  /* one 32px step between the figures, the menus, the tabs' labels and the first bucket (the maintainer, 2026-11-26) */
+  .toolbar:has(+ .status-tabs) { margin-block-end: var(--space-24); } /* with the tabs' own 8px padding, 32 to their labels */
+  #queuePane > .bucket:not([hidden]):not(.bucket:not([hidden]) ~ .bucket) { margin-block-start: var(--space-32); } /* the first bucket a tab shows */
 
 
   /* registry */
@@ -336,6 +348,26 @@
   .fix-where { color: var(--fg-muted); }
   .fix-code { margin: 0; padding: var(--space-12); max-block-size: 50svh; overflow: auto; font-family: var(--font-mono); font-size: var(--text-sm); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface); border: var(--stroke-1) solid var(--line); }
   .fix-actions { display: flex; justify-content: flex-end; gap: var(--space-8); }
+  /* a row's own message, a line of its footer under the buttons: the warning's colour and icon-free text */
+  .row-actions { flex-wrap: wrap; }
+  .row-msg { flex-basis: 100%; margin: 0; color: var(--warn); font-size: var(--text-sm); }
+  .fix-code-more > summary { cursor: pointer; color: var(--fg-muted); font-size: var(--text-sm); }
+  .fix-code-more[open] > summary { margin-block-end: var(--space-8); }
+  /* the note on the card, a line of its own above the footer; and the note dialog */
+  .note-line { display: flex; align-items: center; gap: var(--space-8); margin: var(--space-16) 0 0; padding: var(--space-4) var(--space-4) var(--space-4) var(--space-12); border-radius: var(--radius-8); background: var(--row-band); color: var(--fg); font-size: var(--text-sm); }
+  .note-line-text { flex: 1; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .note-delete { flex: none; }
+  .note-line[hidden] { display: none; }
+  /* a small dialog for one field: narrow (stock-ui's --modal-width), the body tighter, Cancel and Save in a footer
+     band across the dialog's width over a hairline, as the head sits under one */
+  #noteDialog { --modal-width: 28rem; } /* (28rem: a note's line, not a page's) */
+  #noteDialog .modal__body { padding-block: var(--space-16) 0; }
+  .note-form { display: grid; gap: var(--space-8); }
+  .note-form .fix-actions { margin-inline: calc(-1 * var(--space-16)); margin-block-start: var(--space-8); padding: var(--space-12) var(--space-16);
+    border-block-start: var(--stroke-1) solid var(--line); }
+  .note-dialog-text { inline-size: 100%; resize: vertical; }
+  .note-dialog-hint { margin: var(--space-4) 0 0; color: var(--fg-muted); font-size: var(--text-sm); }
+  .note-dialog-hint:empty { display: none; }
   /* The Audit dialog: two groups, each a legend over its choices. */
   .audit-form { display: grid; gap: var(--space-24); }
   .audit-form fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-8); }
@@ -355,7 +387,6 @@
     color: var(--fg-soft); white-space: nowrap;
   }
   td .kind[data-kind="first"] { color: var(--accent); }
-  .empty { color: var(--fg-soft); font-size: var(--text-sm); padding-block: var(--space-20); }
 
   footer.foot {
     margin-block-start: var(--space-48); padding-block-start: var(--space-16); border-block-start: var(--stroke-1) solid var(--line);
@@ -421,20 +452,8 @@
 
   /* ---- fix queue ---- */
 
-  .cleared-summary {
-    display: inline-flex; align-items: baseline; cursor: pointer;
-    font-size: var(--text-sm); color: var(--fg-muted); list-style: none;
-  }
-  .cleared-summary::-webkit-details-marker { display: none; }
-  @media (hover: hover) { .cleared-summary:hover { color: var(--fg); } }
-  .cleared-summary::after {
-    content: "▸"; margin-inline-start: var(--space-4); color: var(--fg-soft); font-size: var(--text-sm);
-  }
-  details[open] .cleared-summary::after { content: "▾"; }
-  details.cleared { margin-block-start: var(--space-20); }
-  details.cleared[hidden] { display: none; }
-  details.cleared .rows { border-block-start: var(--stroke-1) solid var(--line); margin-block-start: var(--space-12); }
-  .stamp[data-state="pending"] { color: var(--fg-soft); }
+  .cleared { margin-block-start: var(--space-20); }
+  .cleared .rows { margin-block-start: var(--space-12); }
   .stamp[data-state="failed"] { color: var(--warn); }
   .verify-note {
     margin: 0; margin-block-start: var(--space-12); padding-inline-start: var(--space-12);
@@ -459,50 +478,66 @@
     border: var(--stroke-1) solid var(--accent-soft); background: var(--accent-soft);
     border-radius: var(--radius-4); padding: 2px 7px; /* a badge's padding, off the space scale like the dashboard's own */
   }
-  .bucket-note { color: var(--fg-muted); font-size: var(--text-sm); margin: 0; margin-block-start: var(--space-8); max-inline-size: 66ch; }
 
-  .rows { margin: 0; margin-block-start: var(--space-24); padding: 0; list-style: none; border-block-start: var(--stroke-1) solid var(--line); }
+  .rows { margin: 0; margin-block-start: var(--space-24); padding: 0; list-style: none; } /* no rule above the list, each card has its own edge */
   .rows:empty { border-block-start: 0; margin-block-start: 0; }
-  .bucket-empty {
-    margin: 0; margin-block-start: var(--space-16); padding: 0; padding-block-start: var(--space-12); border-block-start: var(--stroke-1) solid var(--line);
-    color: var(--good); font-size: var(--text-sm); font-weight: 600;
-  }
 
   /* ---- one row ---- */
   .row {
     display: grid;
     grid-template-columns: 26px 1fr; /* the checkbox's column: its 24px box and a little air */
     gap: 0 var(--space-12);
-    padding-block: var(--space-12); padding-inline: var(--space-12);
-    border-block-end: var(--stroke-1) solid var(--line-soft);
-    border-inline-start: var(--stroke-2) solid transparent;
+    padding: var(--space-16) var(--space-16) 0;
+    /* each row its own bordered card, space between */
+    border: var(--stroke-1) solid var(--line-strong); border-radius: var(--radius-12); background: var(--surface); /* white in light, the raised level in dark */
+    margin-block-end: var(--space-16);
     transition: border-color .2s ease, background .2s ease;
   }
-  .row[data-done="true"] { border-inline-start-color: var(--good); background: var(--good-soft); }
+  .row[data-done="true"] { border-color: var(--good); background: var(--good-soft); }
   /* No opacity dim on a done row: at 55% the body text fell to 1.98:1. The done
      state reads from the green rail, the tint and the ticked box instead. */
   .row[data-done="true"] .rid { color: var(--good); }
+  /* a closed row (the Done and Rulings tabs) is a record, not a task: the plain card, its tick shown done
+     and not a control, its footer only Ask, and the note line's Delete ruling to take a ruling back (the maintainer, 2026-11-26) */
+  .cleared .row[data-done="true"] { border-color: var(--line-strong); background: var(--surface); }
+  .cleared .row :is(.do-row, .do-all, .note-toggle) { display: none; } /* Ask stays: always there (the maintainer, 2026-11-26) */
+  /* without a key there is no Ask, so nothing is left in the footer: it goes, and the card keeps its bottom padding */
+  .cleared .row:not(:has(.ask-row:not([hidden]))) .row-actions { display: none; }
+  .cleared .row:not(:has(.ask-row:not([hidden]))) { padding-block-end: var(--space-16); }
 
-  .tick {
-    grid-row: 1 / span 2;
-    appearance: none; -webkit-appearance: none;
-    /* 24px: the minimum target (WCAG 2.5.8). */
-    inline-size: 24px; block-size: 24px; margin: 0;
-    border: 1.5px solid var(--control); border-radius: var(--radius-4);
-    background: var(--surface); cursor: pointer;
-    display: grid; place-items: center;
-    transition: background .15s ease, border-color .15s ease;
-  }
-  @media (hover: hover) { .tick:hover { border-color: var(--fg-muted); } }
+  /* stock-ui's .checkbox, at the 24px minimum target (WCAG 2.5.8) with no label beside it, green when done */
+  .tick { grid-row: 1 / span 2; font-size: 19.2px; } /* (19.2px: the em that makes stock-ui's 1.25em box 24px) */
   .tick:checked { background: var(--good); border-color: var(--good); }
-  .tick:checked::after {
-    content: ""; inline-size: 10px; block-size: 5.5px; /* the tick drawn as two strokes of an L, turned */
-    border-inline-start: var(--stroke-2) solid var(--on-solid); border-block-end: var(--stroke-2) solid var(--on-solid);
-    transform: rotate(-45deg) translate(1px, -1px); /* (nudged to the box's optical centre) */
-  }
+  .tick:checked::after { background: var(--on-solid); }
+  /* forced colours: the system's selected pair, as stock-ui draws a ticked .checkbox there (this rule comes later) */
+  @media (forced-colors: active) { .tick:checked { background: Highlight; border-color: Highlight; } .tick:checked::after { background: HighlightText; } }
+  .tick:disabled { cursor: default; } /* a closed row's: shown done, not a control */
 
   .row-body { min-inline-size: 0; }
   .row-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8) var(--space-12); }
+  /* the severity on the card's right edge */
+  .row-top .sev { margin-inline-start: auto; } /* last in the markup too, so it reads where it shows */
+  /* the top line is the card's header, a band across its width with a rule under it; the
+     checkbox sits in it, drawn above the band */
+  /* a card's header band and inner rules are alphas of the text colour, so they hold on any card fill (a done
+     card's green tint), as the soft buttons do */
+  .row { padding-block-start: 0;
+    --row-band: color-mix(in oklab, var(--fg) 4%, transparent); --row-rule: color-mix(in oklab, var(--fg) 12%, transparent); } /* (4%, 12%: the band and rule at about --surface-2's and --line's weight on white) */
+  .row-top { margin-inline: calc(-1 * (var(--space-16) + 26px + var(--space-12))) calc(-1 * var(--space-16)); /* (26px: the checkbox's column, the row grid's first track) */
+    padding-block: var(--space-12); padding-inline: calc(var(--space-16) + 26px + var(--space-12)) var(--space-16); /* (26px: the checkbox's column, the row grid's first track) */
+    min-block-size: 24px; background: var(--row-band); border-block-end: var(--stroke-1) solid var(--row-rule); /* (24px: the checkbox's height, so a header with no chip keeps it) */
+    border-start-start-radius: calc(var(--radius-12) - var(--stroke-1)); border-start-end-radius: calc(var(--radius-12) - var(--stroke-1)); } /* inside the card's 1px edge */
+  .tick { position: relative; z-index: 1; margin-block-start: var(--space-12); }
+  /* the note opens inside the footer, on the checkbox's edge, the card's padding under it */
+  .note-wrap { margin-inline: calc(-1 * (var(--space-16) + 26px + var(--space-12))) calc(-1 * var(--space-16));
+    padding-inline: var(--space-16); padding-block-end: var(--space-16); }
+  /* each column names itself in a small heading, a rule between the two */
+  .pair .cell-label { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; white-space: normal;
+    display: block; margin-block-end: var(--space-8); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--fg-soft); }
+  @media (min-width: 45rem) { /* (the dashboard's two-column width) */
+    .pair:has(.cell + .cell) > .cell + .cell { padding-inline-start: var(--space-32); border-inline-start: var(--stroke-1) solid var(--row-rule); }
+    .pair:has(.cell + .cell) { column-gap: var(--space-32); }
+  }
   .rid {
     font-family: var(--font-mono); font-size: var(--text-sm); font-weight: 500;
     color: var(--fg-soft); font-variant-numeric: tabular-nums;
@@ -521,7 +556,7 @@
      wraps it instead, so a 320px screen never scrolls sideways (WCAG 1.4.10). */
   /* What's wrong, then the fix muted under it: one block, no headings shown
      (they stay for screen readers) and no rule between (knowledge: visual, Quiet chrome). */
-  .pair { margin-block-start: var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+  .pair { margin-block-start: var(--space-16); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
   .pair > .cell { position: relative; min-inline-size: 0; overflow-wrap: anywhere; padding-inline-end: 0; }
   .cell-label {
     position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; /* 1px: the visually-hidden pattern, read by screen readers only */
@@ -594,10 +629,12 @@
   .note-wrap[hidden] { display: none; }
   /* One line, in the order they are reached for: fix this, fix the rest like
      it, or rule that it is not a defect. All three read the note above them. */
-  .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin-block-start: var(--space-4);
-    /* the first ghost button's label on the findings' left edge: its padding pulled back. The row as a whole (ghost
-       actions, columns aligned, no rule) was approved by the maintainer on a screenshot of the live page, 2026-11-26 */
-    margin-inline-start: calc(-1 * var(--space-12)); }
+  /* the actions are the card's footer, a rule across its whole width above them; the first label
+     still on the findings' left edge (the card's padding: the soft buttons' edge on the checkbox's) */
+  .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8);
+    margin-block-start: var(--space-16); margin-inline: calc(-1 * (var(--space-16) + 26px + var(--space-12))) calc(-1 * var(--space-16)); /* (26px: the checkbox's column, the row grid's first track) */
+    padding-block: var(--space-12); padding-inline: var(--space-16); /* the buttons on the checkbox's edge */
+    border-block-start: var(--stroke-1) solid var(--row-rule); }
   /* Every row action is the plain .button: they are peers, and a heavier one
      would answer for the reader which to reach for. */
 
@@ -617,8 +654,6 @@
   /* The note's own name, shown: a placeholder is not a label, and goes the
      moment someone types. */
   .note-label { font-size: var(--text-sm); font-weight: 600; color: var(--fg-muted); }
-  /* A read-only copy hides an empty note, and its label with it. */
-  :scope[data-readonly="yes"] .note-label:has(+ textarea.note:placeholder-shown) { display: none; }
   .note::placeholder { color: var(--fg-soft); }
   @media (hover: hover) { .note:hover { border-color: var(--fg-soft); } }
   .note:focus-visible { border-color: var(--accent); background: var(--surface); }
@@ -793,7 +828,11 @@
   }
 
   /* Last, so it outranks the drawer's display rules above by order. */
-  :scope[data-readonly="yes"] :is(.head-actions, #sweepBtn, .ask, .ask-rail, .verify-btn, .do-row, .do-all, .rule-row) { display: none; }
+  /* a published copy has no Figma beside it: open or not means nothing there, and the actions go, but not the line
+     that says why the page is empty (#sweepState, in the actions' block) */
+  :scope[data-readonly="yes"] :is(.file > .file-dot, .file > .file-note) { visibility: hidden; }
+  :scope[data-readonly="yes"] .head-actions > :not(.sweep-state) { display: none; }
+  :scope[data-readonly="yes"] :is(#sweepBtn, .ask, .ask-rail, .verify-btn, .do-row, .do-all, .note-delete) { display: none; }
 
 }
 

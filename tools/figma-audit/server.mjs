@@ -62,7 +62,7 @@ import { decoder, MAX_MESSAGE } from "./frames.mjs";
 import specTool from "../snapshot/spec.cjs";
 import { lucideVersion } from "./lucide.mjs";
 import store from "../snapshot/store.cjs";
-const { walkRulings, rulingsOf, rulingKey, appendRuling, removeRuling } = contract;
+const { walkRulings, rulingsOf, textKey, appendRuling, removeRuling, DASHBOARD_WHY } = contract;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -742,8 +742,9 @@ async function writeData(obj, lib) {
  * pretends it does; that needs a lock file, and is called out as such.
  */
 const writeChain = new Map();
-function inOrder(lib, fn) {
-  const key = recordFor(lib);
+const inOrder = (lib, fn) => chained(recordFor(lib), fn);
+// The context document is a file like a record and takes its writes through the same chain, keyed by its path.
+function chained(key, fn) {
   const prev = writeChain.get(key) || Promise.resolve();
   const next = prev.then(fn, fn);
   // Keep the chain alive but never let it reject: a failed write must not
@@ -791,10 +792,24 @@ const sameOrigin = (req) => {
   return ALLOWED.has(o);
 };
 
+// Why `lib` names no record of this project, or null: /rows's guard (its comment says why), and PUT /data's and
+// /patch's, which took any key and created `<key>.json` beside the project's records.
+function unknownLib(lib) {
+  if (!lib || LEGACY) return null;
+  const known = new Set((existsSync(AUDIT_DIR) ? readdirSync(AUDIT_DIR) : [])
+    .filter((f) => f.endsWith(".json") && !f.endsWith(".tmp")).map((f) => f.replace(/\.json$/, "")));
+  const routed = contract.layout(null, LABEL).files || {};
+  // a role routes one file as an object or several as a list (contract.entries reads both)
+  for (const list of Object.values(routed)) for (const f of contract.entries(list)) if (f && f.key) known.add(f.key);
+  return known.size && !known.has(String(lib)) ? "this project does not know the file key " + lib +
+    " \u2014 name it in the project's context document, or file against the service for the project that owns it" : null;
+}
 // held(): a request is work until its handler settles, so a stale dashboard restarts only between requests
 // The context document written whole: through a tmp name only this write uses, as `CONTEXT + ".tmp"` was one path
 // for every writer. Six concurrent rulings: three failed with ENOENT renaming a tmp another had already moved, and
-// of the three that answered ok only two reached the document, the project's source of truth.
+// of the three that answered ok only two reached the document, the project's source of truth. The tmp name stops
+// only the crash: two rulings that both read the document before either wrote still lose one, so every caller
+// reads, changes and writes it inside chained(CONTEXT), and this is its one writer.
 async function writeContext(next) {
   const tmp = CONTEXT + "." + process.pid + "." + (globalThis.__rulingN = (globalThis.__rulingN || 0) + 1) + ".tmp";
   try {
@@ -1035,35 +1050,63 @@ const server = createServer(held(async (req, res) => {
 
     // A ruling goes to the document's rulings log, the one place it lives.
     if (url.pathname === "/ruling" && req.method === "POST") {
-      const { text, where, about, dryRun, remove } = JSON.parse(await body(req)) || {};
+      const { text, where, about, dryRun, remove, ruledAt, ruledOn } = JSON.parse(await body(req)) || {};
       const clean = String(text || "").replace(/\s+/g, " ").trim();
       if (!clean) return json(res, 400, { error: "text required" });
-      if (!existsSync(CONTEXT)) return json(res, 200, { ok: false, error: "no context document at " + CONTEXT });
+      // read, checked and written in one turn of the chain: two rulings at once both land
+      const [code, out] = await chained(CONTEXT, async () => {
+      if (!existsSync(CONTEXT)) return [200, { ok: false, error: "no context document at " + CONTEXT }];
       const md = await readFile(CONTEXT, "utf8");
       // Taken back (the note's ruling box unticked): the row the dashboard wrote goes; one no longer there is said, not refused.
       if (remove === true) {
-        const back = removeRuling(md, clean);
+        // the component the record call named, when the page sends it: only that row goes, the same ruling made
+        // on another component stays; without one (the page before it sent it) every row the dashboard wrote goes
+        const under = typeof where === "string" ? where.replace(/\s+/g, " ").trim() : null;
+        // its own date cell, so the same component's row of another day stays
+        // by name alone only for a row from before `ruledOn`: given one, a renamed component is the block below's to find
+        let back = typeof ruledOn === "string" && ruledOn ? removeRuling(md, clean, under, ruledOn) : removeRuling(md, clean, under);
+        // none under that component. The row this one recorded, found by its date cell (`ruledOn`, which the record
+        // call answered; from an older page, the day of its `ruledAt`), is this row's own under the name it had then
+        // (the component renamed, or recorded before it had a name): that row goes, and no other. Otherwise the row
+        // stands under another component, whose finding it still closes (a row closed by it before rulingAlready
+        // marked such rows), and it stays; several of that day cannot be told apart, so nothing is removed.
+        if (!back && where) {
+          const mine = rulingsOf(md).filter((r) => r.key === textKey(clean) && DASHBOARD_WHY.test(r.why));
+          const day = typeof ruledAt === "string" ? ruledAt.slice(0, 10) : null;
+          const thatDay = mine.filter((r) => typeof ruledOn === "string" && ruledOn ? r.date === ruledOn : day && r.date.slice(0, 10) === day); // a day's second row is "2026-11-26b"
+          if (thatDay.length > 1) return [200, { ok: false, error: "that ruling has " + thatDay.length + " rows recorded that day, none under this component: strike the one to take back in the context document" }];
+          if (thatDay.length === 1) back = removeRuling(md, clean, thatDay[0].why.replace(/^Recorded from the audit dashboard, on /, "").replace(/(, about: .*)?\.$/, ""), thatDay[0].date);
+          // a row under this very component whose date cell is not the one recorded (re-dated by hand): not taken by name
+          // (the same component's row of another day would go with it), and not called another's
+          else if (under && removeRuling(md, clean, under)) return [200, { ok: false, error: "no row of this ruling is dated " + ruledOn + ", but one under " + under + " of another date stands: strike the one to take back in the context document" }];
+          else if (mine.length) return [200, { ok: true, absent: true, elsewhere: true }];
+        }
         // one written by hand stays: it is the maintainer's to strike in the document
-        if (!back && rulingsOf(md).some((r) => r.key === rulingKey(clean))) return json(res, 200, { ok: false, byHand: true, error: "that ruling was written in the context document, not recorded here: strike it there" });
-        if (!back) return json(res, 200, { ok: true, absent: true });
-        if (dryRun) return json(res, 200, { ok: true, dryRun: true, file: CONTEXT });
+        if (!back && rulingsOf(md).some((r) => r.key === textKey(clean))) return [200, { ok: false, byHand: true, error: "that ruling was written in the context document, not recorded here: strike it there" }];
+        if (!back) return [200, { ok: true, absent: true }];
+        if (dryRun) return [200, { ok: true, dryRun: true, file: CONTEXT }];
         await writeContext(back);
-        return json(res, 200, { ok: true, removed: true, file: CONTEXT });
+        return [200, { ok: true, removed: true, file: CONTEXT }];
       }
       // Said as a fact the page can act on: a ruling already recorded still closes the row it is written under.
-      if (rulingsOf(md).some((r) => r.key === rulingKey(clean))) return json(res, 200, { ok: false, already: true, error: "that ruling is already in the document" });
+      if (rulingsOf(md).some((r) => r.key === textKey(clean))) return [200, { ok: false, already: true, error: "that ruling is already in the document" }];
       // The Why column names the component the ruling was made on and the
       // finding it answered: that is what lets the judge apply it to that
       // component and to the same finding on any other.
       // one line, always: a newline in `where` would split the §6 row and write lines of its own into the document
       const on = String(where || "the queue").replace(/\s+/g, " ").trim() + (about ? ", about: " + String(about).replace(/\s+/g, " ").trim().slice(0, 140) : "");
       const next = appendRuling(md, clean, on);
-      if (!next) return json(res, 200, { ok: false, error: "the context document has no rulings table in §6" });
+      if (!next) return [200, { ok: false, error: "the context document has no rulings table in §6" }];
       // A dry run answers every check above and writes nothing — the way to
       // probe a live service, after a probe appended a row to a real document.
-      if (dryRun) return json(res, 200, { ok: true, dryRun: true, file: CONTEXT, wouldAppend: next.split("\n").find((l, i) => l !== md.split("\n")[i]) || "" });
+      if (dryRun) return [200, { ok: true, dryRun: true, file: CONTEXT, wouldAppend: next.split("\n").find((l, i) => l !== md.split("\n")[i]) || "" }];
       await writeContext(next);
-      return json(res, 200, { ok: true, file: CONTEXT });
+      // the date cell written (a day's second row is "…b"): the page keeps it, so a take-back finds this row exactly
+      const had = new Set(rulingsOf(md).map((r) => r.date));
+      const wrote = rulingsOf(next).find((r) => r.key === textKey(clean) && !had.has(r.date));
+      return [200, { ok: true, file: CONTEXT, date: wrote ? wrote.date : null }];
+      });
+      return json(res, code, out);
     }
 
     // Rows are filed here, by every writer — the page and every skill that owns
@@ -1083,15 +1126,8 @@ const server = createServer(held(async (req, res) => {
        * a genuinely new library is still accepted the first time it is
        * snapshotted; only a key nothing knows about is refused.
        */
-      if (payload.fileKey && !LEGACY) {
-        const known = new Set((existsSync(AUDIT_DIR) ? readdirSync(AUDIT_DIR) : [])
-          .filter((f) => f.endsWith(".json") && !f.endsWith(".tmp")).map((f) => f.replace(/\.json$/, "")));
-        const routed = contract.layout(null, LABEL).files || {};
-        for (const list of Object.values(routed)) for (const f of (Array.isArray(list) ? list : [])) if (f && f.key) known.add(f.key);
-        if (known.size && !known.has(payload.fileKey))
-          return json(res, 400, { ok: false, error: "this project does not know the file key " + payload.fileKey +
-            " \u2014 name it in the project's context document, or file against the service for the project that owns it" });
-      }
+      const foreign = unknownLib(payload.fileKey);
+      if (foreign) return json(res, 400, { ok: false, error: foreign });
       // A payload already names the library it audited: that is the record it
       // belongs in, so a run against mobile cannot file into web's queue.
       let out, failed = null;
@@ -1127,6 +1163,8 @@ const server = createServer(held(async (req, res) => {
        */
       if (!next || typeof next !== "object" || Array.isArray(next) || !next.rows || typeof next.rows !== "object" || Array.isArray(next.rows))
         return json(res, 400, { ok: false, error: "that is not a record: a record is an object with a `rows` object" });
+      const foreign = unknownLib(url.searchParams.get("lib"));
+      if (foreign) return json(res, 400, { ok: false, error: foreign });
       await writeData(next, url.searchParams.get("lib"));
       return json(res, 200, { ok: true });
     }
@@ -1141,6 +1179,11 @@ const server = createServer(held(async (req, res) => {
       // process and then be serialised into the record.
       if (keys.some((k) => k === "__proto__" || k === "constructor" || k === "prototype" || k === ""))
         return json(res, 400, { error: "bad_path" });
+      // null clears an entry (readers take it as none), but a top-level key is the record's own: `rows` set to null
+      // was every row gone; a nested null is stored as sent
+      if (keys.length === 1 && value == null) return json(res, 400, { error: "a top-level key is never cleared: patch inside it" });
+      const foreign = unknownLib(lib);
+      if (foreign) return json(res, 400, { ok: false, error: foreign });
       await inOrder(lib, async () => {
         const data = await readData(lib);
         let node = data;

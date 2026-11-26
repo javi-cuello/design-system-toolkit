@@ -64,7 +64,7 @@ const sorted = [...ladder].sort((a, b) => RANK[a.level] - RANK[b.level] || b.blo
 
     <section class="panel panel--plain components-table" aria-labelledby="tracker-components">
       <header class="panel__head"><h2 id="tracker-components">By component</h2></header>
-      <Filter groups={groups} label="Show components that are" placeholder="Filter by name or check" />
+      <Filter level={3} groups={groups} label="Show components that are" placeholder="Filter by name or check" />
       {/* Errors and warnings as counts, then one column per other check
           holding a component back, most common first, the order of the tiles
           above: a list of checks in one cell had to be read row by row

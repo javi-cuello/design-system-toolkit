@@ -22,8 +22,11 @@ interface Props {
   placeholder?: string;
   searchLabel?: string;
   param?: string;
+  // The no-results heading's level: 3 for a bar inside a panel under an h2, whose empty state is the small one.
+  level?: 2 | 3;
 }
-const { scope = '#main', groups = [], label, placeholder, searchLabel = placeholder, param } = Astro.props;
+const { scope = '#main', groups = [], label, placeholder, searchLabel = placeholder, param, level = 2 } = Astro.props;
+const H = `h${level}`;
 // Up to four choices are buttons, all in sight; a longer list is a menu. The
 // buttons carry their menu too, which a bar too narrow for them shows
 // instead (site.scss .filter-bar).
@@ -45,9 +48,12 @@ const short = groups.length <= 4;
     {placeholder && <search><input class="filter" type="search" placeholder={placeholder} aria-label={searchLabel} data-filter-q /></search>}
   </div>
   <p class="filter-status" data-filter-status></p>
-  <div class="filter-empty" data-filter-empty hidden>
-    <p data-filter-empty-text></p>
-    <p class="filter-empty__actions"><a href="?" data-filter-clear="q">Clear search</a><a href="?" data-filter-clear="all">Show all</a></p>
+  <!-- Nothing left: the shared empty state, no-results kind (feedback.md *Empty states*); the script writes its
+       title and announces it through the page's one live region, so the box itself is not a second one. -->
+  <div class:list={['empty-state', level > 2 && 'empty-state--small']} data-filter-empty hidden>
+    <H class="empty-state__title" data-filter-empty-title>Nothing matches</H>
+    <p class="empty-state__text" data-filter-empty-text></p>
+    <p class="empty-state__action"><a class="button button--soft" href="?" data-filter-clear="q">Clear search</a><a class="button button--soft" href="?" data-filter-clear="all">Show all</a></p>
   </div>
 </div>
 <script is:inline>document.currentScript.previousElementSibling.hidden = false;</script>

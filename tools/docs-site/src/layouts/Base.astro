@@ -10,6 +10,7 @@ import { platformLabel } from '../dashboard/labels.js';
 
 interface Props {
   title: string;
+  navMin?: number; // the fewest headings that draw On this page (default 4); 0 keeps it drawn whatever shows (Audits: its tabs and files change the headings, and the rail must not come and go)
 }
 const { title } = Astro.props;
 const here = Astro.url.pathname.replace(/\/$/, '') || '/';
@@ -196,7 +197,7 @@ import frameScript from '../../../../stock-ui/frame.js?raw';
       <main class="content" id="main" tabindex="-1">
         {/* A page's own band above its content, edge to edge (a component's title and description). */}
         {Astro.slots.has('hero') && <div class="hero-band"><div class="container"><slot name="hero" /></div></div>}
-        <div class="container page-body" data-page-nav={pageNav ? '' : undefined}><slot /></div>
+        <div class="container page-body" data-page-nav={pageNav ? '' : undefined} data-page-nav-min={Astro.props.navMin}><slot /></div>
       </main>
 
       <footer class="site-foot">Figma snapshot {stamp}{meta.hash && <> · <code>{meta.hash}</code></>}</footer>
@@ -330,10 +331,10 @@ import frameScript from '../../../../stock-ui/frame.js?raw';
           }
           list.querySelectorAll('a').forEach((a, i) => (i === at ? a.setAttribute('aria-current', 'location') : a.removeAttribute('aria-current')));
         };
-        let drawn = '';
+        let drawn = null; // not '': a first build with no headings still draws the kept rail
         const build = () => {
           const seen = (sel) => [...document.querySelectorAll(sel)]
-            .filter((h) => !h.closest('[hidden], aside') && !h.classList.contains('visually-hidden') && h.getClientRects().length);
+            .filter((h) => !h.closest('[hidden], aside, dialog, .empty-state') && !h.classList.contains('visually-hidden') && h.getClientRects().length); // an empty state's or a dialog's title is not a section of the page
           const heads = seen('main h2');
           const pairs = heads.map((h) => [anchor(h), h]);
           // Redrawn only when the headings change: redrawing on every jump
@@ -342,7 +343,9 @@ import frameScript from '../../../../stock-ui/frame.js?raw';
           if (key === drawn) return;
           drawn = key;
           targets = pairs.map(([t]) => t);
-          if (heads.length < 4) { nav.remove(); return; }
+          if (heads.length < +(body.dataset.pageNavMin ?? 4)) { nav.remove(); return; } // a page may ask for fewer (navMin)
+          // nothing to list on a page that keeps the rail (navMin 0): its column stays, so nothing beside it moves
+          nav.style.visibility = heads.length ? '' : 'hidden';
           list.replaceChildren(...pairs.map(([target, h]) => {
             const li = document.createElement('li'), a = document.createElement('a');
             a.href = '#' + target.id; a.textContent = label(h); li.append(a); return li;
@@ -466,6 +469,8 @@ import frameScript from '../../../../stock-ui/frame.js?raw';
             if (match) { found.get(all)?.add(name); found.get(item.dataset.kind)?.add(name); }
           }
           for (const part of parts) part.hidden = !part.querySelector('[data-name]:not([hidden])');
+          // a table with no row left goes, headers and all: the empty state stands in its place (feedback.md, Empty states)
+          for (const table of new Set([...items].map((i) => i.closest('table')).filter(Boolean))) table.hidden = !table.querySelector('[data-name]:not([hidden])');
           for (const b of buttons) b.textContent = `${b.dataset.label} (${found.get(b.dataset.show)?.size ?? 0})`;
           for (const o of options) o.textContent = `${o.dataset.label} (${found.get(o.value)?.size ?? 0})`;
           // Nothing left: say what was asked, and offer the way back.
@@ -477,11 +482,13 @@ import frameScript from '../../../../stock-ui/frame.js?raw';
           status.textContent = none ? '' : text;
           empty.hidden = !none;
           if (none) {
-            empty.querySelector('[data-filter-empty-text]').textContent = text + '.';
+            empty.querySelector('[data-filter-empty-title]').textContent = text;
+            // one action (feedback.md, Empty states): with words, clearing them, which keeps the group chosen
+            empty.querySelector('[data-filter-empty-text]').textContent = words ? 'Try other words, or clear the search.' : 'Show every group to see the rest.';
             const [clearQ, clearAll] = empty.querySelectorAll('[data-filter-clear]');
             clearQ.hidden = !words;
             clearQ.href = address('', group);
-            clearAll.hidden = group === all;
+            clearAll.hidden = !!words || group === all;
             clearAll.href = address('', all);
           }
           clearTimeout(timer);

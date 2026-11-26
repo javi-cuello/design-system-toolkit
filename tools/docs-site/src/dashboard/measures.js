@@ -1,8 +1,8 @@
-// The About view's account of the measures, the library line, the
+// The About view's account of the measures, the
 // queue's figures strip, the run history table and the plugin's status line.
 import { cssEsc, fmtDate, num, percent } from './format.js';
 import { DASH, ctx } from './context.js';
-import { shownRows, narrowedView, state } from './queue.js';
+import { state } from './queue.js';
 import { isOpen, platformLabel } from './labels.js';
 import { kpiStyles } from './kpis.js';
 
@@ -18,60 +18,63 @@ export function renderLibrary(lib) {
   // error state.
   const measured = !!(lib.metrics && Object.keys(lib.metrics).length) || DASH.dataset.scanned === "no";
   DASH.dataset.firstRun = measured ? "no" : "yes";
-  // The link to the library in Figma, shown only where the record carries a
-  // URL. (This comment used to describe a title built from `displayTitle`; no
-  // such code is here, and nothing in the repo reads that field.)
-  const fl = document.getElementById("fileLink");
-  if (lib.figmaUrl) { fl.href = lib.figmaUrl; fl.hidden = false; } else fl.hidden = true;
-
-  const m = lib.metrics || {};
-
-  // The age of the library in view's last run; none, for one never run.
-  const fresh = document.getElementById("freshness");
-  fresh.hidden = !lib.lastRunAt;
-  if (lib.lastRunAt) {
-    const days = Math.floor((Date.now() - new Date(lib.lastRunAt)) / 86400000);
-    fresh.textContent = days <= 0 ? "measured today" : days === 1 ? "1 day old" : days + " days old";
-    fresh.className = "freshness " + (days <= 7 ? "fresh" : "aging");
-    // The date is the page's caption, under the title (design-standard rule
-    // 1); this line says what the file's run covered, and the badge its age.
-    document.getElementById("measuredLine").textContent =
-      "The last audit of this file read " + (m.sets || "?") + " sets and " + (m.variants || "?") + " variants.";
-  } else if (DASH.dataset.scanned === "no") {
-    // No run to date it, so the snapshot does: the one its rows came from.
-    // A file with no rows has not been in a snapshot yet.
-    const has = Object.keys(state).length > 0;
-    document.getElementById("measuredLine").textContent = has && window.DASH_SNAPSHOT
-      ? "Checked from its snapshot when it is not open in Figma."
-      : "No snapshot of this file yet: it is checked from the first one stored.";
-  } else {
-    // Rows with no run behind them were filed from the snapshot's change log
-    // (breaking.mjs); "no audit" above a queue that lists them read as a
-    // contradiction (maintainer, 15 November 2026).
-    document.getElementById("measuredLine").textContent = Object.keys(state).length
-      ? "No audit of this file yet: the rows below were filed from its snapshots' changes."
-      : "No audit of this file yet.";
-  }
+  // the file's line under the figures ("Checked from its snapshot…", Open in Figma) removed (the maintainer,
+  // 2026-11-26); the hero's file list says each file's state.
 }
-export function renderQueuePane(metrics, runs) {
+// the figures are the project's, every file's rows, the same whatever file, tab or filter is in view (the
+// maintainer, 2026-11-26: they changed with each choice). The file in view counts from its live rows; the others from
+// their records, read when the file in view changes (readFor: the file in view they were read for).
+const others = { for: null, open: 0, total: 0, missing: 0 };
+async function readOthers() {
+  const key = ctx.libKey;
+  if (others.for !== key) others.retry = 0;     // a new file's failures back off from the start, not from the last file's
+  others.for = key; others.at = Date.now(); // a render while this read is pending does not start another
+  const libs = (window.DASH_LIBS || []).filter((l) => l.key !== key);
+  const recs = await Promise.all(libs.map(async (l) => {
+    try {
+      const live = DASH.dataset.readonly !== "yes";
+      const r = await fetch(live ? "/data?lib=" + encodeURIComponent(l.key) : "/audit/" + encodeURIComponent(l.key) + ".json", { cache: "no-store" });
+      return r.ok ? await r.json() : r.status === 404 ? {} : null;
+    } catch (e) { return null; }
+  }));
+  if (others.for !== key) return;               // the file changed while they were read
+  let open = 0, total = 0, missing = 0;
+  for (const rec of recs) {
+    if (!rec) { missing++; continue; }
+    // their ages, for the hero's file list, now in hand
+    ctx.libRecords = Object.assign({}, ctx.libRecords, rec.libraries || {});
+    const rows = Object.values(rec.rows || {}).filter(Boolean);
+    total += rows.length;
+    open += rows.filter(isOpen).length;
+  }
+  // a file that could not be read is read again on a later render, not left at a dash until the file changes
+  // a file that keeps failing is tried less often: 10s, 20s, 40s, then each minute
+  others.retry = missing ? Math.min((others.retry || OTHERS_RETRY / 2) * 2, OTHERS_EVERY) : 0;
+  Object.assign(others, { open, total, missing, read: true, readFor: key, at: Date.now() });
+  renderQueuePane();
+  if (lastStatus) paintFiles(lastStatus);
+}
+// Read again on a render a while after the last read (the record polls every 15s): another session's writes to the
+// other files reach the figures within a minute, and a file that could not be read is tried again sooner.
+const OTHERS_EVERY = 60000, OTHERS_RETRY = 10000;
+export function renderQueuePane() {
   const tiles = document.getElementById("queueTiles");
+  // a new file in view keeps the last figures until its others are read (a dash, then a number, moved the strip)
+  if (others.for !== ctx.libKey) readOthers();
+  else if (others.readFor === ctx.libKey && Date.now() - others.at > (others.missing ? others.retry : OTHERS_EVERY)) readOthers();
+  const rows = Object.values(state).filter(Boolean);
+  // until the other files are read, or when one could not be, a figure would be a part passed off as the whole
+  // the file in view's own rows count only once its record is in (switchLib empties them while it reads)
+  const known = others.readFor === ctx.libKey && !others.missing && ctx.recordFor === ctx.libKey;
+  // while this file's others or its own record are still being read, the strip keeps what it showed (a dash, then a
+  // number, moved it); once a read has failed it says so with dashes rather than keep old numbers as current
+  const failed = (others.readFor === ctx.libKey && others.missing) || ctx.recordFailed === ctx.libKey;
+  if (!known && tiles.children.length && !failed) return;
+  const open = known ? rows.filter(isOpen).length + others.open : null;
+  const total = known ? rows.length + others.total : null;
   tiles.textContent = "";
-  // Counted from the rows the owner filter shows, so the tiles answer for
-  // the chip that is pressed; the library metric is the whole-record figure
-  // and is what the tiles read before any row was loaded.
-  // Both filters, and by the owner KEY. It compared the bare owner against
-  // the chip's key, and the validator's chips are target-qualified
-  // ("component-validator|web"), so pressing "Web build" matched nothing and
-  // the tiles read Open 0 / Raised 0 / Closed 0 above a board showing 235.
-  // And the component a Needs attention link narrowed it to (queue.js).
-  const shown = shownRows();
-  const narrowed = narrowedView();
-  const open = shown.length || narrowed ? shown.filter(isOpen).length
-             : (metrics && typeof metrics.openFindings === "number" ? metrics.openFindings : null);
-  const total = shown.length || narrowed ? shown.length
-              : (metrics && typeof metrics.totalFindings === "number" ? metrics.totalFindings : null);
   const cells = [
-    ["Open", open === null ? "\u2014" : String(open), open === 0 ? "good" : "warn"],
+    ["Open", open === null ? "\u2014" : String(open), open === 0 ? "good" : open === null ? null : "warn"],
     ["Raised to date", total === null ? "\u2014" : String(total), null],
     ["Closed", (open !== null && total !== null) ? String(total - open) : "\u2014", null]
   ];
@@ -79,7 +82,8 @@ export function renderQueuePane(metrics, runs) {
   // Balanced like every other strip, so no row is left with an empty cell.
   const styles = kpiStyles(cells.map(() => 1));
   cells.forEach(([label, value, tone], i) => {
-    const li = kpi(label, value, tone === "good" ? "Good: none open" : tone === "warn" ? "Attention: to fix or rule" : "", tone);
+    // the first figure's note line is there before its words are, so the strip does not grow when they arrive
+    const li = kpi(label, value, tone === "good" ? "Good: none open" : tone === "warn" ? "Attention: to fix or rule" : i === 0 ? "\u00a0" : "", tone);
     li.style.cssText = styles[i];
     tiles.appendChild(li);
   });
@@ -214,6 +218,8 @@ export function renderRuns(runs) {
 // at that stage when it is shut — which the old single line could not say,
 // because it only ever described the library in view.
 let lastStatus = null;
+// Whether a file is open in Figma with the Desktop Bridge, as the last status poll said: null before the first one.
+export const fileOpen = (key) => (lastStatus && lastStatus.files ? lastStatus.files.some((f) => f.fileKey === key) : null);
 // What a run is doing, and to which file: { key, pct, label }. Null at rest.
 let running = null;
 
@@ -319,8 +325,10 @@ export function paintFiles(st) {
       const name = document.createElement("span"); name.className = "file-what";
       const note = document.createElement("span"); note.className = "file-note";
       const stale = document.createElement("span"); stale.className = "file-stale"; stale.hidden = true;
-      stale.textContent = "\u26a0 Snapshot again";
-      li.append(dot, name, note, stale);
+      stale.textContent = "Snapshot again"; // its mark is a dot in the lines' column, like the others
+      // the file's age, a line like the two above it
+      const age = document.createElement("span"); age.className = "file-age"; age.hidden = true;
+      li.append(dot, name, note, stale, age);
       host.appendChild(li);
     }
     host.dataset.keys = want;
@@ -332,9 +340,6 @@ export function paintFiles(st) {
     const set = (k, v) => { if (v === null) { if (k in li.dataset) delete li.dataset[k]; } else if (li.dataset[k] !== v) li.dataset[k] = v; };
     set("on", String(!!open));
     set("role", r.role);
-    // The library in view is marked, because the buttons beside this list act
-    // on that one and nothing else said which it was.
-    set("current", r.key === ctx.libKey ? "yes" : null);
     const busy = !!(running && running.key === r.key);
     set("busy", busy ? "1" : null);
     // The file's own name where Figma has told us one, the project's recorded
@@ -348,7 +353,15 @@ export function paintFiles(st) {
       ? running.label + " \u00b7 " + Math.round(running.pct) + "% \u00b7 " + running.secs + "s"
       // Status only: what the Audit reads is said in its dialog.
       : open ? "open" : "not open";
-    const [, nameEl, noteEl, staleEl] = li.children;
+    const [, nameEl, noteEl, staleEl, ageEl] = li.children;
+    const ran = ((ctx.libRecords || {})[r.key] || {}).lastRunAt;
+    const days = ran ? Math.floor((Date.now() - new Date(ran)) / 86400000) : null;
+    // its line's room kept while the age is unknown (a file's record is read when it is opened), so the hero's height
+    // does not change as files are switched (the maintainer, 2026-11-26)
+    ageEl.hidden = false;
+    ageEl.style.visibility = days === null ? "hidden" : "";
+    if (days === null) ageEl.textContent = "\u00a0";
+    else { ageEl.textContent = days <= 0 ? "measured today" : days === 1 ? "measured 1 day ago" : "measured " + days + " days ago"; ageEl.dataset.tone = days <= 7 ? "ok" : "warn"; }
     const f = fresh[r.key];
     staleEl.hidden = !(f && f.stale);
     staleEl.title = f && f.stale ? "Saved in Figma at " + f.edited + ", after its last snapshot" + (f.snapped ? " (" + f.snapped + ")" : "") + ". Run the snapshot plugin in it again." : "";

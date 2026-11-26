@@ -15,6 +15,7 @@ import UpdatedBy from '../components/UpdatedBy.astro';
 import Filter from '../components/Filter.astro';
 import DesignShot from '../components/DesignShot.astro';
 import Modal from '../components/Modal.astro';
+import EmptyState from '../components/EmptyState.astro';
 import { icons, iconGroups, iconLibrary, assetGroups, slug } from '../lib/snapshot.js';
 
 export function getStaticPaths() {
@@ -133,7 +134,7 @@ const Group = iconGroups.length ? 'section' : 'div';
         copySvg.dataset.copy = texts.at(-1);
       });
     </script>
-  </> : <p class="lede">No icons recorded yet: run the snapshot plugin in {title}.</p>}
-  {iconLibrary && !assetGroups.length && <p>No illustrations or other assets recorded yet: run the snapshot plugin in {title}.</p>}
+  </> : <EmptyState title="Icons land here" level={2}>No icons recorded yet: run the snapshot plugin in {title}.</EmptyState>}
+  {iconLibrary && !assetGroups.length && <EmptyState title="Illustrations land here" level={2}>No illustrations or other assets recorded yet: run the snapshot plugin in {title}.</EmptyState>}
 </Base>
 )}

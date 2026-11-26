@@ -1288,9 +1288,16 @@ async function runAudit(targets) {
   // fraction of the run's stages that are behind it, which is the only thing
   // the page actually knows; a stage's own batches move it within its band.
   runProgress(ctx.libKey, 2, "Scanning");
+  // A record write the service refuses (record.js throws) is said and the run goes on, as recordRun's is: the rows are
+  // already filed, and the run's own record and the other stages still owe theirs.
+  const unsaved = [];
+  const keep = async (what, fn) => {
+    try { return await fn(); }
+    // a refusal or a lost service alike (neither stops the run: the rows are filed); the message says which it was
+    catch (e) { unsaved.push(what); say("Could not save the " + what + " \u2014 " + (e && e.message ? e.message : "unknown"), "warn"); }
+  };
+  const unsavedNote = () => unsaved.length ? "; the " + unsaved.join(", ") + " could not be saved" : "";
   try {
-
-
     const { audit: auditScript, stages } = await api.scripts();
     if (!auditScript) { say("The dashboard service did not return its scanner.", "warn"); return; }
 
@@ -1325,10 +1332,10 @@ async function runAudit(targets) {
       // Close first, then measure: openFindings counts the queue, and counted
       // before the close it reported rows this same run had just cleared.
       const closed0 = (await fileRows([], scan)).closed;
-      await recordMeasures(scan.measures);
-      await recordScores(scan);
+      await keep("measures", () => recordMeasures(scan.measures));
+      await keep("scores", () => recordScores(scan));
       const runId0 = await recordRun(scope, 0, 0, 0, scan.measures, closed0);
-      await consumeMoved(scope);                      // a clean scan is still an audit of the library
+      await keep("changed list", () => consumeMoved(scope));   // a clean scan is still an audit of the library
       say("Nothing to fix in " + plural(scannedN, "component") + "." +
           (closed0 ? " Closed " + closed0 + " row" + (closed0 === 1 ? "" : "s") + " the scan no longer raises." : ""), "ok");
       // HELD until every stage has finished. The components stage is the
@@ -1337,7 +1344,7 @@ async function runAudit(targets) {
       // number the reader takes as the run's answer, minutes before the run
       // has one. `runOtherStages` shows it beside its own.
       await runOtherStages(scan, rules0, runId0, {
-        title: auditHeadline(0, closed0, scannedN), tone: "ok",
+        title: auditHeadline(0, closed0, scannedN) + unsavedNote(), tone: unsaved.length ? "warn" : "ok",
         detail: auditDetail(0, 0, 0, closed0),
         linkText: closed0 ? "See the queue \u2192" : null, onLink: closed0 ? showCleared : null });
       auditDone = true;              // only once every stage finished: runOtherStages rethrows a stage error
@@ -1349,7 +1356,7 @@ async function runAudit(targets) {
     if (!(await claudeReady())) {
       // Candidates are not findings until something has judged them against
       // the recorded rulings, so they are never filed as queue rows here.
-      await recordMeasures(scan.measures);
+      await keep("measures", () => recordMeasures(scan.measures));
       say(total + " possible issue" + (total === 1 ? "" : "s") + " found, but nothing judged them \u2014 add an API key in ~/.figma-dashboard-key and restart the service.", "warn");
       return;
     }
@@ -1408,10 +1415,10 @@ async function runAudit(targets) {
     const filedRows = await fileRows(judged, scan);   // files and closes, before measuring, as above
     const reopened = filedRows.reopened, fresh = filedRows.added, closed = filedRows.closed;
     const added = fresh + reopened;
-    await recordMeasures(scan.measures);
-    await recordScores(scan);
+    await keep("measures", () => recordMeasures(scan.measures));
+    await keep("scores", () => recordScores(scan));
     const runId = await recordRun(scope, total, kept, added, scan.measures, closed);
-    await consumeMoved(scope);
+    await keep("changed list", () => consumeMoved(scope));
     const closedNote = closed ? " Closed " + closed + " no longer raised." : "";
     // Reopened rows are work in the queue too, and are said as such: a row
     // the scan raised again is neither new nor "already there".
@@ -1423,7 +1430,7 @@ async function runAudit(targets) {
     // directions at once. Say both numbers rather than the net.
     // Held until the other three stages are done — see the note above.
     await runOtherStages(scan, rules0, runId, {
-      title: auditHeadline(added, closed, scannedN, reopened, kept), tone: added || kept ? "warn" : "ok",
+      title: auditHeadline(added, closed, scannedN, reopened, kept) + unsavedNote(), tone: added || kept || unsaved.length ? "warn" : "ok",
       detail: auditDetail(total, kept, added, closed),
       linkText: "See the queue \u2192", onLink: showCleared });
     auditDone = true;
@@ -1441,11 +1448,11 @@ async function runAudit(targets) {
 }
 function lock() {
   auditBtn.disabled = true; ctx.running = true; sweepBtn.disabled = true;
-  for (const b of document.querySelectorAll("[data-lib-choice]")) b.disabled = true;
+  const libFilter = document.getElementById("libFilter"); if (libFilter) libFilter.disabled = true;   // the file menu, still mid-run
 }
 function unlock() {
   auditBtn.disabled = false; ctx.running = false; sweepBtn.disabled = false;
-  for (const b of document.querySelectorAll("[data-lib-choice]")) b.disabled = false;
+  const libFilter = document.getElementById("libFilter"); if (libFilter) libFilter.disabled = false;   // the file menu, still mid-run
   paintFiles();                                   // the file boxes: enabled where the file can run
 }
 
@@ -1459,7 +1466,7 @@ function unlock() {
  *   a tokens or icons file, closed  its checks from its last stored snapshot
  *
  * The run lock is held from the first file to the last; between files the
- * page switches to the next exactly as a tab click would, and back at the end.
+ * page switches to the next exactly as the file menu would, and back at the end.
  */
 let batching = false;
 // Whether runAudit got as far as filing its scan: each early return leaves it false.

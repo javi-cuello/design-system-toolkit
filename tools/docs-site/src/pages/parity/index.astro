@@ -7,6 +7,7 @@ import { compareNames } from '../../../../shared/output.mjs';
 import { join } from 'node:path';
 import Base from '../../layouts/Base.astro';
 import ParityEmpty from '../../components/ParityEmpty.astro';
+import EmptyState from '../../components/EmptyState.astro';
 import KpiStrip from '../../components/KpiStrip.astro';
 import UpdatedBy from '../../components/UpdatedBy.astro';
 import Filter from '../../components/Filter.astro';
@@ -56,7 +57,7 @@ const libraries = [...codeOf].map(([key, code]) => {
   ) : libraries.map((l) => (<>
     {libraries.length > 1 && <h2>{l.name || l.key}</h2>}
     {!l.found ? (
-      <p class="lede">The code for {l.name || 'this library'} is stated as <code>{l.components}</code> in <code>{l.stated}</code>, and that folder was not there when this site was built, so nothing is compared.</p>
+      <EmptyState level={libraries.length > 1 ? 3 : 2} title="The code folder was not found">The code for {l.name || 'this library'} is stated as <code>{l.components}</code> in <code>{l.stated}</code>, and that folder was not there when this site was built, so nothing is compared.</EmptyState>
     ) : (<>
     <p class="lede">Which components exist in Figma and in code: the component pages of {l.name || 'the library'} against <code>{l.components}</code> in <code>{l.stated}</code>.</p>
     {/* The match is by name and nothing else, and the page has to say so: a
@@ -72,7 +73,7 @@ const libraries = [...codeOf].map(([key, code]) => {
 
     <section class="panel panel--plain" id={`library-${l.key}`} aria-labelledby={`parity-${l.key}`}>
       <header class="panel__head"><h2 id={`parity-${l.key}`}>Components</h2></header>
-      <Filter scope={`[id="library-${l.key}"]`} param={libraries.length > 1 ? l.key : undefined} label="Show components that are" placeholder={`Filter ${l.rows.length} components`} groups={[['all', 'All components', l.rows.length], ['both', 'In both', l.both.length], ['figma', 'Only in Figma', l.figmaOnly.length], ['code', 'Only in code', l.codeOnly.length]]} />
+      <Filter level={3} scope={`[id="library-${l.key}"]`} param={libraries.length > 1 ? l.key : undefined} label="Show components that are" placeholder={`Filter ${l.rows.length} components`} groups={[['all', 'All components', l.rows.length], ['both', 'In both', l.both.length], ['figma', 'Only in Figma', l.figmaOnly.length], ['code', 'Only in code', l.codeOnly.length]]} />
       <div class:list={['table-wrap', l.rows.length > 20 && 'table-wrap--long']} data-scrolls>
         <table class="table">
           <caption class="visually-hidden">Every component, and whether it exists in Figma and in code</caption>
