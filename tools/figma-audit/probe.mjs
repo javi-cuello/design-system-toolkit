@@ -79,8 +79,9 @@ await step('library', async () => {
 return out;`;
 
 /* The checks, run in order until one fails; each { check, ok, said }. `io` is the world (the service, the port's
-   listeners, the calls), which the test replaces. */
-export async function probe(label, fileKey, io) {
+   listeners, the calls), which the test replaces. `through`: the last check to run ('answers' for a read that draws
+   nothing and imports nothing: bin/audit). */
+export async function probe(label, fileKey, io, { through = null } = {}) {
   const out = [];
   // `skipped`: passed with nothing to check (no instance, no library instance on the page), said apart
   const say = (check, ok, said, skipped = false) => { out.push({ check, ok, said, ...(skipped && { skipped: true }) }); return ok; };
@@ -94,6 +95,7 @@ export async function probe(label, fileKey, io) {
   const files = (status.files || []).map((f) => f.fileKey);
   if (!say('connected', files.includes(fileKey), files.includes(fileKey) ? 'the Desktop Bridge is connected' : `mode 1: ${fileKey} is not connected (connected: ${files.join(', ') || 'none'}): open the file and run the Desktop Bridge plugin in it`)) return out;
   try { await within(io.exec(svc, fileKey, 'return 1', 10000), 12000, 'a trivial call'); say('answers', true, 'a trivial call came back'); } catch (e) { say('answers', false, `mode 1: ${e.message}: the plugin is connected but not answering; close and reopen it in the file`); return out; }
+  if (through === 'answers') return out;
   let r;
   // a timeout here is the stalled library API (mode 3); any other error is the script's or the file's, said as it is
   try { r = await within(io.exec(svc, fileKey, (io.own ? 'const OWN = true;\n' : '') + IN_FILE, 40000), 45000, 'the in-file checks'); } catch (e) { say('library', false, /timed? ?out|no answer|plugin_timeout/i.test(e.message) ? `mode 3: ${e.message}: a font load or a library import hangs; reopen the plugin in this file` : `the in-file checks failed: ${e.message}`); return out; }

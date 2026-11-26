@@ -42,6 +42,7 @@
 // does not collide with the MCP servers Claude Code spawns from 9223 up.
 
 import { createServer } from "node:http";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile, writeFile, mkdir, rename, rm, copyFile } from "node:fs/promises";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -755,6 +756,8 @@ function inOrder(lib, fn) {
 // site that has silently stopped rebuilding looks exactly like a site with
 // nothing to say — one real log held 127 build failures that nothing reported.
 let lastBuildError = null;
+// what holds this port on [::1] in this service's place, or null: said on /status (the listen below)
+let loopback6Clash = null;
 
 // --------------------------------------------------------------------- http
 // Buffers, not string concatenation: a multi-byte character split across two
@@ -823,7 +826,7 @@ const server = createServer(held(async (req, res) => {
         plugin: files.length > 0,
         files,                                   // every library currently open
         file: files[0] || null,                  // kept for the page's simple case
-        data: AUDIT_DIR, claude: !!ANTHROPIC_KEY, buildError: lastBuildError
+        data: AUDIT_DIR, claude: !!ANTHROPIC_KEY, buildError: lastBuildError, loopback6Clash
       });
     }
 
@@ -1333,7 +1336,31 @@ server.headersTimeout = 60000;
 // progress and no plugin is connected (a dropped plugin is reopened in Figma by hand: REFERENCE.md), the parent
 // bringing it back with what is on disk; check-services.mjs names one still waiting
 const plugged = () => [...plugins.values()].some((e) => !e.socket.destroyed);
-const selfRestart = restartWhenStale(boundBy(HERE), { servers: [server], busy: () => pending.size > 0 || plugged() });
+/*
+ * Both loopback stacks, as the snapshot router does (tools/snapshot/router.mjs). `localhost` resolves to [::1] first,
+ * and the Desktop Bridge dials it: a figma-console MCP that took [::1] on a project's port, free while this held
+ * only 127.0.0.1, answered the plugin in this service's place and every audit stage timed out (2026-11-26;
+ * three projects' ports held so that day). Held here, the MCP moves to a port of its own. Found held at start, this
+ * still serves 127.0.0.1, says the holder once and on /status, and takes [::1] when it comes free.
+ */
+const server6 = createServer();
+for (const ev of ["request", "upgrade"]) for (const fn of server.listeners(ev)) server6.on(ev, fn);
+server6.requestTimeout = 0;
+server6.headersTimeout = 60000;
+server6.on("error", (e) => {
+  // no IPv6 loopback on this machine, or no right to it: said on /status and in the log, not tried again
+  if (e.code !== "EADDRINUSE") { loopback6Clash = `[::1]:${PORT} is not served (${e.code || e.message}); 127.0.0.1 only`; return console.error(loopback6Clash); }
+  if (!loopback6Clash) {
+    let who = ""; try { who = execFileSync("lsof", ["-nP", `-iTCP@[::1]:${PORT}`, "-sTCP:LISTEN"], { encoding: "utf8", timeout: 3000 }).trim().split("\n").slice(1).map((l) => l.split(/\s+/).slice(0, 2).join(" ")).join(", "); } catch {}
+    loopback6Clash = `[::1]:${PORT} is held by ${who || "another process"}, and the Desktop Bridge dials it first: stop it (a figma-console MCP: end that session's MCP) or move it off ${PORT}`;
+    console.error(loopback6Clash);
+  }
+  // not once the service has closed for a restart (stale-self closes both): it would take requests while it waits to exit
+  setTimeout(() => { if (server.listening) server6.listen(PORT, "::1"); }, 30000).unref();
+});
+server6.on("listening", () => { if (loopback6Clash) console.log(`[::1]:${PORT} came free and is held now`); loopback6Clash = null; });
+const selfRestart = restartWhenStale(boundBy(HERE), { servers: [server, server6], busy: () => pending.size > 0 || plugged() });
+server6.listen(PORT, "::1");
 server.listen(PORT, "127.0.0.1", () => {
   console.log("figma audit      http://127.0.0.1:" + PORT);
   console.log("records          " + AUDIT_DIR + (LEGACY ? " (single record: audit.json)" : "/<library>.json"));
@@ -1578,9 +1605,10 @@ server.listen(PORT, "127.0.0.1", () => {
   const { spawn } = await import("node:child_process");
   const label = LABEL;
   const docs = join(HERE, "..", "docs-site");
-  // Astro's own command-line entry, read from its package, not guessed.
+  // Astro installed, asked at each build: a service started while `pnpm install` had the engine's node_modules out
+  // gave up on its site for good, watching nothing and saying nothing on /status (seven sites frozen from 09:26 to
+  // 16:09, 2026-11-26)
   const astroPkg = join(docs, "node_modules", "astro", "package.json");
-  const astro = existsSync(astroPkg) ? join(docs, "node_modules", "astro", JSON.parse(readFileSync(astroPkg, "utf8")).bin.astro) : null;
   const where = contract.layout(null, label);
   if (where.error) console.error(`docs site      ${label}: ${where.error}; only the record and the context document are watched`);
   const P = where.paths || {};
@@ -1611,6 +1639,13 @@ server.listen(PORT, "127.0.0.1", () => {
     // forever (test-routes, 2026-10-31). Said on /status, and tried again on the next change.
     let now; try { now = contract.layout(null, label); } catch (e) { now = { error: e.message }; }
     if (now.error) { lastBuildError = `not built: ${now.error}`; return; }
+    if (!existsSync(astroPkg)) {
+      const why = `not built: no Astro install in ${docs} (run pnpm install there); looked for again every 30 s`;
+      if (lastBuildError !== why) console.error(`docs site      ${label}: ${why}`);
+      lastBuildError = why;
+      clearTimeout(timer); timer = setTimeout(build, 30000); timer.unref();
+      return;
+    }
     building = true;
     const releaseBuild = hold();
     const started = Date.now();
@@ -1682,8 +1717,7 @@ server.listen(PORT, "127.0.0.1", () => {
     child.on("error", (e) => end(false, e.message));
   };
 
-  if (!astro) console.error(`docs site      no Astro install in ${docs} (run pnpm install there); the site will not build`);
-  else {
+  {
     // Files are watched through their folders: a file replaced by a rename
     // (this service writes the record that way) would drop a watch on the file.
     const byDir = new Map();

@@ -1,6 +1,6 @@
 # Snapshot standard — how a design file reaches a project's snapshot, and how readers find it
 
-**Version 2.28.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
+**Version 2.29.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
 
 Governs the chain from a Figma file to a project's stored snapshot: the
 **plugin** (`plugins/design-system-snapshot`), the **router**
@@ -203,7 +203,8 @@ Never `0.0.0.0` or `::`, which would put it on the network.
 *Why:* the plugin cannot choose which address `localhost` resolves to, so an
 unbound half sends snapshots to whatever holds it, and the router never sees
 them to log the failure.
-*Checked:* `tools/snapshot/test-router.mjs` "snapshot-standard 11: both loopback stacks answer, and no other address does", seen to fail with `::1` unbound.
+The audit service (`tools/figma-audit/server.mjs`), which the Desktop Bridge plugin dials the same way, holds both too, and says on `/status` (`loopback6Clash`) what holds `::1` on its port in its place: a figma-console MCP took `[::1]` on a project's port and every audit stage sat out its timeout.
+*Checked:* `tools/snapshot/test-router.mjs` "snapshot-standard 11: both loopback stacks answer, and no other address does", seen to fail with `::1` unbound. `tools/figma-audit/test-routes.mjs` "the service answers on [::1] too, and says nothing holds it in its place", seen to fail with `::1` unbound.
 
 
 **12 · A summary on screen, the detail in a file.**

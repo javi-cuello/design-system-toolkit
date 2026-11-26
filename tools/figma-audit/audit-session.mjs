@@ -99,8 +99,13 @@ const fileKey = keyArg || (keys.length === 1 ? keys[0] : null);
 const lib = ctx.libraries[fileKey] || ((r) => r && Object.assign({}, others[r.key], { name: nameOf(r) }))(routed.find((r) => r.key === fileKey));
 if (!fileKey || !lib) die(`name the library: ${keys.map((k) => `${k} (${ctx.libraries[k] ? ctx.libraries[k].name : nameOf(routed.find((r) => r.key === k))})`).join(', ')}`);
 const { port } = serviceOf(project);
-const status = await call(port, '/status');
-if (!(status.files || []).some((f) => f.fileKey === fileKey)) die(`${lib.name} is not open on the bridge (port ${port}); open it in Figma with the plugin running`);
+// the bridge is probed before the first stage (probe.mjs, through a trivial call): a console MCP on the port's other
+// loopback half (mode 4) or a stalled plugin made every stage sit out its whole timeout, 20 minutes in all (2026-11-26)
+{
+  const { probe, world } = await import('./probe.mjs');
+  const bad = (await probe(project, fileKey, world(where), { through: 'answers' })).find((o) => !o.ok);
+  if (bad) die(`${lib.name}: the bridge on port ${port} is not fit to audit (${bad.check}): ${bad.said}`);
+}
 
 const read = (rel) => fs.readFileSync(path.join(TOOLKIT, rel), 'utf8');
 // Every candidate carries its own fix in `advice` (both scanners' suites assert it); a stock sentence

@@ -10,7 +10,7 @@ The detail behind [README.md](README.md), moved here word for word. The README i
 
 ## Adding a project: the port
 
-Give the project's context document a port in its project block, one the other projects do not use, inside 9223–9232 (the only ports the Desktop Bridge plugin scans), and one no figma-console-mcp holds on `[::1]` (`lsof -nP -iTCP -sTCP:LISTEN`): each Claude session's console MCP takes the first free IPv6 port in that range, the service listens on IPv4 only, and the bridge dials `localhost`, which resolves to `::1` first, so it reaches the MCP instead and the service shows no plugin:
+Give the project's context document a port in its project block, one the other projects do not use, inside 9223–9232 (the only ports the Desktop Bridge plugin scans), and that range is the figma-console MCP's too: each Claude session's console MCP takes the first free `[::1]` port in it, and the bridge dials `localhost`, which resolves to `::1` first. The service holds both `127.0.0.1` and `[::1]` on its port (snapshot-standard 11), so an MCP started after it moves on; one that took `[::1]` first is named on `/status` (`loopback6Clash`) and in the log, `probe.mjs` fails it as mode 4, and the service takes `[::1]` within 30 s of it closing:
 
 ```json project
 {"name": "Acme", "phase": "design", "port": 9232}

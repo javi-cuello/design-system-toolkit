@@ -66,6 +66,11 @@ try {
   ok("a request addressed to another name is refused, before any route reads it", rebound.code === 421 && rebound.json.error === "wrong_host");
   ok("…and so is the health probe under another name", (await ask("GET", "/health", { host: `attacker.example:${PORT}` })).code === 421);
   for (const h of [`localhost:${PORT}`, `127.0.0.1:${PORT}`, `[::1]:${PORT}`]) ok(`the service answers when addressed as ${h}`, (await ask("GET", "/status", { host: h })).code === 200);
+  // snapshot-standard 11: the [::1] half is held too, so no console MCP can take it and answer the plugin in its place
+  const six = await new Promise((resolve) => { const r = http.request({ host: "::1", port: PORT, path: "/status", headers: { host: `localhost:${PORT}` } }, (res) => { let t = ""; res.on("data", (c) => { t += c; }); res.on("end", () => { let json = null; try { json = JSON.parse(t); } catch {} resolve({ code: res.statusCode, json }); }); }); r.on("error", (e) => resolve({ code: 0, error: e.code })); r.end(); });
+  // a machine with no IPv6 loopback has no [::1] to take (EADDRNOTAVAIL, EAFNOSUPPORT): said, never failed
+  if (/^EADDRNOTAVAIL$|^EAFNOSUPPORT$/.test(six.error || "")) console.log(`skip [::1]: ${six.error} on this machine`);
+  else ok("the service answers on [::1] too, and says nothing holds it in its place", six.code === 200 && six.json && six.json.loopback6Clash === null, JSON.stringify(six));
   const crossRead = await ask("GET", "/status", { origin: "https://attacker.example" });
   ok("a cross-site read of /status is refused", crossRead.code === 403 && crossRead.json.error === "cross_origin");
   const crossRun = await post("/exec", { code: "return 1" }, "https://attacker.example");

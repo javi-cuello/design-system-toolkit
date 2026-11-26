@@ -50,4 +50,6 @@ assert.deepEqual(await run({ own: true, inFile: { instances: 'ok', font: 1, libr
 // the code sent to the file parses as Figma reads it, an async function body (it is a template, so a quote escaped
 // in the source arrives unescaped)
 { const { IN_FILE } = await import('./probe.mjs'); const AsyncFunction = (async () => {}).constructor; assert.doesNotThrow(() => new AsyncFunction('const OWN = true;\n' + IN_FILE), 'the in-file code parses'); }
-console.log('probe: 21 passed');
+// bin/audit probes through the trivial call only: it draws nothing and imports nothing, so the in-file checks are not run
+assert.deepEqual((await probe('lib', 'F', world({ inFile: new Error('never asked') }), { through: 'answers' })).map((x) => x.check), ['service', 'port', 'connected', 'answers'], 'through answers stops after the trivial call');
+console.log('probe: 22 passed');
