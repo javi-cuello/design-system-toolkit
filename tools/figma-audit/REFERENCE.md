@@ -118,7 +118,7 @@ only question is what the reader has to do to see it:
 | the page, [`tools/docs-site/src/dashboard/*`](../docs-site/README.md) — markup, styles, logic | its site rebuilding (seconds, automatic), then a browser refresh |
 | the skill's `scanner/*` — checks, prompts, buckets, catalogue, scoring | a browser refresh |
 | a project's audit records | a browser refresh (that project only) |
-| `server.mjs` — routes, transport (`frames.mjs`) — and what it binds once (the files [`bound.mjs`](bound.mjs) names and what they import) | nothing: each dashboard restarts itself once no request, build or upload is in progress and no plugin is connected ([`stale-self.mjs`](../shared/stale-self.mjs)); one still waiting is named by `bin/check` |
+| `server.mjs` — routes, transport (`frames.mjs`) — and what it binds once (the files [`bound.mjs`](bound.mjs) names and what they import) | nothing: each dashboard restarts itself once no request, build or upload is in progress and no plugin is connected ([`stale-self.mjs`](../shared/stale-self.mjs)); one still waiting is named by `bin/check`: a failure, except one waiting on a connected plugin, which is a warning |
 
 **A restart does not reload an open tab.** The page is fetched on load, so a tab left open across a `server.mjs` restart keeps running the page code it loaded; a page change tested from it is the old page. One whole Audit run was judged as "the fix did not work" that way. Refresh before testing anything in the page.
 

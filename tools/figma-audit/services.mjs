@@ -116,6 +116,10 @@ function vouch(svc, root = ROOT) {
   return vouched.get(k);
 }
 
+/* A service's /status, asked without vouching for its checkout: whether a plugin is connected is a fact about the port,
+   whichever checkout serves it (check-services asks it from a land's own worktree). Read-only. */
+export const statusOf = (svc) => request(svc, '/status');
+
 async function request(svc, route, body) {
   const data = body && JSON.stringify(body);
   const text = await new Promise((ok, fail) => {

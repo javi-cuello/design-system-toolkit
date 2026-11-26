@@ -19,7 +19,7 @@
  * records are. Services are optional: none running is not a failure. One
  * running against a path no project claims is.
  */
-import { running, call } from './services.mjs';
+import { statusOf, running, call } from './services.mjs';
 import { existsSync, statSync, realpathSync } from 'node:fs';
 import { basename, join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -72,19 +72,21 @@ export function judge(found, wanted, newest) {
  * With --heal (bin/land, before queuing), a stale service is asked to restart before it is judged (its route /restart-when-idle: stale-self's now()), and
  * waited for: a dashboard restarts itself once idle, but looks only once a minute and waits out a docs build (about a
  * minute), and stale dashboards failed a land that had nothing to do with them (2026-11-24). What stays a failure is
- * returned, each with why: a plugin connected (it keeps the old code while the plugin is open), nothing supervising it,
- * a service too old to be asked, or not back on the new files within `timeout`. `ask`, `list` and the times are its
- * test's to replace.
+ * returned in `left`, each with why: nothing supervising it, a service too old to be asked, or not back on the new
+ * files within `timeout`. One with a plugin connected is returned apart, in `held`: it keeps the old code by design
+ * until the plugin closes and then restarts itself, so it is a warning, not a failure (2026-11-26: four services
+ * holding plugins failed every land that day, two of them nothing to do with the services). `ask`, `list` and the
+ * times are its test's to replace.
  */
 export async function heal(stale, { ask = (r) => Promise.race([call(r, '/restart-when-idle', {}), new Promise((_, no) => setTimeout(() => no(new Error('no answer in 5 s')), 5000).unref())]), list = () => running().filter((r) => !r.test), newest, timeout = 120000, poll = 1000 } = {}) {
-  const left = [], waiting = [];
+  const left = [], waiting = [], held = [];
   for (const s of stale) {
     if (!s.r.port) { left.push(s.msg); continue; }
     let a;
     try { a = await ask(s.r); } catch (e) { left.push(`${s.msg} (it could not be asked to restart: ${e.message})`); continue; }
     if (a && a.stale === false) continue; // restarted since the process list was read
     if (!a || !a.supervised) left.push(`${s.msg} (nothing supervises it to bring it back)`);
-    else if (a.plugin) left.push(`${s.msg} (a plugin is connected: it restarts itself once the plugin closes)`);
+    else if (a.plugin) held.push(s);
     else waiting.push(s);
   }
   const back = (s, now) => now.some((x) => x.data === s.r.data && x.port === s.r.port && x.started instanceof Date && x.started > newest.mtime);
@@ -97,7 +99,18 @@ export async function heal(stale, { ask = (r) => Promise.race([call(r, '/restart
     await new Promise((r) => setTimeout(r, poll));
   }
   for (const s of wait) left.push(`${s.msg} (asked to restart, and not back on the new files within ${Math.round(timeout / 1000)} s: a build or a call still in progress)`);
-  return left;
+  return { left, held };
+}
+
+/* bin/check's judge, which restarts nothing: the stale services a plugin holds, asked of each one's /status. One that
+   cannot answer is not held, and stays a failure. `status` is its test's to replace. */
+export async function pluginHeld(stale, { status = (r) => Promise.race([statusOf(r), new Promise((_, no) => setTimeout(() => no(new Error('no answer in 5 s')), 5000).unref())]) } = {}) {
+  const held = [];
+  for (const s of stale) {
+    if (!s.r.port) continue;
+    try { if ((await status(s.r)).plugin === true) held.push(s); } catch { /* unanswered: a failure, as judged */ }
+  }
+  return held;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
@@ -133,13 +146,20 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const { seen, found } = judged;
   let bad = judged.bad;
   // --heal (bin/land, before queuing, outside the lock) restarts what it can first; bin/check only judges
+  let held = [];
   if (judged.stale.length && process.argv.includes('--heal')) {
-    const left = await heal(judged.stale, { newest });
-    const healed = judged.stale.filter((s) => !left.some((l) => l.startsWith(s.msg)));
-    bad = bad.filter((b) => !judged.stale.some((s) => s.msg === b)).concat(left);
+    const r = await heal(judged.stale, { newest });
+    held = r.held;
+    const healed = judged.stale.filter((s) => !r.left.some((l) => l.startsWith(s.msg)) && !held.includes(s));
+    bad = bad.filter((b) => !judged.stale.some((s) => s.msg === b)).concat(r.left);
     for (const s of healed) seen.add(s.label);
     if (healed.length) console.log(`dashboards: ${healed.length} stale service(s) restarted, idle, on the files on disk: ${healed.map((s) => s.label).join(', ')}`);
+  } else if (judged.stale.length) {
+    held = await pluginHeld(judged.stale);
+    bad = bad.filter((b) => !held.some((s) => s.msg === b));
   }
+  // a plugin open keeps a service on the old code until it closes, by design: said, never failed
+  for (const s of held) { seen.add(s.label); console.log(`dashboards: warning: ${s.msg.replace(/; kickstart the agent$/, '')}, while a plugin is connected; it restarts itself once the plugin closes`); }
   if (bad.length) {
     console.log(`dashboards: ${bad.length} service(s) serving something the projects do not have`);
     for (const b of bad) console.log('  ' + b);

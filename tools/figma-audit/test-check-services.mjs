@@ -49,13 +49,23 @@ ok('a start time ps did not give is not read as stale', undated.bad.length === 0
   const ask = async (r) => { asked.push(r.port); if (r.port === 'd') throw new Error('not_found'); return answers[r.port]; };
   // a comes back on the new files; e never does
   const list = () => [{ data: 'A', port: 'a', started: after }, { data: 'E', port: 'e', started: before }];
-  const left = await heal([svc('A', 'a'), svc('B', 'b'), svc('C', 'c'), svc('D', 'd'), svc('E', 'e')], { ask, list, newest, timeout: 50, poll: 5 });
+  const { left, held } = await heal([svc('A', 'a'), svc('B', 'b'), svc('C', 'c'), svc('D', 'd'), svc('E', 'e')], { ask, list, newest, timeout: 50, poll: 5 });
   ok('an idle stale service asked to restart and back on the new files is no failure', !left.some((l) => l.startsWith('A ')) && asked.includes('a'));
-  ok('one holding a plugin stays a failure, said so', left.some((l) => /^B .*plugin is connected/.test(l)));
+  ok('one holding a plugin is no failure: it is returned apart, held, to be warned of', !left.some((l) => l.startsWith('B ')) && held.length === 1 && held[0].label === 'B');
   ok('one nothing supervises stays a failure, said so', left.some((l) => /^C .*nothing supervises/.test(l)));
   ok('one that cannot be asked (an older service with no such route) stays a failure, with the reason', left.some((l) => /^D .*could not be asked.*not_found/.test(l)));
   ok('one asked that is not back on the new files in time stays a failure', left.some((l) => /^E .*not back/.test(l)));
-  ok('nothing else is a failure', left.length === 4);
+  ok('nothing else is a failure', left.length === 3);
+}
+
+// bin/check's judge restarts nothing: a stale service is asked its /status, and one with a plugin connected is a warning
+// (2026-11-26: four services waiting on open plugins failed every land that day)
+{
+  const { pluginHeld } = await import('./check-services.mjs');
+  const svc = (data, port) => ({ r: { data, port, started: before }, label: data, msg: `${data} runs the old file` });
+  const status = async (r) => { if (r.port === 'z') throw new Error('ECONNREFUSED'); return { plugin: r.port === 'p' }; };
+  const held = await pluginHeld([svc('P', 'p'), svc('Q', 'q'), svc('Z', 'z'), svc('N', null)], { status });
+  ok('the judge holds back only a service whose /status says a plugin is connected; one that cannot answer stays a failure', held.map((s) => s.label).join() === 'P');
 }
 
 // a service too old to have the route answers not_found through the real client: the check fails closed
@@ -66,7 +76,7 @@ ok('a start time ps did not give is not read as stale', undated.bad.length === 0
   const srv = http.createServer((q, s) => { s.writeHead(q.url === '/checkout' ? 200 : 404, { 'Content-Type': 'application/json' }); s.end(q.url === '/checkout' ? JSON.stringify({ root, data: '/old/audit' }) : '{"error":"not_found"}'); });
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const port = String(srv.address().port);
-  const left = await heal([{ r: { data: '/old/audit', port, started: before }, label: 'old', msg: 'OLD runs the old file' }], { newest, list: () => [], timeout: 50, poll: 5 });
+  const { left } = await heal([{ r: { data: '/old/audit', port, started: before }, label: 'old', msg: 'OLD runs the old file' }], { newest, list: () => [], timeout: 50, poll: 5 });
   srv.close();
   ok('a service with no restart route answers not_found, and stays a failure', left.length === 1 && /^OLD .*could not be asked.*not_found/.test(left[0]) && !/checkout/.test(left[0]), left[0]);
 }
