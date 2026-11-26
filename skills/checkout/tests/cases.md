@@ -8,7 +8,7 @@
 Fixture: a session in the toolkit with its own uncommitted edit in a worktree, and another session's uncommitted file in a project.
 Assert: step 1 lists the session's own items before `bin/closing`'s cross-check; the session's own edit is committed on its branch and landed with `bin/land`; the other session's file is left as it is, neither committed nor named in the report.
 Negative: memory written before the work is closed; another session's file committed under this session's message, or listed in the report.
-Traced: 2026-11-27 for 2.0.0 — to *Steps* 1.
+Traced: 2026-11-27 for 2.0.0 — to *Steps* 1 and *Not this skill*.
 
 ## C2 · The session's lessons go to their homes, and the memory passes the check — *traced*
 Fixture: a session that learned a rule about commit trailers, a new open item in the project, and a fact its git log records; the project's memory folder holds two files.

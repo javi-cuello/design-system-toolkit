@@ -18,9 +18,10 @@ This skill is the housekeeping for the end of a session, and covers that session
 ## Steps
 
 1. **Close this session's work.**
-   - List what this session made, from what it did. That is its edits, commits, branches and worktrees (`git status` and `git log origin/main..HEAD` in each), its running background tasks, and the replies it owes.
+   - List what this session made, from what it did. That is its edits, commits, branches and worktrees (`git status` and `git log @{upstream}..HEAD`, or the main branch, in each), its running background tasks, and the replies it owes.
+   - Commit only files this session wrote; one it is unsure of is named, not committed. Others' files are left unmentioned.
    - Commit and push or land each item nothing blocks, with `bin/land` from a toolkit worktree. Remove its landed worktrees and stop its tasks.
-   - Then run `cd "$TOOLKIT" && bin/closing` as a cross-check. A listed file this session did not write is never committed; one it is unsure of is named.
+   - Then run `cd "$TOOLKIT" && bin/closing` as a cross-check for anything the list missed.
    - The script also sweeps other merged worktrees: that is the script's work, and its `removed` lines are not reported.
 2. **Fold the session into memory.** Write what this session learned, and nothing with another home, into the project's one memory file. That is where work stands, each section dated `(as of YYYY-MM-DD)`. How the user likes to work is a rule, and goes to `~/.claude/CLAUDE.md` with the user's go. Rewrite the section that covers it; delete what it supersedes. A rule goes to its standard or CLAUDE.md, a ruling to the context document, a fact the repo records to nowhere (§D 25).
 3. **Check this project's memory folder.** Run `cd "$TOOLKIT" && node tools/memory-check/check.mjs`, and read only the lines for this project's folder. Fix every finding there. Re-check each stale section it warns about against the repo, then update its date or delete it.
