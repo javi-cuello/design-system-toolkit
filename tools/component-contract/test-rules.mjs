@@ -183,5 +183,5 @@ ok('corner smoothing goes to corner-shape and back the same, 0.1 to 1; none, 0 a
     && textFromCss(DECORATION_ROWS, { 'text-decoration-line': 'underline line-through' }) === 'underline' && textFromCss(CASE_ROWS, { 'text-transform': 'none', 'font-variant-caps': 'normal' }) === undefined);
 }
 ok('a number read to two decimals is the same within half the last digit, at the edge too; a hundredth off is not, nor a word',
-  sameAsRead(4.800000190734863, 4.8) && sameAsRead(7.805, 7.8) && !sameAsRead(4.81, 4.8) && !sameAsRead('4.8', 4.8));
+  sameAsRead(4.800000190734863, 4.8) && sameAsRead(7.815, 7.81) && !sameAsRead(7.816, 7.81) && !sameAsRead(4.81, 4.8) && !sameAsRead('4.8', 4.8));
 console.log(`${n}/${n} passed`);

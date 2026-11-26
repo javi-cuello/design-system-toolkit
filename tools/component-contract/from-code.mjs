@@ -180,7 +180,10 @@ export function wordsAsDrawn(n, s) {
 export function layerShown(rects, cs, atZero = false) { return rects > 0 && cs.visibility !== 'hidden' && (atZero || +cs.opacity > 0); }
 
 /* Whether a contract draws its layer `id` at opacity 0 at some combination: in its anatomy, as a variant sets it or as a
-   variant adds it (a tooltip drawn at 0 until hovered). Tested by test-from-code.mjs. */
+   variant adds it (a tooltip drawn at 0 until hovered). Decided once per component, not per combination: a layer drawn
+   at 0 at one combination is taken as shown at 0 at every one, so code drawing it at 0 where the design paints it at
+   another combination still reads as shown (the placed instance's props are not matched against the variants here).
+   Tested by test-from-code.mjs. */
 export function drawnAtZero(c, id) {
   return !!c && [((c.anatomy || {})[id] || {}).opacity, ...(c.variants || []).flatMap((v) => [(v.set || {})[`${id}.opacity`], ((v.add || {})[id] || {}).opacity])].some((o) => o === 0);
 }
@@ -195,9 +198,10 @@ export function markFill(cs, clear) {
   return [cs.maskImage, cs.webkitMaskImage].every((m) => !m || m === 'none') ? c : null;
 }
 
-/* Whether a mark draws no glyph of its own: no child element, and no pseudo-element with content (`pseudo` each one's
-   computed content), so the colour it is read at is no glyph's. Tested by test-from-code.mjs. */
-export function glyphless(children, pseudo) { return !children && pseudo.every((c) => !c || c === 'none' || c === 'normal'); }
+/* Whether a mark draws no glyph of its own: no child element, no text of its own (an icon font's ligature, home), and no
+   pseudo-element with content (`pseudo` each one's computed content), so the colour it is read at is no glyph's. `text`
+   its own text content. Tested by test-from-code.mjs. */
+export function glyphless(children, text, pseudo) { return !children && !String(text || '').trim() && pseudo.every((c) => !c || c === 'none' || c === 'normal'); }
 
 export function ownLayer(m, n, q, isRoot) {
   const host = q.replace(/\s*>\s*[a-z][a-z0-9-]*\s*$/i, '');
@@ -2365,7 +2369,7 @@ async function main() {
           // navigation bar's surface, which to-code writes as a box's, never the glyph's colour, which it keeps only where
           // something inside draws one: glyphless)
           if (kind === 'graphic' && e.mark) { const own = {}; boxStyling(own); for (const k of ['radius', 'full', 'cornerShape', 'outline', 'ownOutline', 'border', 'overflow', 'shadow', 'shadowAll', 'ringsUsed']) if (own[k] !== undefined) e[k] = own[k];
-            const fill = markFill(s, seeThrough); if (fill) { e.background = fill; if (glyphless(n.children.length, ['::before', '::after'].map((p) => getComputedStyle(n, p).content))) delete e.icon; } }
+            const fill = markFill(s, seeThrough); if (fill) { e.background = fill; if (glyphless(n.children.length, n.textContent, ['::before', '::after'].map((p) => getComputedStyle(n, p).content))) delete e.icon; } }
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             boxStyling(e);
             // a box no flex lays out, or one with nothing to hug, has a size of its own (a switch's thumb, an avatar's image)

@@ -400,9 +400,9 @@ export function inWordsOf(library, drawn) {
   }));
 }
 
-// a field the contract holds in px: a corner, a size and its limits, a gap, a side's padding, a place, a stroke's or a
-// shadow's width (roundTrip holds such a number a browser read to its two decimals: sameAsRead)
-const PX_FIELD = /(^|\.)(radius|topLeft|topRight|bottomRight|bottomLeft|width|height|minWidth|maxWidth|minHeight|maxHeight|gap|top|end|bottom|start|x|y|blur|spread|weight)$/;
+// a field the contract holds in px: a corner, a size and its limits, a gap either way, a side's padding, a place, a
+// stroke's, an outline's offset or a shadow's width (roundTrip holds such a number a browser read to its two decimals: sameAsRead)
+const PX_FIELD = /(^|\.)(radius|topLeft|topRight|bottomRight|bottomLeft|width|height|minWidth|maxWidth|minHeight|maxHeight|gap|crossGap|offset|top|end|bottom|start|x|y|blur|spread|weight)$/;
 
 export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false, pointerFrom = null } = {}) {
   const design = library.code?.from !== 'code';

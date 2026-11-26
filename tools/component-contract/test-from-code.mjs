@@ -746,8 +746,9 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
   { const e = { asset: 'house' }, host = { anatomy: { 'nav/icon': { kind: 'instance', with: { '<icon>': 'House' } } }, variants: [] };
     ok('…a glyph the placed component draws there of its own counts, where the design overrides it (its with read beside the design\'s)',
       !wrapGlyph('icon', { asset: 'house' }, [], ['<icon>'], withsOf(design, 'icon')) && wrapGlyph('icon', e, [], ['<icon>'], [...withsOf(design, 'icon'), ...withsOf(host, 'nav/icon')]) && e.with['<icon>'] === 'House'); } }
-  ok('a mark draws no glyph of its own where it has no child and no pseudo-element with content; one with either keeps its glyph\'s colour',
-    glyphless(0, ['none', 'normal']) && !glyphless(1, ['none', 'none']) && !glyphless(0, ['"\\e900"', 'none']));
+  ok('a mark draws no glyph of its own where it has no child, no text and no pseudo-element with content; one with any keeps its glyph\'s colour',
+    glyphless(0, '', ['none', 'normal']) && glyphless(0, '  ', ['none', 'none']) && !glyphless(1, '', ['none', 'none']) && !glyphless(0, '', ['"\\e900"', 'none']));
+  ok('…nor where it holds text of its own, an icon font\'s ligature', !glyphless(0, 'home', ['none', 'none']));
   ok('a full-round empty box where the design draws an ellipse is the ellipse', asShape({ kind: 'container', full: true, radius: 99 }, { kind: 'graphic', shape: 'ellipse' }, false).shape === 'ellipse');
   ok('an empty box where the design draws a line is the line; one holding parts, or under an icon, stays a box', asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, false).kind === 'graphic' && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, true).kind === 'container' && asShape({ kind: 'container' }, { kind: 'graphic', icon: true }, false).kind === 'container');
 }
