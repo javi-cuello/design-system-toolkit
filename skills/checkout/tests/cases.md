@@ -28,7 +28,7 @@ Traced: 2026-11-27 for 2.1.0 — to *Step* 3; `tools/memory-check/test-sessions.
 Fixture: `/checkout --prune` in a project whose sessions are all unnamed.
 Assert: the report asks the user, under "Needed from you:", to run `/rename <project>` in the main session; nothing is renamed for them.
 Negative: the request buried in a paragraph; a session's transcript edited to name it.
-Traced: 2026-11-27 for 2.1.0 — to *Step* 3.
+Traced: 2026-11-27 for 2.1.0 — to *Steps* 3 and 6.
 
 ## C5 · A working preference found at checkout goes to CLAUDE.md, and the report asks for /clear — *traced*
 Fixture: a session in which the user said "always show me a screenshot before pushing UI".
@@ -40,4 +40,4 @@ Traced: 2026-11-27 for 2.1.0 — to *Steps* 2 and 6.
 Fixture: `/checkout` without `--prune`, in a session in the toolkit that landed one worktree and left one background task running; `bin/closing` also lists another project's uncommitted file, the memory check reports a finding in another project's folder, and the toolkit has a 10-day-old unnamed side session.
 Assert: the session's landed worktree is removed and its task stopped; the other project's file, the other folder's finding and the side session are neither touched nor mentioned in the report; the plan is settled.
 Negative: another project's item fixed or listed; another memory folder edited; a session listed or pruned.
-Traced: 2026-11-27 for 2.1.0 — to *Steps* 1, 4 and *Not this skill*.
+Traced: 2026-11-27 for 2.1.0 — to *Steps* 1, 4, 5 and *Not this skill*.
