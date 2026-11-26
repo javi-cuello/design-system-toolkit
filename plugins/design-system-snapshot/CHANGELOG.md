@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.90.8] - 2026-11-26
+### Fixed
+- **A placed instance Figma had not built yet is read whole again.** 0.90.6 took out 0.90.4's read of such an instance's children with hidden layers shown, wrongly blamed for a crash that 0.90.7 traced to the round trip's drawing pages; without it a placed checkbox, icon or switch was recorded empty. Restored as 0.90.5 had it: each child's visibility read while hidden layers are shown.
+
 ## [0.90.7] - 2026-11-26
 ### Fixed
 - **Pages the round trip draws on are skipped, not walked.** A library file holding to-figma's drawings ("Round trip · <component>" pages, thirty in one) had every one walked, previews included, only for the store to drop them; on a large library the run took very long and crashed Figma. They are now left out like a Scratch page; a run given component ids still reads them.

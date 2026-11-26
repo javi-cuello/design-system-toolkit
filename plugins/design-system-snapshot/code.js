@@ -1,4 +1,4 @@
-// Design system snapshot — v0.90.7 · plugin-standard v1.1.0
+// Design system snapshot — v0.90.8 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -851,7 +851,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.90.7';
+const VERSION = '0.90.8';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -939,11 +939,21 @@ async function componentNotesOf(n) {
   return got.length ? got : null;
 }
 
-/* Whether a layer is drawn: a sublayer Figma lists but no longer has is not, rather than stopping the snapshot; any
-   other failure still stops it. skipInvisibleInstanceChildren is never switched mid-walk: doing so per empty instance
-   crashed Figma on a large library (2026-11-26). */
+// An instance Figma has not built yet hands over no children while skipInvisibleInstanceChildren is on, visible ones
+// included: a placed icon and switch were recorded empty in some variants though REST lists their layers. One read with
+// the flag off builds them; it is put back at once, and the walk drops the hidden ones as everywhere.
+/** @param {any} n */
+const kidsOf = (n, f = figma) => {
+  // (each child's visibility read while the flag is off: once it is back on, a hidden sublayer read with it off is no
+  // node Figma knows, and reading it throws "does not exist")
+  const k = 'skipInvisibleInstanceChildren', off = !n.children.length && f[k];
+  if (off) f[k] = false;
+  try { return n.children.filter(isShown); } finally { if (off) f[k] = true; }
+};
+/* Whether a layer is drawn: a sublayer Figma lists but no longer has (an instance's, read across a change of
+   skipInvisibleInstanceChildren) is not, rather than stopping the snapshot; any other failure still stops it. */
 /** @param {SceneNode} c */
-const isShown = (c) => { try { return c.visible !== false; } catch (e) { if (/not exist/.test(message(e))) return false; throw e; } };
+const isShown = (c) => { try { return c.visible !== false; } catch (e) { if (!/not exist/.test(message(e))) throw e; } };
 /** @param {SceneNode} n @param {number} depth @param {number} [at] its place among all its parent's children, none inside an instance @param {boolean} [inInstance] @returns {Promise<Record<string, unknown>>} */
 async function walk(n, depth, at, inInstance = false) {
   /** @type {Record<string, unknown>} */
@@ -1212,7 +1222,7 @@ async function walk(n, depth, at, inInstance = false) {
     if ((overrides.length || walkWhole) && depth < 12) {
       o.overrides = overrides.map((ov) => ov.overriddenFields.join(',')).slice(0, 8);
       const kids = [];
-      for (const c of n.children.filter(isShown)) kids.push(await walk(c, depth + 1, undefined, true));
+      for (const c of kidsOf(n)) kids.push(await walk(c, depth + 1, undefined, true));
       o.children = kids;
     }
     return o;
@@ -1251,7 +1261,7 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
    (snapshot-standard rule 27). "Scratch card" and "Scratch-card" are a component's page. A run that names
    component ids reads them. A page to-figma draws on ("Round trip · <component>", payload.cjs DRAWING_PAGE) is one
    too: the store drops it anyway, and walking thirty of them made a large library's run crash Figma (2026-11-26). */
-const isScratchPage = (page) => page.name.startsWith('Round trip · ') || /^\W*Scratch(\s+[-–—]|\s*[:([]|\s*$)/i.test(page.name);
+const isScratchPage = (page) => /^(Round trip · |\W*Scratch(\s+[-–—]|\s*([:([]|$)))/i.test(page.name);
 /* A graphic is an illustration, not a glyph: a raster or a drawing placed at a
    size, with no Size axis and no currentColor. It exports as a PNG because a
    graphic's fill is usually an image, and an SVG of an image is that image
