@@ -25,6 +25,8 @@ ok('a document with no rulings table is refused', appendRuling('# X\n', 'y', 'z'
   const back = removeRuling(two, 'a | b');
   ok('a ruling taken back leaves the others and the table, and reads as before it', back !== null && rulingsOf(back).map((x) => x.text).join() === 'Keep the fill' && back === appendRuling(template, 'Keep the fill', 'Button', '2026-11-11'));
   ok('taking back a ruling the log does not hold changes nothing', removeRuling(two, 'not there') === null);
+  const byHand = two.replace(/\| 2026-11-11 \|([^|]*)\| Keep the fill \|[^|]*\|/, '| 2026-11-11 |$1| Keep the fill | Decided in review |');
+  ok('a ruling written by hand is never taken back', byHand !== two && removeRuling(byHand, 'Keep the fill') === null);
 }
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

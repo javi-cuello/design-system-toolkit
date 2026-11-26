@@ -156,6 +156,7 @@ try {
     ok("/ruling records a ruling", (await post("/ruling", { text: "Keep the raw stroke", where: "Alert" })).json.ok === true && fs.readFileSync(ctxFile, "utf8").includes("Keep the raw stroke"));
     ok("/ruling with remove takes it back, the document as before it", (await post("/ruling", { text: "Keep the raw stroke", remove: true })).json.removed === true && fs.readFileSync(ctxFile, "utf8") === before);
     ok("/ruling with remove on a ruling not there says absent and writes nothing", (await post("/ruling", { text: "Keep the raw stroke", remove: true })).json.absent === true && fs.readFileSync(ctxFile, "utf8") === before);
+    ok("/ruling with remove other than true writes nothing", (await post("/ruling", { text: "Keep the raw stroke", where: "Alert" })).json.ok === true && (await post("/ruling", { text: "Keep the raw stroke", remove: "false" })).json.already === true);
     fs.rmSync(ctxFile);
   }
 

@@ -1040,9 +1040,11 @@ const server = createServer(held(async (req, res) => {
       if (!clean) return json(res, 400, { error: "text required" });
       if (!existsSync(CONTEXT)) return json(res, 200, { ok: false, error: "no context document at " + CONTEXT });
       const md = await readFile(CONTEXT, "utf8");
-      // Taken back (the note's ruling box unticked): its §6 row goes; one no longer there is said, not refused.
-      if (remove) {
+      // Taken back (the note's ruling box unticked): the row the dashboard wrote goes; one no longer there is said, not refused.
+      if (remove === true) {
         const back = removeRuling(md, clean);
+        // one written by hand stays: it is the maintainer's to strike in the document
+        if (!back && rulingsOf(md).some((r) => r.key === rulingKey(clean))) return json(res, 200, { ok: false, byHand: true, error: "that ruling was written in the context document, not recorded here: strike it there" });
         if (!back) return json(res, 200, { ok: true, absent: true });
         if (dryRun) return json(res, 200, { ok: true, dryRun: true, file: CONTEXT });
         await writeContext(back);

@@ -706,11 +706,16 @@ function appendRuling(md, text, where, today = new Date().toISOString().slice(0,
   lines.splice(at + 1, 0, "| " + row.join(" | ") + " |");
   return lines.join("\n");
 }
-// Takes a ruling back out of §6 (the dashboard's POST /ruling with remove): the rows whose ruling is `text`,
-// compared as rulingsOf compares; null when none is there. A struck row (~~) stays, as rulingsOf skips it.
+// Takes back a ruling the dashboard recorded (its POST /ruling with remove): the rows whose ruling is `text`, compared
+// as rulingsOf compares, and whose Why says appendRuling wrote them; null when none is. A ruling written by hand is
+// never touched (retiring one is striking it, §6's own convention), nor a struck row.
+const DASHBOARD_WHY = /^Recorded from the audit dashboard\b/;
 function removeRuling(md, text) {
   const key = rulingKey(text), lines = md.split("\n"), drop = new Set();
-  walkRulings(lines, (i, c, h) => { const cell = c[h.indexOf("ruling")] || ""; if (!/^~~/.test(cell) && rulingKey(cell) === key) drop.add(i); });
+  walkRulings(lines, (i, c, h) => {
+    const cell = c[h.indexOf("ruling")] || "";
+    if (!/^~~/.test(cell) && rulingKey(cell) === key && DASHBOARD_WHY.test(c[h.indexOf("why")] || "")) drop.add(i);
+  });
   return drop.size ? lines.filter((l, i) => !drop.has(i)).join("\n") : null;
 }
 function rulingsOf(md) {
