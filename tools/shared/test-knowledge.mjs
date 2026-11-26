@@ -29,6 +29,10 @@ const all = 'src/dialog-upload-form-settings-nav-sidebar-menu-pager-search-filte
 ok('every page named exists, and every pattern page has a word that names it',
   ['src/a.scss', all].flatMap(pagesFor).every((x) => fs.existsSync(path.join(TK, x)))
   && pagesFor(all).filter((x) => x.includes('/patterns/')).length === fs.readdirSync(path.join(TK, 'knowledge/ui/patterns')).filter((f) => f.endsWith('.md')).length);
+ok('a timesheet by any spelling names the timesheets page and no dialog; a motion duration does not',
+  ['src/timesheet.tsx', 'src/TimeSheet.tsx', 'src/time-sheet.tsx', 'src/TimeLog.tsx', 'src/timesheets/day.tsx'].every((f) => p(f).includes('timesheets.md') && !p(f).includes('dialogs.md'))
+  && !['src/styles/tokens/_duration.scss', 'src/motion-duration.css'].some((f) => p(f).includes('timesheets.md'))
+  && p('src/ActionSheet.tsx').includes('dialogs.md'));
 // 2026-11-16: a component's page comes first, and every component page has a word that names it.
 ok('a path\'s words name its component page before its pattern: a tooltip, a button, a segmented control',
   p('src/components/Tooltip.tsx')[0] === 'tooltip.md' && p('src/components/Tooltip.tsx').includes('dialogs.md')

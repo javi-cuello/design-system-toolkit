@@ -55,7 +55,7 @@ const PATTERNS = [
   [/^(inspector|properties|property)/, 'property-editors'],
   [/^(calendar|agenda|schedule|month|week)/, 'calendars'],
   [/^(events?|bookings?|appointments?|timeoff)$/, 'calendar-events'],
-  [/^(timesheets?|timelogs?|durations?)$/, 'timesheets'],
+  [/^time(sheets?|logs?)$/, 'timesheets'],
 ];
 
 // a word of the path → the component page it names, listed before the patterns: the component is what is being built.
@@ -72,12 +72,18 @@ const COMPONENTS = [
   [/^(progress|progressbar|progressindicator)$/, 'progress-indicator'], [/^spinners?$/, 'spinner'], [/^cards?$/, 'card'],
 ];
 
+// the patterns whose name is two words, read joined
+const JOINED = [/^time(sheets?|logs?)$/];
+
 export function pagesFor(rel) {
   const words = rel.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().split(/[/\-_.]+/).filter(Boolean);
   // a two-word name split by its case or a hyphen (TextArea, field-error) is also read joined
   const joined = words.concat(words.slice(1).map((w, i) => words[i] + w));
+  // a pattern named by two words (TimeSheet, time-log) is read joined, and its halves name nothing else (sheet is not a dialog here)
+  const pairs = words.slice(1).map((w, i) => [words[i], w]).filter(([a, b]) => JOINED.some((re) => re.test(a + b)));
+  const single = words.filter((w) => !pairs.flat().includes(w)).concat(pairs.map(([a, b]) => a + b));
   const patterns = COMPONENTS.filter(([re]) => joined.some((w) => re.test(w))).map(([, c]) => `knowledge/ui/components/${c}.md`)
-    .concat(PATTERNS.filter(([re]) => words.some((w) => re.test(w))).map(([, p]) => `knowledge/ui/patterns/${p}.md`));
+    .concat(PATTERNS.filter(([re]) => single.some((w) => re.test(w))).map(([, p]) => `knowledge/ui/patterns/${p}.md`));
   const base = /\.(s[ac]ss|css)$/.test(rel) ? STYLE : MARKUP.concat(/\.(m?js|jsx|tsx|vue|svelte|astro)$/.test(rel) ? ['knowledge/code/javascript.md'] : []);
   return [...new Set(patterns.concat(base))];
 }
