@@ -1,6 +1,6 @@
 # Memory check
 
-Claude Code keeps a memory folder and session transcripts for each project, under `~/.claude/projects/<folder>/`. Nothing else in the toolkit checks them. This folder holds the memory folders to one shape, toolkit-standard §D 25. It also lists a project's sessions and, with `--prune`, deletes the stale side ones, when the user asks.
+Claude Code keeps a memory folder and session transcripts for each project, under `~/.claude/projects/<folder>/`. Nothing else in the toolkit checks them. This folder holds the memory folders to one shape, toolkit-standard §D 25. It also lists a project's sessions and, with `--prune`, deletes the stale side ones, for `/checkout --prune`.
 
 ## Use
 

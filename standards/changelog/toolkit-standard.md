@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.54.0 (2026-11-27): §D 25: stale side sessions are folded and pruned by `/checkout --prune`, at the user's request.
 - 2.53.0 (2026-11-27): §D 25: `/checkout` covers its own session only, at the user's request; stale side sessions are pruned by `sessions.mjs --prune` when the user asks, no longer by checkout. A loosening: nothing prunes them unasked now.
 - 2.52.0 (2026-11-26): §D 25: no rule is memory (no feedback type, no Why/How-to-apply pair, no line opening Never, Always, Don't, Do not or Must), and every section of a project file is dated state; memory-check refuses both.
 - 2.51.0 (2026-11-26): §D 13's review row: every Medium and Low is fixed on the way or named under *Open:* with its blocker, moved from memory; the review gate's message says so.

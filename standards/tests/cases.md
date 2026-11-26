@@ -4,6 +4,8 @@ Cases for the standards themselves, not for any one skill (toolkit-standard §C 
 
 Three scripts live in this directory, all run from the repo root: `check-frontmatter.sh` (clause F), `check.sh` (skills, plugins, markdown shape and each standard's scope line, delegating clause F), and `scan-clause-d.py` (advisory: clause D needs a read). Rules, citations, histories and settings are `tools/toolkit-check/check-standards.mjs`'s, run by `bin/check`.
 
+**Walked: 2026-11-27, for toolkit-standard 2.54.0** — §D 25 names `/checkout --prune` as the pruner; the memory-check case asserts `--prune` deleting the stale one, not who calls it, so it holds; test-sessions 3 of 3.
+
 **Walked: 2026-11-27, for toolkit-standard 2.53.0** — §D 25: `/checkout` covers its own session; stale side sessions are pruned by `sessions.mjs --prune` when the user asks. The §D 25 memory-check case asserts the check and `--prune`, not who runs it, so it holds; test-check 11 of 11, test-sessions 3 of 3.
 
 **Walked: 2026-11-26, for skill-standard 1.12.0** — §A clause J: a skill names the enable call for a bridge tool outside the core set; a judgement rule with no script, so no new case (§C clause E). F, D and G cases read against it: none asserts which bridge tools a skill names, so each holds.
