@@ -236,7 +236,6 @@ The invoice bills the entries' hours, by task, project or person, or one line pe
 - [required] 1.4.1: planned and logged entries differ in text or a named pattern ("Planned"), not by a paler fill alone.
 
 **Build**
-- [weak] Logging a planned entry leaves the plan as it was: Float's suggestion does not change its allocation (above).
 - [required] The status is in the entry's accessible name, as [calendar events: *Entry status and conflicts*](calendar-events.md#entry-status-and-conflicts) builds it.
 
 **Check**
