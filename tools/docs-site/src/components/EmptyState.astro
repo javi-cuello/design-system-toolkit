@@ -13,9 +13,11 @@ const { title, level = 3, small = false, action, id } = Astro.props;
 const H = `h${level}`;
 // labelled by its heading only when the caller names it: an id made from the title repeats when two share a title
 const headId = id ? id + '-h' : undefined;
+// a section only when it has that name: an unnamed section is no landmark, and the page-structure check refuses one
+const Box = id ? 'section' : 'div';
 ---
-<section class:list={['empty-state', small && 'empty-state--small']} id={id} aria-labelledby={headId}>
+<Box class:list={['empty-state', small && 'empty-state--small']} id={id} aria-labelledby={headId}>
   <H class="empty-state__title" id={headId}>{title}</H>
   <p class="empty-state__text"><slot /></p>
   {action && <p class="empty-state__action"><a class="button button--soft" href={action.href}>{action.label}</a></p>}
-</section>
+</Box>

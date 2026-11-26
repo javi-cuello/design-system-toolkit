@@ -39,4 +39,4 @@ node tools/ui-check/test-own-pages.mjs
 
 `test-own-pages.mjs` runs axe over the toolkit's own pages. That means every page of the docs site, as `tools/figma-audit/server.mjs` builds and serves it, the dashboard's Audits page among them. It also checks the contract editor, empty and on a component's three tabs.
 
-The project is the contract editor's made-up sample library in a temp projects root, so no project's data is read. It fails on a serious or critical violation and lists the rest as `note:` lines; at desktop width, in light and dark (axe.mjs checks every page in both, and a violation in both is listed once, "(light, dark)"). Without Chrome, or without the docs site's packages, it exits 77.
+The project is the contract editor's made-up sample library in a temp projects root, so no project's data is read. It fails on a serious or critical violation and lists the rest as `note:` lines. It runs at desktop width, in light and in dark; a violation found in both is listed once, as "(light, dark)". Without Chrome, or without the docs site's packages, it exits 77.
