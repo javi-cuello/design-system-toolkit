@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.17.0)
+# Eval cases — figma-context-capture (v2.17.1)
+
+**Walked: 2026-11-26 for 2.17.1** — template only: one paragraph on `pages.componentPages` outside the JSON block, which stays valid; C7–C9's template shape holds; `node tests/test-passes.mjs` 78/78.
 
 **Walked: 2026-11-21 for 2.16.0** — readability rewrite, no rule changed: C1–C19 re-traced to the new text (pass M, slot names and the role rule in discovery-passes.md and SKILL.md steps 3 and 5; state, overrides and output paths in references/assembly.md), and their step pointers moved from step 2 to step 5; `node tests/test-passes.mjs` 78/78.
 

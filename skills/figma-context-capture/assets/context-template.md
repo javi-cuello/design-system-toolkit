@@ -153,6 +153,8 @@ out. With no snapshot, or a `notInSnapshot` entry not yet resolved, leave both
 keys out and put the `[TBD]` in the Tokens prose: a scale read from names, a
 string, or `[]` is a wrong scale, and the audit ignores one that is not numbers.
 
+`pages.componentPages` is set where pages marked like component pages (❖) hold icons or documentation: without it they are audited as components. A regex that keeps the marked pages and drops those two is `^(?:❖|🚧)(?! (?:Icons|Documentation)$)`. Seen 2026-11-26: a library's 52 icon sets and 2 doc components raised about 225 of 345 candidates until its document set `componentPages`.
+
 ```json audit-settings
 {
   "libraries": {
