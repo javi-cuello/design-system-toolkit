@@ -25,7 +25,8 @@ import { run as check } from './check-cache.mjs';
 import { mainOf, link, temp } from './worktree.mjs';
 
 const git = (dir, ...a) => execFileSync('git', ['-C', dir, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-const tryGit = (dir, ...a) => { try { return { ok: true, out: git(dir, ...a) }; } catch (e) { return { ok: false, out: String(e.stderr || e.message).trim() }; } };
+const tryGit = (dir, ...a) => { try { return { ok: true, out: git(dir, ...a) }; } catch (e) { return { ok: false, out: [e.stdout, e.stderr].map((s) => String(s || '').trim()).filter(Boolean).join('\n') || e.message }; } };
+// a local pre-push hook's reason reaches a piped stdout, not stderr: both are kept, or the push is said refused with no why (2026-11-26)
 const say = (l) => console.log(`land: ${l}`);
 const PAUSE = +process.env.TOOLKIT_LAND_PAUSE || 2500; // ms between steps, so a waiter gets the lock
 

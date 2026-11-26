@@ -134,6 +134,16 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.equal(runs() - before, 3, `a check for the batch, then one each: ${r.out}`);
   assert.match(r.out, /worktree-j: not landed/, r.out);
   assert.equal(queued(main).some((q) => q.branch === 'worktree-j'), false, 'off the queue'); }
+// (j2) a local pre-push hook's reason, written to stdout as the toolkit's own is, is said too
+{ const J2 = wt('j2');
+  edit(J2, 'a.txt', 'a-j2\n');
+  const hook = path.join(main, '.git', 'hooks', 'pre-push');
+  fs.writeFileSync(hook, '#!/bin/sh\necho "pre-push: these commit messages name a project"\nexit 1\n', { mode: 0o755 });
+  r = await quiet(() => land(J2));
+  fs.rmSync(hook);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /pre-push: these commit messages name a project/, `the hook's reason is said: ${r.out}`);
+  assert.equal(queued(main).some((q) => q.branch === 'worktree-j2'), false, 'off the queue'); }
 // (k) in a batch of three, the refusal falls on the branch that carries it, queued last; the others land
 { const K = wt('k'), L = wt('l'), M = wt('m');
   edit(K, 'd.txt', 'd-NAMED\n'); edit(L, 'a.txt', 'a-ok\n'); edit(M, 'e.txt', 'e-ok\n');
