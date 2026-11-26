@@ -18,7 +18,7 @@ This skill is the housekeeping for the end of a session, and covers that session
 ## Steps
 
 1. **Close this session's work.**
-   - List what this session made, from what it did. That is its edits, commits, branches and worktrees (`git status` and `git log @{upstream}..HEAD`, or the main branch, in each), its running background tasks, and the replies it owes.
+   - List what this session made, from what it did: its edits, commits, branches and worktrees, its running background tasks, and the replies it owes. In each worktree, `git status` and `git log @{upstream}..HEAD` show what is left.
    - Commit only files this session wrote; one it is unsure of is named, not committed. Others' files are left unmentioned.
    - Commit and push or land each item nothing blocks, with `bin/land` from a toolkit worktree. Remove its landed worktrees and stop its tasks.
    - Then run `cd "$TOOLKIT" && bin/closing` as a cross-check for anything the list missed.
