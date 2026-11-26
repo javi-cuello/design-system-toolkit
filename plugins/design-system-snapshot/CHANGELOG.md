@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.90.6] - 2026-11-26
+### Fixed
+- **The snapshot no longer crashes Figma on a large library.** 0.90.4 switched Figma's skip-hidden-layers setting off and on for each placed instance that handed over no children; on a large library that crashed the Figma tab. The walk no longer touches the setting, so such an instance is recorded empty again (0.90.4's gain undone), and a layer Figma lists but no longer has is still left out as not drawn.
+
 ## [0.90.5] - 2026-11-26
 ### Fixed
 - **A hidden sublayer no longer stops the snapshot.** An instance read with hidden layers shown had each child's visibility read after the setting went back, when Figma no longer knows the hidden ones ("get_visible: The node … does not exist"). Visibility is now read while they are shown, and a layer that still cannot be read is left out as not drawn.

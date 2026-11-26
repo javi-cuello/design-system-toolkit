@@ -68,42 +68,24 @@ ok("a path the walk did not reach marks nothing", markSlots({ name: "x", type: "
     icon.index === 1 && icon.children.length === 1 && !("index" in icon.children[0]) && !("index" in icon.children[0].children[0]));
 }
 
-// 2026-11-25: an overridden instance Figma had not built yet handed over no children while skipInvisibleInstanceChildren
-// was on (live: [] with it on, its layer with it off, then with it on again), so a placed icon was recorded empty though
-// REST lists its layer. One read with the flag off builds them, the flag put back, the hidden ones still dropped.
+// 2026-11-26: switching skipInvisibleInstanceChildren off for each instance that handed over no children crashed Figma
+// on a large library; the walk never touches the flag, and a sublayer Figma lists but no longer has is not drawn.
 {
-  const kids = [box("Glyph", "VECTOR"), box("Hidden", "FRAME", [], false)];
-  const lazy = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }] };
-  Object.defineProperty(lazy, "children", { get: () => (figma.skipInvisibleInstanceChildren ? [] : kids) });
-  figma.skipInvisibleInstanceChildren = true;
-  const walked = await walk(lazy, 1);
-  ok("an instance handing over no children with the flag on is read once with it off: its visible layers recorded",
-    JSON.stringify(walked.children.map((c) => c.name)) === '["Glyph"]');
-  ok("…and the flag put back on", figma.skipInvisibleInstanceChildren === true);
+  let sets = 0;
+  Object.defineProperty(figma, "skipInvisibleInstanceChildren", { configurable: true, get: () => true, set: () => { sets++; } });
+  const lazy = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }], children: [] };
+  await walk(lazy, 1);
+  ok("an instance handing over no children is walked without switching skipInvisibleInstanceChildren", sets === 0);
   delete figma.skipInvisibleInstanceChildren;
-}
-
-// 2026-11-26: a hidden sublayer handed over with the flag off was read for its visibility after the flag went back on,
-// when Figma no longer knows it ("get_visible: The node … does not exist"), and the whole snapshot stopped. Visibility is
-// read while the flag is off; a sublayer that throws anyway is not drawn.
-{
-  let on = true;
-  let readOn = 0;
-  const ghost = box("Ghost", "FRAME"); Object.defineProperty(ghost, "visible", { get: () => { if (on) { readOn++; throw new Error("in get_visible: The node does not exist"); } return false; } });
   const gone = box("Gone", "FRAME"); Object.defineProperty(gone, "visible", { get: () => { throw new Error("in get_visible: The node does not exist"); } });
-  const kids = [box("Glyph", "VECTOR"), ghost, gone];
-  const lazy = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }] };
-  Object.defineProperty(lazy, "children", { get: () => (on ? [] : kids) });
-  Object.defineProperty(figma, "skipInvisibleInstanceChildren", { configurable: true, get: () => on, set: (v) => { on = v; } });
-  let walked = null, err = null; try { walked = await walk(lazy, 1); } catch (e) { err = e; }
-  ok("a sublayer Figma no longer knows once the flag is back on does not stop the snapshot, and is not drawn",
+  const held = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }], children: [box("Glyph", "VECTOR"), gone] };
+  let walked = null, err = null; try { walked = await walk(held, 1); } catch (e) { err = e; }
+  ok("…a sublayer Figma no longer has does not stop the snapshot, and is not drawn",
     !err && JSON.stringify(walked.children.map((c) => c.name)) === '["Glyph"]');
-  ok("…its visibility read while the flag is off, before Figma forgets it", readOn === 0);
   const broken = box("Broken", "FRAME"); Object.defineProperty(broken, "visible", { get: () => { throw new Error("in get_visible: something else"); } });
   const plain = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }], children: [broken] };
   let loud = null; try { await walk(plain, 1); } catch (e) { loud = e; }
   ok("…and any other failure reading a layer still stops the snapshot", !!loud);
-  delete figma.skipInvisibleInstanceChildren;
 }
 
 // Round 4: the release is stamped on every payload, so the store can tell a
