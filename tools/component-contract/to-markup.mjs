@@ -613,7 +613,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     } else if (e.kind === 'instance') {
       return instanceOut(when);
     } else if (e.kind === 'graphic') {
-      out = { tag: 'span', attrs: [...hook(id), ['aria-hidden', { lit: 'true' }]], children: [] };
+      // (a shape a variant turns into a frame of shapes, a radio's circle that holds a dot once checked: those, inside it)
+      out = { tag: 'span', attrs: [...hook(id), ['aria-hidden', { lit: 'true' }]], children: (kids.get(id) || []).flatMap((k) => node(k, known, fill)).filter(Boolean) };
     } else if (e.kind === 'text') {
       out = { tag, attrs: hook(id), children: [textOf(id, e, part.words)] };
     } else {

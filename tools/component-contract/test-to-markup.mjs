@@ -831,4 +831,9 @@ else {
   ok('a snippet that passes a placed component a value its variants choose is PHP that parses', /No syntax errors/.test(lint) || /no php/.test(lint) && !/undefined/.test(php));
 }
 
+// a shape a variant turns into a frame of shapes (a radio's circle that holds a dot once checked): those drawn inside it
+{ const radio = { component: 'Dot', props: { checked: { type: 'boolean', default: false, figma: 'Checked' } }, anatomy: { root: { kind: 'container' }, circle: { kind: 'graphic', parent: 'root', shape: 'rectangle' } },
+    variants: [{ when: { checked: true }, set: { 'circle.kind': 'container', 'circle.shape': null }, add: { 'circle/dot': { kind: 'graphic', parent: 'circle', shape: 'ellipse' } } }] };
+  ok('a shape a variant fills with shapes draws them inside it', /h\("span", \{ "data-part": "circle", "aria-hidden": "true" \},\s*\(checked\) && h\("span", \{ "data-part": "dot"/.test(toElement(radio, 'dot', { naming: ELEMENT, library: {} }))); }
+
 console.log(`${n} passed`);
