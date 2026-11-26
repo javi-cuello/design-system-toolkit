@@ -1126,6 +1126,23 @@ export function asShape(x, fa, hasChildren, here = null) {
   return x;
 }
 
+/* A part the design lists nowhere at the combination read, inside a placed instance it lists nothing inside there (it
+   draws its component as is: a radio's icon at focus and checked), as that component draws it at the instance's props:
+   the part as the design draws it there, for asShape (a dot's box, a container in its checked variant, is no rectangle
+   for having no child the mapping reads). The outermost such instance; null where none is, or one lists a layer inside.
+   `A` is the design's anatomy at the combination (expand). Tested by test-from-code.mjs. */
+export function placedHere(A, id, mainOf) {
+  if (!A || !mainOf || A[id]) return null;
+  const { placedAs } = req('./derive.cjs'), segs = id.split('/');
+  for (let i = 1; i < segs.length; i++) {
+    const h = segs.slice(0, i).join('/'), e = A[h], m = e && e.kind === 'instance' && mainOf(e.component, e.key);
+    if (!m) continue;
+    if (Object.keys(A).some((k) => k.startsWith(`${h}/`))) return null;
+    return placedAs(A, h, m, mainOf).M[segs.slice(i).join('/')] || null;
+  }
+  return null;
+}
+
 // a token whose value paints nothing (rgba(…, 0), rgb(… / 0), #rrggbb00, transparent): the browser reads no fill there
 const seeThroughIn = (value, t) => { const v = String(value(t) ?? ''); return /rgba?\((?:[^,)]*,){3}\s*0(\.0+)?%?\s*\)$|\/\s*0(\.0+)?%?\s*\)$|^\s*transparent\s*$/i.test(v) || /^#[0-9a-f]{6}00$/i.test(v) || /^#[0-9a-f]{3}0$/i.test(v); };
 
@@ -2670,7 +2687,7 @@ async function main() {
           if (mine && f === 'ownOutline' && (ringKnobbed(await authoredValue(L.tab, await boxOf({ id, kind: x.kind }), 'outline', styles)) || ringKnobbed(await authoredValue(L.tab, await boxOf({ id, kind: x.kind }), 'outline-color', styles)))) mine = false;
           if (!mine) delete x[f];
         }
-        A.take('design-shape', { anatomy: { [id]: x } }, () => asShape(x, fa, raw.some((r) => r.parent === id), fa && drawnHere()[id]));
+        A.take('design-shape', { anatomy: { [id]: x } }, () => asShape(x, fa, raw.some((r) => r.parent === id), fa && (drawnHere()[id] || placedHere(drawnHere(), id, mainOf))));
         drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box, layers: !!x.paint };
         delete x.box;
         if (x.layout) {

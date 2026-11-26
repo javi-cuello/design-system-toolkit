@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge } from './from-code.mjs';
+import { wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -704,6 +704,17 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
     asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false, { kind: 'graphic' }).shape === undefined
     && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false).shape === 'rectangle'
     && asShape({ kind: 'container' }, null, false, { kind: 'graphic', shape: 'rectangle' }).kind === 'container');
+  { // a radio's icon placed at focus and checked, listing nothing inside: its dot's box is the checked variant's container
+    const icon = { component: 'Icon', props: { checked: { type: 'boolean', default: false, figma: 'checked', axis: true, figmaValues: ['false', 'true'] } },
+      anatomy: { root: { kind: 'container' }, box: { kind: 'container', parent: 'root' }, 'box/dot': { kind: 'graphic', parent: 'box', shape: 'rectangle' } },
+      variants: [{ when: { checked: true }, set: { 'box/dot.kind': 'container', 'box/dot.shape': null }, add: { 'box/dot/fill': { kind: 'graphic', parent: 'box/dot', shape: 'ellipse' } } }] };
+    const mainOf = byComponentName([icon]), A = { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon', with: { checked: 'true' } } };
+    const here = placedHere(A, 'i/box/dot', mainOf);
+    ok('a part inside a placed instance that lists nothing there is that component\'s at the instance\'s props, so an empty box stays a container',
+      here && here.kind === 'container' && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'rectangle' }, false, here).kind === 'container'
+      && placedHere({ ...A, 'i/box': { kind: 'container', parent: 'i' } }, 'i/box/dot', mainOf) === null
+      && placedHere({ ...A, i: { ...A.i, with: { checked: 'false' } } }, 'i/box/dot', mainOf).kind === 'graphic');
+  }
   ok('a full-round empty box where the design draws an ellipse is the ellipse', asShape({ kind: 'container', full: true, radius: 99 }, { kind: 'graphic', shape: 'ellipse' }, false).shape === 'ellipse');
   ok('an empty box where the design draws a line is the line; one holding parts, or under an icon, stays a box', asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, false).kind === 'graphic' && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, true).kind === 'container' && asShape({ kind: 'container' }, { kind: 'graphic', icon: true }, false).kind === 'container');
 }
