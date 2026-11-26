@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.91.1] - 2026-11-26
+### Fixed
+- **The effect styles another library gives are read off the components alone.** 0.91.0 searched every layer of every page for them, the round trip's drawing pages too, and crashed Figma on a large library; they are now read as the variables the components bind are, off the components on the pages a snapshot stores. A remote text style's texts are looked for on those pages too.
+
 ## [0.91.0] - 2026-11-26
 ### Added
 - **The effect styles another library gives the components are recorded**, marked remote and held as that library's (owns.cjs `remoteEffects`), as its text styles are. A component file whose shadows live in a foundations file sent none, so its shadows read as none.

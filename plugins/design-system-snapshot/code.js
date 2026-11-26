@@ -1,4 +1,4 @@
-// Design system snapshot — v0.91.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.91.1 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -747,7 +747,7 @@ async function collectTokens() {
   const inside = (n) => { for (let p = n.parent; p; p = p.parent) if (p.type === 'COMPONENT' || p.type === 'COMPONENT_SET') return true; return false; };
   // (each style's text one that holds words, where any does: one with none says no font, and its style was dropped)
   const at = new Map();
-  for (const t of figma.root.children.flatMap((pg) => pg.findAllWithCriteria({ types: ['TEXT'] }))) if (typeof t.textStyleId === 'string' && t.textStyleId && inside(t) && (!at.has(t.textStyleId) || (!at.get(t.textStyleId).characters.length && t.characters.length))) at.set(t.textStyleId, t);
+  for (const t of storedPages().flatMap((pg) => pg.findAllWithCriteria({ types: ['TEXT'] }))) if (typeof t.textStyleId === 'string' && t.textStyleId && inside(t) && (!at.has(t.textStyleId) || (!at.get(t.textStyleId).characters.length && t.characters.length))) at.set(t.textStyleId, t);
   const textOf = new Map();
   const remote = /** @type {TextStyle[]} */ ((await Promise.all([...at.keys()].map(async (i) => { const s = await figma.getStyleByIdAsync(i); if (s) textOf.set(s, at.get(i)); return s; }))).filter((s) => s && s.remote && !names.has(s.name) && names.add(s.name)));
   // (each family's metric read once a run, where a style needs it)
@@ -820,7 +820,10 @@ async function collectTokens() {
   // and the effect styles of another library the components use (a component file whose shadows live in a foundations
   // file has none local), marked remote, as its text styles are: a name a local one holds is that one
   const localFx = await figma.getLocalEffectStylesAsync(), fxNames = new Set(localFx.map((e) => e.name));
-  const fxIds = new Set(figma.root.children.flatMap((pg) => pg.findAllWithCriteria({ types: ['COMPONENT', 'FRAME', 'INSTANCE', 'RECTANGLE', 'ELLIPSE', 'VECTOR', 'GROUP', 'TEXT', 'LINE', 'POLYGON', 'STAR', 'BOOLEAN_OPERATION'] })).filter((n) => typeof n.effectStyleId === 'string' && n.effectStyleId && (n.type === 'COMPONENT' || inside(n))).map((n) => n.effectStyleId));
+  // (read off the components on the pages a snapshot stores, as the variables they bind are: a whole-file search of
+  // every layer, the round trip's drawing pages with it, crashed Figma on a large library, 2026-11-26)
+  const fxIds = new Set();
+  for (const p of storedPages()) for (const c of p.findAllWithCriteria({ types: ['COMPONENT'] })) for (const n of [c, ...c.findAll((x) => 'effectStyleId' in x && !!x.effectStyleId)]) if (typeof n.effectStyleId === 'string' && n.effectStyleId) fxIds.add(n.effectStyleId);
   const remoteFx = /** @type {EffectStyle[]} */ ((await Promise.all([...fxIds].map((i) => figma.getStyleByIdAsync(i).catch(() => null)))).filter((e) => e && e.type === 'EFFECT' && e.remote && !fxNames.has(e.name) && fxNames.add(e.name)));
   for (const e of [...localFx, ...remoteFx]) {
     const layers = [];
@@ -884,7 +887,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.91.0';
+const VERSION = '0.91.1';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

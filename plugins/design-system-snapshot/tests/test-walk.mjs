@@ -488,10 +488,13 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   const vars = { va: v("va", "pad/a", "s1", { "a-m": 1 }), vc: v("vc", "pad/c", "s1", { "a-m": 3 }), vb: v("vb", "pad/b", "s2", { "b-m": 2, "b-n": 5 }), vc2: v("vc2", "pad/c", "s2", { "b-m": 9, "b-n": 9 }), vd: v("vd", "pad/d", "s3", { "c-m": 7 }), vb3: v("vb3", "pad/b", "s3", { "c-m": 8 }) };
   const bound = { boundVariables: { paddingLeft: { type: "VARIABLE_ALIAS", id: "va" }, itemSpacing: { type: "VARIABLE_ALIAS", id: "vb" }, paddingTop: { type: "VARIABLE_ALIAS", id: "vc" }, paddingBottom: { type: "VARIABLE_ALIAS", id: "vd" } } };
   const shadow = { type: "EFFECT", name: "Raised", key: "e1", remote: true, effects: [{ type: "DROP_SHADOW", visible: true, offset: { x: 0, y: 1 }, radius: 2, spread: 0, color: { r: 0, g: 0, b: 0, a: 0.1 }, boundVariables: {} }] };
-  const comp = { type: "COMPONENT", name: "Box", parent: null, ...bound, findAll: () => [] };
-  const label = { type: "TEXT", name: "Label", parent: comp, effectStyleId: "S:e1", characters: "" };
-  const page = { type: "PAGE", name: "Page", children: [comp], findAll: () => [comp], findAllWithCriteria: ({ types }) => [...(types.includes("COMPONENT") ? [comp] : []), ...(types.includes("TEXT") && types.length > 1 ? [label] : [])] };
-  const ff = { root: { name: "Lib", children: [page], getPluginData: () => "", findAllWithCriteria: () => [] }, fileKey: "K",
+  const label = { type: "TEXT", name: "Label", effectStyleId: "S:e1", characters: "" };
+  const comp = { type: "COMPONENT", name: "Box", parent: null, ...bound, findAll: (f) => [label].filter(f || (() => true)) };
+  label.parent = comp;
+  const page = { type: "PAGE", name: "Page", children: [comp], findAll: () => [comp], findAllWithCriteria: ({ types }) => (types.includes("COMPONENT") ? [comp] : []) };
+  // (a round trip's drawing page, whose layers are never searched: one holds a shadow no component uses)
+  const drawing = { type: "PAGE", name: "Round trip · Box", children: [], findAll: () => [], findAllWithCriteria: () => { throw new Error("searched a drawing page"); } };
+  const ff = { root: { name: "Lib", children: [page, drawing], getPluginData: () => "", findAllWithCriteria: () => [] }, fileKey: "K",
     variables: { getLocalVariableCollectionsAsync: async () => [], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async (id) => ({ s1: one, s2: two, s3: three })[id] || null },
     getLocalTextStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async (id) => (id === "S:e1" ? shadow : null) };
   const c = vm.createContext({ figma: ff, console, setTimeout, clearTimeout });
@@ -499,7 +502,7 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   const sp = t.collections.Space;
   ok("two other libraries' collections under one name are both kept, the first bound first even when bound again after the second: the second's variables join, by mode name whatever its case, a name both hold counted once", !!sp && sp.values.M["pad/a"] === 1 && sp.values.M["pad/b"] === 2 && sp.values.N["pad/b"] === 5 && sp.modes.join() === "M,N" && t._meta.collectionCounts.Space === 4);
   ok("…a name both hold keeps the first's value, and a third of that name keeps the second's where they meet", sp.values.M["pad/c"] === 3 && !("pad/c" in sp.values.N) && sp.values.M["pad/b"] === 2 && sp.values.M["pad/d"] === 7);
-  ok("an effect style another library gives the components is recorded, marked remote, off a text layer too", t.effects.length === 1 && t.effects[0].name === "Raised" && t.effects[0].remote === true && t.effects[0].layers.length === 1);
+  ok("an effect style another library gives the components is recorded, marked remote, off a text layer too, and no drawing page is searched", t.effects.length === 1 && t.effects[0].name === "Raised" && t.effects[0].remote === true && t.effects[0].layers.length === 1);
 }
 
 // 0.89.4: a variable lookup Figma never answers is given up, and after three the rest are not asked

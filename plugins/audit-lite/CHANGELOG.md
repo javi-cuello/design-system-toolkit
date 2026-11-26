@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.14.23] - 2026-11-26
+### Changed
+- Carries snapshot 0.91.1: another library's effect styles read off the stored components alone.
+
 ## [0.14.22] - 2026-11-26
 ### Changed
 - Carries snapshot 0.91.0: another library's effect styles recorded as remote, two same-named collections from other libraries joined, a remote text style's font read off a text that holds words.
