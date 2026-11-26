@@ -282,6 +282,9 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
   // (kept white space: pre where the text hugs, still never wrapping; pre-wrap where it wraps)
   else if (kept) put('white-space', e.width === 'hug' || e.autoResize === 'width_and_height' ? 'pre' : 'pre-wrap');
   else if (e.kind === 'text' && (e.width === 'hug' || e.autoResize === 'width_and_height')) put('white-space', 'nowrap');
+  // a text that grows down to its words (Figma's HEIGHT) at a height the design states all the same (no auto layout
+  // sizes it): that height, never cutting its words, its minimum the words' own (rules.mjs autoResizeOf reads it back)
+  if (e.kind === 'text' && e.autoResize === 'height' && typeof e.height === 'number' && !lines && e.minHeight === undefined) put('min-block-size', 'fit-content');
   // (a text that grows to its words has no room to place them in: nothing is lost there)
   if (take('verticalAlign') !== undefined && !/^(width_and_height|height)$/.test(e.autoResize || '')) unread.push('verticalAlign (text set in a taller box)');
 

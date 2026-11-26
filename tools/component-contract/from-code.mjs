@@ -47,7 +47,7 @@ export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
 import { inWordsOf } from './to-figma.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, growsDown, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -2362,7 +2362,9 @@ async function main() {
         const nowrap = e.kind === 'text' && writtenNowrap(cut['white-space'], loose, e.width === 'fill');
         cut['white-space'] = await call(L.tab, (q) => { const n = document.querySelector(q); return n ? getComputedStyle(n).whiteSpace : null; }, sel);
         const lines = linesFromCss(cut, e.content);
-        if (e.kind === 'text') e.autoResize = autoResizeOf(e.width, e.height, nowrap && !lines);
+        // (and one whose minimum height is its words' own grows down at the height it states: css.mjs)
+        const grows = e.kind === 'text' && !loose && !lines && growsDown(await authoredWidth(L.tab, sel, 'min-block-size', { raw: true, cache: styles }) || await authoredWidth(L.tab, sel, 'min-height', { raw: true, cache: styles }));
+        if (e.kind === 'text') e.autoResize = autoResizeOf(e.width, e.height, nowrap && !lines, grows);
         // (the overflow a cut needs is the cut's, as css.mjs writes it for one: no clip of the text's own beside it)
         if (lines) { Object.assign(e, lines); if (e.kind === 'text' && e.overflow === 'hidden') delete e.overflow; }
       };

@@ -2,7 +2,7 @@
 // tools/component-contract/rules.mjs: the translation table, each row read both ways.
 import assert from 'node:assert/strict';
 import { declarations } from './css.mjs';
-import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, writtenNowrap, linesFromCss, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss, pathsToCss, pathsFromCss, pathsOfBox, pathsToMask, pathsFromMask, blendToCss, blendFromCss, typeValue, typeOfValue, familyToCss, firstFamily, typeFromFigma, spacingToCss, spacingFromCss, spacingFromFigma, CASE_ROWS, DECORATION_ROWS, textToCss, textFromCss } from './rules.mjs';
+import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, growsDown, writtenNowrap, linesFromCss, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss, pathsToCss, pathsFromCss, pathsOfBox, pathsToMask, pathsFromMask, blendToCss, blendFromCss, typeValue, typeOfValue, familyToCss, firstFamily, typeFromFigma, spacingToCss, spacingFromCss, spacingFromFigma, CASE_ROWS, DECORATION_ROWS, textToCss, textFromCss } from './rules.mjs';
 import { tokenNames } from './to-code.mjs';
 
 let n = 0;
@@ -102,6 +102,11 @@ ok('an ellipsis on one line is a cut under pre as under nowrap, only where the w
 ok('nowrap is the text\'s own only where it is written on the text: a loose text\'s parent saying it says nothing', writtenNowrap('nowrap') && !writtenNowrap('nowrap', true) && !writtenNowrap(null) && !writtenNowrap('normal'));
 ok('a text written never to wrap grows both ways whatever size it states (a WIDTH_AND_HEIGHT text placed by scale), as css.mjs writes it',
   autoResizeOf(19, 24, true) === 'width_and_height' && Object.fromEntries(declarations({ kind: 'text', width: 19, height: 24, autoResize: 'width_and_height' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls)['white-space'] === 'nowrap');
+{ const d = (e) => Object.fromEntries(declarations({ kind: 'text', width: 12, height: 12, ...e }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls);
+  ok('a text that grows down at a height it states all the same keeps that height, its minimum its words\' own, and reads back as growing down; a fixed one, or one cut to lines, does not',
+    d({ autoResize: 'height' })['min-block-size'] === 'fit-content' && d({ autoResize: 'height' })['block-size'] !== undefined && autoResizeOf(12, 12, false, growsDown(d({ autoResize: 'height' })['min-block-size'])) === 'height'
+    && d({ autoResize: 'none' })['min-block-size'] === undefined && d({ autoResize: 'height', maxLines: 2, truncate: true })['min-block-size'] === undefined && d({ autoResize: 'height', height: 'hug' })['min-block-size'] === undefined
+    && autoResizeOf(12, 12, false, growsDown('0.75rem')) === 'none'); }
 {
   const styles = ['Label/md', 'Label/md-medium', 'Body/md'];
   const own = Object.fromEntries(tokenNames.textStyle('Label/md-medium'));
