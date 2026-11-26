@@ -230,6 +230,16 @@ Nothing in the text-file format prevents a duplicated field. Scripts that append
 
 Kirby's own `$page->update()` replaces fields and cannot duplicate them, so prefer it whenever the site can be booted. When editing files directly, parse and replace the field rather than appending, and dedupe on sight.
 
+## PHP regex traps
+
+Each produced a real bug in a Kirby build. Each fails silently, or only on a whole document, so spot checks pass:
+
+1. **A lazy `.*?` with `/s` backtracks across structure.** `<p><strong>(.*?)</strong>\s*</p>` can fail its tail on one element. Then it expands across the next ones, to wherever the tail matches. Forbid the group from crossing its own closing tag: `((?:(?!</tag>).)*)`.
+2. **`(?!` inside a `!`-delimited pattern ends it early.** PCRE reports "Unknown modifier", `preg_*` returns null, and null-subject warnings cascade. Use `~` or `#` delimiters with lookaheads.
+3. **`\1` in a double-quoted PHP string is an octal escape.** It matches a 0x01 byte, the replace does nothing, and nothing errors. Use single-quoted patterns or `\\1`.
+
+Self-test a transform on a known fixture in the same run before applying it. Refuse to write an empty result from a non-empty input: trap 2's null once blanked 16 content files.
+
 ## Version drift
 
 Do not assume an API from memory. `getkirby.com/docs` covers the current release, and older versions are at `getkirby.com/docs/archive`. Check `composer.json` for the constraint the project installs. Read the update guide before using anything introduced after it.

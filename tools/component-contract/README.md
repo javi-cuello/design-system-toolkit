@@ -91,11 +91,22 @@ Each module's full job is in its header comment and in the [modules](REFERENCE.m
 
 ## How it fits
 
+- **The drawing is faithful to the code.** `to-figma.mjs` draws every prop the code exposes and every part it renders. That includes a prop that looks pointless and a part a wrapper draws. The drawing exists to show the code as it is; a difference from the library belongs in the comparison and the audit. Exclude nothing without asking (maintainer-decreed).
 - [REFERENCE.md](REFERENCE.md) holds the detail: every module, [the contract's shape](REFERENCE.md#the-shape-contract-1) and how it is checked.
 - [snapshot](../snapshot/README.md) stores the specs this folder reads.
 - [parity](../parity/README.md) holds code to the spec, which stays the source of truth.
 - [contract-editor](../contract-editor/README.md) writes a contract before anyone draws the component.
 - "Contract" here means the component's. The routing contract in `tools/snapshot/projects.cjs` is a different thing.
+
+## Working the round trip
+
+The round trip judges the machinery; components are only references. Every finding becomes a pipeline fix, tested on a made-up contract. A fix found on one library is measured on every library before it lands, with no rise anywhere.
+
+- One measure command, from a pinned worktree: `eval.mjs --projects carbon,atlassian,material3`. Re-read only what moved (`eval --changed`).
+- Rank causes across all three libraries, the biggest shared one first; read refusals before rows, and rank by components flipped.
+- At most four fixes per review batch. Before a push, re-measure the touched libraries and the projects that use the pipeline against their per-component baselines.
+- Brief a fixer with the principle. The reader inverts the writer's own function. Every side loads settings from `librarySettingsFor`. One function produces what is written and what is hashed.
+- Look at the drawn pages before reporting a number: a visible difference with no row is a gap in the measure, fixed first.
 
 ## Test
 

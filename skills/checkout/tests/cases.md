@@ -25,3 +25,9 @@ Fixture: a project whose sessions are all unnamed.
 Assert: the report asks the user, under "Needed from you:", to run `/rename <project>` in the main session; nothing is renamed for them.
 Negative: the request buried in a paragraph; a session's transcript edited to name it.
 Traced: 2026-11-26 for 1.0.0 — to *Steps* 4.
+
+## C5 · A working preference found at checkout goes to CLAUDE.md, and the report asks for /clear — *traced*
+Fixture: a session in which the user said "always show me a screenshot before pushing UI".
+Assert: step 2 writes nothing of it to memory; the report proposes it for `~/.claude/CLAUDE.md` with the user's go; the memory check stays green; the report's last line asks for `/clear`.
+Negative: a memory section "How the user likes to work" (memory-check refuses it as a `rule` or `undated` finding); a report that ends without the `/clear` ask.
+Traced: 2026-11-26 for 1.1.0 — to *Steps* 2 and 8.

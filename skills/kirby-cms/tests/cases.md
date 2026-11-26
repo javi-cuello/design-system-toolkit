@@ -159,3 +159,10 @@ Assert: the answer says `update()` freezes the object it was called on, and a wr
 Assert: the fix makes the helper return the updated page (or folds both fields into one `update()`), and says the deleted pages are restored from version control.
 Assert: it does not blame file permissions, a concurrent writer or the blueprint, and does not propose catching the exception as the fix.
 Walked live: 2026-10-28 — the pre-fix code run locally against a copy of a subscriber deleted its folder and returned `error.logic`; the fixed code ran eight reminders with every folder intact.
+
+## K22 · A regex transform that blanks content
+Fixture: "a `preg_replace('!<p>(?!<img).*?</p>!s', …)` over every page's text field writes the results back; the run reports no error, but 16 pages now hold empty text."
+Assert: the answer names trap 2 (the `!` in `(?!` ends a `!`-delimited pattern, `preg_*` returns null) and fixes the delimiter to `~` or `#`.
+Assert: it adds the guard: self-test on a fixture in the same run, and refuse to write an empty result from a non-empty input; the pages come back from version control.
+Negative: it blames the content or the encoding, or rewrites the pattern without the guard.
+Traced: 2026-11-26 for 1.11.0 — to references/gotchas.md *PHP regex traps*, from the 2026-08-12 build that blanked 16 files.

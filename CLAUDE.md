@@ -34,6 +34,9 @@ These are owned here.
 - **Name the gaps before saying done:** what never met real input, and what stays open and why.
 - **Close the gap you found in the same change.** "Not yet" in a summary is the gap announcing itself (toolkit-standard §D 10).
 - **Machinery earns its place like a rule:** a check ships for something it would have caught. Net-additive three times running, remove something.
-- **Say project, never client**, in skills, standards and commits.
+- **Say project, never client**, in skills, standards and commits. The repo is public and handed to every project: no project's name, domain, organisation or library name goes in it (`bin/check` refuses labels; the rest only reading catches), and a project renamed at its owner's request is never written under its old name.
+- **Another session's commits move the ground.** Read the current file and `git log` before picking a version or a case id; re-read a measurement after their commits; revert by path, never `git checkout -- .`; check `git status` for paths not yours before writing shared state (a baseline, a generated file). A session started in a project's folder touches only that project.
+- **Gate a commit on the check's own exit code**: `bin/check | tail -1 && git commit` commits on red. zsh does not split `$F`: use `set -- a b c` and `"$@"`.
+- **A red that is another session's** blocking a land: message that session with the failing line, likely cause and fix, and wait for its green. One that is yours: say so, fix it, and say what you committed. Never do for a session what it was refused.
 - **An agent briefed to change code runs its suites, never the full `bin/check`, and never moves the measuring lock (`TOOLKIT_LOCK_DIR` is for tests).** `bin/land` runs the full check; the lock's slots bound how many measures share the machine. Agents' own checks queued 25 minutes, and private locks doubled the load (2026-11-21).
 - **A stalled fan-out review keeps its findings** in `~/.claude/projects/<project>/subagents/agent-<id>.jsonl`; salvage them rather than run it again.

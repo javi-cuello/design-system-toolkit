@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.52.0 (2026-11-26): §D 25: no rule is memory (no feedback type, no Why/How-to-apply pair, no line opening Never, Always, Don't, Do not or Must), and every section of a project file is dated state; memory-check refuses both.
 - 2.51.0 (2026-11-26): §D 13's review row: every Medium and Low is fixed on the way or named under *Open:* with its blocker, moved from memory; the review gate's message says so.
 - 2.50.0 (2026-11-26): §D 25 added: memory is one file per project in one shape (index, frontmatter, size, dated state), holding only what has no other home; side sessions pruned by /checkout; checked by tools/memory-check and the Stop hook.
 - 2.49.0 (2026-11-24): §D 21: a sample or demonstration file (a tool vendor's example design system, such as Figma's Simple Design System) is never evidence; only systems a product ships count.

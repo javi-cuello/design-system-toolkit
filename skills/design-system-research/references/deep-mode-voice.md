@@ -27,7 +27,7 @@ It fails in two known ways:
 - **Compressed.** Correct citations and a verdict per axis, but prose so dense that a reader ends a section not knowing what it said.
 - **Report.** Every sentence is true, but it opens with how it was checked. It reports each source's status mid-explanation and jumps from example to example with nothing joining them. It never sounds like a person explaining something. A reader called one "a stream of examples, not a reading piece".
 
-The rules below exist to avoid both. The second is the one this file was rewritten to fix.
+The rules below exist to avoid both. The second is the one this file was rewritten to fix. A third shape was rejected too: the long chapter essay. Correcting away from one failure, stop at the register; don't overshoot into another.
 
 The model is the educational web press: A List Apart, Smashing Magazine, CSS-Tricks and web.dev's *Learn* courses. Practitioners too, such as Josh Comeau, Ahmad Shadeed, Julia Evans, Brad Frost, Nathan Curtis and Amy Hupe. What they share is below, and each rule names where it came from.
 

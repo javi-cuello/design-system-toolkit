@@ -64,6 +64,13 @@ Three things worth knowing about the shape:
 
 The loop: a comment is fixed on the frame, or becomes a decision, a ruling or a toolkit change; the decision becomes an eval check; every ten threads the notes are read and the largest kind that emerges gets one fix that would have prevented it; a decision that is contradicted, outdated or redundant is offered to retire. Nothing goes to memory.
 
+## Decided against
+
+Each was proposed, measured and rejected. Propose it again only with the run that answers its reason.
+
+- **Rebuilding figma-file-diff on the snapshot** (2026-11-05). The snapshot walk records less than the skill's serialiser: literal effects, image hashes, bound-paint opacity, variable scopes, code syntax and descriptions, property defaults, variant descriptions, stroke styles and hidden layers.
+- **One Storybook build shared by the docs site and parity** (2026-11-11). One changed attribute renamed 69 of 275 chunks, so a rebuild mid-run 404s parity's open pages; locks and swaps each raced. Again only with a run that serves a pinned copy.
+
 ## Words used here
 
 - **Snapshot**: what the snapshot plugin reads out of a Figma file (tokens, component specs, screens), stored as files. Every other output is built from it, never from Figma directly.

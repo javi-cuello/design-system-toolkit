@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.15.0 (2026-11-26): deep-mode-voice.md names the chapter essay as a third rejected shape, and correcting toward the register never overshoots into another (moved from memory).
 - 3.14.0 (2026-11-26): the checklist's deep-mode finish line: no dashes, scan-tells clean, cross-references linked by title, a guide merged into the one it overlaps.
 - 3.13.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I; collection rules move to references/research-collection.md, the roster becomes tables, voice greps sit in one block (§13). No rule changed.
 - 3.12.0 (2026-11-18): the roster gains *Token files beyond the usual cluster*, about 25 systems' npm token packages with what each is good for. Case A36.

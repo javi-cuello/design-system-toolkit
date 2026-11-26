@@ -350,3 +350,10 @@ Assert: the dash is gone (`grep -c '[—–]'` prints 0), scan-tells exits 0, th
 Negative: the guide is called done with a dash left, a bare "see X", or a second article on the same question.
 Observed: 2026-11-26 — the maintainer's corrections on research guides, kept in memory until they moved here.
 Traced: 2026-11-26 for 3.14.0 — to SKILL.md *Quality checklist before delivering*.
+
+## A38 · A correction does not overshoot into the other failure
+Fixture: deep mode, a draft the reader called a report ("every sentence opens with how it was checked"), sent back for a rewrite.
+Assert: the rewrite explains in connected prose and keeps its tables only where they compare; it does not become a long chapter essay with no table and no one-sentence answers.
+Negative: the rewrite swaps the report for an essay, losing the section answers a reader scans for.
+Observed: 2026-11-26 — the maintainer's corrections on research guides, kept in memory until they moved here.
+Traced: 2026-11-26 for 3.15.0 — to references/deep-mode-voice.md §1.

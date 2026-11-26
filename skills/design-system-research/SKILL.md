@@ -19,7 +19,7 @@ description: |
 
 # Design Systems Research
 
-**Version 3.14.0** — history in CHANGELOG.md.
+**Version 3.15.0** — history in CHANGELOG.md.
 
 This skill researches how real design systems handle a topic, from what they actually ship, and turns that into practical guidance. The best evidence is in the shipping systems: their docs, token repos, migration guides and public arguments in issues, PRs and RFC threads. A blog post tells you what one person believes. A v10 to v11 migration guide tells you what a team with millions of users learned the hard way. Use it whenever someone asks how design systems do something, wants approaches compared, or asks for research or best practice on a design system topic.
 

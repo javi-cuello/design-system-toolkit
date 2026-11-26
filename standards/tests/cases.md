@@ -355,3 +355,10 @@ Runs: node tools/claude-hooks/test-gates.mjs — "a review leaves no Medium or L
 Fixture: a dialog pinned to the top to stop it jumping as a field appears.
 Assert: the review cites design-standard rule 21; the fix is the largest state's height, centred, under the cap; a narrow screen's full-screen or sheet form is not flagged.
 Traced: 2026-11-26 for design-standard 1.8.0 — read by `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" at a dialog's review.
+
+## S28 · A rule written to memory is refused — WALKED 2026-11-26
+Fixture: throwaway memory folders: a file of type feedback with a **Why:** line; a project file with "- Never push on red." and "- **Always** ask."; a project file with an undated section; a reference file with an undated section.
+Assert: the first three are `rule` or `undated` errors; a line inside a code fence and the reference file's section are not; the Stop hook blocks a turn that wrote one (as §D 25's other findings).
+Walked 2026-11-26 for toolkit-standard 2.52.0: test-check 10 passed.
+Runs: node tools/memory-check/test-check.mjs — "a rule is never memory", "every section of a project file is dated state".
+

@@ -346,6 +346,14 @@ This service needs no change and no restart for any of it.
 
 **A new project** needs its `figma-design-system/` folder with a context document carrying an `audit-settings` block and a `port` in its project block; the service finds it and creates each library's record on its first audit.
 
+## Operating notes
+
+- A service restart (`launchctl kickstart -k gui/$(id -u)/com.toolkit`) does not reload an open tab and disconnects every Figma file; the Desktop Bridge is reopened in each. Ask for a page refresh before any page-code test.
+- Probe a writing route with a dry run (`rows.mjs --dry-run`): a probe without it wrote a test ruling into a real context document.
+- An uncommitted audit record may be a reset waiting for its re-audit: check `git log` for the reset commit before leaving it.
+- "The library published list came back empty" can be a 23 s `getAvailableLibraryVariableCollectionsAsync` past its bound, not a dead API (2026-09-29): time it by hand before blaming Figma.
+- A low-effort judge that drops a finding no ruling covers is re-measured on a small library before its effort is raised.
+
 ## The record
 
 One record per LIBRARY (`audit/<fileKey>.json`) — a library is a Figma file and two files have two runs, so one record could not say that web had been audited and mobile had not. Version-controlled beside the project's design

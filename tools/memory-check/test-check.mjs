@@ -54,6 +54,18 @@ try {
   assert.deepEqual(rules(dated), ['stale:warning', 'dated:error']);
   ok('a dated heading is "(as of YYYY-MM-DD)", and one past 30 days is a warning, not an error');
 
+  const rule = folder('rule', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a', 'feedback')}## Ask first\n\n**Why:** they said so.\n` });
+  assert.deepEqual(rules(rule), ['rule:error', 'rule:error']);
+  const said = folder('said', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a')}## Open (as of 2026-11-20)\n\n- Never push on red.\n- **Always** ask.\n\n\`\`\`\nNever in a fence\n\`\`\`\n` });
+  assert.deepEqual(rules(said), ['rule:error', 'rule:error']);
+  ok('a rule is never memory: the feedback type, a Why line, a line opening Never or Always');
+
+  const loose = folder('loose', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a')}## How the build works\n\n## Open (as of 2026-11-20)\n` });
+  assert.deepEqual(rules(loose), ['undated:error']);
+  const ref = folder('ref', { 'MEMORY.md': '- [A](a.md) — a\n', 'a.md': `${fm('a', 'reference')}## Where the files are\n` });
+  assert.deepEqual(rules(ref), [], 'a reference file holds pointers, not dated state');
+  ok('every section of a project file is dated state');
+
   const seen = new Set();
   const first = checkWritten([path.join(two, 'a.md')], { root, seen });
   assert.ok(first && /one/.test(first.reason), 'a written file in a broken folder blocks');

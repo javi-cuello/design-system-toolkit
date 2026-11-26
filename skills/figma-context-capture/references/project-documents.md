@@ -34,6 +34,8 @@ Append a dated row to the context document's §6, under its columns. A product d
 
 Then, in the same edit:
 
+- Delete an open item the decision resolves: an open-items list holds only what is open, and the decision row keeps the outcome.
+
 - Strike through the decision of any older row it supersedes, and replace that row's line on a guidance page.
 - Where it settles a word, change the product file's *Words* line.
 - Add its date to the `rulings` of the project's Figma eval task, `tests/evals/figma-tasks.json`. A run that drops the decision then scores lower.

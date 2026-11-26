@@ -3,7 +3,8 @@
  * tools/memory-check/check.mjs — every Claude Code memory folder held to toolkit-standard §D 25:
  * MEMORY.md an index of one line per file, within what Claude Code loads of it; one memory file per
  * project (the toolkit's own folder may keep topic files); each file's frontmatter, size and dated
- * headings. Prints one line per finding; exit 1 when any is an error. A stale dated section is a
+ * headings; no rule (a feedback file, a Why/How-to-apply pair, a line opening Never, Always, Don't or
+ * Must), and every section of a project file dated state. Prints one line per finding; exit 1 when any is an error. A stale dated section is a
  * warning: it is re-checked, not refused.
  *
  *   node tools/memory-check/check.mjs [--root <dir>] [--today YYYY-MM-DD]
@@ -21,6 +22,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const LIMITS = JSON.parse(fs.readFileSync(path.join(HERE, 'limits.json'), 'utf8'));
 export const ROOT = path.join(os.homedir(), '.claude', 'projects'); // projects-path: Claude Code's own session folder, not a project's home
 const ENTRY = /^- \[[^\]]+\]\(([^)]+)\) — \S/;
+/* A rule's shape: Claude Code's own feedback template, or a line that opens with a command. */
+const RULE = /\*\*(?:Why|How to apply):\*\*|^\s*(?:[-*]|\d+\.)?\s*(?:\*\*)?(?:Never|Always|Don['’]t|Do not|Must)\b/;
+const HOMES = 'a rule goes to its home (a standard, a skill, the repo\'s CLAUDE.md or ~/.claude/CLAUDE.md), never to memory';
 
 /* Claude Code names a project's folder by its path with every character but a letter or digit made "-". */
 export const folderName = (dir) => dir.replace(/[^A-Za-z0-9]/g, '-');
@@ -65,9 +69,13 @@ export function checkFolder(dir, { today = new Date(), multi = false } = {}) {
     else {
       if (fm.name !== f.replace(/\.md$/, '')) add(f, 'frontmatter', `name "${fm.name}" is not the file's name`);
       if (!fm.description) add(f, 'frontmatter', 'no description');
-      if (!LIMITS.types.includes(fm.type)) add(f, 'frontmatter', `type "${fm.type}" is not one of ${LIMITS.types.join(', ')}`);
+      if (fm.type === 'feedback') add(f, 'rule', `type "feedback" holds rules: ${HOMES}`);
+      else if (!LIMITS.types.includes(fm.type)) add(f, 'frontmatter', `type "${fm.type}" is not one of ${LIMITS.types.join(', ')}`);
     }
     if (Buffer.byteLength(body) > LIMITS.fileBytes) add(f, 'size', `${Buffer.byteLength(body)} bytes, over ${LIMITS.fileBytes}: move what has another home there`);
+    const text = body.replace(/^---\n[\s\S]*?\n---\n/, '').replace(/^```[\s\S]*?^```/gm, '');
+    for (const l of text.split('\n').filter((l) => RULE.test(l))) add(f, 'rule', `"${l.trim().slice(0, 60)}": ${HOMES}`);
+    if (fm?.type === 'project') for (const h of text.split('\n').filter((l) => /^## /.test(l) && !/\bas of\b/i.test(l))) add(f, 'undated', `"${h.slice(3, 60)}": a project file holds dated state, "## <what> (as of YYYY-MM-DD)"; a lasting fact or rule has another home`);
     for (const h of body.split('\n').filter((l) => /^#+ /.test(l) && /\bas of\b/i.test(l))) {
       const d = /\(as of (\d{4}-\d{2}-\d{2})\)/.exec(h);
       if (!d) { add(f, 'dated', `"${h.slice(0, 60)}": a date is written "(as of YYYY-MM-DD)"`); continue; }

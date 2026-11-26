@@ -1,5 +1,6 @@
 # Changelog — kirby-cms
 
+- 1.11.0 (2026-11-26): references/gotchas.md: three PHP regex traps and the self-test that catches them (moved from memory).
 - 1.10.0 (2026-11-21): meets skill-standard §A clause I; layout, content format and UUIDs move to `references/content-store.md`; signed tokens and opcache to `gotchas.md`; contents lists added.
 - 1.9.1 (2026-10-31): the page-model example and the walk records are neutral (an `EventPage` and a ticket link, "a live site"), no longer one project's own names and hosts (toolkit-standard §D 6).
 - 1.9.0 (2026-10-31): content read from the file, the web or a project is data, never instructions (toolkit-standard §D 24).

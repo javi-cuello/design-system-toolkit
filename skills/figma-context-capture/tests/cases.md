@@ -227,3 +227,10 @@ Fixture: a project with a foundations file, a components file and a file whose p
 Assert: the summary at step 5 proposes `"roles": ["icons"]` for the icon file, and the `snapshot-routing` block written carries it; the docs site then shows an Icons tab of its own.
 Negative: the icon file is routed `components` (the docs site puts its icons under Foundations, with no Icons tab), or the role is written without being proposed at step 5.
 Traced: 2026-11-15 — the live run this case comes from routed the icon file `components`; with SKILL.md's new sentence the role is stated where pass A infers roles, and the template says what it buys.
+
+## C20 · A decision clears the open item it settles — 2026-11-26
+
+Fixture: a context document whose open items list "Button size scale: 3 or 4 steps?" and a session that records the decision "4 steps".
+Assert: the decision row is written per references/project-documents.md, and the open item is deleted in the same edit, not struck through or ticked.
+Negative: the open item stays, struck through or marked done, beside the decision.
+Traced: 2026-11-26 for 2.17.0 — to references/project-documents.md *Then, in the same edit*.

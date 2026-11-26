@@ -5,7 +5,7 @@ description: "Working reference for Kirby CMS (v5) — how a Kirby site is actua
 
 # Kirby CMS — working reference
 
-**Version 1.10.0** — history in CHANGELOG.md.
+**Version 1.11.0** — history in CHANGELOG.md.
 
 This skill is a working reference for Kirby CMS 5, a flat-file PHP CMS with no database. The filesystem is the content store, and filename conventions, not configuration, wire the parts together. Getting a convention wrong is the largest source of "why isn't this working", so most of the skill is naming rules and where they bite. Use it for any task in a Kirby project, and when asked how Kirby works or why a file is not picked up.
 

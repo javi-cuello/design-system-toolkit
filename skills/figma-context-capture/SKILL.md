@@ -5,7 +5,7 @@ description: "Reverse-engineer a Figma library's conventions and fill (or update
 
 # Figma Context Capture
 
-**Version 2.16.1** — history in CHANGELOG.md.
+**Version 2.17.0** — history in CHANGELOG.md.
 
 This skill reads one or more Figma files and writes the project's **context document**. Every other figma-* skill reads its conventions instead of running discovery again. Use it to capture a new project, add a library to a project, or refresh a library that changed. It also keeps the project's other documents: the product file, the decisions in §6 and guidance pages.
 

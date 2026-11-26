@@ -1,10 +1,10 @@
 {
-  "_about": "The values tools/memory-check/check.mjs holds memory to (toolkit-standard §D 25). indexLines and indexBytes are what Claude Code loads of MEMORY.md at a session's start (code.claude.com/docs/en/memory.md, read 2026-11-26); fileBytes holds a memory file, read whole when it is opened, to the same budget; staleDays is when a dated state section is re-checked before it is relied on; types are the memory types Claude Code documents; sessionDays is when an unnamed (side) session is pruned, liveMinutes how recently a transcript changed for its session to count as running.",
+  "_about": "The values tools/memory-check/check.mjs holds memory to (toolkit-standard §D 25). indexLines and indexBytes are what Claude Code loads of MEMORY.md at a session's start (code.claude.com/docs/en/memory.md, read 2026-11-26); fileBytes holds a memory file, read whole when it is opened, to the same budget; staleDays is when a dated state section is re-checked before it is relied on; types are the memory types Claude Code documents less feedback, which holds rules and so goes to their homes (toolkit-standard §D 25); sessionDays is when an unnamed (side) session is pruned, liveMinutes how recently a transcript changed for its session to count as running.",
   "sessionDays": 7,
   "liveMinutes": 60,
   "indexLines": 200,
   "indexBytes": 25000,
   "fileBytes": 25000,
   "staleDays": 30,
-  "types": ["user", "feedback", "project", "reference"]
+  "types": ["user", "project", "reference"]
 }
