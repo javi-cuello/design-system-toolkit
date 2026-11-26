@@ -414,6 +414,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // no style and nothing more: a drawing of it in any values, with no style either, says all it can be held to (Figma's
     // side only: code that read a browser's default there is the very difference the snapshot records sizes to catch)
     if (!layoutUnit && /^[^.]+\.typography$/.test(at) && a === 'literal' && looksLikeValue(b)) return;
+    // a raw colour in any spelling is that colour (Figma's #ae2a19, a browser's rgba(174, 42, 25, 1)): channel for channel
+    const raw = (v) => typeof v === 'string' && /^(#|rgba?\()/i.test(v.trim()) && parseColour(v);
+    if (raw(a) && raw(b) && JSON.stringify(raw(a)) === JSON.stringify(raw(b))) return;
     const bool = (v) => (typeof v === 'boolean' ? v : typeof v === 'string' && /^(true|false)$/i.test(v) ? v.toLowerCase() === 'true' : undefined);
     if (/\.with\.[^.]+$/.test(at) && bool(a) !== undefined && bool(a) === bool(b)) return;
     if (/(^|\.)component$/.test(at) && typeof a === 'string' && typeof b === 'string' && !b.includes('/') && a.split('/').pop() === b) return;

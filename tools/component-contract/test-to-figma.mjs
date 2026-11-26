@@ -1050,4 +1050,10 @@ delete globalThis.figma;
   } finally { globalThis.figma = saved; }
 }
 
+// a raw colour is that colour in any spelling: Figma's hex beside a browser's rgba(), channel for channel; another stays a row
+{ const c = (color) => ({ contract: 1, component: 'T', props: {}, anatomy: { root: { kind: 'container' }, t: { kind: 'text', parent: 'root', color } }, variants: [] });
+  ok('a raw colour in another spelling is the same colour; another colour is a row', roundTrip(c('#ae2a19'), c('rgba(174, 42, 25, 1)'), { layoutUnit: true }).rows.length === 0
+    && roundTrip(c('#ae2a19'), c('rgb(174 42 25 / 1)'), { layoutUnit: true }).rows.length === 0 && roundTrip(c('#ae2a19'), c('rgba(0, 0, 0, 1)'), { layoutUnit: true }).rows.length === 1
+    && roundTrip(c('Text/strong'), c('rgba(0, 0, 0, 1)'), { layoutUnit: true }).rows.length === 1); }
+
 console.log(`${n}/${n} passed`);
