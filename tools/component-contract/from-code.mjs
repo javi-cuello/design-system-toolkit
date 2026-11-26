@@ -268,15 +268,10 @@ export function roomTaken(e, room) {
   return [e.width === room && `anatomy.${e.id}.width`, e.canvas && e.canvas.width === room && `anatomy.${e.id}.canvas.width`].filter(Boolean);
 }
 
-/* Whether a layer's name in the reading is the design's rather than the markup's (nameInside with the design's names
-   against without): one only the design gives, or the markup's own the design drops. */
 /* An icon's colour as read: the token `tokOf` finds for the colour it is drawn in; none (undefined) for one coloured
    with nothing (transparent: to-code's icon whose glyph Figma paints with nothing, its fills emptied) or none read.
    Tested by test-from-code.mjs. */
 export const iconColour = async (v, tokOf) => (!v || clearValue(v) ? undefined : tokOf(v));
-/* A placed component the page draws no stroke on (no border, ring or outline read: `strokeless`) where its component's
-   root has one at its props has had it cleared, as to-code writes a contract's `none` (rules.mjs CLEARED): read back so.
-   Its fill likewise. The mark goes from every part. (A colour style code has none of: never read.) */
 // a colour value that paints nothing (a transparent token: a ghost button's fill)
 export const clearValue = (v) => {
   if (typeof v !== 'string') return false;
@@ -297,6 +292,9 @@ export function shadowOnlyRings(bs) {
     return (spread || 0) !== 0 ? x === 0 && y === 0 : (x === 0) !== (y === 0);
   });
 }
+/* A placed component the page draws no stroke on (no border, ring or outline read: `strokeless`) where its component's
+   root has one at its props has had it cleared, as to-code writes a contract's `none` (rules.mjs CLEARED): read back so.
+   Its fill likewise. The mark goes from every part. (A colour style code has none of: never read.) */
 export function readCleared(anatomy, mains, valueOf = () => undefined) {
   const { atProps } = req('./derive.cjs');
   for (const e of Object.values(anatomy)) {
@@ -319,6 +317,8 @@ export function readCleared(anatomy, mains, valueOf = () => undefined) {
   return anatomy;
 }
 
+/* Whether a layer's name in the reading is the design's rather than the markup's (nameInside with the design's names
+   against without): one only the design gives, or the markup's own the design drops. */
 export function nameBorrowed(inside, id, markup, names) {
   return (nameInside(inside, id, markup, names) ?? null) !== (nameInside(inside, id, markup, null) ?? null);
 }
