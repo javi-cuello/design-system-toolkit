@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations } from './css.mjs';
-import { tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
+import { combinations, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp } from './layers.mjs';
 
@@ -108,16 +108,18 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
   // one icon in code where Figma keeps a swap for each size of one part (Icon (16), Icon (20)): the first stays, named
   // without its size, and answers to each one's Figma name; the sheet sizes the icon. Never two swaps that each drive
   // a layer drawn at one combination (an Icon and an Icon (selected), each on its own layer, both drawn there; the
-  // layers of a size each, drawn at their own sizes only, still merge): each stays its own prop. The combinations
-  // asked: the defaults and each variant's own (layers.mjs expand), where a layer is drawn or not and its swappedBy
+  // layers of a size each, drawn at their own sizes only, still merge): each stays its own prop. Every combination the
+  // variants make (to-code's combinations, layers.mjs expand: where a layer is drawn and its swappedBy there), worked
+  // out only where two swaps share a part
   const icons = new Map();
-  const drivers = [{}, ...(c.variants || []).map((v) => v.when || {})].map((w) => new Set(Object.values(expand(c, w)).map((e) => e && e.swappedBy).filter(Boolean)));
+  let drivers = null;
+  const together = (k1, k2) => (drivers || (drivers = combinations(c).map((w) => new Set(Object.values(expand(c, w)).map((e) => e && e.swappedBy).filter(Boolean))))).some((d) => d.has(k1) && d.has(k2));
   for (const x of [...out]) {
     const part = x.type === 'icon' && (x.p.swaps || [])[0];
     if (!part) continue;
     const first = icons.get(part);
     if (!first) { icons.set(part, x); continue; }
-    if (drivers.some((d) => d.has(first.key) && d.has(x.key))) continue;
+    if (together(first.key, x.key)) continue;
     first.figmas = [...(first.figmas || [first.p.figma]), x.p.figma];
     out.splice(out.indexOf(x), 1);
   }

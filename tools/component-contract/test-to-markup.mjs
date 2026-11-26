@@ -83,11 +83,18 @@ ok('a placed component with a swap per size is given the one its size draws (xs:
 const toggled = { component: 'Toggle', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['a', 'b'] }, iconSelected: { type: 'instance', figma: 'Icon (selected)', swaps: ['a', 'b'] }, selected: { type: 'boolean', default: false, figma: 'Selected', axis: true } },
   anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Icons/filled', swappedBy: 'iconSelected', opacity: 0, order: 0 }, b: { kind: 'instance', parent: 'root', component: 'Icons/outline', swappedBy: 'icon', order: 1 } },
   variants: [{ when: { selected: true }, set: { 'a.component': 'Icons/outline', 'a.swappedBy': 'icon', 'b.component': 'Icons/filled', 'b.swappedBy': 'iconSelected' } }], folder: 'toggle' };
-// a swap per size whose layers sit side by side in the anatomy, each drawn at its own size only: still one icon
+// a swap per size whose layers both sit in the base anatomy, each removed at the other size: never drawn together, so
+// still one icon
+const icons = (c) => JSON.stringify(propsOf(c).filter((x) => x.type === 'icon').map((x) => [x.name, x.figmas || null]));
 const sized = { component: 'Sized', props: { size: { type: 'enum', values: ['md', 'sm'], figmaValues: ['md', 'sm'], default: 'md', figma: 'Size' }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['i20', 'i16'] }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['i20', 'i16'] } },
-  anatomy: { root: { kind: 'container' }, i20: { kind: 'instance', parent: 'root', component: 'Icon/plus', swappedBy: 'icon20', order: 0 } },
-  variants: [{ when: { size: 'sm' }, remove: ['i20'], add: { i16: { kind: 'instance', parent: 'root', component: 'Icon/plus', swappedBy: 'icon16', order: 0 } } }], folder: 'sized' };
-ok('a swap per size, its layers side by side and each drawn at its own size, is still one icon', JSON.stringify(propsOf(sized).filter((x) => x.type === 'icon').map((x) => [x.name, x.figmas])) === '[["icon",["Icon (20)","Icon (16)"]]]', JSON.stringify(propsOf(sized)));
+  anatomy: { root: { kind: 'container' }, i20: { kind: 'instance', parent: 'root', component: 'Icon/plus', swappedBy: 'icon20', order: 0 }, i16: { kind: 'instance', parent: 'root', component: 'Icon/plus', swappedBy: 'icon16', order: 1 } },
+  variants: [{ when: { size: 'md' }, remove: ['i16'] }, { when: { size: 'sm' }, remove: ['i20'] }], folder: 'sized' };
+ok('a swap per size, its layers both in the base and each removed at the other size, is still one icon', icons(sized) === '[["icon",["Icon (20)","Icon (16)"]]]', icons(sized));
+// a base layer on one swap and a layer a variant adds on another, drawn together there: two props
+const added = { component: 'Added', props: { on: { type: 'boolean', default: false, figma: 'On', axis: true }, icon: { type: 'instance', figma: 'Icon', swaps: ['a', 'b'] }, icon2: { type: 'instance', figma: 'Icon 2', swaps: ['a', 'b'] } },
+  anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Icon/plus', swappedBy: 'icon', order: 0 } },
+  variants: [{ when: { on: true }, add: { b: { kind: 'instance', parent: 'root', component: 'Icon/minus', swappedBy: 'icon2', order: 1 } } }], folder: 'added' };
+ok('a base layer on one swap and a variant\'s added layer on another, drawn together, stay two props', icons(added) === '[["icon",null],["icon2",null]]', icons(added));
 const toggledEl = toElement(toggled, 'toggle', { naming: ELEMENT });
 ok('two swaps each driving its own layer stay two props, each defaulting to its own layer\'s component', JSON.stringify(propsOf(toggled).filter((x) => x.type === 'icon').map((x) => [x.name, x.default])) === '[["icon","Icons/outline"],["iconSelected","Icons/filled"]]', JSON.stringify(propsOf(toggled)));
 ok('each layer draws the swap that drives it, handed over where a variant says', /"data-part": "b", "data-icon": selected \? iconSelected : icon/.test(toggledEl) && /"data-part": "a", "data-icon": selected \? icon : iconSelected/.test(toggledEl), toggledEl);
