@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * tools/memory-check/sessions.mjs — a project's Claude Code sessions, for /checkout: each one's name (the
+ * tools/memory-check/sessions.mjs — a project's Claude Code sessions, pruned when the user asks: each one's name (the
  * last `custom-title` line /rename or `claude -n` wrote into its transcript), age and whether it is live.
  * A project keeps one named main session (the toolkit a few); an unnamed one is a side session, and once
  * it is older than limits.json's sessionDays and not live, --prune deletes its transcript and its folder.

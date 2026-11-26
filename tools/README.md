@@ -26,7 +26,7 @@ The code every project shares, one copy each. Some are services that take a Figm
 |---|---|
 | [toolkit-check](toolkit-check/README.md) | The toolkit's own checks and upkeep: standards, owned jobs, READMEs, the closing pass. |
 | [claude-hooks](claude-hooks/README.md) | Claude Code hooks that make a session follow the working loop. |
-| [memory-check](memory-check/README.md) | Holds every Claude Code memory folder to one shape (toolkit-standard §D 25), and lists and prunes a folder's sessions for `/checkout`. |
+| [memory-check](memory-check/README.md) | Holds every Claude Code memory folder to one shape (toolkit-standard §D 25), and lists and prunes a folder's stale side sessions, when the user asks. |
 | [skill-evals](skill-evals/README.md) | Runs an agent on a project's tasks and grades what it built by the project's own gates. |
 | [shared](shared/README.md) | Small libraries more than one tool imports. |
 
