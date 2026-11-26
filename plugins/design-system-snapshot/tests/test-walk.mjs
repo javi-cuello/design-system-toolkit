@@ -103,6 +103,11 @@ ok("a path the walk did not reach marks nothing", markSlots({ name: "x", type: "
   const plain = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }], children: [broken] };
   let loud = null; try { await walk(plain, 1); } catch (e) { loud = e; }
   ok("…and any other failure reading a layer still stops the snapshot", !!loud);
+  const bad = box("Bad", "FRAME"); Object.defineProperty(bad, "visible", { get: () => { throw new Error("in get_visible: something else"); } });
+  const lazyBad = { ...box("Icon", "INSTANCE"), getMainComponentAsync: async () => null, componentProperties: {}, overrides: [{ overriddenFields: ["fills"] }] };
+  Object.defineProperty(lazyBad, "children", { get: () => (on ? [] : [bad]) });
+  on = true; try { await walk(lazyBad, 1); } catch (e) { /* expected */ }
+  ok("…and the flag is put back on even when that failure stops it", on === true);
   delete figma.skipInvisibleInstanceChildren;
 }
 

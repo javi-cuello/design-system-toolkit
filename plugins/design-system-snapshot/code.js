@@ -1260,7 +1260,8 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
    trials, never the library: its components are not read and it is not in the page list
    (snapshot-standard rule 27). "Scratch card" and "Scratch-card" are a component's page. A run that names
    component ids reads them. A page to-figma draws on ("Round trip · <component>", payload.cjs DRAWING_PAGE) is one
-   too: the store drops it anyway, and walking thirty of them made a large library's run crash Figma (2026-11-26). */
+   too: the store drops it anyway, and walking thirty of them made a large library's run crash Figma (2026-11-26).
+   (Matched in any case, unlike the store's exact prefix: to-figma only ever writes the exact one.) */
 const isScratchPage = (page) => /^(Round trip · |\W*Scratch(\s+[-–—]|\s*([:([]|$)))/i.test(page.name);
 /* A graphic is an illustration, not a glyph: a raster or a drawing placed at a
    size, with no Size axis and no currentColor. It exports as a PNG because a
