@@ -1066,8 +1066,7 @@ function shownParts(c, t = HOUSE) {
 function shownPartsOf(c, t) {
   // (partsOf's own reading: a ring is no element, and a part inside a placed component or a slot only pointer states
   // draw is no element this markup holds)
-  // (one only a pointer state draws is the base's to hide, never a combination's: rulesOf `held`)
-  return [...partsOf(c, t).values()].filter((p) => p.pointerShown && !p.pointerHeld && !p.id.includes('::')).map((p) => p.id);
+  return [...partsOf(c, t).values()].filter((p) => p.pointerShown && !p.id.includes('::')).map((p) => p.id);
 }
 function pointerShown(c, full, t = HOUSE) {
   const ids = shownParts(c, t);
@@ -1118,10 +1117,10 @@ export function rulesOf(c, mains, t = HOUSE) {
     const base = rules.find((r) => !Object.keys(r.when).length);
     for (const id of withTurns(c, held)) (base.parts[id] ||= new Map()).set('display', { v: 'none' });
   }
-  for (const [key, miss] of groupBy(selfCheck(c, rules, mains, t), (o) => JSON.stringify(o.when))) {
-    const when = JSON.parse(key), parts = {};
+  for (const [key, miss] of groupBy(selfCheck(c, rules, mains, t), (o) => JSON.stringify([o.when, o.except || []]))) {
+    const [when, except] = JSON.parse(key), parts = {};
     for (const o of miss) (parts[o.part] ||= new Map()).set(o.property, { v: o.want ?? 'unset', ...(o.knob && { knob: o.knob }) });
-    rules.push({ when, weight: Object.keys(when).length, parts });
+    rules.push({ when, weight: Object.keys(when).length, parts, ...(except.length && { except }) });
   }
   return { rules, unread, unshared };
 }
@@ -1167,7 +1166,11 @@ export function selfCheck(c, rules, mains, t = HOUSE) {
       for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset' && !(p === 'display' && gone.has(id))) out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
     }
     // and a part a pointer state takes away stays hidden there, whatever a rule of the same weight gives it
-    for (const id of withTurns(c, [...pointerGone(c, full, dflt, mains, t), ...pointerShown(c, full, t)])) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v }); }
+    // (one only a pointer state draws is hidden here except while its own state holds, which the browser can match at once
+    // with this combination's: a menu open at focus stays open while the box is also hovered)
+    const P = partsOf(c, t), ptr = (k, v) => (c.props[k] || {}).role === 'interaction' && ((c.props[k] || {}).pointer || []).includes(v);
+    const exceptOf = (id) => { const x = P.get(id.replace(/::turn$/, '')); return x && x.pointerHeld ? [...new Set(x.pointerAdds.flatMap((w) => Object.entries(w).filter(([k, v]) => ptr(k, v) && full[k] !== v).map(([k, v]) => `${k}=${v}`)))].map((kv) => kv.split('=')) : []; };
+    for (const id of withTurns(c, [...pointerGone(c, full, dflt, mains, t), ...pointerShown(c, full, t)])) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') { const ex = exceptOf(id); out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v, ...(ex.length && { except: ex }) }); } }
   }
   return out;
 }
@@ -1282,7 +1285,9 @@ export function toCss(c, folder, { naming, layer = 'components', settings = HOUS
   for (const r of rules) {
     // each condition weighs nothing (:where), so rules meet by source order alone, the order selfCheck replays: a
     // condition reaching a control two boxes down would otherwise outweigh an attribute and reorder the cascade
-    const rootCond = Object.entries(r.when).map(([k, v]) => `:where(${condition(c, n, k, v, settings, mains, library)})`).join('');
+    // (and not while a state it is kept from holds: a part only that state draws, which the browser matches with this one)
+    const rootCond = Object.entries(r.when).map(([k, v]) => `:where(${condition(c, n, k, v, settings, mains, library)})`).join('')
+      + (r.except || []).map(([k, v]) => `:where(:not(${condition(c, n, k, v, settings, mains, library)}))`).join('');
     for (const [id, decls] of Object.entries(r.parts)) {
       lines.push(`  ${id === 'root' ? n.root + rootCond + through(n, c.component, placedIn(c)) : chain(c, n, id, rootCond, mains, library)} {`);
       let dimmed = false, undimmed = false;
