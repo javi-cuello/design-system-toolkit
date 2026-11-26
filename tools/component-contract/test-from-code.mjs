@@ -1147,10 +1147,11 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     const browser = await launch({});
     try {
       const tab = await attach(await newPage(browser.endpoint));
-      await navigate(tab, 'http://round-trip.test/', { html: '<!doctype html><div id="s" style="--w: 1px; outline: var(--w) solid red; outline-offset: calc(var(--w) / -2)"></div>' });
+      await navigate(tab, 'http://round-trip.test/', { html: '<!doctype html><style>i { font-size: 40px }</style><div id="s" style="--w: 1px; font-size: 10px; outline: var(--w) solid red; outline-offset: calc(var(--w) / -2)"></div>' });
       const computed = await call(tab, () => getComputedStyle(document.getElementById('s')).outlineOffset);
       const said = await call(tab, lengthAt, ['#s', 'calc(var(--w) / -2)']), none = await call(tab, lengthAt, ['#s', 'auto']), kw = await call(tab, lengthAt, ['#s', 'inherit']);
-      ok('a 1px stroke across the edge computes a snapped offset, and its written one resolves to the half pixel it says', computed === '-1px' && said === -0.5 && snappedOffset(said) === -1 && none === null && kw === null, `${computed} ${said} ${none} ${kw}`);
+      const em = await call(tab, lengthAt, ['#s', '-0.05em']);
+      ok('a 1px stroke across the edge computes a snapped offset, and its written one resolves to the half pixel it says', computed === '-1px' && said === -0.5 && snappedOffset(said) === -1 && none === null && kw === null && em === -0.5, `${computed} ${said} ${none} ${kw} ${em}`);
     } finally { await browser.close(); }
   }
 }
