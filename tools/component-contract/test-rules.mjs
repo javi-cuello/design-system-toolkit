@@ -2,7 +2,7 @@
 // tools/component-contract/rules.mjs: the translation table, each row read both ways.
 import assert from 'node:assert/strict';
 import { declarations } from './css.mjs';
-import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, writtenNowrap, linesFromCss, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss, pathsToCss, pathsFromCss, pathsOfBox, blendToCss, blendFromCss, typeValue, typeOfValue, familyToCss, firstFamily, typeFromFigma, spacingToCss, spacingFromCss, spacingFromFigma, CASE_ROWS, DECORATION_ROWS, textToCss, textFromCss } from './rules.mjs';
+import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, writtenNowrap, linesFromCss, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss, pathsToCss, pathsFromCss, pathsOfBox, pathsToMask, pathsFromMask, blendToCss, blendFromCss, typeValue, typeOfValue, familyToCss, firstFamily, typeFromFigma, spacingToCss, spacingFromCss, spacingFromFigma, CASE_ROWS, DECORATION_ROWS, textToCss, textFromCss } from './rules.mjs';
 import { tokenNames } from './to-code.mjs';
 
 let n = 0;
@@ -129,7 +129,25 @@ ok('corner smoothing goes to corner-shape and back the same, 0.1 to 1; none, 0 a
     && pathsOfBox({ clipPath: pathsToCss(one), ariaHidden: false, children: 0, text: '' }, 'graphic') === null && pathsOfBox({ clipPath: pathsToCss(one), ariaHidden: true, children: 2, text: '' }, 'graphic') === null && pathsOfBox({ clipPath: pathsToCss(one), ariaHidden: true, children: 0, text: 'Hi' }, 'graphic') === null && pathsOfBox(undefined) === null);
   ok('…and only where the design draws a vector there: never a container\'s box, nor an icon mark (data-icon)', pathsOfBox({ clipPath: pathsToCss(one), ariaHidden: true, children: 0, text: '' }, 'container') === null
     && pathsOfBox({ clipPath: pathsToCss(one), ariaHidden: true, children: 0, text: '', icon: true }, 'graphic') === null && pathsOfBox({ clipPath: pathsToCss(one), ariaHidden: true, children: 0, text: '' }) === null);
-  ok('…an open path (no fill rule) or several none: no one clip says them; none and an inset read as no path', pathsToCss([{ windingRule: 'NONE', data: 'M 0 0 L 1 1' }]) === null && pathsToCss([...one, ...odd]) === null && pathsToCss([]) === null && pathsFromCss('none') === null && pathsFromCss('inset(0px)') === null); }
+  ok('…an open path (no fill rule) or several none: no one clip says them; none and an inset read as no path', pathsToCss([{ windingRule: 'NONE', data: 'M 0 0 L 1 1' }]) === null && pathsToCss([...one, ...odd]) === null && pathsToCss([]) === null && pathsFromCss('none') === null && pathsFromCss('inset(0px)') === null);
+  // what no one clip says (several paths, a rule of none, a vector that scales) as a mask of an SVG of them at the
+  // vector's own size, stretched over the box, each path's rule kept, read back the same
+  const ring = [{ windingRule: 'NONZERO', data: 'M 6 10 L 3 7 L 6 9 Z' }, { windingRule: 'NONE', data: 'M 15 0 L 0 0 L 0 15 Z M 1 14 L 14 14 L 14 1 Z' }];
+  const mask = pathsToMask(ring, 15, 15);
+  ok('several paths, one of no rule of its own, are a mask that reads back the same, off a vector\'s box only; its own size is its viewBox',
+    JSON.stringify(pathsFromMask(mask)) === JSON.stringify(ring) && JSON.stringify(pathsOfBox({ maskImage: mask, ariaHidden: true, children: 0, text: '' }, 'graphic')) === JSON.stringify(ring)
+    && pathsOfBox({ maskImage: mask, ariaHidden: true, children: 0, text: '' }, 'container') === null && decodeURIComponent(mask).includes("viewBox='0 0 15 15' preserveAspectRatio='none'")
+    && JSON.stringify(pathsFromMask(pathsToMask(odd, 4, 4))) === JSON.stringify(odd));
+  ok('…but never an open path of no rule (Figma fills none), nor at no set size; an arc\'s gradient mask is no path',
+    pathsToMask([{ windingRule: 'NONE', data: 'M 0 0 L 1 1' }], 2, 2) === null && pathsToMask(one, 'Size/16', 16) === null && pathsToMask([], 2, 2) === null
+    && pathsFromMask('conic-gradient(from 90deg, rgb(0, 0, 0) 180deg, rgba(0, 0, 0, 0) 0deg)') === null); }
+{ // and css.mjs writes it where no clip says the paths: a scaled vector, several paths; a stroke it would cut stays unread
+  const v = (o) => declarations({ kind: 'graphic', width: 15, height: 9, background: 'Fill/x', paths: [{ windingRule: 'NONZERO', data: 'M 7.5 0 L 15 9 L 0 9 Z' }], ...o }, { holds: false, row: true }, names);
+  const scaled = v({ constraints: { horizontal: 'scale', vertical: 'scale' } }), plain = v({}), stroked = v({ constraints: { horizontal: 'scale', vertical: 'scale' }, border: { color: 'Line/x', width: 1 } });
+  ok('a vector that scales is masked by its paths, one drawn at its size clipped; one with a stroke neither, said unread',
+    scaled.decls.some(([p, x]) => p === 'mask' && /^url\("data:image\/svg\+xml,.* 0 0 \/ 100% 100% no-repeat$/.test(x)) && !scaled.unread.some((u) => /^paths/.test(u))
+    && plain.decls.some(([p]) => p === 'clip-path') && !plain.decls.some(([p]) => p === 'mask')
+    && !stroked.decls.some(([p]) => p === 'mask' || p === 'clip-path') && stroked.unread.some((u) => /^paths/.test(u))); }
 
 { // a mirror (the snapshot's flip) is its own property, scale, as rotate is
   const d = (flip) => JSON.stringify(declarations({ kind: 'container', flip }, { holds: false, row: true }).decls);

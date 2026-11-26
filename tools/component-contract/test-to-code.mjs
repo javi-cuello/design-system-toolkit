@@ -753,7 +753,9 @@ ok('a placed component stretched by its insets takes no size from its main', dec
 // (a clip is fixed pixels: a vector that scales, stretches, fills or hugs, or one with a stroke or a shadow the clip
 // would cut, keeps its box and says its paths unread)
 { const P = [{ windingRule: 'NONZERO', data: 'M 0 0 L 4 0 L 4 4 Z' }], none = (e) => { const d = declarations({ kind: 'graphic', background: 'C/s', width: 4, height: 4, paths: P, ...e }, {}, names); return !d.decls.some(([p]) => p === 'clip-path') && d.unread.some((f) => /^paths/.test(f)); };
-  ok('a vector drawn at another size than its paths\' (scaled, stretched, filled, hugging) is never clipped to them', none({ constraints: { horizontal: 'scale', vertical: 'min' }, absolute: { x: 0, y: 0 } }) && none({ constraints: { horizontal: 'min', vertical: 'stretch' }, absolute: { x: 0, y: 0 } }) && none({ width: 'fill' }) && none({ height: 'hug' }));
+  const masked = (e) => { const d = declarations({ kind: 'graphic', background: 'C/s', width: 4, height: 4, paths: P, ...e }, {}, names); return !d.decls.some(([p]) => p === 'clip-path') && d.decls.some(([p, v]) => p === 'mask' && /^url\("data:image\/svg\+xml,/.test(v)) && !d.unread.some((f) => /^paths/.test(f)); };
+  ok('a vector drawn at another size than its paths\' is never clipped to them: one that scales or stretches is masked by them at its own size (rules.mjs pathsToMask), one that fills or hugs, of no set size, unread',
+    masked({ constraints: { horizontal: 'scale', vertical: 'min' }, absolute: { x: 0, y: 0 } }) && masked({ constraints: { horizontal: 'min', vertical: 'stretch' }, absolute: { x: 0, y: 0 } }) && none({ width: 'fill' }) && none({ height: 'hug' }));
   ok('…nor one whose stroke or shadow the clip would cut', none({ border: { color: 'C/s', width: 1, align: 'outside' } }) && none({ border: { color: 'C/s', width: 1, align: 'center' } }) && none({ shadow: 'Elevation/1' })); }
 // a dashed line (a divider no tall): its one edge dashed, nothing unread
 { const l = declarations({ kind: 'graphic', width: 160, height: 0, border: { color: 'C/s', align: 'center', dash: [2, 2], width: 1 } }, {}, names);

@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, pathsToCss, blendToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
+import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, pathsToCss, pathsToMask, blendToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
@@ -133,8 +133,12 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     const sized = ['width', 'height'].every((k) => e[k] === undefined || typeof e[k] === 'number') && !['horizontal', 'vertical'].some((k) => /^(scale|stretch)$/.test((e.constraints || {})[k] || ''));
     const painted = (e.border && e.border !== CLEARED) || (e.shadow && e.shadow !== CLEARED);
     const clip = sized && !painted ? pathsToCss(paths) : null;
+    // (what no one clip says, several paths, a rule of none or a vector that scales, a mask of them stretched over the
+    // box says, at the vector's own size: rules.mjs pathsToMask; not beside an arc's mask)
+    const mask = !clip && !painted && !arc ? pathsToMask(paths, e.width, e.height) : null;
     if (clip) put('clip-path', clip);
-    else unread.push(`paths (${!sized ? 'drawn at another size than its own: a clip does not scale' : painted ? 'a clip would cut its stroke or shadow' : 'an open path, or several: no one clip-path says them'})`);
+    else if (mask) { put('mask', `${mask} 0 0 / 100% 100% no-repeat`); }
+    else unread.push(`paths (${painted ? 'a clip would cut its stroke or shadow' : 'an open path, or one in a box of no set size'})`);
   }
 
   // a stroke in the channel that takes the room Figma's takes (code-standard rule 63)

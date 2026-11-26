@@ -281,13 +281,34 @@ export function pathsToCss(paths) {
   if (typeof data !== 'string' || !data || /"/.test(data) || !['NONZERO', 'EVENODD'].includes(rule)) return null;
   return `path(${rule === 'EVENODD' ? 'evenodd, ' : ''}"${data}")`;
 }
+/* What one clip cannot say (several paths, a rule of none, a vector that scales with its parent) as a mask: an SVG of
+   the paths in the vector's own pixels (`w` by `h`, its viewBox), stretched over the box (preserveAspectRatio none, as
+   Figma's scale stretches it), each path with its own rule (css-masking-1 §7.1, SVG 2 fill-rule). Figma's NONE is no
+   rule of the path's own: written with none, SVG's default, as Figma fills a closed one (a dot drawn with no rule); an
+   open one (a subpath with no Z) Figma does not fill (VectorPath.windingRule, @figma/plugin-typings), so no mask says it. */
+const closedPath = (d) => d.trim().split(/(?=M)/i).every((sub) => /Z\s*$/i.test(sub));
+export function pathsToMask(paths, w, h) {
+  if (!Array.isArray(paths) || !paths.length || !(w > 0) || !(h > 0)) return null;
+  const ok = paths.every((p) => p && typeof p.data === 'string' && p.data && !/['"<>&]/.test(p.data) && (['NONZERO', 'EVENODD'].includes(p.windingRule) || (p.windingRule === 'NONE' && closedPath(p.data))));
+  if (!ok) return null;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}' preserveAspectRatio='none'>${paths.map((p) => `<path d='${p.data}'${p.windingRule === 'NONE' ? '' : ` fill-rule='${p.windingRule.toLowerCase()}'`}/>`).join('')}</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+export function pathsFromMask(v) {
+  const m = /^\s*url\(\s*"data:image\/svg\+xml,([^"]*)"\s*\)/i.exec(String(v || ''));
+  if (!m) return null;
+  let svg; try { svg = decodeURIComponent(m[1]); } catch { return null; }
+  if (!/preserveAspectRatio='none'/.test(svg)) return null;
+  const out = [...svg.matchAll(/<path d='([^']*)'(?: fill-rule='(nonzero|evenodd)')?\/>/g)].map((x) => ({ windingRule: x[2] ? x[2].toUpperCase() : 'NONE', data: x[1] }));
+  return out.length ? out : null;
+}
 /* The paths a reading takes off a box: only a vector's as the markup draws one (an empty element hidden from readers,
    to-markup's graphic), never a clip a project puts on a container or on words, nor an icon mark (data-icon); and only
-   where the design's part there is a vector (`kind`, its element's kind in the design). `box`: { clipPath, ariaHidden,
-   children, text, icon }, as the page read it. */
+   where the design's part there is a vector (`kind`, its element's kind in the design). `box`: { clipPath, maskImage,
+   ariaHidden, children, text, icon }, as the page read it: its clip, else its mask (pathsToMask). */
 export function pathsOfBox(box, kind) {
   if (kind !== 'graphic' || !box || box.icon || !box.ariaHidden || box.children || String(box.text || '').trim()) return null;
-  return pathsFromCss(box.clipPath);
+  return pathsFromCss(box.clipPath) || pathsFromMask(box.maskImage);
 }
 export function pathsFromCss(v) {
   const m = /^\s*path\(\s*(?:(nonzero|evenodd)\s*,\s*)?"([^"]*)"\s*\)\s*$/i.exec(String(v || ''));

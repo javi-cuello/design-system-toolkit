@@ -2266,7 +2266,8 @@ async function main() {
                 e.arc = { start: turn(from - 90), end: +(turn(from - 90) + +c[2]).toFixed(2), inner: r ? +(+r[1] / 100).toFixed(4) : 0 }; } }
             // a vector's own outline drawn as the box's clip (css.mjs, rules.mjs pathsToCss), read back below as its paths
             // (where the box is one the markup draws a vector as: empty, hidden from readers; rules.mjs pathsOfBox)
-            if (/^path\(/.test(String(s.clipPath || ''))) e.clipBox = { clipPath: s.clipPath, ariaHidden: n.getAttribute('aria-hidden') === 'true', children: n.children.length, text: n.textContent, icon: n.hasAttribute('data-icon') };
+            // (or as a mask of an SVG of its paths, where no one clip says them: rules.mjs pathsToMask)
+            if (/^path\(/.test(String(s.clipPath || '')) || /^url\("data:image\/svg\+xml,/.test(String(s.maskImage || ''))) e.clipBox = { clipPath: s.clipPath, maskImage: s.maskImage, ariaHidden: n.getAttribute('aria-hidden') === 'true', children: n.children.length, text: n.textContent, icon: n.hasAttribute('data-icon') };
             // its blend (css.mjs mix-blend-mode), read back below in Figma's spelling
             if (s.mixBlendMode && s.mixBlendMode !== 'normal') e.mixBlend = s.mixBlendMode;
             // a focus ring drawn as the box's outline (taking no room; the browser's own, style auto, is not the design's): read, and drawn below as the layer the design has
