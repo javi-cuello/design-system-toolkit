@@ -200,11 +200,12 @@ running two receivers over the same files at once.
 `127.0.0.1` leaves the other half to whoever wants it — something took it once
 and answered every snapshot with a 404 while the router logged nothing.
 Never `0.0.0.0` or `::`, which would put it on the network.
+The audit service (`tools/figma-audit/server.mjs`), which the Desktop Bridge plugin dials the same way, holds both too, and says on `/status` (`loopback6Clash`) what holds `::1` on its port in its place.
 *Why:* the plugin cannot choose which address `localhost` resolves to, so an
 unbound half sends snapshots to whatever holds it, and the router never sees
 them to log the failure.
-The audit service (`tools/figma-audit/server.mjs`), which the Desktop Bridge plugin dials the same way, holds both too, and says on `/status` (`loopback6Clash`) what holds `::1` on its port in its place: a figma-console MCP took `[::1]` on a project's port and every audit stage sat out its timeout.
-*Checked:* `tools/snapshot/test-router.mjs` "snapshot-standard 11: both loopback stacks answer, and no other address does", seen to fail with `::1` unbound. `tools/figma-audit/test-routes.mjs` "the service answers on [::1] too, and says nothing holds it in its place", seen to fail with `::1` unbound.
+*Evidence:* 2026-11-26: a figma-console MCP held `[::1]` on three projects' audit ports, and every audit stage on one of them sat out its timeout.
+*Checked:* `tools/snapshot/test-router.mjs` "snapshot-standard 11: both loopback stacks answer, and no other address does"; `tools/figma-audit/test-routes.mjs` "the service answers on [::1] too, and says nothing holds it in its place", each seen to fail with `::1` unbound.
 
 
 **12 · A summary on screen, the detail in a file.**
