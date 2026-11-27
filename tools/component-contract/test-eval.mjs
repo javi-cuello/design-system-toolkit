@@ -198,7 +198,7 @@ ok('a component measured since the accept is held until accepted; one that came 
   const itemBox = { ...item, anatomy: { ...item.anatomy, box: { kind: 'container', parent: 'root' } } };
   const inDeep = leftToCode(deep, (n) => ({ Item: itemBox, Menu: menu })[n] || null);
   ok('a part of the item\'s own the design keeps only as the way down to an override goes with it, whole; its fields stay differences',
-    inDeep('menu/items/item/box') && !inDeep('menu/items/item/box.layout') && inDeep('menu/items/item/box/avatar', { library: { kind: 'instance' }, drawn: null }));
+    inDeep('menu/items/item/box') && !inDeep('menu/items/item/box', { library: null, drawn: { kind: 'container' } }) && !inDeep('menu/items/item/box.layout') && inDeep('menu/items/item/box/avatar', { library: { kind: 'instance' }, drawn: null }));
   // (a pointer row as roundTrip gives it: found only where the pointer state decides it, `pointer`, with the design's
   // value at rest there, `rest`)
   const P = (library, drawn, rest = drawn) => ({ library, drawn, pointer: true, rest });
@@ -313,6 +313,8 @@ ok('a component measured since the accept is held until accepted; one that came 
   const row = { library: 'scale', drawn: 'min' };
   ok('a scale constraint the sheet writes at no layer (its parent hugs wherever it is drawn) is code\'s to say; one whose share is in the sheet at any layer (the cascade carries it, size l over tone b), the axis that has a size, and a parent sized everywhere, are not',
     leftToCode(box('hug', false))('frame/mark.constraints.vertical', row) && !leftToCode(box('hug'))('frame/mark.constraints.vertical', row)
+    // (review of 2026-11-27: only where the reading drew the part pinned at its size from the start, as the sheet writes it)
+    && !leftToCode(box('hug', false))('frame/mark.constraints.vertical', { library: 'scale', drawn: 'max' }) && !leftToCode(box('hug', false))('frame/mark.constraints.vertical', { library: 'scale', drawn: 'stretch' })
     && !leftToCode(box('hug', false))('frame/mark.constraints.horizontal', row) && !leftToCode(box('hug', false))('frame/mark.constraints.vertical', { library: 'min', drawn: 'max' })
     && !leftToCode(box(12))('frame/mark.constraints.vertical', row));
   ok('a row held to a reading rather than the contract the sheet was written from (the second leg) is never left by the share',
@@ -646,7 +648,7 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
     variants: [{ when: { state: 'focus' }, add: { menu: { kind: 'container', parent: 'root' }, 'picker/hint': { kind: 'text', parent: 'picker' } } }] };
   c.anatomy.picker = { kind: 'instance', parent: 'root', component: 'Menu' };
   const g = gapOf(c);
-  ok('gapOf names the branch that excuses a row, and none for a difference (a slot\'s sample among them: the markup draws it)', g('picker/hint') === 'pointer-only-part' && g('menu') === null && g('slot/sample.content') === null && g('tip.radius', { library: 'mixed', drawn: null }) === 'path-radius' && g('root.width') === null
+  ok('gapOf names the branch that excuses a row, and none for a difference (a slot\'s sample among them: the markup draws it)', g('picker/hint') === 'pointer-only-part' && g('menu') === null && g('slot/sample.content') === null && g('tip.radius', { library: 'mixed', drawn: null }) === 'path-radius' && g('tip.radius', { library: 'mixed', drawn: 0 }) === 'path-radius' && g('tip.radius', { library: 'mixed', drawn: 4 }) === null && g('root.width') === null
     // (an effect with no style, its values never recorded: none drawn is the gap, one drawn stays a difference)
     && g('tip.shadow', { library: 'literal', drawn: null }) === 'unrecorded-effect' && leftToCode(c)('tip.shadow', { library: 'literal', drawn: null }) && g('tip.shadow', { library: 'literal', drawn: 'Shadow/1' }) === null
     // (a token spelt as the same custom property as the one read back: the gap; another token, or words told apart by case, stay a difference)

@@ -331,7 +331,9 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const onPath = (el) => { const rs = [contract.anatomy?.[el], ...vs.map((v) => (v.add || {})[el])].filter(Boolean); return rs.length > 0 && rs.every((e) => e.kind === 'graphic' && !e.shape) && !vs.some((v) => [`${el}.kind`, `${el}.shape`].some((k) => k in (v.set || {}))); };
   // and an effect with no style (the snapshot records only that there is one, `literal`, never its values: css.mjs says
   // it unread), which no sheet draws, so the reading finds none: where the reading draws one, it stays a difference
-  const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) ? 'path-radius'
+  // (each only where the reading drew what the sheet writes instead: the part pinned at its size from the start, read
+  // `min`; a path's corners as none, null or 0; anything else drawn there is code's, a difference)
+  const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) && row.drawn === 'min' ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) && (row.drawn == null || row.drawn === 0) ? 'path-radius'
     : row.library === 'literal' && row.drawn == null && /\.shadow$/.test(at) ? 'unrecorded-effect'
     : typeof row.library === 'string' && typeof row.drawn === 'string' && row.library !== row.drawn && /\.(background|color|radius|border|shadow|type|typography|width|height|min\w*|max\w*|opacity|layout)(\.|$)/.test(at) && !/^(#|rgba?\(|literal$|mixed$|scale$)/.test(row.library) && tokenNames.token(row.library) === tokenNames.token(row.drawn) ? 'one-css-name' : null);
   // a placed instance's props only a pointer state gives: one of its own (a definition drawn hovered, its State Hover), or
@@ -384,7 +386,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     // it reads, its placed component forced to that state too (from-code forwardedAt), differs as any part does, and so
     // does a field of it the reading leaves out)
     return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) ? 'inside-foreign'
-      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field, row) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' ? ((row && row.drawn != null) || (readIds && readIds.has(el)) ? null : reasons.get(id))
+      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field, row) ? 'swapped-own' : field === '' && carries(el) && (row || {}).drawn == null ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' ? ((row && row.drawn != null) || (readIds && readIds.has(el)) ? null : reasons.get(id))
         // (an override the markup cannot pass is left to code only where the reading drew the placed main's own there)
         // (a swap into an exposed instance, its key, modes and look: held to the swapped-in component's own, as swapped-own's)
         : (over.get(id) === 'exposed-part' && el === id && SWAPPED.test(field) ? swappedIn(el, field, row) : asOwn(el, field, row)) ? reasons.get(id) : null) : null);
