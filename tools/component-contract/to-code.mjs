@@ -96,7 +96,8 @@ export function namer(folder, naming = { kind: 'class', prefix: '', part: '__' }
 
 /* A token by the custom property the token build writes; a text style by the fields its mixin applies. */
 export const tokenNames = {
-  token: (name) => `var(${cssName('', name)})`,
+  // (a colour the design names currentColor is CSS's own keyword, the colour the box inherits: never a custom property)
+  token: (name) => (/^currentcolor$/i.test(String(name)) ? 'currentColor' : `var(${cssName('', name)})`),
   textStyle: (name) => textStyleFields(cssName('', name).slice(2)),
 };
 
@@ -876,6 +877,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   // (inside a placed component: its glyph's colour is that component's, or an override there: recolour, below)
   const insideAny = (id) => { for (let p = a[id].parent; p; p = a[p] && a[p].parent) if (a[p] && a[p].kind === 'instance') return true; return false; };
   const recolour = new Map();
+  // (a glyph's colour as the instance's color: a token, or transparent where the glyph is cleared, `none` (rules.mjs
+  // CLEARED), which names no token)
+  const glyphCss = (v) => (v === CLEARED ? 'transparent' : tokenNames.token(v));
   // an instance whose insides are its component's (derive drops them) draws its glyph in the colour that component
   // gives it at the instance's props: the same colour, said the same way, as an opened instance's recorded glyph
   for (const [id, e] of Object.entries(a)) {
@@ -883,7 +887,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     const m = e.component && mains(e.component, e.key);
     if (!m) continue;
     const glyph = glyphColour(m, e.with);
-    if (glyph) extra.push([id, [['color', tokenNames.token(glyph)]]]);
+    if (glyph) extra.push([id, [['color', glyphCss(glyph)]]]);
   }
   // a gap below 0 is said by pull-backs (rules.mjs): each child's start margin on its own rule (an instance's
   // insides are its own sheet's)
@@ -908,7 +912,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
       if (a[e.parent] && a[e.parent].kind === 'instance' && e.kind === 'graphic' && typeof e.background === 'string') {
         // (a glyph said as its instance gives it its opacity too, times the instance's own: rules.mjs heldGlyph, heldOpacity)
         const lone = !Object.keys(a).some((k) => k !== id && k.startsWith(`${e.parent}/`)), opacity = heldGlyph(a[e.parent], e, lone) ? heldOpacity(a[e.parent], e) : undefined;
-        if (inside(e.parent)) recolour.set(e.parent, e.background); else extra.push([e.parent, [['color', tokenNames.token(e.background)], ...(opacity !== undefined ? [['opacity', String(opacity)]] : [])]]);
+        if (inside(e.parent)) recolour.set(e.parent, e.background); else extra.push([e.parent, [['color', glyphCss(e.background)], ...(opacity !== undefined ? [['opacity', String(opacity)]] : [])]]);
       }
       // (one painted with nothing in an icon the library does not hold, which code draws by name in its colour: none,
       // transparent, or it takes the colour around it; rules.mjs bareGlyph)
@@ -1131,13 +1135,16 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   // component does): the component's own value here, so the base rule's override does not hold where it is gone
   // whatever a rule gave it goes back to the component's own value (`given`: written only where a rule set it), the rest
   // to unset (rulesOf); nowhere set, nothing is written, so the component's own sheet, its states included, holds
-  // (and one whose instance this combination no longer records either, itself placed in a placed component that it does
+  // (and one whose instance this combination no longer records either, itself placed, at any depth, in a placed component that it does
   // record (a stop in Stops, which a slider's value drops from its list): drawn as that outer component draws it there,
   // reached through the instance as the defaults place it)
   for (const id of Object.keys(ALL)) {
     if (id in a || out[id]) continue;
-    const near = hostThrough(ALL, id, mains), up = near && !a[near] && ALL[near] && hostOf(ALL, near);
-    const at = up && a[up] && mains(a[up].component, a[up].key) ? { ...a, [near]: ALL[near] } : a;
+    // (each level up the combination dropped, to the nearest placed component it keeps)
+    const near = hostThrough(ALL, id, mains), miss = [];
+    let up = near;
+    while (up && !a[up] && ALL[up]) { miss.push(up); up = hostOf(ALL, up); }
+    const at = miss.length && up && a[up] && mains(a[up].component, a[up].key) ? { ...a, ...Object.fromEntries(miss.map((k) => [k, ALL[k]])) } : a;
     const host = near, m = host && at[host] && mains(at[host].component, at[host].key);
     if (!m || (hostOf(ALL, host) && !hostIn(c, host, mains)) || copyOf(c, host) || Object.keys(ALL).some((k) => k !== host && copyOf(c, k) === host)) continue;
     // (where a variant places another component there, the part is that one's own drawing: nothing of the base's
@@ -1147,7 +1154,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     if (now) out[id] = { decls: new Map([...now.theirs].map(([p, v]) => [p, { v, given: true }])), unread: [] };
     // (an icon's colour too: back to the one the placed component draws it in, not unset, which would inherit)
     const own = now && ALL[id].kind === 'instance' && placedGlyph({ ...ALL, [host]: at[host] || ALL[host] }, host, id.slice(host.length + 1), m, mains);
-    if (own) out[id].decls.set('color', { v: tokenNames.token(own), given: true });
+    if (own) out[id].decls.set('color', { v: glyphCss(own), given: true });
   }
   // the sample's own children are reached by the rule for any child too: what it says that theirs does not is unset on
   // theirs, so each is drawn as the design draws it
@@ -1168,7 +1175,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     const own = placedGlyph(a, host, id.slice(host.length + 1), m, mains), mine = recolour.get(id);
     if (mine == null && own == null) continue;
     out[id] ||= { decls: new Map(), unread: [] };
-    out[id].decls.set('color', mine != null && mine !== own ? { v: tokenNames.token(mine) } : { v: tokenNames.token(own), given: true });
+    out[id].decls.set('color', mine != null && mine !== own ? { v: glyphCss(mine) } : { v: glyphCss(own), given: true });
   }
   for (const [id, notes] of Object.entries(ringNotes)) if (out[id]) out[id].unread.push(...notes);
   const entry = entryOf(c);

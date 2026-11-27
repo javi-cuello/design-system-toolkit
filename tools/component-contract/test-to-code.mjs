@@ -809,7 +809,15 @@ else console.log('skip: no stored contracts on this machine');
     const mainsS = (n) => ({ Dot: dot, Stops: stops }[n] || null);
     const ss = toCss(slider, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: mainsS });
     ok('an override inside an instance placed in another, both dropped by a variant, goes back to the outer component\'s value there',
-      /data-zero[^{]*> \.ds-stops__stop > \.ds-dot__dot \{\s*background: var\(--c-on\);/.test(ss) && /\.ds-slider > \.ds-slider__stops > \.ds-stops__stop > \.ds-dot__dot \{\s*background: none;/.test(ss)); }
+      /data-zero[^{]*> \.ds-stops__stop > \.ds-dot__dot \{\s*background: var\(--c-on\);/.test(ss) && /\.ds-slider > \.ds-slider__stops > \.ds-stops__stop > \.ds-dot__dot \{\s*background: none;/.test(ss));
+    // (two levels down: a stop in a pair in Stops, the pair and the stop both dropped by the variant)
+    const pair = { contract: 1, component: 'Pair', props: {}, anatomy: { root: { kind: 'container' }, stop: { kind: 'instance', parent: 'root', component: 'Dot', with: {} } }, variants: [] };
+    const stops2 = { ...stops, component: 'Stops2', anatomy: { root: stops.anatomy.root, pair: { kind: 'instance', parent: 'root', component: 'Pair', with: {} } } };
+    const deep = { ...slider, anatomy: { root: { kind: 'container' }, stops: { kind: 'instance', parent: 'root', component: 'Stops2', with: {} }, 'stops/pair': { kind: 'instance', parent: 'stops', component: 'Pair', with: {} }, 'stops/pair/stop': { kind: 'instance', parent: 'stops/pair', component: 'Dot', with: {} }, 'stops/pair/stop/dot': { kind: 'graphic', parent: 'stops/pair/stop', background: 'none', shape: 'ellipse', width: 4, height: 4 } }, variants: [{ when: { zero: true }, remove: ['stops/pair', 'stops/pair/stop', 'stops/pair/stop/dot'] }] };
+    const mainsD = (n) => ({ Dot: dot, Pair: pair, Stops2: stops2 }[n] || null);
+    const ds = toCss(deep, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: mainsD });
+    ok('…and two levels down, both instances dropped, the same', /data-zero[^{]*> \.ds-dot__dot \{\s*background: var\(--c-on\);/.test(ds), ds);
+    ok('a glyph cleared inside a placed component colours its instance transparent, never an undefined token', !/var\(--none\)/.test(ss) && /\.ds-slider > \.ds-slider__stops > \.ds-stops__stop \{\s*color: transparent;/.test(ss)); }
   // a variant that places another component there and drops the override (drawn as that component draws it): nothing of
   // the base's override reaches it, as nothing does where it keeps the layer (a selected menu item's trailing element)
   const tagSel = { ...tag, component: 'Tag selected' };
@@ -1248,4 +1256,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const open = d({ kind: 'container', foreign: true, width: 16, height: 16 }), own = d({ kind: 'container', width: 16, height: 16 });
   ok('an instance drawn open does not shrink below its size in its parent\'s flow; a frame of this component\'s is left as it was', open.get('flex-shrink') === '0' && !own.has('flex-shrink'), JSON.stringify([...open]));
 }
+// a fill the design names `currentColor` is CSS's own keyword, the colour the box inherits, never a token's custom property
+{ const { tokenNames } = await import('./to-code.mjs');
+  ok('a colour named currentColor is written as the keyword; a token as its custom property', tokenNames.token('currentColor') === 'currentColor' && tokenNames.token('color/currentcolor') === 'var(--color-currentcolor)'); }
 console.log(`${n} passed`);
