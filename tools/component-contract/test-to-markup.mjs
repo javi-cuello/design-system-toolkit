@@ -220,7 +220,7 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   ok('…and styled by the sheet as its own: the frame\'s padding, the glyph\'s size and fill, as a variant changes it; its key and mark no unwritten field',
     /\[data-part="icon"\] \{[^}]*padding: 0\.125rem/.test(css) && /\[data-part="icon-inner-vector"\] \{[^}]*block-size: 1rem;[^}]*background: var\(--fill-info\)/.test(css) && /\[tone="error"\]\) > [^{]*\[data-part="icon-inner-vector"\] \{\s*background: var\(--fill-error\)/.test(css) && !/key on|foreign on/.test(css), css);
   const m = toParity(chip, 'chip', { naming: ELEMENT, library: lib, framework: 'web-components' });
-  ok('…read by its own hooks, under each name a variant gives the frame above it', m.layers['Icon > Inner > Vector'] === 'ds-chip > [data-part="icon"] > [data-part="inner"] > [data-part="icon-inner-vector"]' && m.layers['Error icon > Inner > Vector'] === m.layers['Icon > Inner > Vector'] && typeof m.layers['Swapped > Vector'] === 'object');
+  ok('…read by its own hooks', m.layers['Icon > Inner > Vector'] === 'ds-chip > [data-part="icon"] > [data-part="inner"] > [data-part="icon-inner-vector"]' && typeof m.layers['Swapped > Vector'] === 'object');
   ok('…without a library the markup opens nothing, though none would be held (every instance with insides opens)', !toElement(chip, 'chip', { naming: ELEMENT, library: {} }).includes('data-component') && [...foreignOpened(chip, {})].sort().join() === 'icon,icon/inner,tag,tag/mark');
 }
 { // a component the library does not hold, swapped in where no prop swaps it: its look and the limits of its size inline

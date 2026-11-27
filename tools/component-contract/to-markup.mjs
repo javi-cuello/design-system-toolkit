@@ -1342,20 +1342,6 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   // a layer as the store spells its path (tools/parity layers.mjs): a repeat by its number, Item#2
   const nameOf = (id) => { const e = (parts.get(id) || {}).e || {}; const m = /_(\d+)$/.exec(id); return (e.name || partName(id)) + (m ? `#${m[1]}` : ''); };
   const pathOf = (id) => { const names = []; for (let up = id; up && up !== 'root'; up = (parts.get(up) || {}).e?.parent) names.unshift(nameOf(up)); return names.join(' > '); };
-  const renamedPaths = (id) => {
-    const out = new Set(), base = pathOf(id);
-    for (const v of c.variants || []) {
-      if (pointerWords(c, v.when)) continue;
-      const names = [];
-      for (let up = id; up && up !== 'root'; up = (parts.get(up) || {}).e?.parent) {
-        const set = v.set && `${up}.name` in v.set ? v.set[`${up}.name`] : undefined, m = /_(\d+)$/.exec(up);
-        names.unshift(typeof set === 'string' && set ? set + (m ? `#${m[1]}` : '') : nameOf(up));
-      }
-      const p = names.join(' > ');
-      if (p !== base) out.add(p);
-    }
-    return out;
-  };
   const layers = {}, byId = {};
   const mains = (name, key = null) => placedOf(library, { component: name, key });
   // what this component puts in a placed component's slot, at any depth there: that slot's selector, then each box's own
@@ -1384,9 +1370,6 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
       : partSelector(c, n, x.id, x, library);
     layers[pathOf(x.id)] = at;
-    // (and under each name a variant gives a box above it, as the store spells the path where that variant holds: an
-    // icon's frame a type renames, holding the glyph that type adds; never over a path another part has)
-    if (typeof at === 'string') for (const p of renamedPaths(x.id)) if (!(p in layers)) layers[p] = at;
     // each part's selector by its id too (not in the mapping written): a stored path may be two parts never drawn
     // together, where the self leg needs each one's own (from-code swapPartsOf)
     if (typeof at === 'string') byId[x.id] = at;
