@@ -5637,7 +5637,7 @@ if (typeof figma !== 'undefined') {
       if (msg.type === 'context-set') {
         const key = figma.fileKey || null;
         // a document written for one other file, as a duplicate of a library's is: offered for this file, never refused
-        // a document written for other files, as a duplicate's or one drafted elsewhere is: the person picks its entry
+        // a document written for other files, as a duplicate's or one drafted elsewhere is: never refused
         const others = otherFiles(msg.text, key);
         // one other file is plainly the one meant, as with a duplicate: taken at once; with several, the person picks
         const other = others.length === 1 ? others[0] : others.find((f) => f.key === msg.adopt) || null;

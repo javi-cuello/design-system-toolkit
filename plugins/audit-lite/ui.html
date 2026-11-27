@@ -412,7 +412,7 @@ function context(name) {
   $('draft-row').hidden = !!name; if (name) $('draft').removeAttribute('checked');
 }
 $('ctx-pick').onclick = function () { if (busy) return; $('ctx-file').value = ''; $('ctx-file').click(); };
-// a document written for another file, as a duplicate of a library's is: taken for this one on the person's word
+// a document naming several files, none this one: the entry the person picks is taken for this file
 $('ctx-adopt').onclick = function () { if (busy || !offer) return; parent.postMessage({ pluginMessage: { type: 'context-set', name: offer.name, text: offer.text, adopt: $('ctx-entry').value } }, '*'); };
 $('ctx-clear').onclick = function () { if (busy) return; parent.postMessage({ pluginMessage: { type: 'context-clear' } }, '*'); };
 $('ctx-file').onchange = function () {
@@ -427,7 +427,7 @@ onmessage = function (e) {
   if (msg.type === 'stages') { if ($('status').getAttribute('data-load') === 'failed') { $('status').hidden = true; $('status').removeAttribute('data-load'); } showStages(msg.stages, msg.off); return; }
   // the file's facts could not be read on opening: said as that, Run held until Try again reads them
   if (msg.type === 'load-failed') { loaded = false; canRun(); $('retry').hidden = false; say('error', 'This file could not be read', msg.why + '. Press Try again; if it fails again, reload the plugin.'); $('status').setAttribute('data-load', 'failed'); return; }
-  if (msg.type === 'context') { context(msg.name); hint(msg.adoptedFrom ? 'Settings from ' + msg.adoptedFrom.replace(/ \([^)]*\)$/, '') : ''); return; }
+  if (msg.type === 'context') { context(msg.name); hint(msg.adoptedFrom ? 'Settings from ' + msg.adoptedFrom.replace(/ \([^)]*\)$/, '') + '.' : ''); return; }
   // only a document naming several files, none this one, is offered: one other file is taken at once
   if (msg.type === 'context-offer') {
     // the document kept for this file, if any, stays shown and in use until the person picks

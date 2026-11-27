@@ -34,7 +34,7 @@ Every later run judges by them. Marks and notes stay in that browser.
 
 - Without a context document, it uses the toolkit's house conventions, not the library's own. The report lists them. Claude drops a finding that only says the library follows a different convention. It offers to draft a starter context document from what it found in the file.
 - Checks whose settings are not set do not run, and the report says which.
-- With a document, it reads that file's settings and the rulings, as the full audit does. A document for another file is offered for this one. It never writes the document.
+- With a document, it reads that file's settings and the rulings, as the full audit does. A document for another file is taken for this one. It never writes the document.
 - It skips the stages only the full audit runs: the code-target validator, the token link check and the design-to-code comparison. The report names them.
 - It does not check icon names against a published icon set.
 - Unused tokens: only this file's own uses count.
