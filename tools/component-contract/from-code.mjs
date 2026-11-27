@@ -375,11 +375,27 @@ export function shadowOnlyRings(bs) {
    root has one at its props has had it cleared, as to-code writes a contract's `none` (rules.mjs CLEARED): read back so.
    Its fill likewise. The mark goes from every part. (A colour style code has none of: never read.) */
 export function readCleared(anatomy, mains, valueOf = () => undefined) {
-  const { atProps } = req('./derive.cjs');
-  for (const e of Object.values(anatomy)) {
+  const { atProps, placedAs, placedMatch } = req('./derive.cjs');
+  const painted = (v) => typeof v === 'string' && v !== CLEARED && !clearValue(v) && !clearValue(valueOf(v));
+  // (a layer inside a placed component: that component's part it is drawn as, at the nearest instance's props, by
+  // derive's own match, once per instance)
+  const partsOf = new Map();
+  const partOf = (k) => {
+    let hid = null;
+    for (let up = (anatomy[k] || {}).parent; up && !hid; up = (anatomy[up] || {}).parent) if ((anatomy[up] || {}).kind === 'instance') hid = up;
+    const h = hid && anatomy[hid], m = h && h.component && mains(h.component, h.key);
+    if (!m) return null;
+    if (!partsOf.has(hid)) { const { M } = placedAs(anatomy, hid, m, mains); partsOf.set(hid, { M, match: placedMatch(M, Object.fromEntries(Object.keys(anatomy).filter((q) => q.startsWith(`${hid}/`)).map((q) => [q.slice(hid.length + 1), anatomy[q]]))) }); }
+    const { M, match } = partsOf.get(hid), mk = match[k.slice(hid.length + 1)];
+    return mk ? M[mk] : null;
+  };
+  for (const [k, e] of Object.entries(anatomy)) {
     if (!e || (!e.strokeless && !e.fillless && !e.shadowless && !e.clipless && !e.blendless)) continue;
     const stroke = !!e.strokeless, fill = !!e.fillless, shade = !!e.shadowless, clip = !!e.clipless, blend = !!e.blendless;
     delete e.strokeless; delete e.fillless; delete e.shadowless; delete e.clipless; delete e.blendless;
+    // a layer inside a placed component the page paints clear (`fillless`) where that component's part has a fill: cleared,
+    // as to-code writes a contract's background none there (a read-only field's emptied background)
+    if (e.kind !== 'instance') { const x = fill && e.background === undefined && !e.paint && partOf(k); if (x && x.kind === e.kind && painted(x.background)) e.background = CLEARED; continue; }
     const m = e.kind === 'instance' && e.component && mains(e.component, e.key), R = m && atProps(m, e.with || {}).root;
     if (stroke && R && R.border && typeof R.border === 'object' && R.border.color != null && e.border === undefined) e.border = CLEARED;
     // (and a fill the page paints clear, `fillless`, where its root has one: cleared too, as to-code writes a contract's
@@ -2650,6 +2666,9 @@ async function main() {
           // writes on the mark as a box's)
           if (kind === 'graphic' && e.mark) { const own = {}; boxStyling(own); for (const k of MARK_FIELDS) if (own[k] !== undefined) e[k] = own[k];
             const fill = markFill(s, seeThrough); if (fill) { e.background = fill; if (glyphless(n.children.length, n.textContent, ['::before', '::after'].map((p) => getComputedStyle(n, p).content))) delete e.icon; } }
+          // a box inside a placed component the page paints clear: marked, so readCleared reads it cleared where that
+          // component's part has a fill (to-code's background none there), never a fill merely unread
+          if (inside && (kind === 'container' || (kind === 'graphic' && e.mark)) && e.background === undefined && clear(s.backgroundColor) && s.backgroundImage === 'none') e.fillless = true;
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             boxStyling(e);
             // a box no flex lays out, or one with nothing to hug, has a size of its own (a switch's thumb, an avatar's image)

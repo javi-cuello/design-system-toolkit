@@ -994,6 +994,13 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     f.c.background === 'none' && f.u.background === undefined && f.k.background === 'Bg/other' && !Object.values(f).some((x) => 'fillless' in x)
     && readCleared({ c: { kind: 'instance', component: 'Card', fillless: true } }, () => F, (t) => (t === 'Bg/card' ? 'rgba(0, 0, 0, 0)' : undefined)).c.background === undefined
     && src.includes("if (clear(cs.backgroundColor) && cs.backgroundImage === 'none') ie.fillless = true;"));
+  // a layer inside a placed component painted clear where that component's part has a fill reads as the fill cleared
+  // (a read-only time picker's field background, which to-code writes `background: none`); one whose part draws none,
+  // one painted, or one with no component held, says nothing
+  { const I = { component: 'Item', props: {}, anatomy: { root: { kind: 'container' }, bg: { kind: 'graphic', parent: 'root', background: 'Field/bg' }, bare: { kind: 'graphic', parent: 'root' }, own: { kind: 'graphic', parent: 'root', background: 'Field/bg' } }, variants: [] };
+    const r = readCleared({ root: { kind: 'container' }, it: { kind: 'instance', parent: 'root', component: 'Item' }, 'it/bg': { kind: 'graphic', parent: 'it', fillless: true }, 'it/bare': { kind: 'graphic', parent: 'it', fillless: true }, 'it/own': { kind: 'graphic', parent: 'it', background: 'Field/x' }, lone: { kind: 'graphic', parent: 'root', fillless: true } }, (n) => (n === 'Item' ? I : null));
+    ok('a layer inside a placed component painted clear where its component\'s part has a fill reads as the fill cleared; nothing else does, and the mark is gone',
+      r['it/bg'].background === 'none' && r['it/bare'].background === undefined && r['it/own'].background === 'Field/x' && r.lone.background === undefined && !Object.values(r).some((x) => 'fillless' in x)); }
 }
 {
   // a placed component computing no clip where its component's root clips reads back as the clip stopped, `visible`
