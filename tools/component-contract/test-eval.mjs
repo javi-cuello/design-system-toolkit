@@ -21,6 +21,13 @@ const leftToCode = (...a) => { const g = gapOf(...a), yes = leftToCode0(...a); r
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
 
 ok('a field is said without its element, so one cause in many elements is one line', fieldOf('content/icon.border.width') === '*.border.width' && fieldOf('props') === 'props' && fieldOf('root.shadow.0.color') === '*.shadow.N.color');
+{ // (review 2026-11-27) the icons a project's code draws open are read from its reading, never assumed none: another
+  // library's instance the reading lists a layer inside; a closed one, or one the library holds, is not
+  const { openedIn } = await import('./eval.mjs');
+  const reading = { anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Ext' }, 'a/g': { kind: 'graphic', parent: 'a' }, b: { kind: 'instance', parent: 'root', component: 'Ext' }, c: { kind: 'instance', parent: 'root', component: 'Own' }, 'c/x': { kind: 'text', parent: 'c' } },
+    variants: [{ when: { on: true }, add: { d: { kind: 'instance', parent: 'root', component: 'Ext' }, 'd/g': { kind: 'graphic', parent: 'd' } } }] };
+  const got = [...openedIn(reading, { Own: { component: 'Own' } })].sort().join();
+  if (got !== 'a,d') throw new Error(`openedIn: ${got}`); console.log('ok the icons a project\'s code draws open are read from its reading'); }
 const legs = { browser: { a: { rows: [1, 2] }, b: { rows: [] }, c: { skipped: 'no reading' } }, figma: { a: { rows: [1] } } };
 ok('the counts are the rows per component, and a component not measured has none', JSON.stringify(counts(legs)) === '{"browser":{"a":2,"b":0},"figma":{"a":1}}');
 const accepted = { browser: { a: 2, b: 0, c: 3 }, figma: { a: 2 } };

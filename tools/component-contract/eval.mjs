@@ -156,6 +156,14 @@ export const GAPS = {
   'carries-override': 'a placed component\'s part kept only as the way down to an override',
 };
 /* Which gap of GAPS excuses a row (at, row), or null where it is a difference: leftToCode, by name. */
+/* The instances a reading from code draws open: another library's (the library holds none of it), with a layer listed
+   inside, in the base or a variant's adds. A project's code may draw an icon so; what it draws closed lists nothing. */
+export function openedIn(reading, library = {}) {
+  const parts = [reading.anatomy || {}, ...((reading.variants || []).map((v) => v.add || {}))], all = Object.assign({}, ...parts);
+  const out = new Set();
+  for (const A of parts) for (const [id, e] of Object.entries(A)) if (e && e.kind === 'instance' && !placedOf(library, e) && Object.values(all).some((x) => x && x.parent === id)) out.add(id);
+  return out;
+}
 export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true, read = null, library = null } = {}) {
   // (`library`: the one the markup was drawn with, { component: contract }; another library's instance it draws open,
   // its insides, props and layout this component's own, is held to the design as any part: layers.mjs openForeign)
@@ -529,9 +537,9 @@ export function measure(where, only = [], now = {}) {
     const code = read(path.join(readings, `${folder}.json`));
     if (!code || !code.asFigma) legs.browser[folder] = { skipped: 'no reading from code (from-code.mjs has not read it)' };
     // from-code fingerprints a reading from code with the contract it read against (`of`)
-    // (a project's code draws no icon open, so a closed icon's glyph goes whole there: to-figma's glyph; the self legs'
-    // markup draws open what foreignOpened lists)
-    else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true, opened: new Set() }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, ...tagsOf(code), combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    // (the icons a project's code draws open, read from its reading (openedIn): there a glyph's box stays, elsewhere it
+    // goes whole, to-figma's glyph; the self legs' markup draws open what foreignOpened lists)
+    else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true, opened: openedIn(code.asFigma, library) }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, ...tagsOf(code), combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
     else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true, opened: foreignOpened(contract, library) }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma, library })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
