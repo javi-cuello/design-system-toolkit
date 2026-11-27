@@ -44,6 +44,11 @@ const CLASS = { kind: 'class', prefix: 'ds-', part: '__' }, ELEMENT = { kind: 'e
   const rl = toReact(link, 'mode-link', { naming: CLASS, library: {}, stylesheet: '../styles/mode-link.css' });
   ok('React: modes a pointer state\'s add draws a part with, where only it draws the part, are held under the rest of its props',
     /data-theme=\{\(blank && tone === "inverse"\) \? "" : "link"\}/.test(rl), rl.split('\n').filter((l) => /data-theme/.test(l)));
+  // (review: a state the product sets, disabled, that draws the part there too is the rest's as much as the default:
+  // the pointer state's modes are then no longer the only ones there, and are not written over it)
+  const dim = { ...link, props: { ...link.props, state: { ...link.props.state, values: ['rest', 'press', 'disabled'] } }, variants: [...link.variants, { when: { state: 'disabled', blank: true, tone: 'inverse' }, add: { icon: { kind: 'container', parent: 'root', order: 0, modes: { theme: 'dim' } } } }] };
+  const rd = toReact(dim, 'mode-link', { naming: CLASS, library: {}, stylesheet: '../styles/mode-link.css' });
+  ok('…but not where a state the product sets draws the part there too', !/data-theme=\{\(blank && tone === "inverse"\) \? ""/.test(rd), rd.split('\n').filter((l) => /data-theme/.test(l)));
   // (but where the rest draws the part there too, the markup keeps the rest's: the pointer state's are the gap)
   const kept = { ...link, variants: link.variants.filter((v) => !v.remove) };
   ok('…and where the rest draws the part there too, the rest\'s modes stay', /data-theme="link"/.test(toReact(kept, 'mode-link', { naming: CLASS, library: {}, stylesheet: '../styles/mode-link.css' })));

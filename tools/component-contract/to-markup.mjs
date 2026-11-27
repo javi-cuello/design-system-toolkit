@@ -605,12 +605,14 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     // its tone takes the icon away: it carries only the modes it says, which the markup holds under the rest of its props,
     // as only that state draws the part there; where the rest draws it at any such combination, it stays the gap)
     const restAt = (w) => Object.fromEntries(Object.entries(w).filter(([k, v]) => !pointerWords(c, { [k]: v })));
-    // (every combination of the props variants are chosen by, the pointer states at rest and the variant's own fixed; past
-    // 4096 of them, none read and the gap kept)
+    // (every combination of the props variants are chosen by, the variant's own fixed: an interaction prop at each value
+    // no pointer state is, a disabled the product sets as much as the default; past 4096 of them, none read and the gap
+    // kept)
     const onlyThere = (w) => {
       const fixed = restAt(w), P = c.props || {};
-      const ks = [...new Set((c.variants || []).flatMap((v) => Object.keys(v.when || {})))].filter((k) => P[k] && P[k].role !== 'interaction' && !(k in fixed));
-      const xs = ks.reduce((acc, k) => (acc.length > 4096 ? acc : acc.flatMap((m) => (P[k].type === 'boolean' ? [false, true] : P[k].values || [P[k].default]).map((v) => ({ ...m, [k]: v })))), [{}]);
+      const ks = [...new Set((c.variants || []).flatMap((v) => Object.keys(v.when || {})))].filter((k) => P[k] && !(k in fixed));
+      const valuesOf = (k) => (P[k].type === 'boolean' ? [false, true] : P[k].values || [P[k].default]).filter((v) => !pointerWords(c, { [k]: v }));
+      const xs = ks.reduce((acc, k) => (acc.length > 4096 ? acc : acc.flatMap((m) => valuesOf(k).map((v) => ({ ...m, [k]: v })))), [{}]);
       return xs.length <= 4096 && xs.every((x) => !expandAt({ ...D, ...x, ...fixed })[id]);
     };
     const readds = id === 'root' ? [] : (c.variants || []).filter((v) => (v.add || {})[id] && pointerWords(c, v.when) && Object.keys(restAt(v.when)).length && onlyThere(v.when))
