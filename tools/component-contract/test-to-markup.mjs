@@ -235,6 +235,10 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
       // (and no branch that never holds: the swap the frame stands for is never also a mark, nor its test said twice, nor
       // its attributes asked again inside the frame or on the held one, where the answer is known)
       && !/data-icon/.test(nel) && !/!\(tone === "error"\) && !\(tone === "error"\)/.test(nel) && (nel.match(/tone === "error"\) && /g) || []).length === 1, nel);
+  // (review: a narrower variant laid over it that swaps the held one back is the held one again there, never left a frame)
+  const back = { ...note, props: { ...note.props, big: { type: 'boolean', default: false, figma: 'Big' } }, variants: [...note.variants, { when: { tone: 'error', big: true }, set: { 'st.component': 'Tag', 'st.key': null }, combination: true }] };
+  const bs = openForeign(back, { Tag: tag, Note: back }).variants[1].set, bx = expand(openForeign(back, { Tag: tag, Note: back }), { tone: 'error', big: true }).st;
+  ok('…and a narrower variant that swaps the held one back draws it again there: an instance, not another library\'s', bs['st.kind'] === 'instance' && bs['st.foreign'] === false && bx.kind === 'instance' && bx.component === 'Tag' && !bx.foreign, JSON.stringify(bs));
 }
 { // a component the library does not hold, swapped in where no prop swaps it: its look and the limits of its size inline
   const tile = { component: 'Tile', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };

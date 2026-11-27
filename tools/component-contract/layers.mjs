@@ -188,7 +188,14 @@ function opening(c, library) {
   }
   if (!opened.size) return { c, opened };
   const open = (o) => Object.fromEntries(Object.entries(o).map(([id, e]) => [id, opened.has(id) && !swappedIn.has(id) && !inHeld.has(id) && e ? { ...e, kind: 'container', foreign: true } : e]));
-  const setOpen = (v, w) => { const ids = [...swappedIn].filter(([, at]) => at.has(v)).map(([id]) => id); return ids.length ? { ...w, set: { ...w.set, ...Object.fromEntries(ids.flatMap((id) => [[`${id}.kind`, 'container'], [`${id}.foreign`, true]])) } } : w; };
+  // (and a variant that swaps the held one back, a narrower one laid over it, says it an instance again there, as expand
+  // keeps a field no later variant sets)
+  const backTo = (v, id) => { const s = v.set || {}; return typeof s[`${id}.component`] === 'string' && held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null }); };
+  const setOpen = (v, w) => {
+    const ids = [...swappedIn].filter(([, at]) => at.has(v)).map(([id]) => id), back = [...swappedIn.keys()].filter((id) => backTo(v, id) && !(`${id}.kind` in (v.set || {})));
+    if (!ids.length && !back.length) return w;
+    return { ...w, set: { ...w.set, ...Object.fromEntries(ids.flatMap((id) => [[`${id}.kind`, 'container'], [`${id}.foreign`, true]])), ...Object.fromEntries(back.flatMap((id) => [[`${id}.kind`, 'instance'], [`${id}.foreign`, false]])) } };
+  };
   const out = { ...c, anatomy: open(anatomy), variants: vs.map((v) => setOpen(v, v.add ? { ...v, add: open(v.add) } : v)) };
   // (opened twice is opened once: a reader handed the opened contract opens nothing more)
   OPENED.set(out, new WeakMap([[library, { c: out, opened }]]));
