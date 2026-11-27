@@ -581,7 +581,7 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
 // (nor does an instance's key, a look a reading from code never has: two keys that differ are held apart in own())
 const IGNORED = new Set(['parent', 'order', 'name', 'swappedBy', 'key']);
 // (every object's keys in order, a stroke's among them: a reading writes a dashed line's fields in another order than
-// strokeForm leaves its component's, so Carbon's definition tooltip's underline, drawn as its component's, read as an override)
+// strokeForm leaves its component's, so a definition tooltip's underline, drawn as its component's, read as an override)
 const look = (e) => sorted(Object.fromEntries(Object.entries(e).filter(([k]) => !IGNORED.has(k))));
 /* An instance's own styling is its component's root's too: a field the instance states (its layout, corners, fill,
    stroke, effect, opacity, clipping, blend, smoothing, min and max sizes) that equals its component's root at the instance's
@@ -749,14 +749,14 @@ function asGlyphOf(e, x, reading) {
 // a part without the size it keeps only while empty (whileEmpty): an instance's layer keeps none (anatomies), so its
 // component's part is compared without it
 const emptyless = (e) => { if (!e || !e.whileEmpty) return e; const r = { ...e }; for (const f of e.whileEmpty) delete r[f]; delete r.whileEmpty; return r; };
-/* A stroke in the form a reading from code can say it, for a reading only (to-figma's dashes and line equivalences): a
-   dash as dashed, its pattern and cap unstated in CSS; a line's stroke (a graphic of no width or height) without its
-   alignment, which draws it nowhere else. So a placed layer code draws as its component does is its component's. */
 /* A component's part without what a reading from code cannot say, where the reading says none (to-figma's roundTrip holds
-   neither there): a colour style, Figma's alone, its colour still compared (Material's slider's inactive track and its
-   stop's dot); and the vertical alignment of a text that grows to its words, where it shows nowhere and no CSS writes it
+   neither there): a colour style, Figma's alone, its colour still compared (a slider's inactive track and its stop's
+   dot); and the vertical alignment of a text that grows to its words, where it shows nowhere and no CSS writes it
    (an action button's label); and whether a nested instance is exposed. Else every such part read as an override the
    design does not state. For a reading only. */
+// a text grows to its words where it resizes so, or says no resizing and hugs or states no height (to-figma's unaligned
+// asks the same)
+const textGrows = (d) => /^(width_and_height|height)$/.test(d.autoResize || '') || (!d.autoResize && (d.height == null || d.height === 'hug'));
 function unsayable(x, y, reading) {
   if (!reading || !x || !y) return x;
   const r = { ...x };
@@ -764,10 +764,12 @@ function unsayable(x, y, reading) {
   // (and whether a nested instance is exposed, the Figma component's API, which no reading from code holds: to-figma's
   // roundTrip never compares it; a notification's close button's Close icon, read as an override in every combination)
   if (r.exposed !== undefined && y.exposed === undefined) delete r.exposed;
-  const grows = /^(width_and_height|height)$/.test(r.autoResize || '') || (!r.autoResize && (r.height == null || r.height === 'hug'));
-  if (r.kind === 'text' && r.verticalAlign !== undefined && y.verticalAlign === undefined && grows) delete r.verticalAlign;
+  if (r.kind === 'text' && r.verticalAlign !== undefined && y.verticalAlign === undefined && textGrows(r)) delete r.verticalAlign;
   return r;
 }
+/* A stroke in the form a reading from code can say it, for a reading only (to-figma's dashes and line equivalences): a
+   dash as dashed, its pattern and cap unstated in CSS; a line's stroke (a graphic of no width or height) without its
+   alignment, which draws it nowhere else. So a placed layer code draws as its component does is its component's. */
 function strokeForm(e, reading) {
   if (!reading || !e || !e.border || typeof e.border !== 'object') return e;
   const b = { ...e.border };
@@ -1302,4 +1304,4 @@ function wholeIn(all, mains, { reading = false } = {}) {
   return out;
 }
 
-module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, glyphColour, ownStyling, OWN, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs, wholeHosts, wholeIn };
+module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, glyphColour, ownStyling, OWN, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs, wholeHosts, wholeIn, textGrows };

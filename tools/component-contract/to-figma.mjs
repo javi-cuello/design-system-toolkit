@@ -608,7 +608,7 @@ function unaligned(x, design, layoutUnit) {
   if (!layoutUnit) return x;
   // (a text with no resizing said grows where it hugs or states no height; one at the top is where a reading that says
   // none places it, whatever its box)
-  const grows = (d) => /^(width_and_height|height)$/.test(d.autoResize || '') || (!d.autoResize && (d.height == null || d.height === 'hug'));
+  const grows = req('./derive.cjs').textGrows;
   const out = { ...x };
   for (const [id, e] of Object.entries(x)) {
     const d = design[id];
