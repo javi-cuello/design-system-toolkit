@@ -143,6 +143,20 @@ export function turnOf(n, style) {
    the positioned in the flow (rules.mjs liftsAlone, passed in: positioned, or a stacking context of its own), and `z`, its z-index where one applies (a positioned box, or a flex or grid item: CSS
    Flexbox 4.3). Read off the box it renders at, as cssOrderOf. rules.mjs siblingOrder orders by it. Runs in the page
    (passed as source); tested by test-from-code.mjs. */
+/* The box a box's own words take on the page: the union of its text nodes' boxes, by `range` (a DOM Range), each
+   blank or empty one left out; null where none draws. So a sibling a margin pulls over them is seen to overlap (the
+   page's overlap, stackLikeDesign). Runs in the page (passed as source); tested by test-from-code.mjs. */
+export function wordsRect(n, range) {
+  let r = null;
+  for (const c of n.childNodes) {
+    if (c.nodeType !== 3 || !c.textContent.trim()) continue;
+    range.selectNodeContents(c);
+    const b = range.getBoundingClientRect();
+    if (!(b.width > 0 && b.height > 0)) continue;
+    r = r ? [Math.min(r[0], b.left), Math.min(r[1], b.top), Math.max(r[2], b.right), Math.max(r[3], b.bottom)] : [b.left, b.top, b.right, b.bottom];
+  }
+  return r;
+}
 export function stackOf(n, style, liftsAlone) {
   // (a part turned in a wrapper that is a box, as turnOf reads it: the wrapper is what its parent lays out and stacks)
   const w = n.parentElement && n.parentElement.hasAttribute && n.parentElement.hasAttribute('data-turn') ? n.parentElement : null;
@@ -2416,7 +2430,7 @@ async function main() {
       // each element two layers of the design share, by what it draws (namedAt): its icon's name, else the first inside it
       const twice = [...new Set(named.map((x) => x[0]).filter((sl, i, a) => a.indexOf(sl) !== i))];
       const glyphs = twice.length ? await call(L.tab, (sels) => Object.fromEntries(sels.map((sl) => { const n = document.querySelector(sl), g = n && (n.getAttribute('data-icon') || (n.querySelector('[data-icon]') || { getAttribute: () => null }).getAttribute('data-icon')); return [sl, g || null]; })), twice) : {};
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
@@ -2666,8 +2680,10 @@ async function main() {
                 seen[tid] = (seen[tid] || 0) + 1; if (seen[tid] > 1) tid += seen[tid];
                 // drawn over this box's own fill where it paints one, else over what this box is drawn over
                 const over = clear(s.backgroundColor) ? under : s.backgroundColor;
+                // (its box, the union of its words' own, so a sibling drawn over them is seen to overlap: wordsRect)
+                const rect = new Function(`return ${wordsRectSrc}`)()(n, document.createRange());
                 out.push({ id: tid, kind: 'text', parent: id, order: i++, color: s.color, type: typeOf(n, s),
-                  textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign, content: text, under: over });
+                  textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign, content: text, under: over, ...(rect && { rect }) });
               }
             }
           }
@@ -2696,7 +2712,7 @@ async function main() {
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; });
         }
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a box whose children say by z-index how they stack but not the design's order of them (one in the flow, no CSS
       // order: rules.mjs stackedFirst): its children read as painted, and said so; the box keeps the mark (stackUnknown),

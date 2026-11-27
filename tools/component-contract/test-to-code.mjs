@@ -214,6 +214,19 @@ const upright = { contract: 1, component: 'Upright', props: { orientation: { typ
   const late = { ...opened, props: { ...opened.props, inl: { type: 'boolean', default: false, figma: 'Inline' } }, anatomy: { root: opened.anatomy.root },
     variants: [{ when: { inl: true }, add: Object.fromEntries(Object.entries(opened.anatomy).filter(([k]) => k !== 'root')) }, { when: { inl: true, ro: true }, set: { 'p.kind': 'container', 'p.component': null, 'p.key': null } }] };
   const lcss2 = toCss(late, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Held' ? held : null) });
+  // (and a variant that does not open the instance itself, but draws where another does: the copy is read whole there
+  // too, its background set out of the flow only there)
+  const plain = { contract: 1, component: 'Held', folder: 'held', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, box: { kind: 'container', parent: 'root', layout: { direction: 'row', gap: 4 } }, 'box/bg': g('box', 0), 'box/a': g('box', 1) } };
+  const shut = { contract: 1, component: 'Field', props: { ro: { type: 'boolean', default: false, figma: 'Read only' }, x: { type: 'boolean', default: false, figma: 'X' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, p: { kind: 'instance', parent: 'root', order: 0, component: 'Held', key: 'k' }, 'p/box': { kind: 'container', parent: 'p', order: 0, layout: { direction: 'row', gap: 4 } }, 'p/box/bg': g('p/box', 0), 'p/box/a': g('p/box', 1) },
+    variants: [{ when: { ro: true }, set: { 'p.kind': 'container', 'p.component': null, 'p.key': null } }, { when: { ro: true, x: true }, set: { 'p/box/bg.position': 'absolute', 'p/box/bg.absolute': { x: 0, y: 0 } } }] };
+  const scss = toCss(shut, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Held' ? plain : null) });
+  ok('a copy another variant opens is restacked where a variant of its own sets a part out of the flow there', /isolation: isolate/.test(scss) && /z-index: 1;/.test(scss), scss);
+  // (a child of the copy positioned to anchor a part another layer adds there paints with the positioned ones: read off
+  // the copy as drawn, so a background already under it is not restacked)
+  const anchor = { ...shut, anatomy: { ...shut.anatomy, 'p/box/bg': g('p/box', 0, true) }, variants: [shut.variants[0], { when: { ro: true }, add: { 'p/box/a/dot': g('p/box/a', 0, true) } }] };
+  const acss = toCss(anchor, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Held' ? { ...plain, anatomy: { ...plain.anatomy, 'box/bg': g('box', 0, true) } } : null) });
+  ok('a copy\'s child that anchors a part another layer adds there is positioned, so nothing is restacked', !/data-ro[^{]*\{[^}]*z-index/.test(acss), acss);
   ok('a copy a later variant opens of an instance another variant adds stacks by z-index as its own', /\.ds-held__a \{[^}]*z-index: 3;/.test(lcss2.split('[data-ro]').slice(1).join('')), lcss2);
   ok('a holder that leaves one child in the flow of a box a placed component restacks says each one\'s place by order, at every combination',
     /order: 1;/.test(rule(fcss, '.ds-field > .ds-field__p > .ds-held__box > .ds-held__a')) && /order: 2;/.test(rule(fcss, '.ds-field > .ds-field__p > .ds-held__box > .ds-held__i')) && /order: 2;/.test(rule(fcss, '.ds-field:where([data-open]:not([data-open="false"])) > .ds-field__p > .ds-held__box > .ds-held__bg')), fcss); }

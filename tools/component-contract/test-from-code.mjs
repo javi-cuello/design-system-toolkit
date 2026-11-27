@@ -810,7 +810,12 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   // (so does one whose children the page drew overlapping some other way, a grid cell or a margin: `overlap`)
   const laid = { props: {}, anatomy: { root: { kind: 'container', overlap: true, layout: { direction: 'row', gap: 0 } }, text: { kind: 'text', parent: 'root', order: 0 }, bg: { kind: 'graphic', parent: 'root', order: 1 } }, variants: [] };
   stackLikeDesign(laid, { ...design, anatomy: { ...design.anatomy, bg: { kind: 'graphic', parent: 'root', order: 1 } } }, (t) => t);
-  ok('a box whose children were drawn overlapping keeps the stacking read off the code', !laid.anatomy.root.layout.firstOnTop); }
+  ok('a box whose children were drawn overlapping keeps the stacking read off the code', !laid.anatomy.root.layout.firstOnTop);
+  // (a box's own words have a box too, their text nodes' union, so a sibling a margin pulls over them is caught)
+  const { wordsRect } = await import('./from-code.mjs');
+  const t = (w, l, r) => ({ nodeType: 3, textContent: w, b: { left: l, top: 0, right: r, bottom: 5, width: r - l, height: 5 } });
+  const range = { selectNodeContents(c) { this.c = c; }, getBoundingClientRect() { return this.c.b; } };
+  ok('a box\'s own words are measured as the union of their text nodes\' boxes', JSON.stringify(typeof wordsRect === 'function' && wordsRect({ childNodes: [t('a', 0, 10), { nodeType: 1 }, t(' ', 40, 44), t('b', 20, 30)] }, range)) === '[0,0,30,5]'); }
 { // a reading's rest state is the design's Enabled (a library's slider): its stacking goes on the reading's own rest, never
   // on a layer naming `enabled`, a state the reading has no word for, which held at no combination it draws
   const st = (values, def) => ({ type: 'enum', values, default: def, figma: 'State', role: 'interaction', pointer: ['hover'] });

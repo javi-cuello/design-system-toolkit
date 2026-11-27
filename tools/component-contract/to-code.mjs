@@ -355,6 +355,8 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
   if (!memo.has(mains)) {
     const boxes = new Set(), parts = partsOf(c, t), kids = childrenOf(parts);
     const outOf = (e) => e.position === 'absolute' || !!e.absolute;
+    // (what a variant's combination draws, whole, as expand draws it: each once)
+    const D = variantDefaults(c), whole = new Map(), drawnAt = (v) => whole.get(v) || whole.set(v, expand(c, { ...D, ...(v.when || {}) })).get(v);
     // (whether declarations lift a box: true, false, or null where an opacity by a token decides it, its value unknown here)
     const lifts = (decls) => {
       const d = new Map(decls), o = d.get('opacity');
@@ -371,15 +373,13 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
       const dom = new Map(markupOrder(c, list).order.map((p, i) => [p.id, i]));
       for (const v of [{}, ...(c.variants || [])]) {
         const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
-        // (a variant that opens a placed instance this box is in into a container draws the copy as this component's own:
-        // what is drawn there is read whole, as the variant's combination expands, its parts added by other variants too)
-        const opens = !!B && Object.entries(set).some(([k, x]) => k.endsWith('.kind') && x === 'container' && (box === k.slice(0, -5) || box.startsWith(`${k.slice(0, -5)}/`)));
-        const W = opens ? expand(c, { ...variantDefaults(c), ...(v.when || {}) }) : null;
+        // (a box inside a placed instance, or one, is that component's sheet's to stack; but at a combination that opens
+        // the instance into a container, by this variant or another, the copy is this component's own drawing: read
+        // whole as the variant's combination expands it, its parts added by other variants too)
+        const W = B && (B.inside || B.e.kind === 'instance') ? drawnAt(v) : null;
+        const placedAt = (id) => { for (let up = id; up && W[up]; up = W[up].parent) if (W[up].kind === 'instance') return true; return false; };
+        if (W && (!W[box] || placedAt(box))) continue;
         const asAt = (p) => (W && W[p.id]) || partAtVariant(v, p.id, p.e);
-        // (a box inside a placed instance is that component's sheet's to stack, and an instance itself is drawn by it;
-        // but where this variant opens the instance into a container, the copy is this component's own drawing: here)
-        const placedAt = (id) => { for (let up = id; up && parts.has(up); up = asAt(parts.get(up)).parent) if (asAt(parts.get(up)).kind === 'instance') return true; return false; };
-        if (B && placedAt(box)) continue;
         const { drawnHere, orderAt } = heldAt(c, v, list);
         const here = W ? list.filter((p) => !p.ring && W[p.id] && (W[p.id].parent || 'root') === box)
           : list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id)) || drawnHere(p)));
@@ -392,7 +392,8 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
         if (!here.some((p) => outOf(asAt(p))) && !(gap < 0)) continue;
         const at = (p) => (W ? W[p.id].order ?? 0 : set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? orderAt(p) ?? p.e.order ?? 0);
         // (it holds a part out of the flow here, not a ring: positioned, its containing block)
-        const anchors = (p) => (kids.get(p.id) || []).some((q) => !q.ring && ((q.base && !gone.has(q.id)) || q.id in add) && (asAt(q).parent || 'root') === p.id && outOf(asAt(q)));
+        // (in a copy read whole, what that combination draws: a part another variant adds there too)
+        const anchors = (p) => (kids.get(p.id) || []).some((q) => !q.ring && (W ? !!W[q.id] : (q.base && !gone.has(q.id)) || q.id in add) && (asAt(q).parent || 'root') === p.id && outOf(asAt(q)));
         const lifted = (p) => {
           if (boxes.has(p.id)) return true;
           // (a part turned in a wrapper that is a box: the wrapper is the child, positioned (drawn), so it lifts)
