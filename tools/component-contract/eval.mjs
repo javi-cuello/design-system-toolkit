@@ -187,7 +187,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // declares, which the markup does not forward yet: exposed-unforwarded, below)
   const SWAPPED = /^(key|modes|background|radius|border|shadow|layout|overflow|smoothing)(\.|$)/;
   const swappedOwn = (el, field, row) => over.get(el) === 'part' && (all[el] || {}).kind === 'instance' && SWAPPED.test(field) && swappedIn(el, field, row);
-  const swappedIn = (el, field, row) => { const e = all[el]; if (!mainOf(e.component, e.key)) return true; const { root } = ownsOf(el); return asOwn(el, field, row, Object.assign([], { root })); };
+  const swappedIn = (el, field, row) => { const e = all[el]; if (!mainOf(e.component, e.key)) return true; const { roots } = ownsOf(el); return asOwn(el, field, row, Object.assign([], { roots })); };
   // (a whole part the component does not draw takes its insides with it; a field it draws otherwise, only that field)
   // a part of a placed component's own that the design keeps only as the way down to such an override (an item's
   // content, holding the avatar it has no prop for): its whole-part row goes with the override, its fields stay
@@ -212,17 +212,36 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   };
   const ownsSeen = new Map();
   const ownsOf = (el) => (ownsSeen.has(el) ? ownsSeen.get(el) : ownsSeen.set(el, ownsAt(el)).get(el));
+  // (at every combination the design draws, as rows merge them under one place: the placed main's own there is the one
+  // at that combination's props, a list's items Small where the list is)
   const ownsAt = (el) => {
-    const out = [], e = all[el] || {}, s = el.split('/');
-    // (its own root says its look alone: which component it is, its props and words are the holder's to place)
-    const m = e.kind === 'instance' && mainOf(e.component, e.key);
-    if (m) { const r = atProps(m, e.with).root || {}, g = glyphColour(m, e.with); out.root = r.background == null && g != null ? { ...r, background: g } : r; }
-    const hosts = s.map((_, i) => s.slice(0, i).join('/')).filter((h) => h && (all[h] || {}).kind === 'instance');
-    const host = hosts.find((h) => mainOf(all[h].component, all[h].key));
-    if (host) { try { const { M } = placedAs(all, host, mainOf(all[host].component, all[host].key), mainOf), rel = el.slice(host.length + 1); out.push(rel in M ? M[rel] : down(mainOf(all[host].component, all[host].key), all[host].with, rel)); } catch { /* a main placedAs cannot read: no candidate */ } }
-    const near = hosts[hosts.length - 1], nm = near && mainOf(all[near].component, all[near].key);
-    if (nm && near !== host) out.push(down(nm, all[near].with, el.slice(near.length + 1)));
+    const out = [], roots = [], s = el.split('/'), seen = new Map([[out, new Set()], [roots, new Set()]]);
+    const push = (to, x) => { const k = JSON.stringify(x ?? null); if (!seen.get(to).has(k)) { seen.get(to).add(k); to.push(x); } };
+    const done = new Set();
+    for (const A of [all, ...(expandedAll() || [])]) {
+      const hosts = s.map((_, i) => s.slice(0, i).join('/')).filter((h) => h && (A[h] || {}).kind === 'instance');
+      const key = JSON.stringify([A[el], ...hosts.map((h) => [h, A[h]])]);
+      if (done.has(key)) continue;
+      done.add(key);
+      const e = A[el] || {};
+      // (its own root says its look alone: which component it is, its props and words are the holder's to place)
+      const m = e.kind === 'instance' && mainOf(e.component, e.key);
+      if (m) { const r = atProps(m, e.with).root || {}, g = glyphColour(m, e.with); push(roots, r.background == null && g != null ? { ...r, background: g } : r); }
+      const host = hosts.find((h) => mainOf(A[h].component, A[h].key));
+      if (host) { try { const hm = mainOf(A[host].component, A[host].key), { M } = placedAs(A, host, hm, mainOf), rel = el.slice(host.length + 1); push(out, rel in M ? M[rel] : swappedAt(M, rel, (A[el] || all[el] || {}).component) || down(hm, A[host].with, rel)); } catch { /* a main placedAs cannot read: no candidate */ } }
+      const near = hosts[hosts.length - 1], nm = near && mainOf(A[near].component, A[near].key);
+      if (nm && near !== host) push(out, down(nm, A[near].with, el.slice(near.length + 1)));
+    }
+    out.roots = roots;
     return out;
+  };
+  // (a part a swap the instance's prop passes put there, kept under the swapped-out part's name where the library holds
+  // no main for the target (placedAs): the one beside it naming the same component)
+  const swappedAt = (M, rel, comp) => {
+    if (typeof comp !== 'string') return undefined;
+    const up = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '', last = (v) => String(v).split('/').pop().toLowerCase();
+    const k = Object.keys(M).find((x) => (x.includes('/') ? x.slice(0, x.lastIndexOf('/')) : '') === up && M[x] && typeof M[x].component === 'string' && last(M[x].component) === last(comp));
+    return k ? M[k] : undefined;
   };
   // (a placed instance's prop at its component's default is unstated: a reading leaves it out)
   const unstated = (el, k, v) => {
@@ -235,7 +254,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const props = (el, w) => restKey(w && typeof w === 'object' ? Object.fromEntries(Object.entries(w).filter(([k, v]) => !unstated(el, k, v))) : w);
   const colour = (v) => typeof v === 'string' && /^(#|rgba?\()/i.test(v.trim()) && JSON.stringify(parseColour(v));
   const asOwn = (el, field, row, found = ownsOf(el)) => {
-    const owns = found.root && !/^(with|content|component|kind)(\.|$)/.test(field) && field !== '' ? [found.root, ...found] : found;
+    const owns = (found.roots || []).length && !/^(with|content|component|kind)(\.|$)/.test(field) && field !== '' ? [...found.roots, ...found] : found;
     if (!row || !owns.length) return false;
     const d = row.drawn ?? null;
     // (a whole part: there where the main draws one, gone where it draws none)
@@ -267,13 +286,14 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     for (const [k, q] of Object.entries(contract.props || {})) if (q.type === 'enum' || q.type === 'boolean') { cs = cs.flatMap((c) => (q.type === 'enum' ? q.values : [true, false]).map((v) => ({ ...c, [k]: v }))); if (cs.length > 4096) return (seen = null); }
     return (seen = cs.filter((c) => !(contract.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v)))));
   }; })();
+  const expandedAll = (() => { let seen; return () => (seen !== undefined ? seen : (seen = combosOf() && combosOf().map((c) => expand(contract, { ...variantDefaults(contract), ...c })))); })();
   const leftOwn = (el) => {
     const cs = combosOf(), dflt = variantDefaults(contract);
     if (!cs) return false;
     const held = !!mainOf(all[el].component, all[el].key);
     let any = false;
-    for (const c of cs) {
-      const w = { ...dflt, ...c }, A = expand(contract, w);
+    for (const [i, c] of cs.entries()) {
+      const w = { ...dflt, ...c }, A = expandedAll()[i];
       if (colourIn(A, el) !== null) continue;
       const removed = !held && (contract.variants || []).some((v) => Object.entries(v.when || {}).every(([k, x]) => String(w[k]) === String(x)) && (v.remove || []).some((r) => r.startsWith(`${el}/`) && all[r] && all[r].background != null));
       const swapped = typeof A[el].component === 'string' && A[el].component !== all[el].component && !mainOf(A[el].component, A[el].key);

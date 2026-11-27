@@ -735,6 +735,24 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
     g(true)('item/sw.modes') === 'exposed-unforwarded' && g(false)('item/sw.modes') === 'swapped-own'
     && h(true)('item/sw.radius', { library: 8, drawn: 2 }) === 'exposed-unforwarded' && h(false)('item/sw.radius', { library: 8, drawn: 2 }) === 'swapped-own' && h(false)('item/sw.radius', { library: 8, drawn: null }) === 'swapped-own'
     && h(true)('item/sw.radius', { library: 8, drawn: 5 }) === null && h(false)('item/sw.radius', { library: 8, drawn: 5 }) === null && h(false)('item/sw.key', { library: 'K', drawn: 'J' }) === null); }
+// (review of 2026-11-27: the placed main's own is the one at each combination's props, as rows merge combinations: a
+// list placed Small at size s draws its item Small, which code may draw there; a size no combination places is code's)
+{ const item = { contract: 1, component: 'Item', props: { size: { type: 'enum', values: ['l', 's'], default: 'l', figma: 'Size', figmaValues: ['L', 'S'] } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const list = { contract: 1, component: 'List', props: { size: { type: 'enum', values: ['l', 's'], default: 'l', figma: 'Size', figmaValues: ['L', 'S'] } }, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item', with: { Size: 'L' } } },
+    variants: [{ when: { size: 's' }, set: { 'item.with': { Size: 'S' } } }] };
+  const drop = { contract: 1, component: 'Drop', props: { size: { type: 'enum', values: ['l', 's'], default: 'l' } }, anatomy: { root: { kind: 'container' }, list: { kind: 'instance', parent: 'root', component: 'List', with: { Size: 'L' } }, 'list/item': { kind: 'instance', parent: 'list', component: 'Item', with: { Size: 'L', Type: 'Multi' } } },
+    variants: [{ when: { size: 's' }, set: { 'list.with': { Size: 'S' } } }] };
+  const g = gapOf(drop, (n) => ({ List: list, Item: item })[n] || null);
+  ok('an override no prop passes is held to the placed main\'s own at every combination\'s props: the item Small where the list is placed Small; a value no combination places stays a difference',
+    g('list/item.with.Size', { library: 'L', drawn: 'S' }) === 'unexposed-override' && g('list/item.with.Size', { library: 'L', drawn: 'M' }) === null); }
+// (and a part a swap the placed component's prop passes put there, kept under the swapped-out part's name where the
+// library holds no main for the target: held to that part, so code drawing the swapped icon where the main does is excused)
+{ const button = { contract: 1, component: 'Button', props: { icon: { type: 'instance', figma: 'Swap icon', swaps: ['icon/add'] } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'container', parent: 'root' }, 'icon/add': { kind: 'instance', parent: 'icon', component: 'Add', width: 16 } }, variants: [] };
+  const note = { contract: 1, component: 'Note', props: {}, anatomy: { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Button', with: { 'Swap icon': 'Close' } }, 'b/icon': { kind: 'container', parent: 'b' }, 'b/icon/close': { kind: 'instance', parent: 'b/icon', component: 'Close', exposed: true, width: 20 } }, variants: [] };
+  const g = gapOf(note, (n) => (n === 'Button' ? button : null));
+  ok('a part a passed swap put there is held to the swapped-out part the placed main draws: drawn where the main draws it, left to code',
+    g('b/icon/close', { library: null, drawn: { kind: 'instance', component: 'Close' } }) === 'unexposed-override'
+    && gapOf({ ...note, anatomy: { ...note.anatomy, b: { kind: 'instance', parent: 'root', component: 'Button' } } }, (n) => (n === 'Button' ? button : null))('b/icon/close', { library: null, drawn: { kind: 'instance', component: 'Close' } }) === null); }
 ok('every gap id is met by a fixture', Object.keys(GAPS).every((g) => seenGaps.has(g)), [...Object.keys(GAPS)].filter((g) => !seenGaps.has(g)));
 
 ok('--check: only a strict count absent from accepted.json is spared; a `left` or `predicted` count absent still fails',
