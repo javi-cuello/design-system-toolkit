@@ -91,6 +91,15 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
     const [w, h] = (QUARTER(n.rotation) && flows ? String(n.sizing).split('/').reverse() : String(n.sizing).split('/'));
     e.width = sizeFromFigma(w) || (b.w ?? n.w);
     e.height = sizeFromFigma(h) || (b.h ?? n.h);
+    // an auto layout that hugs but holds only layers placed out of its flow has nothing to hug: Figma keeps the size it
+    // last had (a status icon's frame 16 high in 8 of padding, its icon scaled to it), so that size is the part's, where
+    // it differs from its padding; hugging in CSS it would be its padding, and a placed layer's share of it unwritable
+    // (figma-fact:empty-hug-keeps-size, as an empty frame keeps it, below)
+    const kids = n.children || [];
+    if (n.layout && Array.isArray(n.pad) && kids.length && kids.every((c) => c.absolute)) {
+      if (e.width === 'hug' && Math.abs(n.w - (n.pad[1] + n.pad[3])) > 0.5) e.width = b.w ?? n.w;
+      if (e.height === 'hug' && Math.abs(n.h - (n.pad[0] + n.pad[2])) > 0.5) e.height = b.h ?? n.h;
+    }
     // a component that fills its set: the size the set gives it, a canvas fact, as `invalid` is (a row 420 wide)
     if (!parent && (w === 'FILL' || h === 'FILL')) e.canvas = { ...(w === 'FILL' ? { width: n.w } : {}), ...(h === 'FILL' ? { height: n.h } : {}) };
   }

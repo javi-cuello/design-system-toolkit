@@ -1048,6 +1048,14 @@ ok('combinations too many to list are said to be unlisted, never left to read as
 { // a layer name may hold a line separator (U+2028, pasted from text): its id is made all the same
   const sep = { name: 'Box', id: '9:3', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 10, h: 10, children: [{ name: 'Replace\u2028with an image', type: 'TEXT', text: 'x', w: 5, h: 5 }] }] };
   ok('a name with a line separator derives, its id camel-cased across it', Object.keys(derive(sep).anatomy).length === 2); }
+{ // an auto layout that hugs but holds only layers placed out of its flow keeps the size Figma left it at (a status
+  // icon's frame 16 high in 8 of padding, its icon scaled to it): hugging in CSS it is its padding, 8, and the icon's
+  // share of it cannot be written (2026-11-27)
+  const icon = { name: 'Glyph', type: 'INSTANCE', w: 16, h: 16, x: 0, y: 0, absolute: true, constraints: 'SCALE/SCALE', sizing: 'FIXED/FIXED', children: [] };
+  const frame = (kids, h = 16) => ({ name: 'Icon', type: 'FRAME', w: 16, h, layout: 'HORIZONTAL', pad: [4, 4, 4, 4], gap: 0, align: 'MIN/CENTER', sizing: 'FIXED/HUG', children: kids });
+  const spec = (f) => ({ name: 'S', id: '9:4', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 16, h: 16, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'HUG/HUG', children: [f] }] });
+  const held = derive(spec(frame([icon]))).anatomy.icon, flowing = derive(spec(frame([{ ...icon, absolute: false }], 24))).anatomy.icon;
+  ok('a hugging frame holding only placed layers keeps its size as a number; one holding a layer in its flow hugs', held.height === 16 && held.width === 16 && flowing.height === 'hug', JSON.stringify([held.height, flowing.height])); }
 { // an empty auto layout that hugs keeps its last size (a dialog's empty content): that is its least; one a boolean
   // fills in another variant only holds a hidden layer, and keeps nothing
   const frame = (kids, type = 'SLOT') => ({ name: 'Content', type, w: 400, h: 200, layout: 'VERTICAL', pad: [20, 20, 20, 20], gap: 0, align: 'MIN/MIN', sizing: 'FILL/HUG', children: kids });
