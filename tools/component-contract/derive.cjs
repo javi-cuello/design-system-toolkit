@@ -97,8 +97,9 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
     // (figma-fact:empty-hug-keeps-size, as an empty frame keeps it, below)
     const kids = n.children || [];
     if (n.layout && Array.isArray(n.pad) && kids.length && kids.every((c) => c.absolute)) {
-      if (e.width === 'hug' && Math.abs(n.w - (n.pad[1] + n.pad[3])) > 0.5) e.width = b.w ?? n.w;
-      if (e.height === 'hug' && Math.abs(n.h - (n.pad[0] + n.pad[2])) > 0.5) e.height = b.h ?? n.h;
+      // (not where its minimum holds that size: it hugs to it, its minimum said, a nav slot 300 wide at its min-width)
+      if (e.width === 'hug' && n.minWidth == null && Math.abs(n.w - (n.pad[1] + n.pad[3])) > 0.5) e.width = b.w ?? n.w;
+      if (e.height === 'hug' && n.minHeight == null && Math.abs(n.h - (n.pad[0] + n.pad[2])) > 0.5) e.height = b.h ?? n.h;
     }
     // a component that fills its set: the size the set gives it, a canvas fact, as `invalid` is (a row 420 wide)
     if (!parent && (w === 'FILL' || h === 'FILL')) e.canvas = { ...(w === 'FILL' ? { width: n.w } : {}), ...(h === 'FILL' ? { height: n.h } : {}) };

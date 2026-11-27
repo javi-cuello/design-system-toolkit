@@ -1055,7 +1055,11 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const frame = (kids, h = 16) => ({ name: 'Icon', type: 'FRAME', w: 16, h, layout: 'HORIZONTAL', pad: [4, 4, 4, 4], gap: 0, align: 'MIN/CENTER', sizing: 'FIXED/HUG', children: kids });
   const spec = (f) => ({ name: 'S', id: '9:4', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 16, h: 16, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'HUG/HUG', children: [f] }] });
   const held = derive(spec(frame([icon]))).anatomy.icon, flowing = derive(spec(frame([{ ...icon, absolute: false }], 24))).anatomy.icon;
-  ok('a hugging frame holding only placed layers keeps its size as a number; one holding a layer in its flow hugs', held.height === 16 && held.width === 16 && flowing.height === 'hug', JSON.stringify([held.height, flowing.height])); }
+  ok('a hugging frame holding only placed layers keeps its size as a number; one holding a layer in its flow hugs', held.height === 16 && held.width === 16 && flowing.height === 'hug', JSON.stringify([held.height, flowing.height]));
+  // (2026-11-27: one whose minimum holds that size hugs to it, its minimum said: a nav slot 300 wide at its min-width)
+  const slot = { ...frame([icon]), sizing: 'HUG/HUG', w: 300, pad: [0, 0, 0, 0], minWidth: 300 };
+  const s = derive(spec(slot)).anatomy.icon;
+  ok('…unless its minimum holds that size: it hugs, its minimum said', s.width === 'hug' && s.minWidth === 300, JSON.stringify([s.width, s.minWidth])); }
 { // an empty auto layout that hugs keeps its last size (a dialog's empty content): that is its least; one a boolean
   // fills in another variant only holds a hidden layer, and keeps nothing
   const frame = (kids, type = 'SLOT') => ({ name: 'Content', type, w: 400, h: 200, layout: 'VERTICAL', pad: [20, 20, 20, 20], gap: 0, align: 'MIN/MIN', sizing: 'FILL/HUG', children: kids });
