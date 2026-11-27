@@ -231,7 +231,10 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   const lib2 = { Tag: tag, Note: note }, on = openForeign(note, lib2), errSet = on.variants[0].set, nel = toElement(note, 'note', { naming: ELEMENT, library: lib2 });
   ok('…a held one a variant swaps for another library\'s with recorded layers opens in that variant alone: a frame there, its component and key said there, the held one elsewhere',
     [...foreignOpened(note, lib2)].join() === 'st' && on.anatomy.st.kind === 'instance' && errSet['st.kind'] === 'container' && errSet['st.foreign'] === true
-      && /\(tone === "error"\) && h\("(div|span)", \{ "data-part": "st", "data-component": \(tone === "error"\) \? "Err" : "", "data-key": \(tone === "error\"\) \? "k7" : "" \}/.test(nel) && !/data-with/.test(nel) && /renderTag|ds-tag/.test(nel), nel);
+      && /\(tone === "error"\) && h\("(div|span)", \{ "data-part": "st", "data-component": "Err", "data-key": "k7" \}/.test(nel) && /placed\(parts\["st"\], renderTag, \{  \}, \{ "data-part": "st" \}\)/.test(nel) && !/data-with/.test(nel) && /renderTag|ds-tag/.test(nel)
+      // (and no branch that never holds: the swap the frame stands for is never also a mark, nor its test said twice, nor
+      // its attributes asked again inside the frame or on the held one, where the answer is known)
+      && !/data-icon/.test(nel) && !/!\(tone === "error"\) && !\(tone === "error"\)/.test(nel) && (nel.match(/tone === "error"\) && /g) || []).length === 1, nel);
 }
 { // a component the library does not hold, swapped in where no prop swaps it: its look and the limits of its size inline
   const tile = { component: 'Tile', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };

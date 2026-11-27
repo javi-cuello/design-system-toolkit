@@ -572,13 +572,6 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     const e = ((parts.get(id) || {}).e) || {};
     const vs = c.variants || [], order = [...vs.filter((v) => !v.combination), ...vs.filter((v) => v.combination)].filter((v) => !pointerWords(c, v.when));
     const at = (v, f) => (v.set && `${id}.${f}` in v.set ? { x: v.set[`${id}.${f}`] } : v.add && v.add[id] ? { x: v.add[id][f] } : null);
-    // (one the library holds that a variant swaps another library's in for, opened there alone, layers.mjs openForeign:
-    // said where those variants hold, nothing elsewhere, where the held one is drawn)
-    const swapped = order.filter((v) => v.set && v.set[`${id}.foreign`] === true);
-    if (!e.foreign && swapped.length) {
-      const one = (f, name, say) => { if (swapped.every((v) => !say((at(v, f) || { x: e[f] }).x))) return []; const code = byVariant(swapped, (v) => lang.str(say((at(v, f) || { x: e[f] }).x)), lang.str('')); return code ? [[name, { code }]] : []; };
-      return [...one('component', 'data-component', (x) => (typeof x === 'string' ? x : '')), ...one('key', 'data-key', (x) => (typeof x === 'string' ? x : '')), ...one('with', 'data-with', (w) => (w && typeof w === 'object' && Object.keys(w).length ? JSON.stringify(w) : ''))];
-    }
     if (!e.foreign) return [];
     const attr = (f, name, say) => {
       // (none where every variant gives the base's own: an instance only variants add says it once)
@@ -834,7 +827,16 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       const d = byOrder.every((v) => v.set[`${id}.kind`] !== 'instance') ? (detach.includes('true') ? 'true' : detach.length === 1 ? detach[0] : detach.map(wrap).join(' || '))
         : byVariant(byOrder, (v) => String(v.set[`${id}.kind`] !== 'instance'), 'false');
       const and = (x, y) => (!x ? y : `${wrap(x)} && ${wrap(y)}`);
-      const frame = { tag: control || inline ? 'span' : 'div', attrs: hook(id), children: (kids.get(id) || []).flatMap((k) => node(k, { yes: new Set([...known.yes, d]), no: known.no }, true)).filter(Boolean) };
+      // (one the library holds that a variant swaps another library's in for, opened there alone, layers.mjs openForeign:
+      // its component, key and props said on the frame, as that variant gives them; where several do, each where it holds)
+      const opens = byOrder.filter((v) => v.set[`${id}.foreign`] === true);
+      const said = (f, name, say) => {
+        const vals = opens.map((v) => say(`${id}.${f}` in v.set ? v.set[`${id}.${f}`] : e[f]));
+        if (vals.every((x) => !x)) return [];
+        return vals.every((x) => x === vals[0]) ? [[name, { lit: vals[0] }]] : [[name, { code: byVariant(opens, (v) => lang.str(say(`${id}.${f}` in v.set ? v.set[`${id}.${f}`] : e[f])), lang.str('')) }]];
+      };
+      const openAttrs = opens.length ? [...said('component', 'data-component', (x) => (typeof x === 'string' ? x : '')), ...said('key', 'data-key', (x) => (typeof x === 'string' ? x : '')), ...said('with', 'data-with', (w) => (w && typeof w === 'object' && Object.keys(w).length ? JSON.stringify(w) : ''))] : [];
+      const frame = { tag: control || inline ? 'span' : 'div', attrs: [...hook(id), ...openAttrs], children: (kids.get(id) || []).flatMap((k) => node(k, { yes: new Set([...known.yes, d]), no: known.no }, true)).filter(Boolean) };
       return [...(d === 'true' ? [] : instanceOut(and(when, `!${wrap(d)}`))), d === 'true' && !when ? frame : { when: d === 'true' ? when : and(when, d), node: frame }];
     } else if (e.kind === 'graphic') {
       // (a shape a variant turns into a frame of shapes, a radio's circle that holds a dot once checked: those, inside it)
@@ -854,7 +856,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // an app bar's Text Large at Large): each drawn where its variant holds and no later one swaps it again, the
       // base's where none does, as expand layers them (a combination last)
       // (the combinations last and reversed: of those, the first that holds is drawn, as expand and layers.mjs take it)
-      const swaps = (c.variants || []).filter((v) => typeof (v.set || {})[`${id}.component`] === 'string');
+      // (not one that detaches it there too, an instance opened in that variant, layers.mjs openForeign: the frame
+      // stands there, so its swap is never drawn, and the instance is asked for only where that variant does not hold)
+      const swaps = (c.variants || []).filter((v) => typeof (v.set || {})[`${id}.component`] === 'string' && !(typeof v.set[`${id}.kind`] === 'string' && v.set[`${id}.kind`] !== 'instance'));
       const layers = [...swaps.filter((v) => !v.combination), ...swaps.filter((v) => v.combination).reverse()]
         .map((v) => ({ t: testOf(v.when || {}), e: { ...e, component: v.set[`${id}.component`], key: (v.set || {})[`${id}.key`] ?? null } }))
         .filter((x) => x.t && x.t !== 'false');
