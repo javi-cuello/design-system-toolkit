@@ -1124,6 +1124,27 @@ export function designKeyOf(design, fe, name) {
    component, the snapshot keeps only what differs from it inside, so a colour there is the design's. */
 // (a glyph's own words, as to-figma's glyph() moves its colour up only when it says nothing else: rules.mjs GLYPH_WORDS)
 const PLACE = GLYPH_WORDS;
+/* A placed instance a variant swaps for a component the library does not hold (a status icon set of its own at the error
+   state): to-markup marks that component where the variant holds, and the reading reads the mark as a graphic naming its
+   asset. Read back as the swap it is: that variant's component (the design's spelling, its key), the graphic's own fields
+   gone, its colour too where the design sets none (designSetsColour, `setsColour`). In place, on the reading's variants. */
+export function swappedMark(fromCode, design, setsColour = () => false) {
+  for (const v of fromCode.variants || []) {
+    const s = v.set || {};
+    for (const k of Object.keys(s)) {
+      if (!k.endsWith('.asset') || typeof s[k] !== 'string') continue;
+      const id = k.slice(0, -'.asset'.length), base = (fromCode.anatomy || {})[id];
+      if (s[`${id}.kind`] !== 'graphic' || !base || base.kind !== 'instance') continue;
+      const dv = (design.variants || []).find((w) => { const n = (w.set || {})[`${id}.component`]; return typeof n === 'string' && (n === s[k] || n.split('/').pop() === s[k]); });
+      if (!dv) continue;
+      delete s[k]; delete s[`${id}.kind`];
+      s[`${id}.component`] = dv.set[`${id}.component`];
+      s[`${id}.key`] = dv.set[`${id}.key`] ?? null;
+      if (!setsColour(id)) delete s[`${id}.background`];
+    }
+  }
+  return fromCode;
+}
 export function designSetsColour(design, id, mainOf = () => null) {
   const all = Object.assign({}, ...[...(design.variants || [])].reverse().map((v) => v.add || {}), design.anatomy || {});
   const foreign = (el) => (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key);
@@ -3555,6 +3576,7 @@ async function main() {
       A.take('icon-as-instance', fromCode, () => {
       for (const [id, e] of Object.entries(fromCode.anatomy)) asIcon(id, e);
       for (const v of fromCode.variants) for (const [id, e] of Object.entries(v.add || {})) asIcon(id, e);
+      swappedMark(fromCode, figmaContract, (id) => designSetsColour(figmaContract, id, mainOf));
       });
       // a swap that shows a layer the design shows and swaps: the design's boolean and swap names
       A.take('swap-names', fromCode, () => {

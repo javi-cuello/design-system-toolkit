@@ -162,7 +162,13 @@ ok('each layer draws the swap that drives it, handed over where a variant says',
     && /if \(\$show && \(\$styleOption === 'elevated'\)\): \?>\s*<\?php snippet\('ds\/elevated'/.test(k) && /if \(\$show && \(\$styleOption === 'filled'\)\): \?>\s*<\?php snippet\('ds\/filled'/.test(k) && /'filled'\)\)\): \?>\s*<\?php snippet\('ds\/outlined'/.test(k), r);
   const combos = { ...card, variants: [{ when: { style: 'elevated', show: true }, combination: true, set: { 'bg.component': 'Elevated', 'bg.key': 'k-Elevated' } }, { when: { style: 'elevated' }, combination: true, set: { 'bg.component': 'Filled', 'bg.key': 'k-Filled' } }] };
   const rc = toReact(combos, 'card', { naming: CLASS, library: { ...lib, Card: combos } });
-  ok('of two combinations that swap it, the first that holds is drawn, as expand takes it', /\{styleOption === "elevated" && show && \(\s*<Elevated/.test(rc) && /!\(styleOption === "elevated" && show\) && \(\s*<Filled/.test(rc), rc); }
+  ok('of two combinations that swap it, the first that holds is drawn, as expand takes it', /\{styleOption === "elevated" && show && \(\s*<Elevated/.test(rc) && /!\(styleOption === "elevated" && show\) && \(\s*<Filled/.test(rc), rc);
+  // a variant that swaps in a component the library does not hold (a status icon of its own at the error state): marked
+  // where it holds, as any such instance is, never the base's component drawn on there
+  const foreign = { ...card, variants: [{ when: { style: 'elevated' }, set: { 'bg.component': 'Status/Error', 'bg.key': 'k-Error' } }] };
+  const rf = toReact(foreign, 'card', { naming: CLASS, library: { ...lib, Card: foreign } });
+  ok('a variant that swaps in a component the library does not hold marks it where it holds, the base\'s elsewhere',
+    /styleOption === "elevated" && \(\s*<span[^>]*data-icon="Status\/Error"/.test(rf) && /!\(styleOption === "elevated"\) && \(\s*<Outlined/.test(rf), rf); }
 const two = { component: 'Find', props: { placeholderText: { type: 'string', figma: 'Placeholder text', sets: ['label'] }, valueText: { type: 'string', default: 'Value', figma: 'Value text', sets: ['label'] }, value: { type: 'boolean', default: false, figma: 'Value' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Search' } }, variants: [{ when: { value: true }, set: { 'label.content': '{valueText}' } }], folder: 'find' };
 { const out = toElement(two, 'find', { naming: ELEMENT, library: {} });
   ok('one text two strings set is the one a variant swaps in where drawn, else the other, which draws its layer\'s words', /value \? valueText : placeholderText/.test(out) && /placeholderText = "Search"/.test(out)); }

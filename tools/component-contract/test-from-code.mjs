@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf } from './from-code.mjs';
+import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1514,4 +1514,12 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   const f = (w) => JSON.stringify(forwardedAt(c, w, (name) => mains[name], (m, v) => PS[v]));
   ok('a placed component given a pointer state of its own at this combination is forced there by its own pseudo-class, nowhere else', f({ state: 'focus' }) === '[{"id":"b","pseudo":"focus-visible"}]'
     && f({ state: 'focus', on: true }) === '[]' && f({ state: 'hover' }) === '[{"id":"a","pseudo":"hover"}]' && f({ state: 'default' }) === '[]', f({ state: 'focus' }) + f({ state: 'focus', on: true }) + f({ state: 'hover' })); }
+// a placed instance a variant swaps for a component the library does not hold, marked there by to-markup, read back as that
+// swap: the variant's component and key, no graphic fields, no colour the design does not set; a mark naming another
+// glyph than the design's swap stays the code's graphic
+{ const design = { anatomy: { s: { kind: 'instance', component: 'Status' } }, variants: [{ when: { status: 'error' }, set: { 's.component': 'Status/Error', 's.key': 'k-err', 's.with': null } }] };
+  const read = (asset) => ({ anatomy: { s: { kind: 'instance', component: 'Status' } }, variants: [{ when: { status: 'error' }, set: { 's.kind': 'graphic', 's.component': null, 's.with': null, 's.key': null, 's.asset': asset, 's.background': 'rgba(0, 0, 0, 1)' } }] });
+  const a = swappedMark(read('Status/Error'), design).variants[0].set, b = swappedMark(read('Other'), design).variants[0].set;
+  ok('a variant\'s mark of a component the library does not hold reads back as that variant\'s swap; another glyph stays the code\'s',
+    JSON.stringify(a) === JSON.stringify({ 's.component': 'Status/Error', 's.with': null, 's.key': 'k-err' }) && b['s.kind'] === 'graphic' && b['s.asset'] === 'Other', JSON.stringify(a)); }
 console.log(`${n}/${n} passed`);

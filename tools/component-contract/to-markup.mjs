@@ -811,17 +811,24 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       const swaps = (c.variants || []).filter((v) => typeof (v.set || {})[`${id}.component`] === 'string');
       const layers = [...swaps.filter((v) => !v.combination), ...swaps.filter((v) => v.combination).reverse()]
         .map((v) => ({ t: testOf(v.when || {}), e: { ...e, component: v.set[`${id}.component`], key: (v.set || {})[`${id}.key`] ?? null } }))
-        .filter((x) => x.t && x.t !== 'false' && placedOf(library, x.e));
+        .filter((x) => x.t && x.t !== 'false');
       if (layers.some((x) => placedOf(library, x.e) !== placedOf(library, e))) {
         const wrap = (x) => (/^!?[\w$]+$/.test(x) || /^!\([^()]*\)$/.test(x) ? x : `(${x})`), not = (x) => (x === 'true' ? 'false' : /^[\w$]+$/.test(x) ? `!${x}` : `!(${x})`);
         const all = (ts) => { const xs = ts.filter((x) => x !== 'true'); return ts.includes('false') ? 'false' : !xs.length ? 'true' : xs.length === 1 ? xs[0] : xs.map(wrap).join(' && '); };
         // (a later layer at another value of the same prop never holds with this one: not said)
         const one = (t) => /^([\w$.]+) === ("[^"]*"|'[^']*')$/.exec(t), apart = (a, b) => { const x = one(a), y = one(b); return !!x && !!y && x[1] === y[1] && x[2] !== y[2]; };
         const alts = [{ t: all(layers.map((x) => not(x.t))), e }, ...layers.map((x, i) => ({ t: all([x.t, ...layers.slice(i + 1).filter((y) => !apart(x.t, y.t)).map((y) => not(y.t))]), e: x.e }))].filter((x) => x.t !== 'false');
-        return alts.map((x) => { const t = all([...(w ? [w] : []), x.t]); const item = placedItem(x.e); return t === 'true' ? item : { when: t, node: item }; });
+        return alts.map((x) => { const t = all([...(w ? [w] : []), x.t]); const item = placedOf(library, x.e) ? placedItem(x.e) : foreignMark(x.e); return t === 'true' ? item : { when: t, node: item }; });
       }
       const item = placedItem(e);
       return [w ? { when: w, node: item } : item];
+    }
+    // a component the library does not hold that a variant swaps in (a status icon set of its own at the error state):
+    // marked where it goes, as any such instance is, its drawing the project's; never the base's component drawn on
+    function foreignMark(x) {
+      const gap = `${partName(id)}: draw ${x.component} where its variant swaps it in, as the project draws icons`;
+      if (!gaps.includes(gap)) gaps.push(gap);
+      return { tag: 'span', attrs: [...hook(id), ['data-icon', { lit: x.component }], ['aria-hidden', { lit: 'true' }]], children: [] };
     }
     // a placed instance of the library's: the component, the props it is given and what this one puts in its slots
     function placedItem(e) {
