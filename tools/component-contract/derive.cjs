@@ -818,6 +818,9 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
   // the outer component's word is said over the inner's (a host restoring a style its placed component cleared on a
   // nested icon))
   const stated = new Set();
+  // (the layers an outer instance's turn cut as its component's own: drawn, so a nested instance's turn never takes one
+  // for hidden (a slider item's active rail, its left rail's bar cut at the rail's turn))
+  const cutAsOwn = new Set();
   for (const id of Object.keys(anatomy)) {
     const e = anatomy[id];
     if (!e || e.kind !== 'instance' || !e.component) continue;
@@ -944,7 +947,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       }
     };
     // (`found` says where the instance hides a layer, whichever way it came to be kept whole)
-    const hidesHere = !partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk));
+    const hidesHere = !partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk) && !cutAsOwn.has(`${id}/${mk}`));
     if (whole.has(id) || hidesHere) { if (found && hidesHere) found.add(id); sayCleared(inner); sayStopped(inner); inherit(); continue; }
     const own = (k) => {
       // (a vector's paths are its component's: the walk records none inside an instance, snapshot 0.86.0, so a placed
@@ -977,7 +980,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     };
     const kept = new Set(inner.filter((k) => stated.has(k) || !own(k)));
 
-    for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
+    for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) { delete anatomy[k]; cutAsOwn.add(k); }
     // a layer kept for another field whose variable modes are its component's part's there: those modes are that
     // component's, as the walk leaves them unsaid inside an instance (it records a placed layer's modes only where
     // overridden), so a reading's, drawn as the component draws them, are left out too (a reading's only: the design's

@@ -697,6 +697,29 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('an outer instance is not kept whole for a layer inside a nested instance left closed; it is for one hidden in a nested instance opened',
     closed['tag/text'] && closed['tag/text'].color === 'Text/danger' && !('tag/pill' in closed) && 'tag/text' in hidden && !('tag/text' in shown));
 }
+{
+  // 2026-11-27: a variant that sets a prop on an instance nested in a placed one (a slider item's active rail, its left
+  // rail Active) lists every layer of the placed one as shown: a layer the outer instance's turn cuts as its component's
+  // own (the left rail's bar, the right rail) is drawn, never hidden at the nested instance's turn, so neither instance
+  // is kept whole there and the nested one's insides at its own props (the circle its Active draws) are cut as its own
+  const fr = (name, w, h) => ({ name, type: 'FRAME', sizing: 'FIXED/FIXED', w, h });
+  const left = { name: 'Left', id: '7:1', props: { Active: ['False', 'True'] }, variants: [
+    { name: 'Active=False', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [fr('Bar', 0, 2), fr('Circle', 14, 14)] },
+    { name: 'Active=True', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [fr('Bar', 0, 2), fr('Circle', 20, 20)] }] };
+  const right = { name: 'Right', id: '7:2', props: {}, variants: [{ name: 'Right', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [fr('Line', 10, 2)] }] };
+  const leftIn = (a) => ({ name: 'Left', type: 'INSTANCE', instanceOf: 'Left', props: { Active: a }, layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [fr('Bar', 0, 2), fr('Circle', a === 'True' ? 20 : 14, a === 'True' ? 20 : 14)] });
+  const rightIn = { name: 'Right', type: 'INSTANCE', instanceOf: 'Right', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [fr('Line', 10, 2)] };
+  const rail = { name: 'Rail', id: '7:3', props: {}, variants: [{ name: 'Rail', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [rightIn, leftIn('False')] }] };
+  const railIn = (a) => ({ name: 'Rail', type: 'INSTANCE', instanceOf: 'Rail', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'], children: [rightIn, leftIn(a)] });
+  const item = { name: 'Item', id: '7:4', props: { Active: ['False', 'True'] }, variants: [
+    { name: 'Active=False', type: 'COMPONENT', layout: 'VERTICAL', sizing: 'HUG/HUG', children: [railIn('False')] },
+    { name: 'Active=True', type: 'COMPONENT', layout: 'VERTICAL', sizing: 'HUG/HUG', children: [railIn('True')] }] };
+  const mains = mainsFrom({ Left: left, Right: right, Rail: rail });
+  const ci = derive(item, ['Left', 'Right', 'Rail'], { mains }), on = expand(ci, { active: true });
+  const { wholeIn } = require('./derive.cjs');
+  ok('a nested instance a variant sets a prop on is not kept whole for a layer its outer instance cut as its own; its insides at its props are its own',
+    on['rail/left'] && on['rail/left'].with && on['rail/left'].with.Active === 'True' && !('rail/left/circle' in on) && !wholeIn(on, mains).size, JSON.stringify(Object.keys(on)));
+}
 
 // a placed component's part named for the boolean that shows it (showIconIcon, its layer Icon) or renamed in the
 // instance (Glyph) is matched to the layer the instance records: equal, it goes; an override on it stays
