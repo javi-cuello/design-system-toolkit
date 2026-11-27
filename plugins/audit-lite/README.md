@@ -57,7 +57,7 @@ The test checks that a context document gives the settings and rulings the full 
 
 It keeps the context document picked for a file, its name and text. That sits in the plugin's client storage on this machine, keyed by the file. **Remove** deletes it.
 
-A document written for another file, as for a library you duplicated, is offered with **Use for this file**. It keeps a copy under this file's key.
+A document written for one other file, as for a library you duplicated, is taken under this file's key. One naming several files asks which applies.
 
 It keeps the checks you unticked, as `stages-off`, in the same storage. That list is one for every file.
 

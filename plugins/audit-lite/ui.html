@@ -413,7 +413,7 @@ function context(name) {
 }
 $('ctx-pick').onclick = function () { if (busy) return; $('ctx-file').value = ''; $('ctx-file').click(); };
 // a document written for another file, as a duplicate of a library's is: taken for this one on the person's word
-$('ctx-adopt').onclick = function () { if (busy || !offer) return; parent.postMessage({ pluginMessage: { type: 'context-set', name: offer.name, text: offer.text, adopt: offer.files.length > 1 ? $('ctx-entry').value : offer.files[0].key } }, '*'); };
+$('ctx-adopt').onclick = function () { if (busy || !offer) return; parent.postMessage({ pluginMessage: { type: 'context-set', name: offer.name, text: offer.text, adopt: $('ctx-entry').value } }, '*'); };
 $('ctx-clear').onclick = function () { if (busy) return; parent.postMessage({ pluginMessage: { type: 'context-clear' } }, '*'); };
 $('ctx-file').onchange = function () {
   var f = this.files && this.files[0]; if (!f || busy) return;
@@ -427,16 +427,14 @@ onmessage = function (e) {
   if (msg.type === 'stages') { if ($('status').getAttribute('data-load') === 'failed') { $('status').hidden = true; $('status').removeAttribute('data-load'); } showStages(msg.stages, msg.off); return; }
   // the file's facts could not be read on opening: said as that, Run held until Try again reads them
   if (msg.type === 'load-failed') { loaded = false; canRun(); $('retry').hidden = false; say('error', 'This file could not be read', msg.why + '. Press Try again; if it fails again, reload the plugin.'); $('status').setAttribute('data-load', 'failed'); return; }
-  if (msg.type === 'context') { context(msg.name); hint(msg.adoptedFrom ? 'Its settings and rulings are used for this file, in place of ' + msg.adoptedFrom + '.' : ''); return; }
+  if (msg.type === 'context') { context(msg.name); hint(msg.adoptedFrom ? 'Settings from ' + msg.adoptedFrom.replace(/ \([^)]*\)$/, '') : ''); return; }
+  // only a document naming several files, none this one, is offered: one other file is taken at once
   if (msg.type === 'context-offer') {
-    // the document kept for this file, if any, stays shown and in use until the person takes this one
+    // the document kept for this file, if any, stays shown and in use until the person picks
     offer = msg; $('ctx-adopt').hidden = false;
-    var label = function (f) { return f.name ? f.name + ' (' + f.key + ')' : f.key; };
-    if (msg.files.length > 1) {
-      $('ctx-entry').innerHTML = ''; msg.files.forEach(function (f) { var o = document.createElement('option'); o.value = f.key; o.textContent = label(f); $('ctx-entry').appendChild(o); });
-      $('ctx-entry-wrap').hidden = false;
-      hint(msg.name + ' has no entry for this file. Pick the entry that applies here, then Use for this file.');
-    } else { $('ctx-entry-wrap').hidden = true; hint(msg.name + ' is for another file, ' + label(msg.files[0]) + '. Use for this file applies its settings and rulings here.'); }
+    $('ctx-entry').innerHTML = ''; msg.files.forEach(function (f) { var o = document.createElement('option'); o.value = f.key; o.textContent = f.name ? f.name + ' (' + f.key + ')' : f.key; $('ctx-entry').appendChild(o); });
+    $('ctx-entry-wrap').hidden = false;
+    hint(msg.name + ' names several files. Pick the one this file follows, then Use for this file.');
     return;
   }
   if (msg.type === 'context-failed') { hint('That document was not used: ' + msg.why + '.'); return; }

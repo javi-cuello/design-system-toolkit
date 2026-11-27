@@ -182,11 +182,9 @@ const plugin = ({ fileKey, store = {} }) => {
   // 1. the sample document, one entry, on a duplicate
   const p = plugin({ fileKey: 'COPY9' });
   await p.send({ type: 'context-set', name: 'design-system-context.md', text: MD });
-  const offer = p.sent.find((m) => m.type === 'context-offer');
-  ok('1. a document for one other file is offered for this one, not refused or kept', offer && offer.files.length === 1 && offer.files[0].key === 'KEY123' && !p.store['context:COPY9'] && !p.sent.some((m) => m.type === 'context-failed'));
-  await p.send({ type: 'context-set', name: offer.name, text: offer.text, adopt: 'KEY123' });
+  ok('1. a document for one other file is taken on Upload: no offer, no refusal', !p.sent.some((m) => m.type === 'context-offer' || m.type === 'context-failed'));
   const kept = p.store['context:COPY9'];
-  ok('1. "Use for this file" keeps it under this file\'s key, the original\'s key gone from it', kept && !kept.text.includes('KEY123') && kept.text.includes('COPY9'));
+  ok('1. it is kept under this file\'s key, the original\'s key gone from it', kept && !kept.text.includes('KEY123') && kept.text.includes('COPY9'));
   ok('1. and says, once, whose entry it took', p.sent.filter((m) => m.type === 'context' && /KEY123/.test(m.adoptedFrom || '')).length === 1);
   const taken = settingsFor(kept.text, 'COPY9');
   ok('1. the run reads the taken document as the original\'s settings and rulings', JSON.stringify(taken.tokens) === JSON.stringify(run.tokens) && JSON.stringify(taken.rulings) === JSON.stringify(run.rulings));
@@ -201,9 +199,7 @@ const plugin = ({ fileKey, store = {} }) => {
   ok('2. a drafted document on its own file is used as it is, no offer', otherFiles(draft, 'MINE1').length === 0 && settingsFor(draft, 'MINE1').from === 'context');
   const q = plugin({ fileKey: 'MINE2' });
   await q.send({ type: 'context-set', name: 'd.md', text: draft });
-  const o3 = q.sent.find((m) => m.type === 'context-offer');
-  ok('3. the drafted document on another file is offered, by its key when routing names no file', o3 && o3.files.length === 1 && o3.files[0].key === 'MINE1' && o3.files[0].name === null);
-  await q.send({ type: 'context-set', name: 'd.md', text: draft, adopt: 'MINE1' });
+  ok('3. the drafted document on another file is taken on Upload, named by its key when routing names no file', !q.sent.some((m) => m.type === 'context-offer') && q.sent.some((m) => m.type === 'context' && m.adoptedFrom === 'MINE1'));
   ok('3. taken, it reads on that file', settingsFor(q.store['context:MINE2'].text, 'MINE2').from === 'context');
   // 4. several entries, none this file: the person picks; a pick of no entry is offered again
   const two = MD.replace('"KEY123": {', '"KEY456": { "tokens": { "stateAxis": "Mode" } }, "KEY123": {');
@@ -359,11 +355,11 @@ const plugin = ({ fileKey, store = {} }) => {
   figma.currentPage.selection = [];
 
   // a document taken for this file: the next run uses it and its report names the entry it was written for
-  await figma.ui.onmessage({ type: 'context-set', name: 'design-system-context.md', text: MD, adopt: 'KEY123' });
+  await figma.ui.onmessage({ type: 'context-set', name: 'design-system-context.md', text: MD });
   posted.length = 0;
   await figma.ui.onmessage({ type: 'run', id: 3 });
   const tk = posted.find((m) => m.type === 'done');
-  ok('a run after Use for this file is judged by the document, its Settings line naming the entry taken', tk && tk.from === 'context' && /written for [^\n]*KEY123[^\n]* and taken for this file/.test(tk.text), tk && tk.text.split('## Run')[1].slice(0, 600));
+  ok('a run after a document for another file is taken is judged by the document, its Settings line naming the entry taken', tk && tk.from === 'context' && /written for [^\n]*KEY123[^\n]* and taken for this file/.test(tk.text), tk && tk.text.split('## Run')[1].slice(0, 600));
   await figma.ui.onmessage({ type: 'context-clear' });
 
   // the file cannot be read on opening: said as that, with a way to try again, never as an audit that stopped
