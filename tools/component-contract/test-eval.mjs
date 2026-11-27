@@ -282,6 +282,10 @@ ok('a component measured since the accept is held until accepted; one that came 
   const g = gapOf(c, (n) => (n === 'Slot' ? slot : null)), g2 = gapOf({ ...c, props: {} }, (n) => (n === 'Slot' ? slot : null));
   ok('a swapped drawing\'s own layout is its mark\'s (foreign-own); its size stays a difference', g('middle.layout', { library: { align: 'center' } }) === 'foreign-own' && !g('middle.width', { library: 'fill' })
     && g2('middle.layout', { library: { align: 'center' } }) !== 'foreign-own');
+  // (review of 2026-11-27: its insides are its held main's, drawn by name from it, so compared; and no size or place of a
+  // foreign component inside this one is its own, however the row is spelt)
+  ok('the insides of a drawing the library holds, swapped by a prop, are compared; a foreign component\'s size and place are never foreign-own',
+    g('middle/bg.background', { library: 'x', drawn: 'y' }) === null && g('middle.layout.width', { library: 10, drawn: 12 }) === null && g('middle.position', { library: 'absolute', drawn: null }) === null);
   // (and inside a placed component whose own prop swaps it: drawn as a mark there too)
   const page = { contract: 1, component: 'Page', props: {}, anatomy: { root: { kind: 'container' }, bar: { kind: 'instance', parent: 'root', component: 'Bar' }, 'bar/middle': { kind: 'instance', parent: 'bar', component: 'Slot', layout: { direction: 'row', align: 'center' } } }, variants: [] };
   ok('a drawing swapped by the placed component\'s own prop is its mark there too', gapOf(page, (n) => ({ Slot: slot, Bar: c })[n] || null)('bar/middle.layout', { library: { align: 'center' } }) === 'foreign-own'); }

@@ -304,7 +304,10 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     return false;
   };
   const foreign = (el) => { const e = all[el] || {}; if (!mainOf || e.kind !== 'instance') return false; const m = mainOf(e.component, e.key); return !m || (isDrawing(m) && swappedHere(el)); };
-  const inForeign = (el) => el.split('/').some((_, i, s) => i < s.length - 1 && foreign(s.slice(0, i + 1).join('/')));
+  // (its insides only where the library holds no main for it: a drawing it holds, swapped by a prop, is drawn by name
+  // from that main, so what is inside it is compared)
+  const noMain = (el) => { const e = all[el] || {}; return !!mainOf && e.kind === 'instance' && !mainOf(e.component, e.key); };
+  const inForeign = (el) => el.split('/').some((_, i, s) => i < s.length - 1 && noMain(s.slice(0, i + 1).join('/')));
   // (but its Size: to-markup passes that one, data-icon-size, and from-code reads it back)
   // (nor a swap: the prop whose value names the component placed in it, its glyph, which code draws or does not, and
   // which is measured: excused, a wrong glyph read as the same)
@@ -315,7 +318,8 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     const drawn = row.drawn && typeof row.drawn === 'object' ? row.drawn : {};
     return [...swapKeys(el)].some((k) => k in row.library && JSON.stringify(row.library[k]) !== JSON.stringify(drawn[k]));
   };
-  const foreignOwn = (el, field, row) => foreign(el) && field !== 'with.Size' && /^(with|layout|overflow)(\.|$)/.test(field) && !swapRow(el, field, row);
+  // (never its size or place inside this one, which the sheet writes, however the layout holds them)
+  const foreignOwn = (el, field, row) => foreign(el) && field !== 'with.Size' && /^(with|layout|overflow)(\.|$)/.test(field) && !/^layout\.(width|height|position)(\.|$)/.test(field) && !swapRow(el, field, row);
   // a scale constraint the sheet never writes (to-code's sharesNeverWritten: css.mjs shareable fails wherever drawn()
   // places the part): where it is pinned instead is code's to say. Only where the rows are held to the contract the
   // sheet was written from (`ownSheet`): the second leg's are held to the first reading, in its words
