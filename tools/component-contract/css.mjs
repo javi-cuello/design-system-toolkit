@@ -96,6 +96,9 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     // or its parent wraps: there the content size is where a line breaks, and at 0 no item would ever wrap)
     if (v === 'fill') { if (root) continue; if (along) { put('flex', '1 1 0'); if (!wrap && e[k === 'width' ? 'minWidth' : 'minHeight'] === undefined) put(`min-${prop}`, '0'); } else if (e[k === 'width' ? 'maxWidth' : 'maxHeight'] !== undefined) put(prop, '100%'); else { put('align-self', 'stretch'); if (e.kind === 'instance') put(prop, 'auto'); } continue; }
     put(prop, len(v), literal(v));
+    // (another library's instance drawn open holds only placed layers, so its automatic minimum is 0: along the flow it
+    // keeps its size, as Figma's fixed size does, never shrunk to make room; layers.mjs openForeign marks it `foreign`)
+    if (along && e.foreign) put('flex-shrink', '0');
   }
   for (const [k, prop] of [['minWidth', 'min-inline-size'], ['minHeight', 'min-block-size'], ['maxWidth', 'max-inline-size'], ['maxHeight', 'max-block-size']]) {
     const v = take(k);

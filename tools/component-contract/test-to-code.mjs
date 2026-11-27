@@ -1233,4 +1233,10 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const css = toCss(box2, 'box', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, library: { Tip: tip, Box: box2 } });
   ok('an override of an opened icon\'s glyph colour inside a held component is written on the glyph', /ds-tip__v \{[^}]*background: var\(--icon-off\)/.test(css), css.split('\n').filter((l) => /off|tip__/.test(l)).join('\n'));
 }
+{ // another library's instance drawn open keeps its fixed size along its parent's flow, as Figma's fixed size does: it holds
+  // only placed layers, so CSS's automatic minimum is 0 and it would shrink (a tile's radio icon drawn 4 wide, 2026-11-27)
+  const d = (e) => new Map(declarations(e, { root: false, holds: true, row: true }, { token: (t) => t }).decls.map(([p, v]) => [p, v]));
+  const open = d({ kind: 'container', foreign: true, width: 16, height: 16 }), own = d({ kind: 'container', width: 16, height: 16 });
+  ok('an instance drawn open does not shrink below its size in its parent\'s flow; a frame of this component\'s is left as it was', open.get('flex-shrink') === '0' && !own.has('flex-shrink'), JSON.stringify([...open]));
+}
 console.log(`${n} passed`);
