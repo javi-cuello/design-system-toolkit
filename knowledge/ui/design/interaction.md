@@ -470,7 +470,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 - A tooltip vanishes as the pointer heads for its link → keep it while hovered (1.4.13), or make it a click popover.
 - A truncated file name full only on hover → [disclosure: show more and truncation](../patterns/disclosure.md#show-more-and-truncation).
 
-**Accessibility:** 1.4.13 Content on Hover or Focus (AA): dismissible, hoverable, persistent. 2.1.1 Keyboard (A). 1.4.11 treats hover effects as supplementary, so they may be subtle and carry nothing essential.
+**Accessibility:** 1.4.13 Content on Hover or Focus (AA): dismissible, hoverable, persistent. 2.1.1 Keyboard (A). 1.4.11 treats hover effects as supplementary, so they may be subtle and carry nothing essential. A hover effect still must not cause a component "to lose sufficient contrast against adjacent colors", nor "the visual indicators for other states, such as focus or selection, to lose sufficient contrast" ([Understanding 1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)).
 
 **Build:**
 - [required] Anything revealed on hover is revealed on focus too: pair `:hover` with `:focus-within` on the same container, and keep hover-only styling inside `@media (hover: hover)` (WCAG 2.1.1).
