@@ -633,6 +633,10 @@ else console.log('skip: no stored contracts on this machine');
   ok('an instance the store does not hold draws its own stroke and corners, placed directly or inside a held one',
     /focus-visible[^{]*> \.ds-box__check \{[^}]*border-radius: 4px;[^}]*outline: 2px solid var\(--focus-focus\);/.test(sheet) && /focus-visible[^{]*> \.ds-box__note > \.ds-note__warn \{[^}]*box-shadow: inset 0 0 0 1px var\(--c-clear\);/.test(sheet)
     && selfCheck(box, rulesOf(box, mains).rules, mains).length === 0 && !/key on/.test(sheet));
+  // (and its layout, the room about its glyph an icon's frame keeps: written on its mark as a box's, so the reading finds it)
+  const framed = { contract: 1, component: 'Bar', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Glyph', key: 'dd44', layout: { direction: 'row', gap: 0, align: 'center', crossAlign: 'center', padding: { top: 4, end: 4, bottom: 4, start: 4 } } } }, variants: [] };
+  ok('an instance the store does not hold writes its own layout on its mark',
+    /\.ds-bar__icon \{[^}]*display: flex;[^}]*padding: 0\.25rem;[^}]*justify-content: center;/.test(toCss(framed, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains })));
   // a host each variant adds at its own props (a library's text input adds Status notification per state): a part inside it
   // is named by the variant that draws it there, whichever variant comes first (the first reading lists error's first)
   const stat = { contract: 1, component: 'Stat', props: { status: { type: 'enum', values: ['alt', 'failed'], default: 'alt', figma: 'Status' } }, anatomy: { root: { kind: 'container' } },

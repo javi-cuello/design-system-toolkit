@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins } from './from-code.mjs';
+import { MARK_FIELDS, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1572,4 +1572,7 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
     { titleOption: { control: 'text' }, sizeOptional: {}, label: {}, hiddenOption: { control: 'boolean', default: false } }, design);
   ok('a design prop renamed off an HTML attribute in the markup joins that arg, of its own kind; another word that begins so, or an arg of another kind, does not',
     p.title.code === 'titleOption' && !p.title.missing && p.size.missing === true && p.label === 'label' && p.hidden.missing === true, JSON.stringify(p)); }
+// 2026-11-27: a mark (data-icon, a component the library does not hold) keeps its layout as read, the room about its glyph
+// to-code writes on it, so a frame's padding goes round
+ok('a mark keeps its layout and its corners, stroke and clipping as read', ['layout', 'radius', 'border', 'overflow'].every((k) => (MARK_FIELDS || []).includes(k)));
 console.log(`${n}/${n} passed`);

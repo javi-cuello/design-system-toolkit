@@ -243,6 +243,10 @@ export function alignedOf(n, s) {
 /* Whether a mark draws no glyph of its own: no child element, no text of its own (an icon font's ligature, home), and no
    pseudo-element with content (`pseudo` each one's computed content), so the colour it is read at is no glyph's. `text`
    its own text content. Tested by test-from-code.mjs. */
+/* What a mark (to-markup's data-icon, a component the library does not hold) keeps of its own box's styling as read: its
+   corners, stroke, ring, clipping, shadow and layout (the room about its glyph its frame keeps, which to-code writes on
+   the mark). Read in the page, so passed in by name; tested by test-from-code.mjs. */
+export const MARK_FIELDS = ['radius', 'full', 'cornerShape', 'outline', 'ownOutline', 'border', 'overflow', 'shadow', 'shadowAll', 'ringsUsed', 'layout', 'rtl'];
 export function glyphless(children, text, pseudo) { return !children && !String(text || '').trim() && pseudo.every((c) => !c || c === 'none' || c === 'normal'); }
 
 export function ownLayer(m, n, q, isRoot) {
@@ -2430,7 +2434,7 @@ async function main() {
       // each element two layers of the design share, by what it draws (namedAt): its icon's name, else the first inside it
       const twice = [...new Set(named.map((x) => x[0]).filter((sl, i, a) => a.indexOf(sl) !== i))];
       const glyphs = twice.length ? await call(L.tab, (sels) => Object.fromEntries(sels.map((sl) => { const n = document.querySelector(sl), g = n && (n.getAttribute('data-icon') || (n.querySelector('[data-icon]') || { getAttribute: () => null }).getAttribute('data-icon')); return [sl, g || null]; })), twice) : {};
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
@@ -2590,7 +2594,9 @@ async function main() {
           // (a fill of its own, its box painted, where no mask cuts a glyph out of it: a placed component's own fill, a
           // navigation bar's surface, which to-code writes as a box's, never the glyph's colour, which it keeps only where
           // something inside draws one: glyphless)
-          if (kind === 'graphic' && e.mark) { const own = {}; boxStyling(own); for (const k of ['radius', 'full', 'cornerShape', 'outline', 'ownOutline', 'border', 'overflow', 'shadow', 'shadowAll', 'ringsUsed']) if (own[k] !== undefined) e[k] = own[k];
+          // (and its layout, the room about the glyph a component the library does not hold keeps in its frame, which to-code
+          // writes on the mark as a box's)
+          if (kind === 'graphic' && e.mark) { const own = {}; boxStyling(own); for (const k of MARK_FIELDS) if (own[k] !== undefined) e[k] = own[k];
             const fill = markFill(s, seeThrough); if (fill) { e.background = fill; if (glyphless(n.children.length, n.textContent, ['::before', '::after'].map((p) => getComputedStyle(n, p).content))) delete e.icon; } }
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             boxStyling(e);
@@ -2713,7 +2719,7 @@ async function main() {
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; delete e.rects; });
         }
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a box whose children say by z-index how they stack but not the design's order of them (one in the flow, no CSS
       // order: rules.mjs stackedFirst): its children read as painted, and said so; the box keeps the mark (stackUnknown),

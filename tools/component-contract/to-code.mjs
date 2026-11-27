@@ -1027,13 +1027,14 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     // (and a combination that drops the sample's mark but keeps its size has the defaults' kept size still: dropped too)
     const empty = [...new Set([...(e.whileEmpty || []), ...(slotted && B[id] ? (B[id].whileEmpty || []).filter((f) => e[f] === B[id][f]) : [])])].filter((f) => e[f] !== undefined);
     if (empty.length) { e = { ...e }; for (const f of empty) delete e[f]; delete e.whileEmpty; }
-    const { decls, unread, unshared } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', wrap: !!(parent && parent.layout && parent.layout.wrap), anchors, box, pull, words: wordsOf(c, e) }, tokenNames);
     // a placed component is placed here and looks as its own sheet says (code-standard rule 5): where it sits and
     // how big, never its fill, stroke, corners or type, which a prop changes in code
     // (but an instance of a component the store does not hold, an icon of another library: no sheet of its own draws
-    // its box, and derive kept every field it states, so its fill, stroke and corners are written here, as a box's)
+    // its box, and derive kept every field it states, so its fill, stroke, corners and layout (the room about its glyph,
+    // the padding of an icon's frame) are written here, as a box's, on the mark to-markup leaves for it)
     // (known only where the store was given: with none, every placed component is taken to be held)
     const unheld = e.kind === 'instance' && mains !== NO_MAINS && !(e.component && mains(e.component, e.key));
+    const { decls, unread, unshared } = declarations(e, { root: id === 'root', holds: holds(e.kind) || unheld, row: !parent || (parent.layout || {}).direction !== 'column', wrap: !!(parent && parent.layout && parent.layout.wrap), anchors, box, pull, words: wordsOf(c, e) }, tokenNames);
     const kept = (e.kind === 'instance' && !unheld) || slotted ? decls.filter(([p]) => PLACED.test(p)) : decls;
     // save an override set on the instance itself (derive keeps only what differs from its component's root at its
     // props: a library's toggle fills its toggle item per state): written on the instance, and where the defaults' override
