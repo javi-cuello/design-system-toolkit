@@ -413,6 +413,10 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
   const marked = [...raw, { id: 'check', kind: 'graphic', parent: 'root' }];
   ok('a placed component drawn as an icon mark holds its own outline; a graphic that is no mark does not',
     insidePlaced(marked, 'check', new Set(['check'])) && !insidePlaced(marked, 'check') && !insidePlaced(marked, 'label', new Set(['check'])));
+  // so is one drawn open (another library's, the markup's data-component: the walk's `foreign`), and its insides are inside
+  // it: the checkbox icon drawn open read its focus stroke as a ring (2026-11-27)
+  const opened = [...raw, { id: 'box', kind: 'container', parent: 'root', foreign: 'Check' }, { id: 'box/v', kind: 'graphic', parent: 'box' }];
+  ok('an instance drawn open holds its own outline, and its insides are inside it', insidePlaced(opened, 'box') && insidePlaced(opened, 'box/v'));
 }
 
 // the names nameInside takes come from the contract the markup was drawn from: on --second the first reading, so a
@@ -1618,5 +1622,14 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
   const back = { anatomy: { root: { kind: 'container' } }, variants: [{ when: { tone: 'error', big: true }, set: { 'st.kind': 'instance', 'st.foreign': false, 'st.foreignKey': null, 'st.component': 'Tag' } }, { when: { tone: 'none' }, set: { 'st.foreign': null } }] };
   foreignAsInstance(back);
   ok('…a foreign that is no name is dropped: the held component stays, never false or null', JSON.stringify(back.variants[0].set) === '{"st.kind":"instance","st.component":"Tag","st.key":null}' && JSON.stringify(back.variants[1].set) === '{}', JSON.stringify(back.variants.map((v) => v.set)));
+}
+{ // a glyph that scales both ways inside another library's instance the markup drew open keeps its point, as derive keeps
+  // it there (ownInsides: a part of an instance it draws open keeps its place); inside a held one it keeps none (2026-11-27)
+  const c = () => ({ component: 'C', props: { size: { type: 'enum', values: ['sm', 'lg'], default: 'sm' } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Check' }, 'i/v': { kind: 'graphic', parent: 'i', absolute: { x: 2.5, y: 2.5 }, constraints: { horizontal: 'scale', vertical: 'scale' } }, 'i/b': { kind: 'container', parent: 'i', absolute: { x: 1, y: 1 } } }, variants: [{ when: { size: 'lg' }, set: { 'i/v.absolute': { x: 3.13, y: 3.13 }, 'i/b.absolute': { x: 2, y: 2 } } }] });
+  const O = asFigma(c(), { foreign: new Set(['i']) }).contract, H = asFigma(c()).contract, open = O.anatomy, held = H.anatomy;
+  ok('a glyph scaling both ways inside an instance drawn open keeps its point; inside a held one, and a part in flow, none',
+    JSON.stringify(open['i/v'].absolute) === '{"x":2.5,"y":2.5}' && open['i/v'].constraints && !held['i/v'].absolute && held['i/v'].constraints && !open['i/b'].absolute, JSON.stringify([open['i/v'], held['i/v']]));
+  // (and the point a variant sets it at, the icon drawn larger there: the status icon at 20px read 1 for 1.25)
+  ok('…and the point a variant sets it at, likewise', JSON.stringify(O.variants[0].set) === '{"i/v.absolute":{"x":3.13,"y":3.13}}' && JSON.stringify(H.variants[0].set) === '{}', JSON.stringify([O.variants[0].set, H.variants[0].set]));
 }
 console.log(`${n}/${n} passed`);

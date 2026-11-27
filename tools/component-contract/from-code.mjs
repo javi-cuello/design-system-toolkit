@@ -295,12 +295,14 @@ export function nameInside(inside, id, markup, names) {
 /* Whether a layer of a reading sits inside a placed component's insides: an instance among its ancestors. An outline
    there is that layer's own stroke (a spinner's ellipse), never the focus ring a focused render draws on this
    component's own boxes; so is one on a placed component drawn as an icon mark (`marks`), whose box to-code styles
-   as the instance's own. Tested by test-from-code.mjs. */
+   as the instance's own, and on one drawn open (another library's, the walk's `foreign`), read back as that instance,
+   whose insides are inside it. Tested by test-from-code.mjs. */
 export function insidePlaced(raw, id, marks = new Set()) {
   // (a placed component drawn as an icon mark is its own box: its outline its own stroke, as to-code writes it there)
   if (marks.has(id)) return true;
-  const by = new Map(raw.map((e) => [e.id, e]));
-  for (let up = by.get((by.get(id) || {}).parent); up; up = by.get(up.parent)) if (up.kind === 'instance') return true;
+  const by = new Map(raw.map((e) => [e.id, e])), placed = (e) => e.kind === 'instance' || typeof e.foreign === 'string';
+  if (placed(by.get(id) || {}) && (by.get(id) || {}).kind !== 'instance') return true;
+  for (let up = by.get((by.get(id) || {}).parent); up; up = by.get(up.parent)) if (placed(up)) return true;
   return false;
 }
 
@@ -1443,8 +1445,9 @@ export function delta(base, other, def = base) {
    - a swap that can show nothing is a boolean that shows the element and,
      beside it, the swap (figma-standard rule 5);
    - props first, then the axes in the order the house settings give (axisOrder, figma-standard rule 1).
-   `renamed` lists every change, so a reader can see what the code said. */
-export function asFigma(contract, { axisOrder = [] } = {}) {
+   `renamed` lists every change, so a reader can see what the code said. `foreign`: the instances foreignAsInstance gave
+   back (another library's, drawn open), whose glyph scaling both ways keeps its point, as derive keeps it there. */
+export function asFigma(contract, { axisOrder = [], foreign = new Set() } = {}) {
   const renamed = [];
   const props = {}, valueMap = {}, joined = [];
   const tokensOf = (anatomy) => Object.values(anatomy).flatMap((e) => [e.background, e.color].filter((t) => typeof t === 'string' && t.includes('/')));
@@ -1525,12 +1528,15 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
   // a layer inside a placed component keeps no constraints, as derive keeps none in the design's
   // (figma-fact: no-nested-position-override); one placed absolutely, or a glyph's scale both ways, keeps them
   const all = { ...contract.anatomy, ...Object.assign({}, ...variants.map((v) => v.add || {})) };
-  const inside = (id) => { for (let up = (all[id] || {}).parent; up; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') return true; return false; };
+  const nearest = (id) => { for (let up = (all[id] || {}).parent; up; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') return up; return null; };
+  const inside = (id) => !!nearest(id);
   // (nor a place in its frame: the component's too; one placed absolutely in an auto layout, position absolute, keeps it)
   const framed = (e) => e.position !== 'absolute';
   const loose = (e) => (framed(e) || !e.absolute) && !(e.constraints && e.constraints.horizontal === 'scale' && e.constraints.vertical === 'scale');
   // (nor a slot's binding: the placed component's own prop, which derive states only on its own slots)
-  const one = (id, e) => { if (!inside(id)) return e; const { absolute, constraints, ...rest } = e; if (rest.kind === 'slot') delete rest.content; return { ...rest, ...(absolute && !framed(e) && { absolute }), ...(constraints && !loose(e) && { constraints }) }; };
+  // (inside another library's instance drawn open, a glyph scaling both ways keeps its point too: derive's ownInsides)
+  const scales = (e) => !!e.constraints && e.constraints.horizontal === 'scale' && e.constraints.vertical === 'scale';
+  const one = (id, e) => { if (!inside(id)) return e; const { absolute, constraints, ...rest } = e; if (rest.kind === 'slot') delete rest.content; return { ...rest, ...(absolute && (!framed(e) || (scales(e) && foreign.has(nearest(id)))) && { absolute }), ...(constraints && !loose(e) && { constraints }) }; };
   const strip = (anatomy) => Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, one(id, e)]));
   // (a variant's own: what it sets of the element, its parent, position and place, over the element as drawn where the
   // variant holds: the base's, else the adds of the variants in force there, never another variant's add of it, which
@@ -1556,8 +1562,8 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
     return maybe.length ? Object.assign({}, ...maybe.map((u) => u.add[id])) : null;
   };
   const asIn = (v, id) => { const e = { ...(drawnAt(v, id) || {}), ...((v.add || {})[id] || {}) }; for (const f of ['parent', 'position', 'absolute', 'constraints']) if (`${id}.${f}` in (v.set || {})) e[f] = v.set[`${id}.${f}`]; return e; };
-  const insideIn = (v, id) => { for (let up = asIn(v, id).parent; up; up = asIn(v, up).parent) if (asIn(v, up).kind === 'instance') return true; return false; };
-  const gone = (v, k) => { const m = /^(.+)\.(constraints|absolute|content)(\.|$)/.exec(k); if (!m || !insideIn(v, m[1])) return false; const e = asIn(v, m[1]); return m[2] === 'content' ? e.kind === 'slot' : m[2] === 'absolute' ? framed(e) : loose(e); };
+  const nearestIn = (v, id) => { for (let up = asIn(v, id).parent; up; up = asIn(v, up).parent) if (asIn(v, up).kind === 'instance') return up; return null; };
+  const gone = (v, k) => { const m = /^(.+)\.(constraints|absolute|content)(\.|$)/.exec(k), near = m && nearestIn(v, m[1]); if (!near) return false; const e = asIn(v, m[1]); return m[2] === 'content' ? e.kind === 'slot' : m[2] === 'absolute' ? framed(e) && !(scales(e) && foreign.has(near)) : loose(e); };
   const kept = variants.map((v) => ({ ...v, ...(v.add && { add: strip(v.add) }), ...(v.set && { set: Object.fromEntries(Object.entries(v.set).filter(([k]) => !gone(v, k))) }) }));
   return { contract: { ...contract, anatomy: strip(contract.anatomy), props: ordered, variants: kept }, renamed };
 }
@@ -3461,7 +3467,7 @@ async function main() {
 
     // another library's instance the markup drew open, read back as that instance: its component, key and props as the
     // markup says them
-    foreignAsInstance(fromCode);
+    const foreignIds = foreignAsInstance(fromCode);
     // where a governed mapping gives the design's layers: a slot the code fills with words where the design draws
     // a text is the design's text prop, under its name and with its sample (a slot has no default of its own);
     // an enum with the design's values lists them in the design's order, its own default kept
@@ -3846,7 +3852,7 @@ async function main() {
     for (const e of [...Object.values(fromCode.anatomy), ...fromCode.variants.flatMap((v) => Object.values(v.add || {}))]) if (e) delete e.overlap;
     for (const v of fromCode.variants) for (const k of Object.keys(v.set || {})) if (k.endsWith('.overlap')) delete v.set[k];
     // in the house's Figma conventions; its props against Figma's as the code audit judges them (one comparison, compareProps)
-    const shaped = asFigma(fromCode, { axisOrder: (L.lib.tokens && L.lib.tokens.axisOrder) || [] });
+    const shaped = asFigma(fromCode, { axisOrder: (L.lib.tokens && L.lib.tokens.axisOrder) || [], foreign: foreignIds });
     // a prop the design has under no key or name is the code's alone (the contract editor's "Exists in: Code only"):
     // the drawing leaves it out, as Figma has no such property
     // only where the code follows the design (governed): a compared library's props are joined by rule, under the
