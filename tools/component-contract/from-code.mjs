@@ -48,7 +48,7 @@ import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses, isDrawing } from './to-code.mjs';
 import { swapKeysOf } from './to-markup.mjs';
 import { inWordsOf } from './to-figma.mjs';
-import { sameAsRead, layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, stackedFirst, childOrder, liftsAlone, autoResizeOf, growsDown, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
+import { sameAsRead, layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, stackedFirst, childOrder, liftsAlone, autoResizeOf, growsDown, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, glyphOnly, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -1155,8 +1155,7 @@ export function designKeyOf(design, fe, name) {
    makes here: eval.mjs leaves those insides to code (inForeign), so its colour sets nothing, but for its lone glyph straight
    under it, whose colour roundTrip compares as the instance's (to-figma glyph). Where the library holds the
    component, the snapshot keeps only what differs from it inside, so a colour there is the design's. */
-// (a glyph's own words, as to-figma's glyph() moves its colour up only when it says nothing else: rules.mjs GLYPH_WORDS)
-const PLACE = GLYPH_WORDS;
+// (a glyph's own words, as to-figma's glyph() moves its colour up only when it says nothing else: layers.mjs glyphOnly)
 /* A placed instance a variant swaps for a component the library does not hold (a status icon set of its own at the error
    state): to-markup marks that component where the variant holds, and the reading reads the mark as a graphic naming its
    asset. Read back as the swap it is: that variant's component (the design's spelling, its key), the graphic's own fields
@@ -1181,7 +1180,7 @@ export function swappedMark(fromCode, design) {
 export function designSetsColour(design, id, mainOf = () => null) {
   const all = Object.assign({}, ...[...(design.variants || [])].reverse().map((v) => v.add || {}), design.anatomy || {});
   const foreign = (el) => (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key);
-  const loneGlyph = (at, k) => { const inside = Object.keys(all).filter((x) => x.startsWith(`${at}/`)); return inside.length === 1 && inside[0] === k && (all[k] || {}).kind === 'graphic' && Object.keys(all[k]).every((f) => PLACE.has(f)); };
+  const loneGlyph = (at, k) => { const inside = Object.keys(all).filter((x) => x.startsWith(`${at}/`)); return inside.length === 1 && inside[0] === k && glyphOnly(all[k]); };
   // (k is id or under it; it counts unless an instance from id down to its parent is a foreign one)
   const counts = (k) => {
     if (k !== id && !k.startsWith(`${id}/`)) return false;

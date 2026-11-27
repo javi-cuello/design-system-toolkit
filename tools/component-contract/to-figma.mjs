@@ -39,7 +39,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
-import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, bareGlyph, looksLikeValue, CLEARED, negative, sameAsRead } from './rules.mjs';
+import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, bareGlyph, GLYPH_BOX, looksLikeValue, CLEARED, negative, sameAsRead } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 import { turnedParts } from './to-code.mjs';
 import { geometry } from './geometry.mjs';
@@ -121,14 +121,18 @@ function glyph(x, mains = null) {
     if (!e || e.kind !== 'instance') continue;
     const inside = Object.keys(x).filter((k) => k.startsWith(`${id}/`));
     const kid = inside.length === 1 && x[inside[0]].parent === id ? x[inside[0]] : null;
-    // only a colour (and its opacity) moves up: a glyph that also overrides its size, or an instance with a colour of its own, is compared as it is (rules.mjs heldGlyph)
+    // only a colour (and its opacity) moves up: a glyph that also overrides another field than its scaled box, or an instance with a colour of its own, is compared as it is (rules.mjs heldGlyph)
     // (one painted with nothing in an icon the library does not hold goes, said as its instance's no colour: rules.mjs
     // bareGlyph)
     if (bareGlyph(x, id, mains)) { delete out[inside[0]]; continue; }
     if (!heldGlyph(e, kid, !!kid)) continue;
     const opacity = heldOpacity(e, kid);
     out[id] = { ...e, background: kid.background, ...(kid.fillStyle && { fillStyle: kid.fillStyle }), ...(opacity !== undefined && { opacity }) };
-    delete out[inside[0]];
+    // (its box, where it scales with the icon (layers.mjs glyphOnly), stays the glyph's, compared as it is: the icon
+    // drawn open draws it at its share)
+    const box = Object.fromEntries(Object.entries(kid).filter(([k]) => GLYPH_BOX.has(k)));
+    if (Object.keys(box).length) out[inside[0]] = { kind: kid.kind, parent: kid.parent, ...(kid.name !== undefined && { name: kid.name }), ...(kid.order !== undefined && { order: kid.order }), ...box };
+    else delete out[inside[0]];
   }
   return out;
 }

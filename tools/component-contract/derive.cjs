@@ -830,7 +830,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     const m = mains(e.component, e.key);
     // (a component the library does not hold: its layers are drawn open, as this component's own (layers.mjs
     // openForeign), so each keeps the place it has in its frame (PLACE_ASIDE), a glyph's point beside its scale, which
-    // a share of its frame then says; all but an icon's one glyph, which ownGlyph folds into the icon)
+    // a share of its frame then says)
     if (!m) {
       ownGlyph(anatomy, id);
       const asideOf = PLACE_ASIDE.get(anatomy), near = (k) => { for (let up = (anatomy[k] || {}).parent; up; up = (anatomy[up] || {}).parent) if ((anatomy[up] || {}).kind === 'instance') return up; return null; };
@@ -1058,17 +1058,14 @@ function placedMatch(M, inner) {
 }
 
 /* An instance of a component this library does not hold (an icon from its own set) that draws one graphic, scaled to
-   the instance on both axes: that graphic's size is its component's drawing, not an override the instance states, so
-   only what the instance overrides there (its colour) is kept. The drawing places the component by reference, and
-   code draws the glyph at the instance's size: neither says the graphic's own box. The limit: the snapshot holds no
-   drawing of such an icon to hold the box to, so a size a designer did override on that graphic goes too. */
+   the instance on both axes: its frame clipping that graphic is the icon's own (a glyph code draws is cut to its own
+   box). The graphic keeps its box, its scale and its point in the icon (ownInsides gives the point back), as the
+   snapshot records them: the icon is drawn open (layers.mjs openForeign), the glyph a box at its share of the icon
+   (2026-11-27, review: its size was once dropped as the icon's drawing, which left nothing to draw it by). */
 function ownGlyph(anatomy, id) {
   const inner = Object.keys(anatomy).filter((k) => k.startsWith(id + '/'));
   const g = inner.length === 1 && anatomy[inner[0]];
   if (!g || g.kind !== 'graphic' || g.parent !== id || !g.constraints || g.constraints.horizontal !== 'scale' || g.constraints.vertical !== 'scale') return;
-  const { width, height, constraints, ...rest } = g;
-  anatomy[inner[0]] = rest;
-  // and the icon's frame clipping its glyph is the icon's own too: a glyph code draws is cut to its own box (an svg's)
   if (anatomy[id].overflow === 'hidden') delete anatomy[id].overflow;
 }
 

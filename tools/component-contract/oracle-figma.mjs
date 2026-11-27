@@ -962,7 +962,8 @@ export function compareContract(component, setNode, contract, ctx) {
     // a glyph folded into its icon (derive's ownGlyph): where an instance whose main holds no contract draws one layer,
     // a graphic scaled both ways, and the contract names that one part inside it, the glyph's size, place and
     // constraints are the icon's drawing fitted to its box, and the icon's clipping its own, said by no host: skipped,
-    // named, never a row (a field the contract states is still compared, and a glyph it does not name stays a row)
+    // named, never a row (a field the contract states is still compared, and a glyph it does not name stays a row; since
+    // 2026-11-27 derive keeps the glyph's box, so only the icon's clipping is left to skip)
     const glyphInside = (instId) => { const inner = Object.keys(flat).filter((k) => k.startsWith(`${instId}/`)); return inner.length === 1 && flat[inner[0]].parent === instId && flat[inner[0]].kind === 'graphic' ? inner[0] : null; };
     const folded = (instId, glyph) => {
       const icon = found.get(instId), g = found.get(glyph);

@@ -18,7 +18,7 @@
  */
 import { splitTop, parseGradient, COLOUR, WEIGHTS, figmaWeight, weightName } from '../parity/values.mjs';
 import { stopPositions } from '../parity/schema.mjs';
-import { GLYPH_WORDS } from './layers.mjs';
+import { GLYPH_WORDS, GLYPH_BOX, glyphOnly } from './layers.mjs';
 
 /* Cleared: an instance that clears its component's colour style, stroke, fill or shadow (fillStyle, border, background, shadow) says
    `none` (derive's cleared), as does a layer inside an opened instance that draws no fill where its component's layer
@@ -95,9 +95,9 @@ export const sizeToFigma = (w) => (SIZE_ROWS.find((r) => r[0] === w) || [])[1];
    saying nothing but where it is, its colour and its opacity, inside an instance with no colour of its own (`lone`: it
    is the instance's only layer). to-code writes such a glyph's colour and opacity on the instance; to-figma's comparison
    folds it there, with the colour style it is painted with (a Figma name for that colour, which code does not say). */
-// (layers.mjs holds it: openForeign leaves such an icon a mark)
-export { GLYPH_WORDS };
-export const heldGlyph = (holder, glyph, lone) => !!lone && !!holder && !!glyph && glyph.kind === 'graphic' && glyph.background != null && holder.background == null && Object.keys(glyph).every((k) => GLYPH_WORDS.has(k));
+// (layers.mjs holds them: glyphOnly, the box of a glyph scaled with its icon said beside its colour)
+export { GLYPH_WORDS, GLYPH_BOX, glyphOnly };
+export const heldGlyph = (holder, glyph, lone) => !!lone && !!holder && !!glyph && glyph.kind === 'graphic' && glyph.background != null && holder.background == null && glyphOnly(glyph);
 /* The same glyph painted with nothing (its fills emptied: a glyph kept hidden behind its swap's other layer), the one
    rule to-code and to-figma's comparison share: instance `hid` of anatomy `a`, of a component the library does not hold
    (`mains`, none given: none held) and placed inside no other instance, whose one layer is such a glyph, saying nothing
@@ -108,7 +108,7 @@ export const bareGlyph = (a, hid, mains = null) => {
   if (!holder || holder.kind !== 'instance' || holder.background != null || (mains && mains(holder.component, holder.key))) return false;
   for (let p = holder.parent; p; p = (a[p] || {}).parent) if ((a[p] || {}).kind === 'instance') return false;
   const inside = Object.keys(a).filter((k) => k.startsWith(`${hid}/`)), glyph = inside.length === 1 && a[inside[0]].parent === hid ? a[inside[0]] : null;
-  return !!glyph && glyph.kind === 'graphic' && glyph.background == null && glyph.fillStyle == null && Object.keys(glyph).every((k) => GLYPH_WORDS.has(k));
+  return !!glyph && glyph.background == null && glyph.fillStyle == null && glyphOnly(glyph);
 };
 /* Its opacity on the instance: one layer in a group shows at the group's opacity times its own, so the instance's times
    the glyph's, to the three places a reading keeps (from-code: 0.38 by 0.38 is 0.144); the glyph's own where the

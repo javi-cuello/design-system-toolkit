@@ -828,7 +828,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
 }
 
 {
-  // an icon from a set the library does not hold: its scaled graphic's box is the icon's drawing, its colour the override
+  // an icon from a set the library does not hold: its frame clipping its glyph is the icon's own
   const icon = () => ({ i: { kind: 'instance', component: 'Icon/house', width: 20, height: 20 }, 'i/v': { kind: 'graphic', parent: 'i', width: 16.67, height: 17.5, constraints: { horizontal: 'scale', vertical: 'scale' }, background: 'C/icon' } });
   const a = icon(); ownGlyph(a, 'i');
   const clipped = icon(); clipped.i.overflow = 'hidden'; ownGlyph(clipped, 'i');
@@ -836,7 +836,9 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const fixed = icon(); fixed['i/v'].constraints = { horizontal: 'min', vertical: 'min' }; ownGlyph(fixed, 'i');
   { const wrap = derive({ name: 'Wrap', props: {}, variants: [{ name: 'Wrap', type: 'COMPONENT', layout: 'HORIZONTAL', children: [
       { name: 'I', type: 'INSTANCE', instanceOf: 'Icon/house', w: 20, h: 20, sizing: 'FIXED/FIXED', children: [{ name: 'V', type: 'VECTOR', x: 2, y: 1, w: 16.67, h: 17.5, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/icon'] }] }] }] }, [], { mains: () => null }).anatomy;
-    ok('through derive, an outside icon\'s scaled glyph keeps its scale until ownGlyph folds it: no box of its own left', !!wrap['i/v'] && (wrap['i/v'].width === undefined && wrap['i/v'].constraints === undefined)); }
+    // (2026-11-27, review: the snapshot records the glyph's box, and the icon is drawn open, layers.mjs openForeign: its
+    // box, its scale and its point in the icon are said, a share of the icon)
+    ok('through derive, an outside icon\'s scaled glyph keeps its box, its scale and its point in the icon', !!wrap['i/v'] && wrap['i/v'].width === 16.67 && wrap['i/v'].height === 17.5 && wrap['i/v'].constraints.horizontal === 'scale' && JSON.stringify(wrap['i/v'].absolute) === '{"x":2,"y":1}'); }
   { // a scale both ways inside an instance (one library's card state layer, another's spinner): its component's where its part
     // there is constrained alike, left out; one its component constrains otherwise, or with no component to hold it to, kept
     const layer = (c) => ({ name: 'Layer', type: 'FRAME', x: 0, y: 0, w: 360, h: 80, sizing: 'FIXED/FIXED', layout: 'VERTICAL', constraints: c, fills: ['C/layer'] });
@@ -891,8 +893,8 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const swapBy = { Button: { component: 'Button', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['i'] } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/check' }, 'i/v': { kind: 'graphic', parent: 'i', background: 'Text/strong' } }, variants: [] }, 'Icon/alert': iconC('Icon/alert', 'Status/danger'), 'Icon/check': iconC('Icon/check', 'Text/strong') };
   const toAlert = (bg) => { const x = { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Button', with: { Icon: 'alert' } }, 'b/i': { kind: 'instance', parent: 'b', component: 'Icon/alert' }, 'b/i/v': { kind: 'graphic', parent: 'b/i', background: bg } }; ownInsides(x, (n) => swapBy[n] || null); return Object.keys(x).length; };
   ok('a swapped icon\'s colour equal to the default icon\'s but not its own is an override, kept; its own colour goes', toAlert('Text/strong') === 4 && toAlert('Status/danger') === 2);
-  ok('a glyph scaled to its icon keeps only its colour; one placed by fixed constraints keeps its box',
-    JSON.stringify(a['i/v']) === '{"kind":"graphic","parent":"i","background":"C/icon"}' && fixed['i/v'].width === 16.67);
+  ok('a glyph scaled to its icon keeps its box and scale (the icon is drawn open); one placed by fixed constraints keeps its box too',
+    a['i/v'].width === 16.67 && a['i/v'].constraints.horizontal === 'scale' && a['i/v'].background === 'C/icon' && fixed['i/v'].width === 16.67);
 }
 
 {

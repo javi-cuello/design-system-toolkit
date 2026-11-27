@@ -592,6 +592,12 @@ delete globalThis.figma;
       roundTrip(figma(), code('Icon/strong')).rows.length === 0 && roundTrip(figma(), code('Icon/soft')).rows.length === 1);
     ok('a glyph that overrides more than its colour (its size) is compared as it is, never folded away',
       roundTrip(figma({ width: 16.67 }), figma({ width: 20 })).rows.length === 1 && roundTrip(figma({ width: 16.67 }), code('Icon/strong')).rows.length > 0);
+    // (2026-11-27, review: a glyph scaled with its icon both ways keeps its box, derive's ownGlyph, the icon drawn open:
+    // its colour still folds into the icon, its box stays the glyph's, compared as it is)
+    const sc = (x) => figma({ width: 14, height: 14, absolute: { x: 1, y: x }, constraints: { horizontal: 'scale', vertical: 'scale' } });
+    const scRows = (a, b) => roundTrip(sc(a), sc(b)).rows;
+    ok('a glyph scaled with its icon folds its colour into the icon, its box kept and compared as the glyph\'s',
+      scRows(1, 1).length === 0 && scRows(1, 2).length === 1 && /absolute/.test(JSON.stringify(scRows(1, 2)[0])) && roundTrip(sc(1), { ...sc(1), anatomy: { ...sc(1).anatomy, 'icon/vector': { ...sc(1).anatomy['icon/vector'], background: 'Icon/soft' } } }).rows.some((r) => /^icon\.background/.test(r.at || r.path || JSON.stringify(r))));
     // a lone glyph's opacity shows at the instance's times its own (a library's disabled chip: 0.38 on the glyph, and on
     // the instance too where it is elevated), as code says it on the instance it colours
     const held = (e, g) => ic({ icon: { kind: 'instance', parent: 'root', component: 'Icon/house', ...e }, ...(g && { 'icon/vector': { kind: 'graphic', parent: 'icon', background: 'Icon/strong', ...g } }) });

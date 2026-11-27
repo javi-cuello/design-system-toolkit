@@ -114,15 +114,19 @@ export function placedOf(library, e) {
   const named = library[e.component];
   return named && keyMatches(named.figma && named.figma.key, e.key) ? named : null;
 }
-/* The fields a glyph says nothing but its colour and place by (an icon's one vector): rules.mjs heldGlyph, to-figma glyph.
+/* The fields a glyph says nothing but its colour by (an icon's one vector): rules.mjs heldGlyph, to-figma glyph.
    Held here, as this module imports nothing (the contract editor's page loads it alone); rules.mjs re-exports it. */
 export const GLYPH_WORDS = new Set(['kind', 'parent', 'name', 'order', 'background', 'fillStyle', 'opacity']);
+/* A glyph that says nothing but its colour and place: GLYPH_WORDS, and its box (its size, its scale, its point) where it
+   scales with its icon both ways, as derive keeps it (ownGlyph) for the icon drawn open to say as a share. The one test
+   rules.mjs heldGlyph and bareGlyph, to-figma's glyph fold and from-code's designSetsColour share. */
+export const GLYPH_BOX = new Set(['width', 'height', 'constraints', 'absolute']);
+export const glyphOnly = (g) => !!g && g.kind === 'graphic' && Object.keys(g).every((k) => GLYPH_WORDS.has(k) || (GLYPH_BOX.has(k) && !!g.constraints && g.constraints.horizontal === 'scale' && g.constraints.vertical === 'scale'));
 /* The instances of a component the library does not hold (another library's) whose insides the contract records,
    opened: each a frame of this component's own, its layers drawn as this component's, as a detached instance is
    (to-markup's detach), its kind a container marked `foreign` and its component, key and props kept on it, for the
    markup to say (data-component, data-with) and the reading to give back. Not one a prop swaps or fills (what the
-   caller passes draws there), one a variant detaches or swaps for a component the library holds, an icon whose one
-   glyph says only its colour (a mark: rules.mjs heldGlyph), nor one inside an
+   caller passes draws there), one a variant detaches or swaps for a component the library holds, nor one inside an
    instance left closed (a held component's insides are its own sheet's). The contract itself where none is opened,
    else a copy, one per contract and library (to-code's caches are keyed by the contract); `foreignOpened`, the ids
    opened. The one rule for to-markup, to-code and eval. Tested by test-to-markup.mjs. */
@@ -147,13 +151,6 @@ function opening(c, library) {
     const es = [anatomy[id], ...vs.map((v) => (v.add || {})[id])].filter(Boolean);
     if (!es.length || es.some((e) => e.kind !== 'instance' || held(e)) || driven.has(id)) continue;
     if (!Object.values(all).some((e) => e && e.parent === id)) continue;
-    // (an icon whose one glyph says only its colour: derive's ownGlyph folded the glyph's size and scale into the icon,
-    // so no box is left to draw; drawn open it is a box of no size, whose colour no longer folds into the icon as the
-    // design's does (rules.mjs heldGlyph): a mark, its colour said on the instance. Measured 2026-11-27: opened, three
-    // components that came back the same no longer did)
-    const under = Object.keys(all).filter((k) => k.startsWith(`${id}/`));
-    if (under.length === 1 && [anatomy[under[0]], ...vs.map((v) => (v.add || {})[under[0]])].filter(Boolean).every((e) => e.kind === 'graphic' && Object.keys(e).every((k) => GLYPH_WORDS.has(k)))
-      && vs.every((v) => Object.keys(v.set || {}).every((k) => !k.startsWith(`${under[0]}.`) || GLYPH_WORDS.has(k.slice(under[0].length + 1))))) continue;
     if (vs.some((v) => { const s = v.set || {}; return `${id}.kind` in s || (typeof s[`${id}.component`] === 'string' && held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null })); })) continue;
     let closed = false;
     for (let up = all[id].parent; up && up !== 'root' && !closed; up = (all[up] || {}).parent) closed = (all[up] || {}).kind === 'instance' && !opened.has(up);
