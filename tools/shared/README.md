@@ -18,6 +18,7 @@ node tools/shared/worktree.mjs <work> --join                       # join a work
 node tools/shared/model-routing.mjs                                # print the model routes
 node tools/shared/kb-quotes.mjs <page.md> [--from <ref>]           # check a knowledge page's quotes against their sources
 node tools/shared/kb-quotes.mjs <page.md> --no-render              # the same, raw pages only, no headless Chrome
+node tools/shared/kb-quotes.mjs <page.md> --fresh                  # fetch again instead of using the week-old cache
 ```
 
 `bin/land` runs `land.mjs`. The [bin README](../../bin/README.md) documents the `bin/` commands.
