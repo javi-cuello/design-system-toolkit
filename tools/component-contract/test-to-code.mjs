@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn, paintsAny, partsOf, childrenOf, markupOrder } from './to-code.mjs';
+import { toCss, rulesOf, rulesAt, combinations, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn, paintsAny, partsOf, childrenOf, markupOrder } from './to-code.mjs';
 import { declarations } from './css.mjs';
 import { toElement } from './to-markup.mjs';
 import { ELEMENT } from './site.mjs';
@@ -417,6 +417,32 @@ const undim = toCss({ ...chip, variants: [...chip.variants, { when: { selected: 
 ok('a disabled rule that undoes the dim sets the knob back to initial', /> \* \{ --ds-dim: initial; \}/.test(undim));
 ok('a stroke with no paint draws nothing', !('box-shadow' in decl({ border: { width: 'Stroke/1' } })) && !('border' in decl({ border: { width: 1, inLayout: true } })));
 
+// many axes, a pointer state, a pair, a combination's own and a combination left out: the rules that hold, found by the
+// index, are those a one-by-one scan finds, in order; and the check that checks each case once (selfCheck) finds what
+// checking every combination on its own finds, a seeded wrong value at every combination it reaches
+{ const many = { contract: 1, component: 'Many',
+    props: { a: { type: 'boolean', default: false, axis: true }, b: { type: 'boolean', default: false, axis: true }, d: { type: 'boolean', default: true, axis: true },
+      size: { type: 'enum', values: ['md', 'sm', 'lg'], default: 'md' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 'S/4' }, background: 'C/rest' }, icon: { kind: 'container', parent: 'root', order: 0, width: 16, height: 16, background: 'C/icon' },
+      label: { kind: 'text', parent: 'root', order: 1, typography: 'Label/md', color: 'T/base' } },
+    variants: [{ when: { a: true }, remove: ['icon'] }, { when: { b: true }, set: { 'icon.background': 'C/b' } }, { when: { d: false }, set: { 'label.color': 'T/off' } },
+      { when: { size: 'sm' }, set: { 'label.typography': 'Label/sm' } }, { when: { size: 'lg' }, set: { 'label.typography': 'Label/lg' } }, { when: { state: 'hover' }, set: { 'root.background': 'C/hover' } },
+      { when: { b: true, state: 'hover' }, set: { 'icon.background': 'C/b-hover' } },
+      { combination: true, when: { a: false, b: true, d: true, size: 'lg', state: 'hover' }, set: { 'root.background': 'C/lg-hover' } }],
+    invalid: [{ d: false, state: 'hover' }] };
+  const { rules } = rulesOf(many), dflt = { a: false, b: false, d: true, size: 'md', state: 'rest' };
+  const scan = (full) => rules.filter((r) => Object.entries(r.when).every(([k, v]) => full[k] === v));
+  ok('the rules that hold at a combination, found by the index, are those a one-by-one scan finds, in order',
+    combinations(many).every((m) => { const full = { ...dflt, ...m }; const x = rulesAt(rules, full), y = scan(full); return x.length === y.length && x.every((r, i) => r === y[i]); }) && rules.length > 5);
+  const k = rules.findIndex((r) => Object.keys(r.when).length === 1 && r.parts.label);
+  // (and a rule of a prop whose layer changes nothing drawn where the icon is gone: the same anatomy, other rules)
+  const seeded = [...rules.map((r, i) => (i === k ? { ...r, parts: { ...r.parts, label: new Map([...r.parts.label].map(([p, d]) => [p, { ...d, v: 'var(--wrong)' }])) } } : r)),
+    { when: { b: true }, weight: 1, parts: { label: new Map([['letter-spacing', { v: '1px' }]]) } }];
+  const said = (list) => new Set(list.map((o) => JSON.stringify([o.when, o.part, o.property, o.want, o.got])));
+  const once = said(selfCheck(many, seeded)), each = said(selfCheck(many, seeded, undefined, HOUSE, null, { each: true }));
+  ok('the check that checks each case once finds what checking every combination on its own finds: a seeded wrong value, wherever it reaches',
+    selfCheck(many, rules).length === 0 && each.size > 1 && once.size === each.size && [...each].every((x) => once.has(x)) && [...each].some((x) => x.includes('letter-spacing') && x.includes('"a":true'))); }
+
 // every contract stored on this machine: each stylesheet rebuilds every variant its contract draws (skipped with none)
 const require = createRequire(import.meta.url);
 // No catch: a contract that crashes the rebuild is a failure, never "not read" and then a skip (review, 2026-10-31).
@@ -436,6 +462,17 @@ for (const { name: label } of projects.projects().list) {
 }
 if (stored) ok(`every stored contract's stylesheet rebuilds every variant it draws (${stored} contracts)`, off === 0);
 else console.log('skip: no stored contracts on this machine');
+
+// a part inside a placed component a pointer state and a selection put in (a row's cell padding at hover and selected):
+// at rest the component draws it in its own values, so the sheet never hides it there; nor is a hide flagged as a display
+// the combination lacks where it is hidden (a glyph in it)
+{ const pad = { kind: 'container', layout: { direction: 'column', gap: 0, padding: { top: 16, end: 16, bottom: 16, start: 16 } } };
+  const cell = { contract: 1, component: 'Cell', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, pad: { ...pad, parent: 'root' }, 'pad/label': { kind: 'text', parent: 'pad', content: 'x', color: 'T/base' } }, variants: [] };
+  const inside = { 'col/pad': { ...pad, parent: 'col' }, 'col/pad/icon': { kind: 'instance', parent: 'col/pad', component: 'Icon', with: { '<icon>': 'Chevron' } } };
+  const row = { contract: 1, component: 'Row', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] }, selected: { type: 'boolean', default: false, axis: true } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' }, background: 'C/rest' }, col: { kind: 'instance', parent: 'root', component: 'Cell' } },
+    variants: [{ when: { state: 'hover' }, set: { 'root.background': 'C/hover' }, add: inside }, { when: { selected: true }, set: { 'root.background': 'C/on' }, add: inside }] };
+  ok('a placed component\'s own part a pointer state puts in is never hidden where the component draws it, and the cascade rebuilds the row', selfCheck(row, null, require('./derive.cjs').byComponentName([cell, row])).length === 0); }
 
 // a contract not stored yet (the contract editor's Push to code): its own stylesheet, under the folder name the store
 // would give it, in the repo's styles folder by its naming, and nothing else there touched

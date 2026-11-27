@@ -1421,6 +1421,19 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   const at = (c, w) => (asFigma(c).contract.variants.find((x) => JSON.stringify(x.when) === JSON.stringify(w)).set || {})['pick/menu.absolute'];
   ok('asFigma: a place set by another variant in force counts, and where no add holds only adds that may hold with it do',
     JSON.stringify(at(setBy, { size: 'sm', state: 'focus' })) === '{"x":0,"y":40}' && JSON.stringify(at(maybe, { state: 'focus' })) === '{"x":0,"y":48}'); }
+{ // the places of the variants in force taken by specificity, not by the list's order: the pair (placed absolutely at
+  // compact focus) over the single prop (back in flow at compact), though listed first
+  const code = { contract: 1, component: 'P', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest' }, size: { type: 'enum', values: ['md', 'sm'], default: 'md' }, off: { type: 'boolean', default: false } },
+    anatomy: { root: { kind: 'container' }, pick: { kind: 'instance', parent: 'root', component: 'Pick' }, 'pick/menu': { kind: 'container', parent: 'pick' } },
+    variants: [{ when: { state: 'focus', size: 'sm' }, set: { 'pick/menu.position': 'absolute' } }, { when: { size: 'sm' }, set: { 'pick/menu.position': null } },
+      { when: { state: 'focus', size: 'sm', off: true }, set: { 'pick/menu.absolute': { x: 0, y: 40 } } }] };
+  const v = asFigma(code).contract.variants.find((x) => x.when.off === true);
+  ok('asFigma: the places of the variants in force are taken by specificity, the pair over the single prop', JSON.stringify((v.set || {})['pick/menu.absolute']) === '{"x":0,"y":40}'); }
+{ // a glyph that is the component's own name fits every layer of it: those drawn here take it
+  const design = { anatomy: { root: { kind: 'container' }, 'f/down': { kind: 'instance', parent: 'root', component: 'Mark' } },
+    variants: [{ when: { s: 'rest' }, add: { 'f/clear': { kind: 'instance', parent: 'root', component: 'Mark' } } }] };
+  const named = [['a', 'root', null], ['b', 'f/down', null], ['b', 'f/clear', null]];
+  ok('namedAt: of several layers a glyph fits, those drawn here', namedAt(named, { 'f/clear': {} }, { b: 'Mark' }, (id) => layerNamesOf(design, id)).map((x) => x[1]).join() === 'root,f/clear'); }
 { // (and roundTrip, given such a reading against a design whose axis is `state`, raises no props row; review)
   const { roundTrip } = await import('./to-figma.mjs');
   const design = { contract: 1, component: 'L', props: { state: { type: 'enum', values: ['default', 'hover'], default: 'default', role: 'interaction', pointer: ['hover'], figma: 'state' } }, anatomy: { root: { kind: 'container' } }, variants: [] };

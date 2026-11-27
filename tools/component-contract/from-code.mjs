@@ -1424,9 +1424,12 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
   const compatible = (u, v) => Object.entries(u.when || {}).every(([k, x]) => !(k in (v.when || {})) || v.when[k] === x);
   const PLACE = ['parent', 'position', 'absolute', 'constraints'];
   const drawnAt = (v, id) => {
-    const force = variants.filter((u) => u !== v && holds(u, v));
-    // (the base's and each add in force, in order, with the place each variant in force sets over it; where neither draws
-    // it, the adds of the variants that may hold with this one, never one it rules out)
+    // (in force, by specificity as the cascade and expand apply them: fewer props first, the list's order among equals,
+    // a combination's own last)
+    const rank = (u) => (u.combination ? 1e6 : Object.keys(u.when || {}).length);
+    const force = variants.map((u, i) => [u, i]).filter(([u]) => u !== v && holds(u, v)).sort((x, y) => rank(x[0]) - rank(y[0]) || x[1] - y[1]).map(([u]) => u);
+    // (the base's and each add in force, in that order, with the place each variant in force sets over it; where neither
+    // draws it, the adds of the variants that may hold with this one, never one it rules out)
     let e = contract.anatomy[id] ? { ...contract.anatomy[id] } : null;
     for (const u of force) {
       if ((u.add || {})[id]) e = { ...(e || {}), ...u.add[id] };
@@ -2092,7 +2095,9 @@ export function namedAt(named, drawn, glyphs = {}, names = () => []) {
   const shared = (x) => named.filter((y) => y[0] === x[0]);
   const fits = (x) => glyphs[x[0]] != null && names(x[1]).map(low).includes(low(glyphs[x[0]]));
   // (of a shared element: the layers its glyph names, else the ones the design draws here)
-  const best = (x) => { const all = shared(x); if (all.length < 2) return true; const fit = all.filter(fits); const pool = fit.length ? fit : all.filter((y) => drawn && y[1] in drawn); return !pool.length || pool.includes(x); };
+  // (several fitting, as a glyph that is the component's own name fits every layer of it: those drawn here, if any)
+  const here0 = (y) => drawn && y[1] in drawn;
+  const best = (x) => { const all = shared(x); if (all.length < 2) return true; let fit = all.filter(fits); if (fit.length > 1 && fit.some(here0)) fit = fit.filter(here0); const pool = fit.length ? fit : all.filter(here0); return !pool.length || pool.includes(x); };
   const here = (x) => (drawn && x[1] in drawn ? 0 : 1);
   return named.filter(best).sort((a, b) => depth(a) - depth(b) || here(a) - here(b));
 }

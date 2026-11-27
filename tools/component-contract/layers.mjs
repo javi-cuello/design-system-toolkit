@@ -42,15 +42,17 @@ function applyTo(out, d) {
    name every axis; the editor's default one, its variant props alone). `skip`, a layer left out: what the
    others draw without it. */
 export function expand(contract, when = {}, { skip = null } = {}) {
-  // one copy, every layer applied to it in turn
-  const out = structuredClone((contract && contract.anatomy) || {});
   const full = { ...variantDefaults(contract), ...when };
   const vs = (contract && contract.variants) || [];
-  for (const v of vs) {
-    if (v.combination || v === skip) continue;
-    if (Object.entries(v.when || {}).every(([k, val]) => full[k] === val)) prune(applyTo(out, v));
-  }
-  const combo = vs.find((v) => v.combination && v !== skip && Object.entries(v.when || {}).every(([k, val]) => full[k] === val));
+  const holds = (v) => v !== skip && Object.entries(v.when || {}).every(([k, val]) => full[k] === val);
+  return drawLayers(contract, vs.filter((v) => !v.combination && holds(v)), vs.find((v) => v.combination && holds(v)));
+}
+/* The same from the layers already found to hold, in the contract's order, and the combination's own (or none): for a
+   reader that finds them by an index (to-code's selfCheck, over every combination). */
+export function drawLayers(contract, layers, combo) {
+  // one copy, every layer applied to it in turn
+  const out = structuredClone((contract && contract.anatomy) || {});
+  for (const v of layers) prune(applyTo(out, v));
   return rooted(combo ? applyTo(out, combo) : out);
 }
 
