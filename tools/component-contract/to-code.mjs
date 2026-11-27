@@ -192,6 +192,15 @@ export function partsOf(c, t = HOUSE) {
       // (a part only variants draw: each one's words, set out below)
       if (!at.base && typeof e.content === 'string') (at.texts = at.texts || []).push([when, e.content]);
     }
+    // (and a part a variant adds under one an earlier variant removed is pruned as it lands, as expand prunes after each
+    // variant: gone where both hold, unless this variant puts the parent back too, or a put-back of it holds there (a
+    // toggletip a boolean adds inside a label row Show label off took away, which a size puts back empty))
+    const meets = (a, b) => Object.entries(a).every(([k, x]) => !(k in b) || b[k] === x), within = (a, b) => Object.entries(a).every(([k, x]) => b[k] === x);
+    if (!byPointer) for (const [id, e] of Object.entries(v.add || {})) {
+      const P = e.parent && !(v.add || {})[e.parent] && parts.get(e.parent);
+      if (!P) continue;
+      for (const r of P.removes) if (meets(r, when) && !P.adds.some((a) => within(r, a) && meets(a, when))) parts.get(id).removes.push({ ...r, ...when });
+    }
     // (a part removed takes its parts with it, as expand applies a removal (layers.mjs): one met so far under a removed
     // part, and not put back by this same variant, is gone there too, so a later variant that puts back only the box (a
     // field's trigger at inline and open) does not bring back what it left out (the focus border open added))

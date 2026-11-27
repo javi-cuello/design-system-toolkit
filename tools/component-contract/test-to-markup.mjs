@@ -929,7 +929,11 @@ else {
     const deep = { ...bar, props: { ...bar.props, tip: { type: 'boolean', default: false, figma: 'Tip' } }, anatomy: { ...bar.anatomy, 'menu/box': { kind: 'container', parent: 'menu' } },
       variants: [{ when: { tip: true }, add: { 'menu/box/tip': { kind: 'container', parent: 'menu/box' } } }, ...bar.variants, { when: { sm: true, end: true }, add: { 'menu/box': { kind: 'container', parent: 'menu' } } }] };
     const deepTip = toReact(deep, 'bar', { naming: CLASS, library: { Bar: { ...deep, folder: 'bar' } } }).split('\n').find((l) => /\{.*&& \($/.test(l) && /tip/.test(l)) || '';
-    ok('a child two down, under a box put back by its own add where its parent is, is not revived there', /\{tip && !sm && \($/.test(deepTip), deepTip); }
+    ok('a child two down, under a box put back by its own add where its parent is, is not revived there', /\{tip && !sm && \($/.test(deepTip), deepTip);
+    // and a child added after its parent's removal, in variant order: pruned as it lands, so not revived by the put-back
+    const late = { ...tipBar(false), variants: [bar.variants[0], { when: { tip: true }, add: { 'menu/tip': { kind: 'container', parent: 'menu' } } }, bar.variants[1]] };
+    const lateTip = tipOf(late);
+    ok('a child added after its parent\'s removal is pruned as it lands, never revived where the parent alone is put back', /^\s*\{tip && !sm && \($/.test(lateTip), lateTip); }
   // a narrower removal stacked on the put-back still takes it away
   const bar3 = { ...bar, props: { ...bar.props, busy: { type: 'boolean', default: false, figma: 'Busy' } }, variants: [...bar.variants, { when: { sm: true, end: true, busy: true }, remove: ['menu'] }] };
   ok('a removal narrower than a put-back still takes the part away', /\(sm && end\) && !\(sm && end && busy\)/.test(toReact(bar3, 'bar', { naming: CLASS, library: { Bar: { ...bar3, folder: 'bar' } } })));

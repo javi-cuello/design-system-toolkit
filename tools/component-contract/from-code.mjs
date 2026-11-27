@@ -2681,12 +2681,13 @@ async function main() {
         // placed as the browser paints them (rules.mjs siblingOrder): the flow by CSS order before the markup's (a variant
         // that reverses its parts, to-code's `order`), ties as written; a part out of the flow where it paints, never by an order
         // (a box whose children say by z-index that the first paints on top, as to-code writes firstOnTop where they can
-        // overlap: rules.mjs stackedFirst; each child's order its place in the layout, the box's layout first on top)
+        // overlap: rules.mjs stackedFirst; each child's order the reverse of its paint, the box's layout first on top)
         const [siblingOrder, stackedFirst] = new Function(`return ${siblingOrderSrc}`)();
         for (const [pid, xs] of Object.entries(byParent)) {
           const first = stackedFirst(xs), box = first && out.find((e) => e.id === pid);
           if (box && box.layout) box.layout.firstOnTop = true;
-          const ranked = first && box && box.layout ? xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).map(([e]) => e) : siblingOrder(xs);
+          // (its order the reverse of its paint: to-code's z-index counts down from the first, a part placed absolutely among them)
+          const ranked = first && box && box.layout ? [...xs].sort((a, b) => b.stack.z - a.stack.z) : siblingOrder(xs);
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         }
         return out;
