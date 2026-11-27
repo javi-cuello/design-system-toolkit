@@ -526,17 +526,19 @@ export function measure(where, only = [], now = {}) {
     const code = read(path.join(readings, `${folder}.json`));
     if (!code || !code.asFigma) legs.browser[folder] = { skipped: 'no reading from code (from-code.mjs has not read it)' };
     // from-code fingerprints a reading from code with the contract it read against (`of`)
-    else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, ...tagsOf(code), combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    // (a project's code draws no icon open, so a closed icon's glyph goes whole there: to-figma's glyph; the self legs'
+    // markup draws open what foreignOpened lists)
+    else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true, opened: new Set() }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, ...tagsOf(code), combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma, library })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true, opened: foreignOpened(contract, library) }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma, library })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
     else {
       // held to the first reading as it stands: one taken again since the second trip went round is stale
       // only the combinations the library draws (a reading carries no invalid list of its own)
-      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract, whens: true }), t = (taken.second || {})[folder];
+      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract, whens: true, opened: foreignOpened(contract, library) }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
       legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false, read: again.asFigma, library })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };

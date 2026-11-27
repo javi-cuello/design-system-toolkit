@@ -113,8 +113,10 @@ function pinned(x, other, design) {
 /* An icon's colour, said two ways: Figma colours the one glyph inside an instance (Icon/house's vector), code colours
    the instance (an svg filled with currentColor). Compared as the instance's: the glyph's colour moves up to an
    instance that has none, and the glyph, whose shape is its component's, goes. Only where the instance holds that one
-   graphic and nothing else. Its opacity goes up with it, times the instance's own (rules.mjs heldOpacity). */
-function glyph(x, mains = null) {
+   graphic and nothing else. Its opacity goes up with it, times the instance's own (rules.mjs heldOpacity). `opened`:
+   the icons drawn open (layers.mjs foreignOpened), where the glyph's box stays; elsewhere the glyph goes whole, its
+   component's (null: every icon keeps it). */
+function glyph(x, mains = null, opened = null) {
   if (!x) return x;
   const out = { ...x };
   for (const [id, e] of Object.entries(x)) {
@@ -131,7 +133,7 @@ function glyph(x, mains = null) {
     // (its box, where it scales with the icon (layers.mjs glyphOnly), stays the glyph's, compared as it is: the icon
     // drawn open draws it at its share)
     const box = Object.fromEntries(Object.entries(kid).filter(([k]) => GLYPH_BOX.has(k)));
-    if (Object.keys(box).length) out[inside[0]] = { kind: kid.kind, parent: kid.parent, ...(kid.name !== undefined && { name: kid.name }), ...(kid.order !== undefined && { order: kid.order }), ...box };
+    if (Object.keys(box).length && (!opened || opened.has(id))) out[inside[0]] = { kind: kid.kind, parent: kid.parent, ...(kid.name !== undefined && { name: kid.name }), ...(kid.order !== undefined && { order: kid.order }), ...box };
     else delete out[inside[0]];
   }
   return out;
@@ -412,7 +414,7 @@ export function inWordsOf(library, drawn) {
 // stroke's, an outline's offset or a shadow's width (roundTrip holds such a number a browser read to its two decimals: sameAsRead)
 const PX_FIELD = /(^|\.)(radius|topLeft|topRight|bottomRight|bottomLeft|width|height|minWidth|maxWidth|minHeight|maxHeight|gap|crossGap|offset|top|end|bottom|start|x|y|blur|spread|weight)$/;
 
-export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false, pointerFrom = null, whens = false } = {}) {
+export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false, pointerFrom = null, whens = false, opened = null } = {}) {
   const design = library.code?.from !== 'code';
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
@@ -566,7 +568,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
       return !ss.some((v) => !pointerAt(v.when) && said(v) === said(last));
     };
     // the named equivalences, each the same on both sides
-    const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(unstroked(room(x)))))))), mains)), mains));
+    const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(unstroked(room(x)))))))), mains, opened)), mains));
     const A = expanded[i];
     // (both sides as compared, from an anatomy of the design's at this combination and this combination's drawing, made
     // afresh: a rest's too, restAt above)

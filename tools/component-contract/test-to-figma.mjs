@@ -598,6 +598,10 @@ delete globalThis.figma;
     const scRows = (a, b) => roundTrip(sc(a), sc(b)).rows;
     ok('a glyph scaled with its icon folds its colour into the icon, its box kept and compared as the glyph\'s',
       scRows(1, 1).length === 0 && scRows(1, 2).length === 1 && /absolute/.test(JSON.stringify(scRows(1, 2)[0])) && roundTrip(sc(1), { ...sc(1), anatomy: { ...sc(1).anatomy, 'icon/vector': { ...sc(1).anatomy['icon/vector'], background: 'Icon/soft' } } }).rows.some((r) => /^icon\.background/.test(r.at || r.path || JSON.stringify(r))));
+    // (but an icon left closed, a mark, its glyph its component's: the glyph goes whole, as before its box was kept; a
+    // library's button icon a prop swaps read its glyph's box missing beside the mark, 2026-11-27)
+    ok('…only where the icon is drawn open (`opened`): a closed one\'s glyph goes whole, its colour on the icon',
+      roundTrip(sc(1), code('Icon/strong'), { opened: new Set() }).rows.length === 0 && roundTrip(sc(1), code('Icon/strong'), { opened: new Set(['icon']) }).rows.length > 0 && scRows(1, 2).length === 1);
     // a lone glyph's opacity shows at the instance's times its own (a library's disabled chip: 0.38 on the glyph, and on
     // the instance too where it is elevated), as code says it on the instance it colours
     const held = (e, g) => ic({ icon: { kind: 'instance', parent: 'root', component: 'Icon/house', ...e }, ...(g && { 'icon/vector': { kind: 'graphic', parent: 'icon', background: 'Icon/strong', ...g } }) });
