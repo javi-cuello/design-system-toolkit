@@ -270,7 +270,16 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   // (2026-11-27: one the held component swaps by a prop of its own is what the instance passes it, never opened: a text
   // field's error icon button, Icon: error, opened its icon)
   const swapping = { ...cell, props: { tile: { type: 'instance', figma: 'Tile', swaps: ['slot'] } } };
-  ok('…one a prop of the held component swaps stays closed, passed as that prop', !foreignOpened(host, { ...hostLib, Cell: swapping }).size); }
+  ok('…one a prop of the held component swaps stays closed, passed as that prop', !foreignOpened(host, { ...hostLib, Cell: swapping }).size);
+  // (and found by its place, renamed for the component swapped in: a notification's close button, Swap icon: Close, its
+  // add icon's place)
+  const renamed = { ...host, anatomy: { root: b.root, cell: b.cell, 'cell/close': { ...b['cell/slot'] }, 'cell/close/glyph': { ...b['cell/slot/glyph'], parent: 'cell/close' } } };
+  ok('…found by its place too, renamed for what was swapped in', !foreignOpened(renamed, { ...hostLib, Cell: swapping, Host: renamed }).size && foreignOpened(renamed, { ...hostLib, Host: renamed }).size === 1);
+  // (2026-11-27: and one the held component draws at a variant of its own, a status icon's info glyph at Status: Info, is
+  // its own: never opened)
+  const status = { component: 'Status', props: { status: { type: 'enum', values: ['failed', 'info'], default: 'failed' } }, anatomy: { root: { kind: 'container' }, failed: { kind: 'instance', parent: 'root', component: 'Foreign', order: 0 } }, variants: [{ when: { status: 'info' }, add: { info: { kind: 'instance', parent: 'root', component: 'Info', order: 0 } } }] };
+  const note = { component: 'Note', props: {}, anatomy: { root: { kind: 'container' }, st: { kind: 'instance', parent: 'root', component: 'Status', with: { Status: 'Info' } }, 'st/info': { kind: 'instance', parent: 'st', component: 'Info', order: 0 }, 'st/info/v': { kind: 'graphic', parent: 'st/info' } }, variants: [] };
+  ok('…one the held component draws at a variant of its own stays closed', !foreignOpened(note, { Status: status, Note: note }).size, JSON.stringify([...foreignOpened(note, { Status: status, Note: note })])); }
 ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(tone === "error"\) \? "Icon\/alert" : "Icon\/info"/.test(toElement(alert, 'alert', { naming: ELEMENT, library: {} })));
 { const two = { ...alert, props: { tone: { type: 'enum', values: ['info', 'warning', 'error'], default: 'info', figma: 'Tone' } }, variants: [{ when: { tone: 'warning' }, set: { 'icon.component': 'Icon/warn' } }, ...alert.variants] };
   ok('two glyphs variants change nest bracketed (PHP 8 refuses an unbracketed nested choice)', /: \(\(tone === "warning"\) \? "Icon\/warn" : "Icon\/info"\)/.test(toElement(two, 'alert', { naming: ELEMENT, library: {} }))); }

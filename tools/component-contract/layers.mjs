@@ -168,12 +168,15 @@ function opening(c, library) {
     // draws open too)
     const H = all[near], M = held(H) && !nearOf(near) && placedOf(library, H);
     if (!M) continue;
-    const A = M.anatomy || {}, rel = id.slice(near.length + 1), up = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : 'root';
+    // (what it draws there at any of its variants: its base, else a variant's add, a status icon's info glyph at Status: Info)
+    const draws = [M.anatomy || {}, ...(M.variants || []).map((v) => v.add || {})], rel = id.slice(near.length + 1), up = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : 'root';
+    const byName = draws.map((A) => A[rel]).filter(Boolean);
+    const byPlace = [...new Set(draws.flatMap((A) => Object.keys(A).filter((k) => k !== 'root' && (A[k].parent || 'root') === up && A[k].kind === all[id].kind && (A[k].order ?? 0) === (all[id].order ?? 0))))];
+    const keys = byName.length ? [rel] : byPlace.length === 1 ? byPlace : [];
     // (one a prop of the held component swaps or fills is what the instance passes it there: never opened)
-    if (Object.values(M.props || {}).some((p) => [...(p.swaps || []), ...(p.slots || []), ...(p.slot ? [p.slot] : [])].includes(rel))) continue;
-    const byPlace = Object.keys(A).filter((k) => k !== 'root' && (A[k].parent || 'root') === up && A[k].kind === all[id].kind && (A[k].order ?? 0) === (all[id].order ?? 0));
-    const X = A[rel] || (byPlace.length === 1 ? A[byPlace[0]] : null);
-    if (!X || X.kind !== 'instance' || X.component !== all[id].component) { opened.add(id); inHeld.add(id); }
+    if (Object.values(M.props || {}).some((p) => [...(p.swaps || []), ...(p.slots || []), ...(p.slot ? [p.slot] : [])].some((k) => keys.includes(k)))) continue;
+    const Xs = draws.map((A) => A[keys[0]]).filter(Boolean);
+    if (!Xs.some((X) => X.kind === 'instance' && X.component === all[id].component)) { opened.add(id); inHeld.add(id); }
   }
   // one the library holds that a variant swaps for another library's whose layers that variant records under it (a
   // status icon of its own at the error state): opened where that variant swaps it in, as a variant that detaches an
