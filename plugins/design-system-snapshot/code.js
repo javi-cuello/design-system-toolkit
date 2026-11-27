@@ -1,4 +1,4 @@
-// Design system snapshot — v0.93.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.93.1 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -755,7 +755,8 @@ async function collectTokens() {
   const metrics = new Map();
   for (const s of [...local, ...remote]) {
     // (a remote style whose family is bound to that library's variable says its font is mixed: a text using it says which)
-    const node = textOf.get(s), first = node && node.characters.length ? node.getRangeFontName(0, 1) : null;
+    // (its first character's font, read as a segment: a family the file lacks reads mixed from getRangeFontName, the segment still names it)
+    const node = textOf.get(s), seg = node && node.characters.length ? node.getStyledTextSegments(['fontName'], 0, 1)[0] : null, first = seg ? seg.fontName : null;
     const font = typeof s.fontName === 'object' ? s.fontName : typeof first === 'object' && first ? first : { family: undefined, style: undefined };
     // (one whose font nothing here can tell, bound to a variable this file cannot resolve, is no style a build can write)
     if (s.remote && !font.family) continue;
@@ -887,7 +888,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.93.0';
+const VERSION = '0.93.1';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

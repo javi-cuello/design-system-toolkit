@@ -522,6 +522,22 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("an effect style another library gives the components is recorded, marked remote, off a text layer too, and no drawing page is searched", t.effects.length === 1 && t.effects[0].name === "Raised" && t.effects[0].remote === true && t.effects[0].layers.length === 1);
 }
 
+// 0.93.1: a remote text style whose family the file lacks is still recorded: its font reads mixed off the style and
+// off getRangeFontName, and the text's first segment names it
+{
+  const style = { type: "TEXT", name: "Paragraph/Default", key: "p1", remote: true, fontName: Symbol("mixed"), fontSize: 14, lineHeight: { unit: "PIXELS", value: 20 }, letterSpacing: { unit: "PIXELS", value: 0 }, boundVariables: {} };
+  const dot = { type: "TEXT", name: "Dot", textStyleId: "S:p1", characters: "·", getRangeFontName: () => Symbol("mixed"), getStyledTextSegments: (f, s, e) => [{ characters: "·", start: s ?? 0, end: e ?? 1, fontName: { family: "SF Pro Text", style: "Regular" } }] };
+  const comp = { type: "COMPONENT", name: "Comment", parent: null, findAll: (f) => [dot].filter(f || (() => true)) };
+  dot.parent = comp;
+  const page = { type: "PAGE", name: "Page", children: [comp], findAll: () => [comp], findAllWithCriteria: ({ types }) => (types.includes("TEXT") ? [dot] : types.includes("COMPONENT") ? [comp] : []) };
+  const ff = { root: { name: "Lib", children: [page], getPluginData: () => "", findAllWithCriteria: () => [] }, fileKey: "K",
+    variables: { getLocalVariableCollectionsAsync: async () => [], getVariableByIdAsync: async () => null, getVariableCollectionByIdAsync: async () => null },
+    getLocalTextStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async (id) => (id === "S:p1" ? style : null) };
+  const t = await vm.runInContext(src + "\n;collectTokens()", vm.createContext({ figma: ff, console, setTimeout, clearTimeout }));
+  const got = t.textStyles.find((x) => x.name === "Paragraph/Default");
+  ok("a remote text style whose family the file lacks is recorded, its family read off its text's first segment", !!got && got.remote === true && got.family === "SF Pro Text" && got.weight === "Regular" && got.size === 14);
+}
+
 // 0.89.4: a variable lookup Figma never answers is given up, and after three the rest are not asked
 {
   let asked = 0; const posted = [];

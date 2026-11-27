@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.16.1] - 2026-11-27
+### Changed
+- Carries snapshot 0.93.1: a remote text style whose family the file lacks is recorded, its family read off its text's first segment.
+
 ## [0.15.2] - 2026-11-26
 ### Changed
 - Carries figma-components-audit 2.54.2: deleting a hidden layer is breaking unless no instance shows it.

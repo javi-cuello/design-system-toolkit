@@ -17,6 +17,12 @@ let failed = 0, passed = 0;
 const ok = (name, cond, detail = '') => { if (cond) passed++; else { failed++; console.log('FAIL ' + name + (detail ? '\n  ' + detail : '')); } };
 
 // The scan: the scanner body returns checkFacts with no figma in scope, as in its own tests.
+// the plugin's own version agrees in its three places: the header, the VERSION its window shows, and package.json
+// (2026-11-27: the header and package.json moved to 0.16.1 while VERSION stayed 0.15.2)
+{ const src = fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8'), pkg = JSON.parse(fs.readFileSync(path.join(HERE, '..', 'package.json'), 'utf8'));
+  const head = (src.split('\n')[0].match(/v(\d+\.\d+\.\d+)/) || [])[1], own = (src.match(/^const VERSION = '([^']+)';/m) || [])[1];
+  ok("audit lite's header, VERSION and package.json name one version", head === pkg.version && own === pkg.version, `${head} ${own} ${pkg.version}`); }
+
 const FX = JSON.parse(fs.readFileSync(path.join(ROOT, 'skills/figma-components-audit/tests/fixtures/library-slice.json'), 'utf8'));
 const checkFacts = await scan([], LITE.scales, LITE.tokens);
 const r = await checkFacts({ pages: FX.pages }, LITE.tokens, LITE.scales, [], async (id) => (id in FX.vars ? FX.vars[id] : null), FX.file);

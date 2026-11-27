@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.93.1] - 2026-11-27
+### Fixed
+- **A remote text style whose family the file lacks is recorded.** Its font reads mixed off the style, and off its text's `getRangeFontName` too while the family is missing, so the style was skipped and the code drew the browser's default face. The text's first segment (`getStyledTextSegments`) still names the family, and is read instead. Takes effect with the next snapshot.
+
 ## [0.93.0] - 2026-11-26
 ### Added
 - **A nested instance the component exposes is recorded as `exposed`** (Figma's exposed instances): its props are the component's to pass on, so the round trip counts an override of them as the toolkit's to forward, and an override of an instance the component does not expose as the library's own. No snapshot recorded exposure before. Takes effect with the next snapshot.
