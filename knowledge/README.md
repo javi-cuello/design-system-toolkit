@@ -60,3 +60,5 @@ The pages hold evidence and how-to, never opinion. Evidence means a spec, shippe
 Every item on a page opens with a weight, so a reader knows how far to lean on it. The weights are `[required]`, `[strong]`, `[moderate]`, `[weak]` and `[contested]`. A weak item rests on one source. It is the research queue, and no reader acts on it.
 
 [Toolkit-standard §D 21](../standards/toolkit-standard.md#21--knowledge-is-guidance-with-sources-never-rules) alone says what each weight means and what moves an item along the scale. It also says what each asks of an agent, and which lines carry none. `check-standards` refuses an item with no weight. When a source is added, checked or contradicted, the item's weight moves in the same change.
+
+`node tools/shared/kb-quotes.mjs <page.md> --from main` checks new quotes against their sources.

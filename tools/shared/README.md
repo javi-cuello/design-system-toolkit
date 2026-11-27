@@ -16,6 +16,8 @@ node tools/shared/lock.mjs --who                                   # which slots
 node tools/shared/worktree.mjs <work>                              # make or find a work's worktree
 node tools/shared/worktree.mjs <work> --join                       # join a worktree another session holds
 node tools/shared/model-routing.mjs                                # print the model routes
+node tools/shared/kb-quotes.mjs <page.md> [--from <ref>]           # check a knowledge page's quotes against their sources
+node tools/shared/kb-quotes.mjs <page.md> --no-render              # the same, raw pages only, no headless Chrome
 ```
 
 `bin/land` runs `land.mjs`. The [bin README](../../bin/README.md) documents the `bin/` commands.
@@ -45,6 +47,7 @@ node tools/shared/model-routing.mjs                                # print the m
 | `colour.js` | sRGB, contrast ratio and OKLab maths |
 | `text-units.js` | line height and spacing per font size |
 | `knowledge.mjs` | the knowledge pages for an interface file |
+| `kb-quotes.mjs` | each quote on a knowledge page, checked against the page it cites |
 | `project-knowledge.cjs` | a project's product file, decisions and guidance |
 | `code-inventory.mjs` | what a code library contains |
 | `model-routing.json` | the model and effort per task family |

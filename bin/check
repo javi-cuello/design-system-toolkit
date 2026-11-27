@@ -599,6 +599,7 @@ tools/shared/test-code-inventory.mjs                             -
 tools/shared/test-colour.mjs                                     -
 tools/shared/test-dialect.mjs                                    -
 tools/shared/test-free-port.mjs                                  -
+tools/shared/test-kb-quotes.mjs                                  -
 tools/shared/test-knowledge.mjs                                  -
 tools/shared/test-land.mjs                                       -
 tools/shared/test-lock.mjs                                       -
