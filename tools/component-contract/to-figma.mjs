@@ -629,7 +629,7 @@ function lone(a, b) {
     for (const x of [a, b]) if (x[id] && x[id].layout && 'gap' in x[id].layout) { const { gap: _, ...l } = x[id].layout; x[id] = { ...x[id], layout: l }; }
   }
 }
-/* A text's vertical alignment no CSS writes: where the design's text grows to its words it shows nowhere, so a
+/* A text's vertical alignment where it shows nowhere: where the design's text grows to its words css.mjs writes none, so a
    browser's reading (`layoutUnit`) takes the design's there, as from-code takes its horizontal one where the width hugs;
    a design box of its own height stays held to it (a reading that hugs there too: its alignment row beside its height
    row), and Figma's own drawing always. Per combination, so a variant's alignment too. Tested by test-to-figma.mjs. */

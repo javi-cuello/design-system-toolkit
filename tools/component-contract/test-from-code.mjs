@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf } from './from-code.mjs';
+import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1189,6 +1189,30 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); }
   }
 }
+// 2026-11-27: a text set in a taller box goes round with its vertical alignment: css.mjs writes it (align-content on
+// the text's block box), Chrome draws the words there, and the reader (alignedOf, in the page) reads it back; a text cut
+// to lines, a box CSS cannot align its words in, stays said as unread; one at the top writes and reads nothing
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
+  const { declarations } = await import('./css.mjs');
+  const dec = (c) => declarations({ kind: 'text', typography: 'literal 10/10 regular sans-serif', autoResize: 'none', height: 40, ...c }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] });
+  const cssOf = (c) => dec(c).decls.map(([p, v]) => `${p}: ${v}`).join('; ');
+  ok('a text in a taller box: its vertical alignment written, never said unread; one cut to lines said unread',
+    /align-content: center/.test(cssOf({ verticalAlign: 'center' })) && /align-content: end/.test(cssOf({ verticalAlign: 'end' })) && !/align-content/.test(cssOf({ verticalAlign: 'start' }))
+    && !dec({ verticalAlign: 'center' }).unread.length && dec({ verticalAlign: 'center', maxLines: 2 }).unread.some((u) => /verticalAlign/.test(u)));
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a text\'s vertical alignment in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({});
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      const cases = ['center', 'end', 'start'];
+      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html><div style="display: flex; flex-direction: column">${cases.map((v) => `<span data-t style="height: 40px; ${cssOf({ verticalAlign: v })}">Hi</span>`).join('')}</div><span data-i style="height: 40px; align-content: center">Hi</span>` });
+      const got = await call(tab, (src) => { const of = new Function(`return ${src}`)(); return [...document.querySelectorAll('[data-t], [data-i]')].map((n) => { const r = document.createRange(); r.selectNodeContents(n); return [of(getComputedStyle(n)) ?? null, Math.round(r.getBoundingClientRect().top - n.getBoundingClientRect().top)]; }); }, alignedOf.toString());
+      ok('the words drawn where the alignment says, and read back as it: centre, bottom, top; an inline box that aligns nothing reads nothing',
+        JSON.stringify(got.map(([v, y]) => [v, y - got[2][1]])) === '[["center",15],["end",30],[null,0],[null,1]]', JSON.stringify(got));
+    } finally { await browser.close(); }
+  }
+}
 // a blend an instance sets back goes round: css.mjs (through to-code's held instance) writes mix-blend-mode normal over
 // its component's darken, Chrome computes it so, and the reader's mark and readCleared read back `normal` (rules.mjs
 // UNBLENDED); the same instance with nothing said computes its component's darken and reads nothing
@@ -1389,7 +1413,11 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
     anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/thumb': { kind: 'instance', parent: 'content', component: 'Thumb', swappedBy: 'image' }, 'content/title': { kind: 'instance', parent: 'content', component: 'Text Large' } }, variants: [] };
   const lib = { thumb, title }, byName = (nm) => Object.values(lib).find((y) => y.component === nm);
   ok('passedSwaps: the component\'s own part beside a swap is never read as the swap\'s value',
-    JSON.stringify(passedSwaps(bar, 'bar', [{ id: 'bar/content/thumb', kind: 'instance', parent: 'bar/content', slug: 'thumb' }, { id: 'bar/content/title', kind: 'instance', parent: 'bar/content', slug: 'title' }], (sl) => lib[sl], byName)) === '{}'); }
+    JSON.stringify(passedSwaps(bar, 'bar', [{ id: 'bar/content/thumb', kind: 'instance', parent: 'bar/content', slug: 'thumb' }, { id: 'bar/content/title', kind: 'instance', parent: 'bar/content', slug: 'title' }], (sl) => lib[sl], byName)) === '{}');
+  // a holder that does pass the same component as the bar's own part into the swap (Text Large into Image): read, since it
+  // stands in the swap's place, not the own part's
+  ok('passedSwaps: the same component as an own part, passed into the swap, is the swap\'s value',
+    JSON.stringify(passedSwaps(bar, 'bar', [{ id: 'bar/content/textLarge', kind: 'instance', parent: 'bar/content', slug: 'title' }, { id: 'bar/content/title', kind: 'instance', parent: 'bar/content', slug: 'title' }], (sl) => lib[sl], byName)) === '{"Image":"Text Large"}'); }
 { // a part placed absolutely inside a placed component, added at one prop and moved at another (a picker's menu, open at
   // focus, lower at compact): the move is kept, judged by the part as the variant where it is drawn adds it, never by
   // another variant's add of it (one the design rules out, which draws it in flow)

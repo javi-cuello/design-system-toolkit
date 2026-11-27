@@ -198,6 +198,13 @@ export function markFill(cs, clear) {
   return [cs.maskImage, cs.webkitMaskImage].every((m) => !m || m === 'none') ? c : null;
 }
 
+/* Where a text's words sit in its box, as css.mjs writes it: align-content on a block box (CSS Box Alignment 3), centre
+   or end; the top, or a box that aligns nothing by it (inline, flex), reads nothing. `s` its computed style. Run in the
+   page. Tested by test-from-code.mjs. */
+export function alignedOf(s) {
+  if (!/^(block|flow-root|inline-block|list-item)$/.test(s.display)) return undefined;
+  return { center: 'center', 'safe center': 'center', 'unsafe center': 'center', end: 'end', 'flex-end': 'end' }[s.alignContent];
+}
 /* Whether a mark draws no glyph of its own: no child element, no text of its own (an icon font's ligature, home), and no
    pseudo-element with content (`pseudo` each one's computed content), so the colour it is read at is no glyph's. `text`
    its own text content. Tested by test-from-code.mjs. */
@@ -2077,11 +2084,11 @@ export function passedSwaps(fc, id, raw, bySlug, byName) {
       const layer = all[sp], lm = layer && layer.component && byName(layer.component);
       if (!layer || layer.kind !== 'instance' || (lm && !isDrawing(lm))) continue;
       const dir = sp.includes('/') ? sp.slice(0, sp.lastIndexOf('/')) : '', under = dir ? `${id}/${dir}` : id;
-      // (never one the component places there itself, beside the swap, at any variant: an app bar's title text beside its
-      // thumbnail, another text at another size)
-      const mine = (k) => k !== sp && all[k] && all[k].kind === 'instance' && (all[k].parent === 'root' ? '' : all[k].parent || '') === dir;
-      const own = new Set([...Object.keys(all).filter(mine).map((k) => all[k].component), ...(fc.variants || []).flatMap((v) => Object.entries(v.set || {}).filter(([f]) => f.endsWith('.component') && mine(f.slice(0, -'.component'.length))).map(([, x]) => x))].filter(Boolean));
-      const m = raw.filter((e) => e.kind === 'instance' && e.parent === under && e.slug).map((e) => bySlug(e.slug)).find((x) => x && !isDrawing(x) && x.component !== layer.component && !own.has(x.component));
+      // (never the component's own part beside the swap, at any variant: an app bar's title text beside its thumbnail, by
+      // the place it is drawn at, its layer's own id, not by its component, so the same component passed into the swap,
+      // Text Large into Image, is still read as the swap's value)
+      const own = new Set(Object.keys(all).filter((k) => k !== sp && all[k] && all[k].kind === 'instance' && (all[k].parent === 'root' ? '' : all[k].parent || '') === dir).map((k) => `${id}/${k}`));
+      const m = raw.filter((e) => e.kind === 'instance' && e.parent === under && e.slug && !own.has(e.id)).map((e) => bySlug(e.slug)).find((x) => x && !isDrawing(x) && x.component !== layer.component);
       if (m) w[q.figma] = String(m.component).split('/').pop();
     }
   }
@@ -2352,7 +2359,7 @@ async function main() {
       // each element two layers of the design share, by what it draws (namedAt): its icon's name, else the first inside it
       const twice = [...new Set(named.map((x) => x[0]).filter((sl, i, a) => a.indexOf(sl) !== i))];
       const glyphs = twice.length ? await call(L.tab, (sels) => Object.fromEntries(sels.map((sl) => { const n = document.querySelector(sl), g = n && (n.getAttribute('data-icon') || (n.querySelector('[data-icon]') || { getAttribute: () => null }).getAttribute('data-icon')); return [sl, g || null]; })), twice) : {};
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
@@ -2366,7 +2373,7 @@ async function main() {
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
         const elementOfLayer = new Function(`return ${elementOfLayerSrc}`)();
         const opensPlaced = new Function(`return ${opensPlacedSrc}`)();
-        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), layerShown = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)(); const seeThrough = new Function(`return ${seeThroughSrc}`)(), glyphless = new Function(`return ${glyphlessSrc}`)();
+        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), layerShown = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)(); const seeThrough = new Function(`return ${seeThroughSrc}`)(), glyphless = new Function(`return ${glyphlessSrc}`)(), alignedOf = new Function(`return ${alignedSrc}`)();
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -2505,7 +2512,7 @@ async function main() {
             return; }
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
           if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; if (tag !== 'svg') e.mark = true; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; if (n.getAttribute('data-icon-size')) e.iconSize = n.getAttribute('data-icon-size'); }
-          else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(n, s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
+          else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(n, s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; if (alignedOf(s)) e.verticalAlign = alignedOf(s); e.content = text; }
           // an icon mark, a placed component drawn as the empty element to-markup leaves for it (one the store does not hold),
           // is a box to-code styles as the instance's own: its stroke, corners and clipping read as a box's, its fill
           // staying the glyph's colour (above)
@@ -2619,7 +2626,7 @@ async function main() {
         const siblingOrder = new Function(`return ${siblingOrderSrc}`)();
         for (const xs of Object.values(byParent)) siblingOrder(xs).forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)

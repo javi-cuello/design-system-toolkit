@@ -286,8 +286,15 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
   // a text that grows down to its words (Figma's HEIGHT) at a height the design states all the same (no auto layout
   // sizes it): that height, never cutting its words, its minimum the words' own (rules.mjs autoResizeOf reads it back)
   if (e.kind === 'text' && e.autoResize === 'height' && typeof e.height === 'number' && !lines && e.minHeight === undefined) put('min-block-size', 'fit-content');
-  // (a text that grows to its words has no room to place them in: nothing is lost there)
-  if (take('verticalAlign') !== undefined && !/^(width_and_height|height)$/.test(e.autoResize || '')) unread.push('verticalAlign (text set in a taller box)');
+  // where its words sit in a taller box: align-content on the text's own block box (CSS Box Alignment 3, block
+  // containers), which from-code's alignedOf reads back; one cut to lines is a -webkit-box, which it does not align, so
+  // said. (a text that grows to its words has no room to place them in: nothing is lost there)
+  const va = take('verticalAlign');
+  if (va !== undefined && !/^(width_and_height|height)$/.test(e.autoResize || '')) {
+    if (lines > 1) unread.push('verticalAlign (a text cut to lines, set in a taller box)');
+    else if (va === 'center' || va === 'end') put('align-content', va);
+    else if (va !== 'start') unread.push(`verticalAlign (${va}: no CSS writes it)`);
+  }
 
   for (const k of Object.keys(e)) if (!done.has(k) && !STRUCTURE.has(k)) unread.push(k);
   return { decls, unread, unshared };

@@ -70,9 +70,10 @@ ok('a text at a set width Figma says grows both ways, whose white space is kept,
   const sheet = toCss(card, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Tag' ? { ...tag, folder: 'tag' } : null) });
   ok('a placed part bound to the host\'s own property says its white space from the host\'s default, not the placed component\'s',
     /white-space: pre;/.test(sheet)); }
-ok('a vertical alignment is said unread only where the text has a height of its own: one that grows to its words loses nothing',
-  (() => { const u = (autoResize) => declarations({ kind: 'text', autoResize, verticalAlign: 'center' }, {}, { token: (n) => `var(--${n})` }).unread.filter((x) => /verticalAlign/.test(x)).length;
-    return u('height') === 0 && u('width_and_height') === 0 && u('none') === 1 && u(undefined) === 1; })());
+ok('a vertical alignment is written only where the text has a height of its own, never said unread: one that grows to its words loses nothing',
+  (() => { const d = (autoResize) => declarations({ kind: 'text', autoResize, verticalAlign: 'center' }, {}, { token: (n) => `var(--${n})` });
+    const u = (a) => d(a).unread.filter((x) => /verticalAlign/.test(x)).length, w = (a) => d(a).decls.some(([p, v]) => p === 'align-content' && v === 'center');
+    return [u('height'), u('width_and_height'), u('none'), u(undefined)].every((x) => x === 0) && !w('height') && !w('width_and_height') && w('none') && w(undefined); })());
 ok('a text with no style writes no style\'s fields (no token defines --literal-*): it is said as unread, as an unstyled effect is',
   (() => { const r = declarations({ kind: 'text', typography: 'literal' }, {}, { token: (n) => `var(--${n})`, textStyle: (n) => [['font-size', `var(--${n}-font-size)`]] }); return !r.decls.length && r.unread.some((u) => /^typography \(a text with no style/.test(u)); })());
 // 2026-11-22: a library names a style by its size (`14/20 Regular`): read as a text's own values it lost its var()

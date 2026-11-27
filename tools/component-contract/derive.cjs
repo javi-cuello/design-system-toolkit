@@ -161,8 +161,8 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
     // how the box follows its words, and where they sit in it: neither is a text style's
     if (n.textAutoResize) e.autoResize = n.textAutoResize.toLowerCase();
     // (as the design states it, a text that grows to its words too: there no alignment shows, but a drawing that
-    // leaves it out is not the file; css.mjs writes none, from-code never reads it, and to-figma's roundTrip
-    // (unaligned) holds a browser's reading to it only where the design's text has a height of its own)
+    // leaves it out is not the file; css.mjs writes it only where the box is taller than the words, from-code reads it
+    // back (alignedOf), and to-figma's roundTrip (unaligned) takes the design's where the text grows)
     if (n.textAlignVertical) e.verticalAlign = n.textAlignVertical === 'CENTER' ? 'center' : n.textAlignVertical === 'BOTTOM' ? 'end' : 'start';
     // spacing and case a style would give, said only for words no style sets
     if (!n.textStyle) for (const k of ['letterSpacing', 'lineHeight', 'paragraphSpacing', 'listSpacing']) if (n[k] != null) e[k] = n[k];
