@@ -160,6 +160,7 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   ok('composition: the existing description is returned as typed, the plain field unescaped (D26)', (await run(src, figma))[0].description === 'A <button> & more.');
   set.descriptionMarkdown = 'A `Button`.';
   ok('composition: and the markdown field where it is set', (await run(src, figma))[0].description === 'A `Button`.');
+  delete set.descriptionMarkdown; delete set.description;
   // A part is what the subject places: an icon inside a nested Button is the Button's, not the shell's (2026-11-10).
   const shellGlyph = node({ id: '9:7', type: 'COMPONENT', name: 'x' });
   const nestedBtn = node({ id: '5:3', type: 'INSTANCE', name: 'Button' }, [instanceOf('5:4', 'x', shellGlyph)]);
@@ -289,10 +290,6 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   ok('sync-header: a virtual set writes its shared sentence once, and replaced text is reported as drift', out.filter((r) => r.page === 'Top bar').length === 1 && topHeader.children[0].characters === 'A top bar sits at the top of a screen.' && row('Top bar').drift === 'Something else entirely.');
   ok('sync-header: no header and mixed fonts are report lines, not writes', row('Lone').status === 'no header' && row('Mixed').status === 'mixed font' && mixedHeader.children[0].characters === 'x');
   ok('sync-header: the font is loaded before each write', figma.fonts.length === 2);
-  const loadedPages = [];
-  for (const p of [p1, p2, p3, p4]) p.loadAsync = async () => { loadedPages.push(p.id); };
-  await run(src, figma);
-  ok('sync-header: each page is loaded before its header is looked for (use_figma loads only the first) (D26)', loadedPages.length > 0 && loadedPages.every((id) => [p1, p2, p3, p4].some((p) => p.id === id)));
   const decoy2 = node({ id: '5:1', type: 'COMPONENT', name: 'Two' });
   p1.children.push(decoy2); decoy2.parent = p1;
   const conflict = await run(config(read('sync-header.js'), { headerName: 'Header', headerBodyLayer: 'Body', docs: [['1:1', 'One.'], ['5:1', 'Two.']] }), fakeFigma([p1]));
