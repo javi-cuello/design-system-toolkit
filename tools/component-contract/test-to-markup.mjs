@@ -266,7 +266,11 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
       && node.kids.length === 1 && /background: var\(--c-icon\)/.test(node.kids[0].attrs.style) && seen.has('cell/slot/glyph'), JSON.stringify(node));
   // (second review: its layers are read by their own hooks under the part's, toParity's `added`)
   const pm = toParity(host, 'host', { naming: ELEMENT, library: hostLib, framework: 'web-components' }).layers, gk = Object.keys(pm).find((k) => /Glyph$/.test(k));
-  ok('…and its layers are mapped, read by their own hooks under the part it stands in', !!gk && typeof pm[gk] === 'string' && /\[data-part="glyph"\]$/.test(pm[gk]), JSON.stringify(pm)); }
+  ok('…and its layers are mapped, read by their own hooks under the part it stands in', !!gk && typeof pm[gk] === 'string' && /\[data-part="glyph"\]$/.test(pm[gk]), JSON.stringify(pm));
+  // (2026-11-27: one the held component swaps by a prop of its own is what the instance passes it, never opened: a text
+  // field's error icon button, Icon: error, opened its icon)
+  const swapping = { ...cell, props: { tile: { type: 'instance', figma: 'Tile', swaps: ['slot'] } } };
+  ok('…one a prop of the held component swaps stays closed, passed as that prop', !foreignOpened(host, { ...hostLib, Cell: swapping }).size); }
 ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(tone === "error"\) \? "Icon\/alert" : "Icon\/info"/.test(toElement(alert, 'alert', { naming: ELEMENT, library: {} })));
 { const two = { ...alert, props: { tone: { type: 'enum', values: ['info', 'warning', 'error'], default: 'info', figma: 'Tone' } }, variants: [{ when: { tone: 'warning' }, set: { 'icon.component': 'Icon/warn' } }, ...alert.variants] };
   ok('two glyphs variants change nest bracketed (PHP 8 refuses an unbracketed nested choice)', /: \(\(tone === "warning"\) \? "Icon\/warn" : "Icon\/info"\)/.test(toElement(two, 'alert', { naming: ELEMENT, library: {} }))); }

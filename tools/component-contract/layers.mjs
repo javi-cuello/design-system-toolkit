@@ -131,7 +131,7 @@ export const glyphOnly = (g) => !!g && g.kind === 'graphic' && Object.keys(g).ev
    variant swaps another library's in, its layers recorded there (a status icon of its own at the error state): opened
    in that variant alone, its set saying kind a container and `foreign`. And one inside a held instance that is not
    what that component draws there (swapped where it has no prop for it), its layers recorded: listed, its kind kept,
-   to-markup's insideOf drawing it open in that part's place. The contract itself where none is opened,
+   to-markup's insideOf drawing it open in that part's place (never one a prop of that component swaps: passed). The contract itself where none is opened,
    else a copy, one per contract and library (to-code's caches are keyed by the contract); `foreignOpened`, the ids
    opened. The one rule for to-markup, to-code and eval. Tested by test-to-markup.mjs. */
 const OPENED = new WeakMap();
@@ -169,6 +169,8 @@ function opening(c, library) {
     const H = all[near], M = held(H) && !nearOf(near) && placedOf(library, H);
     if (!M) continue;
     const A = M.anatomy || {}, rel = id.slice(near.length + 1), up = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : 'root';
+    // (one a prop of the held component swaps or fills is what the instance passes it there: never opened)
+    if (Object.values(M.props || {}).some((p) => [...(p.swaps || []), ...(p.slots || []), ...(p.slot ? [p.slot] : [])].includes(rel))) continue;
     const byPlace = Object.keys(A).filter((k) => k !== 'root' && (A[k].parent || 'root') === up && A[k].kind === all[id].kind && (A[k].order ?? 0) === (all[id].order ?? 0));
     const X = A[rel] || (byPlace.length === 1 ? A[byPlace[0]] : null);
     if (!X || X.kind !== 'instance' || X.component !== all[id].component) { opened.add(id); inHeld.add(id); }
