@@ -559,7 +559,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // (a part in an instance a variant detaches: the hook the sheet styles it by there, detachedHost)
   const detachedHook = (id) => {
     if (!detachedHost(c, id)) return null;
-    const last = selectorOf(c, n, id, (name, key = null) => placedOf(library, { component: name, key }), library).split(' > ').pop();
+    const last = selectorOf(c, n, id, Object.assign((name, key = null) => placedOf(library, { component: name, key }), { library }), library).split(' > ').pop();
     // (a numbered copy's hook is its first's, the sheet counting it among those: partSelector's :nth-child)
     const m = n.element ? /^\[data-part="([^"]+)"\](?::nth-child\([^)]*\))?$/.exec(last) : /^\.([\w-]+)(?::nth-child\([^)]*\))?$/.exec(last);
     if (!m) gaps.push(`${partName(id)}: inside ${partName(detachedHost(c, id))}, which a variant detaches, the sheet reaches it by ${last}, no hook the markup can draw: drawn by its own name, which nothing styles or reads`);
@@ -1319,7 +1319,7 @@ export function toGallery(c, { library = {} } = {}) {
 /* The element the markup draws a part as, by the selector the sheet styles it by (to-code's): a focus ring the ringed
    element, a field's two texts its input, a numbered copy its place among its own (`:nth-child(2 of …)`). */
 export function partSelector(c, n, id, part = partsOf(c).get(id), library = {}) {
-  const entry = entryOf(c), first = copyOf(c, id), mains = (name, key = null) => placedOf(library, { component: name, key });
+  const entry = entryOf(c), first = copyOf(c, id), mains = Object.assign((name, key = null) => placedOf(library, { component: name, key }), { library });
   if (id === 'root' || (part && part.ring)) return selectorOf(c, n, 'root');
   if (entry && (id === entry.value || id === entry.placeholder)) return selectorOf(c, n, entry.input, mains, library);
   if (!first) return selectorOf(c, n, id, mains, library);
@@ -1369,7 +1369,8 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   const nameOf = (id) => { const e = (parts.get(id) || {}).e || {}; const m = /_(\d+)$/.exec(id); return (e.name || partName(id)) + (m ? `#${m[1]}` : ''); };
   const pathOf = (id) => { const names = []; for (let up = id; up && up !== 'root'; up = (parts.get(up) || {}).e?.parent) names.unshift(nameOf(up)); return names.join(' > '); };
   const layers = {}, byId = {};
-  const mains = (name, key = null) => placedOf(library, { component: name, key });
+  // (the library kept on it, as to-code's heldOf keeps it, for what a placed component draws open)
+  const mains = Object.assign((name, key = null) => placedOf(library, { component: name, key }), { library });
   // what this component puts in a placed component's slot, at any depth there: that slot's selector, then each box's own
   // hook down to it; inside an instance it puts there, that instance's own (not read here)
   const fillSelector = (id) => {

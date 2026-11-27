@@ -602,6 +602,10 @@ delete globalThis.figma;
     // library's button icon a prop swaps read its glyph's box missing beside the mark, 2026-11-27)
     ok('…only where the icon is drawn open (`opened`): a closed one\'s glyph goes whole, its colour on the icon',
       roundTrip(sc(1), code('Icon/strong'), { opened: new Set() }).rows.length === 0 && roundTrip(sc(1), code('Icon/strong'), { opened: new Set(['icon']) }).rows.length > 0 && scRows(1, 2).length === 1);
+    // (and a glyph read with its box in pixels, no scale said, inside an icon left closed: its colour still the icon's, its box
+    // the component's; a held toggletip's info glyph read under the checkbox placing it)
+    const px = { ...figma({ width: 14, height: 14 }) };
+    ok('…a closed icon\'s glyph read with a box of its own still folds its colour into the icon', roundTrip(sc(1), px, { opened: new Set() }).rows.length === 0 && roundTrip(sc(1), px).rows.length > 0, JSON.stringify(roundTrip(sc(1), px, { opened: new Set() }).rows));
     // a lone glyph's opacity shows at the instance's times its own (a library's disabled chip: 0.38 on the glyph, and on
     // the instance too where it is elevated), as code says it on the instance it colours
     const held = (e, g) => ic({ icon: { kind: 'instance', parent: 'root', component: 'Icon/house', ...e }, ...(g && { 'icon/vector': { kind: 'graphic', parent: 'icon', background: 'Icon/strong', ...g } }) });

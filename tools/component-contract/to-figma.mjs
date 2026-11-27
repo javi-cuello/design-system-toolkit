@@ -122,7 +122,10 @@ function glyph(x, mains = null, opened = null) {
   for (const [id, e] of Object.entries(x)) {
     if (!e || e.kind !== 'instance') continue;
     const inside = Object.keys(x).filter((k) => k.startsWith(`${id}/`));
-    const kid = inside.length === 1 && x[inside[0]].parent === id ? x[inside[0]] : null;
+    // (inside an icon left closed, `opened` given without it, the glyph's box is its component's, whatever a reading says
+    // of it: only its colour counts, as glyph goes whole below)
+    const lone = inside.length === 1 && x[inside[0]].parent === id ? x[inside[0]] : null;
+    const kid = lone && opened && !opened.has(id) ? Object.fromEntries(Object.entries(lone).filter(([k]) => !GLYPH_BOX.has(k))) : lone;
     // only a colour (and its opacity) moves up: a glyph that also overrides another field than its scaled box, or an instance with a colour of its own, is compared as it is (rules.mjs heldGlyph)
     // (one painted with nothing in an icon the library does not hold goes, said as its instance's no colour: rules.mjs
     // bareGlyph)

@@ -1223,4 +1223,14 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const outside = glyphIn({ color: 'C/line', width: 2, align: 'outside' }, { x: 4, y: 4, w: 8, h: 8 }), none = glyphIn(undefined, { x: 4, y: 4, w: 8, h: 8 });
   ok('…an outside stroke, or none, takes nothing off: 25% in, 50% wide', [outside, none].every((x) => decl(x, 'inset-inline-start') === '25%' && decl(x, 'inline-size') === '50%'), outside + none);
 }
+{ // a held component that draws another library's icon open paints its glyph as a box of its own colour: an override of
+  // that glyph's colour, from the component placing it, is written on the glyph, never only the icon's color, which the box
+  // does not take (a checkbox's toggletip info icon at disabled, 2026-11-27)
+  const box = { width: 14, height: 14, absolute: { x: 1, y: 1 }, constraints: { horizontal: 'scale', vertical: 'scale' } };
+  const tip = { component: 'Tip', folder: 'tip', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, info: { kind: 'instance', parent: 'root', component: 'Info', width: 16, height: 16 }, 'info/v': { kind: 'graphic', parent: 'info', background: 'Icon/soft', ...box } }, variants: [] };
+  const box2 = { component: 'Box', folder: 'box', props: { off: { type: 'boolean', default: false } }, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, tip: { kind: 'instance', parent: 'root', component: 'Tip' }, 'tip/info': { kind: 'instance', parent: 'tip', component: 'Info', width: 16, height: 16 }, 'tip/info/v': { kind: 'graphic', parent: 'tip/info', background: 'Icon/soft', ...box } },
+    variants: [{ when: { off: true }, set: { 'tip/info/v.background': 'Icon/off' } }] };
+  const css = toCss(box2, 'box', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, library: { Tip: tip, Box: box2 } });
+  ok('an override of an opened icon\'s glyph colour inside a held component is written on the glyph', /ds-tip__v \{[^}]*background: var\(--icon-off\)/.test(css), css.split('\n').filter((l) => /off|tip__/.test(l)).join('\n'));
+}
 console.log(`${n} passed`);

@@ -1240,4 +1240,13 @@ else {
   ok('a placeholder swap that takes content is marked as drawn at its placeholder by default, so it reads back as the design\'s swap',
     sp.type === 'node' && sp.swapped && JSON.stringify(sp.placed) === '{"parts":["menu/slot"],"component":"Slot"}', JSON.stringify(sp)); }
 
+{ // the glyph of an icon a held component draws open (another library's, its glyph a box) is that component's own part:
+  // mapped under it, read where the sheet writes its override, never skipped (a checkbox's toggletip info icon, 2026-11-27)
+  const box = { width: 14, height: 14, absolute: { x: 1, y: 1 }, constraints: { horizontal: 'scale', vertical: 'scale' } };
+  const tip = { component: 'Tip', folder: 'tip', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, info: { kind: 'instance', parent: 'root', component: 'Info', width: 16, height: 16 }, 'info/v': { kind: 'graphic', parent: 'info', background: 'Icon/soft', ...box } }, variants: [] };
+  const host = { component: 'Box', folder: 'box', props: { off: { type: 'boolean', default: false } }, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, tip: { kind: 'instance', parent: 'root', component: 'Tip' }, 'tip/info': { kind: 'instance', parent: 'tip', component: 'Info', width: 16, height: 16 }, 'tip/info/v': { kind: 'graphic', parent: 'tip/info', background: 'Icon/soft', ...box } },
+    variants: [{ when: { off: true }, set: { 'tip/info/v.background': 'Icon/off' } }] };
+  const L = toParity(host, 'box', { naming: ELEMENT, library: { Tip: tip, Box: host }, framework: 'web-components' }).layers, k = Object.keys(L).find((x) => / > V$/.test(x));
+  ok('the glyph of an icon its held component draws open is mapped under that component, never skipped', !!k && typeof L[k] === 'string', JSON.stringify(L));
+}
 console.log(`${n} passed`);

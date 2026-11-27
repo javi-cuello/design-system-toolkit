@@ -33,7 +33,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
-import { expand, drawLayers, variantDefaults, kebab, camel, placedOf as heldBy, openForeign } from './layers.mjs';
+import { expand, drawLayers, variantDefaults, kebab, camel, placedOf as heldBy, openForeign, foreignOpened } from './layers.mjs';
 import { declarations, holds, rem, borderBox } from './css.mjs';
 import { negative, heldOpacity, heldGlyph, bareGlyph, siblingOrder, liftsAlone, CLEARED, UNCLIPPED } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
@@ -633,6 +633,11 @@ function hostOf(a, id, sample = false) {
   return host;
 }
 
+/* Whether an icon inside a held component is one that component draws open (another library's, whose glyph it paints as
+   a box: layers.mjs foreignOpened over the library `mains` keeps, heldOf); and the host a layer is that component's own
+   part of: the held one above such an icon, else hostOf's. */
+const openedAt = (a, icon, mains) => { const h = hostOf(a, icon), m = h && mains && mains.library && mains(a[h].component, a[h].key); return !!m && foreignOpened(m, mains.library).has(icon.slice(h.length + 1)); };
+const hostThrough = (a, id, mains) => { const near = hostOf(a, id); return near && openedAt(a, near, mains) ? hostOf(a, near) : near; };
 /* Every layer any combination records, as chain names it: the base's, else the first variant's that adds it (findAdded). */
 const allOf = (c) => Object.assign({}, ...[...(c.variants || [])].reverse().map((v) => v.add || {}), c.anatomy);
 /* A part turned a quarter, either way, in some combination, in its parent's flow, that this component draws itself (not a
@@ -768,7 +773,7 @@ function everInside(c, id, mains) {
   if (memo.has(id)) return memo.get(id);
   const ps = new Set(), d = variantDefaults(c), B = expand(c, d);
   for (const when of [d, ...(c.variants || []).filter((v) => (v.add || {})[id] || Object.keys(v.set || {}).some((k) => k.startsWith(`${id}.`))).map((v) => ({ ...d, ...v.when }))]) {
-    const a = expand(c, when), host = a[id] && hostOf(a, id), m = host && a[host].component && mains(a[host].component, a[host].key);
+    const a = expand(c, when), host = a[id] && hostThrough(a, id, mains), m = host && a[host].component && mains(a[host].component, a[host].key);
     const over = m && overrideOf(a, host, id.slice(host.length + 1), m, mains, B, c);
     if (over) for (const [p, v] of over.mine) if (over.theirs.get(p) !== v) ps.add(p);
   }
@@ -816,7 +821,7 @@ const hostIn = (c, id, mains, copies = false, sample = false) => {
   if (!memo.has(k)) memo.set(k, hostInNow(c, id, mains, copies, sample));
   return memo.get(k);
 };
-const hostInNow = (c, id, mains, copies = false, sample = false) => { const a = allOf(c); const h = hostOf(a, id, sample), m = h && a[h].component && mains(a[h].component, a[h].key);
+const hostInNow = (c, id, mains, copies = false, sample = false) => { const a = allOf(c); const h = sample ? hostOf(a, id, sample) : hostThrough(a, id, mains), m = h && a[h].component && mains(a[h].component, a[h].key);
   if (!m || (!copies && (copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h))) || (hostOf(a, h, sample) && !hostIn(c, h, mains, false, sample))) return false;
   const withs = [a[h].with, ...(c.variants || []).flatMap((v) => [((v.add || {})[h] || {}).with, (v.set || {})[`${h}.with`]])].filter((w, i) => i === 0 || w);
   // (or among what the combination that draws the part draws alone: a base part beside a layer another combination draws
@@ -918,7 +923,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
         if (over.changed.length) out[id] = { decls: new Map(over.changed.map(([p, v]) => [p, { v }])), unread: [] };
         continue;
       }
-      const host = hostOf(a, id), m = host && a[host].component && mains(a[host].component, a[host].key);
+      // (a layer of an icon its held component draws open is that component's own part, the icon a frame of it: hostThrough;
+      // its glyph's colour written there too, beside the icon's color above, which the glyph's box does not take)
+      const host = hostThrough(a, id, mains), m = host && a[host].component && mains(a[host].component, a[host].key);
       // (inside one placed inside another: the inner one is reached as the outer one's own part, or not at all)
       if (!m || (hostOf(a, host) && !hostIn(c, host, mains))) continue;
       const rel = id.slice(host.length + 1);
@@ -1126,7 +1133,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   // to unset (rulesOf); nowhere set, nothing is written, so the component's own sheet, its states included, holds
   for (const id of Object.keys(ALL)) {
     if (id in a || out[id]) continue;
-    const host = hostOf(ALL, id), m = host && a[host] && mains(a[host].component, a[host].key);
+    const host = hostThrough(ALL, id, mains), m = host && a[host] && mains(a[host].component, a[host].key);
     if (!m || (hostOf(ALL, host) && !hostIn(c, host, mains)) || copyOf(c, host) || Object.keys(ALL).some((k) => k !== host && copyOf(c, k) === host)) continue;
     // (where a variant places another component there, the part is that one's own drawing: nothing of the base's
     // override holds, as a part it records there says nothing either, above)
@@ -1151,7 +1158,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   // the component's own colour only where a rule set another (`given`), so it never falls back to inherit
   for (const [id, e] of Object.entries(a)) {
     if (e.kind !== 'instance' || !inside(id) || !hostIn(c, id, mains)) continue;
-    const host = hostOf(a, id), m = mains(a[host].component, a[host].key);
+    const host = hostThrough(a, id, mains), m = mains(a[host].component, a[host].key);
     if ((ALL[host] || {}).component !== a[host].component) continue;
     const own = placedGlyph(a, host, id.slice(host.length + 1), m, mains), mine = recolour.get(id);
     if (mine == null && own == null) continue;
@@ -1501,7 +1508,8 @@ export const copySelector = (c, n, id, mains, library = {}) => {
   return `${s.slice(0, i)}${seg}:nth-child(${Number((/_(\d+)$/.exec(h) || [0, 1])[1])} of ${seg})${s.slice(i + own.length)}`;
 };
 export const selectorOf = (c, n, id, mains = null, library = {}) => (id === 'root' ? n.root + through(n, c.component, placedIn(c)) : chain(c, n, id, '', mains, library));
-export const heldOf = (library) => (name, key = null) => heldBy(library, { component: name, key });
+// (the library kept on it, `library`, for what a placed component draws open: layers.mjs foreignOpened)
+export const heldOf = (library) => Object.assign((name, key = null) => heldBy(library, { component: name, key }), { library });
 const findAdded = (c, id) => (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
 // a part's name in a selector: its id's last part, the whole id where two parts would share it
 export function partSeg(c, id) {
