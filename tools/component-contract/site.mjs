@@ -65,7 +65,7 @@ export function closureOf(library, folders) {
    drawn from: the generator's code (site.mjs's import closure, and the house naming preferences), its settings and naming, and the contracts of it and
    every component it places (closureOf; checked on all three outside libraries, 2026-11-21: drawing a component from
    that closure alone writes the same as from the whole library). Every self reading drew the whole library, about three
-   quarters of each (150 of 206 s, a Material 3 reading, 2026-11-21). `dir` null, or TOOLKIT_SELF_DRAWN_CACHE=0, draws
+   quarters of each (150 of 206 s, a library's reading, 2026-11-21). `dir` null, or TOOLKIT_SELF_DRAWN_CACHE=0, draws
    every one; a file that cannot be read or written is drawn. */
 export const DRAWN_CACHE = path.join(os.tmpdir(), 'toolkit-self-drawn');
 // (taken as the module loads, beside the code it hashes: taken later, a run waiting on the measuring lock while the files

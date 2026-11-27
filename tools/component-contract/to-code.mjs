@@ -959,7 +959,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     const unheld = e.kind === 'instance' && mains !== NO_MAINS && !(e.component && mains(e.component, e.key));
     const kept = (e.kind === 'instance' && !unheld) || slotted ? decls.filter(([p]) => PLACED.test(p)) : decls;
     // save an override set on the instance itself (derive keeps only what differs from its component's root at its
-    // props: Carbon's toggle fills its toggle item per state): written on the instance, and where the defaults' override
+    // props: a library's toggle fills its toggle item per state): written on the instance, and where the defaults' override
     // no longer holds, the component's own value, as an override inside one is
     if (e.kind === 'instance' && !unheld && !slotted) {
       const ictx = { root: false, holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', wrap: !!(parent && parent.layout && parent.layout.wrap), anchors: false, box: null, pull: null };

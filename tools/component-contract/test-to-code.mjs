@@ -363,7 +363,7 @@ ok('a placed control the contract names drives the state, and no other', ccss.in
 const restDis = toCss({ ...chip, props: { ...chip.props, state: { ...chip.props.state, values: ['rest', 'hover', 'press'], pointer: ['hover', 'press'] } }, variants: [...chip.variants, { when: { state: 'press' }, set: { 'root.background': 'C/p' } }, { when: { state: 'rest', disabled: true }, set: { 'root.background': 'C/r' } }] }, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
 ok('rest is also a disabled box hovered, where disabled hover is not drawn', condition(chip, namer('chip'), 'state', 'rest').includes(':not(:hover:not(:is([data-disabled]') && !restDis.includes('undefined'));
 // rest, where the product sets states of its own (disabled, read-only, active), is none of them: a rule naming rest never
-// reaches a disabled box (carbon slider: a rest rule's display: none hid its handle at disabled and active)
+// reaches a disabled box (a library's slider: a rest rule's display: none hid its handle at disabled and active)
 { const sl = { contract: 1, component: 'Slide', props: { state: { type: 'enum', values: ['rest', 'hover', 'disabled'], default: 'rest', role: 'interaction', pointer: ['hover'] } }, anatomy: { root: { kind: 'container' } }, variants: [] };
   const r = condition(sl, namer('slide'), 'state', 'rest');
   ok('rest, beside states the product sets, excludes them by its attribute', r.includes(':not(:hover)') && /:is\(\[data-state="rest"\], :not\(\[data-state\]\)\)/.test(r) && !/data-state/.test(condition(chip, namer('chip'), 'state', 'rest'))); }
@@ -403,7 +403,7 @@ ok('a box painted in one combination is ringed by a box of its own there, and dr
 ok('a bare box that clips what it holds keeps its corners at focus', !/calc\(var\(--corner-16\)/.test(cornered({ overflow: 'hidden' })));
 const outside = JSON.parse(JSON.stringify(ringed)); outside.variants.at(-1).add.ring.border.align = 'outside';
 ok('a ring stroked outside its layer starts at the layer\'s edge: offset 4, not 6', /outline-offset: 4px;/.test(toCss(outside, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
-// a ring layer another combination draws as a box (Carbon's focusBorder, shown open and drawn at focus): where its outline
+// a ring layer another combination draws as a box (a library's focusBorder, shown open and drawn at focus): where its outline
 // rings, the box draws nothing, or a rule of that combination reaches there and the layer is drawn twice
 const boxed = JSON.parse(JSON.stringify(ringed)); boxed.variants.push({ when: { selected: true }, add: { ring: boxed.variants.at(-1).add.ring } });
 const bcss = toCss(boxed, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
@@ -551,7 +551,7 @@ else console.log('skip: no stored contracts on this machine');
   ok('without the library, no colour is guessed', !/color:/.test(toCss(btn, 'button', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
 }
 
-// an instance of a component the store does not hold (an icon of another library: Carbon's checkbox draws its Checkbox
+// an instance of a component the store does not hold (an icon of another library: one library's checkbox draws its Checkbox
 // icon with a focus stroke): no sheet of its own draws its box, so its stroke and corners are written here, placed
 // directly or inside a placed component the store holds; with no store given, nothing is taken to be missing
 {
@@ -564,7 +564,7 @@ else console.log('skip: no stored contracts on this machine');
   ok('an instance the store does not hold draws its own stroke and corners, placed directly or inside a held one',
     /focus-visible[^{]*> \.ds-box__check \{[^}]*border-radius: 4px;[^}]*outline: 2px solid var\(--focus-focus\);/.test(sheet) && /focus-visible[^{]*> \.ds-box__note > \.ds-note__warn \{[^}]*box-shadow: inset 0 0 0 1px var\(--c-clear\);/.test(sheet)
     && selfCheck(box, rulesOf(box, mains).rules, mains).length === 0 && !/key on/.test(sheet));
-  // a host each variant adds at its own props (Carbon's text input adds Status notification per state): a part inside it
+  // a host each variant adds at its own props (a library's text input adds Status notification per state): a part inside it
   // is named by the variant that draws it there, whichever variant comes first (the first reading lists error's first)
   const stat = { contract: 1, component: 'Stat', props: { status: { type: 'enum', values: ['alt', 'failed'], default: 'alt', figma: 'Status' } }, anatomy: { root: { kind: 'container' } },
     variants: [{ when: { status: 'alt' }, add: { warnAlt: { kind: 'instance', parent: 'root', component: 'WarnAlt', key: 'a1', order: 0 } } }, { when: { status: 'failed' }, add: { warn: { kind: 'instance', parent: 'root', component: 'Warn', key: 'a2', order: 0 } } }] };
@@ -577,7 +577,7 @@ else console.log('skip: no stored contracts on this machine');
   ok('with no store given, a placed instance is given only its place', !/outline|box-shadow|border-radius/.test(toCss(box, 'box', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
 }
 
-// a placed component the store holds that sets its component's blend back (rules.mjs UNBLENDED, `normal`: Carbon's
+// a placed component the store holds that sets its component's blend back (rules.mjs UNBLENDED, `normal`: a library's
 // number input over its action item's darkened divider) is written so over the component's mode, directly and as a
 // nested instance inside a held one; a layer kept inside it too
 {
@@ -596,7 +596,7 @@ else console.log('skip: no stored contracts on this machine');
 }
 
 // a part a placed component draws only at the props a variant places it with (Icon button's focus ring at state focus,
-// overridden inside Atlassian's split button): the mapping reads it where the sheet writes it, the host placed at those
+// overridden inside a library's split button): the mapping reads it where the sheet writes it, the host placed at those
 // props, never at its base ones, where the part is not, nor matched by place to another part there (its tooltip)
 {
   const ib = { contract: 1, component: 'IB', props: { state: { type: 'enum', values: ['default', 'focus'], default: 'default' } }, anatomy: { root: { kind: 'container' } },
@@ -642,7 +642,7 @@ else console.log('skip: no stored contracts on this machine');
     nestedSelector(cal, namer('cal'), 'week/day_2', mains) === '.cal > .cal__week > .week__day:nth-child(2 of .week__day)', nestedSelector(cal, namer('cal'), 'week/day_2', mains));
 }
 
-// a placed icon whose lone glyph a variant fades (material3's disabled chip: 0.38 on the glyph, the instance faded too where
+// a placed icon whose lone glyph a variant fades (a library's disabled chip: 0.38 on the glyph, the instance faded too where
 // it is elevated): code colours the instance, so the glyph's opacity is written there, times the instance's own
 {
   const chip = { contract: 1, component: 'Chip', props: { off: { type: 'boolean', default: false, axis: true, figma: 'Disabled' }, raised: { type: 'boolean', default: false, axis: true, figma: 'Raised' } },
@@ -662,7 +662,7 @@ else console.log('skip: no stored contracts on this machine');
     /\.ds-chip__icon \{[^}]*color: transparent;/.test(bareSheet) && /data-off[^{]*> \.ds-chip__icon \{[^}]*color: var\(/.test(bareSheet), bareSheet);
 }
 
-// an icon placed inside a placed component, which a variant recolours there (Carbon's disabled Toggletip icon): the
+// an icon placed inside a placed component, which a variant recolours there (a library's disabled Toggletip icon): the
 // instance differs from the component's part only in its glyph's colour, and that colour is written on the part
 {
   const tip = { contract: 1, component: 'Tip', props: {}, anatomy: { root: { kind: 'container' }, info: { kind: 'instance', parent: 'root', component: 'Info', width: 16, height: 16 }, 'info/vector': { kind: 'graphic', parent: 'info', background: 'C/secondary' } }, variants: [] };
@@ -727,7 +727,7 @@ else console.log('skip: no stored contracts on this machine');
   ok('an override a variant drops where it places another component goes back there, as where it keeps the layer',
     at(swapped).length === 1 && /color: unset;/.test(at(swapped)[0]) && JSON.stringify(at(swapped)) === JSON.stringify(at(kept)) && selfCheck(swapped, rulesOf(swapped, mains2).rules, mains2).length === 0);
   // an override a variant adds where the defaults have none, which a combination sets back to the component's own value:
-  // that value is written there, never unset, which would undo the component's own (material3's slider, disabled and
+  // that value is written there, never unset, which would undo the component's own (a library's slider, disabled and
   // large, its active track's corners 0, 2026-11-24)
   const added = { ...loud, props: { ...loud.props, big: { type: 'boolean', default: false, axis: true, figma: 'Big' } }, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag },
     variants: [{ when: { loud: true }, add: { 'tag/text': { kind: 'text', parent: 'tag', color: 'C/x', typography: 'Label/sm' } } }, { when: { loud: true, big: true }, set: { 'tag/text.color': 'C/strong' } }] };
@@ -896,7 +896,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const css = toCss(c, 'btn');
   ok('two parts a combination numbers alike stack in the order they are listed', /isolation: isolate/.test(css) && /\[data-grip\][^{]*:hover[^{]*> \.btn__icon \{[^}]*z-index: 3/.test(css) && selfCheck(c, rulesOf(c).rules).length === 0); }
 // a part the rest of the grid draws that a pointer state also puts in (a tile's border, framed or hovered): the markup
-// holds it, so the sheet hides it where the contract draws none and shows it at the pointer state (carbon tile, 2026-11-21)
+// holds it, so the sheet hides it where the contract draws none and shows it at the pointer state (a library's tile, 2026-11-21)
 { const border = { kind: 'graphic', shape: 'rectangle', parent: 'root', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'C/s', width: 1 } };
   const c = { contract: 1, component: 'Tile', props: { kind: { type: 'enum', values: ['plain', 'framed'], default: 'plain' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, label: { kind: 'text', parent: 'root', content: 'Tile' } },
@@ -907,7 +907,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     // (hidden by a rule naming its whole combination alone, so no rule shows it again: nothing to undo a display with)
     && (css.match(/display: /g) || []).length === 2 && selfCheck(c, rulesOf(c).rules).length === 0);
   // (a placed component is hidden the same way, and never shown again by a display of this sheet's: its own sheet's holds,
-  // whatever its props make it; carbon dropdown's read-only tag, whose content read as filling under display: unset)
+  // whatever its props make it; a library's dropdown's read-only tag, whose content read as filling under display: unset)
   const tag = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } } }, variants: [] };
   const held = { ...c, variants: [{ when: { kind: 'framed' }, add: { tag: { kind: 'instance', parent: 'root', component: 'Tag' } } }, { when: { state: 'hover' }, add: { tag: { kind: 'instance', parent: 'root', component: 'Tag' } } }] };
   const hm = (n) => (n === 'Tag' ? tag : null), hc = toCss(held, 'tile', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: hm });
@@ -916,7 +916,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const ps = { ...c, variants: [{ when: { kind: 'framed' }, add: { 'label::after': { kind: 'graphic', parent: 'label' } } }, { when: { state: 'hover' }, add: { 'label::after': { kind: 'graphic', parent: 'label' } } }] };
   ok('a pseudo part a pointer state also puts in is not hidden by display', !/::after \{\s*display: none/.test(toCss(ps, 'tile', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }))); }
   // (one a pointer state draws as a ring, focus's outline on the box it rings, stays that outline: no element held for it
-  // there, none hidden; carbon dropdown, whose focus border came back as a second ring)
+  // there, none hidden; a library's dropdown, whose focus border came back as a second ring)
   const ringAdd = { contract: 1, component: 'Pick', props: { open: { type: 'boolean', default: false }, state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'] } },
     anatomy: { root: { kind: 'container', radius: 8 } },
     variants: ['open', 'state'].map((k) => { const fb = { kind: 'graphic', shape: 'rectangle', parent: 'root', position: 'absolute', absolute: { x: -2, y: -2, end: -2, bottom: -2 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'C/f', width: 2, align: 'inside' }, radius: 8 }; return { when: { [k]: k === 'open' ? true : 'focus' }, add: { focusBorder: fb } }; }) };
@@ -965,7 +965,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a layer\'s place inside a placed component is never unset by a record that leaves it out', /background: var\(--c-strong\)/.test(markRule) && !/position|inset/.test(markRule));
   ok('a graphic directly under a placed component takes its override', /\.ds-bar > \.ds-bar__row > \.ds-row__line \{[^}]*background: var\(--c-strong\)/.test(sheet));
 }
-// an override set on a placed instance itself (a fill on Carbon's toggle item, per state) is written on the instance,
+// an override set on a placed instance itself (a fill on a library's toggle item, per state) is written on the instance,
 // against its component's root at its props; where a variant drops it, the component's own value there; a nested
 // instance's own override likewise, through its holder
 {
@@ -1007,7 +1007,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a nested instance\'s own override is written through its holder', /\.ds-slider > \.ds-slider__rail > \.ds-rail__knob \{[^}]*background: var\(--c-strong\)/.test(toCss(slider, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: m2 })));
 }
 // a placed component is reached as its own sheet draws it: one whose name says button but which places a Button is a
-// box, no host wrapping a <button>, though its holder's record keeps none of its insides (Carbon's code snippet ghost button)
+// box, no host wrapping a <button>, though its holder's record keeps none of its insides (a library's code snippet ghost button)
 {
   const EL = { kind: 'element', prefix: 'ds-' };
   const ghost = { contract: 1, component: 'Ghost button', props: {}, anatomy: { root: { kind: 'container' }, button: { kind: 'instance', parent: 'root', component: 'Button', with: {} } }, variants: [] };
@@ -1034,7 +1034,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('with no library given, no placed control is reached through a button', !/> button/.test(toCss(tile, 'tile', { naming: EL })));
 }
 // a part scaled with a parent that is stretched between its own parent's edges takes its share of that parent's size, the
-// grandparent's less both offsets (Carbon's skeleton shimmer, scaled inside a fill stretched over the box)
+// grandparent's less both offsets (a library's skeleton shimmer, scaled inside a fill stretched over the box)
 {
   const sk = { contract: 1, component: 'Skel', props: {}, anatomy: { root: { kind: 'container', width: 160, height: 16, overflow: 'hidden' },
     fill: { kind: 'container', parent: 'root', background: 'C/soft', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' } },

@@ -373,7 +373,7 @@ export function layerNames(ids, design, drawnFrom = null) {
 }
 
 /* The layer a design draws as box `id`'s focus ring, which code draws as that box's outline (to-code's ringOf, the one
-   rule): its key and name, so a ring read back from an outline is the design's own layer (Carbon's `focusBorder`),
+   rule): its key and name, so a ring read back from an outline is the design's own layer (a library's `focusBorder`),
    and a synthesised `<id>/focusRing` only where the design has none. For a render (`when`, the design's props) it is
    the outline to-code draws there: of the layers its expanded anatomy holds that ringOf takes for this box, the last,
    whose outline to-code writes over the others' (a {focus, invalid} render's error stroke over the ring {focus} adds).
@@ -406,7 +406,7 @@ export function ringKeyOf(design, id, taken = {}, when = null, settings = undefi
 }
 
 /* A render's args as a design's props: each code prop as the design prop of its key, else the one the mapping's joins
-   give it (Carbon's styleOption for Style), its value in the design's spelling. The render's state (the `__state` arg)
+   give it (a library's styleOption for Style), its value in the design's spelling. The render's state (the `__state` arg)
    is the design's interaction prop's, whatever that prop is called: the value of the same word, else the one the
    house's pseudo-classes (to-code's pseudoClasses, the stylesheet's; `settings` theirs, the house's unless given) force
    as this state is forced (`pseudoOf`), a value of several words kebab-cased as their keys are.
@@ -438,7 +438,7 @@ export function designCombo(design, props, joinedProps, args, pseudoOf = {}, set
 
 /* A reading's layers with its render state said in the design's words (designCombo's own rule: the same word, its rest
    the design's default), for a trip that draws them against the design's props (from-code --second). A combination
-   layer names every prop, the rest state too: kept as the reading's `rest` beside Carbon's `enabled`, it held at no
+   layer names every prop, the rest state too: kept as the reading's `rest` beside a library's `enabled`, it held at no
    combination the second trip drew, and a part a pointer state also adds was hidden there.
    Tested by test-from-code.mjs. */
 export function inDesignStates(variants, reading, design) {
@@ -453,7 +453,7 @@ export function inDesignStates(variants, reading, design) {
    defaults, and every one of more that the design draws (`draws(list)`; none given, a reading only in code, stops at
    four, which has no grid to say which it draws). The round trip compares every combination the design draws, so one of
    five props or more left unread was only predicted from the layers, and read back wrong where they do more together
-   (Material's square extra-small icon button, five props off default; its vertical slider, five to seven).
+   (a library's square extra-small icon button, five props off default; its vertical slider, five to seven).
    Tested by test-from-code.mjs. */
 export function combinationsToRead(keys, valuesOf, draws = null, from = 4) {
   const out = [];
@@ -471,7 +471,7 @@ export const comboKey = (list) => list.map(([k, v]) => `${k}=${String(v)}`).sort
 
 /* Reads the combinations combinationsToRead gave, fewest props first, every one: the round trip compares every
    combination the design draws, and one left to the layers was a guess it counts as not the same (eval.mjs isSame),
-   even where no three of its props build a layer together (Carbon's checkbox left 1,360 so). `readOne(list)` reads it.
+   even where no three of its props build a layer together (a library's checkbox left 1,360 so). `readOne(list)` reads it.
    { read }: the count, said in the self-check.
    Tested by test-from-code.mjs. */
 export async function readCombinations(lists, readOne) {
@@ -594,7 +594,7 @@ export function cornersOf(cs, w, h, corner) {
   return { radius: cs.map((c) => { const k = corner(c, w, h); return k.full ? k : k.radius; }) };
 }
 /* A library's fullest radius: the largest number the radius field offers, of the tokens scoped to corners where any is
-   (a token open to every field, Atlassian's Body S font weight at 400, is offered too, and is no corner). Tested by
+   (a token open to every field, a library's Body S font weight at 400, is offered too, and is no corner). Tested by
    test-from-code.mjs. */
 /* A corner rounder than its box (cornerOf's full) as a token: the one the code's own var names there, as written (a small
    radius on a box less than twice it is that radius, never the fullest); else, where the code names a radius token at all,
@@ -989,7 +989,7 @@ export function writtenByHolder(parts, elSel, rootSel) {
 
 /* A glyph read as the instance of a component this library holds (asIcon) keeps no colour that component draws its glyph
    in itself (derive's glyphColour, the colour to-code writes on it): that is the component's own, no override, as an
-   instance's styling equal to its component's root is (ownStyling). Atlassian's Slot, placed in a banner's and a top
+   instance's styling equal to its component's root is (ownStyling). A library's Slot, placed in a banner's and a top
    nav's slots: its magenta placeholder fill, drawn by Slot itself, read back as the instance's background. At each
    variant's props too. `e` the reading's instance at `id`, `variants` the reading's; `mains` resolves a component. */
 export function dropOwnGlyph(id, e, variants, mains) {
@@ -1077,7 +1077,7 @@ export function codeFigma(js) {
 
 /* The key a reading's icon instance takes: the design's own, from the instance it places at that layer (or, for another
    glyph of the set, any instance of that name the design places). An instance named without its key resolves by name,
-   so an icon that shares a component's name (Carbon's Checkbox glyph inside the Checkbox set) would become that
+   so an icon that shares a component's name (a library's Checkbox glyph inside the Checkbox set) would become that
    component, and a component that places itself recurses without end when drawn again. */
 export function designKeyOf(design, fe, name) {
   if (fe && fe.component === name) return fe.key || null;
@@ -1090,7 +1090,7 @@ export function designKeyOf(design, fe, name) {
 
 /* Whether the design sets the colour of the placed icon at `id`: on the instance itself, or on a layer inside it, in its
    anatomy, a variant's set or a variant's added layers. A layer inside a component the library holds no contract for
-   (`mainOf` finds none: an icon set's, Atlassian's Epic) is that component's own drawing, never an override the design
+   (`mainOf` finds none: an icon set's, a library's Epic) is that component's own drawing, never an override the design
    makes here: eval.mjs leaves those insides to code (inForeign), so its colour sets nothing, but for its lone glyph straight
    under it, whose colour roundTrip compares as the instance's (to-figma glyph). Where the library holds the
    component, the snapshot keeps only what differs from it inside, so a colour there is the design's. */
@@ -1894,7 +1894,7 @@ async function selfSource(project, name, { second = false } = {}) {
   if (!tokensCss) throw Object.assign(new Error(`${project.config.project}: no _tokens.scss under paths.styles to render the tokens with`), { usage: true });
   // only the component and what it places, with only the tokens their sheets reach (site.mjs selfSiteFiles): every
   // matched-styles answer matched the whole library's sheet and carried the whole tokens rule it inherits, 85 to 93% of
-  // a reading's time (a Material text field's 553 KB an answer, 31 ms to 3)
+  // a reading's time (a library's text field's 553 KB an answer, 31 ms to 3)
   const files = selfSiteFiles(library, name, { tokensCss, settingsOf });
   // the page served and Chrome launched when a read first needs them: with the read cache, a reading whose every
   // answer is kept needs neither (read-cache.mjs)
@@ -1905,7 +1905,7 @@ async function selfSource(project, name, { second = false } = {}) {
     browser = await launch({});
     tab = await attach(await newPage(browser.endpoint));
     // the tier's colour scheme, as the parity engine opens a page (hosts.mjs schemeOf): headless Chrome takes the
-    // system's otherwise, and a Mac that turns dark at night read Atlassian's dark tokens (a spinner's currentcolor as
+    // system's otherwise, and a Mac that turns dark at night read a library's dark tokens (a spinner's currentcolor as
     // text/subtle), and kept them in the read cache
     const scheme = schemeOf(tier);
     await media(tab, { 'prefers-color-scheme': scheme });
@@ -1964,7 +1964,7 @@ async function selfSource(project, name, { second = false } = {}) {
       // body): then it is loaded again, so nothing a read did reaches the next. A forced pointer state is let go instead
       // of reloading (fetching the document again drops every one, shared/cdp.mjs forceState), before the next render
       // goes in, so no ancestor still held hovered or focused styles it: each reload cost about 1.5 s, the page and the
-      // first matched styles after it (a Carbon dropdown read 184 of them, 1566 s to 283 s with the served page cut
+      // first matched styles after it (a dropdown read 184 of them, 1566 s to 283 s with the served page cut
       // down below, the same reading, 2026-11-22)
       const tab = await live();
       if (src.forced) { await tab.send('DOM.getDocument', { depth: 0 }); src.forced = false; }
@@ -3021,7 +3021,7 @@ async function main() {
           // style's, not a border; a ring the style does not draw (a divider beside an elevation) stays the border
           const theirs = (l) => (named.layers || []).some((nl) => /SHADOW/.test(nl.type) && keyOf({ layers: [nl] }) === shadowKey(cssShadows(l)));
           // (but a shadow that is all strokes, every layer read as a side's, the code naming no style: a border that looks
-          // like a style, an inside bottom stroke as Carbon's `Border bottom` draws it, is the border it was written as)
+          // like a style, an inside bottom stroke as a library's `Border bottom` draws it, is the border it was written as)
           const strokesOnly = !named && (x.ringsUsed || []).length && x.ringsUsed.length === cssShadows(x.shadowAll || '').length;
           const whole = x.shadowAll && !strokesOnly && wholeShadowStyle(cssShadows(x.shadowAll), named, effects, shadowKey, shadeOf);
           if (whole || (x.shadowAll && named && (x.ringsUsed || []).length && x.ringsUsed.every(theirs))) { x.shadow = (whole || named).name; if (!x.ownStroke) delete x.border; }
@@ -3209,7 +3209,7 @@ async function main() {
       const got = await read({ ...defaults, ...Object.fromEntries(four.map(([k, v]) => [props[k].code, v])) });
       const d = delta(expand(fromCode, { ...allDefaults, ...when }), got, base);
       // (held only where it was read, every other prop at its default, as derive pins what is left over: an open four-prop
-      // layer reached combinations no read saw, a Carbon tag's close button Cyan where its icon draws it Blue)
+      // layer reached combinations no read saw, a tag's close button Cyan where its icon draws it Blue)
       if (!Object.keys(d).length) return false;
       variants.push({ when: { ...allDefaults, ...when }, combination: true, ...d }); fourLayers++;
       return true;

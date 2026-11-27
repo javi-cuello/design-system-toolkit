@@ -751,7 +751,7 @@ function arcForm(y) {
 /* A glyph a reading from code marks where a placed component draws an icon's instance (to-markup's data-icon="Information",
    read as a graphic naming its asset), held to that instance: from-code names it the instance (its asIcon) only after
    this cut, so compared as the graphic it was, it differed from its component's own in every combination and was kept as
-   an override the design never states (Carbon's Toggletip's Information inside every field's label). The asset is the
+   an override the design never states (a library's Toggletip's Information inside every field's label). The asset is the
    instance's component by its last name, as asIcon joins them; its mark's size is the icon's Size. Only for a reading. */
 function asGlyphOf(e, x, reading) {
   const last = (v) => String(v).split('/').pop().toLowerCase();
@@ -825,7 +825,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     // glyph inside it (Figma's way) is its component's, which Figma does not say on the instance: to-figma's glyph
     // equivalence, for a reading (from-code); not in an instance the design keeps whole where the design states a colour
     // for that icon or its glyph (`coloured`: the layers it states one for; none given, every layer there), so the reading
-    // keeps the icon's (Carbon's select chevron); one it states none for there is its component's still (Carbon's Status
+    // keeps the icon's (a library's select chevron); one it states none for there is its component's still (a library's Status
     // notification's Warning--filled, kept whole in a slider's error state)
     const states = (k) => !coloured || [...coloured].some((c) => c === k || c.startsWith(`${k}/`));
     if (reading) for (const k of inner) {
@@ -860,7 +860,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     }
     // a layer kept that draws no fill where its component's part has one has cleared it (an instance's override: its
     // fills emptied, or at no opacity, which the walk does not record): said none, or a reader would take the part's
-    // unsaid fill as its component's (Carbon's read-only time picker's field background); in an instance kept whole too,
+    // unsaid fill as its component's (a library's read-only time picker's field background); in an instance kept whole too,
     // whose every layer is kept, as walked (a field's background a read-only state empties)
     // (Figma's reading only: one from code says a fill cleared only where it saw one painted clear, readCleared)
     const sayCleared = (kept) => {
@@ -949,7 +949,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       // equivalence, for a reading (from-code)
       const sized = (y) => { const { Size, ...w } = y.with || {}; const same = Size != null && String(Size) === String(y.width) && y.width === y.height; const { with: _, ...r } = y; return same ? (Object.keys(w).length ? { ...r, with: w } : r) : y; };
       // and its place and constraints where the reading states none, which no instance can
-      // override (figma-fact: no-nested-position-override): code reads none where the component places a layer in a frame (Atlassian's
+      // override (figma-fact: no-nested-position-override): code reads none where the component places a layer in a frame (a library's
       // Checkbox icon's box at 1, 1, scaled), so their absence is the component's own; one the reading does state is
       // compared, so a part code places elsewhere stays a difference (a design's are compared as walked, above)
       const unstated = (m, by) => { const r = { ...m }; for (const f of ['absolute', 'constraints']) if (by[f] === undefined) delete r[f]; return r; };
@@ -1301,7 +1301,7 @@ function bridge(stored) {
 /* The placed instances a contract keeps whole (one hides a layer no prop shows, so derive kept layers equal to its
    component's), over every variant at once: each whose insides the reading's own cut (ownInsides, partial, `reading`)
    would shrink. One source for from-code, which keeps them whole in its reading, and to-figma's roundTrip, which fills
-   no part of one (a part code did not draw there stays missing). With the reading's cut: Carbon's Status notification,
+   no part of one (a part code did not draw there stays missing). With the reading's cut: a library's Status notification,
    kept whole in a slider's error state with its glyph's place unstated, read as nothing to drop under a cut that held
    place against its component. `mains` is byComponentName over the library. */
 function wholeHosts(contract, mains) {

@@ -179,7 +179,7 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a part whose override is a field, not a swap, keeps its key a difference: two components of one name', !overW('org/box/t.key'));
   ok('an override a placed component has no prop for is left to code, its structure only; one a prop carries, a style the sheet reaches, and a name the reader gives stay differences',
     over('org/icon') && over('org/icon.component') && !over('org/icon.width') && !over('org/icon.name') && !over('org/label.content') && !over('org/dot') && !over('org/dot.background'));
-  // (Atlassian's Column / Page: a cell's slot swapped to an icon tile the cell has no prop for, its key, corners, fill
+  // (a library's Column / Page: a cell's slot swapped to an icon tile the cell has no prop for, its key, corners, fill
   // and modes that tile's own)
   ok('a swap no prop passes takes its key and its component\'s own look and modes with it; its size stays a difference',
     over('org/icon.key') && over('org/icon.radius') && over('org/icon.background') && over('org/icon.modes.tile-colour') && !over('org/icon.height') && !over('org/icon.minWidth') && !over('org/dot.background'));
@@ -333,18 +333,18 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
 // --projects: the steps as child runs, stubbed (a real one measures and takes the lock)
 {
   const go = async (projects, legs, rcs = () => 0) => { const ran = [], log = []; const rc = await runAll(projects, legs, { run: (a) => { ran.push(a.join(' ')); return rcs(ran.length); }, say: (l) => log.push(l), now: () => new Date(2026, 10, 20, 9, 5) }); return { ran, log, rc }; };
-  const a = await go(['carbon', 'material3'], ['self', 'second']);
-  ok('runAll: per project, self then second on the panel, then its diff, project by project', JSON.stringify(a.ran) === JSON.stringify(['--project carbon --self --panel --jobs 4', '--project carbon --second --panel --jobs 4', '--project carbon --panel --diff', '--project material3 --self --panel --jobs 4', '--project material3 --second --panel --jobs 4', '--project material3 --panel --diff']) && a.rc === 0);
-  ok('runAll: each step logged before with its time and args, after with its rc, and the end with its time', a.log[0] === '== 09:05 --project carbon --self --panel --jobs 4' && a.log[1] === '== rc 0' && a.log.at(-1) === '== done 09:05' && a.log.length === 13);
-  const b = await go(['carbon', 'atlassian', 'material3'], ['self'], (i) => (i === 1 ? 2 : i === 2 ? 1 : 3));
+  const a = await go(['lib-a', 'lib-c'], ['self', 'second']);
+  ok('runAll: per project, self then second on the panel, then its diff, project by project', JSON.stringify(a.ran) === JSON.stringify(['--project lib-a --self --panel --jobs 4', '--project lib-a --second --panel --jobs 4', '--project lib-a --panel --diff', '--project lib-c --self --panel --jobs 4', '--project lib-c --second --panel --jobs 4', '--project lib-c --panel --diff']) && a.rc === 0);
+  ok('runAll: each step logged before with its time and args, after with its rc, and the end with its time', a.log[0] === '== 09:05 --project lib-a --self --panel --jobs 4' && a.log[1] === '== rc 0' && a.log.at(-1) === '== done 09:05' && a.log.length === 13);
+  const b = await go(['lib-a', 'lib-b', 'lib-c'], ['self'], (i) => (i === 1 ? 2 : i === 2 ? 1 : 3));
   ok('runAll: three failures in a row (rc 2 or more) stop the run; rc 1 is not a failure and resets the count', b.rc === 1 && b.ran.length === 5 && b.log.at(-1) === '== three failures in a row: stopped' && !b.log.some((l) => /done/.test(l)));
-  const c = await go(['carbon', 'atlassian'], ['self'], (i) => (i === 1 ? 2 : 0));
+  const c = await go(['lib-a', 'lib-b'], ['self'], (i) => (i === 1 ? 2 : 0));
   ok('runAll: a step that failed, short of three in a row, still fails the run, which goes on to the end', c.rc === 1 && c.ran.length === 4 && c.log.at(-1) === '== done 09:05');
   const opts = (o) => projectsOptions(o, { cwd: '/here', labelError: (p) => (p === 'nope' ? `no context document for ${p}` : null) });
-  ok('--projects: a misspelled label is refused, named, before any step', opts({ projects: 'carbon,nope' }).error === 'no context document for nope');
-  ok('--projects: jobs that are not a whole number, or no project, are refused', /usage/.test(opts({ projects: 'carbon', jobs: 'abc' }).error) && /usage/.test(opts({ projects: ',' }).error) && /usage/.test(opts({ projects: 'carbon', jobs: '0' }).error));
-  const good = opts({ projects: 'carbon,atlassian', log: 'l.txt' });
-  ok('--projects: the log made absolute against the folder run in, the rest defaulted', good.log === '/here/l.txt' && good.jobs === 4 && good.legs.join() === 'self,second' && good.projects.join() === 'carbon,atlassian' && opts({ projects: 'a', log: '/abs/l' }).log === '/abs/l');
+  ok('--projects: a misspelled label is refused, named, before any step', opts({ projects: 'lib-a,nope' }).error === 'no context document for nope');
+  ok('--projects: jobs that are not a whole number, or no project, are refused', /usage/.test(opts({ projects: 'lib-a', jobs: 'abc' }).error) && /usage/.test(opts({ projects: ',' }).error) && /usage/.test(opts({ projects: 'lib-a', jobs: '0' }).error));
+  const good = opts({ projects: 'lib-a,lib-b', log: 'l.txt' });
+  ok('--projects: the log made absolute against the folder run in, the rest defaulted', good.log === '/here/l.txt' && good.jobs === 4 && good.legs.join() === 'self,second' && good.projects.join() === 'lib-a,lib-b' && opts({ projects: 'a', log: '/abs/l' }).log === '/abs/l');
   { const was = process.env.TOOLKIT_LOCK_HELD; process.env.TOOLKIT_LOCK_HELD = '1'; let seen;
     const rc = stepRunner(null, (cmd, args, o) => { seen = { args, o }; return { status: 3 }; })(['--project', 'p', '--panel', '--diff']);
     ok('--projects: a step keeps its caller\'s TOOLKIT_LOCK_HELD, so under a holder it never waits on that holder\'s lock', (seen.o.env === undefined || seen.o.env.TOOLKIT_LOCK_HELD === '1') && rc === 3 && /eval\.mjs$/.test(seen.args[0]) && seen.args.at(-1) === '--diff');

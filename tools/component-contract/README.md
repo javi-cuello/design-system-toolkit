@@ -102,7 +102,7 @@ Each module's full job is in its header comment and in the [modules](REFERENCE.m
 
 The round trip judges the machinery; components are only references. Every finding becomes a pipeline fix, tested on a made-up contract. A fix found on one library is measured on every library before it lands, with no rise anywhere.
 
-- One measure command, from a pinned worktree: `eval.mjs --projects carbon,atlassian,material3`. Re-read only what moved (`eval --changed`).
+- One measure command, from a pinned worktree: `eval.mjs --projects <label,label…>`. Re-read only what moved (`eval --changed`).
 - Rank causes across all three libraries, the biggest shared one first; read refusals before rows, and rank by components flipped.
 - At most four fixes per review batch. Before a push, re-measure the touched libraries and the projects that use the pipeline against their per-component baselines.
 - Brief a fixer with the principle. The reader inverts the writer's own function. Every side loads settings from `librarySettingsFor`. One function produces what is written and what is hashed.

@@ -293,7 +293,7 @@ export function ownInPlaced(library, drawn, mains, whole = new Set()) {
       if (!(flow && flow.direction)) delete f.absolute;
       // (a glyph's scale both ways kept only below another instance inside this one, left to that one's turn: a part whose
       // nearest instance is this one has its constraints, the component's own, left out as derive's inherit leaves them;
-      // Carbon's dropdown chevron's Chevron--down, filled with a scale the library keeps none of)
+      // a library's dropdown chevron's Chevron--down, filled with a scale the library keeps none of)
       const nested = (() => { for (let p = x.parent; p && p !== 'root'; p = (M[p] || {}).parent) if ((M[p] || {}).kind === 'instance') return true; return false; })();
       if (!f.absolute && !(nested && f.constraints && f.constraints.horizontal === 'scale' && f.constraints.vertical === 'scale')) delete f.constraints;
       // (nor a vector's paths, which the walk records inside no instance (derive's ownInsides holds its layers without
@@ -576,7 +576,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
       if (mains) req('./derive.cjs').ownInsides(JSON.parse(JSON.stringify(A)), mains, { found: here });
       // (only a host this combination lists whole, some layer it lists its component's own (wholeIn: a partial cut would
       // shrink it): one listing only what it overrides had its unchanged layers left out as its component's, derive's
-      // cut, so a layer missing there is its component's, not hidden (Carbon's group label, shown by Label, beside an
+      // cut, so a layer missing there is its component's, not hidden (a library's group label, shown by Label, beside an
       // overridden row)). A host that hides a layer while every layer it shows is overridden lists alike, and is read so
       // too: the contract keeps no word for which, and a layer the code draws there is then taken as its component's)
       for (const h of [...here]) if (!listedWhole.has(h)) here.delete(h);

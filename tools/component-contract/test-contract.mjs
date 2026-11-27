@@ -218,7 +218,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const items = { name: 'Crumbs', id: '2:1', key: 'k2', props: { Size: ['Md'] }, variants: [{ name: 'Size=Md', type: 'COMPONENT', children: [
     { name: 'Item', type: 'TEXT', text: 'a' }, { name: 'Item', type: 'TEXT', text: 'b' }, { name: 'Item 2', type: 'TEXT', text: 'c' }] }] };
   ok('a layer named with a number and a repeated layer take two ids, never one', bridge(items).clashes.length === 0 && bridge(items).ids['Item 2'].join() === 'item2' && bridge(items).ids['Item#2'].join() === 'item_2');
-  // 2026-11-24, the Figma oracle: Carbon names one layer `Text overflow` in some variants and `Text Overflow` in others
+  // 2026-11-24, the Figma oracle: a library names one layer `Text overflow` in some variants and `Text Overflow` in others
   // (and `Accordion content` with a trailing space); the bridge kept the first path alone, so the part read as missing
   // wherever Figma spelled it the other way
   const renamed = { name: 'Switch', id: '3:1', key: 'k3', props: { Size: ['Sm', 'Md'] }, variants: [
@@ -312,7 +312,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('a part stretched with its parent is its offsets from both edges, no size; one pinned to the end, its offset from it',
     JSON.stringify(pinned.focusRing.absolute) === '{"x":-4,"y":-4,"end":-4,"bottom":-4}' && pinned.focusRing.width === undefined && pinned.focusRing.height === undefined
     && JSON.stringify(pinned.badge.absolute) === '{"x":71,"y":2,"end":2}' && pinned.badge.width === 8);
-  // an icon centred in a 40 box a fraction off its middle (Material's toggleable icon button, 8.3 and 7.75): its far edges
+  // an icon centred in a 40 box a fraction off its middle (a library's toggleable icon button, 8.3 and 7.75): its far edges
   // too, so the distance of its centre from the parent's, (x - end) / 2, is said whatever sizes code gives either box
   const centred = derive({ name: 'Toggle', id: '1:1', props: {}, variants: [{ name: 'Toggle', type: 'COMPONENT', w: 40, h: 40, children: [
     { name: 'Icon', type: 'RECTANGLE', x: 8.3, y: 7.75, w: 24, h: 24, sizing: 'FIXED/FIXED', absolute: true, constraints: 'CENTER/CENTER' }] }] }).anatomy;
@@ -499,7 +499,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('an instance that draws no blend where its component does says normal; one that blends says nothing, nor one whose component does not blend',
     derive(row({}), ['Box'], { mains: bm }).anatomy.box.blend === 'normal' && derive(row({ blendMode: 'DARKEN' }), ['Box'], { mains: bm }).anatomy.box.blend === undefined
     && derive(row({}), ['Box'], { mains }).anatomy.box.blend === undefined);
-  // and a layer inside an opened instance that draws no blend where its component's layer does (Carbon's number input
+  // and a layer inside an opened instance that draws no blend where its component's layer does (a library's number input
   // action item's divider, darkened in its component, set back in the input)
   const item = { name: 'Item', id: '9:11', props: {}, variants: [{ name: 'Item', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
     { name: 'Divider', type: 'FRAME', sizing: 'FIXED/FIXED', w: 1, h: 20, fills: ['Line/subtle'], blendMode: 'DARKEN', children: [] }] }] };
@@ -808,7 +808,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   { const wrap = derive({ name: 'Wrap', props: {}, variants: [{ name: 'Wrap', type: 'COMPONENT', layout: 'HORIZONTAL', children: [
       { name: 'I', type: 'INSTANCE', instanceOf: 'Icon/house', w: 20, h: 20, sizing: 'FIXED/FIXED', children: [{ name: 'V', type: 'VECTOR', x: 2, y: 1, w: 16.67, h: 17.5, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/icon'] }] }] }] }, [], { mains: () => null }).anatomy;
     ok('through derive, an outside icon\'s scaled glyph keeps its scale until ownGlyph folds it: no box of its own left', !!wrap['i/v'] && (wrap['i/v'].width === undefined && wrap['i/v'].constraints === undefined)); }
-  { // a scale both ways inside an instance (Material's card state layer, Atlassian's spinner): its component's where its part
+  { // a scale both ways inside an instance (one library's card state layer, another's spinner): its component's where its part
     // there is constrained alike, left out; one its component constrains otherwise, or with no component to hold it to, kept
     const layer = (c) => ({ name: 'Layer', type: 'FRAME', x: 0, y: 0, w: 360, h: 80, sizing: 'FIXED/FIXED', layout: 'VERTICAL', constraints: c, fills: ['C/layer'] });
     const dot = { name: 'Dot', type: 'ELLIPSE', x: 4, y: 4, w: 8, h: 8, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/dot'] };
@@ -819,7 +819,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     ok('inside an instance, a scale both ways equal to its component\'s part is the component\'s, left out (figma-fact: no-nested-position-override); one the component constrains otherwise, or with no component held, is kept',
       !!alike['state/dot'] && alike['state/dot'].constraints === undefined && (!alike['state/layer'] || alike['state/layer'].constraints === undefined)
       && !!other['state/layer'] && !!other['state/layer'].constraints && !!none['state/layer'] && !!none['state/layer'].constraints); }
-  { // two deep (Material's slider: a track stop's dot, recoloured by the track, inside the track placed in the slider): the
+  { // two deep (a library's slider: a track stop's dot, recoloured by the track, inside the track placed in the slider): the
     // track's own contract has the dot's scale left out at the stop's turn, so the slider's walk of it, constrained alike,
     // is the track's, not an override
     const dot = (fill) => ({ name: 'Dot', type: 'ELLIPSE', x: 0, y: 0, w: 4, h: 4, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: [fill] });
@@ -852,7 +852,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const otherKey = () => { const x = { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Icon button' }, 'b/content': { kind: 'container', parent: 'b' }, 'b/content/icon': { kind: 'instance', parent: 'b/content', component: 'Icon/plus', key: 'another' } }; ownInsides(x, (n) => (n === 'Icon button' ? ibK : null)); return Object.keys(x).length; };
   ok('a nested instance of the same name but another key is an override, kept', otherKey() === 4);
   // a reading marks an icon the placed component draws as a glyph naming it (data-icon), not yet its instance: held to
-  // that instance, it is the component's own (Carbon's Toggletip's Information, kept in every field's label before)
+  // that instance, it is the component's own (a library's Toggletip's Information, kept in every field's label before)
   { const tip = { component: 'Toggletip', props: {}, anatomy: { root: { kind: 'container' }, information: { kind: 'instance', parent: 'root', component: 'Information', key: 'ik', width: 16, height: 16, order: 0 }, 'information/vector': { kind: 'graphic', parent: 'information', background: 'Icon/secondary', order: 0 } }, variants: [] };
     const read = (g, reading = true) => { const x = { root: { kind: 'container' }, t: { kind: 'instance', parent: 'root', component: 'Toggletip' }, 't/information': { kind: 'graphic', parent: 't', order: 0, width: 16, height: 16, ...g } }; ownInsides(x, (n) => (n === 'Toggletip' ? tip : null), { partial: true, reading }); return !!x['t/information']; };
     ok('a reading\'s glyph naming the icon its placed component draws there is that instance, its own: not kept', !read({ asset: 'Information', background: 'Icon/secondary' }) && !read({ asset: 'Information', iconSize: 16 }));
@@ -868,7 +868,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
 
 {
   // a layer read inside a placed instance at its component's look but for the place and constraints the component gives it
-  // (Atlassian's Checkbox icon: its box at 1, 1, scaled, read from code with neither) is the component's: an instance
+  // (a library's Checkbox icon: its box at 1, 1, scaled, read from code with neither) is the component's: an instance
   // cannot override them (figma-fact: no-nested-position-override), so they are no override in a reading; a fill is
   const main = { component: 'Icon', props: {}, anatomy: { root: { kind: 'container' }, box: { kind: 'container', parent: 'root', width: 16, height: 16 },
     'box/check': { kind: 'container', parent: 'box', width: 14, height: 14, absolute: { x: 1, y: 1 }, constraints: { horizontal: 'scale', vertical: 'scale' }, background: 'C/a' } }, variants: [] };
@@ -891,14 +891,14 @@ ok('combinations too many to list are said to be unlisted, never left to read as
 {
   // an icon coloured on its instance (code's way) at the colour its component gives the glyph inside (Figma's way) is the
   // component's; a colour the component does not give is the instance's own. In an instance the design keeps whole it
-  // stays: the design keeps the glyph's colour there too (Carbon's select chevron: Icon/icon-primary, read back as none)
+  // stays: the design keeps the glyph's colour there too (a library's select chevron: Icon/icon-primary, read back as none)
   const main = { component: 'IB', props: {}, anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/icon': { kind: 'instance', parent: 'content', component: 'Icon/x', width: 20, height: 20 }, 'content/icon/icon': { kind: 'graphic', parent: 'content/icon', background: 'C/strong' } }, variants: [] };
   const read = (bg, kind = 'graphic') => ({ root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'IB' }, 'b/content': { kind: 'container', parent: 'b', background: 'C/own' }, 'b/content/icon': { kind, parent: 'b/content', width: 20, height: 20, ...(kind === 'instance' && { component: 'Icon/x' }), background: bg } });
   const m = (x) => (x === 'IB' ? main : null);
   const same = read('C/strong'), other = read('C/danger'), whole = read('C/strong', 'instance');
   ownInsides(same, m, { partial: true, reading: true }); ownInsides(other, m, { partial: true, reading: true }); ownInsides(whole, m, { partial: true, whole: new Set(['b']), reading: true });
   const design = read('C/strong'); ownInsides(design, m, { partial: true });
-  // kept whole, but the design states no colour for that icon nor its glyph (Carbon's Status notification's Warning--filled
+  // kept whole, but the design states no colour for that icon nor its glyph (a library's Status notification's Warning--filled
   // in a slider's error state): the reading's colour at the component's own is the component's there too
   const unstated = read('C/strong', 'instance'), stated = read('C/strong', 'instance');
   ownInsides(unstated, m, { partial: true, whole: new Set(['b']), coloured: new Set(['b/content']), reading: true });

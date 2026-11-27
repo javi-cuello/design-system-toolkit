@@ -568,7 +568,7 @@ delete globalThis.figma;
     anatomy: { root: { kind: 'container', background: 'Bg/info' }, label: { kind: 'text', parent: 'root', color: 'Text/info', content: '{label}' } },
     variants: [{ when: { feedback: 'danger' }, set: { 'root.background': 'Bg/danger', 'label.color': 'Text/danger' } }] };
   ok('a drawing worded differently that draws every combination the same has no difference', roundTrip(lib, same).rows.length === 0 && roundTrip(lib, same).combinations === 2);
-  // a reading names its rest state `rest` where the design says Enabled (Carbon's button): a layer of the reading at rest
+  // a reading names its rest state `rest` where the design says Enabled (a library's button): a layer of the reading at rest
   // holds at the design's default state, as designCombo maps a render's rest to it; another state is still its own word
   {
     const st = (values, def, layers) => ({ contract: 1, component: 'Button', props: { type: { type: 'enum', values: ['text', 'icon'], default: 'text', figma: 'Type' }, state: { type: 'enum', values, default: def, figma: 'State', role: 'interaction', pointer: ['hover'] } },
@@ -592,7 +592,7 @@ delete globalThis.figma;
       roundTrip(figma(), code('Icon/strong')).rows.length === 0 && roundTrip(figma(), code('Icon/soft')).rows.length === 1);
     ok('a glyph that overrides more than its colour (its size) is compared as it is, never folded away',
       roundTrip(figma({ width: 16.67 }), figma({ width: 20 })).rows.length === 1 && roundTrip(figma({ width: 16.67 }), code('Icon/strong')).rows.length > 0);
-    // a lone glyph's opacity shows at the instance's times its own (material3's disabled chip: 0.38 on the glyph, and on
+    // a lone glyph's opacity shows at the instance's times its own (a library's disabled chip: 0.38 on the glyph, and on
     // the instance too where it is elevated), as code says it on the instance it colours
     const held = (e, g) => ic({ icon: { kind: 'instance', parent: 'root', component: 'Icon/house', ...e }, ...(g && { 'icon/vector': { kind: 'graphic', parent: 'icon', background: 'Icon/strong', ...g } }) });
     ok('a lone glyph\'s opacity is the instance\'s, times the instance\'s own; another opacity differs',
@@ -633,8 +633,8 @@ delete globalThis.figma;
 }
 
 {
-  // a part of a placed component the library keeps and the reading leaves to the component (Carbon's dropdown chevron's
-  // Chevron--down, Material's leading element's icon) is filled from it as the library keeps it: its constraints, equal to
+  // a part of a placed component the library keeps and the reading leaves to the component (a library's dropdown chevron's
+  // Chevron--down, a library's leading element's icon) is filled from it as the library keeps it: its constraints, equal to
   // the component's and so left out of the library's (derive's inherit), are left out of the fill too
   const chev = { component: 'Chev', props: {}, anatomy: { root: { kind: 'container', width: 16, height: 16 }, down: { kind: 'instance', parent: 'root', component: 'Down', width: 16, height: 16, constraints: { horizontal: 'scale', vertical: 'scale' }, absolute: { x: 0, y: 0 } } }, variants: [] };
   const mains = (n) => (n === 'Chev' ? chev : null);

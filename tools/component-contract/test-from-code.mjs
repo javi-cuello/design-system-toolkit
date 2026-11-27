@@ -20,7 +20,7 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   const upright = lineEdge({ kind: 'graphic', width: 1, height: 80, border: { color: 'c', width: [0, 0, 0, 1] } }, [0, 0, 0, 1], [0, 0, 0, 1]);
   ok('…and an upright line read off a box its left edge makes wide is no wide: its stroke the edge, its width 0', upright.width === 0 && upright.height === 80 && upright.border.width === 1); }
 // a placed icon's colour the code only inherits (currentColor, no rule of the sheet's) is dropped unless the design sets
-// one for it: Atlassian's EpicObject places Epic, an icon the library holds no contract for, whose glyph inside is purple
+// one for it: a library's EpicObject places Epic, an icon the library holds no contract for, whose glyph inside is purple
 // in its own drawing; that is Epic's own, not this design's, so the inherited black is no override to compare
 { const epic = { anatomy: { root: { kind: 'container' }, sVG: { kind: 'container', parent: 'root' }, 'sVG/icon': { kind: 'instance', parent: 'sVG', component: 'Epic', key: 'k1' },
     'sVG/icon/icon': { kind: 'container', parent: 'sVG/icon' }, 'sVG/icon/icon/glyph': { kind: 'graphic', parent: 'sVG/icon/icon', background: 'color/icon/accent/purple' } }, variants: [] };
@@ -291,7 +291,7 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
   ok('a part first in a placed component that draws no root of its own is that part, never the component\'s words', elementOfLayer(words, 'footer/day/value', 'text', R, others)[0] === words && elementOfLayer(words, 'footer/day/value', 'text', R, others)[1] === false);
 }
 // a placed instance the mapping names is opened at any depth of placing: an override two deep (a slider's stop's dot,
-// inside its Stops) is read, not left to the inner component's own value (Material 3's standard slider)
+// inside its Stops) is read, not left to the inner component's own value (a library's standard slider)
 {
   const { opensPlaced } = await import('./from-code.mjs');
   const inPage = new Function(`return ${opensPlaced.toString()}`)();
@@ -302,7 +302,7 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
 }
 
 // a placed component's place is written on the control its host wraps (to-code's `ds-icon-button > button`): its CSS
-// order is read there, as the browser lays it out (Material 3's text field: a trailing icon after the input's box)
+// order is read there, as the browser lays it out (a library's text field: a trailing icon after the input's box)
 {
   const { cssOrderOf } = await import('./from-code.mjs');
   const inPage = new Function(`return ${cssOrderOf.toString()}`)();
@@ -391,7 +391,7 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
     && flowSelector('end', new Set(), 'contents') === '[data-contract-id="end"] > :first-child'); }
 
 // a layer the mapping places inside a placed component takes the design's name there, never the placed component's own
-// name for the element it lands on (Atlassian's date picker: Select's chevron, <ChevronDownIcon>, carries the design's
+// name for the element it lands on (a library's date picker: Select's chevron, <ChevronDownIcon>, carries the design's
 // <SelectClearIcon>; read under Select's name, the second trip's mapping named a layer the design has not)
 {
   const { nameInside } = await import('./from-code.mjs');
@@ -402,13 +402,13 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
   ok('outside one, or with no design to name it, the markup\'s', inPage(false, 'select', '<Select>', names) === '<Select>' && inPage('select', 'select/textField/selectClearIcon', '<ChevronDownIcon>', null) === '<ChevronDownIcon>');
 }
 // an outline on a part inside a placed component's insides is that part's own stroke, even in a focused render: no
-// focus ring of this component's (Atlassian's loading button: the spinner's ellipse read a focusRing at state focus)
+// focus ring of this component's (a library's loading button: the spinner's ellipse read a focusRing at state focus)
 {
   const { insidePlaced } = await import('./from-code.mjs');
   const raw = [{ id: 'root', kind: 'container' }, { id: 'spinner', kind: 'instance', parent: 'root' }, { id: 'spinner/anim', kind: 'instance', parent: 'spinner' }, { id: 'spinner/anim/ellipse1', kind: 'graphic', parent: 'spinner/anim' }, { id: 'label', kind: 'text', parent: 'root' }];
   ok('a part under a placed instance is inside it, at any depth', insidePlaced(raw, 'spinner/anim/ellipse1') && insidePlaced(raw, 'spinner/anim'));
   ok('the component\'s own boxes are not', !insidePlaced(raw, 'root') && !insidePlaced(raw, 'label') && !insidePlaced(raw, 'spinner'));
-  // a placed component drawn as an icon mark (Carbon's checkbox icon, one the store does not hold) is its own box: its
+  // a placed component drawn as an icon mark (a library's checkbox icon, one the store does not hold) is its own box: its
   // outline at focus is the stroke to-code wrote on the instance, never a focus ring of this component's
   const marked = [...raw, { id: 'check', kind: 'graphic', parent: 'root' }];
   ok('a placed component drawn as an icon mark holds its own outline; a graphic that is no mark does not',
@@ -425,17 +425,17 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
   ok('on --second, the first reading\'s names, not the design\'s', JSON.stringify(layerNames(['a', 'c'], design, first)) === '{"a":"<Renamed>","c":"<Only first>"}');
   ok('no contract: no names', layerNames(['a'], null) === null);
 }
-// a ring read from a focused outline is the design's own ring layer where it draws one (Carbon's focusBorder)
+// a ring read from a focused outline is the design's own ring layer where it draws one (a library's focusBorder)
 {
   const { ringKeyOf } = await import('./from-code.mjs');
   const ring = { kind: 'graphic', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus/focus', width: 2 }, shape: 'rectangle' };
   const props = { state: { type: 'enum', values: ['enabled', 'focus'], default: 'enabled', role: 'interaction' } };
-  const carbon = { props, anatomy: { root: { kind: 'container' }, input: { kind: 'container', parent: 'root' } },
+  const ringed = { props, anatomy: { root: { kind: 'container' }, input: { kind: 'container', parent: 'root' } },
     variants: [{ when: { state: 'focus' }, add: { focusBorder: { ...ring, parent: 'root' }, 'input/focusBorder': { ...ring, parent: 'input' } } }] };
-  ok('the design\'s ring layer is the ring\'s key, at the root and under a part', ringKeyOf(carbon, 'root').key === 'focusBorder' && ringKeyOf(carbon, 'input').key === 'input/focusBorder');
-  ok('a design layer the reading already holds is not taken twice: a ring of its own then', ringKeyOf(carbon, 'root', { focusBorder: {} }).key === 'focusRing');
-  ok('no ring in the design, or no design: a synthesised focusRing', ringKeyOf({ props, anatomy: carbon.anatomy, variants: [] }, 'input').key === 'input/focusRing' && ringKeyOf(null, 'root').key === 'focusRing');
-  ok('a stroke drawn at rest is no ring', ringKeyOf({ props, anatomy: carbon.anatomy, variants: [{ when: { state: 'enabled' }, add: { line: { ...ring, parent: 'root' } } }] }, 'root').key === 'focusRing');
+  ok('the design\'s ring layer is the ring\'s key, at the root and under a part', ringKeyOf(ringed, 'root').key === 'focusBorder' && ringKeyOf(ringed, 'input').key === 'input/focusBorder');
+  ok('a design layer the reading already holds is not taken twice: a ring of its own then', ringKeyOf(ringed, 'root', { focusBorder: {} }).key === 'focusRing');
+  ok('no ring in the design, or no design: a synthesised focusRing', ringKeyOf({ props, anatomy: ringed.anatomy, variants: [] }, 'input').key === 'input/focusRing' && ringKeyOf(null, 'root').key === 'focusRing');
+  ok('a stroke drawn at rest is no ring', ringKeyOf({ props, anatomy: ringed.anatomy, variants: [{ when: { state: 'enabled' }, add: { line: { ...ring, parent: 'root' } } }] }, 'root').key === 'focusRing');
   ok('the corner rounded to shape a ring under the design\'s name stays the box\'s own',
     (() => { const got = { root: { radius: 'R12' }, focusBorder: { ...ring, parent: 'root' } }; Object.defineProperty(got, 'rings', { value: ['focusBorder'] });
       return JSON.stringify(delta({ root: { radius: 'R0' } }, got)) === JSON.stringify({ add: { focusBorder: { ...ring, parent: 'root' } } })
@@ -497,7 +497,7 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
     JSON.stringify(designCombo(design, code, {}, { __state: 'Focus', invalid: true })) === '{"interaction":"focus","invalid":true}'
     && JSON.stringify(designCombo(design, code, {}, { __state: 'keyboard' }, { keyboard: { pseudo: 'focus-visible' } })) === '{"interaction":"focus"}'
     && JSON.stringify(designCombo(design, code, {}, { __state: 'keyboard' }, {})) === '{}');
-  // the second trip draws the first reading's layers against the design's props: a combination layer's rest (Carbon's
+  // the second trip draws the first reading's layers against the design's props: a combination layer's rest (a library's
   // Select, a toggletip at no label, inline, small) held nowhere under the design's `enabled`, and the part a hover also
   // adds was hidden at rest by the sheet (log14, second leg +1)
   { const { inDesignStates } = await import('./from-code.mjs');
@@ -801,7 +801,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     combos.every((w) => ['root', 'bar', 'tip', 'pop'].every((id) => fot(code, w, id) === undefined || fot(code, w, id) === fot(design, w, id)))
     && fot(code, { size: 'sm', open: false }, 'root') === true && fot(code, { size: 'md', open: true }, 'tip') === true && fot(code, { size: 'sm', open: true }, 'pop') === false
     && combos.every((w) => fot(code, w, 'free') === false)); }
-{ // a reading's rest state is the design's Enabled (Carbon's slider): its stacking goes on the reading's own rest, never
+{ // a reading's rest state is the design's Enabled (a library's slider): its stacking goes on the reading's own rest, never
   // on a layer naming `enabled`, a state the reading has no word for, which held at no combination it draws
   const st = (values, def) => ({ type: 'enum', values, default: def, figma: 'State', role: 'interaction', pointer: ['hover'] });
   const design = { props: { state: st(['enabled', 'hover', 'focus'], 'enabled') }, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, firstOnTop: true } } },
@@ -821,7 +821,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     variants: [{ when: {}, set: { 'i/content.content': '{content}', 'body.content': '{body}' } }] };
   const { anatomy: a, variants: [v] } = asFigma(c).contract;
   ok('a placed component\'s slot keeps no binding; the component\'s own slot keeps its', a['i/content'].content === undefined && a['i/content'].kind === 'slot' && a.body.content === '{body}' && !('i/content.content' in v.set) && v.set['body.content'] === '{body}'); }
-{ // (Atlassian's navigation: a search icon centred in the placed search's frame; the design keeps no constraints there)
+{ // (a library's navigation: a search icon centred in the placed search's frame; the design keeps no constraints there)
   const c = { component: 'N', props: {}, anatomy: { root: { kind: 'container' }, s: { kind: 'instance', parent: 'root', component: 'Search' }, 's/i': { kind: 'container', parent: 's', constraints: { horizontal: 'center', vertical: 'center' } }, 's/g': { kind: 'graphic', parent: 's', constraints: { horizontal: 'scale', vertical: 'scale' } }, 's/a': { kind: 'graphic', parent: 's', position: 'absolute', absolute: { x: 1, y: 1 }, constraints: { horizontal: 'max', vertical: 'min' } }, 's/d': { kind: 'graphic', parent: 's', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } }, f: { kind: 'container', parent: 'root', constraints: { horizontal: 'center', vertical: 'min' } } }, variants: [{ when: {}, set: { 's/i.constraints': { horizontal: 'max', vertical: 'max' } } }] };
   const a = asFigma(c).contract.anatomy, v = asFigma(c).contract.variants[0].set;
   ok('a layer inside a placed component keeps no constraints, nor a place in its frame; but a glyph\'s scale, one placed absolutely in an auto layout and one outside it keep theirs', !a['s/i'].constraints && a['s/g'].constraints && a['s/a'].constraints && a.f.constraints && !('s/i.constraints' in v) && !a['s/d'].absolute && a['s/d'].constraints && a['s/a'].absolute);
@@ -831,7 +831,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('a variant\'s own layer under a placed component, and a dotted key, are judged as the design judges them; a layer a variant moves out of the flow keeps its constraints, one outside keeps them',
     !wv.add['s/box/x'].absolute && !wv.add['s/box/x'].constraints && !('s/box.constraints.horizontal' in wv.set) && 'f.constraints' in wv.set && 'f/y.constraints' in wv.set);
 }
-{ // an icon named as a component of the library (Carbon's Checkbox glyph inside the Checkbox set) keeps the design's key,
+{ // an icon named as a component of the library (a library's Checkbox glyph inside the Checkbox set) keeps the design's key,
   // so a second trip resolves it to the icon, never to the set that holds it (which would place itself without end)
   const set = { component: 'Checkbox', figma: { key: 'set' }, anatomy: { root: { kind: 'container' }, glyph: { kind: 'instance', parent: 'root', component: 'Checkbox', key: 'icon' } },
     variants: [{ when: { checked: true }, add: { tick: { kind: 'instance', parent: 'root', component: 'Checkbox checked', key: 'tick' } } }] };
@@ -845,7 +845,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('a glyph a variant swaps to takes the key the design swaps it under', designKeyOf(swapped, null, 'Warning') === 'warn');
   ok('a swap to a glyph the design keys nowhere says no key, as null where the base icon has one (else it keeps the base\'s)', swapKeyOf(swapped, 'icon', 'Info') === null && swapKeyOf(swapped, undefined, 'Info') === undefined && swapKeyOf(swapped, 'icon', 'Warning') === 'warn');
 }
-{ // a colour the placed component draws its glyph in itself is no override (Atlassian's Slot: its magenta placeholder,
+{ // a colour the placed component draws its glyph in itself is no override (a library's Slot: its magenta placeholder,
   // a full-bleed rectangle, which to-code writes as the slot instance's color and the reader read back as an override)
   const slot = { component: 'Slot', props: {}, variants: [], anatomy: { root: { kind: 'container', width: 204, height: 40 },
     background: { kind: 'graphic', parent: 'root', position: 'absolute', shape: 'rectangle', background: 'color/magenta' } } };
@@ -871,7 +871,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
 }
 // a placed instance's own styling is what the component read writes on it: a rule that reaches the instance through the
 // component's root (to-code's `.toggle > … > .toggle__item`), never one of the instance's own sheet (`.toggle-item`,
-// `.toggle-item:where([data-state="read only"])`), which is that component's drawing (Carbon's dropdown read a menu
+// `.toggle-item:where([data-state="read only"])`), which is that component's drawing (a library's dropdown read a menu
 // list's firstOnTop, a tag's pull-back gap, as overrides on every holder)
 {
   const parts = selectorParts('.toggle:where([data-state="read only"]) > .a  .b, .c:is(.d, .e)~.f');
@@ -900,7 +900,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const pinnedEnd = centredEdges({ x: 2, y: 0, end: 4 }, { horizontal: 'center', vertical: 'min' }, { x: 2, y: 0, end: 6, bottom: 3 });
   ok('a centred part keeps its far edges as measured; a far edge the CSS says stays; a part pinned to an edge gains none', at.end === 7.7 && at.bottom === 10.25 && pinnedEnd.end === 4 && pinnedEnd.bottom === undefined);
 }
-// the reading reads every combination of five props or more the design draws, as the round trip compares them all: Material's
+// the reading reads every combination of five props or more the design draws, as the round trip compares them all: a library's
 // square extra-small icon button needs five props off default, and was only predicted from the layers, wrongly
 { const { combinationsToRead } = await import('./from-code.mjs');
   const keys = ['a', 'b', 'c', 'd', 'e', 'f'], vals = () => [true];
@@ -910,7 +910,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     sizes(all) === [...Array(15).fill(4), ...Array(6).fill(5), 6].join() && sizes(none) === Array(15).fill(4).join() && sizes(code) === sizes(none)
     && combinationsToRead(keys, vals, (l) => !l.some(([k]) => k === 'f')).filter((x) => x.length > 4).map((x) => x.map(([k]) => k).join('')).join() === 'abcde'); }
 // every combination of five props or more the design draws is read, none predicted: the round trip counts a predicted
-// one as not the same (eval.mjs isSame), and one whose props build no layer together was still a guess (Carbon's
+// one as not the same (eval.mjs isSame), and one whose props build no layer together was still a guess (a library's
 // checkbox left 1,360 unread)
 { const { readCombinations } = await import('./from-code.mjs');
   const L = (s) => s.split('').map((k) => [k, true]);
@@ -919,7 +919,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('every combination is read, fewest props first, whether or not three of its props build a layer; none is left unread',
     seen.join() === 'abde,cdefg,abdef,abcde' && got.read === 4 && got.skipped === undefined); }
 { // an instance the design keeps whole, its glyph's place and constraints unstated as derive keeps none inside an instance
-  // (Carbon's Status notification in a slider's error state), is kept whole by the reading: the reading's cut drops that
+  // (a library's Status notification in a slider's error state), is kept whole by the reading: the reading's cut drops that
   // glyph as its component's, so it is one that cut drops something from; one the design keeps a different glyph in is not
   const { wholeHosts } = createRequire(import.meta.url)('./derive.cjs');
   const { wholeHosts: viaRoundTrip } = await import('./to-figma.mjs');
@@ -938,7 +938,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
 }
 // the reading's set of parts whose background lays a layer over the colour (`layered`) is one name in the reading: a
 // second declared later in the same scope (the five-prop pruning's combination keys) threw before its line wherever a
-// render lost a layer (Material's horizontal card and mobile gallery, log14) and was asked in place of the first
+// render lost a layer (a library's horizontal card and mobile gallery, log14) and was asked in place of the first
 {
   // a placed component drawing no stroke where its component's root has one reads back as the stroke cleared, `none`
   // (rules.mjs CLEARED, as to-code writes it); one whose component draws none, or one drawing a stroke, reads nothing

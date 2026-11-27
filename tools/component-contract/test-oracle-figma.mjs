@@ -28,7 +28,7 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   assert.deepEqual(g.stops.map((s) => s.color), ['#ffffff', '#000000']);
   // a hair short of upright rounds to 0°, never 360°; a contract an older snapshot wrote at 360 reads as 0
   // a paint bound to a variable the stored tokens hold clear in every mode paints nothing, though REST's cached colour
-  // for it is opaque (Carbon's Transparent: REST white at 1, the walk none); the id named through a paint style the node
+  // for it is opaque (a library's Transparent: REST white at 1, the walk none); the id named through a paint style the node
   // draws, and a variable another style names, opaque in one mode, aliased, or named two ways, still drawn
   { const tokens = { collections: {
       Theme: { modes: ['Light', 'Dark'], values: { Light: { Transparent: 'rgb(255 255 255 / 0)', Half: 'rgb(255 255 255 / 0)', Via: 'rgb(0 0 0 / 0)', Solid: '#ffffff' }, Dark: { Transparent: 'rgb(0 0 0 / 0)', Half: '#000000', Via: 'rgb(0 0 0 / 0)', Solid: '#000000' } }, alias: { Light: { Via: 'Transparent' }, Dark: {} } } },
