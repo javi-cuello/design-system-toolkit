@@ -954,7 +954,10 @@ else {
     variants: [{ when: { state: 'read-only' }, set: { 'base.kind': 'container', 'base.component': null, 'base.layout': { direction: 'column', gap: 0 } }, add: { 'base/items/words': { kind: 'text', parent: 'base/items', content: 'Read', order: 0 } } }] };
   const lib = { Base: { ...base, folder: 'base' }, Field: { ...field, folder: 'field' } }, el = toElement(field, 'field', { naming: ELEMENT, library: lib });
   ok('an instance a variant detaches is that frame, with its listed layers, where the variant holds, and the placed component elsewhere',
-    /\(!\(state === "read-only"\)\) && placed\(parts\["base"\], renderBase/.test(el) && /\(state === "read-only"\) && h\("div", \{ "data-part": "base" \},\s*h\("div", \{ "data-part": "items" \},\s*h\("span", \{ "data-part": "words" \},\s*"Read"\)/.test(el), el); }
+    /\(!\(state === "read-only"\)\) && placed\(parts\["base"\], renderBase/.test(el) && /\(state === "read-only"\) && h\("div", \{ "data-part": "base" \},\s*h\("div", \{ "data-part": "items" \},\s*h\("span", \{ "data-part": "words" \},\s*"Read"\)/.test(el), el);
+  // (and read back by that hook: the mapping names the detached layer as the sheet and the markup do, never skipped)
+  const layers = toParity(field, 'field', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers;
+  ok('a layer listed under a detached instance is mapped by the hook it is drawn with there', layers['Base > Items > Words'] === 'ds-field > [data-part="base"] > [data-part="items"] > [data-part="words"]', JSON.stringify(layers)); }
 
 // a variable mode a holder sets on a placed instance overrides that component's own (Figma's instance override): the
 // component writes its own mode before the host's attributes, and the holder sets none (null) where it overrides nothing

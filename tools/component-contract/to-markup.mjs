@@ -393,6 +393,15 @@ export { partsOf };
 
 const inOrder = (c, list) => markupOrder(c, list).order;
 
+/* The placed instance a part sits straight in (no nearer instance between them), where some variant detaches it (sets
+   its kind to a frame, a field's menu at read-only); else null. Where it is detached, the part is this component's own,
+   named as the sheet names it there (to-code's chain: as the placed component names its own parts). */
+const detaches = (c, id) => (c.variants || []).some((v) => !pointerWords(c, v.when) && (v.set || {})[`${id}.kind`] && v.set[`${id}.kind`] !== 'instance');
+export function detachedHost(c, id) {
+  for (let up = (at(c, id) || {}).parent; up && up !== 'root'; up = (at(c, up) || {}).parent) if ((at(c, up) || {}).kind === 'instance') return detaches(c, up) ? up : null;
+  return null;
+}
+
 /* A part's condition as code, over the props' names in code: null where it is always drawn, 'false' where never. */
 function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, lang = JS) {
   const byKey = new Map(props.map((x) => [x.key, x]));
@@ -474,7 +483,14 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     const code = byVariant(sets, (v) => lang.str((v.set && `${id}.name` in v.set ? v.set[`${id}.name`] : v.add[id].name) || ''), lang.str(nm || ''));
     return code ? [['data-figma-name', { code }]] : nm ? [['data-figma-name', { lit: nm }]] : [];
   };
-  const hook = (id) => [...(n.element ? [['data-part', { lit: seg(id) }]] : [['className', { lit: n.part(seg(id)).slice(1) }]]), ...nameAttr(id), ...modeAttrs(id)];
+  // (a part in an instance a variant detaches: the hook the sheet styles it by there, detachedHost)
+  const detachedHook = (id) => {
+    if (!detachedHost(c, id)) return null;
+    const last = selectorOf(c, n, id, (name, key = null) => placedOf(library, { component: name, key }), library).split(' > ').pop();
+    const m = n.element ? /^\[data-part="([^"]+)"\]$/.exec(last) : /^\.([\w-]+)$/.exec(last);
+    return m && [n.element ? 'data-part' : 'className', { lit: m[1] }];
+  };
+  const hook = (id) => [detachedHook(id) || (n.element ? ['data-part', { lit: seg(id) }] : ['className', { lit: n.part(seg(id)).slice(1) }]), ...nameAttr(id), ...modeAttrs(id)];
   const named = (key) => props.find((x) => x.key === key);
   // the code that holds at a variant's props (null: never in markup; 'true': always)
   const testOf = (when) => {
@@ -1194,7 +1210,8 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     // a part the contract keeps inside a placed component is an override there: read where the sheet writes it
     // and what it puts in a placed component's slot (a menu's items), by its own hook under that slot
     const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains, library)) || (x.inside && framework === 'web-components' && copySelector(c, n, x.id, mains, library)) || (x.inside && sampleSelector(c, n, x.id, mains, library));
-    const at = nested ? nested : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
+    // (one in an instance a variant detaches is this component's own there: read by the hook the markup draws it with)
+    const at = nested ? nested : x.inside && detachedHost(c, x.id) ? partSelector(c, n, x.id, x, library) : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
       // (a sample in a placed component's slot, where this one puts nothing there: that component's to draw)
       : x.slotted && (parts.get(x.slotted) || {}).inside ? { skip: 'a sample of what a caller puts in the slot' }
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
