@@ -222,7 +222,10 @@ const plugin = ({ fileKey, store = {} }) => {
   await u.send({ type: 'context-set', name: 'design-system-context.md', text: MD });
   ok('5. a document naming this file is kept as it is, with no offer', !u.sent.some((m) => m.type === 'context-offer') && u.store['context:KEY123'].text === MD && u.store['context:KEY123'].adoptedFrom === null);
   ok('a document with an entry for this file among others is used as it is', otherFiles(two, 'KEY123').length === 0);
-  ok('adopting rewrites every mention of the original, routing and prose alike', adopted('a KEY123 b KEY123', 'KEY123', 'C') === 'a C b C');
+  ok('adopting rewrites every mention of the original, routing, links and prose alike', adopted('a KEY123 b /design/KEY123/x "KEY123"', 'KEY123', 'C') === 'a C b /design/C/x "C"');
+  ok('adopting leaves a longer key that holds the original alone', adopted('KEY1234 xKEY123', 'KEY123', 'C') === 'KEY1234 xKEY123');
+  const routedOnly = '```json snapshot-routing\n{ "files": { "library": [{ "key": "TOK1", "roles": ["tokens"] }] } }\n```\n```json audit-settings\n{ "libraries": {} }\n```\n';
+  ok('a file routing names only for another role is never offered', otherFiles(routedOnly, 'COPY9').length === 0);
 }
 // The workshop's own document, on a duplicate of its example library, when it is on this machine
 {
@@ -354,6 +357,14 @@ const plugin = ({ fileKey, store = {} }) => {
   const sel = posted.find((m) => m.type === 'done');
   ok('on a selection, a whole-file check says a run on a selection checks only the selected components', sel && sel.text.includes('File (a run on a selection checks only the selected components)') && !sel.text.includes('File (switched off'), sel && sel.text.split('## Run')[1].slice(0, 900));
   figma.currentPage.selection = [];
+
+  // a document taken for this file: the next run uses it and its report names the entry it was written for
+  await figma.ui.onmessage({ type: 'context-set', name: 'design-system-context.md', text: MD, adopt: 'KEY123' });
+  posted.length = 0;
+  await figma.ui.onmessage({ type: 'run', id: 3 });
+  const tk = posted.find((m) => m.type === 'done');
+  ok('a run after Use for this file is judged by the document, its Settings line naming the entry taken', tk && tk.from === 'context' && /written for [^\n]*KEY123[^\n]* and taken for this file/.test(tk.text), tk && tk.text.split('## Run')[1].slice(0, 600));
+  await figma.ui.onmessage({ type: 'context-clear' });
 
   // the file cannot be read on opening: said as that, with a way to try again, never as an audit that stopped
   posted.length = 0;

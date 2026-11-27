@@ -319,7 +319,7 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
   <div class="panel-body fields">
     <fig-header borderless><h3>Context document</h3><fig-button variant="secondary" id="ctx-pick">Upload…</fig-button></fig-header>
     <fig-field direction="horizontal"><label>Document</label>
-      <div class="value-row"><span class="value" id="ctx-name">No document</span><select id="ctx-entry" hidden aria-label="The entry that applies to this file"></select><fig-button variant="secondary" id="ctx-adopt" hidden>Use for this file</fig-button><fig-button variant="secondary" id="ctx-clear" hidden>Remove</fig-button></div></fig-field>
+      <div class="value-row"><span class="value" id="ctx-name">No document</span><fig-dropdown id="ctx-entry-wrap" hidden><select id="ctx-entry" aria-label="The entry that applies to this file"></select></fig-dropdown><fig-button variant="secondary" id="ctx-adopt" hidden>Use for this file</fig-button><fig-button variant="secondary" id="ctx-clear" hidden>Remove</fig-button></div></fig-field>
     <fig-field direction="horizontal" id="draft-row"><label for="draft">Draft one</label><fig-switch id="draft"></fig-switch></fig-field>
   </div>
   <fig-footer><span class="footer-hint" id="settings-hint" role="status">Kept on this computer; nothing is saved in the Figma file.</span></fig-footer>
@@ -404,7 +404,7 @@ $('retry').addEventListener('click', function () { $('retry').hidden = true; say
 // the project's context document: its settings and rulings, remembered for this file on this computer
 var offer = null;
 function context(name) {
-  offer = null; $('ctx-adopt').hidden = true; $('ctx-entry').hidden = true;
+  offer = null; $('ctx-adopt').hidden = true; $('ctx-entry-wrap').hidden = true;
   $('ctx-name').textContent = name || 'No document';
   $('ctx-pick').hidden = !!name;
   $('ctx-clear').hidden = !name;
@@ -429,13 +429,14 @@ onmessage = function (e) {
   if (msg.type === 'load-failed') { loaded = false; canRun(); $('retry').hidden = false; say('error', 'This file could not be read', msg.why + '. Press Try again; if it fails again, reload the plugin.'); $('status').setAttribute('data-load', 'failed'); return; }
   if (msg.type === 'context') { context(msg.name); hint(msg.adoptedFrom ? 'Its settings and rulings are used for this file, in place of ' + msg.adoptedFrom + '.' : ''); return; }
   if (msg.type === 'context-offer') {
-    context(null); offer = msg; $('ctx-name').textContent = msg.name; $('ctx-adopt').hidden = false;
+    // the document kept for this file, if any, stays shown and in use until the person takes this one
+    offer = msg; $('ctx-adopt').hidden = false;
     var label = function (f) { return f.name ? f.name + ' (' + f.key + ')' : f.key; };
     if (msg.files.length > 1) {
       $('ctx-entry').innerHTML = ''; msg.files.forEach(function (f) { var o = document.createElement('option'); o.value = f.key; o.textContent = label(f); $('ctx-entry').appendChild(o); });
-      $('ctx-entry').hidden = false;
-      hint('This document has no entry for this file. Pick the entry that applies here, then Use for this file.');
-    } else hint('This document is for another file, ' + label(msg.files[0]) + '. Use for this file applies its settings and rulings here.');
+      $('ctx-entry-wrap').hidden = false;
+      hint(msg.name + ' has no entry for this file. Pick the entry that applies here, then Use for this file.');
+    } else { $('ctx-entry-wrap').hidden = true; hint(msg.name + ' is for another file, ' + label(msg.files[0]) + '. Use for this file applies its settings and rulings here.'); }
     return;
   }
   if (msg.type === 'context-failed') { hint('That document was not used: ' + msg.why + '.'); return; }

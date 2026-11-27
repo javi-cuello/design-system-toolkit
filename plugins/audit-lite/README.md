@@ -34,7 +34,7 @@ Every later run judges by them. Marks and notes stay in that browser.
 
 - Without a context document, it uses the toolkit's house conventions, not the library's own. The report lists them. Claude drops a finding that only says the library follows a different convention. It offers to draft a starter context document from what it found in the file.
 - Checks whose settings are not set do not run, and the report says which.
-- With a document, it reads that file's settings and the rulings, as the full audit does. It refuses a document with no settings for this file, and says why. It never writes the document.
+- With a document, it reads that file's settings and the rulings, as the full audit does. A document for another file is offered for this one. It never writes the document.
 - It skips the stages only the full audit runs: the code-target validator, the token link check and the design-to-code comparison. The report names them.
 - It does not check icon names against a published icon set.
 - Unused tokens: only this file's own uses count.
@@ -57,7 +57,7 @@ The test checks that a context document gives the settings and rulings the full 
 
 It keeps the context document picked for a file, its name and text. That sits in the plugin's client storage on this machine, keyed by the file. **Remove** deletes it.
 
-A document with no entry for the open file is offered for it, as a duplicate of a library's or one drafted for another file is. **Use for this file** rewrites every mention of the entry's key to the open file's, and keeps that copy, with which entry it came from. With several entries, the person picks one first.
+A document written for another file, as for a library you duplicated, is offered with **Use for this file**. It keeps a copy under this file's key.
 
 It keeps the checks you unticked, as `stages-off`, in the same storage. That list is one for every file.
 
