@@ -629,6 +629,16 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     { name: 'Pill', type: 'INSTANCE', instanceOf: 'Pill', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'],
       children: [{ name: 'Text', type: 'TEXT', text: 'Pill', textStyle: 'Label/sm', fills: ['Text/strong'], sizing: 'HUG/HUG' }] }] }] };
   ok('an instance hiding a layer of its component keeps all it records', 'pill/text' in derive(bar, ['Pill'], { mains: mainsFrom({ Pill: pill }) }).anatomy);
+  // kept whole in one variant for the layer it hides there, it is kept whole in every variant that opens it: a layer it
+  // shows elsewhere, as its component draws it, is listed there, never cut to read as hidden
+  const text = { name: 'Text', type: 'TEXT', text: 'Pill', textStyle: 'Label/sm', fills: ['Text/strong'], sizing: 'HUG/HUG' };
+  const dot = { name: 'Dot', type: 'FRAME', sizing: 'FIXED/FIXED', w: 6, h: 6 };
+  const two = { name: 'Row', id: '9:5', props: { Wide: ['False', 'True'] }, variants: [
+    { name: 'Wide=False', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [{ name: 'Pill', type: 'INSTANCE', instanceOf: 'Pill', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'], children: [dot, text] }] },
+    { name: 'Wide=True', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [{ name: 'Pill', type: 'INSTANCE', instanceOf: 'Pill', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'], children: [text] }] }] };
+  const c2 = derive(two, ['Pill'], { mains: mainsFrom({ Pill: pill }) });
+  ok('an instance kept whole in one variant lists the layers it shows in another, as its component draws them',
+    'pill/dot' in expand(c2, { wide: false }) && !('pill/dot' in expand(c2, { wide: true })) && 'pill/text' in expand(c2, { wide: false }));
 }
 {
   // a layer inside a nested instance the walk did not open (an icon's glyph) is that instance's own, not hidden: the outer

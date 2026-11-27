@@ -566,8 +566,14 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
   // an instance that clears its component's colour style or stroke says so (cleared), before its own styling is held to
   // its component's
   if (mains) for (const f of flat) cleared(f.anatomy, mains);
-  // (`found`: a Map, by each variant's `when`, of the instances its insides are kept whole in)
-  if (mains) for (const f of flat) { const here = found ? new Set() : null; ownInsides(f.anatomy, mains, { found: here }); if (found) found.set(JSON.stringify(f.when), [...here]); }
+  // (`found`: a Map, by each variant's `when`, of the instances it hides a layer in)
+  // an instance kept whole in one variant for a layer it hides there is kept whole in every variant that opens it: cut
+  // elsewhere to its overrides, a layer it shows as its component's would read as one it hides (the contract keeps no
+  // word for which), so the round trip held a layer code draws there as extra (Carbon's group label, its box hidden in the
+  // horizontal group, shown in the error state). A variant that does not open it lists nothing inside it, as before
+  const hides = flat.map((f) => { const here = new Set(); if (mains) ownInsides(JSON.parse(JSON.stringify(f.anatomy)), mains, { found: here }); return here; });
+  const whole = new Set(hides.flatMap((h) => [...h]));
+  if (mains) flat.forEach((f, i) => { ownInsides(f.anatomy, mains, { whole }); if (found) found.set(JSON.stringify(f.when), [...hides[i]]); });
   return flat;
 }
 
