@@ -679,7 +679,16 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
         return [{ when: and(given), node: out }, ...instanceOut(and(gone))];
       }
     } else if (e.kind === 'instance') {
-      return instanceOut(when);
+      // an instance a variant detaches (Figma's detach: a frame of its own with the layers listed under it, a field's
+      // menu at read-only): that frame, its layers drawn as this component's own, where the variant holds; the placed
+      // component elsewhere
+      const detach = (c.variants || []).filter((v) => !pointerWords(c, v.when) && (v.set || {})[`${id}.kind`] && v.set[`${id}.kind`] !== 'instance').map((v) => testOf(v.when || {})).filter(Boolean);
+      if (!detach.length) return instanceOut(when);
+      const wrap = (x) => (/^!?[\w$]+$/.test(x) ? x : `(${x})`);
+      const d = detach.includes('true') ? 'true' : detach.length === 1 ? detach[0] : detach.map(wrap).join(' || ');
+      const and = (x, y) => (!x ? y : `${wrap(x)} && ${wrap(y)}`);
+      const frame = { tag: control || inline ? 'span' : 'div', attrs: hook(id), children: (kids.get(id) || []).flatMap((k) => node(k, { yes: new Set([...known.yes, d]), no: known.no }, true)).filter(Boolean) };
+      return [...(d === 'true' ? [] : instanceOut(and(when, `!${wrap(d)}`))), d === 'true' && !when ? frame : { when: d === 'true' ? when : and(when, d), node: frame }];
     } else if (e.kind === 'graphic') {
       // (a shape a variant turns into a frame of shapes, a radio's circle that holds a dot once checked: those, inside it)
       out = { tag: 'span', attrs: [...hook(id), ['aria-hidden', { lit: 'true' }]], children: (kids.get(id) || []).flatMap((k) => node(k, known, fill)).filter(Boolean) };

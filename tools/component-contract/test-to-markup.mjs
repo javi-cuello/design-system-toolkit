@@ -946,6 +946,16 @@ else {
     variants: [{ when: { checked: true }, set: { 'circle.kind': 'container', 'circle.shape': null }, add: { 'circle/dot': { kind: 'graphic', parent: 'circle', shape: 'ellipse' } } }] };
   ok('a shape a variant fills with shapes draws them inside it', /h\("span", \{ "data-part": "circle", "aria-hidden": "true" \},\s*\(checked\) && h\("span", \{ "data-part": "dot"/.test(toElement(radio, 'dot', { naming: ELEMENT, library: {} }))); }
 
+// an instance a variant detaches (a field's menu turned a frame of its own at read-only, its layers listed under it):
+// that frame and those layers drawn as the component's own there, the placed component everywhere else
+{ const base = { component: 'Base', props: {}, anatomy: { root: { kind: 'container' }, items: { kind: 'container', parent: 'root', order: 0 } }, variants: [] };
+  const field = { component: 'Field', props: { state: { type: 'enum', values: ['enabled', 'read-only'], default: 'enabled', figma: 'State' } },
+    anatomy: { root: { kind: 'container' }, base: { kind: 'instance', parent: 'root', component: 'Base', order: 0 }, 'base/items': { kind: 'container', parent: 'base', order: 0, layout: { direction: 'row', gap: 16 } } },
+    variants: [{ when: { state: 'read-only' }, set: { 'base.kind': 'container', 'base.component': null, 'base.layout': { direction: 'column', gap: 0 } }, add: { 'base/items/words': { kind: 'text', parent: 'base/items', content: 'Read', order: 0 } } }] };
+  const lib = { Base: { ...base, folder: 'base' }, Field: { ...field, folder: 'field' } }, el = toElement(field, 'field', { naming: ELEMENT, library: lib });
+  ok('an instance a variant detaches is that frame, with its listed layers, where the variant holds, and the placed component elsewhere',
+    /\(!\(state === "read-only"\)\) && placed\(parts\["base"\], renderBase/.test(el) && /\(state === "read-only"\) && h\("div", \{ "data-part": "base" \},\s*h\("div", \{ "data-part": "items" \},\s*h\("span", \{ "data-part": "words" \},\s*"Read"\)/.test(el), el); }
+
 // a variable mode a holder sets on a placed instance overrides that component's own (Figma's instance override): the
 // component writes its own mode before the host's attributes, and the holder sets none (null) where it overrides nothing
 { const btn = { component: 'Btn', props: {}, anatomy: { root: { kind: 'container', modes: { tone: 'subtle' } } }, variants: [] };
