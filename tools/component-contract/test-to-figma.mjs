@@ -666,6 +666,9 @@ delete globalThis.figma;
     at(roundTrip(field('one'), field('both'), { mains })).length === 0, JSON.stringify(roundTrip(field('one'), field('both'), { mains }).rows));
   const off = field('both'); off.anatomy['tag/content'] = { ...off.anatomy['tag/content'], layout: { direction: 'row', gap: 8 } };
   ok('…and one the code draws otherwise there is a row of that field, never an extra part', JSON.stringify(at(roundTrip(field('one'), off, { mains }))) === '["tag/content.layout.gap"]', JSON.stringify(roundTrip(field('one'), off, { mains }).rows));
+  // (a part the component has no such layer for is no component's own: still an extra part where the code draws it)
+  const stray = field('both'); stray.anatomy['tag/badge'] = { kind: 'container', parent: 'tag', order: 1 };
+  ok('…while a part the placed component lacks is still counted extra', JSON.stringify(at(roundTrip(field('one'), stray, { mains }))) === '["tag/badge"]', JSON.stringify(roundTrip(field('one'), stray, { mains }).rows));
 }
 
 {

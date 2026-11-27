@@ -565,7 +565,10 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     const loose = [...whole].filter((h) => !here.has(h));
     // (and an instance the contract never keeps whole: it hides nothing (derive keeps a host whole by a hidden layer), so a
     // part the drawing reads in it that this combination leaves out is its component's own there, as derive left it out:
-    // a tag's content another combination overrides, read wherever the tag is placed)
+    // a tag's content another combination overrides, read wherever the tag is placed). Only a part its component has
+    // there is filled: one it lacks stays an extra part. Known limit: a layer the design hides by visibility alone on
+    // such an instance is not recorded by the snapshot (the plugin walks an instance's insides only for another
+    // override), so the host is not kept whole and code drawing that layer as the component's own raises no row)
     const open = mains ? Object.keys(A).filter((h) => A[h] && A[h].kind === 'instance' && !whole.has(h)) : [];
     const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k)) || open.some((h) => k.startsWith(`${h}/`))));
     // (the drawn side held to the library as filled, so a part filled there is the library's to compare a field of too)
