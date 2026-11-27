@@ -1,5 +1,6 @@
 # History — skill-standard
 
+- 1.13.0 (2026-11-27): §A clause K: a skill offering a `use_figma` route keeps its scripts runnable there (`check.sh` refuses `loadAllPagesAsync` and a script over 50,000 characters); §B 14: a failed bridge call is diagnosed before it is retried, from the retired `docs/figma-notes.md`.
 - 1.12.0 (2026-11-26): §A clause J: a skill calling a Figma Console bridge tool outside the core set names, at its first use, the `figma_enable_toolsets` call that enables it, or `figma_call` for a read when the tool list did not refresh.
 - 1.11.0 (2026-11-26): §B 13 gains two traps: binding a variable on a styled node detaches its text or effect style, and a remote component that hangs on import by key can be `clone()`d from its instance's main.
 - 1.10.0 (2026-11-21): §A clause I: a skill is written to be read, held to §D 22's numbers with a 500-line body in place of the word cap; readability.mjs measures it.

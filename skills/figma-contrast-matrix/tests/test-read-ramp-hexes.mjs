@@ -37,7 +37,7 @@ function ramp(id, opts = {}) {
 const frameWith = (id, children) => ({ id, name: "Blue", type: "FRAME", children });
 const world = (frame) => ({
   getNodeByIdAsync: async (id) => (id === frame.id ? frame : null),
-  currentPage: { children: [frame] },
+  currentPage: { type: "PAGE", loadAsync: async () => {}, children: [frame] },
 });
 
 let failures = 0;
@@ -60,6 +60,13 @@ await check("reads both rows of all 12 steps, in step order, as #RRGGBB", async 
 await check("finds the frame by name on the current page, and the ramp as a child by its main component", async () => {
   const fr = frameWith("1:1", [{ id: "1:5", name: "Note", type: "INSTANCE", children: [], getMainComponentAsync: async () => ({ name: "Sticky" }) }, ramp("1:9")]);
   const r = await run(fill("FRAME_NAME", "Blue"), world(fr));
+  assert.equal(r.instance, "1:9");
+});
+await check("with PAGE_ID, the frame is found on that page, never the current one (use_figma)", async () => {
+  const fr = frameWith("1:1", [ramp("1:9")]);
+  const other = { id: "0:2", type: "PAGE", loadAsync: async () => {}, children: [fr] };
+  const code = fill("FRAME_NAME", "Blue").replace('const PAGE_ID = "";', 'const PAGE_ID = "0:2";');
+  const r = await run(code, { currentPage: { type: "PAGE", loadAsync: async () => {}, children: [] }, getNodeByIdAsync: async (id) => (id === "0:2" ? other : null) });
   assert.equal(r.instance, "1:9");
 });
 await check("the list it returns is what build-matrix-script.py accepts for --color-a", async () => {

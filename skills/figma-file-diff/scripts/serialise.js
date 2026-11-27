@@ -13,7 +13,10 @@ function pathOf(n){ const p=[]; let c=n; while(c&&c.type!=='DOCUMENT'){ p.unshif
 function r(v){ return typeof v==='number' ? Math.round(v*100)/100 : v; }
 function stripKey(k){ return String(k).replace(/#\d+:\d+/g,''); }
 
-await figma.loadAllPagesAsync();
+// use_figma hands a plain description back HTML-escaped (`&lt;`); read as typed, so the two routes compare equal.
+function plain(t){ return String(t||'').replace(/&(lt|gt|amp|quot|#39);/g, (m, e) => ({ lt: '<', gt: '>', amp: '&', quot: '"', '#39': "'" })[e]); }
+// Page by page, never loadAllPagesAsync: use_figma refuses it, and each page's loadAsync works on both routes.
+for (const p of figma.root.children) await p.loadAsync();
 
 const vars = await figma.variables.getLocalVariablesAsync();
 const vn = {}; vars.forEach(v => vn[v.id] = v.name);
@@ -106,7 +109,7 @@ function ser(n){
 
   // The API surface. Omitting it gave "identical" for two files whose descriptions or defaults differed.
   if (n.type==='COMPONENT' || n.type==='COMPONENT_SET'){
-    p.push('DESC:'+(n.descriptionMarkdown||n.description||''));
+    p.push('DESC:'+(n.descriptionMarkdown||plain(n.description)));
     // a variant's definitions belong to its set, and reading them there throws
     if (n.type==='COMPONENT_SET' || !(n.parent && n.parent.type==='COMPONENT_SET')){
       let d={}; try{ d = n.componentPropertyDefinitions||{}; }catch(e){}

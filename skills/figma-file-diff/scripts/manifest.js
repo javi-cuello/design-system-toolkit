@@ -9,6 +9,8 @@ function h(s){ let x=5381; for(let i=0;i<s.length;i++){ x=((x*33)^s.charCodeAt(i
 function scopesOf(v){ return [...(v.scopes||[])].sort(); }
 function syntaxOf(v){ const c=v.codeSyntax||{}, o={}; Object.keys(c).sort().forEach(k => o[k]=c[k]); return o; }
 function r(n){ return typeof n==='number' ? Math.round(n*10000)/10000 : n; }
+// use_figma hands a plain description back HTML-escaped (`&lt;`); read as typed, so the two routes compare equal.
+function plain(t){ return String(t||'').replace(/&(lt|gt|amp|quot|#39);/g, (m, e) => ({ lt: '<', gt: '>', amp: '&', quot: '"', '#39': "'" })[e]); }
 
 const cols = await figma.variables.getLocalVariableCollectionsAsync();
 const vars = await figma.variables.getLocalVariablesAsync();
@@ -29,7 +31,7 @@ const rows = vars.map(v => {
   const vals = (c ? c.modes : []).map(m => m.name+'='+fmt(v.valuesByMode[m.modeId])).join(';');
   const fields = {
     type: v.resolvedType, scopes: scopesOf(v), codeSyntax: syntaxOf(v),
-    description: v.description||'', hidden: !!v.hiddenFromPublishing, values: vals
+    description: plain(v.description), hidden: !!v.hiddenFromPublishing, values: vals
   };
   return {
     key: (c ? c.name : '?') + '/' + v.name,
@@ -38,7 +40,7 @@ const rows = vars.map(v => {
       v.resolvedType,
       scopesOf(v).join('+'),
       JSON.stringify(syntaxOf(v)),
-      v.description||'',
+      plain(v.description),
       v.hiddenFromPublishing ? 1 : 0,
       vals
     ].join('|')
@@ -56,13 +58,13 @@ const collectionShape = cols.map(c => c.name+'['+c.modes.map(m=>m.name).join(','
 const textStyles = (await figma.getLocalTextStylesAsync()).map(s => ({
   name: s.name,
   h: h([s.fontName.family, s.fontName.style, s.fontSize, JSON.stringify(s.lineHeight),
-        JSON.stringify(s.letterSpacing), s.textCase, s.textDecoration, s.description||''].join('|'))
+        JSON.stringify(s.letterSpacing), s.textCase, s.textDecoration, plain(s.description)].join('|'))
 }));
 const effectStyles = (await figma.getLocalEffectStylesAsync()).map(s => ({
-  name: s.name, h: h(JSON.stringify(s.effects) + (s.description||''))
+  name: s.name, h: h(JSON.stringify(s.effects) + (plain(s.description)))
 }));
 const paintStyles = (await figma.getLocalPaintStylesAsync()).map(s => ({
-  name: s.name, h: h(JSON.stringify(s.paints) + (s.description||''))
+  name: s.name, h: h(JSON.stringify(s.paints) + (plain(s.description)))
 }));
 
 const wanted = typeof VARS !== 'undefined' && Array.isArray(VARS) ? new Set(VARS) : null;

@@ -26,6 +26,7 @@ const node = (props, children = []) => {
   const all = () => n.children.flatMap((c) => [c, ...(c.findAll ? c.findAll(() => true) : [])]);
   n.findAll = (fn) => all().filter(fn);
   n.findAllWithCriteria = ({ types }) => all().filter((x) => types.includes(x.type));
+  if (props.type === 'PAGE' && !n.loadAsync) n.loadAsync = async () => {};
   return n;
 };
 
@@ -40,7 +41,7 @@ const wrapped = node({ id: '0:1', type: 'PAGE', name: 'Button' }, [node({ id: '1
 const empty = node({ id: '0:2', type: 'PAGE', name: 'Cover' });
 const root = node({ id: '0:0', type: 'DOCUMENT', name: 'Web Components' }, [wrapped, empty]);
 const byId = new Map(root.findAll(() => true).map((x) => [x.id, x]));
-const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNodeByIdAsync: async (id) => byId.get(id) || null };
+const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => { throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); }, getNodeByIdAsync: async (id) => byId.get(id) || null };
 {
   const out = await run(read('pass-a-inventory.js'), figma);
   const p = out.pages[0];
@@ -246,7 +247,7 @@ const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNode
   const wrap = node({ id: '6:6', type: 'COMPONENT', name: 'Card' }, [inside]);
   const page = node({ id: '0:5', type: 'PAGE', name: 'Chip' }, [desc, plain, header, wrap]);
   const root2 = node({ id: '0:0', type: 'DOCUMENT', name: 'F' }, [page]);
-  const f2 = { root: root2, fileKey: 'E', loadAllPagesAsync: async () => {}, getNodeByIdAsync: async (id) => root2.findAll(() => true).find((x) => x.id === id) || null };
+  const f2 = { root: root2, fileKey: 'E', loadAllPagesAsync: async () => { throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); }, getNodeByIdAsync: async (id) => root2.findAll(() => true).find((x) => x.id === id) || null };
   const out = await run(read('pass-e-descriptions.js'), f2);
   const [chip] = out.samples;
   ok('pass E: the first described components are sampled, never a variant, never an undescribed one', out.samples.length === 1 && chip.name === 'Chip');
@@ -260,6 +261,17 @@ const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNode
   page.findAllWithCriteria = function (c) { if (!loaded) throw new Error('page not loaded'); return walk.call(this, c); };
   const byIds = await run(read('pass-e-descriptions.js').replace(/ids: \[\]/, 'ids: ["5:3", "9:9"]'), f2);
   ok('pass E: given ids are read as given, a missing one reported', byIds.samples[0].name === 'Plain' && byIds.samples[0].headings.length === 0 && byIds.samples[1].error === 'not found');
+  // D-use_figma: the cloud throws on reading a property a node lacks, and hands a plain-only description back escaped
+  const strict = (o) => new Proxy(o, { get: (t, k) => { if (typeof k === 'string' && !(k in t) && !['then', 'toJSON'].includes(k)) throw new TypeError("node." + k + ": no such property '" + k + "'"); return t[k]; } });
+  const escaped = node({ id: '5:4', type: 'COMPONENT', name: 'Escaped', description: 'Count &lt; 100 &amp; more.', descriptionMarkdown: '' });
+  page.children.push(escaped); escaped.parent = page;
+  const f3 = { ...f2, getNodeByIdAsync: async (id) => { const x = root2.findAll(() => true).find((y) => y.id === id); return x ? strict(x) : null; } };
+  const cloud = await run(read('pass-e-descriptions.js').replace(/ids: \[\]/, 'ids: ["5:4"]'), f3);
+  ok('pass E: a node that throws on an unknown property is read, never marked (use_figma)', cloud.samples[0].name === 'Escaped');
+  ok('pass E: a plain-only description is read as typed and said to be plain-only (use_figma)', cloud.samples[0].plainOnly === true && cloud.samples[0].length === 'Count < 100 & more.'.length);
+  const marked = read('pass-e-descriptions.js').replace(/ids: \[\]/, 'ids: ["5:4"]').replace('var c = picked[k].node;', 'var c = picked[k].node; if (c && c.missing) c = null;');
+  ok('pass E: (planted) a flag read off the node throws there', await run(marked, f3).then(() => false, (e) => /no such property/.test(e.message)));
+  page.children.pop();
 }
 
 // ── passes F and S4 ──────────────────────────────────────────────────────────
@@ -274,7 +286,7 @@ const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNode
   const root3 = node({ id: '0:0', type: 'DOCUMENT', name: 'Docs' }, [p1, p2]);
   const settings = JSON.parse(readFileSync(join(HERE, '../../../standards/audit-settings.json'), 'utf8'));
   const TOKENS = 'const TOKENS = ' + JSON.stringify({ ratiosGrid: settings['audit-defaults'].tokens.ratiosGrid, pageSectionComponent: settings['audit-defaults'].pages.pageSectionComponent }) + ';\n';
-  const out = await run(TOKENS + read('pass-f-doc-apparatus.js'), { root: root3, fileKey: 'F', loadAllPagesAsync: async () => {} });
+  const out = await run(TOKENS + read('pass-f-doc-apparatus.js'), { root: root3, fileKey: 'F', loadAllPagesAsync: async () => { throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); } });
   ok('pass F: with no settings prepended it refuses, never a house name of its own', await run(read('pass-f-doc-apparatus.js'), { root: root3 }).then(() => false, (e) => /prepend the library's settings/.test(e.message)));
   ok('pass F: a contract name is counted local and as instances, and remote furniture keeps its set\'s key', out.furniture['Table - '].local === 1 && out.furniture['Table - '].instances === 1 && out.furniture['Table - '].remote === 0 && out.furniture['Cell - '].instances === 2 && out.furniture['Cell - '].remote === 2 && JSON.stringify(out.furniture['Cell - '].keys) === '["remoteSetKey"]');
   ok('pass S4: _Ratios grid instances per page, and a page with none is absent', JSON.stringify(out.ratiosGrid) === '{"1 - Colour - Primitives":1}');

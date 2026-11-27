@@ -55,7 +55,7 @@ with the machine's Figma token. A token is looked for in this order (`version.cj
 `tokenFor`, the one reader): `FIGMA_TOKEN` in the environment; for release
 pinning in a repo, the `figmaToken` command its `snapshot.config.json` names
 (`collect` does not run it); then `~/.config/figma/token` (`FIGMA_TOKEN_FILE`
-names another file; `bin/set-key figma` writes it). A project routing several library files is
+names another file; `bin/set-key figma` writes it). Test a token on a file's `/versions`: `/v1/me` answers 403 to a working file token (it lacks that scope) and 401 to a bad one. A project routing several library files is
 told which one the run was in with `--file <key>`; `--repo <dir>` delivers into a copy of the
 repo instead, and `--save <file>` keeps the payload. A run can outlast the
 tool's answer: when the call reports it lost, look for the temporary page

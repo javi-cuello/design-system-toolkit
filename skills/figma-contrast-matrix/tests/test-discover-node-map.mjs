@@ -33,7 +33,7 @@ function grid({ id = "5:1", mainName = "_Ratios grid", contentCount = 169, block
   const title = { id: `I${id};0:1`, type: "TEXT" }, content = { id: `I${id};0:2`, type: "FRAME", children: kids.slice(0, contentCount) };
   return { id, type: "INSTANCE", children: [title, content], getMainComponentAsync: async () => (mainName ? { name: mainName } : null) };
 }
-const file = (...nodes) => ({ loadAllPagesAsync: async () => {}, getNodeByIdAsync: async (id) => nodes.find((x) => x.id === id) || null });
+const file = (...nodes) => ({ root: { children: [{ type: "PAGE", loadAsync: async () => {} }] }, loadAllPagesAsync: async () => { throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); }, getNodeByIdAsync: async (id) => nodes.find((x) => x.id === id) || null });
 
 let failures = 0;
 async function check(name, fn) {

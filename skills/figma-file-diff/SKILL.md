@@ -5,7 +5,7 @@ description: Compare two Figma files against each other and report exactly how t
 
 # Figma file diff (two files, read-only)
 
-**Version 1.6.0** — history in CHANGELOG.md.
+**Version 1.7.0** — history in CHANGELOG.md.
 
 This skill compares two Figma files and reports exactly how they differ, and what each difference means. It reads variables, styles, component APIs and full component layer trees, through scripts run in each file. Use it to check that a duplicate is a true copy, or to find drift between a master library and a project's fork. It is read-only: it reports and never writes to either file.
 
@@ -59,6 +59,14 @@ Variables are reachable only through the Plugin API, since the REST variables en
 **Assert identity before every read: the active file drifts**. Locking with `figma_navigate` and `lock: true` is not enough: the lock has been seen releasing mid-session, and a bridge can drop without warning. Every script returns `figma.root.name` as its first field. Check it against the intended file before using the result. Two reads of the same file make a comparison that looks valid and is worthless.
 
 A screenshot has the same trap: the bridge captures only the active file, whichever file the call names.
+
+**Without the bridge**, as in claude.ai with the Figma connector, the same scripts go unchanged through the official Figma MCP's `use_figma`:
+
+- Load its `figma-use` skill first, and name it in each call's `skillNames`.
+- Take both file keys from their URLs. Call `create_session` once and pass the `sessionId` to every call.
+- Each call names its file, so Step 1's list and lock are not needed. `create_session` refuses a file the account cannot edit.
+- Every file reads "Document" there, so the name check cannot tell the two apart. The report script warns that both sides name one file: check that the two keys differ.
+- A description Figma hands back escaped (`&lt;`) is read as typed, so a file read either way compares equal.
 
 ### Step 2 — Tier 0: inventory
 
@@ -155,4 +163,4 @@ Two real blind spots found this way each caused a wrong "identical" verdict:
 | `scripts/coverage-body.mjs` | Node | Prints the coverage test's runnable body |
 | `scripts/report.mjs` | Node | Step 7's tables, `--next` and `--stable` (no dependencies) |
 
-Scripts that run in Figma go through `figma_execute`. They are async function bodies, with top-level `await` and `return`, not standalone Node programs. Outside Figma, the suites in `tests/` run them against stub files; `tests/cases.md` records how.
+Scripts that run in Figma go through `figma_execute` (without the bridge, Step 1's route). They are async function bodies, with top-level `await` and `return`, not standalone Node programs. Outside Figma, the suites in `tests/` run them against stub files; `tests/cases.md` records how.

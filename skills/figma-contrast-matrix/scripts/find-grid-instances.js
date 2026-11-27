@@ -13,6 +13,8 @@
 // settings; never edited into this file, so no project's name for it lands in the toolkit.
 if (typeof TOKENS === "undefined" || !TOKENS || !TOKENS.ratiosGrid) throw new Error("prepend the library's settings, `const TOKENS = …;` with ratiosGrid: node tools/snapshot/projects.cjs settings <project>");
 const GRID_NAME = TOKENS.ratiosGrid;
+// The page holding the matrices. Empty reads the current page, which through use_figma is always the file's first.
+const PAGE_ID = "";
 
 async function findGridInstances(page, gridName) {
   const found = [];
@@ -25,4 +27,7 @@ async function findGridInstances(page, gridName) {
   return found;
 }
 
-return await findGridInstances(figma.currentPage, GRID_NAME);
+const page = PAGE_ID ? await figma.getNodeByIdAsync(PAGE_ID) : figma.currentPage;
+if (!page || page.type !== "PAGE") throw new Error(`no page with id "${PAGE_ID}"`);
+await page.loadAsync();
+return await findGridInstances(page, GRID_NAME);

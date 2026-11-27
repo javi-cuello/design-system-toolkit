@@ -8,6 +8,8 @@ Three scripts live in this directory, all run from the repo root: `check-frontma
 
 **Walked: 2026-11-27, for toolkit-standard 2.53.0** — §D 25: `/checkout` covers its own session; stale side sessions are pruned by `sessions.mjs --prune` when the user asks. The §D 25 memory-check case asserts the check and `--prune`, not who runs it, so it holds; test-check 11 of 11, test-sessions 3 of 3.
 
+**Walked: 2026-11-27, for skill-standard 1.13.0** — §A clause K, checked by `check.sh` (case S29); §B 14, a judgement rule with no script, so no new case (§C clause E). F, D, G and P cases read against it: none asserts what a skill's scripts call, so each holds.
+
 **Walked: 2026-11-26, for skill-standard 1.12.0** — §A clause J: a skill names the enable call for a bridge tool outside the core set; a judgement rule with no script, so no new case (§C clause E). F, D and G cases read against it: none asserts which bridge tools a skill names, so each holds.
 
 **Walked: 2026-11-26, for skill-standard 1.11.0** — §B 13 gains two traps (a style detached by binding, a remote component cloned when import by key hangs); a judgement rule with no script, so no new case (§C clause E). P1–P7 read against it: none asserts §B 13's list, so each holds.
@@ -370,3 +372,8 @@ Assert: the first three are `rule` or `undated` errors; a line inside a code fen
 Walked 2026-11-26 for toolkit-standard 2.52.0: test-check 10 passed.
 Runs: node tools/memory-check/test-check.mjs — "a rule is never memory", "every section of a project file is dated state".
 
+## S29 · A skill with a `use_figma` route sends nothing that route refuses — WALKED 2026-11-27
+Fixture: a skill whose SKILL.md names `use_figma`, one of its `scripts/*.js` planted to call `await figma.loadAllPagesAsync();`.
+Assert: `check.sh` reports `ERROR [K] <skill> — scripts/<file> calls loadAllPagesAsync, which use_figma refuses` and exits 1; with the planted line gone it is green. A comment naming the call is not a call (that script's own comment names it). A script over 50,000 characters is refused the same way; that half was not planted.
+Assert the negative: a skill whose SKILL.md does not name `use_figma` (components-audit, whose scanner calls it and runs only over the bridge) is not checked.
+Walked: figma-component-descriptions' `enumerate.js` planted, `check.sh` exited 1 with the line above; restored, green.

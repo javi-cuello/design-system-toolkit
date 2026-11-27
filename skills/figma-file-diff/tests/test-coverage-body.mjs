@@ -29,8 +29,8 @@ function standIn() {
   };
   const made = [];
   const figma = {
-    mixed: Symbol("mixed"), root: { name: "Scratch" }, made,
-    loadFontAsync: async () => {}, loadAllPagesAsync: async () => {},
+    mixed: Symbol("mixed"), root: { name: "Scratch", children: [] }, made,
+    loadFontAsync: async () => {}, loadAllPagesAsync: async () => { throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); },
     variables: { getLocalVariablesAsync: async () => [] },
     getLocalPaintStylesAsync: async () => [], getLocalTextStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [],
     createFrame: () => node("FRAME", { clipsContent: true, layoutMode: "NONE", paddingTop: 0, paddingRight: 0, paddingBottom: 0, paddingLeft: 0, itemSpacing: 0, counterAxisSpacing: 0,

@@ -24,7 +24,7 @@ const nodes = [
   inst("1:4", "Green matrix", "_Ratios grid", []),
   inst("1:5", "Lookalike", "_Ratios grid copy", [text("Title", "Purple")]),
 ];
-const page = { findAllWithCriteria: ({ types }) => nodes.filter((n) => types.includes(n.type)) };
+const page = { id: "0:1", type: "PAGE", loadAsync: async () => {}, findAllWithCriteria: ({ types }) => nodes.filter((n) => types.includes(n.type)) };
 
 let failures = 0;
 async function check(name, fn) {
@@ -42,7 +42,7 @@ await check("returns the Title text, or null when there is none", async () => {
   assert.equal(r[1].title, null);
 });
 await check("an instance with no resolvable main component is skipped, not thrown on", async () => {
-  const r = await run({ currentPage: { findAllWithCriteria: () => [inst("9:9", "x", null)] } });
+  const r = await run({ currentPage: { type: "PAGE", loadAsync: async () => {}, findAllWithCriteria: () => [inst("9:9", "x", null)] } });
   assert.deepEqual(r, []);
 });
 
@@ -54,5 +54,20 @@ await check("without the settings it says what to prepend, rather than matching 
   await assert.rejects(run({ currentPage: page }, {}), /prepend the library's settings/);
 });
 
+// use_figma starts every call on the file's first page, so a page named by id is read, never the current one.
+await check("PAGE_ID reads the page it names, loaded first, never the current page (use_figma)", async () => {
+  let loaded = false;
+  const other = { ...page, id: "0:2", loadAsync: async () => { loaded = true; } };
+  const first = { type: "PAGE", loadAsync: async () => {}, findAllWithCriteria: () => [] };
+  const named = src.replace('const PAGE_ID = "";', 'const PAGE_ID = "0:2";');
+  assert.notEqual(named, src);
+  const r = await new AsyncFunction("figma", "TOKENS", named)({ currentPage: first, getNodeByIdAsync: async (id) => (id === "0:2" ? other : null) }, { ratiosGrid: "_Ratios grid" });
+  assert.deepEqual(r.map((x) => x.id), ["1:1", "1:4"]);
+  assert.ok(loaded);
+});
+await check("with PAGE_ID empty, the current page is read, as on the bridge, and an empty one finds nothing", async () => {
+  const r = await run({ currentPage: { type: "PAGE", loadAsync: async () => {}, findAllWithCriteria: () => [] }, getNodeByIdAsync: async () => page });
+  assert.deepEqual(r, []);
+});
 console.log(failures ? `\n${failures} failed` : "\nall passed");
 process.exit(failures ? 1 : 0);

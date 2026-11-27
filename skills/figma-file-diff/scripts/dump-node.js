@@ -12,7 +12,8 @@ const COMPONENT_PATH = null;
 // The full ancestor path, as serialise.js writes it, so report.mjs pairs the dump with its component.
 function pathOf(n){ const p=[]; let c=n; while(c&&c.type!=='DOCUMENT'){ p.unshift(c.name); c=c.parent; } return p.join(' / '); }
 
-await figma.loadAllPagesAsync();
+// Page by page, never loadAllPagesAsync: use_figma refuses it, and each page's loadAsync works on both routes.
+for (const p of figma.root.children) await p.loadAsync();
 
 let target = null;
 const candidates = [];

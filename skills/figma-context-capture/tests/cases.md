@@ -238,3 +238,10 @@ Fixture: a context document whose open items list "Button size scale: 3 or 4 ste
 Assert: the decision row is written per references/project-documents.md, and the open item is deleted in the same edit, not struck through or ticked.
 Negative: the open item stays, struck through or marked done, beside the decision.
 Traced: 2026-11-26 for 2.17.0 — to references/project-documents.md *Then, in the same edit*.
+
+## C21 · The passes run unchanged through `use_figma` — *executed* 2026-11-27
+Fixture: stub files whose `loadAllPagesAsync` throws "not a supported API" and whose pages carry `loadAsync`; for pass E, a node that throws on reading a property it lacks, as Figma's cloud does, holding only a plain description in the escaped form the cloud hands back (`Count &lt; 100 &amp; more.`).
+Assert: every pass runs without calling `loadAllPagesAsync`; pass E, given that node's id, reads it, measures the description as typed and marks it `plainOnly`.
+Assert the negative: planted to read a `missing` flag off the node, as the earlier pass E did, it throws there.
+Recorded: 2026-11-27. The maintainer asked for a route without the bridge for the skills that can work without it. Each pass was sent through `use_figma` to a scratch file: C, D, S1, S2 and S3 ran; A and F, and E with no ids, stopped on `loadAllPagesAsync`; E with ids stopped on `node.missing: no such property 'missing' on COMPONENT_SET node`. Variable, text-style and plain component descriptions came back escaped; `figma.root.name` read "Document".
+Runs: node tests/test-passes.mjs — "pass E: a node that throws on an unknown property is read, never marked (use_figma)", "pass E: a plain-only description is read as typed and said to be plain-only (use_figma)", "pass E: (planted) a flag read off the node throws there", and every pass's assertions, now against stubs that refuse `loadAllPagesAsync`.

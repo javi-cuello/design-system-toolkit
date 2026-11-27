@@ -275,7 +275,7 @@ Several skills write to one project's record, so they write rows the same way. T
 | `GET /` | the docs site (the dashboard is at `/audits/`) |
 | `GET /data`, `PUT /data` | the whole record; a `lib` no record and no routing names is refused, as `/rows` refuses one |
 | `POST /patch` | one entry — how a tick or note is saved without racing the rest; a nested `null` is stored (readers take it as none), a top-level key set to `null` is refused (`rows` would lose every row), and so is an unknown `lib` |
-| `POST /exec` | `{code}` straight to the Figma plugin |
+| `POST /exec` | `{ code, fileKey, timeout }` straight to the Figma plugin; the value comes back at `result.result`. A caller outside the page sends `origin: http://127.0.0.1:<port>`, or the answer is `cross_origin`. A script read from disk this way ran 280 s, where the bridge's own call stops at 300 s |
 | `POST /claude` | proxied to the Anthropic API |
 | `GET /status` | is the plugin attached, and to which file |
 | `GET /scripts` | the **skills'** scripts: the components scanner, sweep, judgement and fix instructions and measures from `figma-components-audit/scanner/`, the file-level scanner from `figma-foundations-audit`, the live reader from `component-validator`, the link check from `figma-variable-audit`, the pairing instruction from `design-code-parity`, the snapshot plugin's code for headless use, and `stages`, the audit's one list of stages (`figma-project-audit/scripts/stages.json`), which the page runs in order |

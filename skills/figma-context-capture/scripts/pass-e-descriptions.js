@@ -22,19 +22,23 @@ function insideComponent(n) {
   return false;
 }
 function pageOf(n) { for (var p = n; p; p = p.parent) if (p.type === 'PAGE') return p; return null; }
+// A description as typed: use_figma hands the plain field back HTML-escaped, and a description set as
+// plain text only leaves descriptionMarkdown empty.
+function plain(t) { return String(t || '').replace(/&(lt|gt|amp|quot|#39);/g, function (m, e) { return { lt: '<', gt: '>', amp: '&', quot: '"', '#39': "'" }[e]; }); }
 
 var picked = [];
 if (CONFIG.ids.length) {
   for (var i = 0; i < CONFIG.ids.length; i++) {
     var n = await figma.getNodeByIdAsync(CONFIG.ids[i]);
-    picked.push(n || { id: CONFIG.ids[i], missing: true });
+    picked.push({ id: CONFIG.ids[i], node: n });
   }
 } else {
-  await figma.loadAllPagesAsync();
+  // Page by page, never loadAllPagesAsync: use_figma refuses it, and each page's loadAsync works on both routes.
+  for (var lp = 0; lp < figma.root.children.length; lp++) await figma.root.children[lp].loadAsync();
   for (var pi = 0; pi < figma.root.children.length && picked.length < CONFIG.sample; pi++) {
     var nodes = figma.root.children[pi].findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] });
     for (var j = 0; j < nodes.length && picked.length < CONFIG.sample; j++)
-      if (!isVariant(nodes[j]) && (nodes[j].descriptionMarkdown || nodes[j].description || '').length) picked.push(nodes[j]);
+      if (!isVariant(nodes[j]) && (nodes[j].descriptionMarkdown || nodes[j].description || '').length) picked.push({ id: nodes[j].id, node: nodes[j] });
   }
 }
 
@@ -42,10 +46,12 @@ var spelling = {};
 for (var q = 0; q < PAIRS.length; q++) { spelling[PAIRS[q][0]] = 0; spelling[PAIRS[q][1]] = 0; }
 var samples = [];
 for (var k = 0; k < picked.length; k++) {
-  var c = picked[k];
-  if (c.missing) { samples.push({ id: c.id, error: 'not found' }); continue; }
-  // descriptionMarkdown, never description: the plain one strips the markdown this pass reads
-  var md = c.descriptionMarkdown || '';
+  // A marker on the picked entry, never on the node: use_figma throws on reading a property a node lacks.
+  var c = picked[k].node;
+  if (!c) { samples.push({ id: picked[k].id, error: 'not found' }); continue; }
+  // descriptionMarkdown first: the plain one strips the markdown this pass reads, so a plain-only sample says so
+  var plainOnly = !c.descriptionMarkdown;
+  var md = c.descriptionMarkdown || plain(c.description);
   var lines = md.split('\n'), headings = [], bullets = 0, stops = 0;
   for (var l = 0; l < lines.length; l++) {
     var t = lines[l].trim();
@@ -55,12 +61,12 @@ for (var k = 0; k < picked.length; k++) {
   var low = md.toLowerCase();
   for (var r = 0; r < PAIRS.length; r++)
     for (var s = 0; s < 2; s++) spelling[PAIRS[r][s]] += (low.match(new RegExp('\\b' + PAIRS[r][s] + '\\w*', 'g')) || []).length;
-  samples.push({ id: c.id, name: c.name, length: md.length, headings: headings, bullets: bullets, bulletsWithStop: stops });
+  samples.push({ id: c.id, name: c.name, length: md.length, plainOnly: plainOnly, headings: headings, bullets: bullets, bulletsWithStop: stops });
 }
 
 var headers = [];
 var first = null;
-for (var f = 0; f < picked.length && !first; f++) if (!picked[f].missing) first = pageOf(picked[f]);
+for (var f = 0; f < picked.length && !first; f++) if (picked[f].node) first = pageOf(picked[f].node);
 if (first) {
   if (first.loadAsync) await first.loadAsync();   // ids mode loads no page, and dynamic-page throws on an unloaded one
   var inst = first.findAllWithCriteria({ types: ['INSTANCE'] });

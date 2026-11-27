@@ -2,7 +2,8 @@
 // file's identity and its page and component inventory. Read-only. Send this
 // file's body as the code of one figma_execute call with an explicit fileKey,
 // after figma_list_open_files + figma_navigate({lock:true}) + figma_get_status({probe:true}).
-await figma.loadAllPagesAsync();
+// Page by page, never loadAllPagesAsync: use_figma refuses it, and each page's loadAsync works on both routes.
+for (var lp = 0; lp < figma.root.children.length; lp++) await figma.root.children[lp].loadAsync();
 var pages = [];
 for (var i = 0; i < figma.root.children.length; i++) {
   var page = figma.root.children[i];

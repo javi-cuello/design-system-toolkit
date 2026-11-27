@@ -39,7 +39,8 @@ if (typeof TARGET_INSTANCE_ID === "undefined" || !TARGET_INSTANCE_ID) throw new 
 const GRID_NAME = TOKENS.ratiosGrid;
 const STEPS = 12;
 
-await figma.loadAllPagesAsync();
+// Page by page, never loadAllPagesAsync: use_figma refuses it, and each page's loadAsync works on both routes.
+for (const p of figma.root.children) await p.loadAsync();
 
 function expect(cond, msg) {
   if (!cond) throw new Error(`${GRID_NAME} structure unexpected: ${msg}`);

@@ -17,7 +17,8 @@
 // user's answer, asked before this runs (step 4: always confirm which mode).
 
 const FRAME_ID = "";               // the ramp's top-level frame, or leave empty and set FRAME_NAME
-const FRAME_NAME = "";             // matched exactly among the current page's top-level frames
+const FRAME_NAME = "";             // matched exactly among the page's top-level frames
+const PAGE_ID = "";                // with FRAME_NAME: the page to look on; empty = the current page (through use_figma, always the first)
 const RAMP_NAME = "_Colour ramp";  // the ramp component's name, per the context document if it differs
 const STEPS = 12;
 
@@ -59,7 +60,12 @@ async function readRamp(frame) {
 
 let frame = null;
 if (FRAME_ID) frame = await figma.getNodeByIdAsync(FRAME_ID);
-else if (FRAME_NAME) frame = (figma.currentPage.children || []).find((n) => n.name === FRAME_NAME) || null;
+else if (FRAME_NAME) {
+  const page = PAGE_ID ? await figma.getNodeByIdAsync(PAGE_ID) : figma.currentPage;
+  if (!page || page.type !== "PAGE") fail(`no page with id "${PAGE_ID}"`);
+  await page.loadAsync();
+  frame = (page.children || []).find((n) => n.name === FRAME_NAME) || null;
+}
 else fail("FRAME_ID and FRAME_NAME are both empty — fill one with the ramp's frame");
 if (!frame) fail(`no frame found for ${FRAME_ID ? `id "${FRAME_ID}"` : `name "${FRAME_NAME}" on the current page`}`);
 return await readRamp(frame);

@@ -5,7 +5,7 @@ description: Populates a "_Ratios grid" contrast matrix component in a Foundatio
 
 # Figma Contrast Matrix
 
-**Version 3.8.0** — history in CHANGELOG.md.
+**Version 3.9.0** — history in CHANGELOG.md.
 
 This skill fills a `_Ratios grid` instance in Figma with the WCAG contrast ratios between the steps of one or two 12-step colour scales. Scripts find the grid, map its nodes, read the hexes, do the maths in Python and write the cells in batches. Then every cell is read back. Use it to fill a contrast matrix, compare colour steps, or check which pairs pass WCAG AA.
 
@@ -26,8 +26,12 @@ Each instance is a `Title` over a grid of 12 by 12 result blocks, with a header 
 ## Workflow
 
 1. **Confirm the bridge.** Check with `figma_get_status` that the Desktop Bridge is connected to the intended file, per the context document's registry.
+   - **Without the bridge**, as in claude.ai with the Figma connector, every script below goes unchanged through the official Figma MCP's `use_figma`.
+   - Load its `figma-use` skill first, and name it in each call's `skillNames`. Call `create_session` with the file key from its URL, and pass the `sessionId` on.
+   - Each call starts on the file's first page. So set `PAGE_ID` in step 2's script, and beside `FRAME_NAME` in step 4.
+   - `create_session` refuses a file the account cannot edit.
 
-2. **Find the target instance.** Given a Figma link or node ID, use that. Otherwise run `scripts/find-grid-instances.js` through `figma_execute` on the page holding the matrices.
+2. **Find the target instance.** Given a Figma link or node ID, use that. Otherwise run `scripts/find-grid-instances.js` through `figma_execute` on the page holding the matrices. Or set its `PAGE_ID` to that page.
    - Pass the file's contents as `code`, after `const TOKENS = …;`: the library's settings, printed by `node tools/snapshot/projects.cjs settings <project>`.
    - The settings' `ratiosGrid` names the component; the house's is `_Ratios grid`.
    - It returns every instance on the page as `{ id, name, title }`. Matching the user's colour against `name` or `title` is yours.

@@ -25,7 +25,7 @@ The page and frame naming are a per-project convention: take them from the conte
 - Each ramp has 12 step columns.
 - Each column is a `Swatches` sub-frame with two rows of fills.
 
-Run `scripts/read-ramp-hexes.js` through `figma_execute`. Fill `FRAME_ID` (or `FRAME_NAME`) with the ramp's frame. Set `RAMP_NAME` if the context document names the component differently.
+Run `scripts/read-ramp-hexes.js` through `figma_execute`. Fill `FRAME_ID` (or `FRAME_NAME`) with the ramp's frame. A frame named on a page other than the current one takes that page's id too. Set `RAMP_NAME` if the context document names the component differently.
 
 - It finds the ramp as an actual child of that frame, by its main component's name.
 - It **never** finds it by offsetting the frame's own ID. A frame and the instance inside it have unrelated IDs, and an assumed offset reads a different node while looking like it worked.

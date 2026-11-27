@@ -67,7 +67,7 @@ Never promote `[inferred]` to `[confirmed]` because it "looks obvious". A wrong 
 
 Send `scripts/pass-a-inventory.js` after `figma_list_open_files`, `figma_navigate({lock:true})` and `figma_get_status({probe:true})`.
 
-- It returns `fileKey` and `fileName`.
+- It returns `fileKey` and `fileName`. Through `use_figma`, `fileName` reads "Document" for every file.
 - Per page it returns `sets`, `comps` (variants are not counted), `described`, the flat `names` list, and `setIds`.
 - `setIds` holds each component set's `{ name, id }`, which pass D takes as its `CONFIG.ids`.
 - Never judge a page from `page.children`. Libraries wrap pages in one outer frame, and `findAllWithCriteria` descends fully.

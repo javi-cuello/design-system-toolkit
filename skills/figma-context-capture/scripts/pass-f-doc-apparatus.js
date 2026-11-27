@@ -24,7 +24,8 @@ function prefixOf(name) {
 }
 function setName(c) { return c.parent && c.parent.type === 'COMPONENT_SET' ? c.parent.name : c.name; }
 
-await figma.loadAllPagesAsync();
+// Page by page, never loadAllPagesAsync: use_figma refuses it, and each page's loadAsync works on both routes.
+for (var lp = 0; lp < figma.root.children.length; lp++) await figma.root.children[lp].loadAsync();
 var furniture = {};
 for (var p = 0; p < CONFIG.prefixes.length; p++) furniture[CONFIG.prefixes[p]] = { local: 0, instances: 0, remote: 0, keys: [] };
 var pages = [], ratios = {};

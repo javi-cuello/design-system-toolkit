@@ -19,7 +19,7 @@ const fileOf = (fork = false) => {
     layoutSizingHorizontal: "FIXED", layoutSizingVertical: "HUG", width: 600, height: 40 };
   const tag = { type: "COMPONENT", name: "Tag", description: "", children: [] };
   const page = (name, id, kids) => {
-    const p = { type: "PAGE", name, id, children: kids, findAllWithCriteria: () => kids };
+    const p = { type: "PAGE", name, id, children: kids, loadAsync: async () => {}, findAllWithCriteria: () => kids };
     kids.forEach((k) => { k.parent = p; k.children.forEach((c) => { c.parent = k; }); });
     return p;
   };
@@ -34,7 +34,7 @@ const fileOf = (fork = false) => {
   const cols = [{ id: "C:1", name: "Space", modes: [{ modeId: "m1", name: "Default" }], variableIds: vars.map((v) => v.id) }];
   const text = [{ name: "Body/md", fontName: { family: "Inter", style: "Regular" }, fontSize: fork ? 15 : 14, lineHeight: {}, letterSpacing: {} }];
   return {
-    mixed: Symbol("mixed"), root: { name: fork ? "Library (fork)" : "Library", children: pages }, loadAllPagesAsync: async () => {},
+    mixed: Symbol("mixed"), root: { name: fork ? "Library (fork)" : "Library", children: pages }, loadAllPagesAsync: async () => { throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); },
     variables: { getLocalVariablesAsync: async () => vars, getLocalVariableCollectionsAsync: async () => cols },
     getLocalPaintStylesAsync: async () => [], getLocalTextStylesAsync: async () => text,
     getLocalEffectStylesAsync: async () => [], getLocalGridStylesAsync: async () => [],
@@ -112,6 +112,15 @@ ok("a variable in a collection whose name holds a slash is folded into that coll
   assert.equal(ls.filter((l) => l.startsWith("| `Brand/Core/x`")).length, 0);
   assert.equal(ls.filter((l) => l.startsWith("| `Brand/y`")).length, 1);
 });
+// use_figma hands a variable's and a style's description back escaped: read as typed, both routes hash the same.
+{
+  const described = async (d) => { const f = fileOf(); (await f.variables.getLocalVariablesAsync())[0].description = d; (await f.getLocalTextStylesAsync())[0].description = d; return run("manifest.js", f, "const VARS = ['Space/Space/2'];"); };
+  const typed = await described("a < b & c"), escaped = await described("a &lt; b &amp; c");
+  ok("a variable's and a text style's description read back escaped hash and read as typed (use_figma)", () => {
+    assert.equal(escaped.fileHash, typed.fileHash);
+    assert.equal(escaped.bodies["Space/Space/2"].description, "a < b & c");
+  });
+}
 const ordered = async (flip) => {
   const f = fileOf();
   const [v] = await f.variables.getLocalVariablesAsync();

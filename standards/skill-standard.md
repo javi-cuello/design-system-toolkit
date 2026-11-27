@@ -1,6 +1,6 @@
 # Skill standard — definition of done for a skill and a plugin
 
-**Version 1.12.0** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
+**Version 1.13.0** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
 
 What a skill (`skills/`) and a plugin (`plugins/`) must be before they are committed. What every standard shares, including how these clauses are enforced and changed, is [`toolkit-standard.md`](toolkit-standard.md)'s; this file adds only what is particular to a skill or a plugin.
 
@@ -225,6 +225,24 @@ A skill that calls a Figma Console bridge tool outside the core set says, at its
 
 *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — a skill naming a bridge tool is read for its enable call when it changes.
 
+### K — A skill that offers a route through the official Figma MCP keeps its scripts runnable there
+
+A skill whose SKILL.md names `use_figma` sends its Figma scripts, unchanged, through the official Figma MCP when the Figma Console bridge is off, and says how: the Figma MCP's `figma-use` skill loaded first, `create_session` with the file's key, its `sessionId` on every call. Each script it sends there:
+
+- **loads pages one by one** with `page.loadAsync()`, never `figma.loadAllPagesAsync()`, which `use_figma` refuses ("not a supported API");
+- **is at most 50,000 characters**, `use_figma`'s limit for `code`;
+- **reads a description as typed**: `descriptionMarkdown` comes back as written, but the plain `description` of a component, a variable or a style comes back HTML-escaped (`&lt;`, `&gt;`, `&amp;`), and a description set as plain text only leaves `descriptionMarkdown` empty, so a script falls back to the plain field unescaped;
+- **marks nothing on a node**: reading a property a node lacks throws there, where the bridge returns `undefined`;
+- **names the page it reads**: each call starts on the file's first page, so a script that reads `figma.currentPage` by default takes a page id.
+
+Where its prose relies on the file's name, it says that `figma.root.name` reads "Document" through `use_figma`, and takes identity from the `fileKey` each call names. A skill that cannot work without the bridge (a script over the limit, a library too large for one call) offers no route and owes nothing here.
+
+*Why:* a route is offered to people who have no bridge at all, as in claude.ai with the Figma connector, so a script that fails there fails with no fallback, and a description read escaped compares unequal to the same text read through the bridge.
+
+*Evidence:* every script of figma-component-descriptions, figma-file-diff, figma-context-capture and figma-contrast-matrix sent through `use_figma` to scratch files (2026-11-27): eight stopped on `loadAllPagesAsync`, one on a flag read off a node, and one found its grid on one call and nothing on the next; variable, style and plain component descriptions came back escaped; every file read "Document". Each ran once the fallback was in. Cases D26, A11, C21 and A18.
+
+*Checked:* `standards/tests/check.sh` "calls loadAllPagesAsync, which use_figma refuses"; `standards/tests/check.sh` "is over use_figma's 50,000 characters". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — the unescaped read, no mark on a node and the file's name are a read when such a skill changes.
+
 ### Verifying a skill
 
 Run the checks over every skill at once, from the repo root:
@@ -401,3 +419,21 @@ Each of these returns success or a plausible result while doing nothing, so a sc
 *Evidence:* one session's cleanup of a consumer library. Clearing modes on 274 frames left 121 still set, all on one extended collection, until the parent was passed. Relinking 5,360 bindings to a resource library's hidden variables failed by key and succeeded through ids already present on that library's instances. Resetting overrides on 43 header instances timed out five times while completing; a before-snapshot showed 25 of 25 unchanged and caught four that never finished. Another session made a duplicated library self-contained (2026-11-26): rebinding its remote variables to local copies left 2 styles in use where 16 had been, restored by re-applying the styles by node id from the source file; and a doc Header component and a Section header set that hung on import by key came in by `clone()` of their remote mains.
 
 *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — by `figma-plugin-creator`'s conformance checklist whenever the plugin's files change; `bin/closing` names every plugin changed since the upstream.
+
+### 14 · A failed bridge call is diagnosed before it is retried
+A call over the Figma Console bridge that fails says nothing about the file, so whoever sends scripts over it, a skill or a session, finds the cause before acting on it:
+
+- **Know the call's limits.** `figma_execute` stops at 5 s unless given a `timeout`, up to 300 s. A server that failed to connect when the session started stays down until `/mcp` reconnects it, and its "No files connected" can stand beside a project dashboard whose `/status` lists the files.
+- **Probe first.** `figma_get_status({ probe: true })` tells a dropped connection (another plugin opened, the file switched) from a fault in the payload, where only that payload fails and the probe answers.
+- **Hand the person what only the person can do, early.** When the probe answers but library imports and `loadFontAsync` hang in one file, or every call reports nodes inside instances that "do not exist" after hours of use, the plugin must be reopened in that file; `figma_reload_plugin` does not fix it.
+- **Check the file before every write.** The active file drifts and `figma_navigate({ lock: true })` does not hold it, so a write checks `figma.fileKey` or `figma.currentPage.name` and refuses otherwise. `figma_list_open_files` lists only files with the Desktop Bridge running, so a missing file is usually closed.
+- **Re-read before each batch.** People edit the same files while a session works.
+- **One script, not many probes.** Each call is a round trip through the Desktop Bridge: fetch keys, definitions and styles in one script, then build in one more.
+- **A long run that crawls is brought to the front.** A Figma browser tab in the background runs timers about once a minute.
+- **`figma_get_file_at_version` always takes a small `depth`.** With none, or `depth: 6`, it closes the connection and every figma-console tool is gone until `/mcp` reconnects; `node_ids` with `depth: 1` names a node at that version, or `null` before it existed.
+
+*Why:* each failure reads as another. A retry after a dropped connection writes twice; a stalled library looks like a payload bug and costs an hour of edits to the payload; a write to the drifted file lands in the wrong library.
+
+*Evidence:* sessions on the toolkit's projects from 2026-10, kept as notes until 2026-11-27: one degraded plugin cost an hour before the restart was asked for; one component took 17 minutes in a background browser tab (Pitre, southleft.substack.com, 2026-11-12); a version read with `depth: 6` returned 5.3 MB and killed the server.
+
+*Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — a skill whose scripts run over the bridge is read against it when it changes.
