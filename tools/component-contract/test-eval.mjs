@@ -829,5 +829,12 @@ ok('--check: only a strict count absent from accepted.json is spared; a `left` o
     gap(byName)('cell/slot/glyph', { library: { kind: 'graphic' }, drawn: null }) === null && gap(byName)('cell/slot.layout', { library: { direction: 'row' }, drawn: null }) === null
       && gap(byPlace)('cell/renamed/glyph', { library: { kind: 'graphic' }, drawn: null }) === null
       && gap(same)('cell/renamed/glyph', { library: { kind: 'graphic' }, drawn: null }) === 'unexposed-override');
+  // (2026-11-27: a held one opened in one variant alone, swapped there for another library's, is held elsewhere: an
+  // override inside it at the other variants keeps its excuse, a notification's status glyph at high contrast)
+  const status = { contract: 1, component: 'Status', props: {}, anatomy: { root: { kind: 'container' }, mark: { kind: 'instance', parent: 'root', component: 'Dot', with: { Size: 's' } } }, variants: [] };
+  const note = { contract: 1, component: 'Note', props: { tone: { type: 'enum', values: ['info', 'error'], default: 'info' } }, anatomy: { root: { kind: 'container' }, st: { kind: 'instance', parent: 'root', component: 'Status' }, 'st/mark': { kind: 'instance', parent: 'st', component: 'Dot', with: { Size: 'l' } } },
+    variants: [{ when: { tone: 'error' }, set: { 'st.component': 'Err' }, add: { 'st/err': { kind: 'instance', parent: 'st', component: 'Err' }, 'st/err/v': { kind: 'graphic', parent: 'st/err', background: 'C' } } }] };
+  const ng = gapOf(note, (nm) => ({ Status: status })[nm] || null, undefined, { library: { Status: status, Note: note } });
+  ok('…and an override inside a held one opened in one variant alone keeps its excuse at the others', ng('st/mark.with.Size', { library: 'l', drawn: 's' }) === 'unexposed-override');
 }
 console.log(`${n} passed`);

@@ -58,7 +58,7 @@ import { roundTrip, drawSettings, restKey } from './to-figma.mjs';
 import { parseColour } from '../parity/values.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, swapKeysOf } from './to-markup.mjs';
-import { expand, variantDefaults, foreignOpened, openForeign } from './layers.mjs';
+import { expand, variantDefaults, foreignOpened, openForeign, placedOf } from './layers.mjs';
 import { sharesNeverWritten, tokenNames } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
@@ -166,7 +166,10 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const parts = partsOf(contract, settings);
   // (not one the markup draws open, or a layer of it: a part swapped into a held one where it has no prop, drawn open in
   // that part's place, to-markup's insideOf, so the markup does pass it: layers.mjs openForeign lists it)
-  const drawnOpen = (id) => [...opened].some((o) => id === o || id.startsWith(`${o}/`));
+  // (a held one opened in one variant alone, swapped there for another library's, is held at the rest: its insides there
+  // are its own, their overrides unpassed as any held one's; the parts that variant adds are listed themselves)
+  const everywhere = [...opened].filter((o) => !((contract.anatomy || {})[o] && contract.anatomy[o].kind === 'instance' && placedOf(library, contract.anatomy[o])));
+  const drawnOpen = (id) => everywhere.some((o) => id === o || id.startsWith(`${o}/`));
   const unpassed = (id) => (drawnOpen(id) ? null : unexposed(contract, id, mainOf));
   const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : ((u) => (!u ? null : /^exposed/.test(u) ? 'exposed-unforwarded' : 'unexposed-override'))(mainOf && unpassed(p.id)));
   const reasons = new Map([...parts.values()].map((p) => [p.id, reasonOf(p)]).filter(([, r]) => r));
