@@ -374,6 +374,6 @@ Runs: node tools/memory-check/test-check.mjs — "a rule is never memory", "ever
 
 ## S29 · A skill with a `use_figma` route sends nothing that route refuses — WALKED 2026-11-27
 Fixture: a skill whose SKILL.md offers a **Without the bridge** route, one of its `scripts/*.js` planted to call `await figma.loadAllPagesAsync();`, then `figma['loadAllPagesAsync']()`, then only a `//` comment and a JSDoc block naming the call.
-Assert: `check.sh` reports `ERROR [K] <skill> — scripts/<file> calls loadAllPagesAsync, which use_figma refuses` and exits 1 for either call; for the comments alone it is green. A script over 50,000 characters is refused the same way; that half was not planted.
+Assert: `check.sh` reports `ERROR [K] <skill> — scripts/<file> calls loadAllPagesAsync, which use_figma refuses` and exits 1 for either call; for the comments alone it is green. A call on a line that also holds a URL (`"https://…"`) still counts; a mention in a string counts too, by design: a script names the call only in a comment. A script over 50,000 characters is refused the same way; that half was not planted.
 Assert the negative: a skill whose SKILL.md offers no such route (components-audit, whose scanner calls it and runs only over the bridge) is not checked, nor one that only mentions `use_figma`.
 Walked: figma-component-descriptions' `enumerate.js` planted with the call, exit 1 with the line above; figma-file-diff's `inventory.js` planted with the bracketed call (exit 1) and with the comments (green); each restored.

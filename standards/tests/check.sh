@@ -171,9 +171,9 @@ if [ -d skills ]; then
         if grep -q '\*\*Without the bridge\*\*' "${d}SKILL.md" 2>/dev/null; then
             for f in "${d}"scripts/*.js; do
                 [ -f "$f" ] || continue
-                grep -vE '^[[:space:]]*(//|\*|/\*)' "$f" | sed 's#//.*##' | grep -q 'loadAllPagesAsync' &&
+                grep -vE '^[[:space:]]*(//|\*|/\*)' "$f" | sed -E 's#(^|[[:space:]])//.*##' | grep -q 'loadAllPagesAsync' &&
                     err "[K] $s — ${f#"$d"} calls loadAllPagesAsync, which use_figma refuses; load each page with page.loadAsync()"
-                [ "$(wc -c < "$f")" -gt 50000 ] &&
+                [ "$(LC_ALL=en_US.UTF-8 wc -m < "$f")" -gt 50000 ] &&
                     err "[K] $s — ${f#"$d"} is over use_figma's 50,000 characters"
             done
         fi
