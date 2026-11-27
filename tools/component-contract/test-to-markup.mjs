@@ -984,4 +984,16 @@ else {
   const own = toElement(btn, 'btn', { naming: ELEMENT, library: {} }), held = toElement(holder, 'holder', { naming: ELEMENT, library: { Btn: { ...btn, folder: 'btn' } } });
   ok('a mode a holder sets on a placed instance overrides its own: own mode before the host, none set where none overrides, its null leaving the own one standing', /h\("ds-btn", \{ "data-tone": "subtle", \.\.\.rest, \.\.\.Object\.fromEntries\(Object\.entries\(host\)\.filter\(\(\[, v\]\) => v != null\)\)/.test(own) && /"data-tone": on \? "selected" : null/.test(held), own + held); }
 
+{ // a boolean axis Figma spells otherwise (isDisabled=false, not False): the mapping keys its options so, or no variant
+  // name matches, the governed reading renders none and no pointer state is forced (the self leg never read a focus)
+  const c = { component: 'Chip', props: { state: { type: 'enum', values: ['default', 'focus'], default: 'default', figmaValues: ['default', 'focus'], role: 'interaction', pointer: ['focus'], figma: 'state' },
+    isDisabled: { type: 'boolean', default: false, axis: true, figmaValues: ['false', 'true'], figma: 'isDisabled' }, isOn: { type: 'boolean', default: true, axis: true, figmaValues: ['true', 'false'], figma: 'isOn' } },
+    anatomy: { root: { kind: 'container' } }, variants: [] };
+  const m = toParity(c, 'chip', { naming: ELEMENT, library: {}, framework: 'web-components' });
+  const { expand: render } = await import('../parity/project.mjs');
+  const got = render(m, [{ name: 'state=focus, isDisabled=true, isOn=false' }, { name: 'state=default, isDisabled=false, isOn=true' }], {});
+  const f = got.get('state=focus, isDisabled=true, isOn=false');
+  ok('a boolean axis is keyed as the design spells its options, so its variants render and a pointer state is forced', got.size === 2 && !!f && f.pseudo === 'focus-visible' && f.args.isDisabled === true && f.args.isOn === false
+    && JSON.stringify(m.axes.isDisabled) === '{"false":{},"true":{"isDisabled":true}}', JSON.stringify(m.axes)); }
+
 console.log(`${n} passed`);

@@ -1206,7 +1206,12 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
       // has a value: the input holds the Value's sample text
       const value = props.find((y) => y.type === 'value'), arg = framework === 'react' ? 'defaultValue' : 'value';
       axes[fig] = { [figmaWord(entry.on)]: { [arg]: (value && value.default) || 'Value' }, [figmaWord(!entry.on)]: {} };
-    } else if (p.type === 'boolean' && (p.axis || (p.shows || []).length || key === disabledKey(c, settings))) axes[fig] = { False: p.default === true ? { [name]: false } : {}, True: p.default === true ? {} : { [name]: true } };
+    } else if (p.type === 'boolean' && (p.axis || (p.shows || []).length || key === disabledKey(c, settings))) {
+      // (each option as the design spells it, which variant names carry: isDisabled=false where Figma's are not False,
+      // True; keyed False/True, a spec spelling them so matched no variant, and no pointer state was forced)
+      const spelt = (on) => (p.figmaValues || []).find((x) => String(x).toLowerCase() === String(on)) ?? (on ? 'True' : 'False');
+      axes[fig] = { [spelt(false)]: p.default === true ? { [name]: false } : {}, [spelt(true)]: p.default === true ? {} : { [name]: true } };
+    }
   }
   const parts = partsOf(c, settings);
   const root = selectorOf(c, n, 'root');
