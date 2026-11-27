@@ -186,7 +186,9 @@ export function partsOf(c, t = HOUSE) {
       parts.get(id).pointerOnly = false;
       parts.get(id).adds.push(when);
       const at = parts.get(id);
-      if (at.base && typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) && (e.content !== at.e.content || at.words.length)) at.words.push([when, e.content]);
+      // (words of its own, or another string prop that sets this text put in its place, as a set does below: a value
+      // where the placeholder was, a field's inline style when filled)
+      if (at.base && typeof e.content === 'string' && (!/^\{.*\}$/.test(e.content) || swapsIn(e.content, id)) && (e.content !== at.e.content || at.words.length)) at.words.push([when, e.content]);
       // (a part only variants draw: each one's words, set out below)
       if (!at.base && typeof e.content === 'string') (at.texts = at.texts || []).push([when, e.content]);
     }

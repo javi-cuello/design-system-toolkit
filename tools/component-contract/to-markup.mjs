@@ -601,6 +601,21 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     const sets = (c.variants || []).filter((v) => v.set && `${id}.modes` in v.set).sort((x, y) => !!x.combination - !!y.combination);
     // (modes a pointer state sets, a card's at focus: the markup's attributes, which no pointer state changes, so a gap)
     if (sets.some((v) => pointerWords(c, v.when))) gaps.push(`${partName(id)}'s variable modes change at a pointer state: frontend-build's to add, or the design's to drop`);
+    // (and a pointer state's variant that adds the part again where no other state draws it, a link's icon at press where
+    // its tone takes the icon away: it carries only the modes it says, which the markup holds under the rest of its props,
+    // as only that state draws the part there; where the rest draws it at any such combination, it stays the gap)
+    const restAt = (w) => Object.fromEntries(Object.entries(w).filter(([k, v]) => !pointerWords(c, { [k]: v })));
+    // (every combination of the props variants are chosen by, the pointer states at rest and the variant's own fixed; past
+    // 4096 of them, none read and the gap kept)
+    const onlyThere = (w) => {
+      const fixed = restAt(w), P = c.props || {};
+      const ks = [...new Set((c.variants || []).flatMap((v) => Object.keys(v.when || {})))].filter((k) => P[k] && P[k].role !== 'interaction' && !(k in fixed));
+      const xs = ks.reduce((acc, k) => (acc.length > 4096 ? acc : acc.flatMap((m) => (P[k].type === 'boolean' ? [false, true] : P[k].values || [P[k].default]).map((v) => ({ ...m, [k]: v })))), [{}]);
+      return xs.length <= 4096 && xs.every((x) => !expandAt({ ...D, ...x, ...fixed })[id]);
+    };
+    const readds = id === 'root' ? [] : (c.variants || []).filter((v) => (v.add || {})[id] && pointerWords(c, v.when) && Object.keys(restAt(v.when)).length && onlyThere(v.when))
+      .map((v) => ({ when: restAt(v.when), set: { [`${id}.modes`]: v.add[id].modes || {} } }));
+    sets.push(...readds);
     const keys = new Set([...Object.keys(e.modes || {}), ...sets.flatMap((v) => Object.keys(v.set[`${id}.modes`] || {}))]);
     // (on a placed instance, unset is no attribute at all (null, which h() leaves out): its component's own mode stands
     // there, as an instance with no mode override keeps its component's)

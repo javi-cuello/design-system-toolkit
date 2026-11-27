@@ -35,6 +35,18 @@ const CLASS = { kind: 'class', prefix: 'ds-', part: '__' }, ELEMENT = { kind: 'e
   const r = toReact(card, 'mode-card', { naming: CLASS, library: {}, stylesheet: '../styles/mode-card.css' });
   ok('React: a variant\'s mode is chosen by its props, a part\'s own written as it stands',
     /data-5-responsive-type=\{\(breakpoint === "sm"\) \? "mobile" : "desktop"\}/.test(r) && /data-theme="dark"/.test(r), r);
+  // (2026-11-27, a link's icon at press: a pointer state's variant that adds a part again where no other state draws it
+  // carries the modes it says, none where it says none; the markup holds them under the rest of its props, as only the
+  // pointer state draws the part there)
+  const link = { contract: 1, component: 'Mode link', props: { state: { type: 'enum', values: ['rest', 'press'], default: 'rest', role: 'interaction', pointer: ['press'], figma: 'State' }, blank: { type: 'boolean', default: false, figma: 'Blank' }, tone: { type: 'enum', values: ['plain', 'inverse'], default: 'plain', figma: 'Tone' } },
+    anatomy: { root: { kind: 'container' } },
+    variants: [{ when: { blank: true }, add: { icon: { kind: 'container', parent: 'root', order: 0, modes: { theme: 'link' } } } }, { when: { blank: true, tone: 'inverse' }, remove: ['icon'] }, { when: { state: 'press', blank: true, tone: 'inverse' }, add: { icon: { kind: 'container', parent: 'root', order: 0 } } }] };
+  const rl = toReact(link, 'mode-link', { naming: CLASS, library: {}, stylesheet: '../styles/mode-link.css' });
+  ok('React: modes a pointer state\'s add draws a part with, where only it draws the part, are held under the rest of its props',
+    /data-theme=\{\(blank && tone === "inverse"\) \? "" : "link"\}/.test(rl), rl.split('\n').filter((l) => /data-theme/.test(l)));
+  // (but where the rest draws the part there too, the markup keeps the rest's: the pointer state's are the gap)
+  const kept = { ...link, variants: link.variants.filter((v) => !v.remove) };
+  ok('…and where the rest draws the part there too, the rest\'s modes stay', /data-theme="link"/.test(toReact(kept, 'mode-link', { naming: CLASS, library: {}, stylesheet: '../styles/mode-link.css' })));
 }
 
 /* ── React, as text ── */
@@ -149,6 +161,12 @@ ok('each layer draws the swap that drives it, handed over where a variant says',
 const two = { component: 'Find', props: { placeholderText: { type: 'string', figma: 'Placeholder text', sets: ['label'] }, valueText: { type: 'string', default: 'Value', figma: 'Value text', sets: ['label'] }, value: { type: 'boolean', default: false, figma: 'Value' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Search' } }, variants: [{ when: { value: true }, set: { 'label.content': '{valueText}' } }], folder: 'find' };
 { const out = toElement(two, 'find', { naming: ELEMENT, library: {} });
   ok('one text two strings set is the one a variant swaps in where drawn, else the other, which draws its layer\'s words', /value \? valueText : placeholderText/.test(out) && /placeholderText = "Search"/.test(out)); }
+// (2026-11-27, a field's inline style: a variant that puts the text back by adding it again, bound to the other string, a
+// value where the placeholder was, draws that string there, as a set does)
+{ const back = { ...two, props: { ...two.props, inline: { type: 'boolean', default: false, figma: 'Inline' } }, anatomy: { ...two.anatomy, label: { kind: 'text', parent: 'root', content: '{placeholderText}' } },
+    variants: [{ when: { value: true }, remove: ['label'] }, { when: { inline: true, value: true }, add: { label: { kind: 'text', parent: 'root', content: '{valueText}' } } }] };
+  const out = toElement(back, 'find', { naming: ELEMENT, library: {} });
+  ok('one text two strings set, put back by a variant\'s add bound to the other, draws that other there', /inline && value \? valueText : placeholderText|\(inline && value\) \? valueText : placeholderText/.test(out), out); }
 const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['info', 'error'], default: 'info', figma: 'Tone' } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/info' } }, variants: [{ when: { tone: 'error' }, set: { 'icon.component': 'Icon/alert' } }], folder: 'alert' };
 { // a wrapper the library does not hold, its glyph named by its own prop and placed inside it: the glyph is marked
   const banner = { component: 'Banner', props: { tone: { type: 'enum', values: ['info', 'error'], default: 'info', figma: 'Tone' } }, folder: 'banner',
