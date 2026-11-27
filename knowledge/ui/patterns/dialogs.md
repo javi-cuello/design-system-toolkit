@@ -22,14 +22,14 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
 
 - [strong] **Modal** when the person must decide or supply something before continuing, or must not miss an urgent consequence of their own action. NN/g's [modal and nonmodal dialogs](https://www.nngroup.com/articles/modal-nonmodal-dialog/): use modals "for important warnings", to request information "critical to continuing the current process", and avoid them for "nonessential information" and "complex decision making that requires additional sources of information unavailable in the modal".
 - [moderate] **Non-modal** when the person needs the page while the surface is open (find and replace, a comparison). Carbon: "Use when a user needs to compare or refer to information in the main page."
-- [strong] **Page** when the task has steps, needs navigation inside it, or should have its own address. Primer's [dialog](https://primer.style/product/components/dialog/guidelines/) on deep linking: "it is often more advisable to avoid using a Dialog altogether" and create a dedicated page. Apple's [modality](https://developer.apple.com/design/human-interface-guidelines/modality): avoid "a modal experience that feels like an app within your app".
+- [strong] **Page** when the task has steps, needs navigation inside it, or should have its own address. Primer's [dialog](https://primer.style/product/components/dialog/guidelines/) on deep linking: "it is often more advisable to avoid using a Dialog altogether" and create a dedicated page. Apple's [modality](https://developer.apple.com/design/human-interface-guidelines/modality): avoid "a modal experience that feels like an app within your app". Geist: "Skip Modal for routine create flows that have a dedicated page" ([Geist modal](https://vercel.com/geist/modal)).
 - [required] **An item's detail or an explanation** (a row's checks, "what the levels mean") opens in a dialog or a side panel, not in place (design-standard rule 13 picks this between the inline and overlay rows above).
 - [moderate] **Never for news.** System messages go to toasts or banners ([feedback: choosing the feedback](feedback.md#choosing-the-feedback)); Carbon reserves modals for critical information "immediately related to their task".
 
 **Cases**
 - Editing one field of a record (a name) → inline edit in place; a modal for one field hides the record being edited.
 - "Add item" with four fields → a modal dialog: short, self-contained, user-initiated (Carbon's example of a simple dialog task).
-- A twelve-field create form with sections → a page; on a narrow screen Primer makes any dialog with inputs full-screen anyway.
+- A twelve-field create form with sections → a page; on a narrow screen Primer makes any dialog with inputs full-screen anyway, and Material keeps full-screen dialogs "for compact breakpoints only, like mobile devices" ([Material dialogs](https://m3.material.io/components/dialogs/guidelines)).
 - Choosing columns for a table → a popover from the "Columns" button: a few checkboxes, the table visible behind.
 - A newsletter prompt three seconds after landing → none of them. NN/g reports "visceral disdain" for such modals.
 

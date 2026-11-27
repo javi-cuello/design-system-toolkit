@@ -160,6 +160,39 @@ No design system sets a maximum: Primer, GOV.UK, Carbon and ONS give none, nor d
 
 **Sources.** The W3C tutorial and Primer agree that deep hierarchy belongs outside one table; as linked.
 
+## Column widths
+
+How wide each column of a data table is. What goes in a column is [*What earns a column*](#what-earns-a-column); text that overflows its width is [*Truncation*](#truncation); figures and their alignment are [*Alignment and figures*](#alignment-and-figures).
+
+**What good looks like**
+- [strong] **Width follows content, and one column takes the room left over.** Primer's default column width is `'grow'`: "Stretch to fill available space, and min width is the width of the widest cell in the column" ([Primer DataTable column source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/DataTable/column.ts)); Carbon: "Column widths can vary by content and only require a minimum spacing between columns" ([Carbon data table style](https://raw.githubusercontent.com/carbon-design-system/carbon-website/main/src/pages/components/data-table/style.mdx)); Cloudscape: "If the width is not set, the browser automatically adjusts the column width based on the content", and with resizable columns "the last visible column always fills the remaining space of the table" ([Cloudscape table source](https://raw.githubusercontent.com/cloudscape-design/components/main/src/table/interfaces.tsx)); MUI's `flex` divides "the remaining space in the Data Grid among all flex columns in proportion to their `flex` value" ([MUI X column dimensions](https://raw.githubusercontent.com/mui/mui-x/master/docs/data/data-grid/column-dimensions/column-dimensions.md)). No source opened recommends equal widths.
+- [moderate] **Minimum and maximum widths bound a column, set from its content.** Cloudscape: "Always set the column width and minimum width properties based on content length. When setting it, avoid text wrapping in more than three rows and too much white space after cell content" ([Cloudscape table usage](https://cloudscape.design/components/table/?tabId=usage)); Primer: "Use the column width options to appropriately size the columns depending on the content and the available horizontal space" ([Primer DataTable guidelines](https://primer.style/product/components/data-table/guidelines/)).
+
+**How**
+- [weak] **A fixed width only where content length is stable.** Primer's `'auto'` column "is the width of it's widest cell. Not intended for use with columns who's content length varies a lot because a layout shift will occur when the content changes", and an explicit width "will be exactly that width and will not grow or shrink" (Primer DataTable column source).
+- [weak] **Proportional widths when the layout needs them.** GOV.UK: "You can use the width override classes to set the width of table columns", such as `govuk-!-width-one-half` on a header cell ([GOV.UK table](https://raw.githubusercontent.com/alphagov/govuk-design-system/main/src/components/table/index.md)); Atlassian's head cell takes "The width of the cell as a percentage" ([`@atlaskit/dynamic-table` types](https://unpkg.com/@atlaskit/dynamic-table@19.3.9/dist/types/types.d.ts)).
+- [weak] **A data table gets width.** Carbon: "consider giving your data table the most width on the page" ([Carbon data table usage](https://raw.githubusercontent.com/carbon-design-system/carbon-website/main/src/pages/components/data-table/usage.mdx)).
+
+**Cases**
+- An empty Balance column is 200px wide and an Hours column 352px for "3 h", because every column takes an equal share → size columns to content and let the name column take the rest (Primer `'grow'`, MUI `flex`).
+- A status column shifts width as rows load → give it an explicit width; its values are a short, stable set (Primer DataTable column source).
+
+**Accessibility**
+- [required] 1.4.10 Reflow excepts data tables that need two dimensions; a table wider than its container scrolls inside its own box ([*Responsive tables*](#responsive-tables)).
+- [required] 1.4.12 Text Spacing: a column sized to its content still fits it at the increased spacing, so no width is set in pixels around text that must not clip.
+
+**Build**
+- [moderate] In CSS grid, a content column is `minmax(max-content, 1fr)` and a fixed one an explicit width, as Primer builds its columns (Primer DataTable column source); in a `table`, the browser's automatic layout sizes columns to content ([MDN `table-layout`](https://developer.mozilla.org/en-US/docs/Web/CSS/table-layout): `auto`, "The widths of the table and its cells are adjusted to fit the content").
+- [required] Widths come from the column's role, not today's longest value (code-standard rule 57).
+
+**Check**
+- *Script:* could, per column, compare its rendered width with its widest cell's and flag a column more than twice as wide as its content while another column wraps or truncates; flag equal widths across columns whose content lengths differ by more than half.
+- *Judgement:* does the column that holds names or descriptions get the room?
+
+**Sources:** Primer (DataTable source and guidelines; the guidelines describe `'grow'` as `minmax(auto, 1fr)` where the source uses `max-content`), Carbon (website source), Cloudscape (source and usage), MUI X (docs source), GOV.UK (design-system source), Atlassian (`@atlaskit/dynamic-table` types) and MDN. Silent: no source gives a width for numeric or status columns; NN/g's table articles set no widths.
+
+---
+
 ## Alignment and figures
 
 **What good looks like**
@@ -940,6 +973,7 @@ No source settles how many rows a preview shows: PatternFly's dashboard example 
 ## Truncation
 
 **Use when / don't use**
+- [strong] **Wrap before truncating.** Primer: wrapping "is the preferred way to accommodate long content because it doesn't hide the content" ([Primer DataTable guidelines](https://primer.style/product/components/data-table/guidelines/)); Polaris: "Wrap instead of truncate content" ([Polaris data table](https://raw.githubusercontent.com/Shopify/polaris/main/polaris.shopify.com/content/components/tables/data-table.mdx)); Atlassian: "Avoid truncating content wherever possible" ([`@atlaskit/dynamic-table` types](https://unpkg.com/@atlaskit/dynamic-table@19.3.9/dist/types/types.d.ts)). Material 2 truncated by default, "Text that is longer than the column width is truncated with an ellipsis" ([Material 2 data tables](https://m2.material.io/components/data-tables)); Material 3 has no data-table guidance.
 - [weak] Truncate long text in a cell when the column's width is fixed by the layout and the full value is rarely needed at a glance.
 - [weak] Never truncate numbers, identifiers people must tell apart, or anything the person compares.
 
