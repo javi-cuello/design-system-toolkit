@@ -230,7 +230,15 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   const mainOf = (n) => ({ Tile: tile, Cell: cell })[n] || null;
   const a = { root: { kind: 'container' }, cell: { kind: 'instance', parent: 'root', component: 'Cell' }, 'cell/slot': { kind: 'instance', parent: 'cell', component: 'Foreign', minWidth: 24, maxWidth: 24, radius: 3 } };
   const r = ((insideOf(a, 'cell', mainOf).slot || {}).render || {}).attrs || {};
-  ok('a component swapped in that the library does not hold carries the limits of its size inline, beside its look', /min-inline-size: 1\.5rem/.test(r.style) && /max-inline-size: 1\.5rem/.test(r.style) && /border-radius: 3px/.test(r.style), JSON.stringify(r)); }
+  ok('a component swapped in that the library does not hold carries the limits of its size inline, beside its look', /min-inline-size: 1\.5rem/.test(r.style) && /max-inline-size: 1\.5rem/.test(r.style) && /border-radius: 3px/.test(r.style), JSON.stringify(r));
+  // (2026-11-27, review: one whose layers the design records (a table cell's icon tile, swapped for another library's)
+  // is drawn open in that part's place, its layout and layers said, its component, key and props for the reading)
+  const b = { ...a, 'cell/slot': { kind: 'instance', parent: 'cell', component: 'Foreign', key: 'k9', with: { Size: '24' }, layout: { direction: 'row', align: 'center', crossAlign: 'center', gap: 0, padding: { top: 4, end: 4, bottom: 4, start: 4 } }, width: 24, height: 24 },
+    'cell/slot/glyph': { kind: 'graphic', parent: 'cell/slot', order: 0, width: 16, height: 16, background: 'C/icon' } };
+  const seen = new Set(), node = ((insideOf(b, 'cell', mainOf, { seen }).slot || {}).render || {}).node;
+  ok('…one whose layers the design records is drawn open in its place: a frame of its layout, its glyph a box, its component, key and props said',
+    !!node && node.tag === 'div' && node.attrs['data-component'] === 'Foreign' && node.attrs['data-key'] === 'k9' && node.attrs['data-with'] === '{"Size":"24"}' && /display: flex/.test(node.attrs.style) && /padding: 0\.25rem/.test(node.attrs.style)
+      && node.kids.length === 1 && /background: var\(--c-icon\)/.test(node.kids[0].attrs.style) && seen.has('cell/slot/glyph'), JSON.stringify(node)); }
 ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(tone === "error"\) \? "Icon\/alert" : "Icon\/info"/.test(toElement(alert, 'alert', { naming: ELEMENT, library: {} })));
 { const two = { ...alert, props: { tone: { type: 'enum', values: ['info', 'warning', 'error'], default: 'info', figma: 'Tone' } }, variants: [{ when: { tone: 'warning' }, set: { 'icon.component': 'Icon/warn' } }, ...alert.variants] };
   ok('two glyphs variants change nest bracketed (PHP 8 refuses an unbracketed nested choice)', /: \(\(tone === "warning"\) \? "Icon\/warn" : "Icon\/info"\)/.test(toElement(two, 'alert', { naming: ELEMENT, library: {} }))); }

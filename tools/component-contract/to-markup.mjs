@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { declarations } from './css.mjs';
+import { declarations, borderBox } from './css.mjs';
 import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign } from './layers.mjs';
@@ -259,6 +259,12 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
         if (Object.keys(props).length) entry.props = props;
       }
       if (Object.keys(nested).length) entry.parts = nested;
+    }
+    // (another library's component swapped in where no prop swaps it, whose layers the design records: drawn open in that
+    // part's place, as this component draws one of its own (openForeign), so its layout and layers are said and read)
+    else if (L.kind === 'instance' && L.component && (Xm || (X.kind === 'instance' && L.component !== X.component)) && Object.keys(a).some((k) => a[k].parent === at)) {
+      entry.render = { node: addedOf(a, at, mainOf, { library, lang, settings }) };
+      for (const k of Object.keys(a)) if (k.startsWith(`${at}/`)) seen.add(k);
     } else if (L.kind === 'instance' && X.kind === 'instance' && !Xm && L.component && L.component !== X.component) entry.attrs = { 'data-icon': L.component, ...swappedLook(L, inner, rel, e) };
     // (one the library does not hold, in place of one it does: marked where it goes, as this component marks its own)
     else if (L.kind === 'instance' && Xm && L.component) entry.render = { icon: L.component, attrs: swappedLook(L, inner, rel, e) };
@@ -326,14 +332,20 @@ function addedOf(a, id, mainOf, { library, lang, settings }) {
   const e = a[id], up = a[e.parent] || {};
   const name = camel(id.split('/').pop()).replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`);
   const attrs = { 'data-part': name, ...(e.name && { 'data-figma-name': e.name }) };
-  if (e.kind === 'instance') {
+  const open = e.kind === 'instance' && !mainOf(e.component, e.key) && Object.keys(a).some((k) => a[k].parent === id);
+  if (e.kind === 'instance' && !open) {
     const m = mainOf(e.component, e.key);
     return m ? { render: m, props: givenOf(m, e.with, library, lang, settings), attrs } : { tag: 'span', attrs: { ...attrs, 'data-icon': e.component, 'aria-hidden': 'true' } };
   }
-  const { decls } = declarations(e, { holds: e.kind === 'container', row: !up.layout || up.layout.direction !== 'column', words: e.kind === 'text' ? e.content : null }, tokenNames);
+  // (another library's instance whose layers the design records: drawn open, as openForeign draws one of this
+  // component's own, a frame of its layers, its component, key and props said for the reading, foreignAsInstance)
+  if (open) Object.assign(attrs, { 'data-component': e.component, ...(typeof e.key === 'string' && { 'data-key': e.key }), ...(e.with && Object.keys(e.with).length && { 'data-with': JSON.stringify(e.with) }) });
+  // (its box, for a share of it a scaled layer in it is placed by: css.mjs)
+  const box = { width: up.width, height: up.height, border: borderBox(up) };
+  const { decls } = declarations(open ? { ...e, kind: 'container' } : e, { holds: open || e.kind === 'container', row: !up.layout || up.layout.direction !== 'column', box, words: e.kind === 'text' ? e.content : null }, tokenNames);
   const style = decls.map(([k, v]) => `${k}: ${v}`).join('; ');
   const kids = Object.keys(a).filter((k) => a[k].parent === id).sort((x, y) => (a[x].order ?? 0) - (a[y].order ?? 0)).map((k) => addedOf(a, k, mainOf, { library, lang, settings })).filter(Boolean);
-  return { tag: e.kind === 'container' ? 'div' : 'span', attrs: { ...attrs, ...(style && { style }), ...(e.kind === 'graphic' && { 'aria-hidden': 'true' }) }, text: e.kind === 'text' && typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) ? e.content : undefined, kids };
+  return { tag: e.kind === 'container' || open ? 'div' : 'span', attrs: { ...attrs, ...(style && { style }), ...(e.kind === 'graphic' && { 'aria-hidden': 'true' }) }, text: e.kind === 'text' && typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) ? e.content : undefined, kids };
 }
 
 /* A main that is a drawing alone (no props, no words, nothing placed: an empty state's ghost, a slot's placeholder): a
@@ -663,15 +675,17 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     const copied = !!copyOf(c, id) || Object.keys(a).some((k) => k !== id && copyOf(c, k) === id);
     return insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), seen: carried, library, lang, settings, sheet: !copied });
   };
-  const nodeLit = (x) => {
-    const attrs = `{ ${Object.entries(x.attrs || {}).map(([k, v]) => `${str(k)}: ${str(v)}`).join(', ')} }`;
+  // (`host`: the attributes of the part it takes the place of, its hook, said first so the node's own name stays)
+  const nodeLit = (x, host = null) => {
+    const attrs = `{ ${[...(host ? [`...${host}`] : []), ...Object.entries(x.attrs || {}).filter(([k]) => !(host && k === 'data-part')).map(([k, v]) => `${str(k)}: ${str(v)}`)].join(', ')} }`;
     if (x.render) { const name = Object.keys(library).find((k2) => library[k2] === x.render) || x.render.component; if (x.render.component !== c.component) used.add(name); return `${fnOf(x.render)}({ ${Object.entries(x.props || {}).map(([p, l]) => `${IDENT.test(p) ? p : str(p)}: ${str(l)}`).join(', ')} }, ${attrs})`; }
     return `h(${str(x.tag)}, ${attrs}${x.text !== undefined ? `, ${str(x.text)}` : ''}${(x.kids || []).map((k) => `, ${nodeLit(k)}`).join('')})`;
   };
   const partsLit = (x) => `{ ${Object.entries(x).map(([k, v]) => `${str(k)}: { ${[
     ...(v.hidden ? ['hidden: true'] : []),
+    ...(v.render && v.render.node ? [`render: (_, host) => ${nodeLit(v.render.node, 'host')}`] : []),
     ...(v.render && v.render.icon ? [`render: (_, host) => h("span", { ...host, "data-icon": ${str(v.render.icon)}, ${Object.entries(v.render.attrs || {}).map(([k, x]) => `${str(k)}: ${str(x)}, `).join('')}"aria-hidden": "true" })`] : []),
-    ...(v.render && !v.render.icon ? (() => { const name = Object.keys(library).find((k2) => library[k2] === v.render) || v.render.component; if (v.render.component !== c.component) used.add(name); return [`render: ${fnOf(v.render)}`]; })() : []),
+    ...(v.render && !v.render.icon && !v.render.node ? (() => { const name = Object.keys(library).find((k2) => library[k2] === v.render) || v.render.component; if (v.render.component !== c.component) used.add(name); return [`render: ${fnOf(v.render)}`]; })() : []),
     ...(v.props ? [`props: { ${Object.entries(v.props).map(([p, l]) => `${IDENT.test(p) ? p : str(p)}: ${str(l)}`).join(', ')} }`] : []),
     ...(v.parts ? [`parts: ${partsLit(v.parts)}`] : []),
     ...(v.content !== undefined ? [`content: ${str(v.content)}`] : []),
