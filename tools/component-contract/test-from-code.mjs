@@ -69,7 +69,11 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
   ok('a part inside a placed component, in a box with no auto layout, has no place read (the design writes none); in flow or outside one, it does',
     unplacedIn(raw, raw[2]) && !unplacedIn(raw, raw[4]) && !unplacedIn(raw, raw[5]) && !unplacedIn(raw, raw[0]));
   ok('a part placed absolutely in a placed component whose main has auto layout keeps its place (a button\'s focus ring)',
-    !unplacedIn(raw, raw[2], (u) => (u.kind === 'instance' ? { direction: 'row' } : u.layout))); }
+    !unplacedIn(raw, raw[2], (u) => (u.kind === 'instance' ? { direction: 'row' } : u.layout)));
+  // (2026-11-27: one in another library's icon drawn open inside a placed component is placed by the design: a field's
+  // open chevron's glyph at its point)
+  const open = [...raw, { id: 'chev', kind: 'container', foreign: 'Chevron--up', parent: 'pin' }, { id: 'glyph', kind: 'graphic', parent: 'chev' }];
+  ok('…but a part in another library\'s instance drawn open inside it has its place read', !unplacedIn(open, open[7])); }
 ok('a placed component\'s arg is read under the attribute markup spells it (isChecked as is-checked or data-is-checked)',
   axisValueOf({ False: {}, True: { isChecked: true } }, { 'is-checked': 'true' }) === 'True' && axisValueOf({ False: {}, True: { isChecked: true } }, { 'data-is-checked': 'false' }) === 'False');
 ok('the token the code wrote holds its value in any of its modes: a contextual field token drawn on a layer, not the base mode, is still the one written',

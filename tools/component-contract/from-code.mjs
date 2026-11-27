@@ -2150,7 +2150,9 @@ export function unplacedIn(raw, e, layoutOf = (u) => u.layout) {
   const up = raw.find((r) => r.id === e.parent);
   const l = up && layoutOf(up);
   if (!up || (l && l.direction)) return false;
-  for (let q = up; q; q = raw.find((r) => r.id === q.parent)) if (q.kind === 'instance') return true;
+  // (another library's instance drawn open, the walk's `foreign`, is a frame of this component's: the design places
+  // what is in it, an icon's glyph at its point, so the first such frame up ends the climb)
+  for (let q = up; q; q = raw.find((r) => r.id === q.parent)) { if (typeof q.foreign === 'string') return false; if (q.kind === 'instance') return true; }
   return false;
 }
 
