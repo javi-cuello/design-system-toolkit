@@ -346,13 +346,13 @@ This file holds the UX area's fundamentals for building and auditing a design or
 
 ## Attention hierarchy across a page
 
-**What good looks like**
-- [weak] Each screen has one thing it must make obvious, and that thing gets the emphasis.
-- [strong] One primary action per view.
-- [weak] Accent and status colours are spent only where they mean something.
-- [weak] The visual order of emphasis matches the information order.
+Which thing on a screen gets the attention, decided from the user's need. How the emphasis is then spent (one primary action, accent only where action is, turning neighbours down) is [visual: *Emphasis and the attention budget*](visual.md#emphasis-and-the-attention-budget); where the eye lands first is [visual: *Composition of an app page*](visual.md#composition-of-an-app-page-header-content-and-the-first-focal-point).
 
-**How.** Name the one thing per screen (the next piece of work, what got worse, what blocks a release) and give it the only primary emphasis. One primary action per view ([button hierarchy](../components/button.md#button-hierarchy)). Save highlight colour for high-action moments, as Spectrum 2 does ([Adobe, 2023](https://blog.adobe.com/en/publish/2023/12/12/adobe-unveils-spectrum-2-design-system-reimagining-user-experience-over-100-adobe-applications)). Status colours mark status, never decoration (the visual file). Order headings by importance and keep the outline in order. Without a stated rule emphasis inflates, because every stakeholder lobbies for theirs; write the screen's one thing next to its need line.
+**What good looks like**
+- [weak] Each screen has one thing it must make obvious, written next to its need line, and that thing gets the emphasis.
+- [weak] The visual order of emphasis matches the information order: NN/g, "Visual hierarchy should reflect information hierarchy" ([NN/g local navigation](https://www.nngroup.com/articles/local-navigation/)).
+
+**How.** Name the one thing per screen (the next piece of work, what got worse, what blocks a release) and give it the only primary emphasis. Order headings by importance and keep the outline in order. Without a stated rule emphasis inflates, because every stakeholder lobbies for theirs; write the screen's one thing next to its need line.
 
 **Cases**
 - An audit dashboard colours every row by severity, badges every card and puts a primary button in each → keep severity as a mark, make one summary ("4 new blockers since the last audit") the emphasis, and one primary action.
@@ -362,12 +362,11 @@ This file holds the UX area's fundamentals for building and auditing a design or
 **Accessibility.** 1.4.1 Use of Color (A): emphasis and severity are never colour alone. 1.3.1 (A) and 2.4.6 (AA): the heading outline expresses the hierarchy, code-standard rule 1. Visible focus on the emphasised control is figma-standard rule 31 in the design.
 
 **Build.**
-- [weak] One primary button variant per view, as an attribute on the button component ([figma handoff: variants to attributes](../../code/figma-handoff.md#variants-to-attributes)).
-- [moderate] Accent and status colours come only from their semantic tokens ([tokens: three tiers](../../code/tokens.md#three-tiers)); the heading outline carries the order (code-standard rule 1).
+- [required] The heading outline carries the order (code-standard rule 1); button rank and accent tokens are visual *Emphasis*'s Build.
 
-**Check.** *Script:* could count primary buttons per view, and check accent and status colours come only from their reserved tokens. *Judgement:* what deserves the top of this screen?
+**Check.** *Script:* could compare the heading outline's order with the order of emphasis on the screen. *Judgement:* what deserves the top of this screen?
 
-**Sources.** Adobe as linked; [NN/g local navigation](https://www.nngroup.com/articles/local-navigation/): "Visual hierarchy should reflect information hierarchy". No Spectrum documentation page was found on attention hierarchy, only the launch post, so this file cites the post.
+**Sources.** NN/g as linked; the accent and primary-action sources are visual *Emphasis*'s.
 
 ---
 

@@ -581,7 +581,7 @@ How many text colours a product uses and how far apart they sit. Surfaces are [*
 
 **What good looks like**
 - [strong] One primary action per view; a region the person opened (a dialog, a side panel) may have its own ([button hierarchy](../components/button.md#button-hierarchy)).
-- [weak] The accent colour appears where action is, and rarely elsewhere.
+- [moderate] The accent colour appears where action is, and rarely elsewhere: Carbon, "Additional colors are used sparingly and purposefully" ([Carbon color](https://carbondesignsystem.com/elements/color/overview/)); Spectrum 2 saves its highlight colour for high-action moments ([Adobe, 2023](https://blog.adobe.com/en/publish/2023/12/12/adobe-unveils-spectrum-2-design-system-reimagining-user-experience-over-100-adobe-applications)).
 - [weak] Button roles are visibly ranked, as [button hierarchy](../components/button.md#button-hierarchy) maps them.
 - [weak] When the important thing does not stand out, its neighbours are turned down.
 
@@ -609,7 +609,7 @@ How many text colours a product uses and how far apart they sit. Surfaces are [*
 - *Script:* could count primary or accent-filled buttons per page or frame against a project threshold, and flag two prominent buttons side by side.
 - *Judgement:* is the one emphasised thing the right one, and can a first-time reader find it in a second?
 
-**Sources:** Carbon and Refactoring UI as above; the one-primary sources and their disagreement are in [button hierarchy](../components/button.md#button-hierarchy).
+**Sources:** Carbon, Adobe's Spectrum 2 launch post (no Spectrum documentation page on it was found) and Refactoring UI as above; the one-primary sources and their disagreement are in [button hierarchy](../components/button.md#button-hierarchy).
 
 ---
 
