@@ -284,7 +284,11 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   // own there: opened as one of its own is, a read-only field's open chevron in its detached menu)
   const menu = { ...host, props: { open: { type: 'boolean', default: false } }, anatomy: { root: b.root, cell: b.cell }, variants: [{ when: { open: true }, set: { 'cell.kind': 'container', 'cell.component': null }, add: { 'cell/slot': b['cell/slot'], 'cell/slot/glyph': b['cell/slot/glyph'] } }] };
   const mo = openForeign(menu, { ...hostLib, Host: menu });
-  ok('…and one a variant adds in the held instance it detaches is opened there, as one of its own', [...foreignOpened(menu, { ...hostLib, Host: menu })].join() === 'cell/slot' && mo.variants[0].add['cell/slot'].kind === 'container' && mo.variants[0].add['cell/slot'].foreign === true, JSON.stringify(mo.variants[0].add['cell/slot'])); }
+  ok('…and one a variant adds in the held instance it detaches is opened there, as one of its own', [...foreignOpened(menu, { ...hostLib, Host: menu })].join() === 'cell/slot' && mo.variants[0].add['cell/slot'].kind === 'container' && mo.variants[0].add['cell/slot'].foreign === true, JSON.stringify(mo.variants[0].add['cell/slot']));
+  // (review: and one in the base, where a variant detaches the held instance: opened in that variant, held elsewhere)
+  const based = { ...host, props: { open: { type: 'boolean', default: false } }, anatomy: b, variants: [{ when: { open: true }, set: { 'cell.kind': 'container', 'cell.component': null } }] };
+  const bo = openForeign(based, { ...hostLib, Host: based }), bs = bo.variants[0].set || {};
+  ok('…and one in the base is opened in the variant that detaches its held instance, kept elsewhere', bo.anatomy['cell/slot'].kind === 'instance' && bs['cell/slot.kind'] === 'container' && bs['cell/slot.foreign'] === true, JSON.stringify(bs)); }
 ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(tone === "error"\) \? "Icon\/alert" : "Icon\/info"/.test(toElement(alert, 'alert', { naming: ELEMENT, library: {} })));
 { const two = { ...alert, props: { tone: { type: 'enum', values: ['info', 'warning', 'error'], default: 'info', figma: 'Tone' } }, variants: [{ when: { tone: 'warning' }, set: { 'icon.component': 'Icon/warn' } }, ...alert.variants] };
   ok('two glyphs variants change nest bracketed (PHP 8 refuses an unbracketed nested choice)', /: \(\(tone === "warning"\) \? "Icon\/warn" : "Icon\/info"\)/.test(toElement(two, 'alert', { naming: ELEMENT, library: {} }))); }

@@ -191,6 +191,15 @@ function opening(c, library) {
     const at = vs.filter((v) => { const s = v.set || {}; return typeof s[`${id}.component`] === 'string' && !(`${id}.kind` in s) && !held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null }) && Object.values(v.add || {}).some((x) => x && x.parent === id); });
     if (at.length) { swappedIn.set(id, new Set(at)); opened.add(id); }
   }
+  // (one in the base listed inside a held instance, where a variant detaches that instance: opened in that variant, as
+  // one of this component's own there, held at the rest; one a variant adds, `freed` below)
+  for (const id of Object.keys(anatomy)) {
+    if (!inHeld.has(id)) continue;
+    let near = null;
+    for (let up = (all[id] || {}).parent; up && up !== 'root' && !near; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') near = up;
+    const at = vs.filter((v) => { const k = (v.set || {})[`${near}.kind`]; return typeof k === 'string' && k !== 'instance'; });
+    if (at.length) swappedIn.set(id, new Set(at));
+  }
   if (!opened.size) return { c, opened };
   const open = (o) => Object.fromEntries(Object.entries(o).map(([id, e]) => [id, opened.has(id) && !swappedIn.has(id) && !inHeld.has(id) && e ? { ...e, kind: 'container', foreign: true } : e]));
   // (and a variant laid over an opener that swaps the held one back says it an instance again there, as expand keeps a
