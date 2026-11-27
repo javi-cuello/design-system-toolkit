@@ -44,6 +44,9 @@
     --surface-2: light-dark(#f2f2f6, #1c1f27);
     --hover: light-dark(#eeeff3, #1e2028);
     --selected: light-dark(#e6e7ed, #262a34);
+    /* A control held down: a clear step past --hover (1.25:1 from it light, 1.39:1 dark; --selected is only
+       1.07:1 / 1.13:1), so pressed reads stronger than hover (visual.md *Visual states of controls*). */
+    --pressed: light-dark(#d5d7df, #333845);
     --fg: light-dark(#15171c, #eceef3);
     --fg-muted: light-dark(#545a6b, #a7adbd);
     /* Soft text holds 4.5:1 on every tinted ground it sits on (a hovered or
@@ -55,7 +58,7 @@
     --line-strong: light-dark(#c9cbd4, #3a3f4c);
     /* A control's edge must reach 3:1 against every ground it sits on
        (WCAG 1.4.11): the page, a card, and a hovered, selected or tinted row
-       (3.3:1 on the darkest of them, --selected). */
+       (3.07:1 on the darkest of them, --selected, light; 3.33:1 dark). */
     --control: light-dark(#7d8394, #727a8c);
     /* One accent across light and dark (visual.md): hue held at 49-50 in OKLCH,
        lighter and less chromatic in dark (L 0.52 -> 0.72, C 0.139 -> 0.120).
@@ -65,7 +68,6 @@
        alpha: the accent's own values tint pink over the cool grey page. */
     --accent: light-dark(#a54a00, #e08d5d);
     --accent-soft: light-dark(#f173001a, #f1730024);
-    --accent-soft-solid: light-dark(#e8a877, #7a4413);
     --good: light-dark(#177049, #2f9c6c);
     --good-soft: light-dark(#1770491a, #2f9c6c1f);
     --warn: light-dark(#85590f, #d79a3a);
@@ -309,16 +311,16 @@
      --gutter-min. Knobs: --aside, what a fixed panel takes from the right edge, so the column centres beside it
      instead of shrinking under it; --rail, what the page's own sections take on the left: when space is tight
      only the left gutter grows for it. */
-  .container, .masthead { --gutter: max(var(--gutter-min), (100% - var(--aside, 0px) - var(--column)) / 2); }
+  .container, .masthead, .site-foot { --gutter: max(var(--gutter-min), (100% - var(--aside, 0px) - var(--column)) / 2); }
   .container { margin-inline: max(var(--gutter), var(--rail, 0px)) calc(var(--gutter) + var(--aside, 0px)); }
-  /* The masthead shares the container's edges (visual.md *Alignment and shared edges*): the same gutter over the
-     same width, so the name starts where the content does and the theme switch ends where it ends. Knob:
-     --masthead-inline, its inline padding, for a shell whose content does not span the masthead (a side
+  /* The masthead and the footer share the container's edges (visual.md *Alignment and shared edges*): the same
+     gutter over the same width, so the name starts where the content does and the theme switch ends where it
+     ends. Knob: --masthead-inline, their inline padding, for a shell whose content does not span them (a side
      navigation beside it). */
-  .masthead { padding-inline: var(--masthead-inline, max(var(--gutter), var(--rail, 0px)) calc(var(--gutter) + var(--aside, 0px))); }
+  .masthead, .site-foot { padding-inline: var(--masthead-inline, max(var(--gutter), var(--rail, 0px)) calc(var(--gutter) + var(--aside, 0px))); }
 
   .site-foot {
-    padding: var(--space-16);
+    padding-block: var(--space-16);
     border-block-start: var(--stroke-1) solid var(--line);
     font-size: var(--text-xs);
     color: var(--fg-soft);
@@ -330,7 +332,6 @@
       grid-template-columns: auto minmax(0, 1fr) auto;
       grid-template-areas: "brand nav theme";
     }
-    .site-foot { padding-inline: var(--space-24); }
   }
 }
 
@@ -409,14 +410,15 @@
     text-decoration: none; white-space: nowrap; cursor: pointer;
   }
   /* Hover only where there is a pointer that hovers (a tap leaves none
-     behind); pressed is stronger than hover, and wins by selector. Both are
-     neutral steps: the accent is spent on the primary action, selection and
-     focus, never on hover (visual.md *Quiet chrome in a dense tool*). */
+     behind); pressed is stronger than hover (--pressed, a clear step past
+     --hover), and wins by selector. Both are neutral steps: the accent is
+     spent on the primary action, selection and focus, never on hover
+     (visual.md *Quiet chrome in a dense tool*, *Visual states of controls*). */
   @media (hover: hover) {
     .button:hover:not(:disabled, :active) { background: var(--hover); }
     .button--primary:hover:not(:disabled, :active) { background: var(--accent); filter: brightness(1.08); }
   }
-  .button:active:not(:disabled) { background: var(--selected); }
+  .button:active:not(:disabled) { background: var(--pressed); }
   .button:disabled { opacity: var(--disabled-opacity); cursor: default; }
   .button--primary { border-color: transparent; background: var(--accent); color: var(--on-accent); font-weight: var(--weight-semibold); }
   /* (a darker step of the fill: pressed, against hover's lighter one) */
@@ -534,8 +536,10 @@
     font: inherit; font-size: var(--text-sm); text-align: start; text-decoration: none; cursor: pointer;
   }
   @media (hover: hover) { .sidenav li > :is(a, button):first-child:hover { background: var(--hover); color: var(--fg); } }
+  /* the current page: the accent's soft fill and a 2px accent bar at its start, two cues and no weight change, so
+     the row keeps its size (visual.md *Quiet chrome in a dense tool*: never a fill, a border and bold together) */
   .sidenav li > :is(a, button):first-child[aria-current]:not([aria-current="false"]) {
-    background: var(--accent-soft); box-shadow: inset var(--stroke-2) 0 0 var(--accent); color: var(--fg); font-weight: var(--weight-semibold);
+    background: var(--accent-soft); box-shadow: inset var(--stroke-2) 0 0 var(--accent); color: var(--fg);
   }
   .sidenav li > :is(a, button):first-child:focus-visible { outline-offset: calc(-1 * var(--focus-offset)); }
 
@@ -596,11 +600,11 @@
   .toolbar__end { margin-inline-start: auto; }
 
   /* A segmented filter: one bordered group of buttons, the pressed one filled
-     and edged, each with its count. The Audits queue and the Tracker share it. */
-  /* No overflow clip: it cut the focus ring of every button in the group. The
-     ends take the group's corners instead. */
+     and marked, each with its count. The Audits queue and the Tracker share it. */
   /* A segmented control never wraps (design-standard rule 4); when its labels are longer
-     than the column it scrolls, as tabs do. */
+     than the column it scrolls, as tabs do. That scroll clips anything drawn outside a
+     segment, so a segment's focus ring is drawn inside it (below); the ends take the
+     group's corners. */
   .segmented { display: inline-flex; flex-wrap: nowrap; max-inline-size: 100%; overflow-x: auto; scrollbar-width: none; border: var(--stroke-1) solid var(--line-strong); border-radius: var(--radius-8); }
   .seg { white-space: nowrap; flex: none; }
   .seg:first-child { border-start-start-radius: inherit; border-end-start-radius: inherit; }
@@ -615,13 +619,18 @@
   }
   span.seg { cursor: default; } /* a segment that is a label, not a control */
   .seg + .seg { border-inline-start: var(--stroke-1) solid var(--line-strong); }
-  /* Pressed takes two neutral cues, never the focus ring's look (visual.md *Quiet chrome in a dense tool*, *Visual
-     states of controls*): the selected fill and a 1px control edge, 3:1 or more against that fill and the ground
-     around it (WCAG 1.4.11: 3.1:1 the least, light). Its text takes the ink; the weight stays, so the control keeps
-     its size (design-standard rule 2). The accent is the focus ring's and the primary action's. */
-  .seg:is([aria-pressed="true"], [aria-current="true"]) { background: var(--selected); color: var(--fg); box-shadow: inset 0 0 0 var(--stroke-1) var(--control); }
-  @media (hover: hover) { .seg:hover:not(span, [aria-pressed="true"], [aria-current="true"], :active) { color: var(--fg); } }
-  .seg:active:not([aria-pressed="true"], [aria-current="true"]) { color: var(--fg); background: var(--hover); }
+  /* Selected is a neutral fill with an accent mark (visual.md *Quiet chrome in a dense tool*: the accent is spent on
+     selection): the --selected fill and a 2px accent bar along the foot, a shape as well as a colour (WCAG 1.4.1),
+     as a tab's underline is. The bar holds 3:1 against the fill and the ground (WCAG 1.4.11: 4.75:1 on the fill,
+     5.48:1 on the page, light; 5.56:1 and 7.42:1 dark). No border, no weight change: the control keeps its size
+     (design-standard rule 2), and a bar on one edge never reads as the focus ring. Hover is a lighter neutral fill
+     with no bar; pressed a stronger one. */
+  .seg:is([aria-pressed="true"], [aria-current="true"]) { background: var(--selected); color: var(--fg); box-shadow: inset 0 calc(-1 * var(--stroke-2)) 0 var(--accent); }
+  @media (hover: hover) { .seg:hover:not(span, [aria-pressed="true"], [aria-current="true"], :active) { color: var(--fg); background: var(--hover); } }
+  .seg:active:not([aria-pressed="true"], [aria-current="true"]) { color: var(--fg); background: var(--pressed); }
+  /* Inside, as the group's scroll would clip it outside: 3px drawn inside (visual.md *Visual states of controls*),
+     clear of the selected bar (the band 2-5px in), so focused and selected both show. */
+  .seg:focus-visible { outline-width: 3px; outline-offset: -5px; }
 
   /* The page frame's components (its layout and markup are above, before this layer). Last in the layer, so the
      Menu button's hiding beats .button's display by order. */
@@ -711,7 +720,7 @@
   /* Windows high contrast and other forced palettes drop backgrounds and shadows, which is how the current page,
      a pressed segment and a default value are marked; each gets an outline the palette keeps. */
   @media (forced-colors: active) {
-    [aria-current="page"], .topnav [aria-current], [aria-pressed="true"], .pill--default { outline: var(--stroke-2) solid Highlight; outline-offset: -2px; }
+    [aria-current="page"], .topnav [aria-current], [aria-pressed="true"], .seg[aria-current="true"], .pill--default { outline: var(--stroke-2) solid Highlight; outline-offset: -2px; }
     /* a ticked box is its fill and a tick in the fill's contrast, both dropped: kept in the palette's own pair, so
        ticked never reads as unticked */
     .checkbox:checked { forced-color-adjust: none; background: Highlight; border-color: Highlight; }

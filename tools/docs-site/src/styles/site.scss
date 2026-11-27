@@ -111,9 +111,9 @@ $xxl: 90rem;
         grid-template-rows: auto 1fr auto;
       }
       .shell--sidebar > :is(.masthead, .site-foot) { grid-column: 1 / -1; }
-      // The masthead spans the sidebar too, so stock-ui's shared edges (the container's) would put the name in
-      // the middle of the window: it starts over the sidebar, and the theme switch ends where the content does.
-      .shell--sidebar > .masthead { --masthead-inline: var(--space-24) calc(max(var(--gutter-min), (100% - var(--sidebar) - var(--aside, 0px) - var(--column)) / 2) + var(--aside, 0px)); }
+      // The masthead and the footer span the sidebar too, so stock-ui's shared edges (the container's) would put
+      // the name in the middle of the window: they start over the sidebar and end where the content does.
+      .shell--sidebar > :is(.masthead, .site-foot) { --masthead-inline: var(--space-24) calc(max(var(--gutter-min), (100% - var(--sidebar) - var(--aside, 0px) - var(--column)) / 2) + var(--aside, 0px)); }
       .page-body { padding-block-start: var(--space-48); }
     }
     // The page's own sections (HIG's section rail, on the left). It sits in
@@ -145,7 +145,8 @@ $xxl: 90rem;
     border: var(--stroke-1) solid var(--warn); border-radius: var(--radius-8); background: var(--warn-soft); font-size: var(--text-sm); }
   .hero__parts ul { display: flex; flex-wrap: wrap; gap: var(--space-8); list-style: none; margin: var(--space-24) 0 0; padding: 0; }
   .hero__parts a { display: inline-block; padding: var(--space-4) var(--space-12); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-full); background: var(--bg); color: var(--fg); text-decoration: none; font-size: var(--text-sm); }
-  .hero__parts a { @include hover { border-color: var(--accent); } }
+  // hover a neutral step; the accent is the current part's (visual.md *Quiet chrome in a dense tool*)
+  .hero__parts a { @include hover { border-color: var(--control); background: var(--hover); } }
   .hero__parts a[aria-current="page"] { border-color: var(--accent); background: var(--accent); color: var(--bg); }
   .tabs--sections { margin-block-end: var(--space-24); }
   // A panel never shorter than the screen, once the tabs are wired: a short
@@ -161,9 +162,6 @@ $xxl: 90rem;
     // switch between a repo's design systems, in the name's place, is the site's.
     .masthead__systems { grid-area: brand; justify-self: start; margin-block: var(--space-8); }
     .masthead__systems .seg { text-decoration: none; }
-    // the group scrolls (overflow-x), which would clip a ring drawn outside the link
-    // inside the current link's 1px inset edge, so the ring shows on it too
-    .masthead__systems .seg:focus-visible { outline-offset: -5px; }
 
     // ---- Sidebar -------------------------------------------------------------
 
@@ -673,7 +671,7 @@ $xxl: 90rem;
     }
     button.code-chip {
       cursor: copy;
-      @include hover { color: var(--accent); }
+      @include hover { text-decoration: underline; }
       &[data-copied]::after { content: " ✓"; color: var(--accent); }
     }
 
@@ -1069,7 +1067,7 @@ $xxl: 90rem;
       background: var(--surface);
       overflow: clip;
       text-decoration: none;
-      @include hover { border-color: var(--accent); .card__title { color: var(--accent); } }
+      @include hover { border-color: var(--control); .card__title { text-decoration: underline; } }
     }
     .card__thumb {
       display: grid;
@@ -1369,8 +1367,9 @@ $xxl: 90rem;
       font: inherit;
       cursor: pointer;
       @include hover { background: var(--hover); }
-      // the icon open in the dialog
-      &[aria-current] { outline: var(--stroke-2) solid var(--accent); outline-offset: calc(-1 * var(--stroke-2)); }
+      // the icon open in the dialog: stock-ui's selected segment, a neutral fill and an accent bar, so it never
+      // reads as the focus ring the tile takes back when the dialog closes
+      &[aria-current] { background: var(--selected); box-shadow: inset 0 calc(-1 * var(--stroke-2)) 0 var(--accent); }
     }
     // A group's heading sits nearer its own grid than the one above.
     .icon-group + .icon-group { margin-block-start: var(--space-48); }
@@ -1502,6 +1501,7 @@ $xxl: 90rem;
   @media (forced-colors: active) {
     .chip, .value__swatch, .progress__seg, .legend__item::before, .status::before { forced-color-adjust: none; }
     :focus-visible { outline: 3px solid Highlight; }
+    .icon-tile[aria-current] { outline: var(--stroke-2) solid Highlight; outline-offset: calc(-1 * var(--stroke-2)); }
   }
 }
 
