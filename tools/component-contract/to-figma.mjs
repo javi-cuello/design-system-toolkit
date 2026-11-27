@@ -295,8 +295,14 @@ export function ownInPlaced(library, drawn, mains, whole = new Set()) {
       if (!seen.has(h)) seen.set(h, placedAs(out, h, m, mains).M);
       const M = seen.get(h), x = M[id.slice(h.length + 1)], y = library[id];
       if (!x) continue;
-      // (the same part: of its kind, and an instance of the same component; another under that name stays missing)
-      if (!(y && x.kind === y.kind && (x.kind !== 'instance' || String(x.component).toLowerCase() === String(y.component).toLowerCase()))) break;
+      // (the same part: of its kind, and an instance of the same component; another under that name stays missing, but
+      // where an instance between them states a prop the outer one places it at otherwise: there the inner one draws it,
+      // an app bar's leading icon button given Icon: account_circle drawing that icon, its swap applied)
+      if (!(y && x.kind === y.kind && (x.kind !== 'instance' || String(x.component).toLowerCase() === String(y.component).toLowerCase()))) {
+        const restated = ups.filter((u) => u.length > h.length && out[u] && out[u].kind === 'instance').some((u) => { const w = (M[u.slice(h.length + 1)] || {}).with || {}; return Object.entries(out[u].with || {}).some(([k, v]) => k in w && String(w[k]) !== String(v)); });
+        if (restated) continue;
+        break;
+      }
       // and as an instance draws it: in a box with no auto layout it keeps no place nor constraints, which the
       // component's own contract states and no instance can override (figma-fact: no-nested-position-override; derive
       // keeps none there); one placed absolutely in an auto layout, or a glyph scaled both ways, keeps them

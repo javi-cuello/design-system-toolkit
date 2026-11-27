@@ -1240,4 +1240,15 @@ delete globalThis.figma;
   const r = roundTrip(lib, drawn, { whens: true }).rows, plain = roundTrip(lib, drawn).rows;
   ok('roundTrip, asked whens, says the combinations each row was found in; unasked, says none',
     r.length === 1 && JSON.stringify(r[0].whens) === '[{"size":"l"}]' && plain.length === 1 && !('whens' in plain[0])); }
+{ // (2026-11-27) a part inside an instance placed in another: where the inner instance states props of its own (an app
+  // bar's leading icon button given Icon: account_circle), the outer one's drawing of it is not it, so the inner one fills
+  // the part, its swap applied
+  const { ownInPlaced } = await import('./to-figma.mjs');
+  const btn = { component: 'Btn', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['icon'] } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icons/star' }, 'icon/g': { kind: 'graphic', parent: 'icon', background: 'C/a' } }, variants: [] };
+  const bar = { component: 'Bar', props: {}, anatomy: { root: { kind: 'container' }, lead: { kind: 'instance', parent: 'root', component: 'Btn', with: { Icon: 'star' } }, 'lead/icon': { kind: 'instance', parent: 'lead', component: 'Icons/star' }, 'lead/icon/g': { kind: 'graphic', parent: 'lead/icon', background: 'C/a' } }, variants: [] };
+  const mains = (n) => ({ Btn: btn, Bar: bar })[n] || null;
+  const lib = { root: { kind: 'container' }, bar: { kind: 'instance', parent: 'root', component: 'Bar' }, 'bar/lead': { kind: 'instance', parent: 'bar', component: 'Btn', with: { Icon: 'person' } }, 'bar/lead/icon': { kind: 'instance', parent: 'bar/lead', component: 'Icons/person' }, 'bar/lead/icon/g': { kind: 'graphic', parent: 'bar/lead/icon', background: 'C/b' } };
+  const drawn = { root: lib.root, bar: lib.bar, 'bar/lead': lib['bar/lead'] };
+  const out = ownInPlaced(lib, drawn, mains);
+  ok('a part inside an inner instance that states its own props is filled by that instance, its swap applied', (out['bar/lead/icon'] || {}).component === 'Icons/person', JSON.stringify(out)); }
 console.log(`${n}/${n} passed`);
