@@ -21,9 +21,9 @@
  * instance's props, with the host's word over it; where a main has no contract, a field Figma has there that the host
  * leaves unsaid is `contract:not stated`, counted apart, never a difference; where that main is another library's
  * (REST's `remote`) or one of this library's icons (the tokens' `_meta.icons`), what is inside it is said there, and the
- * field is skipped by that name, unless an instance overrides it or it is the placed instance's own place; a glyph folded
- * into its icon (the one graphic, scaled both ways, that such a contract-less instance draws: derive's ownGlyph) takes its
- * size, place and constraints, and the icon its clipping, from that drawing, skipped by that name. Every field compared is counted, and every
+ * field is skipped by that name, unless an instance overrides it or it is the placed instance's own place; an icon
+ * clipping its one glyph (the one graphic, scaled both ways, that such a contract-less instance draws: derive's ownGlyph)
+ * is the icon's own, skipped by that name; the glyph's size, place and constraints derive states, compared. Every field compared is counted, and every
  * field skipped (REST silent, mixed text, a swap REST does not name) is counted apart, never as passing. A library's
  * report, per side: the components that match on every field checked, that differ, that differ only by `not stated`,
  * and that had nothing checked; the differences and the `not stated` rows; and the kinds that differ most.
@@ -959,11 +959,10 @@ export function compareContract(component, setNode, contract, ctx) {
     const byPlace = (a, b, k) => stretched(a, b, k) || styledOwn(a, b, k);
     const unstated = (vname, id, a, b) => { for (const k of Object.keys(a)) if (!(k in b) && !OWN.includes(k) && !byPlace(a, b, k)) { t.differ(vname, `${id}.${k}`, 'not stated', a[k], undefined); delete a[k]; } };
     const frameOf = (n) => { let f = parentOf.get(n) || null; while (f && GROUPS.has(f.type)) f = parentOf.get(f); return f; };
-    // a glyph folded into its icon (derive's ownGlyph): where an instance whose main holds no contract draws one layer,
-    // a graphic scaled both ways, and the contract names that one part inside it, the glyph's size, place and
-    // constraints are the icon's drawing fitted to its box, and the icon's clipping its own, said by no host: skipped,
-    // named, never a row (a field the contract states is still compared, and a glyph it does not name stays a row; since
-    // 2026-11-27 derive keeps the glyph's box, so only the icon's clipping is left to skip)
+    // an icon's clipping its one glyph (derive's ownGlyph): where an instance whose main holds no contract draws one layer,
+    // a graphic scaled both ways, and the contract names that one part inside it, the icon's clipping is its own, said by
+    // no host: skipped, named, never a row. The glyph's size, place and constraints are compared: derive states them
+    // (2026-11-27), so one the contract leaves unsaid is a row
     const glyphInside = (instId) => { const inner = Object.keys(flat).filter((k) => k.startsWith(`${instId}/`)); return inner.length === 1 && flat[inner[0]].parent === instId && flat[inner[0]].kind === 'graphic' ? inner[0] : null; };
     const folded = (instId, glyph) => {
       const icon = found.get(instId), g = found.get(glyph);
@@ -971,11 +970,10 @@ export function compareContract(component, setNode, contract, ctx) {
       const shown = (icon.children || []).filter((c) => c.visible !== false);
       return shown.length === 1 && shown[0] === g && !!g.constraints && g.constraints.horizontal === 'SCALE' && g.constraints.vertical === 'SCALE';
     };
-    const FOLDED = 'a glyph folded into its icon: its drawing fitted to the icon\'s box (derive ownGlyph)';
+    const FOLDED = 'an icon clipping its glyph folded into its icon: the icon\'s own (derive ownGlyph)';
     const fold = (id, a, b) => {
       const part = flat[id], glyph = part.kind === 'instance' ? glyphInside(id) : null;
-      const fields = glyph && folded(id, glyph) ? (a.overflow === 'hidden' ? ['overflow'] : [])
-        : part.kind === 'graphic' && part.parent && glyphInside(part.parent) === id && folded(part.parent, id) ? ['width', 'height', 'absolute', 'constraints'] : [];
+      const fields = glyph && folded(id, glyph) && a.overflow === 'hidden' ? ['overflow'] : [];
       for (const k of fields) if (k in a && !(k in b)) { delete a[k]; t.skip(FOLDED); }
     };
     for (const [id, part] of Object.entries(flat)) {
