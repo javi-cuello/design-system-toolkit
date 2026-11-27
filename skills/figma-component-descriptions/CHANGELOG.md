@@ -1,5 +1,6 @@
 # Changelog — figma-component-descriptions
 
+- 1.25.0 (2026-11-27): a route without the bridge, the same scripts through `use_figma` (scripts.md, *Without the bridge*); `enumerate.js` and `verify.js` load pages one by one and read a plain-only description unescaped. Case D26.
 - 1.24.0 (2026-11-26): SKILL.md step 0 (and scripts.md's tools table) names the Figma Console 2.0 enable call, before the skill reaches either non-core bridge tool: toolsets `components` and `inspect`, for `figma_set_description` and `figma_get_component_details` (skill-standard §A clause J).
 - 1.23.1 (2026-11-23): the guide's Button example names its emphasis axis `Appearance`, as figma-standard 2.33.0 rule 1 does; no rule changed.
 - 1.23.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I: a lead and numbered steps; step 2, the scripts and the checklist move to `references/subjects.md`, `scripts.md` and `quality-checklist.md`; no rule dropped.

@@ -76,6 +76,15 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
     const vs = (await run(config(read('enumerate.js'), { internalPrefix: prefix, separator: '/' }), figma)).virtualSets.map((v) => v.stem);
     ok('enumerate: internalPrefix ' + JSON.stringify(prefix) + ' marks nothing private (no throw, groups still form)', JSON.stringify(vs) === '["Top bar","_Row"]');
   }
+  // D26: the cloud route (use_figma) refuses loadAllPagesAsync and hands a plain-only description back escaped.
+  const loaded = [];
+  for (const p of [docPage, barePage, barPage, empty]) p.loadAsync = async () => { loaded.push(p.name); };
+  const cloud = { ...figma, loadAllPagesAsync: async () => { throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); } };
+  button.description = 'A &lt;button&gt; &amp; more.';
+  const viaCloud = await run(src, cloud);
+  ok('enumerate: where loadAllPagesAsync is refused, every page is loaded one by one', loaded.length === 4 && viaCloud.pages.length === 3);
+  ok('enumerate: a plain description handed back escaped is measured as typed', viaCloud.pages.find((p) => p.page === 'Button').items[0].descLen === 'A <button> & more.'.length);
+  button.description = 'A button.';
 
   // step 8: the same sweep diffed against what the run wrote (sweep-diff.mjs)
   const { against } = await import('../scripts/sweep-diff.mjs');

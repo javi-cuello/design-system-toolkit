@@ -14,6 +14,7 @@ How each step's script reaches Figma, what it takes and what it returns. [SKILL.
 - [sync-header.js](#sync-headerjs)
 - [Verification](#verification)
 - [Bridge traps](#bridge-traps)
+- [Without the bridge](#without-the-bridge)
 - [MCP tools](#mcp-tools)
 
 ## Files
@@ -25,7 +26,7 @@ references/
   subjects.md                         — discovery and step 2 in full
   scripts.md                          — this file
   quality-checklist.md                — the checks before reporting
-scripts/                              — each a figma_execute body: fill its CONFIG, send the file
+scripts/                              — each a figma_execute or use_figma body: fill its CONFIG, send the file
   enumerate.js                        — step 1 sweep, step 2e's bare pages, step 2c's virtual sets (read-only)
   sweep-diff.mjs                      — step 8, plain node: the re-run sweep against the targets
   consumer-usage.js                   — step 2f, run in the consumer file (read-only)
@@ -201,6 +202,31 @@ An input it cannot read, or a flag with no value, exits 2 in one line. **Never d
 - **A call that times out**. Probe with `figma_get_status({ probe: true })` before assuming the connection dropped. A healthy probe beside a hung call means the tool is at fault, not the transport.
 - **The target missing from the connected list**. The plugin closed in that file: stop, and ask for it to be reopened. A pinned file that disconnects releases its pin. Later writes then land silently in whichever file is active.
 - **`figma_search_components({ query: "" })`**. It can hang for minutes on a large library while the connection stays healthy. Never enumerate with it; keep it for looking up a few named components.
+
+## Without the bridge
+
+Where the Figma Console bridge is off, as in claude.ai with the Figma connector, the scripts run through the official Figma MCP's `use_figma`, unchanged. Every script in `scripts/` has run this way against a small real file (case D26). A large library has not met the cloud's time limit yet.
+
+Step 0 becomes:
+
+- Load the Figma MCP's `figma-use` skill before the first `use_figma` call, as the server requires, and name it in each call's `skillNames`. Where no Figma plugin is installed, it is the server's resource `skill://figma/figma-use/SKILL.md`, named `resource:figma-use`.
+- Take the target's `fileKey` from its URL (`figma.com/design/<fileKey>/…`), and ask for the URL if the conversation has none. There is no list of connected files and nothing to pin: each call names its file.
+- Call `create_session` with that `fileKey`, and pass its `sessionId` to every `use_figma` call, the consumer file's included. It refuses a file the account cannot edit, so the run cannot start there: ask for edit access.
+
+Each script is the call's `code`, with its `CONFIG` filled, as on the bridge.
+
+| On the bridge | Without it |
+|---|---|
+| `figma_execute` | `use_figma({ fileKey, sessionId, code })` |
+| `figma_execute({ fileKey })` for step 2f's consumer file | `use_figma` with the consumer file's `fileKey`; nothing to re-pin after |
+| `figma_set_description` | `apply.js` with one pair |
+| `figma_get_component_details` | `composition.js`, which returns the interface; the existing description is the component's `descriptionMarkdown` |
+| `figma_get_status({ probe: true })` | none: a failed call says so, and `safeToRetryWithoutCanvasRead` says whether to re-read before retrying |
+
+What the cloud does differently, each handled in the scripts, so nothing changes in how they are sent:
+
+- **`loadAllPagesAsync` is refused** ("not a supported API"). `enumerate.js` and `verify.js` fall back to loading each page in turn.
+- **The plain description comes back HTML-escaped**, `<` as `&lt;`. The markdown field reads back as typed, but a description set as plain text only leaves it empty. The scripts read the markdown, and fall back to the plain field unescaped.
 
 ## MCP tools
 

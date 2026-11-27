@@ -137,4 +137,21 @@ badge.name = 'Badge';
   const noSep = await new AsyncFunction('figma', src)(f5);
   ok('step 4: with no separator setting, the shared text is a duplicate like any other', noSep.duplicates.length === 2);
 }
+
+// D26: through use_figma, loadAllPagesAsync is refused, and a description set as plain text only
+// reads back with an empty descriptionMarkdown and its plain field HTML-escaped.
+{
+  const loaded = [];
+  const plainOnly = node({ id: '6:1', type: 'COMPONENT', name: 'Badge', descriptionMarkdown: '', description: 'A badge shows a count &lt; 100 &amp; more.\n\n## Usage\n\n- Beside a `Card`', componentPropertyDefinitions: {} });
+  const cardOf = node({ id: '6:2', type: 'COMPONENT', name: 'Card', descriptionMarkdown: 'A card groups one record.', componentPropertyDefinitions: {} });
+  const pg = node({ id: '0:9', type: 'PAGE', name: 'Badge' }, [plainOnly, cardOf, node({ id: '6:3', type: 'TEXT', name: 'Notes' })]);
+  pg.loadAsync = async () => { loaded.push(pg.id); };
+  const cloud = { root: node({ id: '0:0', type: 'DOCUMENT' }, [pg]), loadAllPagesAsync: async () => { throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); } };
+  const o = await new AsyncFunction('figma', src)(cloud);
+  ok('D26: where loadAllPagesAsync is refused, each page is loaded and the file still checked', JSON.stringify(loaded) === '["0:9"]' && o.ok === 2);
+  ok('D26: a description held only as plain text is read, unescaped, never counted missing', o.missing.length === 0 && o.unknownNames.length === 0);
+  const markdownOnly = src.replace('const textOf = (n) =>', 'const textOf = (n) => n.descriptionMarkdown || ""; const plainOf = (n) =>');
+  assert.notEqual(markdownOnly, src, 'the reader the plant replaces is still there');
+  ok('D26: (planted) reading descriptionMarkdown alone counts it missing', (await new AsyncFunction('figma', markdownOnly)(cloud)).missing.length === 1);
+}
 console.log(`${n}/${n} passed`);

@@ -23,7 +23,12 @@ const inComponent = (n) => safe(() => {
   return false;
 }, true);
 
-await figma.loadAllPagesAsync();
+// A description as typed. descriptionMarkdown reads back as written on both routes; a description set
+// as plain text only leaves it empty, and the plain field comes back HTML-escaped through use_figma
+// (seen 2026-11-27), so it is unescaped. The snapshot plugin's `unescaped` does the same.
+const textOf = (n) => n.descriptionMarkdown || (n.description || '').replace(/&(lt|gt|amp|quot|#39);/g, (m, e) => ({ lt: '<', gt: '>', amp: '&', quot: '"', '#39': "'" })[e]);
+// Figma's cloud (use_figma) refuses loadAllPagesAsync; page by page works on both routes.
+try { await figma.loadAllPagesAsync(); } catch (e) { for (const p of figma.root.children) await p.loadAsync(); }
 const pages = [];
 const groups = new Map();
 for (const page of figma.root.children) {
@@ -33,7 +38,7 @@ for (const page of figma.root.children) {
   // A COMPONENT whose parent is a COMPONENT_SET is a variant, not a component.
   const items = page.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] })
     .filter(n => !(n.type === 'COMPONENT' && n.parent && n.parent.type === 'COMPONENT_SET'))
-    .map(n => ({ id: n.id, name: n.name, type: n.type, descLen: (n.description || '').length }));
+    .map(n => ({ id: n.id, name: n.name, type: n.type, descLen: textOf(n).length }));
   const alone = items.length > 0 &&
     page.findAll(n => safe(() => CONTENT.includes(n.type), false) && !inComponent(n)).length === 0;
   pages.push({ page: page.name, alone, items });

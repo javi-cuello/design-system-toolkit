@@ -5,7 +5,7 @@ description: Write and apply high-quality descriptions to Figma design system co
 
 # Figma Component Descriptions
 
-**Version 1.24.0** — history in CHANGELOG.md.
+**Version 1.25.0** — history in CHANGELOG.md.
 
 This skill writes the descriptions of the components in a Figma library and applies them through the Figma bridge. A public component gets the full structured form. A private part gets a compact form of one or two sentences. Scripts read the file, generate the Behaviour and Composition lists, write the text and check it. Use it to document, fill in, audit or review component descriptions; auditing how a component is built is `figma-components-audit`'s job.
 
@@ -27,8 +27,11 @@ Step 0 confirms the target and loads its settings. Steps 1 to 3 gather, step 4 a
 
 Every Figma call below is a script in `scripts/`, sent whole as the `figma_execute` code with its `CONFIG` filled in. **Never retype a script's logic from memory or an old transcript**. How each script is sent, and what it returns: [scripts.md](references/scripts.md).
 
+**Without the bridge**, as in claude.ai with the Figma connector, the same scripts go unchanged to the official Figma MCP's `use_figma`. How: [scripts.md](references/scripts.md), *Without the bridge*.
+
 **0. Confirm the target and load the settings**.
 
+- Without the bridge, follow [scripts.md](references/scripts.md), *Without the bridge*, in place of the next three lines.
 - Turn on the bridge tools this skill uses that are off at start (skill-standard clause J): `figma_enable_toolsets({ toolsets: ["components", "inspect"] })`, for `figma_set_description` and `figma_get_component_details`.
 - List the connected files with `figma_list_open_files`, and ask if more than one is connected. Pin the target with `figma_navigate({ lock: true })`.
 - Probe the bridge with `figma_get_status({ probe: true })` before the run. After a connection error mid-run, probe again before retrying; never assume the write landed or failed.
@@ -76,7 +79,7 @@ A virtual set's members are left out of `duplicates`, since they share their tex
 
 **6. Apply the description**. Detail: [scripts.md](references/scripts.md), *apply.js*.
 
-- For one component, use `figma_set_description`. Beyond about three, send `scripts/apply.js` in batches of six to nine.
+- For one component, use `figma_set_description`. Beyond about three, or without the bridge, send `scripts/apply.js` in batches of six to nine.
 - Re-read what was written before moving on.
 - To clear a description, set both fields.
 

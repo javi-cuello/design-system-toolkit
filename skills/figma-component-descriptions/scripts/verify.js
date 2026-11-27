@@ -89,7 +89,12 @@ const publicsOf = (page) => page.findAllWithCriteria({ types: ['COMPONENT_SET', 
 // error, or a layer that "does not exist", is the set's; any other ends the check.
 const defsOf = (n) => { try { return n.componentPropertyDefinitions || {}; } catch (e) { if (/existing errors|does not exist/.test(e && e.message)) return null; throw e; } };
 
-await figma.loadAllPagesAsync();
+// A description as typed. descriptionMarkdown reads back as written on both routes; a description set
+// as plain text only leaves it empty, and the plain field comes back HTML-escaped through use_figma
+// (seen 2026-11-27), so it is unescaped. The snapshot plugin's `unescaped` does the same.
+const textOf = (n) => n.descriptionMarkdown || (n.description || '').replace(/&(lt|gt|amp|quot|#39);/g, (m, e) => ({ lt: '<', gt: '>', amp: '&', quot: '"', '#39': "'" })[e]);
+// Figma's cloud (use_figma) refuses loadAllPagesAsync; page by page works on both routes.
+try { await figma.loadAllPagesAsync(); } catch (e) { for (const p of figma.root.children) await p.loadAsync(); }
 
 // Every name the file defines: component names, property names, variant options. A
 // description quoting a name outside this set cites something the file no longer has,
@@ -232,11 +237,11 @@ for (const page of figma.root.children) {
   for (const n of subjects) {
     if (alone && !uses.has(n.id)) {
       skippedAlone++;
-      const md = n.descriptionMarkdown || "";
+      const md = textOf(n);
       if (md) shouldBeEmpty.push({ page: page.name, name: n.name, len: md.length });
       continue;
     }
-    const md = n.descriptionMarkdown || "";
+    const md = textOf(n);
     const compact = isCompactTier(n);
 
     const stale = unknownNamesIn(md);
@@ -325,7 +330,7 @@ for (const page of figma.root.children) {
     const unprefix = (x) => CONFIG.internalPrefix && x.startsWith(CONFIG.internalPrefix) ? x.slice(CONFIG.internalPrefix.length) : x;
     const pageName = bare(page.name);
     const named = subjects.filter(s => { const nm = unprefix(s.name); return nm === pageName || (CONFIG.separator && nm.startsWith(pageName + " " + CONFIG.separator.trim())); });
-    const sentence = (s) => firstSentenceOf(s.descriptionMarkdown || "").replace(/`/g, "");
+    const sentence = (s) => firstSentenceOf(textOf(s)).replace(/`/g, "");
     const wanted = [...new Set(named.map(sentence).filter(Boolean))];
     const fallback = subjects.find(s => !isCompactTier(s)) || subjects[0];
     if (!header) headerReport.push({ page: page.name, status: "no header" });
