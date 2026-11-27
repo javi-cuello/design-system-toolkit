@@ -567,12 +567,13 @@ export function siblingOrder(xs) {
 }
 
 /* Whether a box's children paint first on top (Figma's firstOnTop), as to-code says it where they can overlap: two or more
-   children, every one in the flow and carrying a z-index (a flex item takes one unpositioned, CSS Flexbox 4.3), the
-   z-index falling strictly from the first laid out (by CSS order, ties as written) to the last. siblingOrder keeps the
+   children, every one carrying a z-index (a flex item takes one unpositioned, CSS Flexbox 4.3; one placed absolutely
+   too, to-code giving every child its place), the z-index falling strictly from the first (by CSS order, ties as
+   written) to the last. siblingOrder keeps the
    flow in its laid-out order, as a child there says its layout; this reads its paint. Then each child's order is its
    place in the layout. Runs in the page as well (passed as source); tested by test-from-code.mjs. */
 export function stackedFirst(xs) {
-  if (xs.length < 2 || xs.some((e) => !e.stack || e.stack.out || e.stack.z == null)) return false;
+  if (xs.length < 2 || xs.some((e) => !e.stack || e.stack.z == null)) return false;
   const laid = xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).map(([e]) => e.stack.z);
   return laid.every((z, i) => i === 0 || z < laid[i - 1]);
 }

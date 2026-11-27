@@ -175,7 +175,10 @@ const upright = { contract: 1, component: 'Upright', props: { orientation: { typ
   const top = css(-4, true);
   ok('an overlapping group stacked first on top says it by z-index, the first highest; last on top, or apart, says none',
     /z-index: 3;/.test(rule(top, '.ds-pile > .ds-pile__a')) && /z-index: 1;/.test(rule(top, '.ds-pile > .ds-pile__c')) && /isolation: isolate/.test(rule(top, '.ds-pile')) && !/firstOnTop/.test(top)
-    && !/z-index/.test(css(-4, false)) && !/z-index/.test(css(4, true))); }
+    && !/z-index/.test(css(-4, false)) && !/z-index/.test(css(4, true)));
+  // (a variant that sets only the gap, by a dotted path, makes the group overlap there: said so too)
+  const tight = { ...pile(4, true), props: { tight: { type: 'boolean', default: false, figma: 'Tight' } }, variants: [{ when: { tight: true }, set: { 'root.layout.gap': -4 } }] };
+  ok('a gap a variant sets below 0 by a dotted path restacks the group as a whole layout would', /z-index: 3;/.test(toCss(tight, 'pile', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }))); }
 // a turned part in a restacked box: its wrapper is what the box lays out and stacks (a size container, its own stacking
 // context: css-contain-3 §3), so its place by z-index is said on the wrapper, beside its order, and not on the part inside
 { const row = { contract: 1, component: 'Row', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } },

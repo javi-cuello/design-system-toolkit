@@ -347,8 +347,10 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
         const here = list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id)) || drawnHere(p)));
         // (children that can overlap: one out of the flow, or a gap below 0; and the design's paint order there, first on
         // top where the box's layout says so, as Figma reverses the stack, firstOnTop)
+        // (its layout as the variant draws it: set whole, or a field of it by a dotted path, layout.gap)
         const boxAt = B ? asAt(B) : { ...(c.anatomy[box] || {}), ...(set[`${box}.layout`] && { layout: set[`${box}.layout`] }) };
-        const L = boxAt.layout || {}, gap = L.gap != null && parseFloat(String(L.gap));
+        const dotted = Object.entries(set).filter(([k]) => k.startsWith(`${box}.layout.`) && !k.slice(box.length + 8).includes('.')).map(([k, x]) => [k.slice(box.length + 8), x]);
+        const L = { ...(boxAt.layout || {}), ...Object.fromEntries(dotted) }, gap = L.gap != null && parseFloat(String(L.gap));
         if (!here.some((p) => outOf(asAt(p))) && !(gap < 0)) continue;
         const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? orderAt(p) ?? p.e.order ?? 0;
         // (it holds a part out of the flow here, not a ring: positioned, its containing block)

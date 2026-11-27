@@ -1523,12 +1523,12 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   ok('a variant\'s mark of a component the library does not hold reads back as that variant\'s swap; another glyph stays the code\'s',
     JSON.stringify(a) === JSON.stringify({ 's.component': 'Status/Error', 's.with': null, 's.key': 'k-err', 's.background': 'rgba(0, 0, 0, 1)' }) && b['s.kind'] === 'graphic' && b['s.asset'] === 'Other', JSON.stringify(a)); }
 // children that say by z-index the first paints on top (to-code's firstOnTop over an overlapping group) read as first on
-// top; the last on top, one with no z-index, or one out of the flow does not
+// top, a child placed absolutely among them too; the last on top, or one with no z-index, does not
 { const { stackedFirst } = await import('./rules.mjs');
   const k = (z, extra = {}) => ({ stack: { z, ...extra } });
   const rev = [k(3), k(2), k(1)], fwd = [k(1), k(2), k(3)];
-  ok('children whose z-index paints the first on top read as first on top; the last on top, a child with none, or one out of the flow, not',
-    stackedFirst(rev) && !stackedFirst(fwd) && !stackedFirst([k(3), { stack: {} }, k(1)]) && !stackedFirst([k(3), k(2, { out: true }), k(1)]) && !stackedFirst([k(1)])); }
+  ok('children whose z-index paints the first on top read as first on top, one placed absolutely among them too; the last on top, or a child with none, not',
+    stackedFirst(rev) && !stackedFirst(fwd) && !stackedFirst([k(3), { stack: {} }, k(1)]) && stackedFirst([k(3), k(2, { out: true }), k(1)]) && !stackedFirst([k(1)])); }
 // a design prop the engine's rule joined to no arg, where the toolkit's markup renamed it off an HTML attribute's name,
 // joins that arg: a flag's title (titleOption) keeps the design's name, never read back as Title beside it
 { const design = { title: { type: 'string' }, size: { type: 'string' }, label: { type: 'string' }, hidden: { type: 'string' } };
