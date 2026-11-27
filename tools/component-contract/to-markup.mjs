@@ -789,7 +789,12 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       const vs = c.variants || [];
       // (a combination is drawn alone, the first that holds: one that holds and states nothing here still shadows the next,
       // so the layers below it give the value there)
-      const combos = vs.filter((v) => v.combination).map(stated), varied = vs.filter((v) => !v.combination).reverse().map(stated).filter(({ sets }) => sets.size);
+      // (an instance only a pointer state draws, held by the markup and shown there alone (partsOf `pointerHeld`): a
+      // variant at that state and other props (a radio's icon at focus and checked) is said by those props, as the
+      // instance is drawn nowhere else; one at another pointer state stays untestable)
+      const heldAt = new Set(((parts.get(id) || {}).pointerHeld && (parts.get(id).pointerAdds || []).flatMap((w) => Object.entries(w).filter(([k, x]) => ((c.props || {})[k] || {}).role === 'interaction' && (c.props[k].pointer || []).includes(x)).map(([k, x]) => `${k}=${x}`))) || []);
+      const unheld = (s) => (heldAt.size ? { ...s, when: Object.fromEntries(Object.entries(s.when).filter(([k, x]) => !heldAt.has(`${k}=${x}`))) } : s);
+      const combos = vs.filter((v) => v.combination).map(stated).map(unheld), varied = vs.filter((v) => !v.combination).reverse().map(stated).map(unheld).filter(({ sets }) => sets.size);
       const litCode = (l) => (l === undefined ? (lang.php ? 'null' : 'undefined') : typeof l === 'boolean' || typeof l === 'number' ? String(l) : lang.str(String(l)));
       const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       const figs = [...new Set([...Object.keys(e.with || {}), ...[...combos, ...varied].flatMap(({ sets }) => [...sets])])];

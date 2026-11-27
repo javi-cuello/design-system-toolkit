@@ -996,4 +996,13 @@ else {
   ok('a boolean axis is keyed as the design spells its options, so its variants render and a pointer state is forced', got.size === 2 && !!f && f.pseudo === 'focus-visible' && f.args.isDisabled === true && f.args.isOn === false
     && JSON.stringify(m.axes.isDisabled) === '{"false":{},"true":{"isDisabled":true}}', JSON.stringify(m.axes)); }
 
+{ // an instance only focus draws (held by the markup, shown by the sheet there), given another prop at focus and checked:
+  // passed by that prop, as the instance is drawn at focus alone (a radio's icon checked at focus drew unchecked)
+  const icon = { component: 'Dot', props: { on: { type: 'boolean', default: false, axis: true, figma: 'on' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const state = { type: 'enum', values: ['default', 'focus'], default: 'default', role: 'interaction', pointer: ['focus'], figma: 'state' };
+  const r = { component: 'Pick', props: { state, on: { type: 'boolean', default: false, axis: true, figma: 'on' } }, anatomy: { root: { kind: 'container' } },
+    variants: [{ when: { state: 'focus' }, add: { dot: { kind: 'instance', parent: 'root', component: 'Dot', with: { on: 'false' } } } }, { when: { state: 'focus', on: true }, set: { 'dot.with': { on: 'true' } } }] };
+  const out = toElement(r, 'pick', { naming: ELEMENT, library: { Dot: { ...icon, folder: 'dot' } } });
+  ok('an instance only a pointer state draws takes the props a variant at that state and another prop gives it', /renderDot, \{ on: on \}/.test(out), out); }
+
 console.log(`${n} passed`);
