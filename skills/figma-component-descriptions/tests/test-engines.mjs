@@ -82,7 +82,7 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   const cloud = { ...figma, loadAllPagesAsync: async () => { throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); } };
   button.description = 'A &lt;button&gt; &amp; more.';
   const viaCloud = await run(src, cloud);
-  ok('enumerate: where loadAllPagesAsync is refused, every page is loaded one by one', loaded.length === 4 && viaCloud.pages.length === 3);
+  ok('enumerate: every page is loaded on its own, never all at once (use_figma refuses loadAllPagesAsync)', loaded.length === 4 && viaCloud.pages.length === 3);
   ok('enumerate: a plain description handed back escaped is measured as typed', viaCloud.pages.find((p) => p.page === 'Button').items[0].descLen === 'A <button> & more.'.length);
   button.description = 'A button.';
 

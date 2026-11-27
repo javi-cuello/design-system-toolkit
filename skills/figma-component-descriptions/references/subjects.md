@@ -18,6 +18,7 @@ This is step 0's discovery and step 2 of [SKILL.md](../SKILL.md) in full. It cov
 Run it only for what the context document marks `[TBD]`, or for everything when there is no document. Run it too when a local `systems/` cache is in use and holds no entry for this `fileKey`.
 
 - **Dialect and headings**. Read one documented component's `descriptionMarkdown`, never `description`, which strips the markdown. It shows the dialect and the section headings' spelling from real text. This is the fallback, not the source: `language` in the document's `audit-settings` wins where it is stated (`"en-US"`; absent means en-GB). Sampled text only says what the library *was* written in, which is wrong once a project switches.
+- **Plain-only descriptions**. Sample one whose markdown is not empty: a description set as plain text only leaves it empty.
 - **Header**. Check one component's page for a documentation header instance, to find the header component and its body layer. Say plainly that one page was checked, not all, since a header convention can be page-specific.
 - **Prefix and separator**. Infer the internal prefix and the virtual-set separator from existing component names.
 - **Unclear evidence**. Where evidence is ambiguous or contradictory, gather it and ask the maintainer rather than guessing. An example is the same child prefixed on one page and not on another. Record the ruling in the rulebook once given.

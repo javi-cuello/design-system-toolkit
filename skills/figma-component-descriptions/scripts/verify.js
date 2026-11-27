@@ -93,8 +93,9 @@ const defsOf = (n) => { try { return n.componentPropertyDefinitions || {}; } cat
 // as plain text only leaves it empty, and the plain field comes back HTML-escaped through use_figma
 // (seen 2026-11-27), so it is unescaped. The snapshot plugin's `unescaped` does the same.
 const textOf = (n) => n.descriptionMarkdown || (n.description || '').replace(/&(lt|gt|amp|quot|#39);/g, (m, e) => ({ lt: '<', gt: '>', amp: '&', quot: '"', '#39': "'" })[e]);
-// Figma's cloud (use_figma) refuses loadAllPagesAsync; page by page works on both routes.
-try { await figma.loadAllPagesAsync(); } catch (e) { for (const p of figma.root.children) await p.loadAsync(); }
+// Page by page, never loadAllPagesAsync: use_figma refuses it ("not a supported API") and its
+// contract says never to call it; each page's loadAsync works on both routes.
+for (const p of figma.root.children) await p.loadAsync();
 
 // Every name the file defines: component names, property names, variant options. A
 // description quoting a name outside this set cites something the file no longer has,
