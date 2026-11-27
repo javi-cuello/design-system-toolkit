@@ -210,9 +210,15 @@ export function alignedOf(n, s) {
   const top = b.top + px(s.borderTopWidth) + px(s.paddingTop), bottom = b.bottom - px(s.borderBottomWidth) - px(s.paddingBottom);
   // (the words' line box, not their glyphs': a line height under the font's own draws the rect past the line by half
   // the difference each side, which is no room)
-  // (lines counted as drawn, by their distinct tops, never by the rect's height over the line height, which a line height
-  // past twice the glyphs' undercounts)
-  const lh = parseFloat(s.lineHeight), lines = new Set([...r.getClientRects()].filter((x) => x.height).map((x) => Math.round(x.top))).size;
+  // (lines counted as drawn, never by the rect's height over the line height, which a line height past twice the glyphs'
+  // undercounts: each rect joins the line whose band it overlaps by more than half its height, so a bigger word, a
+  // smaller or a raised one on a line is that line, not another)
+  const bands = [];
+  for (const x of [...r.getClientRects()].filter((q) => q.height).sort((a, c) => a.top - c.top)) {
+    const l = bands.find((y) => Math.min(y[1], x.bottom) - Math.max(y[0], x.top) > x.height / 2);
+    if (l) { l[0] = Math.min(l[0], x.top); l[1] = Math.max(l[1], x.bottom); } else bands.push([x.top, x.bottom]);
+  }
+  const lh = parseFloat(s.lineHeight), lines = bands.length;
   const half = lh > 0 && lines ? (w.height - lines * lh) / 2 : 0;
   const above = w.top + half - top, below = bottom - (w.bottom - half);
   if (above + below < 4) return undefined;

@@ -1222,6 +1222,13 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
         + '<div data-t style="min-height: 60px; line-height: 10px; font-size: 10px; align-content: center">Hi</div>'
         + '<div style="display: flex; height: 40px"><span data-t style="line-height: 10px; font-size: 10px; align-content: center">Hi</span><span data-t style="line-height: 10px; font-size: 10px">Hi</span></div>' });
       const more = await read();
+      // (and lines whose words sit at different tops, a bigger word, a smaller one and a raised one in the first: still two
+      // lines, so a box of their height has no room and a taller one centres them)
+      const mixed = 'display: block; width: 60px; font-size: 12px; line-height: 40px; align-content: center';
+      await navigate(tab, 'http://round-trip.test/', { html: ['80px', '160px'].map((h) => `<div data-t style="${mixed}; height: ${h}">a<strong style="font-size: 16px">b</strong><span style="font-size: 9px">c</span><sup>d</sup> eeeeeeeeeee</div>`).join('') });
+      const tops = await read();
+      ok('words at different tops on one line are one line: a box of two lines\' height has no room, a taller one centres them',
+        JSON.stringify(tops) === '[null,"center"]', JSON.stringify(tops));
       ok('three lines spaced past their glyphs fill a box of their height (no room) and centre in a taller one; min-height and a stretched flex item measured as any box',
         JSON.stringify(more) === '[null,"center","center","center",null]', JSON.stringify(more));
     } finally { await browser.close(); }
