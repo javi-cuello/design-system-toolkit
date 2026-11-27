@@ -299,7 +299,12 @@ export function ownInPlaced(library, drawn, mains, whole = new Set()) {
       // where an instance between them states a prop the outer one places it at otherwise: there the inner one draws it,
       // an app bar's leading icon button given Icon: account_circle drawing that icon, its swap applied)
       if (!(y && x.kind === y.kind && (x.kind !== 'instance' || String(x.component).toLowerCase() === String(y.component).toLowerCase()))) {
-        const restated = ups.filter((u) => u.length > h.length && out[u] && out[u].kind === 'instance').some((u) => { const w = (M[u.slice(h.length + 1)] || {}).with || {}; return Object.entries(out[u].with || {}).some(([k, v]) => k in w && String(w[k]) !== String(v)); });
+        // (only the prop of the inner one's component that swaps this part, or a part above it in that one)
+        const restated = ups.filter((u) => u.length > h.length && out[u] && out[u].kind === 'instance').some((u) => {
+          const um = mains(out[u].component, out[u].key), rel = id.slice(u.length + 1), w = (M[u.slice(h.length + 1)] || {}).with || {};
+          const names = Object.entries((um && um.props) || {}).filter(([, q]) => q.type === 'instance' && (q.swaps || []).some((sid) => rel === sid || rel.startsWith(`${sid}/`))).map(([pk, q]) => String(q.figma || pk).toLowerCase());
+          return Object.entries(out[u].with || {}).some(([k, v]) => names.includes(String(k).replace(/#\d+:\d+$/, '').toLowerCase()) && k in w && String(w[k]) !== String(v));
+        });
         if (restated) continue;
         break;
       }

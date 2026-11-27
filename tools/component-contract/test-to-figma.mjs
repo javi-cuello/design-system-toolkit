@@ -1250,5 +1250,11 @@ delete globalThis.figma;
   const lib = { root: { kind: 'container' }, bar: { kind: 'instance', parent: 'root', component: 'Bar' }, 'bar/lead': { kind: 'instance', parent: 'bar', component: 'Btn', with: { Icon: 'person' } }, 'bar/lead/icon': { kind: 'instance', parent: 'bar/lead', component: 'Icons/person' }, 'bar/lead/icon/g': { kind: 'graphic', parent: 'bar/lead/icon', background: 'C/b' } };
   const drawn = { root: lib.root, bar: lib.bar, 'bar/lead': lib['bar/lead'] };
   const out = ownInPlaced(lib, drawn, mains);
-  ok('a part inside an inner instance that states its own props is filled by that instance, its swap applied', (out['bar/lead/icon'] || {}).component === 'Icons/person', JSON.stringify(out)); }
+  ok('a part inside an inner instance that states its own props is filled by that instance, its swap applied', (out['bar/lead/icon'] || {}).component === 'Icons/person', JSON.stringify(out));
+  // (review: only the prop that swaps that part counts; another the inner one restates leaves it missing)
+  const sized = { ...btn, props: { ...btn.props, size: { type: 'enum', figma: 'Size', values: ['s', 'l'], default: 's' } } };
+  const mains2 = (n) => ({ Btn: sized, Bar: { ...bar, anatomy: { ...bar.anatomy, lead: { ...bar.anatomy.lead, with: { Icon: 'star', Size: 's' } }, 'lead/icon': { ...bar.anatomy['lead/icon'], component: 'Icons/moon' } } } })[n] || null;
+  const lib2 = { ...lib, 'bar/lead': { ...lib['bar/lead'], with: { Icon: 'star', Size: 'l' } }, 'bar/lead/icon': { ...lib['bar/lead/icon'], component: 'Icons/star' } };
+  const out2 = ownInPlaced(lib2, { root: lib.root, bar: lib.bar, 'bar/lead': lib2['bar/lead'] }, mains2);
+  ok('…but only the prop that swaps it: another prop restated leaves a different part missing', !('bar/lead/icon' in out2), JSON.stringify(out2)); }
 console.log(`${n}/${n} passed`);
