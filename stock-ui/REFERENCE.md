@@ -22,5 +22,6 @@ What `stock-ui.css` holds:
 | sidebar list | `.sidenav` |
 | tabs and toolbar | |
 | segmented control | `.segmented`, `.seg` |
+| choice chips | `.chips`, `.chip`: a segmented control drawn as separate rounded chips (a filter over the data below) |
 
 - **The page frame:** skip link, masthead with name, sections and theme switch, reading column (`.container`), footer. Its markup is in the comment above it. The masthead shares the container's leading and trailing edges. Knobs: `--column` and `--gutter-min`, set on an ancestor of both (`:root`, `.shell`) so they move together; `--aside` and `--rail`; `--masthead-inline`, the masthead's own padding, for a shell with a side navigation.
