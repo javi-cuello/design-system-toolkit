@@ -433,7 +433,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     // (a part only a pointer state draws inside a placed component is left to code only where the reading lacks it: one
     // it reads, its placed component forced to that state too (from-code forwardedAt), differs as any part does, and so
     // does a field of it the reading leaves out)
-    return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) && !(row && row.library == null && row.drawn != null) ? 'inside-foreign'
+    return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) && (!row || row.drawn == null) ? 'inside-foreign'
       : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field, row) ? 'swapped-own' : field === '' && carries(el) && (row || {}).drawn == null ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' ? ((row && row.drawn != null) || (readIds && readIds.has(el)) ? null : reasons.get(id))
         // (an override the markup cannot pass is left to code only where the reading drew the placed main's own there)
         // (a swap into an exposed instance, its key, modes and look: held to the swapped-in component's own, as swapped-own's)

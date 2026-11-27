@@ -34,7 +34,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
 import { expand, drawLayers, variantDefaults, kebab, camel, placedOf as heldBy } from './layers.mjs';
-import { declarations, holds } from './css.mjs';
+import { declarations, holds, rem } from './css.mjs';
 import { negative, heldOpacity, heldGlyph, bareGlyph, siblingOrder, liftsAlone, CLEARED, UNCLIPPED } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
@@ -712,6 +712,21 @@ function overrideOf(a, host, rel, m, mains, B = a, c = null) {
   return { mine, theirs, removed, changed: [...mine.filter(([p, v]) => theirs.get(p) !== v), ...removed.map((p) => [p, 'unset'])] };
 }
 
+/* What a mark (an instance the library does not hold) that keeps room about its glyph (its layout's padding) declares
+   so the glyph sits inside that room: `decls`, the glyph's paint kept to the content box; and where the mark hugs, `before`,
+   a box the size of the glyph the design draws in it (its one child's) as its content, so the mark is as big as the
+   frame, the padding round it, and still hugs (its own size written would read as fixed). `a`: the combination's
+   anatomy. Tested by test-to-code.mjs and test-from-code.mjs. */
+export function markRoom(e, a, id) {
+  const pad = (e.layout || {}).padding;
+  if (!pad || !Object.values(pad).some((v) => v && v !== 0)) return null;
+  const decls = [['background-origin', 'content-box'], ['background-clip', 'content-box'], ['mask-origin', 'content-box'], ['mask-clip', 'content-box']];
+  const kids = Object.values(a).filter((x) => x && x.parent === id);
+  const g = kids.length === 1 ? kids[0] : null;
+  const sized = [['width', 'inline-size'], ['height', 'block-size']].filter(([k]) => (e[k] === undefined || e[k] === 'hug') && g && typeof g[k] === 'number');
+  return { decls, ...(sized.length && { before: [['content', '""'], ['flex', 'none'], ...sized.map(([k, prop]) => [prop, rem(g[k])])] }) };
+}
+
 /* A placed instance's declarations drawn whole: where it sits and how big (PLACED), and its own styling over its
    component's root at its props (derive's ownStyling keeps on an instance only a field that differs from that root: a
    fill, stroke or layout set on the instance itself, an override), said as that root with those fields over it; only
@@ -1047,6 +1062,11 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
       kept.push(...over.changed, ...[...everOverrides(c, id, mains, ictx)].filter((p) => !said.has(p)).map((p) => [p, over.theirs.get(p) ?? 'unset', undefined, true]));
     }
     if (sample) kept.push(['inline-size', '100%']);
+    // (a mark padded so, the room its frame keeps about the glyph: the glyph code paints on it (a mask, a background) is
+    // kept to its content box, inside that room, and a mark that hugs is as big as the design's frame, its content the
+    // glyph's own size, its padding round it: markRoom)
+    const room = unheld && !slotted ? markRoom(e, a, id) : null;
+    if (room) kept.push(...room.decls);
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
     // (only where an auto layout lays it out, and never on a part out of the flow: order moves neither, CSS Flexbox 4.1)
     // (but in a box restacked, below, whose flow holds one child or none at some combination, every child says its place
@@ -1067,6 +1087,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: (e.kind === 'instance' && !unheld) || slotted ? [] : unheld ? unread.filter((f) => !/^(key|component|with|swappedBy)\b/.test(f)) : unread,
       // (the axes a scale constraint went unwritten on: eval.mjs leftToCode leaves what code draws there to code)
       ...(unshared.length && !slotted && { unshared }) };
+    if (room && room.before) out[`${id}::before`] = { decls: new Map(room.before.map(([p, v]) => [p, { v }])), unread: [] };
     // a part turned a quarter (turnedParts): its wrapper takes its place in the flow on the parent's axes, its own width
     // the wrapper's height and its own height the wrapper's width, and the part is drawn inside at its own size, centred
     // (its turn, css.mjs's rotate, as it is); where this combination does not turn it so, the wrapper is no box

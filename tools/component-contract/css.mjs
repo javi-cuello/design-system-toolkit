@@ -30,7 +30,7 @@ const TEXT_NOTE = 'no text style in the design';
 // what a text with no style says by leaving it out, each inherited in CSS, so written or it takes its host's
 const UNSAID = [['font-style', 'normal'], ['letter-spacing', 'normal'], ['text-transform', 'none'], ['font-variant-caps', 'normal']];
 
-const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
+export const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
 /* Whether a part that scales with its parent can be written as a share of it: the parent's size on that axis, its own
    offset and its own size, each a number (the parent's above 0). Where not (a parent that hugs or fills, a part with no
    size or point of its own there), the sheet says it unread and declarations() returns the axis as unshared; what code

@@ -327,7 +327,9 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a foreign component\'s own is the one at the row\'s own combinations, none where it is not drawn; a part the design leaves out inside it that the reading draws is a row',
     leftToCode(sized, () => null)('icon.with.size', { library: 'M', drawn: 'M', whens: [{ size: 'l' }] }) && !leftToCode(sized, () => null)('icon.with.size', { library: 'M', drawn: 'S', whens: [{ size: 'l' }] })
     && !leftToCode(late, () => null)('icon.layout', { library: { direction: 'row' }, drawn: { direction: 'column' } })
-    && !left('icon/glyph', { library: null, drawn: { kind: 'graphic' } }) && left('icon/glyph', { library: { kind: 'graphic' }, drawn: null })); }
+    && !left('icon/glyph', { library: null, drawn: { kind: 'graphic' } }) && left('icon/glyph', { library: { kind: 'graphic' }, drawn: null })
+    // (fourth review: a value the reading draws inside it, other than the design's, is read: a row; none drawn is left)
+    && !left('icon/glyph.width', { library: 12, drawn: 16 }) && left('icon/glyph.width', { library: 12, drawn: null })); }
 
 { const box = (h, sized = true) => ({ contract: 1, component: 'Badge', props: { size: { type: 'enum', values: ['s', 'l'], default: 's' }, tone: { type: 'enum', values: ['a', 'b'], default: 'a' } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, frame: { kind: 'container', parent: 'root', layout: { direction: 'row' }, width: 12, height: h },

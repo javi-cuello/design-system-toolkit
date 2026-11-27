@@ -637,6 +637,15 @@ else console.log('skip: no stored contracts on this machine');
   const framed = { contract: 1, component: 'Bar', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Glyph', key: 'dd44', layout: { direction: 'row', gap: 0, align: 'center', crossAlign: 'center', padding: { top: 4, end: 4, bottom: 4, start: 4 } } } }, variants: [] };
   ok('an instance the store does not hold writes its own layout on its mark',
     /\.ds-bar__icon \{[^}]*display: flex;[^}]*padding: 0\.25rem;[^}]*justify-content: center;/.test(toCss(framed, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains })));
+  // (fourth review of 2026-11-27: the glyph code paints on the mark kept inside that room, its content box, and a mark that
+  // hugs as big as the design's frame: its content the glyph's size, the padding round it)
+  const withGlyph = { ...framed, anatomy: { ...framed.anatomy, 'icon/glyph': { kind: 'instance', parent: 'icon', component: 'Warn', width: 16, height: 16 } } };
+  const roomSheet = toCss(withGlyph, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  const block = (sheet, sel) => (sheet.split(`${sel} {`)[1] || '').split('}')[0];
+  ok('a padded mark keeps the glyph painted on it inside its content box, and hugging, holds the glyph\'s size as its content, its own size unwritten',
+    ['mask-origin: content-box;', 'background-origin: content-box;'].every((d) => block(roomSheet, '.ds-bar__icon').includes(d)) && !/inline-size/.test(block(roomSheet, '.ds-bar__icon'))
+    && ['content: "";', 'inline-size: 1rem;', 'block-size: 1rem;'].every((d) => block(roomSheet, '.ds-bar__icon::before').includes(d))
+    && !/::before/.test(toCss({ ...withGlyph, anatomy: { ...withGlyph.anatomy, icon: { ...withGlyph.anatomy.icon, layout: { direction: 'row' } } } }, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains })), roomSheet);
   // a host each variant adds at its own props (a library's text input adds Status notification per state): a part inside it
   // is named by the variant that draws it there, whichever variant comes first (the first reading lists error's first)
   const stat = { contract: 1, component: 'Stat', props: { status: { type: 'enum', values: ['alt', 'failed'], default: 'alt', figma: 'Status' } }, anatomy: { root: { kind: 'container' } },

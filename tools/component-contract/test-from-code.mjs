@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { MARK_FIELDS, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins } from './from-code.mjs';
+import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1575,4 +1575,28 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
 // 2026-11-27: a mark (data-icon, a component the library does not hold) keeps its layout as read, the room about its glyph
 // to-code writes on it, so a frame's padding goes round
 ok('a mark keeps its layout and its corners, stroke and clipping as read', ['layout', 'radius', 'border', 'overflow'].every((k) => (MARK_FIELDS || []).includes(k)));
+// (and in a page: to-code's sheet for a mark padded about its glyph, read off its computed style by the reader's own halves
+// (flowOf, paddingOf): its layout as the design says it, its box the design's frame, 16 glyph and 4 room each side, and
+// the glyph painted on it kept to its content box)
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
+  const { toCss } = await import('./to-code.mjs');
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a mark in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const c = { contract: 1, component: 'Bar', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Glyph', key: 'dd44', layout: { direction: 'row', gap: 0, align: 'center', crossAlign: 'center', padding: { top: 4, end: 4, bottom: 4, start: 4 } } }, 'icon/glyph': { kind: 'instance', parent: 'icon', component: 'Warn', width: 16, height: 16 } }, variants: [] };
+    const sheet = toCss(c, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: () => null });
+    const browser = await launch({});
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html><style>${sheet}</style><div class="ds-bar"><span class="ds-bar__icon" data-icon="Warn" aria-hidden="true"></span></div>` });
+      const got = await call(tab, ([flowSrc, padSrc]) => {
+        const flowOf = new Function(`return ${flowSrc}`)(), paddingOf = new Function(`return ${padSrc}`)(), px = (v) => +parseFloat(v).toFixed(2);
+        const n = document.querySelector('[data-icon]'), s = getComputedStyle(n), r = n.getBoundingClientRect();
+        return { flex: /flex/.test(s.display), flow: flowOf(s, px), pad: paddingOf(s, px), w: r.width, h: r.height, mask: s.maskOrigin || s.webkitMaskOrigin, bg: s.backgroundOrigin };
+      }, [flowOf.toString(), paddingOf.toString()]);
+      ok('a mark padded about its glyph reads back its layout from its computed style, is as big as the design\'s frame, and keeps its glyph to its content box',
+        got.flex && got.flow.direction === 'row' && Object.values(got.pad).every((v) => v === 4) && got.w === 24 && got.h === 24 && got.mask === 'content-box' && got.bg === 'content-box', JSON.stringify(got));
+    } finally { await browser.close(); }
+  }
+}
 console.log(`${n}/${n} passed`);
