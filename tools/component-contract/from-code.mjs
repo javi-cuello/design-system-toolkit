@@ -1221,6 +1221,15 @@ export function designSetsColour(design, id, mainOf = () => null) {
     || (design.variants || []).some((v) => Object.keys(v.set || {}).some((k) => /\.background$/.test(k) && counts(k.split('.')[0])) || Object.entries(v.add || {}).some(([k, x]) => counts(k) && x.background != null));
 }
 
+/* Whether the design at one combination (`here`, its anatomy expanded there) leaves placed icon `id` its own colour: an
+   instance of a component the library holds no contract for, listed there, for which designSetsColour finds no colour at
+   that combination alone. A reading that finds the code sets no colour on it there either reads none there (from-code's
+   walk), as it reads none for one the design never colours. Tested by test-from-code.mjs. */
+export function unstatedHere(here, id, mainOf = () => null) {
+  const e = here && here[id];
+  return !!e && e.kind === 'instance' && !mainOf(e.component, e.key) && !designSetsColour({ anatomy: here, variants: [] }, id, mainOf);
+}
+
 /* Another library's instance the markup drew open (layers.mjs openForeign; to-markup's data-component, data-key and
    data-with, the walk's `foreign`, `foreignKey` and `foreignWith`), read back as the instance it is: its kind, its
    component, its key and the props it is given,
@@ -3127,12 +3136,15 @@ async function main() {
         const icon = await iconColour(x.icon, (v) => tok('icon', v, `${id}.icon`, ['fill', 'color']));
         delete x.icon;
         if (icon !== undefined) {
-          x.background = icon;
           // a glyph whose colour the code sets on it, in any render: else it is the colour around it (asIcon)
           const at = `[data-contract-id="${id}"]`;
           // (a reset that hands it on, svg { fill: currentColor } or color: inherit, or a stroke icon's fill: none, sets none of its own)
           const sets = (v) => v != null && !/^\s*(currentcolor|inherit|unset|initial|revert|none|transparent)\s*$/i.test(v);
-          if (sets(await authoredValue(L.tab, at, 'color', styles)) || sets(await authoredValue(L.tab, at, 'fill', styles))) ownIcon.add(id);
+          const own = sets(await authoredValue(L.tab, at, 'color', styles)) || sets(await authoredValue(L.tab, at, 'fill', styles));
+          if (own) ownIcon.add(id);
+          // (and at a combination where the design leaves a placed icon of another library its own colour, one the code
+          // sets none on there either has none read there: the colour around it is no override, unstatedHere)
+          if (own || !figmaContract || !unstatedHere(drawnHere(), id, mainOf)) x.background = icon;
         }
         if (x.color) x.color = await tok('text', x.color, `${id}.color`, ['color']);
         // a corner rounder than the element's longest side asks for a full round: the library's fullest radius

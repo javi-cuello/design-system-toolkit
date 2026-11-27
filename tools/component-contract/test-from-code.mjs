@@ -32,6 +32,15 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
     && designSetsColour({ ...epic, anatomy: { ...epic.anatomy, 'sVG/icon': { ...epic.anatomy['sVG/icon'], background: 'color/icon/x' } } }, 'sVG/icon', byComponentName([])) === true
     && designSetsColour({ anatomy: { i: { kind: 'instance', component: 'Epic' } }, variants: [{ when: {}, set: { 'i.background': 'c' } }] }, 'i', byComponentName([])) === true
     && designSetsColour({ anatomy: { i: { kind: 'instance', component: 'Epic' } }, variants: [] }, 'i', held) === false);
+  // at one combination: a placed icon the library holds no contract for, listed with no colour of its own there (a status
+  // icon swapped in at a contrast its notification leaves it its own colour), is unstated there; coloured on it or on its
+  // lone glyph, held, or not listed, it is not
+  { const { unstatedHere } = await import('./from-code.mjs'), none = byComponentName([]);
+    const at = { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Error--filled' } };
+    ok('a placed icon of another library listed with no colour at a combination is unstated there; coloured, held or unlisted, it is not',
+      unstatedHere(at, 'i', none) === true && unstatedHere({ ...at, 'i/vector': { kind: 'graphic', parent: 'i', background: 'Support/error' } }, 'i', none) === false
+      && unstatedHere({ ...at, i: { ...at.i, background: 'c' } }, 'i', none) === false && unstatedHere(at, 'i', byComponentName([{ component: 'Error--filled', anatomy: { root: { kind: 'container' } } }])) === false
+      && unstatedHere(at, 'gone', none) === false); }
   // a foreign icon's lone glyph straight under it: roundTrip compares its colour as the instance's (to-figma glyph), so
   // a colour there, or a variant's set of it (an error state's red), is the design's (review of the first cut)
   const lone = { anatomy: { icon: { kind: 'instance', component: 'Icons/x' }, 'icon/icon': { kind: 'graphic', parent: 'icon', background: 'C/medium' } }, variants: [{ when: { error: true }, set: { 'icon/icon.background': 'C/red' } }] };
