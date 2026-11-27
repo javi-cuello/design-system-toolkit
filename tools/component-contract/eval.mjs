@@ -275,8 +275,10 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     const id = ids.find((x) => (el === x || el.startsWith(`${x}/`)) && !(over.has(x) && !((el !== x && /^(exposed-)?part$/.test(String(over.get(x)))) || passed.has(field) || (field.startsWith('with.') && el === x))));
     // (modes, the markup's attributes, that only pointer states' variants set at every combination the row was found in:
     // roundTrip's `pointer`)
+    // (a part only a pointer state draws inside a placed component is left to code only where the reading lacks it: one
+    // it reads, its placed component forced to that state too (from-code forwardedStates), differs as any part does)
     return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) ? 'inside-foreign'
-      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? reasons.get(id) : null);
+      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' && row && row.drawn != null ? null : reasons.get(id)) : null);
   };
 }
 /* What the toolkit's own markup leaves to code (gapOf), as yes or no. */
