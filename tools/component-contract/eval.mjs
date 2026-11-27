@@ -164,7 +164,11 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const readIds = read ? new Set([...Object.keys(read.anatomy || {}), ...(read.variants || []).flatMap((v) => Object.keys(v.add || {}))]) : null;
   // (a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
   const parts = partsOf(contract, settings);
-  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : ((u) => (!u ? null : /^exposed/.test(u) ? 'exposed-unforwarded' : 'unexposed-override'))(mainOf && unexposed(contract, p.id, mainOf)));
+  // (not one the markup draws open, or a layer of it: a part swapped into a held one where it has no prop, drawn open in
+  // that part's place, to-markup's insideOf, so the markup does pass it: layers.mjs openForeign lists it)
+  const drawnOpen = (id) => [...opened].some((o) => id === o || id.startsWith(`${o}/`));
+  const unpassed = (id) => (drawnOpen(id) ? null : unexposed(contract, id, mainOf));
+  const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : ((u) => (!u ? null : /^exposed/.test(u) ? 'exposed-unforwarded' : 'unexposed-override'))(mainOf && unpassed(p.id)));
   const reasons = new Map([...parts.values()].map((p) => [p.id, reasonOf(p)]).filter(([, r]) => r));
   const ids = [...reasons.keys()];
   // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them
@@ -179,7 +183,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // difference. A row with no `rest` (found apart from pointer states, or over combinations whose rests differ) stays one)
   const atRest = (row) => !!row && row.pointer === true && Object.hasOwn(row, 'rest') && restKey(row.drawn) === restKey(row.rest);
   const said = (at, row) => atRest(row) && (words.get(at) || []).includes(row.library);
-  const over = new Map(mainOf ? [...parts.values()].map((p) => [p.id, unexposed(contract, p.id, mainOf)]).filter(([, w]) => w) : []);
+  const over = new Map(mainOf ? [...parts.values()].map((p) => [p.id, unpassed(p.id)]).filter(([, w]) => w) : []);
   // (of such an override, only what markup would pass: the part itself, its kind, component, words and props; its
   // styles the sheet reaches, and a name the reading gives it is the reader's)
   const passed = new Set(['', 'kind', 'component', 'content', 'with']);

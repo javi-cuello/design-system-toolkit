@@ -188,9 +188,11 @@ function opening(c, library) {
   }
   if (!opened.size) return { c, opened };
   const open = (o) => Object.fromEntries(Object.entries(o).map(([id, e]) => [id, opened.has(id) && !swappedIn.has(id) && !inHeld.has(id) && e ? { ...e, kind: 'container', foreign: true } : e]));
-  // (and a variant that swaps the held one back, a narrower one laid over it, says it an instance again there, as expand
-  // keeps a field no later variant sets)
-  const backTo = (v, id) => { const s = v.set || {}; return typeof s[`${id}.component`] === 'string' && held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null }); };
+  // (and a variant laid over an opener that swaps the held one back says it an instance again there, as expand keeps a
+  // field no later variant sets; one beside it is left as the design says it)
+  // (laid over: it holds wherever it does with an opener's props, as a combination narrower than that opener)
+  const over = (v, o) => v !== o && Object.entries(o.when || {}).every(([k, x]) => (v.when || {})[k] === x);
+  const backTo = (v, id) => { const s = v.set || {}; return typeof s[`${id}.component`] === 'string' && held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null }) && [...swappedIn.get(id)].some((o) => over(v, o)); };
   const setOpen = (v, w) => {
     const ids = [...swappedIn].filter(([, at]) => at.has(v)).map(([id]) => id), back = [...swappedIn.keys()].filter((id) => backTo(v, id) && !(`${id}.kind` in (v.set || {})));
     if (!ids.length && !back.length) return w;

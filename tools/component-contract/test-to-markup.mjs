@@ -239,6 +239,11 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   const back = { ...note, props: { ...note.props, big: { type: 'boolean', default: false, figma: 'Big' } }, variants: [...note.variants, { when: { tone: 'error', big: true }, set: { 'st.component': 'Tag', 'st.key': null }, combination: true }] };
   const bs = openForeign(back, { Tag: tag, Note: back }).variants[1].set, bx = expand(openForeign(back, { Tag: tag, Note: back }), { tone: 'error', big: true }).st;
   ok('…and a narrower variant that swaps the held one back draws it again there: an instance, not another library\'s', bs['st.kind'] === 'instance' && bs['st.foreign'] === false && bx.kind === 'instance' && bx.component === 'Tag' && !bx.foreign, JSON.stringify(bs));
+  // (second review: only a variant laid over the opener says it back; one beside it, at another value, setting the held
+  // component, is left as the design says it)
+  const beside = { ...back, variants: [...back.variants, { when: { big: true }, set: { 'st.component': 'Tag' } }] };
+  const ss = openForeign(beside, { Tag: tag, Note: beside }).variants[2].set;
+  ok('…a variant beside the opener that sets the held component is left as the design says it', !('st.kind' in ss) && !('st.foreign' in ss), JSON.stringify(ss));
 }
 { // a component the library does not hold, swapped in where no prop swaps it: its look and the limits of its size inline
   const tile = { component: 'Tile', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
@@ -258,7 +263,10 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   const seen = new Set(), node = ((insideOf(b, 'cell', mainOf, { seen, opened }).slot || {}).render || {}).node;
   ok('…one whose layers the design records is drawn open in its place: a frame of its layout, its glyph a box, its component, key and props said',
     [...opened].join() === 'cell/slot' && openForeign(host, hostLib).anatomy['cell/slot'].kind === 'instance' && !kept.size && !!node && node.tag === 'div' && node.attrs['data-component'] === 'Foreign' && node.attrs['data-key'] === 'k9' && node.attrs['data-with'] === '{"Size":"24"}' && /display: flex/.test(node.attrs.style) && /padding: 0\.25rem/.test(node.attrs.style)
-      && node.kids.length === 1 && /background: var\(--c-icon\)/.test(node.kids[0].attrs.style) && seen.has('cell/slot/glyph'), JSON.stringify(node)); }
+      && node.kids.length === 1 && /background: var\(--c-icon\)/.test(node.kids[0].attrs.style) && seen.has('cell/slot/glyph'), JSON.stringify(node));
+  // (second review: its layers are read by their own hooks under the part's, toParity's `added`)
+  const pm = toParity(host, 'host', { naming: ELEMENT, library: hostLib, framework: 'web-components' }).layers, gk = Object.keys(pm).find((k) => /Glyph$/.test(k));
+  ok('…and its layers are mapped, read by their own hooks under the part it stands in', !!gk && typeof pm[gk] === 'string' && /\[data-part="glyph"\]$/.test(pm[gk]), JSON.stringify(pm)); }
 ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(tone === "error"\) \? "Icon\/alert" : "Icon\/info"/.test(toElement(alert, 'alert', { naming: ELEMENT, library: {} })));
 { const two = { ...alert, props: { tone: { type: 'enum', values: ['info', 'warning', 'error'], default: 'info', figma: 'Tone' } }, variants: [{ when: { tone: 'warning' }, set: { 'icon.component': 'Icon/warn' } }, ...alert.variants] };
   ok('two glyphs variants change nest bracketed (PHP 8 refuses an unbracketed nested choice)', /: \(\(tone === "warning"\) \? "Icon\/warn" : "Icon\/info"\)/.test(toElement(two, 'alert', { naming: ELEMENT, library: {} }))); }

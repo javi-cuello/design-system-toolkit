@@ -1613,5 +1613,10 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
   const held = { anatomy: { root: { kind: 'container' }, st: { kind: 'instance', parent: 'root', component: 'Tag' } }, variants: [{ when: { tone: 'error' }, set: { 'st.kind': 'container', 'st.foreign': 'Err', 'st.foreignKey': 'k7' } }] };
   foreignAsInstance(held);
   ok('…and a variant\'s frame opened over a held instance is that variant\'s swap again, no kind set', JSON.stringify(held.variants[0].set) === '{"st.component":"Err","st.key":"k7"}', JSON.stringify(held.variants[0].set));
+  // (review: a narrower variant that reads the held one again, no data-component there, gives no component of its own:
+  // a foreign that is no name (false, null) is dropped, never written as the component)
+  const back = { anatomy: { root: { kind: 'container' } }, variants: [{ when: { tone: 'error', big: true }, set: { 'st.kind': 'instance', 'st.foreign': false, 'st.foreignKey': null, 'st.component': 'Tag' } }, { when: { tone: 'none' }, set: { 'st.foreign': null } }] };
+  foreignAsInstance(back);
+  ok('…a foreign that is no name is dropped: the held component stays, never false or null', JSON.stringify(back.variants[0].set) === '{"st.kind":"instance","st.component":"Tag","st.key":null}' && JSON.stringify(back.variants[1].set) === '{}', JSON.stringify(back.variants.map((v) => v.set)));
 }
 console.log(`${n}/${n} passed`);

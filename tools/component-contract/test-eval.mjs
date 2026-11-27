@@ -815,5 +815,19 @@ ok('--check: only a strict count absent from accepted.json is spared; a `left` o
   ok('…a glyph inside scaled, its point kept (a share writes it), is never unwritten-scale: read with none, a difference',
     open('icon/glyph.constraints', { library: { horizontal: 'scale', vertical: 'scale' }, drawn: null }) === null
       && closed('icon/glyph.constraints', { library: { horizontal: 'scale', vertical: 'scale' }, drawn: null }) === 'inside-foreign');
+  // (second review: another library's component swapped into a held cell's part, where the cell has no prop for it, is
+  // drawn open there (insideOf, as openForeign lists it): its layers are measured, by name or by place (a layer renamed
+  // in the instance, as derive's placedMatch takes it); one that is what the cell draws there keeps its excuse)
+  const tile = { contract: 1, component: 'Tile', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const cell = { contract: 1, component: 'Cell', props: {}, anatomy: { root: { kind: 'container' }, slot: { kind: 'instance', parent: 'root', order: 0, component: 'Tile' } }, variants: [] };
+  const host = (name, component) => ({ contract: 1, component: 'Host', props: {}, variants: [], anatomy: { root: { kind: 'container' }, cell: { kind: 'instance', parent: 'root', component: 'Cell' },
+    [`cell/${name}`]: { kind: 'instance', parent: 'cell', order: 0, component, layout: { direction: 'row' } }, [`cell/${name}/glyph`]: { kind: 'graphic', parent: `cell/${name}`, background: 'C/x' } } });
+  const hmains = (nm) => ({ Cell: cell, Tile: tile })[nm] || null;
+  const gap = (h) => gapOf(h, hmains, undefined, { library: { Cell: cell, Tile: tile, Host: h } });
+  const byName = host('slot', 'Foreign'), byPlace = host('renamed', 'Foreign'), same = host('renamed', 'Tile');
+  ok('a part swapped inside a held one for another library\'s is measured, by name or by place; one the held one draws there keeps its excuse',
+    gap(byName)('cell/slot/glyph', { library: { kind: 'graphic' }, drawn: null }) === null && gap(byName)('cell/slot.layout', { library: { direction: 'row' }, drawn: null }) === null
+      && gap(byPlace)('cell/renamed/glyph', { library: { kind: 'graphic' }, drawn: null }) === null
+      && gap(same)('cell/renamed/glyph', { library: { kind: 'graphic' }, drawn: null }) === 'unexposed-override');
 }
 console.log(`${n} passed`);
