@@ -1212,4 +1212,10 @@ delete globalThis.figma;
   ok('a combination takes the drawing\'s prop of its own spelling, else of its type in any case: a boolean title beside a string Title is the boolean',
     JSON.stringify(inWordsOf(lib, drawn)({ showTitle: false })) === '{"showTitle":false}'
     && JSON.stringify(inWordsOf(lib, { props: { title: drawn.props.title, show: { type: 'boolean', figma: 'TITLE' } } })({ showTitle: false })) === '{"show":false}'); }
+// asked `whens`, each row carries the design's combinations it was found in (eval's gapOf holds it there); unasked, none
+{ const lib = { contract: 1, component: 'Box', props: { size: { type: 'enum', values: ['s', 'l'], default: 's' } }, anatomy: { root: { kind: 'container', width: 10 } }, variants: [{ when: { size: 'l' }, set: { 'root.width': 20 } }] };
+  const drawn = { ...lib, anatomy: { root: { kind: 'container', width: 10 } }, variants: [] };
+  const r = roundTrip(lib, drawn, { whens: true }).rows, plain = roundTrip(lib, drawn).rows;
+  ok('roundTrip, asked whens, says the combinations each row was found in; unasked, says none',
+    r.length === 1 && JSON.stringify(r[0].whens) === '[{"size":"l"}]' && plain.length === 1 && !('whens' in plain[0])); }
 console.log(`${n}/${n} passed`);

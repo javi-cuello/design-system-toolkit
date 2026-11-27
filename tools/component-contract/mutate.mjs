@@ -432,7 +432,7 @@ export function mutateSpec(stored, kind, { rng: r, catalogue: cat }) {
    `held`: the side the reading is held to (the contract; for the second leg the first reading, with the contract's
    invalid combinations), `contract`: the official one, for what is left to code. */
 export function compareContract(held, reading, { mains = null, settings, split = false, ownSheet = true, contract = held, pointerFrom = null } = {}) {
-  const r = roundTrip(held, reading, { mains, layoutUnit: true, ...(pointerFrom && { pointerFrom }) });
+  const r = roundTrip(held, reading, { mains, layoutUnit: true, whens: split, ...(pointerFrom && { pointerFrom }) });
   if (!split) return { rows: r.rows, left: [] };
   const isLeft = leftToCode(contract, mains, settings, { ownSheet });
   return { rows: r.rows.filter((x) => !isLeft(x.at, x)), left: r.rows.filter((x) => isLeft(x.at, x)) };

@@ -404,7 +404,7 @@ export function inWordsOf(library, drawn) {
 // stroke's, an outline's offset or a shadow's width (roundTrip holds such a number a browser read to its two decimals: sameAsRead)
 const PX_FIELD = /(^|\.)(radius|topLeft|topRight|bottomRight|bottomLeft|width|height|minWidth|maxWidth|minHeight|maxHeight|gap|crossGap|offset|top|end|bottom|start|x|y|blur|spread|weight)$/;
 
-export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false, pointerFrom = null } = {}) {
+export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false, pointerFrom = null, whens = false } = {}) {
   const design = library.code?.from !== 'code';
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
@@ -415,8 +415,10 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   // its rest, as the markup draws it, which holds no pointer state; the reading's own value where it is that rest at
   // every combination the row was found in, as diff() holds two values the same, else the one rest there, else none.
   // eval's gapOf excuses the row only where the reading drew it)
-  let byPointer = () => false, restAt = () => [null, false], probe = null;
-  const add = (at, a, b) => { if (probe) { probe.n++; return; } adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0, pointer: true, rests: new Set(), drawnAtRest: true }; r.in++; r.pointer = r.pointer && byPointer(at); if (r.pointer) { const [key, same] = restAt(at, b); r.rests.add(key); r.drawnAtRest &&= same; } rows.set(k, r); };
+  // (and, asked `whens`, the combinations each row was found in, the design's, so eval's gapOf holds a row to what code is
+  // entitled to there, never at some other combination)
+  let byPointer = () => false, restAt = () => [null, false], probe = null, comboNow = null;
+  const add = (at, a, b) => { if (probe) { probe.n++; return; } adds++; if (whens && comboNow) { const k0 = JSON.stringify([at, a, b]), r0 = rows.get(k0); if (r0) { if (r0.whens.at(-1) !== comboNow) r0.whens.push(comboNow); } else rows.set(k0, { at, library: a ?? null, drawn: b ?? null, in: 0, pointer: true, rests: new Set(), drawnAtRest: true, whens: [comboNow] }); } const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0, pointer: true, rests: new Set(), drawnAtRest: true }; r.in++; r.pointer = r.pointer && byPointer(at); if (r.pointer) { const [key, same] = restAt(at, b); r.rests.add(key); r.drawnAtRest &&= same; } rows.set(k, r); };
   // (whether diff() holds two values the same at a place: it runs adding nothing)
   const sameAt = (a, b, at) => { const was = probe; probe = { n: 0 }; try { diff(a, b, at); return probe.n === 0; } finally { probe = was; } };
   const diff = (a, b, at) => {
@@ -496,6 +498,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   const defaults = variantDefaults(library);
   const applies = (w, c) => Object.entries(w || {}).every(([k, v]) => String({ ...defaults, ...c }[k]) === String(v));
   for (const [i, c] of combos.entries()) {
+    comboNow = c;
     const theirs = inTheirs(c);
     // (every variant that sets the field there a pointer state's: where another that applies sets it too, a focus and a
     // selected both saying Search, the markup holds the words through that one)
@@ -598,7 +601,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     diff(...sidesOf(A, listedWholeAt[i]), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
-  byPointer = () => false; restAt = () => [null, false];
+  byPointer = () => false; restAt = () => [null, false]; comboNow = null;
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));
   if (library.component !== drawn.component) add('name', library.component, drawn.component);
   return { combinations: combos.length, ...(invalid && { invalid }), ...(cut && { cut }), rows: [...rows.values()].map(({ pointer, rests, drawnAtRest, ...r }) => (pointer && layoutUnit ? { ...r, pointer, ...(drawnAtRest ? { rest: r.drawn } : rests.size === 1 && { rest: JSON.parse([...rests][0]) }) } : r)) };

@@ -57,7 +57,7 @@ import { contracts, hashOf } from './official.mjs';
 import { roundTrip, drawSettings, restKey } from './to-figma.mjs';
 import { parseColour } from '../parity/values.mjs';
 import { libraryOf } from '../parity/project.mjs';
-import { partsOf, unexposed, pointerWords, isDrawing, swapKeysOf } from './to-markup.mjs';
+import { partsOf, unexposed, pointerWords, swapKeysOf } from './to-markup.mjs';
 import { expand, variantDefaults } from './layers.mjs';
 import { sharesNeverWritten, tokenNames } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
@@ -187,7 +187,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // declares, which the markup does not forward yet: exposed-unforwarded, below)
   const SWAPPED = /^(key|modes|background|radius|border|shadow|layout|overflow|smoothing)(\.|$)/;
   const swappedOwn = (el, field, row) => over.get(el) === 'part' && (all[el] || {}).kind === 'instance' && SWAPPED.test(field) && swappedIn(el, field, row);
-  const swappedIn = (el, field, row) => { const e = all[el]; if (!mainOf(e.component, e.key)) return true; const { roots } = ownsOf(el); return asOwn(el, field, row, Object.assign([], { roots })); };
+  const swappedIn = (el, field, row) => { const e = all[el]; if (!mainOf(e.component, e.key)) return !/^layout(\.|$)/.test(field); return asOwn(el, field, row, { roots: true }); };
   // (a whole part the component does not draw takes its insides with it; a field it draws otherwise, only that field)
   // a part of a placed component's own that the design keeps only as the way down to such an override (an item's
   // content, holding the avatar it has no prop for): its whole-part row goes with the override, its fields stay
@@ -207,33 +207,43 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     if (!rel) return A.root;
     if (A[rel]) return A[rel];
     const s = rel.split('/');
-    for (let i = s.length - 1; i >= 1; i--) { const x = A[s.slice(0, i).join('/')]; if (x && x.kind === 'instance') { const n = mainOf(x.component, x.key); return n ? down(n, x.with, s.slice(i).join('/')) : undefined; } }
+    for (let i = s.length - 1; i >= 1; i--) { const x = A[s.slice(0, i).join('/')]; if (x && x.kind === 'instance') { const n = mainOf(x.component, x.key); return n ? down(n, x.with, s.slice(i).join('/')) : UNKNOWN; } }
     return undefined;
   };
+  // (inside an instance the library holds no main for, what is there is not known: no candidate, never none)
+  const UNKNOWN = Symbol('unknown');
+  // (at the combinations the row was found in, as roundTrip's `whens` gives them, each a real one: the placed main's own
+  // there is the one at that combination's props, a list's items Small where the list is, never at another; a row with
+  // no `whens` is held at the default combination alone)
+  const OWN = new Set(req('./derive.cjs').OWN);
+  const anatomyAt = (() => { const seen = new Map(); return (w) => { const k = JSON.stringify(w); if (!seen.has(k)) seen.set(k, expand(contract, { ...variantDefaults(contract), ...w })); return seen.get(k); }; })();
+  // (a combination in another side's words, the second leg's reading: each prop by its key or Figma name, its value by
+  // its word in any case)
+  const inOurs = (w) => Object.fromEntries(Object.entries(w || {}).flatMap(([k, v]) => {
+    const [mk, q] = Object.entries(contract.props || {}).find(([x, y]) => x === k || low(y.figma || x) === low(k)) || [];
+    if (!q) return [];
+    if (q.type !== 'enum') return [[mk, v]];
+    const i = (q.figmaValues || []).map(low).indexOf(low(v)), x = i >= 0 ? q.values[i] : q.values.find((y) => low(y) === low(v));
+    return x === undefined ? [] : [[mk, x]];
+  }));
+  const rowAnatomies = (row) => (row && Array.isArray(row.whens) && row.whens.length ? row.whens.map((w) => anatomyAt(inOurs(w))) : [anatomyAt({})]);
   const ownsSeen = new Map();
-  const ownsOf = (el) => (ownsSeen.has(el) ? ownsSeen.get(el) : ownsSeen.set(el, ownsAt(el)).get(el));
-  // (at every combination the design draws, as rows merge them under one place: the placed main's own there is the one
-  // at that combination's props, a list's items Small where the list is)
-  const ownsAt = (el) => {
-    const out = [], roots = [], s = el.split('/'), seen = new Map([[out, new Set()], [roots, new Set()]]);
-    const push = (to, x) => { const k = JSON.stringify(x ?? null); if (!seen.get(to).has(k)) { seen.get(to).add(k); to.push(x); } };
-    const done = new Set();
-    for (const A of [all, ...(expandedAll() || [])]) {
-      const hosts = s.map((_, i) => s.slice(0, i).join('/')).filter((h) => h && (A[h] || {}).kind === 'instance');
-      const key = JSON.stringify([A[el], ...hosts.map((h) => [h, A[h]])]);
-      if (done.has(key)) continue;
-      done.add(key);
-      const e = A[el] || {};
-      // (its own root says its look alone: which component it is, its props and words are the holder's to place)
-      const m = e.kind === 'instance' && mainOf(e.component, e.key);
-      if (m) { const r = atProps(m, e.with).root || {}, g = glyphColour(m, e.with); push(roots, r.background == null && g != null ? { ...r, background: g } : r); }
-      const host = hosts.find((h) => mainOf(A[h].component, A[h].key));
-      if (host) { try { const hm = mainOf(A[host].component, A[host].key), { M } = placedAs(A, host, hm, mainOf), rel = el.slice(host.length + 1); push(out, rel in M ? M[rel] : swappedAt(M, rel, (A[el] || all[el] || {}).component) || down(hm, A[host].with, rel)); } catch { /* a main placedAs cannot read: no candidate */ } }
-      const near = hosts[hosts.length - 1], nm = near && mainOf(A[near].component, A[near].key);
-      if (nm && near !== host) push(out, down(nm, A[near].with, el.slice(near.length + 1)));
-    }
-    out.roots = roots;
-    return out;
+  const ownsIn = (A, el) => {
+    const s = el.split('/'), hosts = s.map((_, i) => s.slice(0, i).join('/')).filter((h) => h && (A[h] || {}).kind === 'instance');
+    const key = JSON.stringify([el, A[el], ...hosts.map((h) => [h, A[h]])]);
+    if (ownsSeen.has(key)) return ownsSeen.get(key);
+    const out = [], e = A[el] || {};
+    // (its own root says its look alone: which component it is, its props and words are the holder's to place)
+    const m = e.kind === 'instance' && mainOf(e.component, e.key);
+    if (m) { const r = atProps(m, e.with).root || {}, g = glyphColour(m, e.with); out.root = r.background == null && g != null ? { ...r, background: g } : r; }
+    const host = hosts.find((h) => mainOf(A[h].component, A[h].key));
+    if (host) { try { const hm = mainOf(A[host].component, A[host].key), { M } = placedAs(A, host, hm, mainOf), rel = el.slice(host.length + 1); out.push(rel in M ? M[rel] : swappedAt(M, rel, (A[el] || all[el] || {}).component) || down(hm, A[host].with, rel)); } catch { /* a main placedAs cannot read: no candidate */ } }
+    const near = hosts[hosts.length - 1], nm = near && mainOf(A[near].component, A[near].key);
+    if (nm && near !== host) out.push(down(nm, A[near].with, el.slice(near.length + 1)));
+    const known = out.filter((x) => x !== UNKNOWN);
+    if (out.root) known.root = out.root;
+    ownsSeen.set(key, known);
+    return known;
   };
   // (a part a swap the instance's prop passes put there, kept under the swapped-out part's name where the library holds
   // no main for the target (placedAs): the one beside it naming the same component)
@@ -253,22 +263,27 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   };
   const props = (el, w) => restKey(w && typeof w === 'object' ? Object.fromEntries(Object.entries(w).filter(([k, v]) => !unstated(el, k, v))) : w);
   const colour = (v) => typeof v === 'string' && /^(#|rgba?\()/i.test(v.trim()) && JSON.stringify(parseColour(v));
-  const asOwn = (el, field, row, found = ownsOf(el)) => {
-    const owns = (found.roots || []).length && !/^(with|content|component|kind)(\.|$)/.test(field) && field !== '' ? [...found.roots, ...found] : found;
-    if (!row || !owns.length) return false;
+  // (at every combination the row was found in, the drawn value one the main draws there; `roots` alone, the part's own
+  // component's: swapped-own's)
+  const asOwn = (el, field, row, { roots = false } = {}) => !!row && rowAnatomies(row).every((A) => {
+    const found = ownsIn(A, el);
+    const useRoot = found.root && field !== '' && !/^(with|content|component|kind)(\.|$)/.test(field);
+    const owns = roots ? (found.root ? [found.root] : []) : useRoot ? [found.root, ...found] : found;
+    if (!owns.length) return false;
     const d = row.drawn ?? null;
     // (a whole part: there where the main draws one, gone where it draws none)
     if (field === '') return owns.some((x) => (x == null) === (d == null));
+    // (none read where the reader clears what equals the component's own: a field of derive's OWN on an instance of a held
+    // main, which ownStyling drops on every reading; anywhere else none read is a value, held as any other)
+    if (d == null && found.root && OWN.has(field) && (roots || useRoot)) return true;
     return owns.some((x) => {
       const v = field.split('.').reduce((y, q) => (y == null ? undefined : y[q]), x) ?? null;
       if (field === 'with') return props(el, v) === props(el, d);
+      // (a prop at its component's default is unstated on both sides, roundTrip's atDefault)
       if (field.startsWith('with.')) return restKey(v) === restKey(d) || (d == null && unstated(el, field.slice(5), v));
-      // (a field of its own a reading leaves unsaid is its component's, as both sides leave out what equals it: derive's
-      // ownStyling, from-code's colourKept; never words, a kind or a component, which a reading always says)
-      if (d == null && !field.includes('.') && !['content', 'kind', 'component'].includes(field)) return true;
       return restKey(v) === restKey(d) || (!!colour(v) && colour(v) === colour(d));
     });
-  };
+  });
   // a placed icon's colour where the design leaves it its own (a combination that takes the glyph's override away): the
   // icon set's own colour, which no main in the library holds; and one a variant swaps in that the library does not hold,
   // where the design expanded there gives it no colour: the swapped-in icon's own, which to-markup can only mark
@@ -276,24 +291,26 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // entitled to the colour the instance has at rest, no other: what it draws there otherwise is a difference. And only
   // where every combination that leaves the instance no colour is one of these (the variants in force there), as rows
   // merge every combination under one place: one found where neither is in force stays a difference
-  const ownColour = (el, field, row) => field === 'background' && row && row.library == null && mainOf && (all[el] || {}).kind === 'instance' && leftOwn(el)
+  const ownColour = (el, field, row) => field === 'background' && row && row.library == null && mainOf && (all[el] || {}).kind === 'instance' && leftOwn(el, row)
     && ((r) => r != null && (restKey(r) === restKey(row.drawn ?? null) || (!!colour(r) && colour(r) === colour(row.drawn))))(colourIn(expand(contract, variantDefaults(contract)), el));
   // (an instance's colour at a combination: its own, else its glyph's, as the rows fold it; undefined where it is not drawn)
   const colourIn = (A, el) => { const x = A[el]; if (!x) return undefined; if (x.background != null) return x.background; const g = Object.entries(A).find(([k, y]) => k.startsWith(`${el}/`) && y && y.kind === 'graphic' && y.background != null); return g ? g[1].background : null; };
+  // (every combination the design draws, or past 4096 a fixed sample of them, each a real one: never a merge of variants)
   const combosOf = (() => { let seen; return () => {
     if (seen !== undefined) return seen;
-    let cs = [{}];
-    for (const [k, q] of Object.entries(contract.props || {})) if (q.type === 'enum' || q.type === 'boolean') { cs = cs.flatMap((c) => (q.type === 'enum' ? q.values : [true, false]).map((v) => ({ ...c, [k]: v }))); if (cs.length > 4096) return (seen = null); }
+    const axes = Object.entries(contract.props || {}).filter(([, q]) => q.type === 'enum' || q.type === 'boolean').map(([k, q]) => [k, q.type === 'enum' ? q.values : [true, false]]);
+    const total = axes.reduce((n, [, vs]) => n * vs.length, 1), step = total > 4096 ? Math.floor(total / 4096) : 1;
+    const cs = [];
+    for (let i = 0; i < total && cs.length < 4096; i += step) { let r = i; const c = {}; for (const [k, vs] of axes) { c[k] = vs[r % vs.length]; r = Math.floor(r / vs.length); } cs.push(c); }
     return (seen = cs.filter((c) => !(contract.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v)))));
   }; })();
-  const expandedAll = (() => { let seen; return () => (seen !== undefined ? seen : (seen = combosOf() && combosOf().map((c) => expand(contract, { ...variantDefaults(contract), ...c })))); })();
-  const leftOwn = (el) => {
-    const cs = combosOf(), dflt = variantDefaults(contract);
-    if (!cs) return false;
+  // (at the row's own combinations where roundTrip gives them, else at every combination, combosOf)
+  const leftOwn = (el, row) => {
+    const dflt = variantDefaults(contract), cs = row && Array.isArray(row.whens) && row.whens.length ? row.whens.map(inOurs) : combosOf();
     const held = !!mainOf(all[el].component, all[el].key);
     let any = false;
-    for (const [i, c] of cs.entries()) {
-      const w = { ...dflt, ...c }, A = expandedAll()[i];
+    for (const c of cs) {
+      const w = { ...dflt, ...c }, A = anatomyAt(c);
       if (colourIn(A, el) !== null) continue;
       const removed = !held && (contract.variants || []).some((v) => Object.entries(v.when || {}).every(([k, x]) => String(w[k]) === String(x)) && (v.remove || []).some((r) => r.startsWith(`${el}/`) && all[r] && all[r].background != null));
       const swapped = typeof A[el].component === 'string' && A[el].component !== all[el].component && !mainOf(A[el].component, A[el].key);
@@ -311,19 +328,11 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // component's own sheet drifting, a difference)
   // (and only where the reading drew the placed component's own there, asOwn: a look code drew of its own is a difference;
   // one swapped in where no prop swaps it is swapped-own's, or exposed-unforwarded's)
-  const ownLook = (el, field, row) => !!mainOf && !!row && row.library != null && LOOK.has(field.split('.')[0]) && (all[el] || {}).kind === 'instance' && !!mainOf(all[el].component, all[el].key) && !foreign(el) && !/^(exposed-)?part$/.test(String(over.get(el))) && asOwn(el, field, row);
+  const ownLook = (el, field, row) => !!mainOf && !!row && row.library != null && LOOK.has(field.split('.')[0]) && (all[el] || {}).kind === 'instance' && !!mainOf(all[el].component, all[el].key) && !/^(exposed-)?part$/.test(String(over.get(el))) && asOwn(el, field, row);
   // a component the library does not hold (an icon set's, or one the snapshot never read): to-markup can only mark where
   // it goes (data-icon), so its insides, the props it is given and its own layout and clipping are its own component's,
-  // which code draws; its size and place in this one are this one's, and stay measured
-  // (and one the library holds that is a drawing alone, swapped by a prop, this component's or that of the placed
-  // component it sits in: to-markup draws it by name, as an icon's mark, so its own layout is its drawing's too)
-  const swapsOf = (x) => new Set(Object.values((x && x.props) || {}).flatMap((p) => p.swaps || []));
-  const swappedHere = (el) => {
-    if (swapsOf(contract).has(el)) return true;
-    for (let up = (all[el] || {}).parent; up && all[up]; up = all[up].parent) if (all[up].kind === 'instance') { const hm = mainOf(all[up].component, all[up].key); return !!hm && swapsOf(hm).has(el.slice(up.length + 1)); }
-    return false;
-  };
-  const foreign = (el) => { const e = all[el] || {}; if (!mainOf || e.kind !== 'instance') return false; const m = mainOf(e.component, e.key); return !m || (isDrawing(m) && swappedHere(el)); };
+  // which code draws; its size and place in this one are this one's, and stay measured. (A drawing the library holds,
+  // swapped by a prop, has a main: its look is held to that, placed-own-look's)
   // (its insides only where the library holds no main for it: a drawing it holds, swapped by a prop, is drawn by name
   // from that main, so what is inside it is compared)
   const noMain = (el) => { const e = all[el] || {}; return !!mainOf && e.kind === 'instance' && !mainOf(e.component, e.key); };
@@ -339,7 +348,18 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     return [...swapKeys(el)].some((k) => k in row.library && JSON.stringify(row.library[k]) !== JSON.stringify(drawn[k]));
   };
   // (never its size or place inside this one, which the sheet writes, however the layout holds them)
-  const foreignOwn = (el, field, row) => foreign(el) && field !== 'with.Size' && /^(with|layout|overflow)(\.|$)/.test(field) && !/^layout\.(width|height|position)(\.|$)/.test(field) && !swapRow(el, field, row);
+  // (and only where the reading drew that component's own as the snapshot knows it, the instance's own fields at the
+  // default combination; a prop none, as the markup passes none; where the snapshot does not draw it there, not known)
+  const foreignOwn = (el, field, row) => noMain(el) && field !== 'with.Size' && /^(with|layout|overflow)(\.|$)/.test(field) && !/^layout\.(width|height|position)(\.|$)/.test(field) && !swapRow(el, field, row) && foreignAsOwn(el, field, row);
+  const foreignAsOwn = (el, field, row) => {
+    const x = anatomyAt({})[el], d = (row || {}).drawn ?? null;
+    if (!x) return true;
+    if (/^with(\.|$)/.test(field) && d == null) return true;
+    const v = field.split('.').reduce((y, q) => (y == null ? undefined : y[q]), x) ?? null;
+    // (of its props, those the reading has: each the snapshot's, the rest none, as the markup passes none)
+    if (field === 'with' && d && typeof d === 'object') return Object.entries(d).every(([k, w]) => restKey(w) === restKey((v || {})[k] ?? null));
+    return restKey(v) === restKey(d) || (!!colour(v) && colour(v) === colour(d));
+  };
   // a scale constraint the sheet never writes (to-code's sharesNeverWritten: css.mjs shareable fails wherever drawn()
   // places the part): where it is pinned instead is code's to say. Only where the rows are held to the contract the
   // sheet was written from (`ownSheet`): the second leg's are held to the first reading, in its words
@@ -352,8 +372,8 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // and an effect with no style (the snapshot records only that there is one, `literal`, never its values: css.mjs says
   // it unread), which no sheet draws, so the reading finds none: where the reading draws one, it stays a difference
   // (each only where the reading drew what the sheet writes instead: the part pinned at its size from the start, read
-  // `min`; a path's corners as none, null or 0; anything else drawn there is code's, a difference)
-  const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) && row.drawn === 'min' ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) && (row.drawn == null || row.drawn === 0) ? 'path-radius'
+  // `min`, or no constraints at all, as from-code drops them where both axes are min; a path's corners as none, null or 0; anything else drawn there is code's, a difference)
+  const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) && (row.drawn == null || row.drawn === 'min') ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) && (row.drawn == null || row.drawn === 0) ? 'path-radius'
     : row.library === 'literal' && row.drawn == null && /\.shadow$/.test(at) ? 'unrecorded-effect'
     : typeof row.library === 'string' && typeof row.drawn === 'string' && row.library !== row.drawn && /\.(background|color|radius|border|shadow|type|typography|width|height|min\w*|max\w*|opacity|layout)(\.|$)/.test(at) && !/^(#|rgba?\(|literal$|mixed$|scale$)/.test(row.library) && tokenNames.token(row.library) === tokenNames.token(row.drawn) ? 'one-css-name' : null);
   // a placed instance's props only a pointer state gives: one of its own (a definition drawn hovered, its State Hover), or
@@ -485,14 +505,14 @@ export function measure(where, only = [], now = {}) {
     else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, ...tagsOf(code), combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
     else {
       // held to the first reading as it stands: one taken again since the second trip went round is stale
       // only the combinations the library draws (a reading carries no invalid list of its own)
-      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract }), t = (taken.second || {})[folder];
+      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract, whens: true }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
       legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false, read: again.asFigma })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
