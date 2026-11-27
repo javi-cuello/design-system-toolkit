@@ -711,7 +711,15 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   const c = { contract: 1, component: 'Toggle', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item' }, 'item/sw': { kind: 'instance', parent: 'item', component: 'Checkbox', key: 'K' }, 'item/sw/box': { kind: 'container', parent: 'item/sw', width: 16 } }, variants: [] };
   const g = (e) => gapOf(c, (n) => (n === 'Item' ? main(e) : null));
   ok('a swap into an exposed instance excuses its key, modes and insides as a swap into an unexposed one does',
-    ['item/sw.key', 'item/sw.modes', 'item/sw/box.width'].every((at) => !!g(true)(at) === !!g(false)(at) && !!g(true)(at)), ['item/sw.key', 'item/sw.modes', 'item/sw/box.width'].map((at) => [g(true)(at), g(false)(at)])); }
+    ['item/sw.key', 'item/sw.modes', 'item/sw/box.width'].every((at) => !!g(true)(at) === !!g(false)(at) && !!g(true)(at)), ['item/sw.key', 'item/sw.modes', 'item/sw/box.width'].map((at) => [g(true)(at), g(false)(at)]));
+  // (review of 2026-11-27: the swap into an exposed instance is the toolkit's to forward, exposed-unforwarded, never
+  // swapped-own; and a swapped-in component the library holds is left to code only where the reading drew its own look)
+  const box = { component: 'Checkbox', props: {}, anatomy: { root: { kind: 'container', radius: 2 } }, variants: [] };
+  const h = (e) => gapOf(c, (n) => ({ Item: main(e), Checkbox: box })[n] || null);
+  ok('a swap into an exposed instance is exposed-unforwarded, into an unexposed one swapped-own; each only where the reading drew the swapped-in component\'s own look',
+    g(true)('item/sw.modes') === 'exposed-unforwarded' && g(false)('item/sw.modes') === 'swapped-own'
+    && h(true)('item/sw.radius', { library: 8, drawn: 2 }) === 'exposed-unforwarded' && h(false)('item/sw.radius', { library: 8, drawn: 2 }) === 'swapped-own' && h(false)('item/sw.radius', { library: 8, drawn: null }) === 'swapped-own'
+    && h(true)('item/sw.radius', { library: 8, drawn: 5 }) === null && h(false)('item/sw.radius', { library: 8, drawn: 5 }) === null && h(false)('item/sw.key', { library: 'K', drawn: 'J' }) === null); }
 ok('every gap id is met by a fixture', Object.keys(GAPS).every((g) => seenGaps.has(g)), [...Object.keys(GAPS)].filter((g) => !seenGaps.has(g)));
 
 ok('--check: only a strict count absent from accepted.json is spared; a `left` or `predicted` count absent still fails',

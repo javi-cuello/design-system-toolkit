@@ -182,7 +182,12 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const passed = new Set(['', 'kind', 'component', 'content', 'with']);
   // (a placed instance the markup cannot place at all, a swap no prop passes: its key, modes and look are the swapped-in
   // component's own, gone with it; its size and place in this one stay, as the sheet reaches them)
-  const swappedOwn = (el, field) => /^(exposed-)?part$/.test(String(over.get(el))) && (all[el] || {}).kind === 'instance' && /^(key|modes|background|radius|border|shadow|layout|overflow|smoothing)(\.|$)/.test(field);
+  // (only where the reading drew the swapped-in component's own there, its main's root; one the library does not hold has
+  // no own the markup could say, as a foreign component's. A swap into an exposed instance is a prop the placed component
+  // declares, which the markup does not forward yet: exposed-unforwarded, below)
+  const SWAPPED = /^(key|modes|background|radius|border|shadow|layout|overflow|smoothing)(\.|$)/;
+  const swappedOwn = (el, field, row) => over.get(el) === 'part' && (all[el] || {}).kind === 'instance' && SWAPPED.test(field) && swappedIn(el, field, row);
+  const swappedIn = (el, field, row) => { const e = all[el]; if (!mainOf(e.component, e.key)) return true; const { root } = ownsOf(el); return asOwn(el, field, row, Object.assign([], { root })); };
   // (a whole part the component does not draw takes its insides with it; a field it draws otherwise, only that field)
   // a part of a placed component's own that the design keeps only as the way down to such an override (an item's
   // content, holding the avatar it has no prop for): its whole-part row goes with the override, its fields stay
@@ -232,7 +237,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const props = (el, w) => restKey(w && typeof w === 'object' ? Object.fromEntries(Object.entries(w).filter(([k, v]) => !unstated(el, k, v))) : w);
   const colour = (v) => typeof v === 'string' && /^(#|rgba?\()/i.test(v.trim()) && JSON.stringify(parseColour(v));
   const asOwn = (el, field, row, found = ownsOf(el)) => {
-    const owns = found.root && !/^(with|content|component|kind|key)(\.|$)/.test(field) && field !== '' ? [found.root, ...found] : found;
+    const owns = found.root && !/^(with|content|component|kind)(\.|$)/.test(field) && field !== '' ? [found.root, ...found] : found;
     if (!row || !owns.length) return false;
     const d = row.drawn ?? null;
     // (a whole part: there where the main draws one, gone where it draws none)
@@ -260,8 +265,9 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const LOOK = new Set(['layout', 'radius', 'border', 'shadow', 'overflow', 'smoothing']);
   // (only where the design states one: a look the reading shows and the design leaves to the component is the
   // component's own sheet drifting, a difference)
-  // (and only where the reading drew the placed component's own there, asOwn: a look code drew of its own is a difference)
-  const ownLook = (el, field, row) => !!mainOf && !!row && row.library != null && LOOK.has(field.split('.')[0]) && (all[el] || {}).kind === 'instance' && !!mainOf(all[el].component, all[el].key) && !foreign(el) && asOwn(el, field, row);
+  // (and only where the reading drew the placed component's own there, asOwn: a look code drew of its own is a difference;
+  // one swapped in where no prop swaps it is swapped-own's, or exposed-unforwarded's)
+  const ownLook = (el, field, row) => !!mainOf && !!row && row.library != null && LOOK.has(field.split('.')[0]) && (all[el] || {}).kind === 'instance' && !!mainOf(all[el].component, all[el].key) && !foreign(el) && !/^(exposed-)?part$/.test(String(over.get(el))) && asOwn(el, field, row);
   // a component the library does not hold (an icon set's, or one the snapshot never read): to-markup can only mark where
   // it goes (data-icon), so its insides, the props it is given and its own layout and clipping are its own component's,
   // which code draws; its size and place in this one are this one's, and stay measured
@@ -343,16 +349,17 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   };
   return (at, row) => {
     const el = at.split('.')[0], field = at.slice(el.length + 1);
-    const id = ids.find((x) => (el === x || el.startsWith(`${x}/`)) && !(over.has(x) && !((el !== x && /^(exposed-)?part$/.test(String(over.get(x)))) || passed.has(field) || (field.startsWith('with.') && el === x))));
+    const id = ids.find((x) => (el === x || el.startsWith(`${x}/`)) && !(over.has(x) && !((el !== x && /^(exposed-)?part$/.test(String(over.get(x)))) || passed.has(field) || (field.startsWith('with.') && el === x) || (el === x && over.get(x) === 'exposed-part' && SWAPPED.test(field)))));
     // (modes, the markup's attributes, that only pointer states' variants set at every combination the row was found in:
     // roundTrip's `pointer`)
     // (a part only a pointer state draws inside a placed component is left to code only where the reading lacks it: one
     // it reads, its placed component forced to that state too (from-code forwardedAt), differs as any part does, and so
     // does a field of it the reading leaves out)
     return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) ? 'inside-foreign'
-      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' ? ((row && row.drawn != null) || (readIds && readIds.has(el)) ? null : reasons.get(id))
+      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field, row) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' ? ((row && row.drawn != null) || (readIds && readIds.has(el)) ? null : reasons.get(id))
         // (an override the markup cannot pass is left to code only where the reading drew the placed main's own there)
-        : asOwn(el, field, row) ? reasons.get(id) : null) : null);
+        // (a swap into an exposed instance, its key, modes and look: held to the swapped-in component's own, as swapped-own's)
+        : (over.get(id) === 'exposed-part' && el === id && SWAPPED.test(field) ? swappedIn(el, field, row) : asOwn(el, field, row)) ? reasons.get(id) : null) : null);
   };
 }
 /* What the toolkit's own markup leaves to code (gapOf), as yes or no. */
