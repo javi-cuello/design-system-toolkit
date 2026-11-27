@@ -1113,6 +1113,11 @@ else {
   const L = { Slot: { ...slot, folder: 'slot' }, Grid: { ...grid, folder: 'grid' }, Pick: { ...pick, folder: 'pick' }, Date: { ...date, folder: 'date' }, Rate: { ...rate, folder: 'rate' } };
   const po = toElement(pick, 'pick', { naming: ELEMENT, library: L }), ro = toElement(rate, 'rate', { naming: ELEMENT, library: L });
   ok('a placeholder swap is decided per holder: a drawing passed by name is drawn as its mark, never the placeholder',
-    /slotOptions: "Star"/.test(ro) && /"data-icon": typeof slotOptions === "string" \? slotOptions : "Slot"/.test(po) && /typeof slotOptions !== "string"\) && slotOptions/.test(po), po + ro); }
+    /slotOptions: "Star"/.test(ro) && /"data-icon": typeof slotOptions === "string" \? slotOptions : "Slot"/.test(po) && /typeof slotOptions !== "string"\) && slotOptions/.test(po), po + ro);
+  // and its story marks it drawn at its placeholder by default (from-code's selfSlotControl `placed`), so the reading
+  // takes it back as the design's swap, never as a slot the design does not have
+  const sp = propsOf(pick, L).find((x) => x.name === 'slotOptions');
+  ok('a placeholder swap that takes content is marked as drawn at its placeholder by default, so it reads back as the design\'s swap',
+    sp.type === 'node' && sp.swapped && JSON.stringify(sp.placed) === '{"parts":["menu/slot"],"component":"Slot"}', JSON.stringify(sp)); }
 
 console.log(`${n} passed`);

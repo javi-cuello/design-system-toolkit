@@ -387,7 +387,9 @@ function swapOf(c, p, library, lang, key) {
   // drawing alone (isDrawing), where a component is the caller's to place; but one a holder in the library fills with a
   // component of the library's (a select's options slot, a placeholder by default, holding a calendar: swappedIn) is
   // content the caller passes, drawn as the slot it is
-  if (e && e.kind === 'instance' && (!placedOf(library, e) || isDrawing(placedOf(library, e)))) return swappedIn(library, c, p).length ? { type: 'node', swapped: true } : { type: 'icon', default: e.component || '' };
+  // (`placed`: drawn at its placeholder where nothing is passed, as a component's swap is drawn at its instance: the
+  // story says so, and a reading takes it back as the design's swap, not as a slot)
+  if (e && e.kind === 'instance' && (!placedOf(library, e) || isDrawing(placedOf(library, e)))) return swappedIn(library, c, p).length ? { type: 'node', swapped: true, placed: { parts: (p.swaps || []).filter((x) => (at(c, x) || {}).kind === 'instance'), component: e.component } } : { type: 'icon', default: e.component || '' };
   // a component of the library's, swapped: content the caller passes, the design's own instance where it passes none
   // (`placed`: each part it swaps drawn so, and the first's component, which a reading of the code takes as its default)
   if (e && e.kind === 'instance' && placedOf(library, e)) {
