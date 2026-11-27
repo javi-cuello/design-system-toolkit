@@ -287,7 +287,8 @@ Periods move as [calendars: *Period navigation*](calendars.md#period-navigation)
 **Build**
 - [weak] The three views read one store of entries (Everhour's "same data but in a different interpretation", above).
 - [required] Each cell is a native input (code-standard rule 8).
-- [weak] Tab moves across the week (beyond code-standard rule 8): Toggl: "you can use the Tab key to move quickly across your week within the same project" ([Toggl timesheet view](https://support.toggl.com/en-us/article/adding-time-entries-in-timesheet-view-5qe6a6/)).
+
+Tab moves between the grid's inputs, as [data-grid: *A table of inputs, edited in place*](data-grid.md#a-table-of-inputs-edited-in-place) sets out.
 
 **Check**
 - *Script* could: assert the week grid is a `table` with `th` for days and rows, and every cell input has an accessible name with its row and day.

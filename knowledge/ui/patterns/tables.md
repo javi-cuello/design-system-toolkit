@@ -29,7 +29,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - Settings shown as "Name: value" pairs → a description list.
 - An audit table of forty components with nine columns of red ✕ marks, almost every cell crossed → the reader learns "nearly everything is missing nearly everything", which is one sentence. Lead with that sentence and the counts per attribute; list the few components that are complete or nearly so; keep the full table one click away, cut down as *What earns a column* and *Many boolean columns* describe.
 - A three-row comparison of plans with fifteen attributes → transpose: plans as columns, attributes as rows.
-- A table of thirty editable price cells → a data grid ([data-grid](data-grid.md)).
+- A table of thirty editable price cells → a data grid, or a table of inputs ([data-grid: *A table of inputs, edited in place*](data-grid.md#a-table-of-inputs-edited-in-place)).
 
 **Accessibility**
 - [required] 1.3.1 Info and Relationships: a table of data is a `table` with header cells, so the relationship between a cell and its headers is programmatic. A visual table built from `div`s fails unless every role is supplied.
