@@ -23,7 +23,7 @@ A radio button picks exactly one option from a small set shown in full, saved wi
 - [moderate] Don't use for a view or filter that applies at once; that is a segmented control (below).
 
 **How**
-- [moderate] **Stacked vertically**, one per line. Inline only for two short options such as Yes and No, and they stack again on a small screen ([GOV.UK radios](https://design-system.service.gov.uk/components/radios/)).
+- [moderate] **Stacked vertically**, one per line. Inline only for two short options such as Yes and No, and they stack again on a small screen ([GOV.UK radios](https://design-system.service.gov.uk/components/radios/)); Fluent prefers vertical and allows horizontal: "Horizontal alignment … work well in crowded layouts to save space" ([Fluent radio group](https://fluent2.microsoft.design/components/web/react/core/radiogroup/usage)).
 - [strong] **Grouped** in a `fieldset` with a `legend` that asks the question; the same heading rule as checkboxes.
 - [contested] **Selection at start.** In a question, preselect nothing. Once a radio is chosen the person cannot return to "no answer", so offer "I do not know" or "None of the above" where they are valid ([GOV.UK](https://design-system.service.gov.uk/components/radios/)). In a settings form, the current value is shown checked; that is the state, not a preselection.
 - [weak] **Order** alphabetical by default, or by frequency; an "or" divider before an option that stands apart ([GOV.UK](https://design-system.service.gov.uk/components/radios/)).

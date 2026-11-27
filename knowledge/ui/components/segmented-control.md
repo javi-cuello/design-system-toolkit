@@ -17,7 +17,7 @@ A segmented control is a row of joined buttons that picks one of two to four sho
 
 **Use when / don't use**
 - [required] Use for a facet of two to four short choices that apply at once: a view, a filter, a sort (design-standard rule 4).
-- [weak] Don't use inside a form that saves with a button; radios carry that promise ([Primer segmented control](https://primer.style/product/components/segmented-control/guidelines/): "similar to radio inputs but without needing form submission").
+- [strong] Don't use inside a form that saves with a button; radios carry that promise. Primer: a segmented control applies a selection at once, "except radio group selections need to be explicitly saved via form submission" ([Primer segmented control](https://github.com/primer/design/blob/main/content/components/segmented-control.mdx)); Carbon's content switcher "should not be used as a binary input control" ([Carbon content switcher](https://carbondesignsystem.com/components/content-switcher/usage/)); React Spectrum's SegmentedControl is "used for view switching" ([React Spectrum S2 SegmentedControl](https://github.com/adobe/react-spectrum/blob/main/packages/dev/s2-docs/pages/s2/SegmentedControl.mdx)).
 - [required] Don't use past four choices; a menu with counts (design-standard rule 4, design-standard rule 11).
 - [weak] Don't use as navigation between pages; that is tabs or links (`navigation.md`).
 
