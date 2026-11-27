@@ -1210,9 +1210,20 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       // box ignores it, on an inline box that has no height; and words padded to the middle with nothing said)
       const odd = ['height: 10px; align-content: center', 'display: flex; height: 40px; align-content: center', 'display: inline; height: 40px; align-content: end', 'height: 20px; padding: 10px 0 10px; align-content: end; line-height: 10px; font-size: 10px', 'height: 40px; padding-top: 15px; box-sizing: border-box; line-height: 10px; font-size: 10px'];
       await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html><div style="display: flex; flex-direction: column">${cases.map((v) => `<span data-t style="height: 40px; ${cssOf({ verticalAlign: v })}">Hi</span>`).join('')}${odd.slice(0, 2).map((css) => `<span data-t style="${css}">Hi</span>`).join('')}</div><span data-t style="${odd[2]}">Hi</span><div data-t style="${odd[3]}">Hi</div><div data-t style="${odd[4]}">Hi</div>` });
-      const got = await call(tab, (src) => { const of = new Function(`return ${src}`)(); return [...document.querySelectorAll('[data-t]')].map((n) => of(n, getComputedStyle(n)) ?? null); }, alignedOf.toString());
+      const read = () => call(tab, (src) => { const of = new Function(`return ${src}`)(); return [...document.querySelectorAll('[data-t]')].map((n) => of(n, getComputedStyle(n)) ?? null); }, alignedOf.toString());
+      const got = await read();
       ok('a text\'s vertical alignment is read where its words are drawn in its content box, never from the property: centre, bottom, top; none where no spare height, a flex box or an inline one shows nothing; within the content box, so padding is not alignment',
         JSON.stringify(got) === '["center","end",null,null,null,null,"end",null]', JSON.stringify(got));
+      // (lines a tall line height spaces far past their glyphs, three at 40px over 12px words: counted by the lines drawn,
+      // so a box that holds them exactly has no room, and one taller centres them; a box given its height by min-height,
+      // and a flex item stretched to its row's height, are measured as any box)
+      const three = 'display: block; width: 16px; font-size: 12px; line-height: 40px; align-content: center';
+      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html><div data-t style="${three}; height: 120px">aa bb cc</div><div data-t style="${three}; height: 200px">aa bb cc</div>`
+        + '<div data-t style="min-height: 60px; line-height: 10px; font-size: 10px; align-content: center">Hi</div>'
+        + '<div style="display: flex; height: 40px"><span data-t style="line-height: 10px; font-size: 10px; align-content: center">Hi</span><span data-t style="line-height: 10px; font-size: 10px">Hi</span></div>' });
+      const more = await read();
+      ok('three lines spaced past their glyphs fill a box of their height (no room) and centre in a taller one; min-height and a stretched flex item measured as any box',
+        JSON.stringify(more) === '[null,"center","center","center",null]', JSON.stringify(more));
     } finally { await browser.close(); }
   }
 }

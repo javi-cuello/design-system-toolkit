@@ -210,7 +210,10 @@ export function alignedOf(n, s) {
   const top = b.top + px(s.borderTopWidth) + px(s.paddingTop), bottom = b.bottom - px(s.borderBottomWidth) - px(s.paddingBottom);
   // (the words' line box, not their glyphs': a line height under the font's own draws the rect past the line by half
   // the difference each side, which is no room)
-  const lh = parseFloat(s.lineHeight), lines = lh > 0 ? Math.max(1, Math.round(w.height / lh)) : 0, half = lh > 0 ? (w.height - lines * lh) / 2 : 0;
+  // (lines counted as drawn, by their distinct tops, never by the rect's height over the line height, which a line height
+  // past twice the glyphs' undercounts)
+  const lh = parseFloat(s.lineHeight), lines = new Set([...r.getClientRects()].filter((x) => x.height).map((x) => Math.round(x.top))).size;
+  const half = lh > 0 && lines ? (w.height - lines * lh) / 2 : 0;
   const above = w.top + half - top, below = bottom - (w.bottom - half);
   if (above + below < 4) return undefined;
   if (Math.abs(above - below) <= 1) return 'center';
