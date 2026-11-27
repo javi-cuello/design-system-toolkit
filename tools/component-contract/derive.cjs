@@ -388,9 +388,7 @@ function flatten(list, characters = new Map(), known = [], axes = [], turned = n
     const e = element(node, parent == null ? null : idOf(parent), known, up, axes, !!turned && turned.has(idOf(segs)));
     const inInstance = segs.slice(0, -1).some((_, i) => (nodeAt.get(keyOf(segs.slice(0, i + 1))) || {}).type === 'INSTANCE');
     const place = (e, inInstance) => {
-      // (a group's children stand where Figma says them, in the frame that holds the group (its relativeTransform is the
-      // frame's); the contract's point is in its parent, the group's box: the group's own point taken off)
-      if (up && !up.layout && !inInstance && !e.absolute && node.x != null) { const b = boxAt(node); e.absolute = up.type === 'GROUP' && up.x != null ? { x: +(b.x - up.x).toFixed(2), y: +(b.y - up.y).toFixed(2) } : b; }
+      if (up && !up.layout && !inInstance && !e.absolute && node.x != null) e.absolute = boxAt(node);
       // and inside an instance, a layer its component places in a frame keeps no constraints either: like its position, an
       // instance cannot override them (figma-fact: no-nested-position-override), so they are the component's, and code reads
       // none there (one placed absolutely in an auto layout keeps them, with the position it states)
@@ -414,6 +412,9 @@ function flatten(list, characters = new Map(), known = [], axes = [], turned = n
     // (the place it would have outside an instance, set aside: PLACE_ASIDE)
     const outside = inInstance && !e.absolute ? place({ ...e }, false) : null;
     place(e, inInstance);
+    // (a group's child: Figma states its point in the frame that holds the group, its box the group's: inside an instance
+    // opened (layers.mjs openForeign) the group is a frame of its own, so the point is taken in it)
+    if (outside && outside.absolute && up && up.type === 'GROUP' && up.x != null) outside.absolute = { ...outside.absolute, x: +(outside.absolute.x - up.x).toFixed(2), y: +(outside.absolute.y - up.y).toFixed(2) };
     if (outside && (outside.absolute || outside.constraints)) aside.set(idOf(segs), outside);
     // a line along its box (a divider, spec.cjs boxOnly) carries no paths where to-figma draws it as its line (a graphic
     // of no height, or no width, along that axis, that no icon names): the box and its stroke say it, as before 0.86.0,

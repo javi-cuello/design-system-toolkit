@@ -1173,8 +1173,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('…and an inside stroke on a shape of no size keeps its alignment', kept({ color: 'C/line', width: 1, align: 'inside' }, { color: 'C/line', width: 1 }));
 }
 // an instance of a component the library does not hold is drawn open (layers.mjs openForeign): a scaled layer inside keeps
-// the point it has in its frame, so a share of that frame can say it; a group's child's point is in the group's box,
-// not the frame holding the group (Figma states it in that frame)
+// the point it has in its frame, so a share of that frame can say it
 {
   const out = derive({ name: 'Badge', props: {}, variants: [{ name: 'Badge', type: 'COMPONENT', layout: 'HORIZONTAL', children: [
     { name: 'Mark', type: 'INSTANCE', instanceOf: 'Mark', w: 16, h: 16, sizing: 'FIXED/FIXED', children: [
@@ -1183,6 +1182,6 @@ ok('combinations too many to list are said to be unlisted, never left to read as
         { name: 'V', type: 'VECTOR', x: 5.25, y: 1, w: 5.5, h: 14, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/v'] }] }] }] }] }, [], { mains: () => null }).anatomy;
   const v = Object.keys(out).find((k) => k.endsWith('/v')), back = Object.keys(out).find((k) => k.endsWith('/back'));
   ok('a scaled layer inside an instance the library does not hold keeps its point beside its scale', !!out[back].absolute && out[back].absolute.x === 0 && out[back].constraints.horizontal === 'scale');
-  ok('…and a group\'s child its point in the group, the group\'s own taken off', !!out[v].absolute && out[v].absolute.x === 0 && out[v].absolute.y === 0);
+  ok('…and a group\'s child its point in the group, which the opened instance draws as a frame of its own (Figma states it in the frame holding the group)', !!out[v].absolute && out[v].absolute.x === 0 && out[v].absolute.y === 0);
 }
 console.log(`${n}/${n} passed`);
