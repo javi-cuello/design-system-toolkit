@@ -574,8 +574,9 @@ export function siblingOrder(xs) {
    place in the layout. Runs in the page as well (passed as source); tested by test-from-code.mjs. */
 export function stackedFirst(xs) {
   if (xs.some((e) => !e.stack || e.stack.z == null)) return false;
-  // (the flow's laid-out order is the design's, the reference; a part placed absolutely has none to read against)
-  const flow = xs.map((e, i) => [e, i]).filter(([e]) => !e.stack.out);
+  // (the flow's laid-out order is the design's, the reference; a part placed absolutely has none to read against, but
+  // where one child alone is in the flow, the markup's order, which follows the design's, is all there is)
+  const all = xs.map((e, i) => [e, i]), inFlow = all.filter(([e]) => !e.stack.out), flow = inFlow.length >= 2 ? inFlow : all;
   if (flow.length < 2) return false;
   const laid = flow.sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).map(([e]) => e.stack.z);
   return laid.every((z, i) => i === 0 || z < laid[i - 1]);
