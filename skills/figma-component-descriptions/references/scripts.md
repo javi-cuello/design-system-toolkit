@@ -87,6 +87,7 @@ Send it with `CONFIG.ids` set to the full-tier subjects. Save the result as JSON
 | `properties` | The interface, with Figma's `#id` suffixes stripped |
 | `sizes` | Each variant's width and height: a number where the side is fixed, `hug` where it grows |
 | `broken` | Nested instances whose main does not exist or resolves to null (the latter with a `reason`) |
+| `description` | The existing description as typed, read through the same fallback as `enumerate.js` and `verify.js` |
 
 A part is marked `inEvery`, or lists the `variants` it appears in. It names the booleans that show or hide it (`toggledBy`) and the swap props bound to it (`swappedBy`).
 
@@ -220,7 +221,7 @@ Each script is the call's `code`, with its `CONFIG` filled, as on the bridge.
 | `figma_execute` | `use_figma({ fileKey, sessionId, code, description })` |
 | `figma_execute({ fileKey })` for step 2f's consumer file | `use_figma` with the consumer file's `fileKey`; nothing to re-pin after |
 | `figma_set_description` | `apply.js` with one pair |
-| `figma_get_component_details` | `composition.js` for the interface; `enumerate.js` says which components hold a description, and `verify.js` reads them |
+| `figma_get_component_details` | `composition.js`, which returns the interface and the existing `description` as typed; send it for compact subjects too when their text is needed |
 | `figma_get_status({ probe: true })` | none: a failed call says so, and its `safeToRetryWithoutCanvasRead` says whether to re-read the file before retrying (the `figma-use` skill) |
 
 What the cloud does differently, each handled in the scripts, so nothing changes in how they are sent:

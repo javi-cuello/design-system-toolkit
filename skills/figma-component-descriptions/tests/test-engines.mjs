@@ -79,10 +79,10 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   // D26: the cloud route (use_figma) refuses loadAllPagesAsync and hands a plain-only description back escaped.
   const loaded = [];
   for (const p of [docPage, barePage, barPage, empty]) p.loadAsync = async () => { loaded.push(p.name); };
-  const cloud = { ...figma, loadAllPagesAsync: async () => { throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); } };
+  const cloud = { ...figma, loadAllPagesAsync: async () => { loaded.push('all'); throw new Error('in loadAllPagesAsync: "loadAllPagesAsync" is not a supported API'); } };
   button.description = 'A &lt;button&gt; &amp; more.';
   const viaCloud = await run(src, cloud);
-  ok('enumerate: every page is loaded on its own, never all at once (use_figma refuses loadAllPagesAsync)', loaded.length === 4 && viaCloud.pages.length === 3);
+  ok('enumerate: every page is loaded on its own, never all at once (use_figma refuses loadAllPagesAsync)', loaded.length === 4 && !loaded.includes('all') && viaCloud.pages.length === 3);
   ok('enumerate: a plain description handed back escaped is measured as typed', viaCloud.pages.find((p) => p.page === 'Button').items[0].descLen === 'A <button> & more.'.length);
   button.description = 'A button.';
 
@@ -155,6 +155,11 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   ok('composition: a part one axis reveals is read from the variant that has it, named by its set', JSON.stringify(btn.parts.find((p) => p.name === 'Icon')) === JSON.stringify({ name: 'Icon', inEvery: false, variants: ['Icon=True'] }));
   ok('composition: an unknown id is reported, not fatal', missing.error === 'not found');
   ok('composition: each variant\'s size is returned only where Figma reports it', JSON.stringify(btn.sizes) === '{}');
+  // D26: the existing description, as typed, where use_figma hands only an escaped plain field back
+  set.descriptionMarkdown = ''; set.description = 'A &lt;button&gt; &amp; more.';
+  ok('composition: the existing description is returned as typed, the plain field unescaped (D26)', (await run(src, figma))[0].description === 'A <button> & more.');
+  set.descriptionMarkdown = 'A `Button`.';
+  ok('composition: and the markdown field where it is set', (await run(src, figma))[0].description === 'A `Button`.');
   // A part is what the subject places: an icon inside a nested Button is the Button's, not the shell's (2026-11-10).
   const shellGlyph = node({ id: '9:7', type: 'COMPONENT', name: 'x' });
   const nestedBtn = node({ id: '5:3', type: 'INSTANCE', name: 'Button' }, [instanceOf('5:4', 'x', shellGlyph)]);
@@ -284,6 +289,10 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   ok('sync-header: a virtual set writes its shared sentence once, and replaced text is reported as drift', out.filter((r) => r.page === 'Top bar').length === 1 && topHeader.children[0].characters === 'A top bar sits at the top of a screen.' && row('Top bar').drift === 'Something else entirely.');
   ok('sync-header: no header and mixed fonts are report lines, not writes', row('Lone').status === 'no header' && row('Mixed').status === 'mixed font' && mixedHeader.children[0].characters === 'x');
   ok('sync-header: the font is loaded before each write', figma.fonts.length === 2);
+  const loadedPages = [];
+  for (const p of [p1, p2, p3, p4]) p.loadAsync = async () => { loadedPages.push(p.id); };
+  await run(src, figma);
+  ok('sync-header: each page is loaded before its header is looked for (use_figma loads only the first) (D26)', loadedPages.length > 0 && loadedPages.every((id) => [p1, p2, p3, p4].some((p) => p.id === id)));
   const decoy2 = node({ id: '5:1', type: 'COMPONENT', name: 'Two' });
   p1.children.push(decoy2); decoy2.parent = p1;
   const conflict = await run(config(read('sync-header.js'), { headerName: 'Header', headerBodyLayer: 'Body', docs: [['1:1', 'One.'], ['5:1', 'Two.']] }), fakeFigma([p1]));

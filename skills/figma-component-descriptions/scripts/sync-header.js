@@ -37,6 +37,8 @@ const report = [];
 for (const [id, md] of CONFIG.docs) {
   const n = await figma.getNodeByIdAsync(id);
   const page = n && pageOf(n);
+  // Load it before findAll: through use_figma only the first page is loaded at the start of a call.
+  if (page) await page.loadAsync();
   if (!page) { report.push({ id, status: 'not found' }); continue; }
   if (!byPage.has(page.id)) byPage.set(page.id, { page, sentences: new Set() });
   byPage.get(page.id).sentences.add(firstSentence(md));

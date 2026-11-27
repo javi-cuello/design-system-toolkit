@@ -5,7 +5,8 @@
 // revealed by an axis or boolean, and Composition must say so. It also returns
 // the subject's `properties`, each variant's `sizes`, and on each part the booleans that show or hide
 // it (`toggledBy`) and the swap props bound to it (`swappedBy`): the input
-// scripts/sections.mjs turns into the Behaviour and Composition lists.
+// scripts/sections.mjs turns into the Behaviour and Composition lists, and the existing `description`
+// as typed, for step 4's audit.
 const CONFIG = {
   ids: []   // component or component-set ids from enumerate.js
 };
@@ -43,6 +44,10 @@ const sizeOf = (v) => {
   const w = side(v.layoutSizingHorizontal, v.width), h = side(v.layoutSizingVertical, v.height);
   return w == null || h == null ? null : { w, h };
 };
+
+// A description as typed: the markdown field, or the plain one unescaped where only that is set
+// (use_figma hands the plain field back HTML-escaped). The same reader as enumerate.js and verify.js.
+const textOf = (n) => n.descriptionMarkdown || (n.description || '').replace(/&(lt|gt|amp|quot|#39);/g, (m, e) => ({ lt: '<', gt: '>', amp: '&', quot: '"', '#39': "'" })[e]);
 
 const out = [];
 for (const id of CONFIG.ids) {
@@ -97,6 +102,6 @@ for (const id of CONFIG.ids) {
     : { name: bare(k), type: d.type });
   const sizes = {};
   for (const v of variants) { const z = sizeOf(v); if (z) sizes[v.name] = z; }
-  out.push({ id, name: n.name, variantCount: variants.length, variantNames: variants.map((v) => v.name), parts, broken, properties, sizes });
+  out.push({ id, name: n.name, description: textOf(n), variantCount: variants.length, variantNames: variants.map((v) => v.name), parts, broken, properties, sizes });
 }
 return out;
