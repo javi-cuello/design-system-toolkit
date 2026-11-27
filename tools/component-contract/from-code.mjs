@@ -1453,8 +1453,44 @@ async function forceAt(tab, at) {
   // (shared/cdp.mjs forceState), which matchedLevels no longer does on each read
   if (!at || !at.on) { await tab.send('DOM.getDocument', { depth: 0 }); return; }
   const { forceState, waitFor } = await import('../shared/cdp.mjs');
-  await forceState(tab, [{ selector: at.on, pseudo: at.pseudo }]);
+  // (and on each placed component the design passes a pointer state of its own there, `also` (forwardedStates): real
+  // focus or hover lands inside it, so its own pseudo-class fires beside the holder's; one a combination does not draw
+  // is passed over)
+  await forceState(tab, [{ selector: at.on, pseudo: at.pseudo }, ...(at.also || []).map((x) => ({ ...x, optional: true }))]);
   await waitFor(tab, 'document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)', { timeout: 3000 }).catch(() => {});
+}
+
+/* The placed components the design passes a pointer state of their own at this component's pointer state `state` (a
+   radio's icon given State Focus at focus, a picker's select at hover): each part id with the pseudo-class, without its
+   colon, that draws that state in its own sheet. Read from the variants at `state` that add the instance or set its
+   props (whole, or the one prop), never at rest. `mainOf(component, key)` finds the placed contract, `pseudoFor(main,
+   value)` its pseudo-class for one of its pointer values. Real focus or hover lands inside such a component, so its own
+   pseudo-class and the holder's both fire: the reader forces both (forceAt). Tested by test-from-code.mjs. */
+export function forwardedStates(c, state, mainOf, pseudoFor) {
+  const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
+  if (!pk || !(c.props[pk].pointer || []).includes(state)) return [];
+  const added = Object.assign({}, ...(c.variants || []).map((v) => v.add || {}));
+  const out = new Map();
+  for (const v of c.variants || []) {
+    if ((v.when || {})[pk] !== state) continue;
+    const given = [...Object.entries(v.add || {}).map(([id, e]) => [id, e.with || {}])];
+    for (const [k, w] of Object.entries(v.set || {})) {
+      const m = /^(.+)\.with(?:\.(.+))?$/.exec(k);
+      if (m && w != null) given.push([m[1], m[2] ? { [m[2]]: w } : w]);
+    }
+    for (const [id, w] of given) {
+      const e = (v.add || {})[id] || (c.anatomy || {})[id] || added[id];
+      if (!e || e.kind !== 'instance' || !w || typeof w !== 'object') continue;
+      const main = mainOf(e.component, e.key ?? null);
+      const q = main && Object.values(main.props || {}).find((x) => x.role === 'interaction');
+      if (!q || w[q.figma] === undefined) continue;
+      const low = (x) => String(x).toLowerCase(), i = (q.figmaValues || []).map(low).indexOf(low(w[q.figma]));
+      const value = i >= 0 ? q.values[i] : w[q.figma];
+      const ps = (q.pointer || []).includes(value) && pseudoFor(main, value);
+      if (ps) out.set(id, ps.replace(/^:/, ''));
+    }
+  }
+  return [...out].map(([id, pseudo]) => ({ id, pseudo }));
 }
 
 /* Whether the self page can take the next render without loading again (run in the page): loaded, and nothing left
@@ -1828,6 +1864,13 @@ async function selfSource(project, name, { second = false } = {}) {
   const t = targetOf(c);
   const b = bridge(store.readSpec(project.paths.components, name, { compact: true }));
   const G = governedReading(t, b, { stateAxis: lib.tokens && lib.tokens.stateAxis, container });
+  // each pointer state forced on the placed components the design passes one of their own there too (forwardedStates),
+  // found by the markup's own selector for that part
+  {
+    const mainOf = req('./derive.cjs').byComponentName(Object.values(library)), byId = partsById(() => drawnMapping(c), container) || {};
+    const pseudoFor = (main, v) => pseudoClasses(settingsOf(main.folder))[v];
+    for (const [s, at] of Object.entries(G.pseudoOf)) { const also = forwardedStates(c, s, mainOf, pseudoFor).filter((x) => byId[x.id]).map((x) => ({ selector: byId[x.id], pseudo: x.pseudo })); if (also.length) at.also = also; }
+  }
   let elements;
   try { elements = G.elements(); } catch (e) { throw Object.assign(new Error(`${name}'s mapping from to-markup: ${e.message}`), { usage: true }); }
   // the tokens as the project's token build writes them (plain custom properties); its fonts are not loaded, so text

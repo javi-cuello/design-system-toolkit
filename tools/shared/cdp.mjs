@@ -343,6 +343,8 @@ export async function navigate(tab, url, { until = 'load', timeout = 30_000, htm
  * All targets in one call: the document is fetched once, and fetching it again
  * resets the node ids the browser holds a forced state against, which dropped
  * every state but the last on a page of many sections.
+ * A target marked `optional` that matches nothing is passed over (a placed
+ * part a combination does not draw); any other throws.
  */
 export async function forceState(tab, targets) {
   await tab.send('DOM.getDocument', { depth: 0 });
@@ -352,7 +354,7 @@ export async function forceState(tab, targets) {
   };
   const held = new Map();
   const hold = (nodeId, classes) => held.set(nodeId, [...new Set([...(held.get(nodeId) || []), ...classes])]);
-  for (const { selector, pseudo, within = null } of targets) {
+  for (const { selector, pseudo, within = null, optional = false } of targets) {
     const focus = /^focus/.test(pseudo);
     const { result } = await tab.send('Runtime.evaluate', {
       expression: `(() => {
@@ -366,6 +368,7 @@ export async function forceState(tab, targets) {
     });
     const { result: pair } = await tab.send('Runtime.getProperties', { objectId: result.objectId, ownProperties: true });
     const [hit, above] = await Promise.all(['0', '1'].map((i) => nodes(pair.find((x) => x.name === i).value.objectId)));
+    if (!hit.length && optional) { await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {}); continue; }
     if (!hit.length) throw new Error(`state selector matched no element: ${selector}${within ? ` in ${within}` : ''}`);
     for (const n of above) hold(n, [focus ? 'focus-within' : pseudo]);
     for (const n of hit) hold(n, focus ? ['focus', 'focus-visible'] : [pseudo]);
