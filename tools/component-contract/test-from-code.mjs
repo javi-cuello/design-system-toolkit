@@ -1541,6 +1541,11 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   const a = swappedMark(read('Status/Error'), design).variants[0].set, b = swappedMark(read('Other'), design).variants[0].set;
   ok('a variant\'s mark of a component the library does not hold reads back as that variant\'s swap; another glyph stays the code\'s',
     JSON.stringify(a) === JSON.stringify({ 's.component': 'Status/Error', 's.with': null, 's.key': 'k-err', 's.background': 'rgba(0, 0, 0, 1)' }) && b['s.kind'] === 'graphic' && b['s.asset'] === 'Other', JSON.stringify(a)); }
+// (2026-11-27) and a mark naming the very icon the base reads there (a read-only field's chevron, drawn whole where that
+// variant detaches the component that draws it open) is that instance still: no swap, its colour as read
+{ const read = { anatomy: { c: { kind: 'instance', component: 'Chevron--down', key: 'k1' }, 'c/v': { kind: 'graphic', parent: 'c' } }, variants: [{ when: { ro: true }, set: { 'c.kind': 'graphic', 'c.asset': 'Chevron--down', 'c.key': null, 'c.background': 'I/disabled' } }] };
+  const s = swappedMark(read, { anatomy: { c: { kind: 'instance', component: 'Chevron--down' } }, variants: [] }).variants[0].set;
+  ok('a variant\'s mark of the icon the base reads there is that instance still, its colour as read', JSON.stringify(s) === JSON.stringify({ 'c.background': 'I/disabled' }), JSON.stringify(s)); }
 // children that say by z-index the first paints on top (to-code's firstOnTop over an overlapping group) read as first on
 // top, a child placed absolutely among them too; the last on top, or one with no z-index, does not
 { const { stackedFirst } = await import('./rules.mjs');

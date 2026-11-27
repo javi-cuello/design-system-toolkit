@@ -1170,6 +1170,13 @@ export function swappedMark(fromCode, design) {
       if (!k.endsWith('.asset') || typeof s[k] !== 'string') continue;
       const id = k.slice(0, -'.asset'.length), base = (fromCode.anatomy || {})[id];
       if (s[`${id}.kind`] !== 'graphic' || !base || base.kind !== 'instance') continue;
+      // (the same icon the base reads there, drawn whole where a variant detaches the component that draws it open, a
+      // read-only field's chevron: the instance still, its colour as read)
+      if (base.component && (base.component === s[k] || base.component.split('/').pop() === s[k])) {
+        delete s[k]; delete s[`${id}.kind`];
+        for (const f of ['component', 'key', 'with']) if (s[`${id}.${f}`] === null) delete s[`${id}.${f}`];
+        continue;
+      }
       const dv = (design.variants || []).find((w) => { const n = (w.set || {})[`${id}.component`]; return typeof n === 'string' && (n === s[k] || n.split('/').pop() === s[k]); });
       if (!dv) continue;
       delete s[k]; delete s[`${id}.kind`];
