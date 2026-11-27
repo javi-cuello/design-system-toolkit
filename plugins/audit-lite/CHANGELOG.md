@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.17.0] - 2026-11-27
+### Changed
+- A context document with no entry for the open file is no longer refused: a duplicate of a library has a new key, and a drafted document may move to another file. Upload offers **Use for this file**, picking the entry first when there are several, and keeps the document under the open file's key. The report names the entry applied.
+
 ## [0.16.2] - 2026-11-27
 ### Changed
 - Re-synced with stock-ui: the accent pair is #a54a00 / #e08d5d (hue held, lighter and less chromatic in dark).

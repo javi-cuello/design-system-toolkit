@@ -57,6 +57,8 @@ The test checks that a context document gives the settings and rulings the full 
 
 It keeps the context document picked for a file, its name and text. That sits in the plugin's client storage on this machine, keyed by the file. **Remove** deletes it.
 
+A document with no entry for the open file is offered for it, as a duplicate of a library's or one drafted for another file is. **Use for this file** rewrites every mention of the entry's key to the open file's, and keeps that copy, with which entry it came from. With several entries, the person picks one first.
+
 It keeps the checks you unticked, as `stages-off`, in the same storage. That list is one for every file.
 
 Nothing is written to the Figma file, because rulings travel in the context document. Versions 0.7 to 0.10 kept uploaded rulings as plugin data on the document. Version 0.11 neither reads nor writes it. The report is a download.

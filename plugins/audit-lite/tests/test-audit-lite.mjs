@@ -10,7 +10,7 @@ const ROOT = path.resolve(HERE, '../../..');
 const ui = fs.readFileSync(path.join(HERE, '..', 'ui.html'), 'utf8');
 const mod = { exports: {} };
 new Function('module', fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8'))(mod);
-const { report, settingsFor, LITE, scan, foundations, selectedSets } = /** @type {any} */ (mod.exports);
+const { report, settingsFor, otherFiles, adopted, LITE, scan, foundations, selectedSets } = /** @type {any} */ (mod.exports);
 const projects = createRequire(import.meta.url)(path.join(ROOT, 'tools/snapshot/projects.cjs'));
 
 let failed = 0, passed = 0;
@@ -174,6 +174,63 @@ const plugin = ({ fileKey, store = {} }) => {
   await p.send({ type: 'context-clear' });
   ok('removing it deletes it', !p.store['context:KEY123']);
   ok('opening, setting and removing a document write nothing to the file', p.wrote() === 0);
+}
+// A document written for another file: a duplicate of the library has a new key, and a drafted document may be brought to
+// another file. It is offered for the open file, never refused; with several entries the person picks one.
+{
+  const settingsOf = (md) => JSON.parse(md.match(/```json[ \t]+audit-settings[ \t]*\n([\s\S]*?)\n```/)[1]);
+  // 1. the sample document, one entry, on a duplicate
+  const p = plugin({ fileKey: 'COPY9' });
+  await p.send({ type: 'context-set', name: 'design-system-context.md', text: MD });
+  const offer = p.sent.find((m) => m.type === 'context-offer');
+  ok('1. a document for one other file is offered for this one, not refused or kept', offer && offer.files.length === 1 && offer.files[0].key === 'KEY123' && !p.store['context:COPY9'] && !p.sent.some((m) => m.type === 'context-failed'));
+  await p.send({ type: 'context-set', name: offer.name, text: offer.text, adopt: 'KEY123' });
+  const kept = p.store['context:COPY9'];
+  ok('1. "Use for this file" keeps it under this file\'s key, the original\'s key gone from it', kept && !kept.text.includes('KEY123') && kept.text.includes('COPY9'));
+  ok('1. and says, once, whose entry it took', p.sent.filter((m) => m.type === 'context' && /KEY123/.test(m.adoptedFrom || '')).length === 1);
+  const taken = settingsFor(kept.text, 'COPY9');
+  ok('1. the run reads the taken document as the original\'s settings and rulings', JSON.stringify(taken.tokens) === JSON.stringify(run.tokens) && JSON.stringify(taken.rulings) === JSON.stringify(run.rulings));
+  const named = report(r, { fileName: 'Copy', fileKey: 'COPY9', date: 'd' }, Object.assign({}, taken, { contextName: kept.name, contextText: kept.text, adoptedFrom: kept.adoptedFrom }));
+  ok('1. the report names the entry applied, so a key mismatch is explained', /written for (.* \()?KEY123\)? and taken for this file/.test(named) && named.includes('## Context document') && !named.split('## Context document')[1].includes('KEY123'));
+  // the next upload of the document Claude gives back (under this file's key): replaced with no prompt
+  const before = p.sent.length;
+  await p.send({ type: 'context-set', name: 'design-system-context.md', text: kept.text + '\n' });
+  ok('1. the document given back replaces it with no offer, no longer marked as taken', !p.sent.slice(before).some((m) => m.type === 'context-offer') && p.store['context:COPY9'].adoptedFrom === null);
+  // 2. a drafted document on its own file; 3. the same on another file
+  const draft = '# Draft\n\n```json audit-settings\n{ "libraries": { "MINE1": { "tokens": {} } } }\n```\n';
+  ok('2. a drafted document on its own file is used as it is, no offer', otherFiles(draft, 'MINE1').length === 0 && settingsFor(draft, 'MINE1').from === 'context');
+  const q = plugin({ fileKey: 'MINE2' });
+  await q.send({ type: 'context-set', name: 'd.md', text: draft });
+  const o3 = q.sent.find((m) => m.type === 'context-offer');
+  ok('3. the drafted document on another file is offered, by its key when routing names no file', o3 && o3.files.length === 1 && o3.files[0].key === 'MINE1' && o3.files[0].name === null);
+  await q.send({ type: 'context-set', name: 'd.md', text: draft, adopt: 'MINE1' });
+  ok('3. taken, it reads on that file', settingsFor(q.store['context:MINE2'].text, 'MINE2').from === 'context');
+  // 4. several entries, none this file: the person picks; a pick of no entry is offered again
+  const two = MD.replace('"KEY123": {', '"KEY456": { "tokens": { "stateAxis": "Mode" } }, "KEY123": {');
+  ok('4. (the second entry is named)', Object.keys(settingsOf(two).libraries).length === 2);
+  const t = plugin({ fileKey: 'COPY9' });
+  await t.send({ type: 'context-set', name: 'x.md', text: two });
+  const o4 = t.sent.find((m) => m.type === 'context-offer');
+  ok('4. a document with several entries, none this file, offers each to pick from, routing\'s name with its key', o4 && o4.files.map((f) => f.key).sort().join() === 'KEY123,KEY456' && o4.files.some((f) => f.key === 'KEY123' && f.name));
+  await t.send({ type: 'context-set', name: 'x.md', text: two, adopt: 'NOPE' });
+  ok('4. a pick that names no entry is offered again, nothing kept', !t.store['context:COPY9'] && t.sent.filter((m) => m.type === 'context-offer').length === 2);
+  await t.send({ type: 'context-set', name: 'x.md', text: two, adopt: 'KEY456' });
+  const t4 = t.store['context:COPY9'];
+  ok('4. the picked entry is the one applied, the other left as it was', settingsOf(t4.text).libraries.COPY9.tokens.stateAxis === 'Mode' && 'KEY123' in settingsOf(t4.text).libraries);
+  // 5. a document that names this file: no change, no prompt
+  const u = plugin({ fileKey: 'KEY123' });
+  await u.send({ type: 'context-set', name: 'design-system-context.md', text: MD });
+  ok('5. a document naming this file is kept as it is, with no offer', !u.sent.some((m) => m.type === 'context-offer') && u.store['context:KEY123'].text === MD && u.store['context:KEY123'].adoptedFrom === null);
+  ok('a document with an entry for this file among others is used as it is', otherFiles(two, 'KEY123').length === 0);
+  ok('adopting rewrites every mention of the original, routing and prose alike', adopted('a KEY123 b KEY123', 'KEY123', 'C') === 'a C b C');
+}
+// The workshop's own document, on a duplicate of its example library, when it is on this machine
+{
+  const W = path.join(process.env.HOME || '', 'Desktop/Workshop/dist/design-system-context.md');
+  if (fs.existsSync(W)) {
+    const wmd = fs.readFileSync(W, 'utf8'), files = otherFiles(wmd, 'pXSLahVA7Ob4Yj67URj4T0');
+    ok('the workshop document on a duplicate is offered for it, and reads once taken', files.length === 1 && settingsFor(adopted(wmd, files[0].key, 'pXSLahVA7Ob4Yj67URj4T0'), 'pXSLahVA7Ob4Yj67URj4T0').from === 'context', JSON.stringify(files));
+  }
 }
 // Selection: what the selection is, sits in or holds, by name; nothing a component scans the whole file
 {
