@@ -1324,7 +1324,8 @@ export function stackLikeDesign(code, design, value) {
   // a child placed absolutely where it has a sibling, at a combination: it can overlap the rest there, so how they stack
   // is the code's as read (by its z-index, rules.mjs stackedFirst, or by paint), the design's place for it too, never
   // copied; a box with one child there has nothing to stack
-  const loose = (x, id) => { const kids = Object.values(x).filter((c) => c && c.parent === id); return kids.length > 1 && kids.some((c) => c.position === 'absolute' || !!c.absolute); };
+  // (or whose children the page drew overlapping some other way, a grid cell or a margin: `overlap`, read off their boxes)
+  const loose = (x, id) => { const kids = Object.values(x).filter((c) => c && c.parent === id); return kids.length > 1 && (!!(x[id] || {}).overlap || kids.some((c) => c.position === 'absolute' || !!c.absolute)); };
   // every layout the contract writes, marked so each combination's expanded layout names the one it came from
   const sources = [];
   const mark = (l) => { if (!l || typeof l !== 'object') return; if (!sources.includes(l)) sources.push(l); Object.defineProperty(l, '__src', { value: sources.indexOf(l), enumerable: true, configurable: true }); };
@@ -2454,7 +2455,7 @@ async function main() {
           return a * d - b * c < 0 && Math.abs(b) < 1e-6 && Math.abs(c) < 1e-6 ? (a < 0 ? 'x' : 'y') : null;
         };
         const turnOf = new Function(`return ${turnSrc}`)();
-        const cssOrderOf = new Function(`return ${cssOrderSrc}`)(), stackOf = new Function(`return ${stackSrc}`)(), liftsAlone = new Function(`return ${liftsSrc}`)(), placedBy = (n, parent) => { const o = cssOrderOf(n, parent, getComputedStyle), st = parent != null ? stackOf(n, getComputedStyle, liftsAlone) : {}; return { ...(o != null && { cssOrder: o }), ...(Object.keys(st).length && { stack: st }) }; };
+        const cssOrderOf = new Function(`return ${cssOrderSrc}`)(), stackOf = new Function(`return ${stackSrc}`)(), liftsAlone = new Function(`return ${liftsSrc}`)(), placedBy = (n, parent) => { const o = cssOrderOf(n, parent, getComputedStyle), st = parent != null ? stackOf(n, getComputedStyle, liftsAlone) : {}, r = parent != null && n.getBoundingClientRect(); return { ...(o != null && { cssOrder: o }), ...(Object.keys(st).length && { stack: st }), ...(r && { rect: [r.left, r.top, r.right, r.bottom] }) }; };
         const walk = (n, parent, order, inside = false) => {
           // a turn's wrapper is no part: what it holds is the part, in its place among its siblings
           if (n.hasAttribute('data-turn')) { if (n.firstElementChild) walk(n.firstElementChild, parent, order, inside); return; }
@@ -2688,7 +2689,11 @@ async function main() {
           if (box && first && box.layout) box.layout.firstOnTop = true;
           // (which way their z-index counts the code does not say: read as painted, and noted, below)
           if (box && first === null) box.stackUnknown = true;
-          ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
+          // (two children whose boxes intersect, however laid out: a grid cell, a margin; stackLikeDesign reads it)
+          const rs = xs.map((e) => e.rect).filter(Boolean), meet = (a, b) => Math.min(a[2], b[2]) - Math.max(a[0], b[0]) > 0.5 && Math.min(a[3], b[3]) - Math.max(a[1], b[1]) > 0.5;
+          const host = rs.some((a, i) => rs.slice(i + 1).some((b) => meet(a, b))) && out.find((e) => e.id === pid);
+          if (host) host.overlap = true;
+          ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; });
         }
         return out;
       }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString()]);
@@ -3772,6 +3777,9 @@ async function main() {
     // a variant's change of it, none)
     for (const e of [...Object.values(fromCode.anatomy), ...fromCode.variants.flatMap((v) => Object.values(v.add || {}))]) if (e) delete e.iconSize;
     for (const v of fromCode.variants) for (const k of Object.keys(v.set || {})) if (k.endsWith('.iconSize')) delete v.set[k];
+    // (whether a box's children were drawn overlapping is stackLikeDesign's to read, no field of the drawing)
+    for (const e of [...Object.values(fromCode.anatomy), ...fromCode.variants.flatMap((v) => Object.values(v.add || {}))]) if (e) delete e.overlap;
+    for (const v of fromCode.variants) for (const k of Object.keys(v.set || {})) if (k.endsWith('.overlap')) delete v.set[k];
     // in the house's Figma conventions; its props against Figma's as the code audit judges them (one comparison, compareProps)
     const shaped = asFigma(fromCode, { axisOrder: (L.lib.tokens && L.lib.tokens.axisOrder) || [] });
     // a prop the design has under no key or name is the code's alone (the contract editor's "Exists in: Code only"):

@@ -806,7 +806,11 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const design = { props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, firstOnTop: true } }, text: { kind: 'text', parent: 'root', order: 0 }, bg: { kind: 'graphic', parent: 'root', order: 1, position: 'absolute' } }, variants: [] };
   const code = { props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0 } }, text: { kind: 'text', parent: 'root', order: 0 }, bg: { kind: 'graphic', parent: 'root', order: 1, position: 'absolute' } }, variants: [] };
   stackLikeDesign(code, design, (t) => t);
-  ok('a box with a child placed absolutely keeps the stacking read off the code, where the design places it so too', !code.anatomy.root.layout.firstOnTop); }
+  ok('a box with a child placed absolutely keeps the stacking read off the code, where the design places it so too', !code.anatomy.root.layout.firstOnTop);
+  // (so does one whose children the page drew overlapping some other way, a grid cell or a margin: `overlap`)
+  const laid = { props: {}, anatomy: { root: { kind: 'container', overlap: true, layout: { direction: 'row', gap: 0 } }, text: { kind: 'text', parent: 'root', order: 0 }, bg: { kind: 'graphic', parent: 'root', order: 1 } }, variants: [] };
+  stackLikeDesign(laid, { ...design, anatomy: { ...design.anatomy, bg: { kind: 'graphic', parent: 'root', order: 1 } } }, (t) => t);
+  ok('a box whose children were drawn overlapping keeps the stacking read off the code', !laid.anatomy.root.layout.firstOnTop); }
 { // a reading's rest state is the design's Enabled (a library's slider): its stacking goes on the reading's own rest, never
   // on a layer naming `enabled`, a state the reading has no word for, which held at no combination it draws
   const st = (values, def) => ({ type: 'enum', values, default: def, figma: 'State', role: 'interaction', pointer: ['hover'] });

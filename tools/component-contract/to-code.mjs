@@ -367,21 +367,30 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
     grew = false;
     for (const [box, list] of kids) {
       const B = parts.get(box);
-      if (boxes.has(box) || (B && (B.inside || B.slotted || B.e.kind === 'instance' || B.e.kind === 'slot'))) continue;
+      if (boxes.has(box) || (B && (B.slotted || B.e.kind === 'slot'))) continue;
       const dom = new Map(markupOrder(c, list).order.map((p, i) => [p.id, i]));
       for (const v of [{}, ...(c.variants || [])]) {
         const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
-        const asAt = (p) => partAtVariant(v, p.id, p.e);
+        // (a variant that opens a placed instance this box is in into a container draws the copy as this component's own:
+        // what is drawn there is read whole, as the variant's combination expands, its parts added by other variants too)
+        const opens = !!B && Object.entries(set).some(([k, x]) => k.endsWith('.kind') && x === 'container' && (box === k.slice(0, -5) || box.startsWith(`${k.slice(0, -5)}/`)));
+        const W = opens ? expand(c, { ...variantDefaults(c), ...(v.when || {}) }) : null;
+        const asAt = (p) => (W && W[p.id]) || partAtVariant(v, p.id, p.e);
+        // (a box inside a placed instance is that component's sheet's to stack, and an instance itself is drawn by it;
+        // but where this variant opens the instance into a container, the copy is this component's own drawing: here)
+        const placedAt = (id) => { for (let up = id; up && parts.has(up); up = asAt(parts.get(up)).parent) if (asAt(parts.get(up)).kind === 'instance') return true; return false; };
+        if (B && placedAt(box)) continue;
         const { drawnHere, orderAt } = heldAt(c, v, list);
-        const here = list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id)) || drawnHere(p)));
+        const here = W ? list.filter((p) => !p.ring && W[p.id] && (W[p.id].parent || 'root') === box)
+          : list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id)) || drawnHere(p)));
         // (children that can overlap: one out of the flow, or a gap below 0; and the design's paint order there, first on
         // top where the box's layout says so, as Figma reverses the stack, firstOnTop)
         // (its layout as the variant draws it: set whole, or a field of it by a dotted path, layout.gap)
         const boxAt = B ? asAt(B) : { ...(c.anatomy[box] || {}), ...(set[`${box}.layout`] && { layout: set[`${box}.layout`] }) };
-        const dotted = Object.entries(set).filter(([k]) => k.startsWith(`${box}.layout.`) && !k.slice(box.length + 8).includes('.')).map(([k, x]) => [k.slice(box.length + 8), x]);
+        const dotted = W ? [] : Object.entries(set).filter(([k]) => k.startsWith(`${box}.layout.`) && !k.slice(box.length + 8).includes('.')).map(([k, x]) => [k.slice(box.length + 8), x]);
         const L = { ...(boxAt.layout || {}), ...Object.fromEntries(dotted) }, gap = L.gap != null && parseFloat(String(L.gap));
         if (!here.some((p) => outOf(asAt(p))) && !(gap < 0)) continue;
-        const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? orderAt(p) ?? p.e.order ?? 0;
+        const at = (p) => (W ? W[p.id].order ?? 0 : set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? orderAt(p) ?? p.e.order ?? 0);
         // (it holds a part out of the flow here, not a ring: positioned, its containing block)
         const anchors = (p) => (kids.get(p.id) || []).some((q) => !q.ring && ((q.base && !gone.has(q.id)) || q.id in add) && (asAt(q).parent || 'root') === p.id && outOf(asAt(q)));
         const lifted = (p) => {
@@ -804,18 +813,18 @@ const drawnWhere = (c, id) => { const adds = (c.variants || []).find((v) => !v.c
 const NO_MAINS = () => null;
 /* A part's place among its siblings in an expanded anatomy: by order, a tie kept in the order they are listed (to-figma
    ranked, the compare's rule), 0 first. */
-// (whether a box's flow holds one child or none at any combination its variants draw: each variant's when over the
-// defaults, as expand draws it; then its children say their place by order wherever it is restacked, every combination
-// alike, as their z-index is said, so no rule layered over another leaves one child of it with an order and one without)
+// (whether a box's flow holds one child or none at any combination the sheet draws (combinations, as selfCheck walks
+// them); then its children say their place by order wherever it is restacked, every combination alike, as their
+// z-index is said, so no rule layered over another leaves one child of it with an order and one without)
 const LONE = new WeakMap();
 function loneSomewhere(c, box) {
-  if (!LONE.has(c)) LONE.set(c, new Map());
+  if (!LONE.has(c)) { const D = variantDefaults(c); LONE.set(c, { drawn: combinations(c).map((m) => expand(c, { ...D, ...m })), boxes: new Map() }); }
   const memo = LONE.get(c);
-  if (!memo.has(box)) {
-    const out = (y) => y.position === 'absolute' || !!y.absolute, D = variantDefaults(c);
-    memo.set(box, [{}, ...(c.variants || [])].some((v) => { const A = expand(c, { ...D, ...(v.when || {}) }); return !!A[box] && Object.values(A).filter((y) => y.parent === box && !out(y)).length < 2; }));
+  if (!memo.boxes.has(box)) {
+    const out = (y) => y.position === 'absolute' || !!y.absolute;
+    memo.boxes.set(box, memo.drawn.some((A) => !!A[box] && Object.values(A).filter((y) => y.parent === box && !out(y)).length < 2));
   }
-  return memo.get(box);
+  return memo.boxes.get(box);
 }
 function rankIn(a, id) {
   const up = a[id].parent, sibs = Object.keys(a).map((k, i) => [k, a[k].order ?? 0, i]).filter(([k]) => a[k].parent === up);

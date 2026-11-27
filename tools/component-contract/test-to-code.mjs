@@ -185,6 +185,12 @@ const upright = { contract: 1, component: 'Upright', props: { orientation: { typ
   const lcss = toCss(lone, 'pile', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
   ok('a restacked box\'s children say their place in the design by order as well, those out of the flow too',
     /order: 1;/.test(rule(lcss, '.ds-pile > .ds-pile__a')) && /order: 3;/.test(rule(lcss, '.ds-pile > .ds-pile__c')) && /z-index: 1;/.test(rule(lcss, '.ds-pile > .ds-pile__c')), lcss);
+  const g = (parent, o, abs) => ({ kind: 'graphic', parent, order: o, width: 8, height: 8, ...(abs && { position: 'absolute', absolute: { x: 0, y: 0 } }) });
+  // (one child left in the flow only where two variants combine is lone there too: judged by combination, as drawn)
+  const both = { contract: 1, component: 'Both', props: { x: { type: 'boolean', default: false, figma: 'X' }, y: { type: 'boolean', default: false, figma: 'Y' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 4, firstOnTop: true } }, a: g('root', 0), b: g('root', 1), c: g('root', 2), bg: g('root', 3, true) },
+    variants: [{ when: { x: true }, remove: ['a'] }, { when: { y: true }, remove: ['b'] }] };
+  ok('a box two variants together leave one child in the flow says each child\'s place by order', /order: 4;/.test(rule(toCss(both, 'both', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }), '.ds-both > .ds-both__bg')));
   // (a box stacked first on top whose children can overlap says it by z-index though the browser would paint them so
   // already: the only way a reading tells which way the design numbers them)
   const over = { contract: 1, component: 'Over', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', firstOnTop: true } }, icon: { kind: 'graphic', parent: 'root', order: 0, width: 8, height: 8, position: 'absolute', absolute: { x: 0, y: 0 } }, text: { kind: 'graphic', parent: 'root', order: 1, width: 8, height: 8 } } };
@@ -192,13 +198,23 @@ const upright = { contract: 1, component: 'Upright', props: { orientation: { typ
   ok('a box stacked first on top whose children can overlap says so by z-index where the browser already paints them so', /z-index: 2;/.test(rule(ocss, '.ds-over > .ds-over__icon')) && /z-index: 1;/.test(rule(ocss, '.ds-over > .ds-over__text')), ocss);
   // (so does a holder where it takes a part out of a box a placed component restacks, leaving one child in its flow: a
   // field that hides its icons at open, between its text and its background)
-  const g = (parent, o, abs) => ({ kind: 'graphic', parent, order: o, width: 8, height: 8, ...(abs && { position: 'absolute', absolute: { x: 0, y: 0 } }) });
   const lay = { direction: 'row', gap: 4, firstOnTop: true };
   const held = { contract: 1, component: 'Held', folder: 'held', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, box: { kind: 'container', parent: 'root', layout: lay }, 'box/a': g('box', 0), 'box/i': g('box', 1), 'box/bg': g('box', 2, true) } };
   const field = { contract: 1, component: 'Field', props: { open: { type: 'boolean', default: false, figma: 'Open' } },
     anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, p: { kind: 'instance', parent: 'root', order: 0, component: 'Held', key: 'k' }, 'p/box': { kind: 'container', parent: 'p', order: 0, layout: lay }, 'p/box/a': g('p/box', 0), 'p/box/i': g('p/box', 1), 'p/box/bg': g('p/box', 2, true) },
     variants: [{ when: { open: true }, remove: ['p/box/i'] }] };
   const fcss = toCss(field, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Held' ? held : null) });
+  // (and a copy the holder draws itself where a variant opens the instance into a container of its own: stacked as the
+  // holder's own box, by the same z-index and order, never left to a sheet that no longer reaches it)
+  const opened = { ...field, props: { ...field.props, ro: { type: 'boolean', default: false, figma: 'Read only' } }, variants: [...field.variants, { when: { ro: true }, set: { 'p.kind': 'container', 'p.component': null, 'p.key': null } }] };
+  const rcss = toCss(opened, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Held' ? held : null) });
+  const roRule = (part) => rule(rcss, `.ds-field:where([data-ro]:not([data-ro="false"])) > .ds-field__p > .ds-held__box > .ds-held__${part}`);
+  ok('a copy the holder draws itself stacks its first-on-top box by z-index as its own', /z-index: 3;/.test(roRule('a')) && /z-index: 1;/.test(roRule('bg')) && /isolation: isolate/.test(rule(rcss, '.ds-field:where([data-ro]:not([data-ro="false"])) > .ds-field__p > .ds-held__box')), rcss);
+  // (one a variant adds, its parts too, and a later variant opens: the copy read whole at that combination)
+  const late = { ...opened, props: { ...opened.props, inl: { type: 'boolean', default: false, figma: 'Inline' } }, anatomy: { root: opened.anatomy.root },
+    variants: [{ when: { inl: true }, add: Object.fromEntries(Object.entries(opened.anatomy).filter(([k]) => k !== 'root')) }, { when: { inl: true, ro: true }, set: { 'p.kind': 'container', 'p.component': null, 'p.key': null } }] };
+  const lcss2 = toCss(late, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Held' ? held : null) });
+  ok('a copy a later variant opens of an instance another variant adds stacks by z-index as its own', /\.ds-held__a \{[^}]*z-index: 3;/.test(lcss2.split('[data-ro]').slice(1).join('')), lcss2);
   ok('a holder that leaves one child in the flow of a box a placed component restacks says each one\'s place by order, at every combination',
     /order: 1;/.test(rule(fcss, '.ds-field > .ds-field__p > .ds-held__box > .ds-held__a')) && /order: 2;/.test(rule(fcss, '.ds-field > .ds-field__p > .ds-held__box > .ds-held__i')) && /order: 2;/.test(rule(fcss, '.ds-field:where([data-open]:not([data-open="false"])) > .ds-field__p > .ds-held__box > .ds-held__bg')), fcss); }
 // a turned part in a restacked box: its wrapper is what the box lays out and stacks (a size container, its own stacking
