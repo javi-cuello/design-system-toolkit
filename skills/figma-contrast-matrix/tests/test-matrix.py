@@ -265,8 +265,8 @@ if node_bin:
         # planted: the same build with a limit below today's scripts refuses, and writes nothing
         planted = os.path.join(tmp, "planted-build.py")
         with open(os.path.join(SKILL, "scripts", "build-matrix-script.py")) as f: src = f.read()
-        with open(planted, "w") as f: f.write(src.replace("USE_FIGMA_LIMIT = 50000", "USE_FIGMA_LIMIT = 1000"))
-        out_dir = os.path.join(tmp, "planted"); os.mkdir(out_dir)
+        with open(planted, "w") as f: f.write(src.replace("USE_FIGMA_LIMIT = 50000", "USE_FIGMA_LIMIT = 1000"))  # not-shared: inside the TemporaryDirectory
+        out_dir = os.path.join(tmp, "planted"); os.mkdir(out_dir)  # not-shared: inside the TemporaryDirectory
         pr = subprocess.run([sys.executable, planted, "--node-map", os.path.join(SKILL, "references", "node-map.example.json"), "--instance", "9:1",
             "--color-a", ",".join(A), "--color-a-name", "Blue", "--out", os.path.join(out_dir, "apply_matrix.js")], capture_output=True, text=True)
         chk("(planted) a script over the limit is refused, and no file is written", src.count("USE_FIGMA_LIMIT = 50000") == 1 and pr.returncode != 0 and "over use_figma" in pr.stderr and not os.listdir(out_dir), pr.stderr[-200:])
