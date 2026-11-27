@@ -569,11 +569,18 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
   // (`found`: a Map, by each variant's `when`, of the instances it hides a layer in)
   // an instance kept whole in one variant for a layer it hides there is kept whole in every variant that opens it: cut
   // elsewhere to its overrides, a layer it shows as its component's would read as one it hides (the contract keeps no
-  // word for which), so the round trip held a layer code draws there as extra (Carbon's group label, its box hidden in the
-  // horizontal group, shown in the error state). A variant that does not open it lists nothing inside it, as before
-  const hides = flat.map((f) => { const here = new Set(); if (mains) ownInsides(JSON.parse(JSON.stringify(f.anatomy)), mains, { found: here }); return here; });
-  const whole = new Set(hides.flatMap((h) => [...h]));
-  if (mains) flat.forEach((f, i) => { ownInsides(f.anatomy, mains, { whole }); if (found) found.set(JSON.stringify(f.when), [...hides[i]]); });
+  // word for which), so the round trip held a layer code draws there as extra (a group whose first item's box is hidden
+  // in one layout and shown in another state). Found under the regime used: an outer instance kept whole keeps what an
+  // inner one holds, which may show it hiding a layer, so the set is grown until it holds. A variant that does not open
+  // it lists nothing inside it, as before
+  if (mains) {
+    const whole = new Set();
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const f of flat) { const here = new Set(); ownInsides(JSON.parse(JSON.stringify(f.anatomy)), mains, { whole, found: here }); for (const h of here) if (!whole.has(h)) { whole.add(h); grew = true; } }
+    }
+    for (const f of flat) { const here = new Set(); ownInsides(f.anatomy, mains, { whole, found: here }); if (found) found.set(JSON.stringify(f.when), [...here]); }
+  }
   return flat;
 }
 
@@ -885,8 +892,40 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
         if (R && x.radius === 0 && e.radius === undefined && cornered(R.radius)) e.radius = R.radius;
       }
     };
-    if (whole.has(id)) { sayCleared(inner); inherit(); continue; }
-    if (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk))) { if (found) found.add(id); sayCleared(inner); inherit(); continue; }
+    // (on every layer kept, whether the instance is cut to its overrides or kept whole: a mark only adds what the layer draws)
+    const sayStopped = (kept) => {
+      // and one kept that does not clip where its component's part does has stopped it (an override): said `visible`
+      // (UNCLIPPED), or a reader would take the part's clip as its component's. Both readings: each reads a clip wherever
+      // one is drawn (the walk's clips, code's computed overflow), so none read is none drawn. A nested instance too, where
+      // its own component's root does not clip (none resolved: its styling as walked), as its unsaid clip is that root's;
+      // not one of another component than the part's, or a swap draws, whose part's clip was the swapped-out component's
+      for (const k of kept) {
+        const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+        if (!e || !x || e.kind === 'text' || e.overflow !== undefined || x.overflow !== 'hidden') continue;
+        if (e.kind === 'instance' && (swapped.includes(mk) || x.component !== e.component || !keyMatches(e.key, x.key))) continue;
+        const m2 = e.kind === 'instance' && e.component && mains(e.component, e.key), R = m2 && atProps(m2, e.with).root;
+        if (!R || R.overflow !== 'hidden') e.overflow = UNCLIPPED;
+      }
+      // and a clip this component stops that the placed layer draws again, its own component's, left out above: said. Both
+      // readings: each reads a clip wherever one is drawn
+      for (const k of kept) {
+        const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+        const R = x && e && e.kind === 'instance' && e.component && x.overflow === UNCLIPPED && e.overflow === undefined && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
+        if (R && R.overflow === 'hidden') e.overflow = 'hidden';
+      }
+      // and a blend: one kept that draws none where its component's part has one has set it back, said `normal`
+      // (UNBLENDED); a placed layer this component sets back that draws its own component's again, said. Figma's reading
+      // only: one from code reads no blend mode but a placed component's root computing normal (readCleared)
+      if (!reading) for (const k of kept) {
+        const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+        if (e && x && e.kind !== 'instance' && e.blend === undefined && blends(x.blend)) e.blend = UNBLENDED;
+        const R = x && e && e.kind === 'instance' && e.component && x.blend === UNBLENDED && e.blend === undefined && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
+        if (R && blends(R.blend)) e.blend = R.blend;
+      }
+    };
+    // (`found` says where the instance hides a layer, whichever way it came to be kept whole)
+    const hidesHere = !partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk));
+    if (whole.has(id) || hidesHere) { if (found && hidesHere) found.add(id); sayCleared(inner); sayStopped(inner); inherit(); continue; }
     const own = (k) => {
       // (a vector's paths are its component's: the walk records none inside an instance, snapshot 0.86.0, so a placed
       // layer is held to its part without them where it states none)
@@ -928,34 +967,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       if (e && x && e.kind !== 'instance' && e.modes && sorted(e.modes) === sorted(x.modes)) { const { modes: _, ...rest } = e; anatomy[k] = rest; }
     }
     sayCleared(kept);
-    // and one kept that does not clip where its component's part does has stopped it (an override): said `visible`
-    // (UNCLIPPED), or a reader would take the part's clip as its component's. Both readings: each reads a clip wherever
-    // one is drawn (the walk's clips, code's computed overflow), so none read is none drawn. A nested instance too, where
-    // its own component's root does not clip (none resolved: its styling as walked), as its unsaid clip is that root's;
-    // not one of another component than the part's, or a swap draws, whose part's clip was the swapped-out component's
-    for (const k of kept) {
-      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
-      if (!e || !x || e.kind === 'text' || e.overflow !== undefined || x.overflow !== 'hidden') continue;
-      if (e.kind === 'instance' && (swapped.includes(mk) || x.component !== e.component || !keyMatches(e.key, x.key))) continue;
-      const m2 = e.kind === 'instance' && e.component && mains(e.component, e.key), R = m2 && atProps(m2, e.with).root;
-      if (!R || R.overflow !== 'hidden') e.overflow = UNCLIPPED;
-    }
-    // and a clip this component stops that the placed layer draws again, its own component's, left out above: said. Both
-    // readings: each reads a clip wherever one is drawn
-    for (const k of kept) {
-      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
-      const R = x && e && e.kind === 'instance' && e.component && x.overflow === UNCLIPPED && e.overflow === undefined && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
-      if (R && R.overflow === 'hidden') e.overflow = 'hidden';
-    }
-    // and a blend: one kept that draws none where its component's part has one has set it back, said `normal`
-    // (UNBLENDED); a placed layer this component sets back that draws its own component's again, said. Figma's reading
-    // only: one from code reads no blend mode but a placed component's root computing normal (readCleared)
-    if (!reading) for (const k of kept) {
-      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
-      if (e && x && e.kind !== 'instance' && e.blend === undefined && blends(x.blend)) e.blend = UNBLENDED;
-      const R = x && e && e.kind === 'instance' && e.component && x.blend === UNBLENDED && e.blend === undefined && (mains(e.component, e.key) ? atProps(mains(e.component, e.key), e.with).root : null);
-      if (R && blends(R.blend)) e.blend = R.blend;
-    }
+    sayStopped(kept);
     inherit();
   }
 }

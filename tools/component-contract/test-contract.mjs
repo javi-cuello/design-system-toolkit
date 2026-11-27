@@ -639,6 +639,41 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const c2 = derive(two, ['Pill'], { mains: mainsFrom({ Pill: pill }) });
   ok('an instance kept whole in one variant lists the layers it shows in another, as its component draws them',
     'pill/dot' in expand(c2, { wide: false }) && !('pill/dot' in expand(c2, { wide: true })) && 'pill/text' in expand(c2, { wide: false }));
+  // and `found` says, per variant, only where the instance hides a layer, under the regime the contract was cut by
+  const f2 = new Map(); derive(two, ['Pill'], { mains: mainsFrom({ Pill: pill }), found: f2 });
+  const at = (w) => [...f2].find(([k]) => JSON.parse(k).Wide === (w ? "True" : "False"))?.[1] || [];
+  ok('found lists the instance kept whole in the variant that hides a layer, and not in the one that shows them all',
+    at(true).includes('pill') && !at(false).includes('pill'));
+  // a layer kept whole that stops its component's clip says so (`visible`), as one cut to its overrides does
+  const boxed = { ...pill, variants: [{ ...pill.variants[0], children: [dot, { name: 'Box', type: 'FRAME', sizing: 'FIXED/FIXED', w: 4, h: 4, clips: true }, text] }] };
+  const unclipped = { name: 'Box', type: 'FRAME', sizing: 'FIXED/FIXED', w: 4, h: 4 };
+  const three = { ...two, variants: [
+    { ...two.variants[0], children: [{ ...two.variants[0].children[0], children: [dot, unclipped, text] }] },
+    { ...two.variants[1], children: [{ ...two.variants[1].children[0], children: [unclipped, text] }] }] };
+  const c3 = derive(three, ['Pill'], { mains: mainsFrom({ Pill: boxed }) });
+  ok('a layer of an instance kept whole that stops its component\'s clip says visible, in every variant',
+    (expand(c3, { wide: true })['pill/box'] || {}).overflow === 'visible' && (expand(c3, { wide: false })['pill/box'] || {}).overflow === 'visible');
+  // a nested instance hiding a layer in one variant, inside an outer one kept whole there only for it: both kept whole
+  // wherever opened, and found says the inner one where it hides
+  const tag = { name: 'Tag', id: '9:6', props: {}, variants: [{ name: 'Tag', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [dot, text] }] };
+  const chip = { name: 'Chip', id: '9:7', props: {}, variants: [{ name: 'Chip', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [{ name: 'Tag', type: 'INSTANCE', instanceOf: 'Tag', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [] }, text] }] };
+  const inTag = (kids) => ({ name: 'Tag', type: 'INSTANCE', instanceOf: 'Tag', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'], children: kids });
+  const nest = { name: 'Row', id: '9:8', props: { Wide: ['False', 'True'] }, variants: [
+    { name: 'Wide=False', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [{ name: 'Chip', type: 'INSTANCE', instanceOf: 'Chip', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'], children: [inTag([dot, text]), text] }] },
+    { name: 'Wide=True', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [{ name: 'Chip', type: 'INSTANCE', instanceOf: 'Chip', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'], children: [inTag([text]), text] }] }] };
+  const f4 = new Map(), c4 = derive(nest, ['Chip', 'Tag'], { mains: mainsFrom({ Chip: chip, Tag: tag }), found: f4 });
+  const at4 = (w) => [...f4].find(([k]) => JSON.parse(k).Wide === (w ? "True" : "False"))?.[1] || [];
+  ok('a nested instance kept whole where it hides a layer lists what it shows in another variant, and found says where it hides',
+    'chip/tag/dot' in expand(c4, { wide: false }) && !('chip/tag/dot' in expand(c4, { wide: true })) && at4(true).includes('chip/tag') && !at4(false).includes('chip/tag'));
+  // a host swapped to another component in one variant is held to that component there: kept whole for what it hides
+  // in its own variant, it lists in the other what that one's component draws, never a layer the first one hides
+  const badge = { name: 'Badge', id: '9:9', props: {}, variants: [{ name: 'Badge', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [text] }] };
+  const swap = { ...two, variants: [
+    { ...two.variants[0], children: [{ ...two.variants[0].children[0], instanceOf: 'Badge', children: [text] }] },
+    two.variants[1]] };
+  const c5 = derive(swap, ['Pill', 'Badge'], { mains: mainsFrom({ Pill: pill, Badge: badge }) });
+  ok('a host swapped to another component where it hides nothing lists no layer of the one it hides in',
+    !('pill/dot' in expand(c5, { wide: false })) && !('pill/dot' in expand(c5, { wide: true })));
 }
 {
   // a layer inside a nested instance the walk did not open (an icon's glyph) is that instance's own, not hidden: the outer
