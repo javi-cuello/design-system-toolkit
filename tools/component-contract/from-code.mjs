@@ -798,13 +798,15 @@ export function axisValueOf(vals, attrs, innerDisabled = false) {
 }
 
 /* A design prop the engine's rule joined to no arg, where the toolkit's own markup renamed it off an HTML attribute's name
-   (to-markup's propsOf: title as titleOption, type as typeOption): that arg, as the code's for it. Else the prop read as
+   (to-markup's propsOf: title as titleOption, type as typeOption), of the design prop's kind: that arg, as the code's for it. Else the prop read as
    one the code lacks, and its text as another prop under the house's name (a flag's ✏️ title read as Title). Changes
    `props` in place. Tested by test-from-code.mjs. */
-export function renamedJoins(props, argTypes = {}) {
+export function renamedJoins(props, argTypes = {}, design = {}) {
+  // (of the design prop's own kind: an arg offering options is an enum, a flag a boolean, the rest take text)
+  const kindOf = (a) => (Array.isArray(a && a.options) && a.options.length ? 'enum' : a && (a.control === 'boolean' || typeof a.default === 'boolean') ? 'boolean' : 'string');
   for (const [k, v] of Object.entries(props)) {
     if (!v || typeof v !== 'object' || !v.missing) continue;
-    const arg = Object.keys(argTypes).find((a) => a.startsWith(`${k}Option`) && /^\d*$/.test(a.slice(k.length + 6)));
+    const arg = Object.keys(argTypes).find((a) => a.startsWith(`${k}Option`) && /^\d*$/.test(a.slice(k.length + 6)) && (design[k] || {}).type === kindOf(argTypes[a]));
     if (arg) props[k] = { code: arg, fixed: v.fixed };
   }
   return props;
@@ -1846,7 +1848,7 @@ async function governedSource(project, name) {
     api: async () => api || S.PAGE.api(tab),
     elements: async () => elements,
     // the mapping's joins, and the engine's one rule (effectiveProps) for a prop the mapping's variants do not move (a text)
-    joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: renamedJoins(X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}), argTypes) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
+    joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: renamedJoins(X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}), argTypes, figma.props) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
     argsOf: (all) => G.argsOf(all) || {},
     close: () => S.close(),
   };
@@ -2049,7 +2051,7 @@ async function selfSource(project, name, { second = false } = {}) {
     },
     api: async () => api,
     elements: async () => elements,
-    joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: renamedJoins(X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}), argTypes) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
+    joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: renamedJoins(X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}), argTypes, figma.props) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
     argsOf: (all) => G.argsOf(all) || {},
     close: async () => {
       if (browser) await browser.close(); if (site) await site.close();

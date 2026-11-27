@@ -168,7 +168,13 @@ ok('each layer draws the swap that drives it, handed over where a variant says',
   const foreign = { ...card, variants: [{ when: { style: 'elevated' }, set: { 'bg.component': 'Status/Error', 'bg.key': 'k-Error' } }] };
   const rf = toReact(foreign, 'card', { naming: CLASS, library: { ...lib, Card: foreign } });
   ok('a variant that swaps in a component the library does not hold marks it where it holds, the base\'s elsewhere',
-    /styleOption === "elevated" && \(\s*<span[^>]*data-icon="Status\/Error"/.test(rf) && /!\(styleOption === "elevated"\) && \(\s*<Outlined/.test(rf), rf); }
+    /styleOption === "elevated" && \(\s*<span[^>]*data-icon="Status\/Error"/.test(rf) && /!\(styleOption === "elevated"\) && \(\s*<Outlined/.test(rf), rf);
+  // and the other way: a base the library does not hold that a variant swaps for one it holds: the held one there, the
+  // mark elsewhere
+  const toHeld = { ...card, anatomy: { ...card.anatomy, bg: { ...card.anatomy.bg, component: 'Status/Info', key: 'k-Info' } }, variants: [{ when: { style: 'elevated' }, set: { 'bg.component': card.anatomy.bg.component, 'bg.key': card.anatomy.bg.key ?? null } }] };
+  const rh = toReact(toHeld, 'card', { naming: CLASS, library: { ...lib, Card: toHeld } });
+  ok('a base the library does not hold, swapped for one it holds, draws the held one where its variant holds, the mark elsewhere',
+    /!\(styleOption === "elevated"\) && \(\s*<span[^>]*data-icon="Status\/Info"/.test(rh) && /styleOption === "elevated" && \(\s*<Outlined/.test(rh), rh); }
 const two = { component: 'Find', props: { placeholderText: { type: 'string', figma: 'Placeholder text', sets: ['label'] }, valueText: { type: 'string', default: 'Value', figma: 'Value text', sets: ['label'] }, value: { type: 'boolean', default: false, figma: 'Value' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Search' } }, variants: [{ when: { value: true }, set: { 'label.content': '{valueText}' } }], folder: 'find' };
 { const out = toElement(two, 'find', { naming: ELEMENT, library: {} });
   ok('one text two strings set is the one a variant swaps in where drawn, else the other, which draws its layer\'s words', /value \? valueText : placeholderText/.test(out) && /placeholderText = "Search"/.test(out)); }

@@ -1531,7 +1531,9 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
     stackedFirst(rev) && !stackedFirst(fwd) && !stackedFirst([k(3), { stack: {} }, k(1)]) && !stackedFirst([k(3), k(2, { out: true }), k(1)]) && !stackedFirst([k(1)])); }
 // a design prop the engine's rule joined to no arg, where the toolkit's markup renamed it off an HTML attribute's name,
 // joins that arg: a flag's title (titleOption) keeps the design's name, never read back as Title beside it
-{ const p = renamedJoins({ title: { fixed: undefined, missing: true }, size: { fixed: 'm', missing: true }, label: 'label' }, { titleOption: {}, sizeOptional: {}, label: {} });
-  ok('a design prop renamed off an HTML attribute in the markup joins that arg; another word that begins so does not',
-    p.title.code === 'titleOption' && !p.title.missing && p.size.missing === true && p.label === 'label', JSON.stringify(p)); }
+{ const design = { title: { type: 'string' }, size: { type: 'string' }, label: { type: 'string' }, hidden: { type: 'string' } };
+  const p = renamedJoins({ title: { fixed: undefined, missing: true }, size: { fixed: 'm', missing: true }, label: 'label', hidden: { missing: true } },
+    { titleOption: { control: 'text' }, sizeOptional: {}, label: {}, hiddenOption: { control: 'boolean', default: false } }, design);
+  ok('a design prop renamed off an HTML attribute in the markup joins that arg, of its own kind; another word that begins so, or an arg of another kind, does not',
+    p.title.code === 'titleOption' && !p.title.missing && p.size.missing === true && p.label === 'label' && p.hidden.missing === true, JSON.stringify(p)); }
 console.log(`${n}/${n} passed`);

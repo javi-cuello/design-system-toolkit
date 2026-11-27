@@ -733,7 +733,10 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     const slot = props.find((x) => x.type === 'node' && ((x.slots || [x.slot]).includes(id) || (x.p.swaps || []).includes(id)));
     const tag = e.kind === 'text' || control || inline ? 'span' : 'div';
     let out;
-    if (icon || (e.kind === 'instance' && !placedOf(library, e))) {
+    // (a component the library does not hold that a variant swaps for one it holds: drawn as each alternative, the mark
+    // where none swaps it, the held one where its variant holds: instanceOut)
+    const toHeld = !icon && e.kind === 'instance' && !placedOf(library, e) && (c.variants || []).some((v) => { const g = (v.set || {})[`${id}.component`]; return typeof g === 'string' && placedOf(library, { ...e, component: g, key: v.set[`${id}.key`] ?? null }); });
+    if (!toHeld && (icon || (e.kind === 'instance' && !placedOf(library, e)))) {
       gaps.push(`${partName(id)}: draw the icon ${icon ? `its ${icon.name} names` : e.component}, as the project draws icons`);
       // the glyph a variant changes (an alert's error icon): the one its condition draws, else the part's own
       let glyph = icon ? { code: ref(icon.name) } : { lit: e.component };
@@ -835,7 +838,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     // a component the library does not hold that a variant swaps in (a status icon set of its own at the error state):
     // marked where it goes, as any such instance is, its drawing the project's; never the base's component drawn on
     function foreignMark(x) {
-      const gap = `${partName(id)}: draw ${x.component} where its variant swaps it in, as the project draws icons`;
+      const gap = x === e ? `${partName(id)}: draw the icon ${x.component}, as the project draws icons` : `${partName(id)}: draw ${x.component} where its variant swaps it in, as the project draws icons`;
       if (!gaps.includes(gap)) gaps.push(gap);
       return { tag: 'span', attrs: [...hook(id), ['data-icon', { lit: x.component }], ['aria-hidden', { lit: 'true' }]], children: [] };
     }
