@@ -181,6 +181,40 @@ How time is shown on a calendar: choosing between the month grid, the week and d
 
 **Sources:** Google, Zoom, Basecamp, Calendly, Fluent, FullCalendar, React Aria and APG as linked. They differ on the view switch's form and on disabling Today; design-standard rule 4 picks the form by count.
 
+## The period header: order, grouping and style
+
+How the period heading, Previous and Next, and Today are laid out in one row. What each control does is [*Period navigation*](#period-navigation).
+
+**Use when / don't use**
+- [strong] **A full calendar view puts the heading first and the controls at the end.** FullCalendar v6's default toolbar is `{ start: 'title', center: '', end: 'today prev,next' }` ([FullCalendar v6 headerToolbar](https://legacy.fullcalendar.io/v6/headerToolbar)); MUI X's scheduler puts its label at the start and a `role="navigation"` group of Previous and Next, then Today, at the end, with `justifyContent: 'space-between'` ([MUI X Scheduler HeaderToolbar](https://github.com/mui/mui-x/blob/master/packages/x-scheduler/src/event-calendar/header-toolbar/HeaderToolbar.tsx)); Apple: "Click the Today button in the top right", with "the arrows beside Today" ([Apple Calendar for Mac](https://help.apple.com/calendar/mac/10.11/en.lproj/icl1010.html)); Clockify's timesheet: "Switch to a different week using the date navigation in the top-right corner" ([Clockify timesheet](https://clockify.me/help/time-tracking/timesheet-view)).
+- [contested] **A date picker's month: between the arrows, or first with both arrows at the end.** React Aria's anatomy is Previous, heading, Next ([React Aria Calendar docs](https://github.com/adobe/react-spectrum/blob/main/packages/dev/s2-docs/pages/react-aria/Calendar.mdx)); Atlassian's header spreads the arrows either side of its heading ([`@atlaskit/calendar` header](https://unpkg.com/@atlaskit/calendar@19.6.1/dist/es2019/internal/components/header.js)); Polaris's DatePicker puts its arrows at the edges, `justify-content:space-between` ([Polaris DatePicker CSS](https://github.com/Shopify/polaris-react-archive/blob/main/polaris-react/src/components/DatePicker/DatePicker.module.css)). MUI's label takes `marginRight: 'auto'`, so both arrows sit at the end ([MUI PickersCalendarHeader](https://github.com/mui/mui-x/blob/master/packages/x-date-pickers/src/PickersCalendarHeader/PickersCalendarHeader.tsx)), as Material 3's `MonthsNavigation` does with `Arrangement.SpaceBetween` ([Compose DatePicker](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/DatePicker.kt)). A full view's header is the item above.
+
+**How**
+- [moderate] **Previous and Next sit together.** FullCalendar: "Values separated by a comma will be displayed adjacently", as `prev,next` is (FullCalendar v6 headerToolbar); MUI X's scheduler groups them in one navigation element (MUI X Scheduler HeaderToolbar).
+- [contested] **Today before the arrows, after them, or apart.** FullCalendar puts it before them with "a small gap in between" (FullCalendar v6 headerToolbar); MUI X's scheduler after them (MUI X Scheduler HeaderToolbar); Outlook: "We've moved Today to a new spot in the top left corner so it's closer to the calendar" ([Outlook new look](https://support.microsoft.com/en-us/office/outlook-calendar-has-a-new-look-1c04e438-d84a-44fc-a404-170c9007e65c)). The project decides.
+- [strong] **It is labelled "Today".** FullCalendar's `today` button, MUI X's scheduler Today button, Apple's "Today button" and Outlook's "Today" (sources above). No source opened labels it "This week".
+- [strong] **The arrows are quiet icon buttons.** React Aria's example uses `variant="quiet"` (React Aria Calendar docs); React Spectrum's are `ActionButton … isQuiet` ([React Spectrum CalendarBase](https://github.com/adobe/react-spectrum/blob/main/packages/@adobe/react-spectrum/src/calendar/CalendarBase.tsx)); Atlassian's are `appearance: "subtle"` (`@atlaskit/calendar` header); Polaris's are `variant="tertiary"` ([Polaris DatePicker](https://github.com/Shopify/polaris-react-archive/blob/main/polaris-react/src/components/DatePicker/DatePicker.tsx)); FullCalendar's Monarch theme gives icon buttons `border border-transparent` ([FullCalendar Monarch theme](https://github.com/fullcalendar/fullcalendar/tree/main/packages/preact/src/themes)). FullCalendar's Classic theme borders them and joins the pair.
+- [contested] **Today outlined or as text.** FullCalendar's Monarch gives text buttons a visible border, `border border-(--fc-monarch-strong-border)` (FullCalendar Monarch theme); MUI X's scheduler uses MUI's default `Button`, a text button (MUI X Scheduler HeaderToolbar). The project decides.
+- [moderate] **On a narrow screen the row wraps.** FullCalendar's toolbar is `flex flex-row flex-wrap items-center justify-between gap-3` (FullCalendar Monarch theme); MUI X's scheduler wraps, `flexWrap: 'wrap'`, and below 550px hides the label and turns Today into "an icon button replacing the expanded text button" (MUI X Scheduler HeaderToolbar).
+- [weak] **A page title and the period are separate rows.** Polaris's page header puts its `pagination` in the row above the title, `InlineStack align="space-between"` ([Polaris Page Header](https://github.com/Shopify/polaris-react-archive/blob/main/polaris-react/src/components/Page/components/Header/Header.tsx)). No source opened sets a page title above a calendar's period.
+
+**Cases**
+- A row of Today, Previous, Next, then a large heading → the heading first; Previous and Next together at the end; Today beside them, before or after (contested, above).
+- Arrows drawn as bordered buttons beside a bordered Today → quiet arrows; Today outlined or as text is the project's call (above).
+- A narrow screen squeezes the heading → the row wraps, the heading on its own line (above).
+
+**Accessibility**
+- [required] 1.3.2 and 2.4.3: the DOM order of heading and controls matches the row's visual order (code-standard rule 2); the heading, names and announcements are [*Period navigation*](#period-navigation).
+
+**Build**
+- [moderate] One flex row, `justify-content: space-between` and `flex-wrap: wrap`, heading first, a group of Previous and Next, and Today (FullCalendar, MUI X, above).
+
+**Check**
+- *Script* could: assert the heading comes before the controls in the DOM, Previous and Next are adjacent, and the row wraps without overlap at 320px.
+- *Judgement*: does the heading read first, and are the arrows quieter than it?
+
+**Sources.** FullCalendar (v6 docs, v7 source and themes), MUI X (date pickers and scheduler source), React Aria and React Spectrum source, Atlassian's calendar build, Polaris (archived source), Compose Material 3 source, Apple's Calendar help (10.11), Outlook's and Clockify's help, each read raw. Not opened or silent: Google's help gives no toolbar layout; Harvest's help refused automated reads; Toggl, Notion Calendar and Linear gave no period-navigation text; Primer and Ant Design ship no such header.
+
 ## Calendars on small screens
 
 **Use when / don't use**
