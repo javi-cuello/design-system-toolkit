@@ -1549,7 +1549,11 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
 // variant detaches the component that draws it open) is that instance still: no swap, its colour as read
 { const read = { anatomy: { c: { kind: 'instance', component: 'Chevron--down', key: 'k1' }, 'c/v': { kind: 'graphic', parent: 'c' } }, variants: [{ when: { ro: true }, set: { 'c.kind': 'graphic', 'c.asset': 'Chevron--down', 'c.key': null, 'c.background': 'I/disabled' } }] };
   const s = swappedMark(read, { anatomy: { c: { kind: 'instance', component: 'Chevron--down' } }, variants: [] }).variants[0].set;
-  ok('a variant\'s mark of the icon the base reads there is that instance still, its colour as read', JSON.stringify(s) === JSON.stringify({ 'c.background': 'I/disabled' }), JSON.stringify(s)); }
+  ok('a variant\'s mark of the icon the base reads there is that instance still, its colour as read', JSON.stringify(s) === JSON.stringify({ 'c.background': 'I/disabled' }), JSON.stringify(s));
+  // (review: by its whole name: a glyph of that last name in another set is another icon)
+  const other = { anatomy: { c: { kind: 'instance', component: 'Arrows/Chevron--down' } }, variants: [{ when: { ro: true }, set: { 'c.kind': 'graphic', 'c.asset': 'Chevron--down', 'c.key': null } }] };
+  const o = swappedMark(other, { anatomy: { c: { kind: 'instance', component: 'Arrows/Chevron--down' } }, variants: [] }).variants[0].set;
+  ok('…by its whole name: one of that last name in another set stays the code\'s graphic', o['c.kind'] === 'graphic' && o['c.asset'] === 'Chevron--down', JSON.stringify(o)); }
 // children that say by z-index the first paints on top (to-code's firstOnTop over an overlapping group) read as first on
 // top, a child placed absolutely among them too; the last on top, or one with no z-index, does not
 { const { stackedFirst } = await import('./rules.mjs');
