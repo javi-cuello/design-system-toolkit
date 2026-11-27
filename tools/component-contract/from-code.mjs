@@ -198,12 +198,24 @@ export function markFill(cs, clear) {
   return [cs.maskImage, cs.webkitMaskImage].every((m) => !m || m === 'none') ? c : null;
 }
 
-/* Where a text's words sit in its box, as css.mjs writes it: align-content on a block box (CSS Box Alignment 3), centre
-   or end; the top, or a box that aligns nothing by it (inline, flex), reads nothing. `s` its computed style. Run in the
-   page. Tested by test-from-code.mjs. */
-export function alignedOf(s) {
-  if (!/^(block|flow-root|inline-block|list-item)$/.test(s.display)) return undefined;
-  return { center: 'center', 'safe center': 'center', 'unsafe center': 'center', end: 'end', 'flex-end': 'end' }[s.alignContent];
+/* Where a text's words sit in its box, measured, never read off the property css.mjs writes (align-content): the words'
+   rect (a Range over them) against the box's content box, where the box has height to spare beyond them; centre where
+   the room above and below is even, end where it is below the words' least, else the top, which reads nothing, as does
+   a box with no room to spare. `n` the text's element, `s` its computed style. Run in the page. Tested by
+   test-from-code.mjs. */
+export function alignedOf(n, s) {
+  const r = document.createRange(); r.selectNodeContents(n);
+  const w = r.getBoundingClientRect(), b = n.getBoundingClientRect(), px = (v) => parseFloat(v) || 0;
+  if (!w.height || !b.height) return undefined;
+  const top = b.top + px(s.borderTopWidth) + px(s.paddingTop), bottom = b.bottom - px(s.borderBottomWidth) - px(s.paddingBottom);
+  // (the words' line box, not their glyphs': a line height under the font's own draws the rect past the line by half
+  // the difference each side, which is no room)
+  const lh = parseFloat(s.lineHeight), lines = lh > 0 ? Math.max(1, Math.round(w.height / lh)) : 0, half = lh > 0 ? (w.height - lines * lh) / 2 : 0;
+  const above = w.top + half - top, below = bottom - (w.bottom - half);
+  if (above + below < 4) return undefined;
+  if (Math.abs(above - below) <= 1) return 'center';
+  if (below <= 1 && above > below) return 'end';
+  return undefined;
 }
 /* Whether a mark draws no glyph of its own: no child element, no text of its own (an icon font's ligature, home), and no
    pseudo-element with content (`pseudo` each one's computed content), so the colour it is read at is no glyph's. `text`
@@ -2512,7 +2524,7 @@ async function main() {
             return; }
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
           if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; if (tag !== 'svg') e.mark = true; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; if (n.getAttribute('data-icon-size')) e.iconSize = n.getAttribute('data-icon-size'); }
-          else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(n, s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; if (alignedOf(s)) e.verticalAlign = alignedOf(s); e.content = text; }
+          else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(n, s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; { const va = alignedOf(n, s); if (va) e.verticalAlign = va; } e.content = text; }
           // an icon mark, a placed component drawn as the empty element to-markup leaves for it (one the store does not hold),
           // is a box to-code styles as the instance's own: its stroke, corners and clipping read as a box's, its fill
           // staying the glyph's colour (above)

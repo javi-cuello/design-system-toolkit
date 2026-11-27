@@ -1206,10 +1206,13 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     try {
       const tab = await attach(await newPage(browser.endpoint));
       const cases = ['center', 'end', 'start'];
-      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html><div style="display: flex; flex-direction: column">${cases.map((v) => `<span data-t style="height: 40px; ${cssOf({ verticalAlign: v })}">Hi</span>`).join('')}</div><span data-i style="height: 40px; align-content: center">Hi</span>` });
-      const got = await call(tab, (src) => { const of = new Function(`return ${src}`)(); return [...document.querySelectorAll('[data-t], [data-i]')].map((n) => { const r = document.createRange(); r.selectNodeContents(n); return [of(getComputedStyle(n)) ?? null, Math.round(r.getBoundingClientRect().top - n.getBoundingClientRect().top)]; }); }, alignedOf.toString());
-      ok('the words drawn where the alignment says, and read back as it: centre, bottom, top; an inline box that aligns nothing reads nothing',
-        JSON.stringify(got.map(([v, y]) => [v, y - got[2][1]])) === '[["center",15],["end",30],[null,0],[null,1]]', JSON.stringify(got));
+      // (then boxes the reader must measure, not echo: align-content said where no spare height shows it, where a flex
+      // box ignores it, on an inline box that has no height; and words padded to the middle with nothing said)
+      const odd = ['height: 10px; align-content: center', 'display: flex; height: 40px; align-content: center', 'display: inline; height: 40px; align-content: end', 'height: 20px; padding: 10px 0 10px; align-content: end; line-height: 10px; font-size: 10px', 'height: 40px; padding-top: 15px; box-sizing: border-box; line-height: 10px; font-size: 10px'];
+      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html><div style="display: flex; flex-direction: column">${cases.map((v) => `<span data-t style="height: 40px; ${cssOf({ verticalAlign: v })}">Hi</span>`).join('')}${odd.slice(0, 2).map((css) => `<span data-t style="${css}">Hi</span>`).join('')}</div><span data-t style="${odd[2]}">Hi</span><div data-t style="${odd[3]}">Hi</div><div data-t style="${odd[4]}">Hi</div>` });
+      const got = await call(tab, (src) => { const of = new Function(`return ${src}`)(); return [...document.querySelectorAll('[data-t]')].map((n) => of(n, getComputedStyle(n)) ?? null); }, alignedOf.toString());
+      ok('a text\'s vertical alignment is read where its words are drawn in its content box, never from the property: centre, bottom, top; none where no spare height, a flex box or an inline one shows nothing; within the content box, so padding is not alignment',
+        JSON.stringify(got) === '["center","end",null,null,null,null,"end",null]', JSON.stringify(got));
     } finally { await browser.close(); }
   }
 }
