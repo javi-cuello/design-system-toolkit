@@ -52,6 +52,10 @@ assert.equal(merged(repo, 'wt-agent-wip', 'main'), false, 'a subject on main ove
 const typo = wt('agent-typo'); fs.writeFileSync(path.join(typo, 'a.txt'), 'their fix'); git(typo, 'commit', '-qam', 'fix typo');
 fs.writeFileSync(path.join(repo, 'a.txt'), 'main fix'); git(repo, 'commit', '-qam', 'fix typo');
 assert.equal(merged(repo, 'wt-agent-typo', 'main'), false, 'same subject, same file, other content: unmerged');
+// landed as a rebased copy, then main edited the same line again: the tree test conflicts, the patch is on main
+const relanded = wt('agent-relanded'); fs.writeFileSync(path.join(relanded, 'r.txt'), 'A'); git(relanded, 'add', 'r.txt'); git(relanded, 'commit', '-qm', 'the landed change');
+git(repo, 'cherry-pick', 'wt-agent-relanded'); fs.writeFileSync(path.join(repo, 'r.txt'), 'B'); git(repo, 'commit', '-qam', 'edited again on main');
+assert.equal(merged(repo, 'wt-agent-relanded', 'main'), true, 'a rebased landing whose lines main edited since is merged');
 
 // under a day old: nothing goes, nothing is warned of
 assert.deepEqual(sweep(repo), [], 'a worktree under a day old is left alone');
@@ -59,7 +63,7 @@ assert.deepEqual(await leftovers(repo), [], 'and is not warned of');
 
 const later = Date.now() + 2 * 864e5;
 const gone = sweep(repo, later).map((g) => g.replace(/ \(was [0-9a-f]{8}\)$/, '')).sort();
-assert.deepEqual(gone, ['.claude/worktrees/agent-merged', '.claude/worktrees/agent-picked', '.claude/worktrees/linked', 'old-merged'], 'merged, clean and a day old: removed, links to installs and a build cache being nobody\'s work');
+assert.deepEqual(gone, ['.claude/worktrees/agent-merged', '.claude/worktrees/agent-picked', '.claude/worktrees/agent-relanded', '.claude/worktrees/linked', 'old-merged'], 'merged, clean and a day old: removed, links to installs and a build cache being nobody\'s work');
 assert.ok(fs.existsSync(path.join(repo, 'tool')), "a link's target in the main checkout stays");
 assert.ok(!fs.existsSync(fast) && !fs.existsSync(picked), 'their folders are gone');
 assert.equal(git(repo, 'branch', '--list', 'wt-agent-merged', 'wt-agent-picked', 'old-merged').trim(), '', 'with their branches');

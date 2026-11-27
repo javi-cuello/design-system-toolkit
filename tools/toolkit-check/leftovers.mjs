@@ -6,7 +6,8 @@
  *
  *   sweep(repo)      bin/closing (the Stop hook): removes, without asking, each linked worktree and its branch, and
  *                    each other local branch, that is clean, over a day old, and merged into main — no commit of its own
- *                    (rev-list main..<it> is empty) or every commit's subject already on main (a rebase or cherry-pick)
+ *                    (rev-list main..<it> is empty), merging it changes nothing, or every commit's patch is on main
+ *                    (a rebase or cherry-pick, its lines edited again since)
  *                    — and parks each worktree of a piece of work (.claude/worktrees/<work>) left unlanded and untouched
  *                    for a week by every session (none running claims it): files left uncommitted are committed on its
  *                    branch first, saying so; its folder goes, its branch stays, and bin/worktree <work> reopens it
@@ -30,13 +31,17 @@ const git = (repo, args) => { try { return execFileSync('git', ['-C', repo, ...a
 const mainOf = (repo) => ['main', 'master'].map((b) => `refs/heads/${b}`).find((b) => git(repo, ['rev-parse', '--verify', '-q', b]) !== null) || null;
 
 /* Merged: nothing of its own past main, or merging it into main would change nothing (git merge-tree: the merged tree
-   is main's own). That covers a rebase, a cherry-pick and a squash, whatever their hashes, and a commit whose subject
-   matches one on main ("wip") but whose content main lacks is unmerged: it changes the tree. The brief's subject test
-   is subsumed: every subject on main with its content on main merges to main's tree. */
+   is main's own), or every commit of its own has its patch on main (git cherry: no + line). The tree test covers a
+   rebase, a cherry-pick and a squash, whatever their hashes; the patch test covers a branch bin/land landed as a
+   rebased copy whose lines main has since edited again, which conflicts in the tree test (six kb- worktrees sat five
+   days on 2026-11-27). A commit whose subject matches one on main ("wip") but whose content main lacks is unmerged by
+   both: it changes the tree, and its patch is not on main. */
 export function merged(repo, ref, main) {
   if (git(repo, ['rev-list', '--count', `${main}..${ref}`]) === '0') return true;
   const tree = git(repo, ['merge-tree', '--write-tree', main, ref]); // fails (null) on a conflict: not merged
-  return !!tree && tree.split('\n')[0] === git(repo, ['rev-parse', `${main}^{tree}`]);
+  if (!!tree && tree.split('\n')[0] === git(repo, ['rev-parse', `${main}^{tree}`])) return true;
+  const cherry = git(repo, ['cherry', main, ref]);
+  return !!cherry && cherry.split('\n').every((l) => l.startsWith('- '));
 }
 
 const mtime = (f) => { try { return fs.statSync(f).mtimeMs; } catch { return 0; } };
