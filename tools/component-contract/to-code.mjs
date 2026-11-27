@@ -713,18 +713,19 @@ function overrideOf(a, host, rel, m, mains, B = a, c = null) {
 }
 
 /* What a mark (an instance the library does not hold) that keeps room about its glyph (its layout's padding) declares
-   so the glyph sits inside that room: `decls`, the glyph's paint kept to the content box; and where the mark hugs, `before`,
-   a box the size of the glyph the design draws in it (its one child's) as its content, so the mark is as big as the
-   frame, the padding round it, and still hugs (its own size written would read as fixed). `a`: the combination's
-   anatomy. Tested by test-to-code.mjs and test-from-code.mjs. */
+   so the glyph sits inside that room: the glyph's paint kept to the content box; and where the mark hugs, its content box
+   at least the size of the glyph the design draws in it (its one child's: min sizes over a content box, never a pseudo
+   element an icon font may draw its glyph in), so it is as big as the frame, the padding round it, and still hugs.
+   `a`: the combination's anatomy. Tested by test-to-code.mjs and test-from-code.mjs. */
 export function markRoom(e, a, id) {
   const pad = (e.layout || {}).padding;
   if (!pad || !Object.values(pad).some((v) => v && v !== 0)) return null;
   const decls = [['background-origin', 'content-box'], ['background-clip', 'content-box'], ['mask-origin', 'content-box'], ['mask-clip', 'content-box']];
   const kids = Object.values(a).filter((x) => x && x.parent === id);
   const g = kids.length === 1 ? kids[0] : null;
-  const sized = [['width', 'inline-size'], ['height', 'block-size']].filter(([k]) => (e[k] === undefined || e[k] === 'hug') && g && typeof g[k] === 'number');
-  return { decls, ...(sized.length && { before: [['content', '""'], ['flex', 'none'], ...sized.map(([k, prop]) => [prop, rem(g[k])])] }) };
+  const sized = [['width', 'min-inline-size'], ['height', 'min-block-size']].filter(([k]) => (e[k] === undefined || e[k] === 'hug') && e[k === 'width' ? 'minWidth' : 'minHeight'] === undefined && g && typeof g[k] === 'number');
+  if (sized.length) decls.push(['box-sizing', 'content-box'], ...sized.map(([k, prop]) => [prop, rem(g[k])]));
+  return { decls };
 }
 
 /* A placed instance's declarations drawn whole: where it sits and how big (PLACED), and its own styling over its
@@ -1087,7 +1088,6 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: (e.kind === 'instance' && !unheld) || slotted ? [] : unheld ? unread.filter((f) => !/^(key|component|with|swappedBy)\b/.test(f)) : unread,
       // (the axes a scale constraint went unwritten on: eval.mjs leftToCode leaves what code draws there to code)
       ...(unshared.length && !slotted && { unshared }) };
-    if (room && room.before) out[`${id}::before`] = { decls: new Map(room.before.map(([p, v]) => [p, { v }])), unread: [] };
     // a part turned a quarter (turnedParts): its wrapper takes its place in the flow on the parent's axes, its own width
     // the wrapper's height and its own height the wrapper's width, and the part is drawn inside at its own size, centred
     // (its turn, css.mjs's rotate, as it is); where this combination does not turn it so, the wrapper is no box

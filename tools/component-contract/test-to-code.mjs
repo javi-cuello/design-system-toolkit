@@ -642,10 +642,12 @@ else console.log('skip: no stored contracts on this machine');
   const withGlyph = { ...framed, anatomy: { ...framed.anatomy, 'icon/glyph': { kind: 'instance', parent: 'icon', component: 'Warn', width: 16, height: 16 } } };
   const roomSheet = toCss(withGlyph, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
   const block = (sheet, sel) => (sheet.split(`${sel} {`)[1] || '').split('}')[0];
-  ok('a padded mark keeps the glyph painted on it inside its content box, and hugging, holds the glyph\'s size as its content, its own size unwritten',
-    ['mask-origin: content-box;', 'background-origin: content-box;'].every((d) => block(roomSheet, '.ds-bar__icon').includes(d)) && !/inline-size/.test(block(roomSheet, '.ds-bar__icon'))
-    && ['content: "";', 'inline-size: 1rem;', 'block-size: 1rem;'].every((d) => block(roomSheet, '.ds-bar__icon::before').includes(d))
-    && !/::before/.test(toCss({ ...withGlyph, anatomy: { ...withGlyph.anatomy, icon: { ...withGlyph.anatomy.icon, layout: { direction: 'row' } } } }, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains })), roomSheet);
+  // (fifth: never through ::before, which an icon font draws its glyph in: a minimum over the content box, which still hugs)
+  const unpadded = toCss({ ...withGlyph, anatomy: { ...withGlyph.anatomy, icon: { ...withGlyph.anatomy.icon, layout: { direction: 'row' } } } }, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('a padded mark keeps the glyph painted on it inside its content box, and hugging, holds the glyph\'s size as its content\'s minimum, its own size unwritten and no pseudo element',
+    ['mask-origin: content-box;', 'background-origin: content-box;', 'box-sizing: content-box;', 'min-inline-size: 1rem;', 'min-block-size: 1rem;'].every((d) => block(roomSheet, '.ds-bar__icon').includes(d))
+    && !/(^|[^-])inline-size/.test(block(roomSheet, '.ds-bar__icon')) && !/::before/.test(roomSheet)
+    && !/min-inline-size/.test(unpadded), roomSheet);
   // a host each variant adds at its own props (a library's text input adds Status notification per state): a part inside it
   // is named by the variant that draws it there, whichever variant comes first (the first reading lists error's first)
   const stat = { contract: 1, component: 'Stat', props: { status: { type: 'enum', values: ['alt', 'failed'], default: 'alt', figma: 'Status' } }, anatomy: { root: { kind: 'container' } },

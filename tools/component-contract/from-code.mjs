@@ -2781,7 +2781,9 @@ async function main() {
       // own; their minimum and maximum are the wrapper's, on the swapped axis (to-code writes them so)
       const turnedIds = new Set(await call(L.tab, () => [...document.querySelectorAll('[data-contract-turn]')].map((n) => n.getAttribute('data-contract-turn'))));
       const SWAP = { minWidth: 'minHeight', minHeight: 'minWidth', maxWidth: 'maxHeight', maxHeight: 'maxWidth' };
-      for (const e of raw) if (['container', 'slot', 'text', 'instance'].includes(e.kind) || mark.has(e.id)) { const turnedHere = turnedIds.has(e.id), q = turnedHere ? flowSelector(e.id, turnedIds) : await boxOf(e); for (const [css, side] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
+      // (a mark's minimum over its content box is its glyph's room, which keeps it hugging: to-code markRoom; no minimum)
+      for (const e of raw) if (['container', 'slot', 'text', 'instance'].includes(e.kind) || mark.has(e.id)) { const turnedHere = turnedIds.has(e.id), q = turnedHere ? flowSelector(e.id, turnedIds) : await boxOf(e); const room = mark.has(e.id) && (await authoredWidth(L.tab, q, 'box-sizing', { raw: true, cache: styles }) || '').trim() === 'content-box'; for (const [css, side] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
+        if (room && side.startsWith('min')) continue;
         const field = turnedHere ? SWAP[side] : side;
         const w = await authoredWidth(L.tab, q, css, { raw: true, cache: styles });
         // (one written as a token, var(): the length it computes to, which the tokens below name back as that token)
