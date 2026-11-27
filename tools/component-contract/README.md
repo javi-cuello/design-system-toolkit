@@ -16,7 +16,8 @@ In use. The snapshot router writes a contract beside every stored spec on each l
 ## Run it
 
 ```sh
-# write every contract beside its spec, after derive.cjs changes
+# write every contract beside its spec, after derive.cjs changes; a project under another
+# projects root needs the same TOOLKIT_PROJECTS_ROOT the measure runs under, or it stays stale to it
 node tools/component-contract/write.cjs <components dir>
 
 # from the contract to code: stylesheets, then markup and stories
