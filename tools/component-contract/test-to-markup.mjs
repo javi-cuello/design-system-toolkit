@@ -912,6 +912,13 @@ else {
   // its child the later variant does not put back keeps its own removal
   const bar2 = { ...bar, anatomy: { ...bar.anatomy, 'menu/badge': { kind: 'container', parent: 'menu' } }, variants: [{ when: { sm: true }, remove: ['menu', 'menu/badge'] }, bar.variants[1]] };
   ok('a child of a part put back, that is not put back itself, stays taken away', /\{!sm && \(\s*<div className="ds-bar__badge"/.test(toReact(bar2, 'bar', { naming: CLASS, library: { Bar: { ...bar2, folder: 'bar' } } })));
+  // a child an earlier variant adds, gone with its parent's removal, is not revived where a later variant puts the parent
+  // back alone (layers' expand prunes it), but is where an add of its own at least as narrow draws it there
+  { const tipBar = (own) => ({ ...bar, props: { ...bar.props, tip: { type: 'boolean', default: false, figma: 'Tip', shows: ['menu/tip'] } },
+      variants: [{ when: { tip: true }, add: { 'menu/tip': { kind: 'container', parent: 'menu' } } }, ...bar.variants, ...(own ? [{ when: { sm: true, end: true, tip: true }, add: { 'menu/tip': { kind: 'container', parent: 'menu' } } }] : [])] });
+    const tipOf = (x) => toReact(x, 'bar', { naming: CLASS, library: { Bar: { ...x, folder: 'bar' } } }).split('\n').find((l) => /\{.*&& \($/.test(l) && /tip/.test(l)) || '';
+    const pruned = tipOf(tipBar(false)), kept = tipOf(tipBar(true));
+    ok('a child an earlier variant adds is not revived where its parent alone is put back; an add of its own as narrow draws it', /tip && !\(sm && end\)/.test(pruned) && !/!\(sm && end\)/.test(kept), pruned + ' | ' + kept); }
   // a narrower removal stacked on the put-back still takes it away
   const bar3 = { ...bar, props: { ...bar.props, busy: { type: 'boolean', default: false, figma: 'Busy' } }, variants: [...bar.variants, { when: { sm: true, end: true, busy: true }, remove: ['menu'] }] };
   ok('a removal narrower than a put-back still takes the part away', /\(sm && end\) && !\(sm && end && busy\)/.test(toReact(bar3, 'bar', { naming: CLASS, library: { Bar: { ...bar3, folder: 'bar' } } })));
