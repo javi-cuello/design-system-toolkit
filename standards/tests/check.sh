@@ -164,13 +164,14 @@ if [ -d skills ]; then
             END { print k + 0 }')
         [ "${blocks:-0}" -eq 0 ] || warn "[G] $s — $blocks fenced code block(s) of 8+ lines in its prose; clause G says an engine in scripts/"
 
-        # Clause K: a skill that offers a route through the official Figma MCP (its SKILL.md names
-        # use_figma) keeps every script it sends to Figma runnable there: use_figma refuses
-        # loadAllPagesAsync ("not a supported API") and takes at most 50,000 characters of code.
-        if grep -q 'use_figma' "${d}SKILL.md" 2>/dev/null; then
+        # Clause K: a skill that offers a route through the official Figma MCP (a **Without the bridge**
+        # route in its SKILL.md; a mere mention of use_figma is not one) keeps every script it sends to
+        # Figma runnable there: use_figma refuses loadAllPagesAsync ("not a supported API") and takes at
+        # most 50,000 characters of code. Comments are dropped first; any other use of the name counts.
+        if grep -q '\*\*Without the bridge\*\*' "${d}SKILL.md" 2>/dev/null; then
             for f in "${d}"scripts/*.js; do
                 [ -f "$f" ] || continue
-                grep -v '^[[:space:]]*//' "$f" | grep -q 'loadAllPagesAsync(' &&
+                grep -vE '^[[:space:]]*(//|\*|/\*)' "$f" | sed 's#//.*##' | grep -q 'loadAllPagesAsync' &&
                     err "[K] $s — ${f#"$d"} calls loadAllPagesAsync, which use_figma refuses; load each page with page.loadAsync()"
                 [ "$(wc -c < "$f")" -gt 50000 ] &&
                     err "[K] $s — ${f#"$d"} is over use_figma's 50,000 characters"

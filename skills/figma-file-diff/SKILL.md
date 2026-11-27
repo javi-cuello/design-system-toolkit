@@ -67,6 +67,8 @@ A screenshot has the same trap: the bridge captures only the active file, whiche
 - Each call names its file, so Step 1's list and lock are not needed. `create_session` refuses a file the account cannot edit.
 - Every file reads "Document" there, so the name check cannot tell the two apart. The report script warns that both sides name one file: check that the two keys differ.
 - A description Figma hands back escaped (`&lt;`) is read as typed, so a file read either way compares equal.
+- Its limit: a description that holds the text `&lt;` as typed reads as `<` on both routes.
+- Run every script of one side through one route. The two routes name a file differently, so the report refuses a side that mixes them.
 
 ### Step 2 — Tier 0: inventory
 

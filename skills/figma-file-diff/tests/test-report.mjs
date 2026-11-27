@@ -114,11 +114,31 @@ ok("a variable in a collection whose name holds a slash is folded into that coll
 });
 // use_figma hands a variable's and a style's description back escaped: read as typed, both routes hash the same.
 {
-  const described = async (d) => { const f = fileOf(); (await f.variables.getLocalVariablesAsync())[0].description = d; (await f.getLocalTextStylesAsync())[0].description = d; return run("manifest.js", f, "const VARS = ['Space/Space/2'];"); };
+  const described = async (d) => {
+    const f = fileOf();
+    (await f.variables.getLocalVariablesAsync())[0].description = d;
+    (await f.getLocalTextStylesAsync())[0].description = d;
+    f.getLocalPaintStylesAsync = async () => [{ name: "Fill/Brand", paints: [], description: d }];
+    f.getLocalEffectStylesAsync = async () => [{ name: "Shadow/1", effects: [], description: d }];
+    return run("manifest.js", f, "const VARS = ['Space/Space/2'];");
+  };
   const typed = await described("a < b & c"), escaped = await described("a &lt; b &amp; c");
-  ok("a variable's and a text style's description read back escaped hash and read as typed (use_figma)", () => {
+  ok("a variable's description read back escaped hashes and reads as typed (use_figma)", () => {
     assert.equal(escaped.fileHash, typed.fileHash);
     assert.equal(escaped.bodies["Space/Space/2"].description, "a < b & c");
+  });
+  ok("a text, paint and effect style's description read back escaped hash as typed (use_figma)", () => {
+    for (const k of ["textStyles", "paintStyles", "effectStyles"]) assert.deepEqual(escaped[k], typed[k], k);
+  });
+  const planted = read("manifest.js").replace(/plain\(s\.description\)/g, "String(s.description||'')");
+  const runP = async (d) => { const f = fileOf(); (await f.getLocalTextStylesAsync())[0].description = d;
+    f.getLocalPaintStylesAsync = async () => [{ name: "Fill/Brand", paints: [], description: d }];
+    f.getLocalEffectStylesAsync = async () => [{ name: "Shadow/1", effects: [], description: d }];
+    return new Async("figma", planted)(f); };
+  const pt = await runP("a < b"), pe = await runP("a &lt; b");
+  ok("(planted) without the unescape, each style kind hashes differently", () => {
+    assert.notEqual(planted, read("manifest.js"));
+    for (const k of ["textStyles", "paintStyles", "effectStyles"]) assert.notDeepEqual(pe[k], pt[k], k);
   });
 }
 const ordered = async (flip) => {

@@ -67,5 +67,5 @@ else if (FRAME_NAME) {
   frame = (page.children || []).find((n) => n.name === FRAME_NAME) || null;
 }
 else fail("FRAME_ID and FRAME_NAME are both empty — fill one with the ramp's frame");
-if (!frame) fail(`no frame found for ${FRAME_ID ? `id "${FRAME_ID}"` : `name "${FRAME_NAME}" on the current page`}`);
+if (!frame) fail(`no frame found for ${FRAME_ID ? `id "${FRAME_ID}"` : `name "${FRAME_NAME}" on ${PAGE_ID ? `page "${PAGE_ID}"` : "the current page"}`}`);
 return await readRamp(frame);

@@ -352,6 +352,9 @@ def render_batches(payload):
     return out
 
 
+USE_FIGMA_LIMIT = 50000
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--instance", required=True, help="Node ID of the _Ratios grid instance to populate")
@@ -386,6 +389,10 @@ def main():
     )
 
     stem, ext = os.path.splitext(args.out)
+    # Every file is sent whole as one call's code; use_figma takes at most 50,000 characters (skill-standard §A clause K).
+    for js in [*render_batches(payload), *render_verify(payload)]:
+        if len(js) > USE_FIGMA_LIMIT:
+            sys.exit(f"a generated script is {len(js)} characters, over use_figma's {USE_FIGMA_LIMIT}: make the batches smaller")
     for k, js in enumerate(render_batches(payload), 1):
         path = f"{stem}.{k}{ext or '.js'}"
         with open(path, "w") as f:

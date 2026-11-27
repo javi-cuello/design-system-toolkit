@@ -373,7 +373,7 @@ Walked 2026-11-26 for toolkit-standard 2.52.0: test-check 10 passed.
 Runs: node tools/memory-check/test-check.mjs — "a rule is never memory", "every section of a project file is dated state".
 
 ## S29 · A skill with a `use_figma` route sends nothing that route refuses — WALKED 2026-11-27
-Fixture: a skill whose SKILL.md names `use_figma`, one of its `scripts/*.js` planted to call `await figma.loadAllPagesAsync();`.
-Assert: `check.sh` reports `ERROR [K] <skill> — scripts/<file> calls loadAllPagesAsync, which use_figma refuses` and exits 1; with the planted line gone it is green. A comment naming the call is not a call (that script's own comment names it). A script over 50,000 characters is refused the same way; that half was not planted.
-Assert the negative: a skill whose SKILL.md does not name `use_figma` (components-audit, whose scanner calls it and runs only over the bridge) is not checked.
-Walked: figma-component-descriptions' `enumerate.js` planted, `check.sh` exited 1 with the line above; restored, green.
+Fixture: a skill whose SKILL.md offers a **Without the bridge** route, one of its `scripts/*.js` planted to call `await figma.loadAllPagesAsync();`, then `figma['loadAllPagesAsync']()`, then only a `//` comment and a JSDoc block naming the call.
+Assert: `check.sh` reports `ERROR [K] <skill> — scripts/<file> calls loadAllPagesAsync, which use_figma refuses` and exits 1 for either call; for the comments alone it is green. A script over 50,000 characters is refused the same way; that half was not planted.
+Assert the negative: a skill whose SKILL.md offers no such route (components-audit, whose scanner calls it and runs only over the bridge) is not checked, nor one that only mentions `use_figma`.
+Walked: figma-component-descriptions' `enumerate.js` planted with the call, exit 1 with the line above; figma-file-diff's `inventory.js` planted with the bracketed call (exit 1) and with the comments (green); each restored.

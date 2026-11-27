@@ -260,6 +260,8 @@ if node_bin:
         apply = sorted([os.path.join(tmp, f) for f in os.listdir(tmp) if f.startswith("apply_matrix.") and ".verify." not in f], key=lambda f: int(f.split(".")[-2]))
         verify = sorted([os.path.join(tmp, f) for f in os.listdir(tmp) if ".verify." in f])
         chk("the build writes the read-back beside the batches, two parts for a full grid", len(apply) == 8 and len(verify) == 2, str(os.listdir(tmp)))
+        sizes = [os.path.getsize(f) for f in apply + verify]
+        chk("every generated script fits one use_figma call (50,000 characters)", max(sizes) <= 50000, str(sizes))
         files = json.dumps({"apply": apply, "verify": verify})
         clean = json.loads(subprocess.run([node_bin, "-e", STATEFUL, files], capture_output=True, text=True).stdout or "[]")
         chk("after every batch, the read-back finds every cell as meant",
