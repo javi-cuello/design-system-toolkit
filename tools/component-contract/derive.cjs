@@ -412,9 +412,9 @@ function flatten(list, characters = new Map(), known = [], axes = [], turned = n
     // (the place it would have outside an instance, set aside: PLACE_ASIDE)
     const outside = inInstance && !e.absolute ? place({ ...e }, false) : null;
     place(e, inInstance);
-    // (a group's child: Figma states its point in the frame that holds the group, its box the group's: inside an instance
-    // opened (layers.mjs openForeign) the group is a frame of its own, so the point is taken in it)
-    if (outside && outside.absolute && up && up.type === 'GROUP' && up.x != null) outside.absolute = { ...outside.absolute, x: +(outside.absolute.x - up.x).toFixed(2), y: +(outside.absolute.y - up.y).toFixed(2) };
+    // (a group's child: Figma states its point in the frame that holds the group, its box the group's; the group's own
+    // point kept beside it, for an instance drawn open, where the group is a frame of its own: ownInsides)
+    if (outside && outside.absolute && up && up.type === 'GROUP' && up.x != null) outside.group = { x: up.x, y: up.y };
     if (outside && (outside.absolute || outside.constraints)) aside.set(idOf(segs), outside);
     // a line along its box (a divider, spec.cjs boxOnly) carries no paths where to-figma draws it as its line (a graphic
     // of no height, or no width, along that axis, that no icon names): the box and its stroke say it, as before 0.86.0,
@@ -838,6 +838,9 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
         const p = asideOf.get(k), e = anatomy[k];
         if (!p || !e || !e.constraints || e.absolute || near(k) !== id) continue;
         for (const f of ['absolute', 'constraints']) if (p[f] !== undefined) e[f] = p[f];
+        // (in a group, its point taken in the group, which the instance drawn open draws as a frame of its own; a held
+        // instance's layers keep Figma's, as the rest of the drawing reads them)
+        if (p.group && e.absolute) e.absolute = { ...e.absolute, x: +(e.absolute.x - p.group.x).toFixed(2), y: +(e.absolute.y - p.group.y).toFixed(2) };
       }
       continue;
     }

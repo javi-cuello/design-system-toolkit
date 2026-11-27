@@ -269,6 +269,12 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     const stated = derive({ name: 'Shown', props: {}, variants: [{ name: 'Shown', type: 'COMPONENT', layout: 'VERTICAL', children: [
       { name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', w: 4, h: 44, sizing: 'FIXED/FIXED', fills: ['C/x'], children: [{ name: 'Layer', type: 'RECTANGLE', x: 0, y: 0, w: 4, h: 44, sizing: 'FIXED/FIXED', constraints: 'STRETCH/STRETCH', fills: ['C/y'] }] }] }] }, ['Knob'], { mains: mainsFrom({ Knob: knobL }) }).anatomy['knob/layer'];
     ok('…and one its component\'s contract states gets no place back', !stated || (stated.absolute === undefined && stated.constraints === undefined));
+    // (one in a group inside the held instance keeps its point as Figma states it, in the frame holding the group: only
+    // an instance drawn open takes it in the group, layers.mjs openForeign)
+    const grouped = derive({ name: 'Shown', props: {}, variants: [{ name: 'Shown', type: 'COMPONENT', layout: 'VERTICAL', children: [
+      { name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', w: 4, h: 44, sizing: 'FIXED/FIXED', fills: ['C/x'], children: [{ name: 'G', type: 'GROUP', x: 1, y: 2, w: 2, h: 40, children: [
+        { name: 'Layer', type: 'RECTANGLE', x: 1, y: 2, w: 2, h: 40, sizing: 'FIXED/FIXED', constraints: 'MIN/MIN', fills: ['C/y'] }] }] }] }] }, ['Knob'], { mains: mainsFrom({ Knob: knob }) }).anatomy['knob/g/layer'];
+    ok('…one in a group inside a held instance keeps Figma\'s point, in the frame holding the group', !!grouped && !!grouped.absolute && grouped.absolute.x === 1 && grouped.absolute.y === 2, JSON.stringify(grouped));
     // a boolean's flip, walked from a detached instance at its own sizes, keeps the variant's place for such a layer:
     // no per-boolean difference in where it sits
     const knobAt = (w, x) => ({ name: 'Knob', type: 'INSTANCE', instanceOf: 'Knob', x: 100, y: 0, w, h: 44, sizing: 'FIXED/FIXED', fills: ['C/x'], children: [{ name: 'Layer', type: 'RECTANGLE', x, y: 0, w: w - x, h: 44, sizing: 'FIXED/FIXED', constraints: 'STRETCH/STRETCH', fills: ['C/y'] }] });
