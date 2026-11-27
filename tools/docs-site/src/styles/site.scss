@@ -114,9 +114,9 @@ $xxl: 90rem;
       }
       .shell:not(.shell--sidebar) > .content { grid-column: 2; }
       .shell > :is(.masthead, .site-foot) { grid-column: 1 / -1; }
-      // The masthead and the footer span the sidebar too, so stock-ui's shared edges (the container's) would put
-      // the name in the middle of the window: they start over the sidebar and end where the content does.
-      .shell > :is(.masthead, .site-foot) { --masthead-inline: var(--space-24) calc(max(var(--gutter-min), (100% - var(--sidebar) - var(--aside, 0px) - var(--column)) / 2) + var(--aside, 0px)); }
+      // The masthead and the footer span the window: the name at its left edge, over the sidebar, and the
+      // theme switch at its right edge, the same on every section (the maintainer's call, 2026-11-27).
+      .shell > :is(.masthead, .site-foot) { --masthead-inline: var(--space-24); }
       .page-body { padding-block-start: var(--space-48); }
     }
     // The page's own sections (HIG's section rail, on the left). It sits in
