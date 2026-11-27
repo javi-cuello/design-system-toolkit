@@ -115,9 +115,11 @@ return { removedNodeIds: [id] };`;
    a generic Figma error), while parts of up to about 2 000 variant walks each took 17–132 s there. So: a read-only plan;
    a tokens call; a store call that keeps the walk on the temporary page as a function and runs the first part; and
    part calls of a few lines that run what is stored. Each leaves a holder, and collect joins them.
-   600, not 1 500: on a 117-page library (2026-11-26) a part of 1 485 walks ran Figma out of memory even alone, and
-   every part of 576 walks or fewer passed; parts run at once ran it out of memory too, so they run in order. */
-export const LIMIT = 600;
+   500, not 1 500: on a 117-page library (2026-11-26) a part of 1 485 walks ran Figma out of memory even alone, and
+   every part of 576 walks or fewer passed; parts run at once ran it out of memory too, so they run in order. On a
+   233-set library (2026-11-27) a part of 589 walks did too (heavy tables and pickers), and its halves passed: a walk
+   is no fixed size, so the cap keeps a margin below the largest that failed. */
+export const LIMIT = 500;
 
 /* A top-level declaration of the plugin, from the line that opens it at column 0 to the line that closes it there
    (a `{` block to its `}`, anything else to the first line that ends with `;`). */

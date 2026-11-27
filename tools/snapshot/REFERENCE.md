@@ -66,7 +66,7 @@ returns as a file: each set's id and its walks, variants × (1 + booleans).
 `parts <plan.json>` then lists the calls; make them in that order. The tokens call reads the
 variables, styles and icon names. The next call stores the walk on the
 temporary page and runs the first part; each later call runs what is stored.
-A part holds about 600 walks, and a set over that goes alone (a part of 1,485 walks ran Figma out of memory on a 117-page library). Collect every
+A part holds about 500 walks, and a set over that goes alone (a part of 1,485 walks ran Figma out of memory on a 117-page library, and one of 589 heavy table and picker walks on another; split such a part's set list in two and run each half). Collect every
 holder the calls return, the tokens one included, in one `collect`. It refuses
 unless the parts walked every set the tokens call found, each once, in its
 order. The parts send no icon files, graphics or previews.
