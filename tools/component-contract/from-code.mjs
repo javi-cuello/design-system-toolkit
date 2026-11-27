@@ -818,8 +818,8 @@ export function emptiedArgs(args, props, { words = false } = {}) {
    target takes too; a card focused through its button,
    read with no button): nothing is there to take the state, so it draws as rest. Any other missing target is a wrong
    mapping and still fails. Tested by test-from-code.mjs. */
-export function stateHidden(err, asked, props, pseudoOf = {}) {
-  return /^state selector matched no element/.test(String(err && err.message)) && !!asked.__state && asked.__state !== 'rest'
+export function stateHidden(err, asked, props, pseudoOf = {}, rest = 'rest') {
+  return /^state selector matched no element/.test(String(err && err.message)) && !!asked.__state && asked.__state !== rest
     && /focus/.test((pseudoOf[asked.__state] || {}).pseudo || asked.__state)
     && Object.values(props).some((p) => p.emptied !== undefined && asked[p.code] === false);
 }
@@ -1931,10 +1931,10 @@ async function selfSource(project, name, { second = false } = {}) {
       const combo = Object.fromEntries(own.filter((x) => x.key && args[x.name] !== undefined).map((x) => [x.key, args[x.name]]));
       if (flag && flag.name in args && entry) combo[entry.flag] = args[flag.name];
       const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
-      if (pk && __state !== undefined && __state !== 'rest') combo[pk] = __state;
+      if (pk && __state !== undefined && __state !== restOf(c)) combo[pk] = __state;
       const also = src.pseudoOf[__state] ? forwardedAt(c, combo, forwardMain, forwardPseudo).filter((x) => forwardSel[x.id]).map((x) => ({ selector: forwardSel[x.id], pseudo: x.pseudo })) : [];
       // a state no pointer reaches is the markup's own prop (state="loading")
-      if (__state !== undefined && __state !== 'rest' && !src.pseudoOf[__state] && src.stateArg) args[src.stateArg] = __state;
+      if (__state !== undefined && __state !== restOf(c) && !src.pseudoOf[__state] && src.stateArg) args[src.stateArg] = __state;
       // the has-value flag is the input's: on, it holds its value (the sample where none is given); off, it is left as given,
       // empty unless the mapping's own has-value state gives it one (the story's value starts empty)
       if (flag && flag.name in args) { if (args[flag.name] === flag.on && !args[flag.value]) args[flag.value] = flag.sample; delete args[flag.name]; }
@@ -2034,8 +2034,14 @@ function unturn(root) {
 /** The states the code forces (pseudo classes) and those it sets as a prop, read back as one interaction prop, named as
  * the design names its interaction axis: a library's `state` as much as the house's State (2026-11-26). */
 export function stateProp(forced, setStates, design) {
-  const figma = design && (Object.values(design.props || {}).find((q) => q.role === 'interaction') || {}).figma;
-  return { type: 'enum', values: ['rest', ...forced, ...setStates], default: 'rest', role: 'interaction', pointer: forced, code: '__state', ...(figma && { figma }) };
+  const figma = design && (Object.values(design.props || {}).find((q) => q.role === 'interaction') || {}).figma, rest = restOf(design);
+  return { type: 'enum', values: [rest, ...forced, ...setStates], default: rest, role: 'interaction', pointer: forced, code: '__state', ...(figma && { figma }) };
+}
+/** The word the read-back interaction prop says rest by: `rest`, but where the design has a state of that name that is not
+ * its rest (a message's `rest` beside its `default`), the design's own rest, so that state is read as itself, never as rest. */
+export function restOf(design) {
+  const p = design && Object.values(design.props || {}).find((q) => q.role === 'interaction');
+  return p && p.default !== 'rest' && (p.values || []).includes('rest') ? p.default : 'rest';
 }
 async function main() {
   const argv = process.argv.slice(2);
@@ -2165,7 +2171,7 @@ async function main() {
     // (the code prop is the contract's interaction prop, whatever its axis is called; its rest is its default)
     const stateKey = L.statesAsArg && figmaContract && Object.keys(figmaContract.props || {}).find((k) => figmaContract.props[k].role === 'interaction');
     const asArg = stateKey && props[stateKey] && props[stateKey].type === 'enum' ? props[stateKey] : null;
-    const setStates = asArg ? asArg.values.filter((v) => v !== asArg.default && v !== 'rest' && !(v in L.pseudoOf)) : [];
+    const setStates = asArg ? asArg.values.filter((v) => v !== asArg.default && v !== restOf(figmaContract) && !(v in L.pseudoOf)) : [];
     if (asArg && Object.keys(L.pseudoOf).length) { L.stateArg = asArg.code; delete props[stateKey]; }
     if (Object.keys(L.pseudoOf).length) props.state = stateProp(Object.keys(L.pseudoOf), setStates, figmaContract);
     if (L.governed && figmaContract) A.take('empty-shows', { props }, () => emptyShows(props, figmaContract.props, joinedProps, story.args, (L.joins(figmaContract, story.argTypes) || {}).twice));
@@ -2236,15 +2242,15 @@ async function main() {
       const words = { words: L.container !== '#storybook-root' };
       let args = emptiedArgs(asked, props, words);
       try { await show(args); } catch (e) {
-        if (!stateHidden(e, asked, props, L.pseudoOf)) throw e;
+        if (!stateHidden(e, asked, props, L.pseudoOf, restOf(figmaContract))) throw e;
         // only where the boolean is what took it away: shown, the state finds it; hidden, no element of its own kind is left
         await show(emptiedArgs({ ...asked, ...Object.fromEntries(Object.values(props).filter((p) => p.emptied !== undefined).map((p) => [p.code, true])) }, props, words));
-        await show({ ...args, __state: 'rest' });
+        await show({ ...args, __state: restOf(figmaContract) });
         const on = ((L.pseudoOf || {})[asked.__state] || {}).on;
         if (!on || await call(L.tab, ([r, s]) => { const box = document.querySelector(r); return !box || !!box.querySelector(s); }, [L.container, subjectOf(on)])) throw e;
         const said = `${asked.__state}: with what takes it hidden by an empty text, nothing takes that state; read as rest there`;
         if (!notes.includes(said)) notes.push(said);
-        args = { ...args, __state: 'rest' };
+        args = { ...args, __state: restOf(figmaContract) };
       }
       // whether this combination is drawn focused (a forced :focus or :focus-visible): only there is an outline a focus
       // ring, as to-code writes one (ringOf) and code shows one; at any other state it is the box's own stroke (css.mjs

@@ -563,9 +563,13 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // too: the contract keeps no word for which, and a layer the code draws there is then taken as its component's)
     for (const h of [...here]) if (!listedWholeAt[i].has(h)) here.delete(h);
     const loose = [...whole].filter((h) => !here.has(h));
-    const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k))));
+    // (and an instance the contract never keeps whole: it hides nothing (derive keeps a host whole by a hidden layer), so a
+    // part the drawing reads in it that this combination leaves out is its component's own there, as derive left it out:
+    // a tag's content another combination overrides, read wherever the tag is placed)
+    const open = mains ? Object.keys(A).filter((h) => A[h] && A[h].kind === 'instance' && !whole.has(h)) : [];
+    const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k)) || open.some((h) => k.startsWith(`${h}/`))));
     // (the drawn side held to the library as filled, so a part filled there is the library's to compare a field of too)
-    const A2 = loose.length ? ownInPlaced(theirsIn, A, mains, here) : A;
+    const A2 = loose.length || open.length ? ownInPlaced(theirsIn, A, mains, here) : A;
     const a = same(A2), b = unaligned(same(ownInPlaced(A2, B, mains, whole)), a, layoutUnit);
     if (layoutUnit) lone(a, b);
     diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');

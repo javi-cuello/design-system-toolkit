@@ -1364,6 +1364,16 @@ ok('codeKeys: two modules saying different keys for one instance name say none',
 // the forced states read back under the design's own name for its axis: a library spelling it `state` compared as `state`
 ok('stateProp: the read-back interaction prop takes the design\'s axis name; none without a design',
   stateProp(['hover'], [], { props: { s: { type: 'enum', role: 'interaction', figma: 'state' } } }).figma === 'state' && !('figma' in stateProp(['hover'], [], null)) && stateProp(['hover'], ['loading'], null).values.join() === 'rest,hover,loading');
+// a design whose states hold one called `rest` beside its own rest (`default`): that state read back as itself, set as the
+// markup's prop, never taken for rest; the house's rest, `rest`, as before
+{ const { restOf, stateHidden } = await import('./from-code.mjs');
+  const msg = { props: { state: { type: 'enum', values: ['default', 'hover', 'rest'], default: 'default', role: 'interaction', pointer: ['hover'], figma: 'state' } } };
+  const house = { props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } } };
+  const read = stateProp(['hover'], ['rest'], msg);
+  ok('a state called rest that is not the design\'s rest is read as itself',
+    restOf(msg) === 'default' && read.default === 'default' && read.values.join() === 'default,hover,rest' && restOf(house) === 'rest' && stateProp(['hover'], [], house).values.join() === 'rest,hover');
+  const p = { status: { code: 'status', emptied: true } }, gone = new Error('state selector matched no element');
+  ok('a render that failed for focus is still told from one at rest by the design\'s own rest', stateHidden(gone, { status: false, __state: 'focus' }, p, {}, 'default') && !stateHidden(gone, { status: false, __state: 'default' }, p, {}, 'default')); }
 { // (and roundTrip, given such a reading against a design whose axis is `state`, raises no props row; review)
   const { roundTrip } = await import('./to-figma.mjs');
   const design = { contract: 1, component: 'L', props: { state: { type: 'enum', values: ['default', 'hover'], default: 'default', role: 'interaction', pointer: ['hover'], figma: 'state' } }, anatomy: { root: { kind: 'container' } }, variants: [] };

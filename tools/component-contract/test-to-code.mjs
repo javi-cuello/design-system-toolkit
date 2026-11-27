@@ -569,6 +569,16 @@ else console.log('skip: no stored contracts on this machine');
     /\.ds-swipe > \.ds-swipe__item > \.ds-item__body > \.ds-swipe__text \{\s*justify-content: flex-start;/.test(sheet), sheet);
 }
 
+// a part the placed component draws turned a quarter in its turn's wrapper (turnedParts: a min-height line upright in a
+// column): reached through that wrapper, as the placed component's markup and sheet draw it, never as a child it is not
+{
+  const spacer = { contract: 1, component: 'Spacer', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column' }, width: 0, height: 102 }, line: { kind: 'graphic', parent: 'root', order: 0, width: 102, height: 0, rotation: -90 } }, variants: [] };
+  const area = { contract: 1, component: 'Area', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, sizer: { kind: 'instance', parent: 'root', component: 'Spacer' }, 'sizer/line': { kind: 'graphic', parent: 'sizer', order: 0, width: 102, height: 0, rotation: -90 } }, variants: [] };
+  const mains = (n) => (n === 'Spacer' ? { ...spacer, folder: 'spacer' } : null);
+  ok('a part a placed component draws in its turn\'s wrapper is reached through that wrapper',
+    nestedSelector(area, namer('area'), 'sizer/line', mains) === '.area > .area__sizer > [data-turn="line"] > .spacer__line', nestedSelector(area, namer('area'), 'sizer/line', mains));
+}
+
 // a part inside a numbered copy the placed component draws, which shares its first's hook (copyOf): named by that hook,
 // counted among the copies, as the placed component's markup draws it, never by a number no markup writes
 {

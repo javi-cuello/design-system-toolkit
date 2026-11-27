@@ -976,6 +976,16 @@ else {
   ok('a layer a detached instance also draws placed is mapped only where the instance is detached', bmap['Base > Items > Extra'] === 'ds-field:is([state="read-only"]):not([state="read-only"][small]:not([small="false"])) > [data-part="base"] > [data-part="items"] > [data-part="extra"]', JSON.stringify(bmap));
   ok('a narrower variant that sets a detached instance back places the component there', /\(state === "read-only" && small\) \? false : \(\(state === "read-only"\) \? true : false\)/.test(bel), bel); }
 
+// a part a variant adds inside a box another takes away and a narrower one puts back alone (a field's focus border, added
+// open, its trigger gone at inline and back at inline and open): gone there with its box, as expand takes it
+{ const f = { component: 'Dd', props: { open: { type: 'boolean', default: false, figma: 'Open' }, inline: { type: 'boolean', default: false, figma: 'Inline' } },
+    anatomy: { root: { kind: 'container' }, trigger: { kind: 'container', parent: 'root', order: 0 } },
+    variants: [{ when: { open: true }, add: { 'trigger/border': { kind: 'graphic', parent: 'trigger', order: 0 } } }, { when: { inline: true }, remove: ['trigger'] },
+      { when: { inline: true, open: true }, add: { trigger: { kind: 'container', parent: 'root', order: 0 } } }] };
+  const el = toElement(f, 'dd', { naming: ELEMENT, library: {} });
+  const all = [{}, { open: true }, { inline: true }, { open: true, inline: true }].every((w) => { const a = expand(f, { ...variantDefaults(f), ...w }); return !!a['trigger/border'] === (w.open === true && !w.inline); });
+  ok('a part a removed box takes with it stays gone where a narrower variant puts back the box alone', all && /\(open && !inline\) && h\("span", \{ "data-part": "border"/.test(el), el); }
+
 // a variable mode a holder sets on a placed instance overrides that component's own (Figma's instance override): the
 // component writes its own mode before the host's attributes, and the holder sets none (null) where it overrides nothing
 { const btn = { component: 'Btn', props: {}, anatomy: { root: { kind: 'container', modes: { tone: 'subtle' } } }, variants: [] };

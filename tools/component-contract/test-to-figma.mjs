@@ -654,6 +654,20 @@ delete globalThis.figma;
   // (known limit: a host hiding a layer with every layer it shows overridden lists as overrides alone, and is read so)
 }
 
+// a part of a placed component one combination overrides (a field's tag content, pulled in at read-only) that the code
+// draws wherever the tag is placed: where the design leaves it out, it is the tag's own there, held to that, no extra part;
+// where the code draws it otherwise, that field is the row
+{
+  const tag = { component: 'Tag', props: {}, anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root', order: 0, layout: { direction: 'row', gap: 4 } } }, variants: [] };
+  const field = (ro) => ({ component: 'Field', props: { ro: { type: 'boolean', default: false, figma: 'RO' } }, anatomy: { root: { kind: 'container' }, tag: { kind: 'instance', parent: 'root', component: 'Tag' }, ...(ro === 'both' && { 'tag/content': { kind: 'container', parent: 'tag', order: 0, layout: { direction: 'row', gap: 4 } } }) },
+    variants: [{ when: { ro: true }, ...(ro === 'both' ? { set: { 'tag/content.layout': { direction: 'row', gap: ro === 'both' ? -4 : 0 } } } : { add: { 'tag/content': { kind: 'container', parent: 'tag', order: 0, layout: { direction: 'row', gap: -4 } } } }) }] });
+  const mains = (n) => (n === 'Tag' ? tag : null), at = (r) => r.rows.map((x) => x.at);
+  ok('a placed part a combination overrides, drawn where the design leaves it to its component, is that component\'s own there',
+    at(roundTrip(field('one'), field('both'), { mains })).length === 0, JSON.stringify(roundTrip(field('one'), field('both'), { mains }).rows));
+  const off = field('both'); off.anatomy['tag/content'] = { ...off.anatomy['tag/content'], layout: { direction: 'row', gap: 8 } };
+  ok('…and one the code draws otherwise there is a row of that field, never an extra part', JSON.stringify(at(roundTrip(field('one'), off, { mains }))) === '["tag/content.layout.gap"]', JSON.stringify(roundTrip(field('one'), off, { mains }).rows));
+}
+
 {
   // an instance's prop at its own component's default is that prop unstated: the library states it, a reading does not
   const button = { component: 'Button', props: { size: { type: 'enum', values: ['sm', 'lg'], figmaValues: ['Sm', 'Lg'], default: 'sm', figma: 'Size' }, disabled: { type: 'boolean', default: false, figma: 'Disabled' } }, anatomy: { root: { kind: 'container' } }, variants: [] };

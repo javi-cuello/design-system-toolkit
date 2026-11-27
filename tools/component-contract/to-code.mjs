@@ -182,7 +182,13 @@ export function partsOf(c, t = HOUSE) {
       // (a part only variants draw: each one's words, set out below)
       if (!at.base && typeof e.content === 'string') (at.texts = at.texts || []).push([when, e.content]);
     }
-    for (const id of v.remove || []) if (parts.has(id)) { if (byPointer) parts.get(id).pointerGone = true; else parts.get(id).removes.push(when); }
+    // (a part removed takes its parts with it, as expand applies a removal (layers.mjs): one met so far under a removed
+    // part, and not put back by this same variant, is gone there too, so a later variant that puts back only the box (a
+    // field's trigger at inline and open) does not bring back what it left out (the focus border open added))
+    const gone = new Set(v.remove || []);
+    const under = (id) => { for (let up = ((parts.get(id) || {}).e || {}).parent; up; up = ((parts.get(up) || {}).e || {}).parent) if (gone.has(up)) return true; return false; };
+    const swept = gone.size ? [...parts.keys()].filter((id) => !gone.has(id) && !(v.add || {})[id] && under(id)) : [];
+    for (const id of [...(v.remove || []), ...swept]) if (parts.has(id)) { if (byPointer) parts.get(id).pointerGone = true; else parts.get(id).removes.push(when); }
     // words a pointer state sets on a base text (a field's "Search" at focus): marked, for textOf's gap
     if (byPointer) for (const k of Object.keys(v.set || {})) { const m = /^(.+)\.content$/.exec(k); if (m && parts.has(m[1])) parts.get(m[1]).pointerWords = true; }
     // words a variant sets on a base text (a label's * that reads Optional where it is not required)
@@ -1232,7 +1238,9 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
       const next = rest.slice(0, -1).findIndex((s) => all[s] && all[s].kind === 'instance' && mains(all[s].component, all[s].key));
       const take = next >= 0 ? rest.slice(0, next + 1) : rest;
       // (a numbered copy of the placed component's, which shares its first's hook, counted among those: partSelector's)
-      const ownSeg = (k) => { const first = /_\d+$/.test(k) && copyOfOnce(hm, k), p = n2.part(partSeg(hm, first || k)); return first ? `${p}:nth-child(${Number(/_(\d+)$/.exec(k)[1])} of ${p})` : p; };
+      // (and one the placed component draws in its turn's wrapper, turnedParts, reached through that wrapper, as its own
+      // sheet reaches it)
+      const hmTurned = turnedParts(hm), ownSeg = (k) => { const first = /_\d+$/.test(k) && copyOfOnce(hm, k), p = n2.part(partSeg(hm, first || k)), w = hmTurned.has(first || k) ? `[data-turn="${partSeg(hm, first || k)}"] > ` : ''; return w + (first ? `${p}:nth-child(${Number(/_(\d+)$/.exec(k)[1])} of ${p})` : p); };
       inner.push(...take.map((s, i) => ownSeg(own(s)) + (i === next ? through(n, all[s].component, heldIn(hm, own(s), mains)) : '')));
       rest = rest.slice(take.length);
       if (rest.length) { h = take[take.length - 1]; hm = mains(all[h].component, all[h].key); }
