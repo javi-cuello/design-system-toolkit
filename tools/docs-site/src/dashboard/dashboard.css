@@ -46,14 +46,14 @@
     padding-block-end: var(--space-24); border-block-end: var(--stroke-1) solid var(--line);
   }
   .head-actions { display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end; align-content: start; gap: var(--space-8); } /* Check changes and Audit side by side, the status under both */
-  .head-actions .sweep-state { grid-column: 1 / -1; }
   /* the Audits hero, a second root of this scope (its state mirrored from the dashboard's by context.js):
      the title on the left, the actions on its right, the files under both across the width */
   :scope.dash-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-32); margin: 0; }
   /* the actions on the title's line, centred on it; the date line close under the title, the files a section step below */
   :scope.dash-hero > h1 { grid-column: 1; grid-row: 1; margin: 0; }
   :scope.dash-hero > .head-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: start; margin-block-start: var(--space-16); } /* narrow: under the date line; flex, so a hidden Check changes leaves no gap */
-  :scope.dash-hero > .head-actions .sweep-state { flex-basis: 100%; }
+  :scope.dash-hero > .sweep-state { grid-column: 1 / -1; margin-block-start: var(--space-8); }
+  :scope.dash-hero > .sweep-state:empty { margin: 0; }
   @media (min-width: 45rem) { :scope.dash-hero > .head-actions { justify-content: end; } } /* (the dashboard's two-column width) */
   @media (min-width: 45rem) { :scope.dash-hero > .head-actions { grid-column: 2; grid-row: 1; align-self: center; margin: 0; } } /* (the dashboard's two-column width) */
   :scope.dash-hero > .byline { grid-column: 1 / -1; margin: var(--space-8) 0 0; }
@@ -274,6 +274,7 @@
   .sweep-state { font-size: var(--text-sm); color: var(--fg-soft); margin: 0; }
   .sweep-state[data-tone="warn"] { color: var(--warn); }
   .sweep-state[data-tone="ok"] { color: var(--good); }
+  .sweep-state[data-tone="error"] { color: var(--bad); }
   /* The run's status line carries NO motion and no position: it names what is
      in flight, in words. Every moving part belongs to the file list, which
      shows the spinner, the percentage and the seconds on the row for the file
@@ -834,7 +835,7 @@
   /* a published copy has no Figma beside it: open or not means nothing there, and the actions go, but not the line
      that says why the page is empty (#sweepState, in the actions' block) */
   :scope[data-readonly="yes"] :is(.file > .file-dot, .file > .file-note) { visibility: hidden; }
-  :scope[data-readonly="yes"] .head-actions > :not(.sweep-state) { display: none; }
+  :scope[data-readonly="yes"] .head-actions { display: none; }
   :scope[data-readonly="yes"] :is(#sweepBtn, .ask, .ask-rail, .verify-btn, .do-row, .do-all, .note-delete) { display: none; }
 
 }

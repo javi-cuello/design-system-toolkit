@@ -18,6 +18,8 @@ import Dashboard from '../dashboard/Dashboard.astro';
     <h1>Audits</h1>
     <!-- the maintainer's wording; a file the snapshot has moved past says so in the list below (Snapshot again) -->
     <p class="byline">{auditedAt ? <>Last audited <Time at={auditedAt} /></> : 'Not audited yet'}</p>
+    <!-- the run's status, and what failed, on its own row under the date: beside the buttons a long line pushed them aside -->
+    <p class="sweep-state" id="sweepState" role="status" aria-live="polite"></p>
     <div class="head-actions">
     <!-- ONE Audit, on every tab. It opens the Audit dialog below, where the
          files and the scope are chosen: a short setup before a run, which
@@ -25,7 +27,6 @@ import Dashboard from '../dashboard/Dashboard.astro';
     <!-- Check changes beside Audit; it still runs on the file in view -->
     <button class="button" id="sweepBtn" type="button">Check changes</button>
     <button class="button button--primary" id="auditBtn" type="button" aria-haspopup="dialog">Audit</button>
-    <p class="sweep-state" id="sweepState" role="status" aria-live="polite"></p>
   </div>
     <!-- the files' status in the hero -->
     <div class="hero__files"><ul class="files" id="fileList" aria-label="Files this project audits"></ul></div>

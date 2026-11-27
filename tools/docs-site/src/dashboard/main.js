@@ -77,8 +77,9 @@ import './audit.js';
 
   try { await pullRecord(); } catch (e) {
     // in the head, which every view and a first run show
-    document.getElementById("sweepState").textContent =
-      e && e.code === "bad_copy" ? e.message : "Can't reach the dashboard service — is it running? (" + e.message + ")";
+    const state = document.getElementById("sweepState");
+    state.textContent = e && e.code === "bad_copy" ? e.message : "Can't reach the dashboard service — is it running? (" + e.message + ")";
+    state.dataset.tone = "error";
     DASH.dataset.ready = "yes";
     return;
   }
