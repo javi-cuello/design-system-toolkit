@@ -207,10 +207,11 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
       'swapped/vector': { kind: 'graphic', parent: 'swapped', order: 0, background: 'Fill/info' },
       tag: { kind: 'instance', parent: 'root', order: 2, component: 'Tag' },
       'tag/mark': { kind: 'instance', parent: 'tag', order: 0, component: 'Glyph', width: 8, height: 8 },
-      'tag/mark/vector': { kind: 'graphic', parent: 'tag/mark', order: 0 } },
+      'tag/mark/vector': { kind: 'graphic', parent: 'tag/mark', order: 0 },
+      plain: { kind: 'instance', parent: 'root', order: 3, component: 'Glyph', width: 16, height: 16 }, 'plain/vector': { kind: 'graphic', parent: 'plain', order: 0, background: 'Fill/info' } },
     variants: [{ when: { tone: 'error' }, set: { 'icon.with': { Size: 'large' }, 'icon.name': 'Error icon', 'icon/inner/vector.background': 'Fill/error' } }] };
   const lib = { Tag: tag, Chip: chip };
-  ok('another library\'s instance with recorded insides opens, one nested in it too; a held one, one a prop swaps and one inside a held one stay closed',
+  ok('another library\'s instance with recorded insides opens, one nested in it too; a held one, one a prop swaps, one inside a held one and an icon whose one glyph says only its colour stay closed',
     [...foreignOpened(chip, lib)].sort().join() === 'icon,icon/inner' && openForeign(chip, lib).anatomy.icon.kind === 'container' && openForeign(chip, lib).anatomy.swapped.kind === 'instance' && openForeign(openForeign(chip, lib), lib) === openForeign(chip, lib));
   const el = toElement(chip, 'chip', { naming: ELEMENT, library: lib });
   ok('…drawn as frames of this component\'s own, its name and props said as a variant changes them, its glyph a part; said a gap, the glyph a box',
@@ -221,7 +222,7 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
     /\[data-part="icon"\] \{[^}]*padding: 0\.125rem/.test(css) && /\[data-part="icon-inner-vector"\] \{[^}]*block-size: 1rem;[^}]*background: var\(--fill-info\)/.test(css) && /\[tone="error"\]\) > [^{]*\[data-part="icon-inner-vector"\] \{\s*background: var\(--fill-error\)/.test(css) && !/key on|foreign on/.test(css), css);
   const m = toParity(chip, 'chip', { naming: ELEMENT, library: lib, framework: 'web-components' });
   ok('…read by its own hooks', m.layers['Icon > Inner > Vector'] === 'ds-chip > [data-part="icon"] > [data-part="inner"] > [data-part="icon-inner-vector"]' && typeof m.layers['Swapped > Vector'] === 'object');
-  ok('…without a library the markup opens nothing, though none would be held (every instance with insides opens)', !toElement(chip, 'chip', { naming: ELEMENT, library: {} }).includes('data-component') && [...foreignOpened(chip, {})].sort().join() === 'icon,icon/inner,tag,tag/mark');
+  ok('…without a library the markup opens nothing, though none would be held (every instance with insides opens)', !toElement(chip, 'chip', { naming: ELEMENT, library: {} }).includes('data-component') && [...foreignOpened(chip, {})].sort().join() === 'icon,icon/inner,tag');
 }
 { // a component the library does not hold, swapped in where no prop swaps it: its look and the limits of its size inline
   const tile = { component: 'Tile', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
