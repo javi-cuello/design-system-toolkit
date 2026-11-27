@@ -503,17 +503,9 @@ function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, 
   // combination is, past any removal the rest make: the sheet hides it where the contract draws none
   const shown = any(terms(part.pointerShown || []));
   if (shown !== 'false' && cond !== 'true') cond = cond === 'false' || shown === 'true' ? shown : `${wrap(cond)} || ${wrap(shown)}`;
-  // a part its parent's removal took with it is not revived where a later variant puts the parent back alone (layers'
-  // expand prunes it after each variant): gone there, but for an add of its own at least as narrow (a toggletip a
-  // boolean adds, gone with a label row at Show label off, which a size puts back empty)
-  const within = (w, a) => Object.entries(w).every(([k, v]) => a[k] === v);
-  // (one its own removal already takes away there says nothing more)
-  const pruned = any(terms((known.backs || []).filter((w) => !part.adds.some((a) => within(w, a)) && !part.removes.some((r) => within(r, w)))));
-  if (pruned !== 'false' && cond !== 'false') cond = pruned === 'true' ? 'false' : cond === 'true' ? not(pruned) : `${wrap(cond)} && ${not(pruned)}`;
-  // (a removal it is put back over rules nothing else out for its children: they keep their own)
-  return { when: cond === 'true' ? null : cond, unknown, known: { yes: new Set([...known.yes, add]), no: new Set([...known.no, ...(back === 'false' ? no : [])]),
-    // (and so for its children: each add of its own over a removal, its own or one it went with, puts it back alone)
-    backs: part.adds.filter((w) => [...part.removes, ...(known.backs || [])].some((r) => within(r, w))) } };
+  // (a removal it is put back over rules nothing out for its children: they keep their own; one a removed box swept
+  // away is among its removes, to-code partsOf)
+  return { when: cond === 'true' ? null : cond, unknown, known: { yes: new Set([...known.yes, add]), no: new Set([...known.no, ...(back === 'false' ? no : [])]) } };
 }
 
 /* The tree, built once for both frameworks: each element as a tag, its attributes (a literal, or code) and its
