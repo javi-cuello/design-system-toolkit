@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.16.2] - 2026-11-27
+### Changed
+- Re-synced with stock-ui: the accent pair is #a54a00 / #e08d5d (hue held, lighter and less chromatic in dark).
+
 ## [0.16.1] - 2026-11-27
 ### Changed
 - Carries snapshot 0.93.1: a remote text style whose family the file lacks is recorded, its family read off its text's first segment.

@@ -57,7 +57,13 @@
        (WCAG 1.4.11): the page, a card, and a hovered, selected or tinted row
        (3.3:1 on the darkest of them, --selected). */
     --control: light-dark(#7d8394, #727a8c);
-    --accent: light-dark(#8f4100, #f17300);
+    /* One accent across light and dark (visual.md): hue held at 49-50 in OKLCH,
+       lighter and less chromatic in dark (L 0.52 -> 0.72, C 0.139 -> 0.120).
+       Accent text holds 4.5:1 on every ground it sits on, --selected and the
+       soft tint included (4.75:1 the least, light); the ring 3:1 or more.
+       The soft tint is a vivid step of the same hue (#f17300, h 50.6) at low
+       alpha: the accent's own values tint pink over the cool grey page. */
+    --accent: light-dark(#a54a00, #e08d5d);
     --accent-soft: light-dark(#f173001a, #f1730024);
     --accent-soft-solid: light-dark(#e8a877, #7a4413);
     --good: light-dark(#177049, #2f9c6c);
@@ -67,8 +73,8 @@
     --idle: light-dark(#4a5ac4, #7b8cf0);
     --bad: light-dark(#b03c37, #e2635e);
     --on-solid: #ffffff;
-    /* Text on an accent fill: white on the dark light-theme accent, ink on
-       the bright dark-theme one (white on it was 2.9:1). */
+    /* Text on an accent fill: white on the dark light-theme accent (5.9:1),
+       ink on the light dark-theme one (7.4:1; white on it is 2.6:1). */
     --on-accent: light-dark(#ffffff, #0e0f13);
     /* Text on a status fill (good, bad): white on the dark light-theme fills,
        ink on the lighter dark-theme ones, 4.5:1 either way. */
@@ -161,9 +167,14 @@
        from 40rem. The reading column the container centres. */
     --site-header: var(--masthead, 6rem);
     --column: 60rem;
+    /* The least the column and the masthead keep from the window's edge; 48px from 60rem, below. A page that
+       changes it, or --column, sets it on an ancestor of both (:root, .shell), so the masthead follows. */
+    --gutter-min: var(--space-16);
   }
   /* From 40rem the masthead is one row (the docs site's $sm). */
   @media (min-width: 40rem) { :root { --site-header: var(--masthead, 3.5rem); } }
+  /* 60rem, the docs site's $lg: wide enough for the column to stand off the edges. */
+  @media (min-width: 60rem) { :root { --gutter-min: var(--space-48); } }
   /* On a short screen the masthead scrolls away (.masthead), so nothing need keep clear of it. */
   @media (max-height: 30rem) { :root { --site-header: 0px; } }
   :root[data-theme="light"] { color-scheme: light; }
@@ -283,7 +294,6 @@
     align-items: center;
     column-gap: var(--space-12);
     min-block-size: var(--site-header);
-    padding-inline: var(--space-16);
     border-block-end: var(--stroke-1) solid var(--line);
     background: color-mix(in srgb, var(--bg) 90%, transparent);
     backdrop-filter: blur(8px); /* keeps text under the bar unreadable; no design value */
@@ -299,11 +309,13 @@
      --gutter-min. Knobs: --aside, what a fixed panel takes from the right edge, so the column centres beside it
      instead of shrinking under it; --rail, what the page's own sections take on the left: when space is tight
      only the left gutter grows for it. */
-  .container {
-    --gutter: max(var(--gutter-min), (100% - var(--aside, 0px) - var(--column)) / 2);
-    margin-inline: max(var(--gutter), var(--rail, 0px)) calc(var(--gutter) + var(--aside, 0px));
-  }
-  main { --gutter-min: var(--space-16); }
+  .container, .masthead { --gutter: max(var(--gutter-min), (100% - var(--aside, 0px) - var(--column)) / 2); }
+  .container { margin-inline: max(var(--gutter), var(--rail, 0px)) calc(var(--gutter) + var(--aside, 0px)); }
+  /* The masthead shares the container's edges (visual.md *Alignment and shared edges*): the same gutter over the
+     same width, so the name starts where the content does and the theme switch ends where it ends. Knob:
+     --masthead-inline, its inline padding, for a shell whose content does not span the masthead (a side
+     navigation beside it). */
+  .masthead { padding-inline: var(--masthead-inline, max(var(--gutter), var(--rail, 0px)) calc(var(--gutter) + var(--aside, 0px))); }
 
   .site-foot {
     padding: var(--space-16);
@@ -317,12 +329,9 @@
     .masthead {
       grid-template-columns: auto minmax(0, 1fr) auto;
       grid-template-areas: "brand nav theme";
-      padding-inline: var(--space-24);
     }
     .site-foot { padding-inline: var(--space-24); }
   }
-  /* 60rem, the docs site's $lg: wide enough for the column to stand off the edges. */
-  @media (min-width: 60rem) { main { --gutter-min: var(--space-48); } }
 }
 
 @layer components {
@@ -400,12 +409,14 @@
     text-decoration: none; white-space: nowrap; cursor: pointer;
   }
   /* Hover only where there is a pointer that hovers (a tap leaves none
-     behind); pressed is stronger than hover, and wins by selector. */
+     behind); pressed is stronger than hover, and wins by selector. Both are
+     neutral steps: the accent is spent on the primary action, selection and
+     focus, never on hover (visual.md *Quiet chrome in a dense tool*). */
   @media (hover: hover) {
-    .button:hover:not(:disabled, :active) { border-color: var(--accent); color: var(--accent); }
-    .button--primary:hover:not(:disabled, :active) { color: var(--on-accent); filter: brightness(1.08); }
+    .button:hover:not(:disabled, :active) { background: var(--hover); }
+    .button--primary:hover:not(:disabled, :active) { background: var(--accent); filter: brightness(1.08); }
   }
-  .button:active:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .button:active:not(:disabled) { background: var(--selected); }
   .button:disabled { opacity: var(--disabled-opacity); cursor: default; }
   .button--primary { border-color: transparent; background: var(--accent); color: var(--on-accent); font-weight: var(--weight-semibold); }
   /* (a darker step of the fill: pressed, against hover's lighter one) */
@@ -584,8 +595,8 @@
   @media (min-width: 40rem) { .toolbar input.filter { inline-size: auto; flex: 1 1 12rem; max-inline-size: 18rem; } }
   .toolbar__end { margin-inline-start: auto; }
 
-  /* A segmented filter: one bordered group of buttons, the pressed one in the
-     accent, each with its count. The Audits queue and the Tracker share it. */
+  /* A segmented filter: one bordered group of buttons, the pressed one filled
+     and edged, each with its count. The Audits queue and the Tracker share it. */
   /* No overflow clip: it cut the focus ring of every button in the group. The
      ends take the group's corners instead. */
   /* A segmented control never wraps (design-standard rule 4); when its labels are longer
@@ -604,9 +615,11 @@
   }
   span.seg { cursor: default; } /* a segment that is a label, not a control */
   .seg + .seg { border-inline-start: var(--stroke-1) solid var(--line-strong); }
-  /* Pressed is more than a tint (1.11:1 against the rest of the group): an
-     accent edge at 3:1 or more on its ground, and the heavier weight. */
-  .seg:is([aria-pressed="true"], [aria-current="true"]) { background: var(--accent-soft); color: var(--accent); font-weight: var(--weight-semibold); box-shadow: inset 0 0 0 2px var(--accent); }
+  /* Pressed takes two neutral cues, never the focus ring's look (visual.md *Quiet chrome in a dense tool*, *Visual
+     states of controls*): the selected fill and a 1px control edge, 3:1 or more against that fill and the ground
+     around it (WCAG 1.4.11: 3.1:1 the least, light). Its text takes the ink; the weight stays, so the control keeps
+     its size (design-standard rule 2). The accent is the focus ring's and the primary action's. */
+  .seg:is([aria-pressed="true"], [aria-current="true"]) { background: var(--selected); color: var(--fg); box-shadow: inset 0 0 0 var(--stroke-1) var(--control); }
   @media (hover: hover) { .seg:hover:not(span, [aria-pressed="true"], [aria-current="true"], :active) { color: var(--fg); } }
   .seg:active:not([aria-pressed="true"], [aria-current="true"]) { color: var(--fg); background: var(--hover); }
 

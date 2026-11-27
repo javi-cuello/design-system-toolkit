@@ -90,7 +90,7 @@ const taken = meta.snapshotAt || meta.snapshot;
 const stamp = date(taken) || 'none yet';
 // The tab icon: the project's initial on the site's accent (stock-ui
 // --accent), both themes, inlined so there is no file to serve.
-const favicon = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>rect{fill:#8f4100}@media (prefers-color-scheme:dark){rect{fill:#f17300}}</style><rect width="32" height="32" rx="7"/><text x="16" y="22.5" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" font-weight="600" fill="#fff">${project.name.trim().charAt(0).toUpperCase().replace(/[<&]/g, '')}</text></svg>`);
+const favicon = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>rect{fill:#a54a00}@media (prefers-color-scheme:dark){rect{fill:#e08d5d}text{fill:#0e0f13}}</style><rect width="32" height="32" rx="7"/><text x="16" y="22.5" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" font-weight="600" fill="#fff">${project.name.trim().charAt(0).toUpperCase().replace(/[<&]/g, '')}</text></svg>`);
 import themeScript from '../../../../stock-ui/theme.js?raw';
 import frameScript from '../../../../stock-ui/frame.js?raw';
 ---

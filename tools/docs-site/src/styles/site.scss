@@ -104,12 +104,16 @@ $xxl: 90rem;
 
     @include from($lg) {
       .shell--sidebar {
-        display: grid;
         // The sidebar's width: the longest section label, at the site's type.
-        grid-template-columns: 16rem minmax(0, 1fr);
+        --sidebar: 16rem;
+        display: grid;
+        grid-template-columns: var(--sidebar) minmax(0, 1fr);
         grid-template-rows: auto 1fr auto;
       }
       .shell--sidebar > :is(.masthead, .site-foot) { grid-column: 1 / -1; }
+      // The masthead spans the sidebar too, so stock-ui's shared edges (the container's) would put the name in
+      // the middle of the window: it starts over the sidebar, and the theme switch ends where the content does.
+      .shell--sidebar > .masthead { --masthead-inline: var(--space-24) calc(max(var(--gutter-min), (100% - var(--sidebar) - var(--aside, 0px) - var(--column)) / 2) + var(--aside, 0px)); }
       .page-body { padding-block-start: var(--space-48); }
     }
     // The page's own sections (HIG's section rail, on the left). It sits in
@@ -158,7 +162,7 @@ $xxl: 90rem;
     .masthead__systems { grid-area: brand; justify-self: start; margin-block: var(--space-8); }
     .masthead__systems .seg { text-decoration: none; }
     // the group scrolls (overflow-x), which would clip a ring drawn outside the link
-    // inside the current link's 2px inset accent, so the ring shows on it too
+    // inside the current link's 1px inset edge, so the ring shows on it too
     .masthead__systems .seg:focus-visible { outline-offset: -5px; }
 
     // ---- Sidebar -------------------------------------------------------------
