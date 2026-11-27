@@ -15,9 +15,10 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 **How**
 - [weak] Start with one column and add columns only when the content earns them. [GOV.UK layout](https://design-system.service.gov.uk/styles/layout/): "Design for small screens first, starting with a single-column layout", and for different screen sizes "rather than specific devices". Its default maximum page width is 1020px; its default reading column is two-thirds.
 - [moderate] Breakpoints: [Primer](https://primer.style/foundations/layout) lists 320, 544, 768, 1012, 1280 and 1400px and calls them "a unit in a ruler"; [Carbon's 2x grid](https://carbondesignsystem.com/elements/2x-grid/overview/) uses 320, 672, 1056, 1312 and 1584px on an 8px unit with a 32px gutter. Take the project's set; with none, intrinsic sizing first and a breakpoint only where something breaks ([responsive layout in code](../../code/responsive.md)).
-Shared edges across a page are [*Alignment and shared edges*](#alignment-and-shared-edges).
 - [weak] Draw responsive frames at the narrowest supported width and one wide width at least; a design drawn at 1440px only has not decided anything about small screens.
 - [required] Content that appears and disappears keeps its space, so the layout holds still (design-standard rule 2).
+
+Shared edges across a page are [*Alignment and shared edges*](#alignment-and-shared-edges).
 
 **Cases**
 - A docs page sets prose at the full 1280px container → cap the prose column (two-thirds, or a `ch` measure); tables and code may run wider. Long lines are the reading problem in *Typography*.
@@ -105,7 +106,7 @@ How many edges a page has, what lines up across its regions, and where optical c
 - At a phone width a wrapped row's first glyph sits at 28px against the title's 16 → wrapped rows start on the same edge as the title.
 
 **Accessibility**
-- [required] 1.4.10 Reflow: at 320px a row that wraps keeps its leading edge; nothing scrolls sideways ([*Layout and grid*](#layout-and-grid)).
+- [required] 1.4.10 Reflow: at 320px nothing scrolls sideways ([*Layout and grid*](#layout-and-grid)). A wrapped row keeping its leading edge is the alignment evidence above, not 1.4.10.
 - [weak] Screen-magnifier users follow one edge down the page; a block that starts elsewhere can be missed (as [forms: *Form structure*](../patterns/forms.md#form-structure) quotes Atlassian).
 
 **Build**
@@ -167,7 +168,8 @@ How the page header and the content form one page, and where the eye lands first
 
 **What good looks like**
 - [moderate] **The eye starts at the top and the leading side, so the title goes there.** Apple: "place the most important items near the top and leading side of the window or display" ([Apple HIG layout](https://developer.apple.com/design/human-interface-guidelines/layout)); NN/g: "Web users spend 80% of their time viewing the left half of the page", though "the very leftmost area should be reserved for navigation" ([NN/g horizontal attention](https://www.nngroup.com/articles/horizontal-attention-leans-left/)), and "More than 65% of the viewing time above the fold was concentrated in the top half of the viewport" ([NN/g scrolling and attention](https://www.nngroup.com/articles/scrolling-and-attention/)).
-- [strong] **The title leads the header row, page actions sit at its trailing end, the primary action last.** Polaris's header lays out `slot3: actionMenuMarkup, slot4: primaryActionMarkup` after the title ([Polaris Page header source](https://raw.githubusercontent.com/Shopify/polaris/main/polaris-react/src/components/Page/components/Header/Header.tsx)); Atlassian pushes its actions to the end with `margin-inline-start:auto` ([`@atlaskit/page-header` 13.3.4](https://cdn.jsdelivr.net/npm/@atlaskit/page-header@13.3.4/dist/es2019/PageHeader/)); Primer's header grid is `'leading-action breadcrumbs title-area trailing-action actions'` ([Primer PageHeader CSS](https://raw.githubusercontent.com/primer/react/main/packages/react/src/PageHeader/PageHeader.module.css)).
+- [strong] **The title leads the header row, page actions sit at its trailing end.** Polaris's header puts its actions after the title, `slot3: actionMenuMarkup, slot4: primaryActionMarkup` ([Polaris Page header source](https://raw.githubusercontent.com/Shopify/polaris/main/polaris-react/src/components/Page/components/Header/Header.tsx)); Atlassian pushes its actions to the end with `margin-inline-start:auto` ([`@atlaskit/page-header` 13.3.4](https://cdn.jsdelivr.net/npm/@atlaskit/page-header@13.3.4/dist/es2019/PageHeader/)); Primer's header grid is `'leading-action breadcrumbs title-area trailing-action actions'` ([Primer PageHeader CSS](https://raw.githubusercontent.com/primer/react/main/packages/react/src/PageHeader/PageHeader.module.css)).
+- [weak] **The primary action last among them.** Polaris's slot order puts the primary after the action menu (Polaris Page header source).
 - [moderate] **One page header per page, with a title that says what the page is.** Polaris: "Always provide a title that describes the current page" ([Polaris page](https://shopify.dev/docs/api/app-home/polaris-web-components/layout-and-structure/page)); Atlassian: don't "Use multiple page headers in one page" ([Atlassian page header](https://atlassian.design/components/page-header/usage)).
 
 **How**
@@ -175,9 +177,10 @@ How the page header and the content form one page, and where the eye lands first
 - [weak] **Page actions in the header only when they act on the whole page.** Polaris: "Include page actions in the header only if they are relevant to the entire page" (Polaris page).
 - [weak] **Space between title and actions.** Atlassian keeps at least 32px, `padding-inline-start:var(--ds-space-400,2pc)`, and does not wrap its actions, `white-space:nowrap` (`@atlaskit/page-header` 13.3.4).
 - [weak] **In the app's own header, local things lead and global things trail.** Carbon: "left-to-right translates to product-to-global", and its global icons are "aligned to the right of the header with no gaps between icons" ([Carbon UI shell header](https://carbondesignsystem.com/components/UI-shell-header/usage/)). Global controls are quiet; they are not the page's focal point.
-- [weak] **Few sizes, few contrasts, few big things.** NN/g: "Use no more than 3 sizes", "no more than 3 contrast variations for complex designs", and "Limit how many elements are big to a maximum of 2" ([NN/g visual hierarchy](https://www.nngroup.com/articles/visual-hierarchy-ux-definition/)). The size steps themselves are [*One size scale per screen*](#one-size-scale-per-screen).
+- [weak] **Few sizes, few contrasts, few big things.** NN/g: "Use no more than 3 sizes", "no more than 3 contrast variations for complex designs", and "Limit how many elements are big to a maximum of 2" ([NN/g visual hierarchy](https://www.nngroup.com/articles/visual-hierarchy-ux-definition/)). The type styles a tool screen draws from are [*One size scale per screen*](#one-size-scale-per-screen), which owns the count.
 - [weak] **Balance is visual signal spread, not symmetry.** NN/g: balance "occurs when there is an equally distributed (but not necessarily symmetrical) amount of visual signal on both sides of an imaginary axis", and "The area taken by the design element matters" ([NN/g principles of visual design](https://www.nngroup.com/articles/principles-visual-design/)). Its examples are editorial pages; an app page leans to the leading side by design (above).
-- [weak] **A form page.** Shopify's page example: "Use small width for forms" (Polaris page). The form column, its sections and gaps are [forms: *Layout of a one-page form*](../patterns/forms.md#layout-of-a-one-page-form-sections-spacing-and-width); the form's leading edge is the title's (*Alignment and shared edges*, [above](#alignment-and-shared-edges)).
+
+A form page's width is [*Content width and white space*](#content-width-and-white-space); its column, sections and gaps are [forms: *Layout of a one-page form*](../patterns/forms.md#layout-of-a-one-page-form-sections-spacing-and-width); its leading edge is the title's ([*Alignment and shared edges*](#alignment-and-shared-edges)).
 
 **Cases**
 - The primary action is an outline button while the default filter value carries the accent → the page's one accent goes to its primary action; a filter at its default is quiet ([*Emphasis and the attention budget*](#emphasis-and-the-attention-budget)).
@@ -188,7 +191,7 @@ How the page header and the content form one page, and where the eye lands first
 - On a phone four summary tiles stack one per row, about 480px before the first table → the tiles take less height so the content starts in the first screen; most viewing time is in the first screenful (NN/g scrolling and attention).
 
 **Accessibility**
-- [required] 2.4.2 Page Titled and 1.3.1: the visible title is the page's `h1`, and the document title names the same page.
+- [required] 2.4.2 Page Titled: the document title names the page. 1.3.1: the visible title is marked up as a heading (code-standard rule 1 owns the outline).
 - [required] 1.3.2: DOM order is the header's visual order, title then actions (code-standard rule 2).
 
 **Build**
@@ -196,7 +199,7 @@ How the page header and the content form one page, and where the eye lands first
 - [required] *Rules:* code-standard rule 2 (reading order) and code-standard rule 3 (one container per band).
 
 **Check**
-- *Script:* could assert one page-header instance and one `h1` per page, the h1's box in the top fifth of the first viewport at the content's leading edge, at most one primary button and as its header row's last child, at most three font sizes above the fold, and on a phone the first content block's top within the first viewport.
+- *Script:* could assert one page-header instance per page, the title heading's box in the top fifth of the first viewport at the content's leading edge, at most one primary button, at the header row's trailing end, and on a phone the first content block's top within the first viewport.
 - *Judgement:* blur the screenshot by 10px: is the strongest blob the page's one thing, not decoration or a global control (NN/g visual hierarchy)?
 
 **Sources:** Apple (HIG layout, read as JSON), NN/g (horizontal attention, scrolling, visual hierarchy, visual design principles), Polaris (header source and Shopify's page docs), Atlassian (page header docs and source), Primer (PageHeader CSS) and Carbon (UI shell header). Not read: Geist and Material's guideline site (rendered by script), Refactoring UI (blocked), Carbon's page-header pattern (404).
@@ -221,7 +224,7 @@ How wide each kind of content runs, and how much air a dense tool keeps. The pag
 - A tool page has 64px between every block "for air" and needs three screens for one week → dense regions, white space between them, not everywhere (Carbon spacing, NN/g content dispersion).
 
 **Accessibility**
-- [required] 1.4.8 Visual Presentation (AAA) asks for lines of no more than 80 characters in prose; the AA floor is 1.4.10 Reflow ([*Layout and grid*](#layout-and-grid)).
+- [required] 1.4.10 Reflow ([*Layout and grid*](#layout-and-grid)). 1.4.8 Visual Presentation, at AAA and so context only, asks for prose lines of no more than 80 characters.
 
 **Build**
 - [required] Each width is a token or a container variant (narrow, default, wide, full), set on the page container, never per block (code-standard rule 11).
@@ -385,7 +388,7 @@ How wide each kind of content runs, and how much air a dense tool keeps. The pag
 - [weak] Theme by value, never by name: [Carbon](https://carbondesignsystem.com/elements/themes/overview/), "Each theme shares the same variables and roles, with only the value changing".
 - [weak] Design the dark values. [Apple](https://developer.apple.com/design/human-interface-guidelines/dark-mode): dark colours "aren't necessarily inversions of their light counterparts"; contrast "no lower than 4.5:1", striving for 7:1 in small text.
 - [weak] Elevation in dark: [surfaces and elevation levels](#surfaces-and-elevation-levels).
-- [weak] Saturated status and accent colours usually need a lighter step in dark to keep contrast; check each, since a hue that passes on white can fail on near-black.
+- [weak] Saturated status colours usually need a lighter step in dark to keep contrast; check each, since a hue that passes on white can fail on near-black. The accent's dark value is [*One accent across light and dark*](#one-accent-across-light-and-dark).
 - [strong] **Write the dark ladder on its own, ascending, and the order as a position.** Every system read climbs lighter in dark, but light modes disagree: Material's light containers darken as they rise, Carbon's White theme alternates `#FFFFFF` and `#F4F4F4`, Atlassian stays white. A dark set mapped from the light one inherits that convention: Carbon White's `background` and `layer-02` are both `#FFFFFF`, map to one dark value, and the card vanishes. Say "one up from its container", never "lighter".
 - [moderate] **One dark theme unless people ask for a second.** Carbon asks a product for one light and one dark. Primer ships `dark-dimmed` beside `dark` (page `#212830` against `#0d1117`), and there its overlay sits above the page where `dark`'s sits below ([surfaces](#surfaces-and-elevation-levels)). A second dark theme is a second ladder, its own overlay decision and its own contrast run.
 - [weak] **Adaptive, fixed and inverse roles.** Most roles change per mode. A colour that must stay the same in both is a fixed role family with its own on-colours, as Material's `primaryFixed`, `onPrimaryFixed` and `onPrimaryFixedVariant` (tones 90, 10 and 30 in both schemes), never a raw hex in one component, and its pairs are measured in both modes. A light fixed surface is the brightest thing on a dark page (`#EADDFF` on `#141218` is 14.42:1), so keep it small. Inverse does the opposite of the theme ([surfaces](#surfaces-and-elevation-levels)).
@@ -553,14 +556,13 @@ How many text colours a product uses and how far apart they sit. Surfaces are [*
 **How**
 - [weak] **Bolder means more contrast.** Atlassian: "Emphasis can range from subtlest to boldest. Bolder colors have more contrast against the default surface" ([Atlassian color](https://atlassian.design/foundations/color)).
 - [weak] **Each level has one job.** Carbon names the job in each token's role (above): body and headings, labels and secondary text, help text; a level picked "because it looked right" is the drift to look for.
-- [required] Disabled and placeholder text fall below 4.5:1 in these systems (Carbon's placeholder `rgba(22,22,22,.4)`), so they carry nothing a person needs to read to act; required text meets 1.4.3.
+- [required] Only disabled text may fall below 4.5:1: 1.4.3 exempts "part of an inactive user interface component" and "applies to text in the page, including placeholder text" ([Understanding 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)). Carbon's placeholder, `rgba(22,22,22,.4)` on white ([Carbon themes](https://unpkg.com/@carbon/themes@11.85.0/scss/generated/_themes.scss)), falls below it.
 
 **Cases**
 - A page uses five greys for text, two of them a hair apart → map each to one of the product's levels; two levels closer than a reader can tell apart are one.
-- A muted caption passes on the page but sits on a raised card in dark at 3.9:1 → measure each level on every surface it sits on, in each theme.
 
 **Accessibility**
-- [required] 1.4.3 Contrast (Minimum): every readable level meets 4.5:1 (3:1 for large text) on every surface it sits on, in every theme.
+- [required] 1.4.3 Contrast (Minimum): every readable level meets 4.5:1 (3:1 for large text); measuring it on every surface in every theme is [*Surfaces and elevation levels*](#surfaces-and-elevation-levels)' Accessibility.
 
 **Build**
 - [required] Text levels are semantic tokens (`text-default`, `text-muted` and so on), one per level, with a value per theme ([tokens: three tiers](../../code/tokens.md#three-tiers)).
@@ -1042,7 +1044,7 @@ A material is a surface fill that lets what is behind it through, blurred: a fro
 
 **What good looks like**
 - [strong] Every element on a page is a system component or built only from system tokens.
-- [moderate] The same problem gets the same solution everywhere; a divergence states its reason.
+- [strong] The same problem gets the same solution everywhere, down to one page header, one table and one filter; a divergence states its reason. Shopify: "Templates are full-page layouts for paths and functionality found in most Shopify apps. Use one as your starting point" ([Shopify App Home patterns](https://shopify.dev/docs/api/app-home/patterns)); Atlassian: "Use a page header to create a consistent experience at the top of a full page" ([Atlassian page header](https://atlassian.design/components/page-header/usage)); Carbon's shell gives "shared interaction patterns that create a consistent experience across products" ([Carbon UI shell header](https://carbondesignsystem.com/components/UI-shell-header/usage/)); NN/g: systems "should use the same patterns everywhere inside the system", and "Consistency doesn't happen by itself, but requires an active process" ([NN/g consistency and standards](https://www.nngroup.com/articles/consistency-and-standards/)).
 - [required] No one-off sizes, colours, radii or spacings (code-standard rule 22).
 - [moderate] Brand lives in the accent on the primary action, the typeface and the voice.
 
@@ -1051,7 +1053,6 @@ A material is a surface fill that lets what is behind it through, blurred: a fro
 - [required] An instance stays an instance (figma-standard rule 27); every value a component draws is bound (figma-standard rule 29); a page does not restyle a component's root (code-standard rule 4); every literal in component CSS is a token or carries its reason (code-standard rule 22).
 - [weak] A real new need becomes a component or a variant in the system, then the page uses it. A second copy of a pattern is the moment to promote it.
 - [moderate] Brand: [Apple branding](https://developer.apple.com/design/human-interface-guidelines/branding), "Ensure branding always defers to content"; [Fluent](https://fluent2.microsoft.design/design-principles) pairs "Built for focus" with "A little personality goes a long way." Keep expressive type and motion for marketing pages.
-- [strong] **One pattern for each kind of page part: one page header, one table, one filter.** Shopify: "Templates are full-page layouts for paths and functionality found in most Shopify apps. Use one as your starting point" ([Shopify App Home patterns](https://shopify.dev/docs/api/app-home/patterns)); Atlassian: "Use a page header to create a consistent experience at the top of a full page" ([Atlassian page header](https://atlassian.design/components/page-header/usage)); Carbon's shell gives "shared interaction patterns that create a consistent experience across products" ([Carbon UI shell header](https://carbondesignsystem.com/components/UI-shell-header/usage/)); NN/g: systems "should use the same patterns everywhere inside the system", and "Consistency doesn't happen by itself, but requires an active process" ([NN/g consistency and standards](https://www.nngroup.com/articles/consistency-and-standards/)).
 - [weak] Consistent, not uniform: two filters that look alike behave alike; a screen that needs a different solution says why in the design notes.
 
 **Cases**
