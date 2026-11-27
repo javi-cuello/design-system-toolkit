@@ -1114,8 +1114,10 @@ const drawnOnce = (c) => {
     return bySet.get(key);
   };
   const key = (w) => [A(w), ...(entry ? [true, false].map((on) => A({ ...w, [entry.flag]: on ? entry.on : !entry.on })) : []), JSON.stringify(direct.map((k) => w[k]))].join('|');
-  const draw = (c2, full, mains, t) => { const k = key(full); if (!memo.has(k)) memo.set(k, drawn(c, full, mains, t, { a: anatomies[A(full)], B: anatomies[A(variantDefaults(c))] })); return memo.get(k); };
-  draw.expand = (c2, full) => anatomies[A(full)];
+  // (only for the contract it was made for: another's drawing would be read from this one's memo)
+  const mine = (c2) => { if (c2 !== c) throw new Error('drawnOnce: asked to draw a contract it was not made for'); };
+  const draw = (c2, full, mains, t) => { mine(c2); const k = key(full); if (!memo.has(k)) memo.set(k, drawn(c, full, mains, t, { a: anatomies[A(full)], B: anatomies[A(variantDefaults(c))] })); return memo.get(k); };
+  draw.expand = (c2, full) => { mine(c2); return anatomies[A(full)]; };
   draw.key = key;
   return draw;
 };

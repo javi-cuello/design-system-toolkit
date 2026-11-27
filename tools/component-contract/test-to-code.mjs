@@ -420,6 +420,8 @@ ok('a stroke with no paint draws nothing', !('box-shadow' in decl({ border: { wi
 // many axes, a pointer state, a pair, a combination's own and a combination left out: the rules that hold, found by the
 // index, are those a one-by-one scan finds, in order; and the check that checks each case once (selfCheck) finds what
 // checking every combination on its own finds, a seeded wrong value at every combination it reaches
+// (seeded by hand, this cannot find a gap in what the check groups combinations by: the sample of stored contracts
+// below compares the two on real contracts)
 { const many = { contract: 1, component: 'Many',
     props: { a: { type: 'boolean', default: false, axis: true }, b: { type: 'boolean', default: false, axis: true }, d: { type: 'boolean', default: true, axis: true },
       size: { type: 'enum', values: ['md', 'sm', 'lg'], default: 'md' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'] } },
@@ -446,7 +448,8 @@ ok('a stroke with no paint draws nothing', !('box-shadow' in decl({ border: { wi
 // every contract stored on this machine: each stylesheet rebuilds every variant its contract draws (skipped with none)
 const require = createRequire(import.meta.url);
 // No catch: a contract that crashes the rebuild is a failure, never "not read" and then a skip (review, 2026-10-31).
-let stored = 0, off = 0;
+let stored = 0, off = 0, sampled = 0, apart = 0;
+const EACH_MAX = 256, said = (list) => new Set(list.map((o) => JSON.stringify([o.when, o.part, o.property, o.want, o.got, o.except || null])));
 const projects = require('../snapshot/projects.cjs');
 for (const { name: label } of projects.projects().list) {
   const w = projects.layout(null, label);
@@ -455,12 +458,24 @@ for (const { name: label } of projects.projects().list) {
   // (with the project's own components as the mains it places: an override inside one is checked as the sheet writes it)
   const all = fs.readdirSync(dir).map((f) => [f, path.join(dir, f, 'contract.json')]).filter(([, file]) => fs.existsSync(file)).map(([f, file]) => [f, JSON.parse(fs.readFileSync(file, 'utf8'))]);
   const mains = require('./derive.cjs').byComponentName(all.map(([, c]) => c));
+  // and on a fixed sample, the check that checks each case once against every combination checked on its own, each
+  // given the contract's rules less one (so both have something to find): the twenty with the most variants whose
+  // combinations stay few enough to check one by one, and every twentieth of the rest by name
+  const few = all.filter(([, c]) => combinations(c).length <= EACH_MAX).sort((x, y) => (y[1].variants || []).length - (x[1].variants || []).length || (x[0] < y[0] ? -1 : 1));
+  const sample = new Set([...few.slice(0, 20), ...few.slice(20).sort((x, y) => (x[0] < y[0] ? -1 : 1)).filter((_, i) => i % 20 === 0)].map(([f]) => f));
   for (const [f, c] of all) {
     stored++;
-    if (selfCheck(c, rulesOf(c, mains).rules, mains).length) { off++; console.log('  not rebuilt:', label, f); }
+    const { rules } = rulesOf(c, mains);
+    if (selfCheck(c, rules, mains).length) { off++; console.log('  not rebuilt:', label, f); }
+    if (!sample.has(f)) continue;
+    sampled++;
+    const less = rules.filter((_, i) => i !== Math.floor(rules.length / 2));
+    const once = said(selfCheck(c, less, mains)), each = said(selfCheck(c, less, mains, HOUSE, null, { each: true }));
+    if (once.size !== each.size || [...each].some((x) => !once.has(x))) { apart++; console.log('  checked once differs from each:', label, f); }
   }
 }
 if (stored) ok(`every stored contract's stylesheet rebuilds every variant it draws (${stored} contracts)`, off === 0);
+if (sampled) ok(`on real contracts, the check that checks each case once finds what checking every combination finds (${sampled} sampled)`, apart === 0);
 else console.log('skip: no stored contracts on this machine');
 
 // a part inside a placed component a pointer state and a selection put in (a row's cell padding at hover and selected):
