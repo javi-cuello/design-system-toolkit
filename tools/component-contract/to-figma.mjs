@@ -272,6 +272,10 @@ export function ownInPlaced(library, drawn, mains, whole = new Set()) {
   for (const id of missing) {
     const segs = id.split('/'), ups = segs.slice(0, -1).map((_, i) => segs.slice(0, i + 1).join('/'));
     if (ups.some((h) => whole.has(h))) continue;
+    // (a lone glyph the library colours, inside an icon the drawn side colours itself, is that colour said on the icon, as
+    // glyph() compares the two: never filled with its component's own colour beside it, an extra vector)
+    const y0 = library[id], icon = drawn[y0.parent], lone = Object.keys(library).filter((k) => k.startsWith(`${y0.parent}/`)).length === 1;
+    if (icon && icon.kind === 'instance' && icon.background != null && heldGlyph(library[y0.parent], y0, lone)) continue;
     // the outermost instance that draws the part wins, as Figma's outermost override does (an Item that restyles its
     // Head's label says that label, not Head's own); an inner one only where no outer one holds the part
     // (an inner one is taken at the props it is placed with, its `with` here, else as the outer one's own places it;

@@ -645,6 +645,14 @@ delete globalThis.figma;
   const host = (kept) => ({ component: 'Check', props: {}, anatomy: { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Box' }, ...(kept && { 'b/mark': { kind: 'graphic', parent: 'b', width: 8, height: 2, background: kept } }) }, variants: [] });
   ok('a vector filled from the placed component is held without its paths where the library states none (the walk records none inside an instance): only its override differs',
     JSON.stringify(roundTrip(host('Icon/other'), host(null), { mains: (n) => (n === 'Box' ? box : null) }).rows.map((r) => r.at)) === '["b/mark.background"]');
+  // 2026-11-27: an icon inside a placed component (a toggletip's information icon) the design colours on its lone glyph and
+  // the code on the icon itself: the glyph is not filled under the code's coloured icon from the placed component (its own
+  // colour there), which would leave an extra vector beside the instance's colour; the two colours are compared as one
+  const tip = { component: 'Tip', props: {}, anatomy: { root: { kind: 'container' }, info: { kind: 'instance', parent: 'root', component: 'Info', width: 16, height: 16 }, 'info/vector': { kind: 'graphic', parent: 'info', background: 'Icon/secondary' } }, variants: [] };
+  const tipHost = (on) => ({ component: 'Field', props: {}, anatomy: { root: { kind: 'container' }, t: { kind: 'instance', parent: 'root', component: 'Tip' }, 't/info': { kind: 'instance', parent: 't', component: 'Info', width: 16, height: 16, ...(on === 'instance' && { background: 'Icon/disabled' }) }, ...(on === 'glyph' && { 't/info/vector': { kind: 'graphic', parent: 't/info', background: 'Icon/disabled' } }) }, variants: [] });
+  const tipRows = (code) => roundTrip(tipHost('glyph'), code, { mains: (n) => (n === 'Tip' ? tip : null), layoutUnit: true }).rows.map((r) => r.at);
+  ok('an icon in a placed component coloured on its glyph (design) and on the icon (code) is one colour, no glyph filled extra; another colour differs',
+    tipRows(tipHost('instance')).length === 0 && JSON.stringify(tipRows({ ...tipHost('instance'), anatomy: { ...tipHost('instance').anatomy, 't/info': { ...tipHost('instance').anatomy['t/info'], background: 'Icon/primary' } } })) === '["t/info.background"]', tipRows(tipHost('instance')));
 }
 // 2026-11-26: a placed checkbox the design lists only by its overridden row in one variant (its label and box left out
 // as its component's own) and whole in another (its tip hidden): what the first leaves out is not hidden, so the code's
