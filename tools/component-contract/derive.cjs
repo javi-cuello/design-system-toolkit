@@ -388,7 +388,9 @@ function flatten(list, characters = new Map(), known = [], axes = [], turned = n
     const e = element(node, parent == null ? null : idOf(parent), known, up, axes, !!turned && turned.has(idOf(segs)));
     const inInstance = segs.slice(0, -1).some((_, i) => (nodeAt.get(keyOf(segs.slice(0, i + 1))) || {}).type === 'INSTANCE');
     const place = (e, inInstance) => {
-      if (up && !up.layout && !inInstance && !e.absolute && node.x != null) e.absolute = boxAt(node);
+      // (a group's children stand where Figma says them, in the frame that holds the group (its relativeTransform is the
+      // frame's); the contract's point is in its parent, the group's box: the group's own point taken off)
+      if (up && !up.layout && !inInstance && !e.absolute && node.x != null) { const b = boxAt(node); e.absolute = up.type === 'GROUP' && up.x != null ? { x: +(b.x - up.x).toFixed(2), y: +(b.y - up.y).toFixed(2) } : b; }
       // and inside an instance, a layer its component places in a frame keeps no constraints either: like its position, an
       // instance cannot override them (figma-fact: no-nested-position-override), so they are the component's, and code reads
       // none there (one placed absolutely in an auto layout keeps them, with the position it states)
@@ -825,7 +827,19 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
     const e = anatomy[id];
     if (!e || e.kind !== 'instance' || !e.component) continue;
     const m = mains(e.component, e.key);
-    if (!m) { ownGlyph(anatomy, id); continue; }
+    // (a component the library does not hold: its layers are drawn open, as this component's own (layers.mjs
+    // openForeign), so each keeps the place it has in its frame (PLACE_ASIDE), a glyph's point beside its scale, which
+    // a share of its frame then says; all but an icon's one glyph, which ownGlyph folds into the icon)
+    if (!m) {
+      ownGlyph(anatomy, id);
+      const asideOf = PLACE_ASIDE.get(anatomy), near = (k) => { for (let up = (anatomy[k] || {}).parent; up; up = (anatomy[up] || {}).parent) if ((anatomy[up] || {}).kind === 'instance') return up; return null; };
+      if (asideOf) for (const k of Object.keys(anatomy)) {
+        const p = asideOf.get(k), e = anatomy[k];
+        if (!p || !e || !e.constraints || e.absolute || near(k) !== id) continue;
+        for (const f of ['absolute', 'constraints']) if (p[f] !== undefined) e[f] = p[f];
+      }
+      continue;
+    }
     const { M, swapped } = placedAs(anatomy, id, m, mains);
     const SHAPE_OF = new Set(['width', 'height', 'constraints']);
     const inner = Object.keys(anatomy).filter((k) => k.startsWith(id + '/'));

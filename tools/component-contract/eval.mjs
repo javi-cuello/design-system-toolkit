@@ -386,9 +386,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // it unread), which no sheet draws, so the reading finds none: where the reading draws one, it stays a difference
   // (each only where the reading drew what the sheet writes instead: the part pinned at its size from the start, read
   // `min`, or no constraints at all, as from-code drops them where both axes are min; a path's corners as none, null or 0; anything else drawn there is code's, a difference)
-  // (a part whose every axis is such a scale, read with no constraints at all, is one row on the whole field: the same)
-  const allScale = (at, v) => /\.constraints$/.test(at) && !!v && typeof v === 'object' && Object.keys(v).length > 0 && Object.entries(v).every(([axis, x]) => x === 'scale' && unscaled.has(`${at}.${axis}`));
-  const unwritten = (at, row) => (!row ? null : ((row.library === 'scale' && unscaled.has(at) && (row.drawn == null || row.drawn === 'min')) || (allScale(at, row.library) && row.drawn == null)) ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) && (row.drawn == null || row.drawn === 0) ? 'path-radius'
+  const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) && (row.drawn == null || row.drawn === 'min') ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) && (row.drawn == null || row.drawn === 0) ? 'path-radius'
     : row.library === 'literal' && row.drawn == null && /\.shadow$/.test(at) ? 'unrecorded-effect'
     : typeof row.library === 'string' && typeof row.drawn === 'string' && row.library !== row.drawn && /\.(background|color|radius|border|shadow|type|typography|width|height|min\w*|max\w*|opacity|layout)(\.|$)/.test(at) && !/^(#|rgba?\(|literal$|mixed$|scale$)/.test(row.library) && tokenNames.token(row.library) === tokenNames.token(row.drawn) ? 'one-css-name' : null);
   // a placed instance's props only a pointer state gives: one of its own (a definition drawn hovered, its State Hover), or

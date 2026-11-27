@@ -553,8 +553,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     return m && [n.element ? 'data-part' : 'className', { lit: m[1] }];
   };
   const hook = (id) => [detachedHook(id) || (n.element ? ['data-part', { lit: seg(id) }] : ['className', { lit: n.part(seg(id)).slice(1) }]), ...nameAttr(id), ...modeAttrs(id), ...foreignAttrs(id)];
-  // another library's instance drawn open (openForeign): the component it is and the props it is given, as the design
-  // places it, so a reading gives the instance back (from-code foreignAsInstance); each as the variants change them, in
+  // another library's instance drawn open (openForeign): the component it is, its key and the props it is given, as the
+  // design places it, so a reading gives the instance back (from-code foreignAsInstance); each as the variants change them, in
   // the order expand applies them, a combination last
   const foreignAttrs = (id) => {
     const e = ((parts.get(id) || {}).e) || {};
@@ -566,7 +566,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       const sets = order.filter((v) => at(v, f)), code = sets.some((v) => say(at(v, f).x) !== say(e[f])) && byVariant(sets, (v) => lang.str(say(at(v, f).x)), lang.str(say(e[f])));
       return code ? [[name, { code }]] : say(e[f]) ? [[name, { lit: say(e[f]) }]] : [];
     };
-    return [...attr('component', 'data-component', (x) => (typeof x === 'string' ? x : '')), ...attr('with', 'data-with', (w) => (w && typeof w === 'object' && Object.keys(w).length ? JSON.stringify(w) : ''))];
+    return [...attr('component', 'data-component', (x) => (typeof x === 'string' ? x : '')), ...attr('key', 'data-key', (x) => (typeof x === 'string' ? x : '')), ...attr('with', 'data-with', (w) => (w && typeof w === 'object' && Object.keys(w).length ? JSON.stringify(w) : ''))];
   };
   const named = (key) => props.find((x) => x.key === key);
   // the code that holds at a variant's props (null: never in markup; 'true': always)

@@ -1197,8 +1197,9 @@ export function designSetsColour(design, id, mainOf = () => null) {
     || (design.variants || []).some((v) => Object.keys(v.set || {}).some((k) => /\.background$/.test(k) && counts(k.split('.')[0])) || Object.entries(v.add || {}).some(([k, x]) => counts(k) && x.background != null));
 }
 
-/* Another library's instance the markup drew open (layers.mjs openForeign; to-markup's data-component and data-with, the
-   walk's `foreign` and `foreignWith`), read back as the instance it is: its kind, its component and the props it is given,
+/* Another library's instance the markup drew open (layers.mjs openForeign; to-markup's data-component, data-key and
+   data-with, the walk's `foreign`, `foreignKey` and `foreignWith`), read back as the instance it is: its kind, its
+   component, its key and the props it is given,
    on each element a render read and in each variant's set of them. In place; the ids given back. Tested by
    test-from-code.mjs. */
 export function foreignAsInstance(fromCode) {
@@ -1206,17 +1207,19 @@ export function foreignAsInstance(fromCode) {
   const one = (id, e) => {
     if (!e || typeof e.foreign !== 'string') return;
     ids.add(id); e.kind = 'instance'; e.component = e.foreign; delete e.foreign;
+    if (typeof e.foreignKey === 'string') e.key = e.foreignKey;
     if (e.foreignWith && Object.keys(e.foreignWith).length) e.with = e.foreignWith;
-    delete e.foreignWith;
+    delete e.foreignKey; delete e.foreignWith;
   };
   for (const a of [fromCode.anatomy || {}, ...(fromCode.variants || []).map((v) => v.add || {})]) for (const [id, e] of Object.entries(a)) one(id, e);
   for (const v of fromCode.variants || []) {
     if (!v.set) continue;
     for (const k of Object.keys(v.set)) {
-      const m = /^(.+)\.(foreign|foreignWith)$/.exec(k);
+      const m = /^(.+)\.(foreign|foreignKey|foreignWith)$/.exec(k);
       if (!m) continue;
       const x = v.set[k]; delete v.set[k]; ids.add(m[1]);
       if (m[2] === 'foreign') v.set[`${m[1]}.component`] = x;
+      else if (m[2] === 'foreignKey') v.set[`${m[1]}.key`] = x;
       else v.set[`${m[1]}.with`] = x && typeof x === 'object' && Object.keys(x).length ? x : null;
     }
   }
@@ -2545,9 +2548,9 @@ async function main() {
           const host = parent == null && hostSel && n.parentElement && n.parentElement.tagName.includes('-') && (() => { try { return n.parentElement.matches(hostSel[1]); } catch { return false; } })() ? n.parentElement : null;
           const modes = Object.fromEntries(modeKeys.map((k) => [k, n.getAttribute(`data-${k}`) || (host && host.getAttribute(`data-${k}`))]).filter(([, v]) => v));
           const e = { id, kind, ...(parent != null && { parent, order }), ...placedBy(n, parent), ...(figmaName && { name: figmaName }), ...(nameBorrowed && { nameBorrowed }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
-          // another library's instance the markup drew open (to-markup's data-component, data-with): its component and the props
-          // it is given, read back as the instance it is (foreignAsInstance)
-          if (n.getAttribute('data-component')) { e.foreign = n.getAttribute('data-component'); try { const w = JSON.parse(n.getAttribute('data-with') || 'null'); if (w && typeof w === 'object' && !Array.isArray(w)) e.foreignWith = w; } catch { /* none said */ } }
+          // another library's instance the markup drew open (to-markup's data-component, data-key, data-with): its component,
+          // its key and the props it is given, read back as the instance it is (foreignAsInstance)
+          if (n.getAttribute('data-component')) { e.foreign = n.getAttribute('data-component'); if (n.getAttribute('data-key')) e.foreignKey = n.getAttribute('data-key'); try { const w = JSON.parse(n.getAttribute('data-with') || 'null'); if (w && typeof w === 'object' && !Array.isArray(w)) e.foreignWith = w; } catch { /* none said */ } }
           // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
           // (a host that draws no box, display: contents, renders at its control's: the box in the flow)
           { const b = s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n, r = b.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
@@ -3451,14 +3454,9 @@ async function main() {
     const nested = Object.assign({}, base, ...variants.map((v) => v.add || {}));
     for (const [id, e] of Object.entries(nested)) if (e.kind === 'instance' && e.component) structure.push(`${id}: the ${e.component} component, drawn as its instance; its own values are compared in ${e.component}'s audit, not here`);
 
-    // another library's instance the markup drew open, read back as that instance: its component and props as the markup
-    // says them; its key the design's for that component (designKeyOf), as an icon's
-    { const ids = foreignAsInstance(fromCode);
-      if (ids.size && figmaContract) A.take('foreign-key', fromCode, () => {
-        const figmaEl = (id) => figmaContract.anatomy[id] || (figmaContract.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
-        for (const e of [fromCode.anatomy, ...fromCode.variants.map((v) => v.add || {})].flatMap((a) => Object.entries(a))) if (ids.has(e[0])) { const k = designKeyOf(figmaContract, figmaEl(e[0]), e[1].component); if (k) e[1].key = k; }
-        for (const v of fromCode.variants) for (const [k, x] of Object.entries(v.set || {})) if (k.endsWith('.component') && ids.has(k.slice(0, -'.component'.length)) && typeof x === 'string') { const key = designKeyOf(figmaContract, null, x); v.set[`${k.slice(0, -'.component'.length)}.key`] = key || null; }
-      }); }
+    // another library's instance the markup drew open, read back as that instance: its component, key and props as the
+    // markup says them
+    foreignAsInstance(fromCode);
     // where a governed mapping gives the design's layers: a slot the code fills with words where the design draws
     // a text is the design's text prop, under its name and with its sample (a slot has no default of its own);
     // an enum with the design's values lists them in the design's order, its own default kept

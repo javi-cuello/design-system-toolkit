@@ -1172,4 +1172,17 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('…a cap on a solid stroke stays a difference', kept({ color: 'C/line', width: 1, cap: 'round' }, { color: 'C/line', width: 1 }));
   ok('…and an inside stroke on a shape of no size keeps its alignment', kept({ color: 'C/line', width: 1, align: 'inside' }, { color: 'C/line', width: 1 }));
 }
+// an instance of a component the library does not hold is drawn open (layers.mjs openForeign): a scaled layer inside keeps
+// the point it has in its frame, so a share of that frame can say it; a group's child's point is in the group's box,
+// not the frame holding the group (Figma states it in that frame)
+{
+  const out = derive({ name: 'Badge', props: {}, variants: [{ name: 'Badge', type: 'COMPONENT', layout: 'HORIZONTAL', children: [
+    { name: 'Mark', type: 'INSTANCE', instanceOf: 'Mark', w: 16, h: 16, sizing: 'FIXED/FIXED', children: [
+      { name: 'Back', type: 'RECTANGLE', x: 0, y: 0, w: 16, h: 16, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/back'] },
+      { name: 'G', type: 'GROUP', x: 5.25, y: 1, w: 5.5, h: 14, children: [
+        { name: 'V', type: 'VECTOR', x: 5.25, y: 1, w: 5.5, h: 14, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/v'] }] }] }] }] }, [], { mains: () => null }).anatomy;
+  const v = Object.keys(out).find((k) => k.endsWith('/v')), back = Object.keys(out).find((k) => k.endsWith('/back'));
+  ok('a scaled layer inside an instance the library does not hold keeps its point beside its scale', !!out[back].absolute && out[back].absolute.x === 0 && out[back].constraints.horizontal === 'scale');
+  ok('…and a group\'s child its point in the group, the group\'s own taken off', !!out[v].absolute && out[v].absolute.x === 0 && out[v].absolute.y === 0);
+}
 console.log(`${n}/${n} passed`);

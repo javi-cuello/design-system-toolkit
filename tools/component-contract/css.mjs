@@ -245,10 +245,6 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     }
     if (shift.includes('-50%')) put('translate', shift.join(' '));
   } else if (anchors) put('position', 'relative');
-  // a part scaled with its parent that states no point in it (a glyph inside another library's instance, drawn open: derive
-  // keeps its scale both ways but no place there, figma-fact:no-nested-position-override): drawn where it flows, and no
-  // share of it can be written, said so, as one whose offset is no number
-  if (cons && position !== 'absolute' && !at) for (const [axis, k] of [['horizontal', 'width'], ['vertical', 'height']]) if (cons[axis] === 'scale') { unread.push(`constraints (scale: no point in its parent is recorded, so no share of its ${k} can be written)`); unshared.push(axis); }
 
   const ts = take('typography'), own = typeOfValue(ts);
   // a text with no style, by its values (rules.mjs typeValue), written as values, never a var() no token defines; one

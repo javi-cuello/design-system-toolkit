@@ -1601,12 +1601,12 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
 }
 { // another library's instance the markup drew open (data-component, data-with), read back as the instance it is: its
   // component and props on the element and in each variant's set and add of them (2026-11-27)
-  const read = { anatomy: { root: { kind: 'container' }, icon: { kind: 'container', parent: 'root', foreign: 'Status', foreignWith: { Size: 'small' }, layout: { direction: 'row' } }, 'icon/glyph': { kind: 'container', parent: 'icon' }, box: { kind: 'container', parent: 'root' } },
-    variants: [{ when: { tone: 'error' }, set: { 'icon.foreignWith': { Size: 'large' }, 'icon.foreign': 'Status/Error' } }, { when: { tone: 'none' }, set: { 'icon.foreignWith': null } }, { when: { big: true }, add: { extra: { kind: 'container', parent: 'root', foreign: 'Badge' } } }] };
+  const read = { anatomy: { root: { kind: 'container' }, icon: { kind: 'container', parent: 'root', foreign: 'Status', foreignKey: 'k1', foreignWith: { Size: 'small' }, layout: { direction: 'row' } }, 'icon/glyph': { kind: 'container', parent: 'icon' }, box: { kind: 'container', parent: 'root' } },
+    variants: [{ when: { tone: 'error' }, set: { 'icon.foreignWith': { Size: 'large' }, 'icon.foreign': 'Status/Error', 'icon.foreignKey': 'k2' } }, { when: { tone: 'none' }, set: { 'icon.foreignWith': null } }, { when: { big: true }, add: { extra: { kind: 'container', parent: 'root', foreign: 'Badge' } } }] };
   const ids = foreignAsInstance(read), a = read.anatomy;
-  ok('foreignAsInstance: a frame the markup drew for another library\'s instance is that instance again, its component and props as the markup says them, in every variant; a frame of its own stays one',
-    [...ids].sort().join() === 'extra,icon' && a.icon.kind === 'instance' && a.icon.component === 'Status' && JSON.stringify(a.icon.with) === '{"Size":"small"}' && !('foreign' in a.icon) && !('foreignWith' in a.icon) && a.icon.layout.direction === 'row'
-      && JSON.stringify(read.variants[0].set) === '{"icon.with":{"Size":"large"},"icon.component":"Status/Error"}' && read.variants[1].set['icon.with'] === null && read.variants[2].add.extra.kind === 'instance' && read.variants[2].add.extra.component === 'Badge' && !('with' in read.variants[2].add.extra)
+  ok('foreignAsInstance: a frame the markup drew for another library\'s instance is that instance again, its component, key and props as the markup says them (data-key, never a key taken from the design), in every variant; a frame of its own stays one',
+    [...ids].sort().join() === 'extra,icon' && a.icon.kind === 'instance' && a.icon.component === 'Status' && JSON.stringify(a.icon.with) === '{"Size":"small"}' && a.icon.key === 'k1' && !('foreign' in a.icon) && !('foreignKey' in a.icon) && !('foreignWith' in a.icon) && a.icon.layout.direction === 'row'
+      && JSON.stringify(read.variants[0].set) === '{"icon.with":{"Size":"large"},"icon.component":"Status/Error","icon.key":"k2"}' && read.variants[1].set['icon.with'] === null && read.variants[2].add.extra.kind === 'instance' && read.variants[2].add.extra.component === 'Badge' && !('with' in read.variants[2].add.extra)
       && a['icon/glyph'].kind === 'container' && a.box.kind === 'container');
 }
 console.log(`${n}/${n} passed`);

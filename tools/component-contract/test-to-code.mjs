@@ -1199,11 +1199,11 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const ringed = (kind) => ({ kind, parent: 'root', position: 'absolute', absolute: { x: -2, y: -2, end: -2, bottom: -2 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus', width: 2 }, ...(kind === 'instance' && { component: 'Ring' }) });
   const c = (kind) => ({ component: 'B', props: { state }, anatomy: { root: { kind: 'container' } }, variants: [{ when: { state: 'focus' }, add: { ring: ringed(kind) } }] });
   ok('a placed component is never drawn as a ring; a stroke-only frame is', !ringOf(c('instance'), { state: 'focus' }, 'ring', ringed('instance'), {}) && !!ringOf(c('container'), { state: 'focus' }, 'ring', ringed('container'), {})); }
-{ // a part scaled with its parent that states no point in it (a glyph inside another library's instance, drawn open:
-  // derive keeps no place there): drawn where it flows, said unwritten, both axes unshared, so eval names it (2026-11-27)
-  const d = declarations({ kind: 'graphic', width: 10, height: 6, constraints: { horizontal: 'scale', vertical: 'scale' } }, {}, { token: (t) => `var(--${t})` });
-  const placed = declarations({ kind: 'graphic', width: 10, height: 6, position: 'absolute', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' } }, { box: { width: 10, height: 6 } }, { token: (t) => `var(--${t})` });
-  ok('a scale constraint with no point is said unwritten on both axes, nothing positioned; one with a point is written as a share',
-    d.unshared.join() === 'horizontal,vertical' && d.unread.filter((u) => /no point in its parent/.test(u)).length === 2 && !d.decls.some(([p]) => p === 'position') && !placed.unshared.length && placed.decls.some(([p, v]) => p === 'inline-size' && /%/.test(v)));
+{ // a glyph inside another library's instance, drawn open: derive keeps its point (a share of its frame says it), so the
+  // sheet writes it as one, its offset and its size each a percentage of the frame's (2026-11-27)
+  const d = declarations({ kind: 'graphic', width: 14, height: 14, absolute: { x: 1, y: 1 }, constraints: { horizontal: 'scale', vertical: 'scale' } }, { box: { width: 16, height: 16 } }, { token: (t) => `var(--${t})` });
+  const at = (p) => (d.decls.find(([q]) => q === p) || [])[1];
+  ok('a scaled glyph with its point inside a 16 frame is written as shares: 6.25% in, 87.5% wide and high, nothing unshared',
+    at('position') === 'absolute' && at('inset-inline-start') === '6.25%' && at('inset-block-start') === '6.25%' && at('inline-size') === '87.5%' && at('block-size') === '87.5%' && !d.unshared.length);
 }
 console.log(`${n} passed`);

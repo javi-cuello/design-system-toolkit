@@ -18,7 +18,6 @@
  */
 import { splitTop, parseGradient, COLOUR, WEIGHTS, figmaWeight, weightName } from '../parity/values.mjs';
 import { stopPositions } from '../parity/schema.mjs';
-import { GLYPH_WORDS } from './layers.mjs';
 
 /* Cleared: an instance that clears its component's colour style, stroke, fill or shadow (fillStyle, border, background, shadow) says
    `none` (derive's cleared), as does a layer inside an opened instance that draws no fill where its component's layer
@@ -95,8 +94,7 @@ export const sizeToFigma = (w) => (SIZE_ROWS.find((r) => r[0] === w) || [])[1];
    saying nothing but where it is, its colour and its opacity, inside an instance with no colour of its own (`lone`: it
    is the instance's only layer). to-code writes such a glyph's colour and opacity on the instance; to-figma's comparison
    folds it there, with the colour style it is painted with (a Figma name for that colour, which code does not say). */
-// (layers.mjs holds it: openForeign leaves such an icon a mark)
-export { GLYPH_WORDS };
+export const GLYPH_WORDS = new Set(['kind', 'parent', 'name', 'order', 'background', 'fillStyle', 'opacity']);
 export const heldGlyph = (holder, glyph, lone) => !!lone && !!holder && !!glyph && glyph.kind === 'graphic' && glyph.background != null && holder.background == null && Object.keys(glyph).every((k) => GLYPH_WORDS.has(k));
 /* The same glyph painted with nothing (its fills emptied: a glyph kept hidden behind its swap's other layer), the one
    rule to-code and to-figma's comparison share: instance `hid` of anatomy `a`, of a component the library does not hold

@@ -796,7 +796,7 @@ ok('--check: only a strict count absent from accepted.json is spared; a `left` o
   && !unaccepted({ 'self left': { a: 2 } }, { self: { a: 0 } }).length);
 { // another library's instance the markup draws open (layers.mjs openForeign): its insides, props and layout are held
   // to the design as any part's, never inside-foreign or foreign-own; one it leaves closed (a prop swaps it, or it sits in
-  // a held component) keeps them; a glyph inside scaled with no point recorded is unwritten-scale, read with none
+  // a held component) keeps them; a glyph inside scaled is said as a share of its frame, never excused unwritten
   // (2026-11-27: 341 rows of a library's icons left to code)
   const tag = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
   const c = { contract: 1, component: 'Chip', props: { glyph: { type: 'instance', figma: 'Glyph', swaps: ['swapped'] } },
@@ -811,8 +811,8 @@ ok('--check: only a strict count absent from accepted.json is spared; a `left` o
       && closed('icon/glyph', { library: { kind: 'graphic' }, drawn: null }) === 'inside-foreign' && closed('icon.with', { library: { Size: 'small' }, drawn: null }) === 'foreign-own');
   ok('…one the markup leaves closed, a prop\'s swap or inside a held component, keeps its excuse',
     open('swapped/vector', { library: { kind: 'graphic' }, drawn: null }) === 'inside-foreign' && open('swapped.with', { library: { Size: 'small' }, drawn: null }) === 'foreign-own' && open('tag/mark/vector', { library: { kind: 'graphic' }, drawn: null }) === 'inside-foreign');
-  ok('…a glyph inside scaled with no point recorded, read with no constraints, is unwritten-scale; read otherwise, a difference',
-    open('icon/glyph.constraints', { library: { horizontal: 'scale', vertical: 'scale' }, drawn: null }) === 'unwritten-scale' && open('icon/glyph.constraints', { library: { horizontal: 'scale', vertical: 'scale' }, drawn: { horizontal: 'min', vertical: 'min' } }) === null
+  ok('…a glyph inside scaled, its point kept (a share writes it), is never unwritten-scale: read with none, a difference',
+    open('icon/glyph.constraints', { library: { horizontal: 'scale', vertical: 'scale' }, drawn: null }) === null
       && closed('icon/glyph.constraints', { library: { horizontal: 'scale', vertical: 'scale' }, drawn: null }) === 'inside-foreign');
 }
 console.log(`${n} passed`);
