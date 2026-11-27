@@ -1529,6 +1529,14 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   const rev = [k(3), k(2), k(1)], fwd = [k(1), k(2), k(3)];
   ok('children whose z-index paints the first on top read as first on top, one placed absolutely among them too; the last on top, or a child with none, not',
     stackedFirst(rev) && !stackedFirst(fwd) && !stackedFirst([k(3), { stack: {} }, k(1)]) && stackedFirst([k(3), k(2, { out: true }), k(1)]) && stackedFirst([k(3), k(1, { out: true }), k(2)]) && !stackedFirst([k(2, { out: true }), k(1)]) && !stackedFirst([k(1)])); }
+// a first-on-top box's children numbered the reverse of their paint, a part placed absolutely last though written first
+// (a field's background under its text, inside a placed component whose box's layout is not read); else as painted
+{ const { childOrder } = await import('./rules.mjs');
+  const bg = { id: 'bg', stack: { out: true, z: 1 } }, text = { id: 'text', stack: { z: 3 } }, icons = { id: 'icons', stack: { z: 2 } };
+  const ids = (r) => r.ranked.map((e) => e.id).join();
+  ok('a first-on-top box\'s children are numbered the reverse of their paint, its absolute part among them; else as painted',
+    ids(childOrder([text, bg, icons])) === 'text,icons,bg' && childOrder([text, bg, icons]).first
+    && ids(childOrder([{ id: 'a' }, { id: 'b', stack: { out: true } }])) === 'a,b' && !childOrder([{ id: 'a' }, { id: 'b' }]).first); }
 // a design prop the engine's rule joined to no arg, where the toolkit's markup renamed it off an HTML attribute's name,
 // joins that arg: a flag's title (titleOption) keeps the design's name, never read back as Title beside it
 { const design = { title: { type: 'string' }, size: { type: 'string' }, label: { type: 'string' }, hidden: { type: 'string' } };

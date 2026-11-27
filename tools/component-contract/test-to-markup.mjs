@@ -933,7 +933,11 @@ else {
     // and a child added after its parent's removal, in variant order: pruned as it lands, so not revived by the put-back
     const late = { ...tipBar(false), variants: [bar.variants[0], { when: { tip: true }, add: { 'menu/tip': { kind: 'container', parent: 'menu' } } }, bar.variants[1]] };
     const lateTip = tipOf(late);
-    ok('a child added after its parent\'s removal is pruned as it lands, never revived where the parent alone is put back', /^\s*\{tip && !sm && \($/.test(lateTip), lateTip); }
+    ok('a child added after its parent\'s removal is pruned as it lands, never revived where the parent alone is put back', /^\s*\{tip && !sm && \($/.test(lateTip), lateTip);
+    // (but one a later variant of its own adds there again is back: an action row's margin, at Close off and long)
+    const back = { ...late, variants: [bar.variants[0], late.variants[1], { when: { sm: true, tip: true }, add: { menu: { kind: 'container', parent: 'root' } } }, { when: { sm: true, tip: true }, add: { 'menu/tip': { kind: 'container', parent: 'menu' } } }] };
+    const backTip = toReact(back, 'bar', { naming: CLASS, library: { Bar: { ...back, folder: 'bar' } } }).split('\n').filter((l) => /\{.*&& \($/.test(l)).at(-1) || '';
+    ok('a child pruned as it lands that a later variant of its own adds again is drawn there', /\btip\b/.test(backTip) && !/!/.test(backTip), backTip); }
   // a narrower removal stacked on the put-back still takes it away
   const bar3 = { ...bar, props: { ...bar.props, busy: { type: 'boolean', default: false, figma: 'Busy' } }, variants: [...bar.variants, { when: { sm: true, end: true, busy: true }, remove: ['menu'] }] };
   ok('a removal narrower than a put-back still takes the part away', /\(sm && end\) && !\(sm && end && busy\)/.test(toReact(bar3, 'bar', { naming: CLASS, library: { Bar: { ...bar3, folder: 'bar' } } })));

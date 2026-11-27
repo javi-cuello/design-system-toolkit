@@ -581,6 +581,14 @@ export function stackedFirst(xs) {
   return laid.every((z, i) => i === 0 || z < laid[i - 1]);
 }
 
+/* A box's children in their order, as the reading numbers them: the reverse of their paint where they say first on top
+   (stackedFirst: to-code's z-index counting down from the first, a part placed absolutely among them), else as the browser
+   paints them (siblingOrder). `first` says which. Runs in the page as well (passed as source, with the two it calls);
+   tested by test-from-code.mjs. */
+export function childOrder(xs, order = siblingOrder, first = stackedFirst) {
+  return first(xs) ? { first: true, ranked: [...xs].sort((a, b) => b.stack.z - a.stack.z) } : { first: false, ranked: order(xs) };
+}
+
 /* Whether a box in the flow paints with the positioned ones (siblingOrder's `lifted`), in markup order, with no z-index of
    its own: positioned (relative, sticky), or a stacking context of its own (CSS 2 Appendix E; css-color 4 on opacity;
    css-transforms 1 and 2 on transform, translate, rotate, scale; filter-effects on filter and backdrop-filter;

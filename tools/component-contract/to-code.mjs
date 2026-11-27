@@ -176,9 +176,12 @@ export function partsOf(c, t = HOUSE) {
   const parts = new Map();
   const swapsIn = (w, id) => { const k = (/^\{(.+)\}$/.exec(w) || [])[1]; return !!k && (props[k] || {}).type === 'string' && (props[k].sets || []).includes(id); };
   for (const [id, e] of Object.entries(c.anatomy || {})) parts.set(id, { id, e, base: true, adds: [], removes: [], pointerOnly: false, rings: [], words: [] });
-  for (const v of c.variants || []) {
+  // (a part pruned as it lands, held until every variant is seen: one a later variant of its own adds there is back)
+  const landed = new Map(), addedAt = new Map();
+  for (const [vi, v] of (c.variants || []).entries()) {
     const when = v.when || {};
     const byPointer = Object.entries(when).some(([k, x]) => pointer(k, x));
+    if (!byPointer) for (const id of Object.keys(v.add || {})) (addedAt.get(id) || addedAt.set(id, []).get(id)).push([when, vi]);
     for (const [id, e] of Object.entries(v.add || {})) {
       if (!parts.has(id)) parts.set(id, { id, e, base: false, adds: [], removes: [], pointerOnly: true, rings: [], words: [] });
       // (a pointer state's add drawn as a ring is the ringed element's outline there, never an element the markup holds)
@@ -199,7 +202,7 @@ export function partsOf(c, t = HOUSE) {
     if (!byPointer) for (const [id, e] of Object.entries(v.add || {})) {
       const P = e.parent && !(v.add || {})[e.parent] && parts.get(e.parent);
       if (!P) continue;
-      for (const r of P.removes) if (meets(r, when) && !P.adds.some((a) => within(r, a) && meets(a, when))) parts.get(id).removes.push({ ...r, ...when });
+      for (const r of P.removes) if (meets(r, when) && !P.adds.some((a) => within(r, a) && meets(a, when))) (landed.get(id) || landed.set(id, []).get(id)).push([{ ...r, ...when }, vi]);
     }
     // (a part removed takes its parts with it, as expand applies a removal (layers.mjs): one met so far under a removed
     // part, and not put back by this same variant, is gone there too, so a later variant that puts back only the box (a
@@ -217,6 +220,9 @@ export function partsOf(c, t = HOUSE) {
       const swap = typeof w === 'string' && (/^\{(.+)\}$/.exec(w) || [])[1], swaps = swap && ((c.props || {})[swap] || {}).type === 'string' && ((c.props[swap].sets || []).includes(m && m[1]));
       if (at && at.base && typeof w === 'string' && (swaps || !/^\{.*\}$/.test(w)) && (w !== at.e.content || at.words.length)) at.words.push([when, w]);
     }
+  }
+  for (const [id, list] of landed) for (const [r, vi] of list) {
+    if (!(addedAt.get(id) || []).some(([a, ai]) => ai > vi && Object.entries(r).every(([k, x]) => a[k] === undefined || a[k] === x) && Object.entries(a).every(([k, x]) => r[k] === x))) parts.get(id).removes.push(r);
   }
   for (const part of parts.values()) {
     // a part only variants draw, each with its own words (a message at error says the error text, at warning the warning
