@@ -770,13 +770,20 @@ const emptyless = (e) => { if (!e || !e.whileEmpty) return e; const r = { ...e }
 // a text grows to its words where it resizes so, or says no resizing and hugs or states no height (to-figma's unaligned
 // asks the same)
 const textGrows = (d) => /^(width_and_height|height)$/.test(d.autoResize || '') || (!d.autoResize && (d.height == null || d.height === 'hug'));
-/* Whether a part's children can overlap, in a component's expanded anatomy `M`: its layout's gap below 0 (read by the
-   number it leads with: -4, a token written -4px (…)), or a child placed absolutely. Else which paints on top shows
-   nowhere (from-code's stackLikeDesign holds the same). */
-function overlaps(M, id) {
-  const e = M[id] || {}, g = e.layout && e.layout.gap;
-  if (g != null && parseFloat(String(g)) < 0) return true;
-  return Object.values(M).some((c) => c && c.parent === id && (c.position === 'absolute' || !!c.absolute));
+/* Whether a part's children can overlap, in a component's expanded anatomy `M` or at any variant of its contract `m`:
+   its layout's gap below 0 (read by the number it leads with: -4, a token written -4px (…)), set whole or by a dotted
+   path, or a child placed absolutely. Else which paints on top shows nowhere (from-code's stackLikeDesign holds the
+   same). */
+function overlaps(M, id, m = null) {
+  const below = (g) => g != null && parseFloat(String(g)) < 0;
+  const out = (c) => !!c && (c.position === 'absolute' || !!c.absolute);
+  const kids = (a) => Object.values(a || {}).some((c) => c && c.parent === id && out(c));
+  if (below(((M[id] || {}).layout || {}).gap) || kids(M)) return true;
+  if (!m) return false;
+  const all = { ...(m.anatomy || {}), ...Object.assign({}, ...(m.variants || []).map((v) => v.add || {})) };
+  return below(((all[id] || {}).layout || {}).gap) || kids(all) || (m.variants || []).some((v) => { const st = v.set || {};
+    return below((st[`${id}.layout`] || {}).gap) || below(st[`${id}.layout.gap`])
+      || Object.entries(st).some(([k, x]) => { const f = /^(.+)\.(position|absolute)$/.exec(k); return f && (all[f[1]] || {}).parent === id && (f[2] === 'position' ? x === 'absolute' : !!x); }); });
 }
 function unsayable(x, y, reading, overlap = true) {
   if (!reading || !x || !y) return x;
@@ -948,7 +955,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       if (!x3 || !keyMatches(anatomy[k].key, x3.key)) return false;
       // (a layer of an instance nested in this one has its position-less constraints left out at that instance's own
       // turn, as this component's own contract already has them: compared so, where the component's part has none)
-      const y1 = asGlyphOf(anatomy[k], x3, reading), x = strokeForm(unsayable(x3, anatomy[k], reading, overlaps(M, mk)), reading), y0 = strokeForm(y1, reading);
+      const y1 = asGlyphOf(anatomy[k], x3, reading), x = strokeForm(unsayable(x3, anatomy[k], reading, overlaps(M, mk, m)), reading), y0 = strokeForm(y1, reading);
       const y = host(k) !== id && y0.constraints && !y0.absolute && !x.constraints ? (({ constraints: _, ...r }) => r)(y0) : y0;
       if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(arcForm(bare(y))) === look(arcForm(bare(x))); }
       if (look(arcForm(y)) === look(arcForm(x))) return true;

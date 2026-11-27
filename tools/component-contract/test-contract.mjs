@@ -960,6 +960,13 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const pileLay = { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Item' }, 'i/content': { kind: 'container', parent: 'i', layout: { direction: 'row', gap: -8 }, order: 0 } };
   ownInsides(pileLay, (x) => (x === 'Item' ? pile : null), { partial: true, reading: true });
   ok('a reading\'s overlapping group stacked the other way than its component\'s is kept as the difference it is', 'i/content' in pileLay);
+  // (and where only a variant of the component makes them overlap, by a dotted gap or a child placed absolutely)
+  for (const v of [{ when: { tight: true }, set: { 'content.layout.gap': -8 } }, { when: { tight: true }, add: { 'content/badge': { kind: 'graphic', parent: 'content', position: 'absolute' } } }]) {
+    const sometimes = { ...item, variants: [v] };
+    const lay8 = lay(8);
+    ownInsides(lay8, (x) => (x === 'Item' ? sometimes : null), { partial: true, reading: true });
+    ok(`a group only a variant makes overlap (${Object.keys(v.set || v.add)[0]}) keeps its stacking compared`, 'i/content' in lay8);
+  }
 }
 
 { // a mirrored layer stands where its box does (the snapshot's visual), not at its matrix's origin: CSS's left and code's box
