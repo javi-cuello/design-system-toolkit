@@ -36,11 +36,16 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   // icon swapped in at a contrast its notification leaves it its own colour), is unstated there; coloured on it or on its
   // lone glyph, held, or not listed, it is not
   { const { unstatedHere } = await import('./from-code.mjs'), none = byComponentName([]);
-    const at = { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Error--filled' } };
+    const at = { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Alert--solid' } };
     ok('a placed icon of another library listed with no colour at a combination is unstated there; coloured, held or unlisted, it is not',
-      unstatedHere(at, 'i', none) === true && unstatedHere({ ...at, 'i/vector': { kind: 'graphic', parent: 'i', background: 'Support/error' } }, 'i', none) === false
-      && unstatedHere({ ...at, i: { ...at.i, background: 'c' } }, 'i', none) === false && unstatedHere(at, 'i', byComponentName([{ component: 'Error--filled', anatomy: { root: { kind: 'container' } } }])) === false
+      unstatedHere(at, 'i', none) === true && unstatedHere({ ...at, 'i/vector': { kind: 'graphic', parent: 'i', background: 'Tone/alert' } }, 'i', none) === false
+      && unstatedHere({ ...at, i: { ...at.i, background: 'c' } }, 'i', none) === false && unstatedHere(at, 'i', byComponentName([{ component: 'Alert--solid', anatomy: { root: { kind: 'container' } } }])) === false
       && unstatedHere(at, 'gone', none) === false); }
+  { const { inheritsColour } = await import('./from-code.mjs');
+    ok('a fill written as currentColor reads as the keyword, as the design names it; a token or a colour does not', inheritsColour('currentColor') && inheritsColour(' currentcolor ') && !inheritsColour('var(--c)') && !inheritsColour('rgb(0, 0, 0)') && !inheritsColour(null)); }
+  { const src = (await import('node:fs')).readFileSync(new URL('./from-code.mjs', import.meta.url), 'utf8');
+    ok('…the walk reads the colour around an icon as none where the design leaves it its own there, and a fill written currentColor as the keyword',
+      src.includes('if (own || !figmaContract || !unstatedHere(drawnHere(), id, mainOf)) x.background = icon;') && src.includes("if (inheritsColour(await authoredValue(L.tab, styledAt(id), p, styles))) kw = true;")); }
   // a foreign icon's lone glyph straight under it: roundTrip compares its colour as the instance's (to-figma glyph), so
   // a colour there, or a variant's set of it (an error state's red), is the design's (review of the first cut)
   const lone = { anatomy: { icon: { kind: 'instance', component: 'Icons/x' }, 'icon/icon': { kind: 'graphic', parent: 'icon', background: 'C/medium' } }, variants: [{ when: { error: true }, set: { 'icon/icon.background': 'C/red' } }] };
@@ -1009,7 +1014,8 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   { const I = { component: 'Item', props: {}, anatomy: { root: { kind: 'container' }, bg: { kind: 'graphic', parent: 'root', background: 'Field/bg' }, bare: { kind: 'graphic', parent: 'root' }, own: { kind: 'graphic', parent: 'root', background: 'Field/bg' } }, variants: [] };
     const r = readCleared({ root: { kind: 'container' }, it: { kind: 'instance', parent: 'root', component: 'Item' }, 'it/bg': { kind: 'graphic', parent: 'it', fillless: true }, 'it/bare': { kind: 'graphic', parent: 'it', fillless: true }, 'it/own': { kind: 'graphic', parent: 'it', background: 'Field/x' }, lone: { kind: 'graphic', parent: 'root', fillless: true } }, (n) => (n === 'Item' ? I : null));
     ok('a layer inside a placed component painted clear where its component\'s part has a fill reads as the fill cleared; nothing else does, and the mark is gone',
-      r['it/bg'].background === 'none' && r['it/bare'].background === undefined && r['it/own'].background === 'Field/x' && r.lone.background === undefined && !Object.values(r).some((x) => 'fillless' in x)); }
+      r['it/bg'].background === 'none' && r['it/bare'].background === undefined && r['it/own'].background === 'Field/x' && r.lone.background === undefined && !Object.values(r).some((x) => 'fillless' in x)
+      && src.includes("if (inside && (kind === 'container' || (kind === 'graphic' && e.mark)) && e.background === undefined && clear(s.backgroundColor) && s.backgroundImage === 'none') e.fillless = true;")); }
 }
 {
   // a placed component computing no clip where its component's root clips reads back as the clip stopped, `visible`

@@ -350,6 +350,8 @@ export function roomTaken(e, room) {
 /* An icon's colour as read: the token `tokOf` finds for the colour it is drawn in; none (undefined) for one coloured
    with nothing (transparent: to-code's icon whose glyph Figma paints with nothing, its fills emptied) or none read.
    Tested by test-from-code.mjs. */
+/* A fill written as CSS's currentColor keyword (the colour the box inherits), alone. Tested by test-from-code.mjs. */
+export const inheritsColour = (v) => typeof v === 'string' && /^\s*currentcolor\s*$/i.test(v);
 export const iconColour = async (v, tokOf) => (!v || clearValue(v) ? undefined : tokOf(v));
 // a colour value that paints nothing (a transparent token: a ghost button's fill)
 export const clearValue = (v) => {
@@ -3132,7 +3134,12 @@ async function main() {
           if (lost.length) layered.add(id);
           delete x.paint;
           if (named.length) x.background = named.length === 1 ? named[0] : named;
-        } else if (x.background) x.background = await tok('background', x.background, `${id}.background`, ['background-color', 'background']);
+        } else if (x.background) {
+          // (a fill the code writes as currentColor, the keyword, is that, as the design names it (to-code's tokenNames):
+          // never the token its inherited colour happens to match at this combination)
+          let kw = false; for (const p of ['background-color', 'background']) if (inheritsColour(await authoredValue(L.tab, styledAt(id), p, styles))) kw = true;
+          x.background = kw ? 'currentColor' : await tok('background', x.background, `${id}.background`, ['background-color', 'background']);
+        }
         const icon = await iconColour(x.icon, (v) => tok('icon', v, `${id}.icon`, ['fill', 'color']));
         delete x.icon;
         if (icon !== undefined) {
