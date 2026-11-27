@@ -797,6 +797,19 @@ export function axisValueOf(vals, attrs, innerDisabled = false) {
   return (hit || rest || [])[0];
 }
 
+/* A design prop the engine's rule joined to no arg, where the toolkit's own markup renamed it off an HTML attribute's name
+   (to-markup's propsOf: title as titleOption, type as typeOption): that arg, as the code's for it. Else the prop read as
+   one the code lacks, and its text as another prop under the house's name (a flag's ✏️ title read as Title). Changes
+   `props` in place. Tested by test-from-code.mjs. */
+export function renamedJoins(props, argTypes = {}) {
+  for (const [k, v] of Object.entries(props)) {
+    if (!v || typeof v !== 'object' || !v.missing) continue;
+    const arg = Object.keys(argTypes).find((a) => a.startsWith(`${k}Option`) && /^\d*$/.test(a.slice(k.length + 6)));
+    if (arg) props[k] = { code: arg, fixed: v.fixed };
+  }
+  return props;
+}
+
 /* A prop the mapping joins to exactly one design prop of its own kind (a boolean to a boolean, a text to a text) takes
    that prop's Figma name, as the design spells it; one already named, an enum (named by its values above), a swap
    (named by the layers it shows) or a name another prop holds is left. Changes props in place. Tested by test-from-code.mjs. */
@@ -1127,8 +1140,8 @@ const PLACE = GLYPH_WORDS;
 /* A placed instance a variant swaps for a component the library does not hold (a status icon set of its own at the error
    state): to-markup marks that component where the variant holds, and the reading reads the mark as a graphic naming its
    asset. Read back as the swap it is: that variant's component (the design's spelling, its key), the graphic's own fields
-   gone, its colour too where the design sets none (designSetsColour, `setsColour`). In place, on the reading's variants. */
-export function swappedMark(fromCode, design, setsColour = () => false) {
+   gone, and its colour where that variant sets none: a component the library does not hold draws its own. In place. */
+export function swappedMark(fromCode, design) {
   for (const v of fromCode.variants || []) {
     const s = v.set || {};
     for (const k of Object.keys(s)) {
@@ -1140,7 +1153,7 @@ export function swappedMark(fromCode, design, setsColour = () => false) {
       delete s[k]; delete s[`${id}.kind`];
       s[`${id}.component`] = dv.set[`${id}.component`];
       s[`${id}.key`] = dv.set[`${id}.key`] ?? null;
-      if (!setsColour(id)) delete s[`${id}.background`];
+      if (!(`${id}.background` in dv.set)) delete s[`${id}.background`];
     }
   }
   return fromCode;
@@ -1833,7 +1846,7 @@ async function governedSource(project, name) {
     api: async () => api || S.PAGE.api(tab),
     elements: async () => elements,
     // the mapping's joins, and the engine's one rule (effectiveProps) for a prop the mapping's variants do not move (a text)
-    joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
+    joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: renamedJoins(X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}), argTypes) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
     argsOf: (all) => G.argsOf(all) || {},
     close: () => S.close(),
   };
@@ -2036,7 +2049,7 @@ async function selfSource(project, name, { second = false } = {}) {
     },
     api: async () => api,
     elements: async () => elements,
-    joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
+    joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: renamedJoins(X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}), argTypes) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
     argsOf: (all) => G.argsOf(all) || {},
     close: async () => {
       if (browser) await browser.close(); if (site) await site.close();
@@ -3576,7 +3589,7 @@ async function main() {
       A.take('icon-as-instance', fromCode, () => {
       for (const [id, e] of Object.entries(fromCode.anatomy)) asIcon(id, e);
       for (const v of fromCode.variants) for (const [id, e] of Object.entries(v.add || {})) asIcon(id, e);
-      swappedMark(fromCode, figmaContract, (id) => designSetsColour(figmaContract, id, mainOf));
+      swappedMark(fromCode, figmaContract);
       });
       // a swap that shows a layer the design shows and swaps: the design's boolean and swap names
       A.take('swap-names', fromCode, () => {

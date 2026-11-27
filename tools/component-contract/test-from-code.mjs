@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark } from './from-code.mjs';
+import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1521,5 +1521,13 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   const read = (asset) => ({ anatomy: { s: { kind: 'instance', component: 'Status' } }, variants: [{ when: { status: 'error' }, set: { 's.kind': 'graphic', 's.component': null, 's.with': null, 's.key': null, 's.asset': asset, 's.background': 'rgba(0, 0, 0, 1)' } }] });
   const a = swappedMark(read('Status/Error'), design).variants[0].set, b = swappedMark(read('Other'), design).variants[0].set;
   ok('a variant\'s mark of a component the library does not hold reads back as that variant\'s swap; another glyph stays the code\'s',
-    JSON.stringify(a) === JSON.stringify({ 's.component': 'Status/Error', 's.with': null, 's.key': 'k-err' }) && b['s.kind'] === 'graphic' && b['s.asset'] === 'Other', JSON.stringify(a)); }
+    JSON.stringify(a) === JSON.stringify({ 's.component': 'Status/Error', 's.with': null, 's.key': 'k-err' }) && b['s.kind'] === 'graphic' && b['s.asset'] === 'Other', JSON.stringify(a));
+  // (the colour the base's instance carries is the library component's, not the swapped-in one's: dropped there too)
+  const tinted = { ...design, anatomy: { s: { kind: 'instance', component: 'Status', background: 'Icon/primary' } } };
+  ok('…its colour dropped though the base instance carries one, as the swapped-in component draws its own', !('s.background' in swappedMark(read('Status/Error'), tinted).variants[0].set)); }
+// a design prop the engine's rule joined to no arg, where the toolkit's markup renamed it off an HTML attribute's name,
+// joins that arg: a flag's title (titleOption) keeps the design's name, never read back as Title beside it
+{ const p = renamedJoins({ title: { fixed: undefined, missing: true }, size: { fixed: 'm', missing: true }, label: 'label' }, { titleOption: {}, sizeOptional: {}, label: {} });
+  ok('a design prop renamed off an HTML attribute in the markup joins that arg; another word that begins so does not',
+    p.title.code === 'titleOption' && !p.title.missing && p.size.missing === true && p.label === 'label', JSON.stringify(p)); }
 console.log(`${n}/${n} passed`);
