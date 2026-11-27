@@ -176,7 +176,7 @@ How wide each column of a data table is. What goes in a column is [*What earns a
 
 **Cases**
 - An empty Balance column is 200px wide and an Hours column 352px for "3 h", because every column takes an equal share → size columns to content and let the growing columns share the rest (Primer `'grow'`, MUI `flex`).
-- A status column shifts width as rows load → give it an explicit width; its values are a short, stable set (Primer DataTable column source).
+- A status column shifts width as rows load → Primer's explicit width is one answer (a weak item, above); no source sets a width for status columns, so the project decides.
 
 **Accessibility**
 - [required] 1.4.10 Reflow excepts data tables that need two dimensions; a table wider than its container scrolls inside its own box ([*Responsive tables*](#responsive-tables)).
@@ -187,7 +187,7 @@ How wide each column of a data table is. What goes in a column is [*What earns a
 
 **Check**
 - *Script:* could, per column, compare its rendered width with its widest cell's and flag a column more than twice as wide as its content while another column wraps or truncates; flag equal widths across columns whose content lengths differ by more than half.
-- *Judgement:* does the column that holds names or descriptions get the room?
+- *Judgement:* do the growing columns take the leftover room while the others stay at their content width?
 
 **Sources:** Primer (DataTable source and guidelines; the guidelines describe `'grow'` as `minmax(auto, 1fr)` where the source uses `max-content`), Carbon (website source), Cloudscape (source and usage), MUI X (docs source), GOV.UK (design-system source), Atlassian (`@atlaskit/dynamic-table` types) and MDN. Silent: no source gives a width for numeric or status columns; NN/g's table articles set no widths.
 

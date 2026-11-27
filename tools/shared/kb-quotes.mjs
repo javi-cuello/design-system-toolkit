@@ -199,11 +199,14 @@ export async function check(quotes, { raw = fetchRaw, rendered = fetchRendered }
     const errors = [];
     let ok = false, unknown = false;
     for (const u of q.urls) {
-      let verdict = 'absent';
+      // a page read without the quote is absent, whichever pass read it; unknown only when the last pass
+      // that could settle it failed (no pass read it, or a raw shell whose render failed)
+      let verdict = 'unknown';
       for (const pass of [raw, rendered].filter(Boolean)) {
         const got = await pass(u);
-        if (got.error) { errors.push(`${u}: ${got.error}`); verdict = 'unknown'; continue; }
+        if (got.error) { errors.push(`${u}: ${got.error}`); if (pass === rendered) verdict = 'unknown'; continue; }
         if (found(got.text)) { verdict = 'found'; break; }
+        verdict = 'absent';
       }
       if (verdict === 'found') { ok = true; break; }
       if (verdict === 'unknown') unknown = true;
@@ -223,10 +226,7 @@ export function addedLines(diff) {
 export function linesSince(file, ref) {
   const cwd = dirname(file);
   execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd, stdio: 'pipe' }); // not a repo, or no git: an error, said
-  try { execFileSync('git', ['ls-files', '--error-unmatch', file], { cwd, stdio: 'pipe' }); } catch (e) {
-    if (/did not match any file/.test(String(e.stderr))) return null;
-    throw e;
-  }
+  if (!execFileSync('git', ['ls-files', '--', file], { cwd, encoding: 'utf8' }).trim()) return null; // untracked: no message parsed
   return addedLines(execFileSync('git', ['diff', '-U0', ref, '--', file], { cwd, encoding: 'utf8' }));
 }
 

@@ -119,6 +119,10 @@ await t('a script shell read raw and a render that fails is unreachable, not mis
   const { missing, unreachable } = await check(extractQuotes('- "words drawn only by script" ([X](https://x.example))'), { raw: page('<div id=root></div>'), rendered: async () => ({ error: 'render: timeout' }) });
   assert.equal(missing.length, 0); assert.equal(unreachable.length, 1);
 });
+await t('a raw refusal and a rendered page without the quote is missing', async () => {
+  const { missing, unreachable } = await check(extractQuotes('- "words the page never had" ([X](https://x.example))'), { raw: async () => ({ error: 'HTTP 403' }), rendered: page('the drawn page, other words') });
+  assert.equal(missing.length, 1); assert.equal(unreachable.length, 0);
+});
 await t('raw-only checking calls a read page without the quote missing', async () => {
   const { missing } = await check(extractQuotes('- "words the page never had" ([X](https://x.example))'), { raw: page('other text'), rendered: null });
   assert.equal(missing.length, 1);
