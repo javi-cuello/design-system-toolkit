@@ -1211,5 +1211,16 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     glyph: { kind: 'graphic', parent: 'root', width: 6, height: 6, absolute: { x: 5, y: 5 }, constraints: { horizontal: 'scale', vertical: 'scale' }, background: 'C/fill' } } };
   const css = toCss(c, 'badge');
   ok('…and in a parent with a 2 border, of the 12 inside it, from inside it: 25% in, 50% wide', /inset-inline-start: 25%;/.test(css) && /inline-size: 50%;/.test(css) && /border-top: 2px solid/.test(css), css);
+  // (review: a border on one side only comes off that axis alone; one whose width is a token leaves no number, said
+  // unshared; a stroke that is no CSS border (outside, or not in the layout) takes nothing off)
+  const glyphIn = (border, g = { x: 2, y: 4, w: 7, h: 8 }) => toCss({ ...c, anatomy: { root: { ...c.anatomy.root, border }, glyph: { ...c.anatomy.glyph, width: g.w, height: g.h, absolute: { x: g.x, y: g.y } } } }, 'badge');
+  // (the glyph's own rule: the last that names it, after the sheet's list of parts)
+  const decl = (css, p) => (css.slice(css.lastIndexOf('.badge__glyph')).match(new RegExp(`\\n\\s*${p}: ([^;]+);`)) || [])[1];
+  const oneSide = glyphIn({ color: 'C/line', sides: { top: 0, end: 0, bottom: 0, start: 2 }, align: 'inside', inLayout: true });
+  ok('…a border on the start side alone comes off the width only: 0% in, 50% wide; 25% down, 50% high', decl(oneSide, 'inset-inline-start') === '0%' && decl(oneSide, 'inline-size') === '50%' && decl(oneSide, 'inset-block-start') === '25%' && decl(oneSide, 'block-size') === '50%', oneSide);
+  const tokenW = glyphIn({ color: 'C/line', width: 'border/thick', align: 'inside', inLayout: true });
+  ok('…a border whose width is a token leaves no share written, said unwritten', decl(tokenW, 'inline-size') !== '50%' && !/inset-inline-start: [\d.]+%/.test(tokenW) && /constraints \(scale: its parent's width inside its border/.test(tokenW), tokenW);
+  const outside = glyphIn({ color: 'C/line', width: 2, align: 'outside' }, { x: 4, y: 4, w: 8, h: 8 }), none = glyphIn(undefined, { x: 4, y: 4, w: 8, h: 8 });
+  ok('…an outside stroke, or none, takes nothing off: 25% in, 50% wide', [outside, none].every((x) => decl(x, 'inset-inline-start') === '25%' && decl(x, 'inline-size') === '50%'), outside + none);
 }
 console.log(`${n} passed`);

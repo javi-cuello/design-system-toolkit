@@ -245,7 +245,7 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
       else if (to === 'scale') {
         // (of the parent's padding box, as CSS takes a percentage: its border, where its stroke is one, taken off the
         // whole and the offset, Figma's both from the outer edge)
-        const bd = (box && box.border) || {}, [b0, b1] = k === 'width' ? [bd.start ?? 0, bd.end ?? 0] : [bd.top ?? 0, bd.bottom ?? 0];
+        const bd = (box && box.border) || {}, side = (x) => (x in bd ? bd[x] : 0), [b0, b1] = k === 'width' ? [side('start'), side('end')] : [side('top'), side('bottom')];
         const whole = box && typeof box[k] === 'number' && typeof b0 === 'number' && typeof b1 === 'number' ? box[k] - b0 - b1 : null, own = e[k];
         if (shareable(whole, o, own)) {
           put(near, share(o - b0, whole));
