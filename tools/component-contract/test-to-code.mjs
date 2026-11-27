@@ -1056,4 +1056,11 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const bc = toCss(both, 'pik', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
   ok('…and hidden at a combination of another pointer state that does not draw it only while its own state does not hold', /:where\(:hover\):where\(\[data-size="sm"\]\):where\(:not\(:is\(:focus-visible[^{]*> \.ds-pik__menu \{\s*display: none/.test(bc) && selfCheck(both, rulesOf(both).rules).length === 0, bc);
 }
+{ // a focus ring placed as a component, given a stroke at one focus variant: drawn as that component, never the box's
+  // outline (an outline in its place lost which component the design draws there); a frame drawn so stays an outline
+  const { ringOf } = await import('./to-code.mjs');
+  const state = { type: 'enum', values: ['default', 'focus'], default: 'default', role: 'interaction', pointer: ['focus'], figma: 'State' };
+  const ringed = (kind) => ({ kind, parent: 'root', position: 'absolute', absolute: { x: -2, y: -2, end: -2, bottom: -2 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus', width: 2 }, ...(kind === 'instance' && { component: 'Ring' }) });
+  const c = (kind) => ({ component: 'B', props: { state }, anatomy: { root: { kind: 'container' } }, variants: [{ when: { state: 'focus' }, add: { ring: ringed(kind) } }] });
+  ok('a placed component is never drawn as a ring; a stroke-only frame is', !ringOf(c('instance'), { state: 'focus' }, 'ring', ringed('instance'), {}) && !!ringOf(c('container'), { state: 'focus' }, 'ring', ringed('container'), {})); }
 console.log(`${n} passed`);

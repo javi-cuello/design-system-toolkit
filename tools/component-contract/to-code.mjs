@@ -463,7 +463,9 @@ export function ringOf(c, when, id, e, a, t = HOUSE) {
   const ps = pseudoClasses(t);
   const focus = Object.entries(c.props).some(([k, p]) => p.role === 'interaction' && ps[when[k]] === ':focus-visible');
   const b = e.border, x = e.absolute;
-  if (!focus || c.anatomy[id] || !e.parent || e.position !== 'absolute' || !x || e.background || !b || typeof b.color !== 'string') return null;
+  // (a placed component is never a ring: its look is its own sheet's, and an outline in its place loses which component
+  // the design draws there, a focus ring instance given a stroke at one variant read back as a bare frame)
+  if (!focus || e.kind === 'instance' || c.anatomy[id] || !e.parent || e.position !== 'absolute' || !x || e.background || !b || typeof b.color !== 'string') return null;
   if (!e.constraints || e.constraints.horizontal !== 'stretch' || e.constraints.vertical !== 'stretch' || Object.values(a).some((k) => k.parent === id)) return null;
   const out = [x.x, x.y, x.end, x.bottom];
   if (!out.every((v) => typeof v === 'number' && v === out[0])) return null;
