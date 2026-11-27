@@ -106,17 +106,17 @@ How many edges a page has, what lines up across its regions, and where optical c
 - At a phone width a wrapped row's first glyph sits at 28px against the title's 16 → wrapped rows start on the same edge as the title.
 
 **Accessibility**
-- [required] 1.4.10 Reflow: at 320px nothing scrolls sideways ([*Layout and grid*](#layout-and-grid)). A wrapped row keeping its leading edge is the alignment evidence above, not 1.4.10.
 - [weak] Screen-magnifier users follow one edge down the page; a block that starts elsewhere can be missed (as [forms: *Form structure*](../patterns/forms.md#form-structure) quotes Atlassian).
+
+Reflow (1.4.10) is [*Layout and grid*](#layout-and-grid)'s.
 
 **Build**
 - [required] Edges come from the page container and the grid, never from per-element margins (code-standard rules 3 and 11).
-- [weak] A hover or selected fill that reaches past the text edge hangs out by its own padding, so the text stays on the edge, as Carbon hangs containers (above).
 - [weak] Detail: [responsive: one page grid and one container element](../../code/responsive.md#one-page-grid-and-one-container-element).
 
 **Check**
-- *Script:* could collect the left x of the first text or ink of every block in the main column (header, tabs, filters, table first column, form labels), cluster within 2px, and flag each cluster beyond the page's declared edges that is not an indent step; compare the title's and the view switch's x across views of one page; assert a header action's centre lies within the title's first line box.
-- *Judgement:* does every edge that differs from its neighbours say something a reader would see (an indent, a new region)?
+- *Script:* could collect the left x of the first text or ink of every block in the main column (header, tabs, filters, table first column, form labels), cluster within 2px, and flag each cluster beyond the page's declared edges that is not an indent step; assert a header action's centre lies within the title's first line box.
+- *Judgement:* does every edge that differs from its neighbours say something a reader would see (an indent, a new region)? Across views of one page, do the title and the view switch stay put (a weak item, so a look, not a gate)?
 
 **Sources:** Apple (HIG layout, icons and SF Symbols, read as JSON), Carbon (2x grid, icons, forms), Material 2 (archived), Primer (CSS source), Atlassian (`@atlaskit/page-header` source) and NN/g. Silent: no NN/g article on alignment; no Material text on an icon against text; no source on baseline alignment across a row of mixed sizes.
 
@@ -155,7 +155,7 @@ The perception findings behind grouping, each turned into something a script can
 - [required] Groups are elements with their own `gap`; the parent sets the larger gap between them (code-standard rule 22, *Spacing scale and proximity*'s Build).
 
 **Check**
-- *Script:* could, for each container, take the largest gap among its children and the gap to the next sibling container, and flag a ratio under 1.5 (Wagemans et al., labelled a floor); assert no two text boxes intersect; for each component role (button variant, row, chip), assert one fill, type style and radius across pages; assert the link and accent colour appear only on interactive nodes; flag a bordered or filled container whose children would already pass the ratio without it, and a full-width band mid-page.
+- *Script:* could assert no two text boxes intersect; for each component role (button variant, row, chip), assert one fill, type style and radius across pages; assert the link and accent colour appear only on interactive nodes. It could also report, without gating, each container's ratio of the gap to its sibling over its largest inner gap, and bordered containers or full-width bands, for the judgement below.
 - *Judgement:* blur the screenshot by 5 to 10px, as NN/g's visual-hierarchy test does: do the blobs match the groups the content has ([NN/g visual hierarchy](https://www.nngroup.com/articles/visual-hierarchy-ux-definition/))?
 
 **Sources:** Wertheimer (1923, translated), Kubovy et al. (1998), Palmer (1992), Palmer and Rock (1994) and Wagemans et al. (2012), read as abstracts or the open text; NN/g's proximity, similarity, common region and glossary articles. Continuity ("The Factor of Direction", Wertheimer) has no UI rule beyond alignment, so it lives there. Silent: no design system turns these into numbers.
@@ -177,7 +177,7 @@ How the page header and the content form one page, and where the eye lands first
 - [weak] **Page actions in the header only when they act on the whole page.** Polaris: "Include page actions in the header only if they are relevant to the entire page" (Polaris page).
 - [weak] **Space between title and actions.** Atlassian keeps at least 32px, `padding-inline-start:var(--ds-space-400,2pc)`, and does not wrap its actions, `white-space:nowrap` (`@atlaskit/page-header` 13.3.4).
 - [weak] **In the app's own header, local things lead and global things trail.** Carbon: "left-to-right translates to product-to-global", and its global icons are "aligned to the right of the header with no gaps between icons" ([Carbon UI shell header](https://carbondesignsystem.com/components/UI-shell-header/usage/)). Global controls are quiet; they are not the page's focal point.
-- [weak] **Few sizes, few contrasts, few big things.** NN/g: "Use no more than 3 sizes", "no more than 3 contrast variations for complex designs", and "Limit how many elements are big to a maximum of 2" ([NN/g visual hierarchy](https://www.nngroup.com/articles/visual-hierarchy-ux-definition/)). The type styles a tool screen draws from are [*One size scale per screen*](#one-size-scale-per-screen), which owns the count.
+- [weak] **Few sizes, few contrasts, few big things.** NN/g: "Use no more than 3 sizes", "no more than 3 contrast variations for complex designs", and "Limit how many elements are big to a maximum of 2" ([NN/g visual hierarchy](https://www.nngroup.com/articles/visual-hierarchy-ux-definition/)). The number of type styles a screen draws from is [*Typography*](#typography)'s.which owns the count.
 - [weak] **Balance is visual signal spread, not symmetry.** NN/g: balance "occurs when there is an equally distributed (but not necessarily symmetrical) amount of visual signal on both sides of an imaginary axis", and "The area taken by the design element matters" ([NN/g principles of visual design](https://www.nngroup.com/articles/principles-visual-design/)). Its examples are editorial pages; an app page leans to the leading side by design (above).
 
 A form page's width is [*Content width and white space*](#content-width-and-white-space); its column, sections and gaps are [forms: *Layout of a one-page form*](../patterns/forms.md#layout-of-a-one-page-form-sections-spacing-and-width); its leading edge is the title's ([*Alignment and shared edges*](#alignment-and-shared-edges)).
@@ -224,7 +224,7 @@ How wide each kind of content runs, and how much air a dense tool keeps. The pag
 - A tool page has 64px between every block "for air" and needs three screens for one week → dense regions, white space between them, not everywhere (Carbon spacing, NN/g content dispersion).
 
 **Accessibility**
-- [required] 1.4.10 Reflow ([*Layout and grid*](#layout-and-grid)). 1.4.8 Visual Presentation, at AAA and so context only, asks for prose lines of no more than 80 characters.
+- [weak] 1.4.8 Visual Presentation, at AAA and so context only, asks for prose lines of no more than 80 characters; Reflow (1.4.10) is [*Layout and grid*](#layout-and-grid)'s.
 
 **Build**
 - [required] Each width is a token or a container variant (narrow, default, wide, full), set on the page container, never per block (code-standard rule 11).
@@ -556,7 +556,7 @@ How many text colours a product uses and how far apart they sit. Surfaces are [*
 **How**
 - [weak] **Bolder means more contrast.** Atlassian: "Emphasis can range from subtlest to boldest. Bolder colors have more contrast against the default surface" ([Atlassian color](https://atlassian.design/foundations/color)).
 - [weak] **Each level has one job.** Carbon names the job in each token's role (above): body and headings, labels and secondary text, help text; a level picked "because it looked right" is the drift to look for.
-- [required] Only disabled text may fall below 4.5:1: 1.4.3 exempts "part of an inactive user interface component" and "applies to text in the page, including placeholder text" ([Understanding 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)). Carbon's placeholder, `rgba(22,22,22,.4)` on white ([Carbon themes](https://unpkg.com/@carbon/themes@11.85.0/scss/generated/_themes.scss)), falls below it.
+- [required] Placeholder text is held to 1.4.3 like any other text, which "applies to text in the page, including placeholder text"; of its exceptions, the one that touches text levels is text that is "part of an inactive user interface component" ([Understanding 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)). Carbon's placeholder, `rgba(22,22,22,.4)` on white ([Carbon themes](https://unpkg.com/@carbon/themes@11.85.0/scss/generated/_themes.scss)), falls below it.
 
 **Cases**
 - A page uses five greys for text, two of them a hair apart → map each to one of the product's levels; two levels closer than a reader can tell apart are one.
