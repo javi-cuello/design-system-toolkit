@@ -791,9 +791,11 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // so the layers below it give the value there)
       // (an instance only a pointer state draws, held by the markup and shown there alone (partsOf `pointerHeld`): a
       // variant at that state and other props (a radio's icon at focus and checked) is said by those props, as the
-      // instance is drawn nowhere else; one at another pointer state stays untestable)
+      // instance is drawn nowhere else; one at another pointer state stays untestable). Only where one pointer state
+      // draws it: held at two (a hover and a focus), one element shows at both, so a value one state's variant gives it
+      // would be drawn at the other too; there it stays untestable, and the gap below names props only a pointer state gives
       const heldAt = new Set(((parts.get(id) || {}).pointerHeld && (parts.get(id).pointerAdds || []).flatMap((w) => Object.entries(w).filter(([k, x]) => ((c.props || {})[k] || {}).role === 'interaction' && (c.props[k].pointer || []).includes(x)).map(([k, x]) => `${k}=${x}`))) || []);
-      const unheld = (s) => (heldAt.size ? { ...s, when: Object.fromEntries(Object.entries(s.when).filter(([k, x]) => !heldAt.has(`${k}=${x}`))) } : s);
+      const unheld = (s) => (heldAt.size === 1 ? { ...s, when: Object.fromEntries(Object.entries(s.when).filter(([k, x]) => !heldAt.has(`${k}=${x}`))) } : s);
       const combos = vs.filter((v) => v.combination).map(stated).map(unheld), varied = vs.filter((v) => !v.combination).reverse().map(stated).map(unheld).filter(({ sets }) => sets.size);
       const litCode = (l) => (l === undefined ? (lang.php ? 'null' : 'undefined') : typeof l === 'boolean' || typeof l === 'number' ? String(l) : lang.str(String(l)));
       const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -1205,16 +1207,23 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   for (const [key, p] of Object.entries(c.props || {})) {
     const fig = p.figma || key, x = byKey.get(key), name = x ? x.name : key;
     const word = (v, i) => (p.figmaValues || [])[i] ?? figmaWord(v);
+    // a boolean's option as the design spells it, which variant names carry (isDisabled=false where Figma's are not
+    // False, True): keyed False/True, a spec spelling them otherwise matched no variant, and no pointer state was forced.
+    // Spellings that say neither (derive keeps figmaValues on a boolean only where they spell true and false) cannot be
+    // told apart: refused, never left to match nothing
+    const spelt = (on) => {
+      if (!(p.figmaValues || []).length) return on ? 'True' : 'False';
+      const w = p.figmaValues.find((y) => String(y).toLowerCase() === String(on));
+      if (w === undefined) throw new Error(`${c.component}: ${fig}'s options ${JSON.stringify(p.figmaValues)} spell no true and false, so which variant is which cannot be known`);
+      return w;
+    };
     if (p.role === 'interaction') axes[fig] = Object.fromEntries((p.values || []).map((v, i) => [word(v, i), v === p.default ? {} : (p.pointer || []).includes(v) && PSEUDO[v] ? { pseudo: PSEUDO[v] } : { [name]: v }]));
     else if (p.type === 'enum') axes[fig] = Object.fromEntries((p.values || []).map((v, i) => [word(v, i), v === p.default ? {} : { [name]: v }]));
     else if (entry && key === entry.flag) {
       // has a value: the input holds the Value's sample text
       const value = props.find((y) => y.type === 'value'), arg = framework === 'react' ? 'defaultValue' : 'value';
-      axes[fig] = { [figmaWord(entry.on)]: { [arg]: (value && value.default) || 'Value' }, [figmaWord(!entry.on)]: {} };
+      axes[fig] = { [spelt(entry.on === true)]: { [arg]: (value && value.default) || 'Value' }, [spelt(entry.on !== true)]: {} };
     } else if (p.type === 'boolean' && (p.axis || (p.shows || []).length || key === disabledKey(c, settings))) {
-      // (each option as the design spells it, which variant names carry: isDisabled=false where Figma's are not False,
-      // True; keyed False/True, a spec spelling them so matched no variant, and no pointer state was forced)
-      const spelt = (on) => (p.figmaValues || []).find((x) => String(x).toLowerCase() === String(on)) ?? (on ? 'True' : 'False');
       axes[fig] = { [spelt(false)]: p.default === true ? { [name]: false } : {}, [spelt(true)]: p.default === true ? {} : { [name]: true } };
     }
   }

@@ -98,12 +98,12 @@ ok('a base layer on one swap and a variant\'s added layer on another, drawn toge
 const toggledEl = toElement(toggled, 'toggle', { naming: ELEMENT });
 ok('two swaps each driving its own layer stay two props, each defaulting to its own layer\'s component', JSON.stringify(propsOf(toggled).filter((x) => x.type === 'icon').map((x) => [x.name, x.default])) === '[["icon","Icons/outline"],["iconSelected","Icons/filled"]]', JSON.stringify(propsOf(toggled)));
 ok('each layer draws the swap that drives it, handed over where a variant says', /"data-part": "b", "data-icon": selected \? iconSelected : icon/.test(toggledEl) && /"data-part": "a", "data-icon": selected \? icon : iconSelected/.test(toggledEl), toggledEl);
-// two swaps over two glyph layers (Material 3's nav item: Icon and Icon (selected), each linked to icon and icon_2), the
+// two swaps over two glyph layers (a navigation item's: Icon and Icon (selected), each linked to icon and icon_2), the
 // instance stating only the second layer's glyph: it is given the swap whose value that glyph is
 { const item = { component: 'Item', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['icon', 'icon_2'] }, iconSelected: { type: 'instance', figma: 'Icon (selected)', swaps: ['icon', 'icon_2'] } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icons/stars_filled', order: 0 }, icon_2: { kind: 'instance', parent: 'root', component: 'Icons/stars', order: 1 } }, variants: [], folder: 'item' };
   const rail = { component: 'Rail', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item', with: { Icon: 'stars', 'Icon (selected)': 'stars_filled' } }, 'item/icon_2': { kind: 'instance', parent: 'item', component: 'Icons/stars_filled', order: 1 } }, variants: [], folder: 'rail' };
   ok('of two swaps over the same glyph layers, the one whose value the instance draws on any of them', /placed\(parts\["[^"]*"\], renderItem, \{ icon\w*: "stars_filled"/.test(toElement(rail, 'rail', { naming: ELEMENT, library: { Item: item, Rail: rail } }))); }
-// a swap of one of the library's components (Atlassian's button group, its <Button> 1): what the caller passes, else
+// a swap of one of the library's components (a button group's first <Button>): what the caller passes, else
 // the design's own instance at its values, so the code draws what Figma draws at the swap's default; a snippet keeps its slot
 { const btn = { component: 'Btn', props: { label: { type: 'string', figma: 'Label', sets: ['label'], default: 'Go' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: '{label}' } }, variants: [], folder: 'btn' };
   const group = { component: 'Group', props: { button1: { type: 'instance', figma: '<Button> 1', swaps: ['button'] } }, anatomy: { root: { kind: 'container' }, button: { kind: 'instance', parent: 'root', component: 'Btn', with: { Label: 'One' } } }, variants: [], folder: 'group' };
@@ -131,7 +131,7 @@ ok('each layer draws the swap that drives it, handed over where a variant says',
   ok('a swap whose instance a variant changes draws the variant\'s component where it holds, the base\'s elsewhere, where nothing is passed',
     /bgSwap == null\) && \(styleOption === "elevated"\)\) && placed\(parts\["[^"]*"\], renderElevated, /.test(w3) && /bgSwap == null\) && !\(styleOption === "elevated"\)\) && placed\(parts\["[^"]*"\], renderOutlined, /.test(w3), w3);
 }
-// a variant that places another of the library's components (Material 3's card: its Elevated state at Style Elevated, for
+// a variant that places another of the library's components (a card's: its Elevated state at Style Elevated, for
 // the base's Outlined): each where its variant holds, the base's where none does, in all three languages
 { const st = (name) => ({ component: name, props: {}, anatomy: { root: { kind: 'container' } }, variants: [], folder: name.toLowerCase(), figma: { key: `k-${name}` } });
   const card = { component: 'Card', props: { style: { type: 'enum', values: ['outlined', 'elevated', 'filled'], figmaValues: ['Outlined', 'Elevated', 'Filled'], default: 'outlined', figma: 'Style' }, show: { type: 'boolean', default: true, figma: 'Show', shows: ['bg'] } },
@@ -180,7 +180,7 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     // in the component's own slot, its sample is drawn: a placed component there is held to its props as anywhere
     const inSlot = { ...org, anatomy: { root: { kind: 'container' }, body: { kind: 'slot', parent: 'root' }, 'body/sw': { kind: 'instance', parent: 'body', component: 'Switcher' }, 'body/sw/icon': { kind: 'instance', parent: 'body/sw', component: 'Icon/case' } } };
     ok('an override inside a placed component in the slot\'s own sample is one the markup cannot pass', unexposed(inSlot, 'body/sw/icon', (n) => (n === 'Switcher' ? sw : null)) === 'part'); }
-  // a part the placed component draws only at one of its variants (Carbon's toggle item draws its small switch at Size
+  // a part the placed component draws only at one of its variants (a toggle item draws its small switch at Size
   // Small, untoggled): the variant passes the part, but a prop of it no variant gives (the toggle's switch Toggled) is an
   // override all the same; one a variant gives is passed
   { const item = { component: 'Item', props: { size: { type: 'enum', values: ['default', 'small'], default: 'default', figmaValues: ['Default', 'Small'], figma: 'Size' } }, anatomy: { root: { kind: 'container' } },
@@ -905,7 +905,7 @@ else {
   { const lab3 = { contract: 1, component: 'Lab', props: { required: { type: 'boolean', default: true, figma: 'Required' } }, anatomy: { root: { kind: 'container' }, mark: { kind: 'text', parent: 'root', content: '*' } },
       variants: [{ when: { required: false }, set: { 'mark.content': 'Optional' } }] };
     ok('words a variant sets on a base text are said there', /!required \? "Optional" : "\*"/.test(toReact(lab3, 'lab', { naming: CLASS, library: { Lab: { ...lab3, folder: 'lab' } } }))); }
-  // a part only variants draw, each with its own words (carbon slider's message: the error text at error, the warning
+  // a part only variants draw, each with its own words (a slider's message: the error text at error, the warning
   // text at warning; its status icon's label: a prop's words at one status, words of its own at another)
   { const msg = { contract: 1, component: 'Msg', props: { state: { type: 'enum', values: ['enabled', 'error', 'warning', 'done'], default: 'enabled', figma: 'State' },
       errorText: { type: 'string', default: 'Error', figma: 'Error text', sets: ['label'] }, warningText: { type: 'string', default: 'Warning', figma: 'Warning text', sets: ['label'] } },
@@ -1004,5 +1004,28 @@ else {
     variants: [{ when: { state: 'focus' }, add: { dot: { kind: 'instance', parent: 'root', component: 'Dot', with: { on: 'false' } } } }, { when: { state: 'focus', on: true }, set: { 'dot.with': { on: 'true' } } }] };
   const out = toElement(r, 'pick', { naming: ELEMENT, library: { Dot: { ...icon, folder: 'dot' } } });
   ok('an instance only a pointer state draws takes the props a variant at that state and another prop gives it', /renderDot, \{ on: on \}/.test(out), out); }
+
+{ // a text entry's has-value flag spelt hasValue=true: keyed so too, and a boolean whose options spell no true and false
+  // is refused by name, never left to match no variant
+  const field = { component: 'Field', props: { placeholder: { type: 'string', default: 'Search', sets: ['box/ph'] }, value: { type: 'string', default: 'Text', sets: ['box/val'] },
+    hasValue: { type: 'boolean', default: false, axis: true, figmaValues: ['false', 'true'], figma: 'hasValue' } },
+    anatomy: { root: { kind: 'container' }, box: { kind: 'container', parent: 'root' }, 'box/ph': { kind: 'text', parent: 'box', content: '{placeholder}' } },
+    variants: [{ when: { hasValue: true }, add: { 'box/val': { kind: 'text', parent: 'box', content: '{value}' } }, remove: ['box/ph'] }] };
+  const m = toParity(field, 'field', { naming: ELEMENT, library: {}, framework: 'web-components' });
+  const odd = { component: 'Odd', props: { on: { type: 'boolean', default: false, axis: true, figmaValues: ['Off', 'On'], figma: 'on' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  let refused = '';
+  try { toParity(odd, 'odd', { naming: ELEMENT, library: {}, framework: 'web-components' }); } catch (e) { refused = e.message; }
+  ok('a has-value flag is keyed as the design spells it; options that spell no true and false are refused by name', JSON.stringify(Object.keys(m.axes.hasValue).sort()) === '["false","true"]' && m.axes.hasValue.true.value === 'Text'
+    && /on's options \["Off","On"\] spell no true and false/.test(refused), JSON.stringify(m.axes) + refused); }
+
+{ // an instance held at two pointer states, a variant at one of them giving it a prop: one element shows at both, so the
+  // prop is not passed as if that state alone drew it; the markup names the gap instead
+  const icon = { component: 'Dot', props: { on: { type: 'boolean', default: false, axis: true, figma: 'on' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const state = { type: 'enum', values: ['default', 'hover', 'focus'], default: 'default', role: 'interaction', pointer: ['hover', 'focus'], figma: 'state' };
+  const dot = { kind: 'instance', parent: 'root', component: 'Dot', with: { on: 'false' } };
+  const r = { component: 'Pick', props: { state, on: { type: 'boolean', default: false, axis: true, figma: 'on' } }, anatomy: { root: { kind: 'container' } },
+    variants: [{ when: { state: 'hover' }, add: { dot } }, { when: { state: 'focus' }, add: { dot } }, { when: { state: 'focus', on: true }, set: { 'dot.with': { on: 'true' } } }] };
+  const out = toElement(r, 'pick', { naming: ELEMENT, library: { Dot: { ...icon, folder: 'dot' } } });
+  ok('an instance two pointer states draw keeps a prop one of them gives untestable, and says so', /renderDot, \{ on: false \}/.test(out) && /Dot is given props only a pointer state draws/.test(out), out); }
 
 console.log(`${n} passed`);
