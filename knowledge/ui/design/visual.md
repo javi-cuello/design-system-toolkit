@@ -15,7 +15,7 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 **How**
 - [weak] Start with one column and add columns only when the content earns them. [GOV.UK layout](https://design-system.service.gov.uk/styles/layout/): "Design for small screens first, starting with a single-column layout", and for different screen sizes "rather than specific devices". Its default maximum page width is 1020px; its default reading column is two-thirds.
 - [moderate] Breakpoints: [Primer](https://primer.style/foundations/layout) lists 320, 544, 768, 1012, 1280 and 1400px and calls them "a unit in a ruler"; [Carbon's 2x grid](https://carbondesignsystem.com/elements/2x-grid/overview/) uses 320, 672, 1056, 1312 and 1584px on an 8px unit with a 32px gutter. Take the project's set; with none, intrinsic sizing first and a breakpoint only where something breaks ([responsive layout in code](../../code/responsive.md)).
-- [weak] Align to one left edge per column. Every block that starts at a different x needs a reason a reader would see.
+Shared edges across a page are [*Alignment and shared edges*](#alignment-and-shared-edges).
 - [weak] Draw responsive frames at the narrowest supported width and one wide width at least; a design drawn at 1440px only has not decided anything about small screens.
 - [required] Content that appears and disappears keeps its space, so the layout holds still (design-standard rule 2).
 
@@ -79,6 +79,158 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 - *Judgement:* does each gap say the right relationship; would a reader group these things the way the content does?
 
 **Sources:** Carbon, Atlassian, and [Laws of UX, proximity](https://lawsofux.com/law-of-proximity/) (commentary). They agree; Carbon allows exceptions; in code an off-scale value carries its written reason (code-standard rule 22).
+
+---
+
+## Alignment and shared edges
+
+How many edges a page has, what lines up across its regions, and where optical correction lives. Spacing between things is [*Spacing scale and proximity*](#spacing-scale-and-proximity); grouping is [*Grouping*](#grouping-proximity-similarity-common-region-and-figure-ground).
+
+**What good looks like**
+- [strong] **Things line up on a few shared edges, and an indent means hierarchy.** Apple: "Align elements to make them easier to scan, and use indentation to convey hierarchy", and "People assume that aligned items are related to each other" ([Apple HIG layout](https://developer.apple.com/design/human-interface-guidelines/layout)); Carbon: "ensure the overall layout has visible key lines: vertical and horizontal lines on which multiple objects align" ([Carbon 2x grid overview](https://carbondesignsystem.com/elements/2x-grid/overview/)); NN/g: "the right-aligned labels make it more difficult to scan the form", against the single edge of top labels ([NN/g form white space](https://www.nngroup.com/articles/form-design-white-space/)).
+- [weak] **Text inside a container lines up with text outside it.** Carbon: "the container, not the type, hangs 16px into the gutter. This allows headings and copy outside of containers to align with the copy within containers and components", and "Do not hang type into the gutter under any circumstances" ([Carbon 2x grid usage](https://carbondesignsystem.com/elements/2x-grid/usage/)).
+- [weak] **The edges hold from page to page.** Carbon: "common geometries and key alignments are especially important across pages, not just down the scroll" (Carbon 2x grid usage).
+
+**How**
+- [weak] **Align type to the edge of the box's padding,** not to the box: Carbon, "Always align type to the edge of box padding. Note, some design tools add padding to text boxes by default; check text box padding and remove it if necessary" (Carbon 2x grid overview).
+- [moderate] **Optical correction is drawn into the icon's own box,** so layout aligns boxes geometrically. Apple: "When you create an asset that includes your adjustments as padding … you can optically center the icon by geometrically centering the asset" ([Apple HIG icons](https://developer.apple.com/design/human-interface-guidelines/icons)); Material: "Icon content is limited to the 20dp x 20dp live area, with 2dp of padding", and "If additional visual weight is needed, content may extend into the padding" ([Material 2 system icons, archived](https://web.archive.org/web/2019id_/https://material.io/design/iconography/system-icons.html)).
+- [contested] **An icon beside text: centred, or on the text.** Carbon: "When used next to text, icons should be center-aligned", "Don't baseline-align icons to the text" ([Carbon icons usage](https://carbondesignsystem.com/elements/icons/usage/)); Primer sets inline Octicons at `vertical-align: text-bottom` ([Primer CSS octicons](https://cdn.jsdelivr.net/npm/@primer/css@21.5.1/base/octicons.scss)) and centres them inside buttons, `align-items: center` ([Primer ButtonBase CSS](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Button/ButtonBase.module.css)); Apple sizes symbols to the type: "The scales are defined relative to the cap height of the San Francisco system font" ([Apple HIG SF Symbols](https://developer.apple.com/design/human-interface-guidelines/sf-symbols)). The project decides, once.
+- [moderate] **Header actions line up with the title's first line,** not the middle of a wrapped title: Primer gives each header action `height: calc(var(--title-line-height) * 1em)` in a title area set to `align-items: flex-start` ([Primer PageHeader CSS](https://raw.githubusercontent.com/primer/react/main/packages/react/src/PageHeader/PageHeader.module.css)); Atlassian's title wrapper is `align-items:flex-start` ([`@atlaskit/page-header` 13.3.4](https://cdn.jsdelivr.net/npm/@atlaskit/page-header@13.3.4/dist/es2019/PageHeader/)).
+
+**Cases**
+- The brand, the navigation and the content start at three different x positions, and the header's last control ends past the content's right edge → one leading and one trailing edge for masthead and content, from the page container ([*Layout and grid*](#layout-and-grid)).
+- Switching between two views moves the title and the view switch itself → both views share the container, so the control just clicked stays put (Carbon 2x grid usage).
+- List rows start 8px in from the title and the table because a hover fill needs padding → let the fill hang out past the edge and keep the text on it, as Carbon hangs containers (above).
+- A ghost button's box meets the content edge but its label sits inset by its padding, beside a filled button whose box ends at the same edge → boxes align; whether a quiet button hangs its padding so its label meets the edge is the project's call, made once.
+- At a phone width a wrapped row's first glyph sits at 28px against the title's 16 → wrapped rows start on the same edge as the title.
+
+**Accessibility**
+- [required] 1.4.10 Reflow: at 320px a row that wraps keeps its leading edge; nothing scrolls sideways ([*Layout and grid*](#layout-and-grid)).
+- [weak] Screen-magnifier users follow one edge down the page; a block that starts elsewhere can be missed (as [forms: *Form structure*](../patterns/forms.md#form-structure) quotes Atlassian).
+
+**Build**
+- [required] Edges come from the page container and the grid, never from per-element margins (code-standard rules 3 and 11).
+- [weak] A hover or selected fill that reaches past the text edge hangs out by its own padding, so the text stays on the edge, as Carbon hangs containers (above).
+- [weak] Detail: [responsive: one page grid and one container element](../../code/responsive.md#one-page-grid-and-one-container-element).
+
+**Check**
+- *Script:* could collect the left x of the first text or ink of every block in the main column (header, tabs, filters, table first column, form labels), cluster within 2px, and flag each cluster beyond the page's declared edges that is not an indent step; compare the title's and the view switch's x across views of one page; assert a header action's centre lies within the title's first line box.
+- *Judgement:* does every edge that differs from its neighbours say something a reader would see (an indent, a new region)?
+
+**Sources:** Apple (HIG layout, icons and SF Symbols, read as JSON), Carbon (2x grid, icons, forms), Material 2 (archived), Primer (CSS source), Atlassian (`@atlaskit/page-header` source) and NN/g. Silent: no NN/g article on alignment; no Material text on an icon against text; no source on baseline alignment across a row of mixed sizes.
+
+---
+
+## Grouping: proximity, similarity, common region and figure-ground
+
+The perception findings behind grouping, each turned into something a script can measure. The spacing scale and the heading rule are [*Spacing scale and proximity*](#spacing-scale-and-proximity); alignment is [*Alignment and shared edges*](#alignment-and-shared-edges).
+
+**What good looks like**
+- [strong] **Grouping follows relative distance.** Wertheimer: "grouping is most natural which involves the smallest interval" ([Wertheimer 1923, translated](http://psychclassics.yorku.ca/Wertheimer/Forms/forms.htm)); Kubovy, Holcombe and Wagemans: grouping strength "approximates a decreasing exponential function of the relative distance", "robust under transformations of scale" ([Kubovy et al. 1998](https://pubmed.ncbi.nlm.nih.gov/9520318/)); NN/g: proximity "can overpower competing visual cues such as similarity of color or shape" ([NN/g proximity](https://www.nngroup.com/articles/gestalt-proximity/)).
+- [moderate] **What looks alike is read as alike.** Wertheimer: "the tendency of like parts to band together" (Wertheimer 1923); NN/g: "Same-color buttons will be perceived as sharing the same level of importance", and the link colour "should be reserved only for interactive text" ([NN/g similarity](https://www.nngroup.com/articles/gestalt-similarity/)).
+- [moderate] **A boundary groups more strongly than space.** Palmer: common region is "capable of overcoming the effects of other powerful grouping factors such as proximity and similarity" ([Palmer 1992](https://pubmed.ncbi.nlm.nih.gov/1516361/)); NN/g: it "can overpower other grouping principles such as proximity or similarity" ([NN/g common region](https://www.nngroup.com/articles/common-region/)).
+- [moderate] **One continuous fill, or a line, makes one unit.** Palmer and Rock: "closed regions of homogeneous properties … tend to be perceived initially as single units", even "when opposed by powerful grouping principles such as proximity and similarity" ([Palmer and Rock 1994](https://pubmed.ncbi.nlm.nih.gov/24203413/)); NN/g: connectedness "is strong enough to overrule small differences between the items" ([NN/g visual design glossary](https://www.nngroup.com/articles/visual-design-cheat-sheet/)).
+
+**How**
+- [weak] **Make the gap between groups clearly larger than any gap inside them.** In dot lattices, "If the ratio of the longer to the shorter vector is larger than about 1.5, grouping along that orientation is almost never seen" ([Wagemans et al. 2012](https://pmc.ncbi.nlm.nih.gov/articles/PMC3482144/)); that is a lab threshold for dots, not a UI rule, so a ratio of 1.5 is a floor to measure against, not a target.
+- [weak] **Space first, a boundary only when space cannot carry the group.** NN/g: "When possible, using whitespace alone to create clear groupings reduces the visual complexity", asking "Can I communicate this grouping by simply adding or removing whitespace?"; full-width bordered bands "can create false floors" (NN/g common region).
+- [weak] **Different jobs look different.** NN/g: "Avoid using the same or very similarly shaped icons to represent different categories" (NN/g similarity).
+- [weak] **Figure stands apart from ground.** The classic cues are "convexity, symmetry, small area, and 'surroundedness' (or enclosure)" (Wagemans et al. 2012); a surface's own level is [*Surfaces and elevation levels*](#surfaces-and-elevation-levels), and a fill meant to mark a region must clear the contrast that item sets.
+
+**Cases**
+- Title to tabs, tabs to filter and filter to table are all 32px, though the filter narrows the tab → the filter sits closer to the tab it narrows than to the title; the ratio check (below) catches the flat run.
+- Summary tiles sit 32px above the first section while sections are 64px apart → the tiles read as part of the first section; give the tiles the section gap.
+- The page header is 64px above the first day and days are 33px apart, while a heading is closer to its content (design-standard rule 7) → fine; the inverted case is a day heading farther from its rows than from the previous day.
+- A legend's line box overlaps the description under it by 4px → two text boxes never intersect; the line height or the gap is wrong.
+- A destructive action is red at rest on one page, muted on another and hidden in a menu on a third → one treatment for one role across pages (similarity; [*Consistency and reuse of the system*](#consistency-and-reuse-of-the-system)).
+- A weekend shading that measures 1.07:1 in light and 1.03:1 in dark → a fill that marks a region is visible in both themes; measure it in each ([*Theming and dark mode*](#theming-and-dark-mode)).
+- Every project dot is the same colour because a new project takes the first swatch → a colour that is meant to tell items apart differs between them; give each new item the next unused swatch.
+
+**Accessibility**
+- [required] 1.3.1: a group a sighted reader sees is a group in the markup (`fieldset`, a list, a heading over a section), never space alone.
+- [required] 1.4.11 Non-text Contrast: a boundary or fill that is the only thing showing a group or a state meets 3:1 against its neighbours; a decorative one need not.
+
+**Build**
+- [required] Groups are elements with their own `gap`; the parent sets the larger gap between them (code-standard rule 22, *Spacing scale and proximity*'s Build).
+
+**Check**
+- *Script:* could, for each container, take the largest gap among its children and the gap to the next sibling container, and flag a ratio under 1.5 (Wagemans et al., labelled a floor); assert no two text boxes intersect; for each component role (button variant, row, chip), assert one fill, type style and radius across pages; assert the link and accent colour appear only on interactive nodes; flag a bordered or filled container whose children would already pass the ratio without it, and a full-width band mid-page.
+- *Judgement:* blur the screenshot by 5 to 10px, as NN/g's visual-hierarchy test does: do the blobs match the groups the content has ([NN/g visual hierarchy](https://www.nngroup.com/articles/visual-hierarchy-ux-definition/))?
+
+**Sources:** Wertheimer (1923, translated), Kubovy et al. (1998), Palmer (1992), Palmer and Rock (1994) and Wagemans et al. (2012), read as abstracts or the open text; NN/g's proximity, similarity, common region and glossary articles. Continuity ("The Factor of Direction", Wertheimer) has no UI rule beyond alignment, so it lives there. Silent: no design system turns these into numbers.
+
+---
+
+## Composition of an app page: header, content and the first focal point
+
+How the page header and the content form one page, and where the eye lands first. What gets the emphasis is [*Emphasis and the attention budget*](#emphasis-and-the-attention-budget) and [ux: *Attention hierarchy across a page*](ux.md#attention-hierarchy-across-a-page); an object header over a tool layout is [sidebars](../patterns/sidebars.md).
+
+**What good looks like**
+- [moderate] **The eye starts at the top and the leading side, so the title goes there.** Apple: "place the most important items near the top and leading side of the window or display" ([Apple HIG layout](https://developer.apple.com/design/human-interface-guidelines/layout)); NN/g: "Web users spend 80% of their time viewing the left half of the page", though "the very leftmost area should be reserved for navigation" ([NN/g horizontal attention](https://www.nngroup.com/articles/horizontal-attention-leans-left/)), and "More than 65% of the viewing time above the fold was concentrated in the top half of the viewport" ([NN/g scrolling and attention](https://www.nngroup.com/articles/scrolling-and-attention/)).
+- [strong] **The title leads the header row, page actions sit at its trailing end, the primary action last.** Polaris's header lays out `slot3: actionMenuMarkup, slot4: primaryActionMarkup` after the title ([Polaris Page header source](https://raw.githubusercontent.com/Shopify/polaris/main/polaris-react/src/components/Page/components/Header/Header.tsx)); Atlassian pushes its actions to the end with `margin-inline-start:auto` ([`@atlaskit/page-header` 13.3.4](https://cdn.jsdelivr.net/npm/@atlaskit/page-header@13.3.4/dist/es2019/PageHeader/)); Primer's header grid is `'leading-action breadcrumbs title-area trailing-action actions'` ([Primer PageHeader CSS](https://raw.githubusercontent.com/primer/react/main/packages/react/src/PageHeader/PageHeader.module.css)).
+- [moderate] **One page header per page, with a title that says what the page is.** Polaris: "Always provide a title that describes the current page" ([Polaris page](https://shopify.dev/docs/api/app-home/polaris-web-components/layout-and-structure/page)); Atlassian: don't "Use multiple page headers in one page" ([Atlassian page header](https://atlassian.design/components/page-header/usage)).
+
+**How**
+- [moderate] **Search, filters and tabs sit in a band under the title row.** Atlassian's header "can be optionally combined with breadcrumbs buttons, search, and filters", its bottom bar `margin-block-start:var(--ds-space-200,1pc)` below the title (`@atlaskit/page-header` 13.3.4, Atlassian page header); Primer puts the description and then the contextual navigation as full-width rows under the title row (Primer PageHeader CSS).
+- [weak] **Page actions in the header only when they act on the whole page.** Polaris: "Include page actions in the header only if they are relevant to the entire page" (Polaris page).
+- [weak] **Space between title and actions.** Atlassian keeps at least 32px, `padding-inline-start:var(--ds-space-400,2pc)`, and does not wrap its actions, `white-space:nowrap` (`@atlaskit/page-header` 13.3.4).
+- [weak] **In the app's own header, local things lead and global things trail.** Carbon: "left-to-right translates to product-to-global", and its global icons are "aligned to the right of the header with no gaps between icons" ([Carbon UI shell header](https://carbondesignsystem.com/components/UI-shell-header/usage/)). Global controls are quiet; they are not the page's focal point.
+- [weak] **Few sizes, few contrasts, few big things.** NN/g: "Use no more than 3 sizes", "no more than 3 contrast variations for complex designs", and "Limit how many elements are big to a maximum of 2" ([NN/g visual hierarchy](https://www.nngroup.com/articles/visual-hierarchy-ux-definition/)). The size steps themselves are [*One size scale per screen*](#one-size-scale-per-screen).
+- [weak] **Balance is visual signal spread, not symmetry.** NN/g: balance "occurs when there is an equally distributed (but not necessarily symmetrical) amount of visual signal on both sides of an imaginary axis", and "The area taken by the design element matters" ([NN/g principles of visual design](https://www.nngroup.com/articles/principles-visual-design/)). Its examples are editorial pages; an app page leans to the leading side by design (above).
+- [weak] **A form page.** Shopify's page example: "Use small width for forms" (Polaris page). The form column, its sections and gaps are [forms: *Layout of a one-page form*](../patterns/forms.md#layout-of-a-one-page-form-sections-spacing-and-width); the form's leading edge is the title's (*Alignment and shared edges*, [above](#alignment-and-shared-edges)).
+
+**Cases**
+- The primary action is an outline button while the default filter value carries the accent → the page's one accent goes to its primary action; a filter at its default is quiet ([*Emphasis and the attention budget*](#emphasis-and-the-attention-budget)).
+- The theme switch in the masthead is the brightest thing on every page → a global control is quiet and trails (Carbon UI shell header).
+- A selected segment shows four cues (fill, ring, weight and colour) and reads as focus → selection takes one or two cues and never the focus ring's look ([*Visual states of controls*](#visual-states-of-controls)).
+- A report screen shows five accent spots → one; the blur test (NN/g visual hierarchy) shows where the eye goes.
+- A form 704px wide sits in a 960px column, leaving the right third empty, while list pages end their header at the content's edge → the form page's header and form share one narrow width, so title, form and actions share edges (Polaris page).
+- On a phone four summary tiles stack one per row, about 480px before the first table → the tiles take less height so the content starts in the first screen; most viewing time is in the first screenful (NN/g scrolling and attention).
+
+**Accessibility**
+- [required] 2.4.2 Page Titled and 1.3.1: the visible title is the page's `h1`, and the document title names the same page.
+- [required] 1.3.2: DOM order is the header's visual order, title then actions (code-standard rule 2).
+
+**Build**
+- [moderate] *Elements:* one page-header component per page holding the title (`h1`), an actions group at the trailing end and an optional band for search, filters and tabs (Polaris, Atlassian and Primer above).
+- [required] *Rules:* code-standard rule 2 (reading order) and code-standard rule 3 (one container per band).
+
+**Check**
+- *Script:* could assert one page-header instance and one `h1` per page, the h1's box in the top fifth of the first viewport at the content's leading edge, at most one primary button and as its header row's last child, at most three font sizes above the fold, and on a phone the first content block's top within the first viewport.
+- *Judgement:* blur the screenshot by 10px: is the strongest blob the page's one thing, not decoration or a global control (NN/g visual hierarchy)?
+
+**Sources:** Apple (HIG layout, read as JSON), NN/g (horizontal attention, scrolling, visual hierarchy, visual design principles), Polaris (header source and Shopify's page docs), Atlassian (page header docs and source), Primer (PageHeader CSS) and Carbon (UI shell header). Not read: Geist and Material's guideline site (rendered by script), Refactoring UI (blocked), Carbon's page-header pattern (404).
+
+---
+
+## Content width and white space
+
+How wide each kind of content runs, and how much air a dense tool keeps. The page grid and breakpoints are [*Layout and grid*](#layout-and-grid); density modes are [*Density modes*](#density-modes).
+
+**What good looks like**
+- [strong] **Width follows the content: reading narrow, data wide, boards fluid.** Atlassian: fixed-narrow, 864px, "for long-form content such as blogs and articles, to limit line length"; fixed-wide, 1296px, "the default for most experiences"; fluid "when content expands horizontally and has no natural maximum width" ([Atlassian grid](https://atlassian.design/foundations/grid)); Shopify: "Use small width for forms" and, for resource index pages, "set the page's inlineSize to large … when merchants are dealing with lists of data that have many columns" ([Polaris page](https://shopify.dev/docs/api/app-home/polaris-web-components/layout-and-structure/page), [Shopify layout](https://shopify.dev/docs/apps/design/layout)); Primer's page container widths are 768, 1012 and 1280px and full ([Primer PageLayout CSS](https://raw.githubusercontent.com/primer/react/main/packages/react/src/PageLayout/PageLayout.module.css)); Apple's layout guides "restrict the width of text for optimal readability" ([Apple HIG layout](https://developer.apple.com/design/human-interface-guidelines/layout)).
+- [moderate] **Dense regions are fine; a dense page is not.** Carbon: "Sections of a UI are allowed to be dense, but the whole page should not be crowded; there should be white space to let the user's eye rest" ([Carbon spacing](https://carbondesignsystem.com/elements/spacing/overview/)); NN/g, the other way: content "becomes overly dispersed across long scrolling pages with expansive white space and enlarged images and fonts" ([NN/g content dispersion](https://www.nngroup.com/articles/content-dispersion/)).
+
+**How**
+- [weak] **More space around the important thing.** Carbon: "if you have an element or content of high importance on the page, consider giving it extra surrounding space to help it attract focus" (Carbon spacing).
+- [weak] **Fluid only where there is no natural maximum.** Atlassian: "Use sparingly, because at very large viewports, text lines can become too long and visual relationships between elements may break down" (Atlassian grid).
+
+**Cases**
+- An empty Balance column is 200px wide and an Hours column 352px wide for "3 h" → figures end-aligned in every table ([tables: *Alignment and figures*](../patterns/tables.md#alignment-and-figures)); no source opened here sets column widths by content, so the widths are the project's call.
+- A narrow table sits in a 1296px page with half the width empty → the page takes the width its content needs, or the table stays narrow and the empty side is left, not stretched.
+- A tool page has 64px between every block "for air" and needs three screens for one week → dense regions, white space between them, not everywhere (Carbon spacing, NN/g content dispersion).
+
+**Accessibility**
+- [required] 1.4.8 Visual Presentation (AAA) asks for lines of no more than 80 characters in prose; the AA floor is 1.4.10 Reflow ([*Layout and grid*](#layout-and-grid)).
+
+**Build**
+- [required] Each width is a token or a container variant (narrow, default, wide, full), set on the page container, never per block (code-standard rule 11).
+
+**Check**
+- *Script:* could assert prose blocks within 75ch or the narrow width, the page container's width matching its declared variant.
+- *Judgement:* does each region's density match how often it is scanned?
+
+**Sources:** Atlassian grid, Shopify (page docs and layout), Primer (PageLayout source), Apple (HIG layout), Carbon spacing and NN/g. Not read: Material's margin tables (rendered by script). Silent: column widths inside a table.
 
 ---
 
@@ -275,6 +427,36 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 
 ---
 
+## One accent across light and dark
+
+How the accent stays the same colour to the eye when the theme flips. Theme machinery is [*Theming and dark mode*](#theming-and-dark-mode).
+
+**What good looks like**
+- [strong] **The accent keeps its hue between themes; the dark value is lighter and less saturated.** In OKLCH, computed from the published values: Primer `#0969da` → `#4493f8`, hue 257.5° → 255.9°, L 0.54 → 0.66, chroma 0.19 → 0.17 ([Primer light](https://unpkg.com/@primer/primitives@11.10.0/dist/css/functional/themes/light.css), [dark](https://unpkg.com/@primer/primitives@11.10.0/dist/css/functional/themes/dark.css)); Atlassian brand `#1868DB` → `#669DF1`, 259.0° → 258.6°, L 0.54 → 0.70, chroma 0.19 → 0.14 ([Atlassian light](https://unpkg.com/@atlaskit/tokens@20.11.0/dist/cjs/artifacts/themes/atlassian-light.js), [dark](https://unpkg.com/@atlaskit/tokens@20.11.0/dist/cjs/artifacts/themes/atlassian-dark.js)); Carbon link `#0f62fe` → `#78a9ff`, 262.0° → 261.1°, L 0.56 → 0.74, chroma 0.24 → 0.14 ([Carbon themes](https://unpkg.com/@carbon/themes@11.85.0/scss/generated/_themes.scss)); Material maps primary to tone 40 in light and 80 in dark, `s.isDark ? 80 : 40` ([Material color spec 2021](https://raw.githubusercontent.com/material-foundation/material-color-utilities/main/typescript/dynamiccolor/color_spec_2021.ts)).
+- [contested] **The solid accent fill: lightened in dark, or one value in both.** Primer, Atlassian and Material lighten it (above); Carbon's primary button is `blue.60` (`#0f62fe`) in the dark theme as in white ([Carbon g100 button tokens](https://unpkg.com/@carbon/themes@11.86.0/tokens/themes/g100/button.tokens.json)), and Radix's step 9 is one value in both, "the purest step" ([Radix colors](https://www.radix-ui.com/colors/docs/palette-composition/understanding-the-scale)). The project decides.
+- [contested] **The label on that fill: white in both, or dark in dark.** Primer keeps white on a darker `#1f6feb` and Carbon keeps white; Atlassian puts `#1F1F21` on `#669DF1` and Material flips `on-primary` from tone 100 to tone 20 (sources above). Measure, then decide.
+
+**How**
+- [moderate] **Pair the steps by mirror or by tone.** Atlassian: "if a button color is 700 in light theme, it will be 400 in dark theme… it may not work for all use cases" ([Atlassian color palette](https://atlassian.design/foundations/color/color-palette)); Material: "a difference of 40 in tone guarantees a WCAG contrast ratio ≥ 3.0; a difference of 50 in tone guarantees a contrast ratio ≥ 4.5" ([Material contrast for accessibility](https://github.com/material-foundation/material-color-utilities/blob/main/concepts/contrast_for_accessibility.md)).
+- [weak] **Work in OKLCH.** CSS Color 4: OKLCh has "improved hue linearity, hue uniformity, and chroma uniformity compared to CIE LCH" ([CSS Color 4](https://www.w3.org/TR/css-color-4/)); a hue held there holds to the eye.
+
+**Cases**
+- A light accent `#8f4100` reads brown and the dark `#f17300` reads orange, so the primary button changes character → in OKLCH they share hue (50.3°, 50.6°) but chroma rises 0.12 → 0.18 as L rises 0.47 → 0.69, the opposite of the systems above; bring the pair's chroma and lightness into the pattern above, or keep one solid in both themes (contested).
+
+**Accessibility**
+- [required] 1.4.3: accent text meets 4.5:1 on each theme's page; 1.4.11: an accent boundary or icon meets 3:1; the label on a solid accent meets 4.5:1 in each theme.
+
+**Build**
+- [required] One accent role token with a value per theme, never a second token for dark (*Theming and dark mode*'s Build).
+
+**Check**
+- *Script:* could convert the accent's value in each theme to OKLCH and report Δhue, ΔL and Δchroma; flag a hue shift over 5° or a chroma rise in dark (both the pattern above, not a standard); measure accent text and the solid's label in each theme.
+- *Judgement:* side by side, do the two primary buttons look like one brand?
+
+**Sources:** Primer, Atlassian, Carbon, Material and Radix token values, read raw; CSS Color 4. OKLCH values and ratios are computed here from the published hex. Not found: a primary source on hue shift with lightness (Helmholtz–Kohlrausch).
+
+---
+
 ## Surfaces and elevation levels
 
 Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a toast, a dialog, an input) and how that changes between light and dark: four named levels and a scrim. In dark a layer further forward is lighter; in light a forward layer stays white and its shadow and border carry the depth. It extends [theming and dark mode](#theming-and-dark-mode) and [elevation, borders, radius and shape](#elevation-borders-radius-and-shape) and restates neither; choosing between a dialog, drawer, popover or toast is [dialogs](../patterns/dialogs.md)'s job, the token mechanism [tokens: themes and modes](../../code/tokens.md).
@@ -357,6 +539,37 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 - *Judgement:* open a menu from a card inside a sidebar in dark mode. Can you see its edge without the shadow? Forced colours once per release, by hand.
 
 **Sources:** [Material 3 color roles](https://m3.material.io/styles/color/roles) (the page is script-rendered; tones are from [material-color-utilities `color_spec_2021.ts`](https://github.com/material-foundation/material-color-utilities/blob/main/typescript/dynamiccolor/color_spec_2021.ts), and component roles from [material-web tokens v0_192](https://github.com/material-components/material-web/tree/main/tokens/versions/v0_192): dialog `surface-container-high`, menu and rich tooltip `surface-container`, elevated card `surface-container-low`, filled card and filled text field `surface-container-highest`, standard drawer `surface`, modal drawer `surface-container-low`, snackbar and plain tooltip `inverse-surface`, scrim at 0.32). [Material 2 dark theme](https://m2.material.io/design/color/dark-theme) (`#121212`, the 0–16% overlay table, 87/60/38% text, 15.8:1). The overlay formula is `(4.5·ln(1+dp)+2)%` in [ElevationOverlayProvider](https://github.com/material-components/material-components-android/blob/master/lib/java/com/google/android/material/elevation/ElevationOverlayProvider.java), and grey-not-black is in [Android Dark.md](https://github.com/material-components/material-components-android/blob/master/docs/theming/Dark.md). [Apple HIG dark mode](https://developer.apple.com/design/human-interface-guidelines/dark-mode) (base and elevated) and [Apple HIG color](https://developer.apple.com/design/human-interface-guidelines/color) (primary, secondary and tertiary backgrounds, grouped). [Atlassian elevation](https://atlassian.design/foundations/elevation), with values from `@atlaskit/tokens` 20.11.0 ([light](https://cdn.jsdelivr.net/npm/@atlaskit/tokens@20.11.0/dist/cjs/artifacts/themes/atlassian-light.js), [dark](https://cdn.jsdelivr.net/npm/@atlaskit/tokens@20.11.0/dist/cjs/artifacts/themes/atlassian-dark.js)). [Primer primitives](https://primer.style/foundations/primitives/color), with values from `@primer/primitives` 11.10.0 [`dark.css`](https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/css/functional/themes/dark.css), `dark-dimmed.css` and `light.css`. [Radix: understanding the scale](https://www.radix-ui.com/colors/docs/palette-composition/understanding-the-scale). Naming, polarity and nesting from [Polaris tokens](https://cdn.jsdelivr.net/npm/@shopify/polaris-tokens/dist/css/styles.css), [Ant Design theme](https://ant.design/docs/react/customize-theme), [Spectrum `color-aliases.json`](https://cdn.jsdelivr.net/npm/@adobe/spectrum-tokens/src/color-aliases.json), [Radix Themes tokens](https://cdn.jsdelivr.net/npm/@radix-ui/themes/tokens.css), [GOV.UK `_colours-functional.scss`](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/settings/_colours-functional.scss), [Carbon colour usage](https://carbondesignsystem.com/elements/color/usage/), the [Carbon v11 develop migration guide](https://carbondesignsystem.com/migrating/guide/develop) and [`@carbon/themes` 11.85.0](https://cdn.jsdelivr.net/npm/@carbon/themes@11.85.0/lib/index.js). `surface.current` from [`@atlaskit/primitives` 22.7.1 `box.js`](https://cdn.jsdelivr.net/npm/@atlaskit/primitives@22.7.1/dist/cjs/components/box.js). Base and elevated from [UIKit `userInterfaceLevel`](https://developer.apple.com/documentation/uikit/uitraitcollection/userinterfacelevel); scroll-under from the [Compose Material 3 token sources](https://github.com/androidx/androidx/tree/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens) (`AppBarTokens`, `MenuTokens`, `DialogTokens`) and [UIKit `scrollEdgeAppearance`](https://developer.apple.com/documentation/uikit/uinavigationbar/scrolledgeappearance). High contrast from [`@primer/primitives` 11.10.0 `dark-high-contrast.css`](https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/css/functional/themes/dark-high-contrast.css). [shadcn/ui theming](https://ui.shadcn.com/docs/theming). [Vercel Geist materials](https://vercel.com/geist/materials) names base, small, medium and large on the page and tooltip, menu, modal and fullscreen floating, but gives no values. [Linear's redesign](https://linear.app/now/how-we-redesigned-the-linear-ui) generates "background, foreground, panels, dialogs, and modals" elevations from base, accent and contrast in LCH, also without values. The sources disagree in three places. On pure black, Apple uses `#000` as its base and the others never do. On inputs, Material raises them and Primer sinks them. On light-mode containers, Material darkens them as emphasis rises, where Atlassian and shadcn keep raised and overlay white and lift them by shadow. Polarity and the dark overlay's place are contested too (above). Everything here is adoption evidence; no user research on surface polarity, nesting or dark steps was found. Surface and elevation token names across systems are in [token-taxonomy: elevation and shadow names](../../code/token-taxonomy.md#elevation-and-shadow-names).
+
+---
+
+## Text value levels
+
+How many text colours a product uses and how far apart they sit. Surfaces are [*Surfaces and elevation levels*](#surfaces-and-elevation-levels); colour roles are [*Colour roles and semantics*](#colour-roles-and-semantics).
+
+**What good looks like**
+- [strong] **Two to four readable text levels, plus disabled.** Primer's `fgColor-default` and `fgColor-muted` (`#1f2328`, `#59636e`, light) ([Primer primitives, light](https://unpkg.com/@primer/primitives@11.10.0/dist/css/functional/themes/light.css)); Carbon's `$text-primary` "Primary text; Body copy; Headers", `$text-secondary` "Secondary text; Input labels" and `$text-helper` "Tertiary text; Help text" ([Carbon color tokens](https://carbondesignsystem.com/elements/color/tokens/)); Atlassian's `color.text`, `color.text.subtle` and `color.text.subtlest` ([Atlassian tokens, light](https://unpkg.com/@atlaskit/tokens@20.11.0/dist/cjs/artifacts/themes/atlassian-light.js)); Apple's four label colours, secondary for "a subheading or additional information" and quaternary "such as watermark text" ([Apple HIG color](https://developer.apple.com/design/human-interface-guidelines/color)).
+- [strong] **The lowest readable level still passes 4.5:1 on its surface.** On white, Carbon's helper `#6f6f6f` ([Carbon themes](https://unpkg.com/@carbon/themes@11.85.0/scss/generated/_themes.scss)) is 5.02:1 and Atlassian's subtlest `#6B6E76` 5.10:1; Primer's muted `#59636e` is 6.11:1 (ratios computed from the published values, WCAG 2 formula). Primer: "All contrast values for text and borders are calculated against bgColor-muted" ([Primer color usage](https://primer.style/product/getting-started/foundations/color-usage/)).
+
+**How**
+- [weak] **Bolder means more contrast.** Atlassian: "Emphasis can range from subtlest to boldest. Bolder colors have more contrast against the default surface" ([Atlassian color](https://atlassian.design/foundations/color)).
+- [weak] **Each level has one job.** Carbon names the job in each token's role (above): body and headings, labels and secondary text, help text; a level picked "because it looked right" is the drift to look for.
+- [required] Disabled and placeholder text fall below 4.5:1 in these systems (Carbon's placeholder `rgba(22,22,22,.4)`), so they carry nothing a person needs to read to act; required text meets 1.4.3.
+
+**Cases**
+- A page uses five greys for text, two of them a hair apart → map each to one of the product's levels; two levels closer than a reader can tell apart are one.
+- A muted caption passes on the page but sits on a raised card in dark at 3.9:1 → measure each level on every surface it sits on, in each theme.
+
+**Accessibility**
+- [required] 1.4.3 Contrast (Minimum): every readable level meets 4.5:1 (3:1 for large text) on every surface it sits on, in every theme.
+
+**Build**
+- [required] Text levels are semantic tokens (`text-default`, `text-muted` and so on), one per level, with a value per theme ([tokens: three tiers](../../code/tokens.md#three-tiers)).
+
+**Check**
+- *Script:* could collect computed text colours per page, map each to a text token, flag any untokened colour, and measure each against its painted background in each theme.
+- *Judgement:* does each level's job read on sight: body, secondary, help?
+
+**Sources:** Primer (primitives and color usage), Carbon (tokens), Atlassian (tokens and color), Apple (HIG color). Apple publishes no values for its label colours.
 
 ---
 
@@ -838,12 +1051,15 @@ A material is a surface fill that lets what is behind it through, blurred: a fro
 - [required] An instance stays an instance (figma-standard rule 27); every value a component draws is bound (figma-standard rule 29); a page does not restyle a component's root (code-standard rule 4); every literal in component CSS is a token or carries its reason (code-standard rule 22).
 - [weak] A real new need becomes a component or a variant in the system, then the page uses it. A second copy of a pattern is the moment to promote it.
 - [moderate] Brand: [Apple branding](https://developer.apple.com/design/human-interface-guidelines/branding), "Ensure branding always defers to content"; [Fluent](https://fluent2.microsoft.design/design-principles) pairs "Built for focus" with "A little personality goes a long way." Keep expressive type and motion for marketing pages.
+- [strong] **One pattern for each kind of page part: one page header, one table, one filter.** Shopify: "Templates are full-page layouts for paths and functionality found in most Shopify apps. Use one as your starting point" ([Shopify App Home patterns](https://shopify.dev/docs/api/app-home/patterns)); Atlassian: "Use a page header to create a consistent experience at the top of a full page" ([Atlassian page header](https://atlassian.design/components/page-header/usage)); Carbon's shell gives "shared interaction patterns that create a consistent experience across products" ([Carbon UI shell header](https://carbondesignsystem.com/components/UI-shell-header/usage/)); NN/g: systems "should use the same patterns everywhere inside the system", and "Consistency doesn't happen by itself, but requires an active process" ([NN/g consistency and standards](https://www.nngroup.com/articles/consistency-and-standards/)).
 - [weak] Consistent, not uniform: two filters that look alike behave alike; a screen that needs a different solution says why in the design notes.
 
 **Cases**
 - A page draws its own button with a 10px radius because the system's "looked heavy" → use the system button; if it really is heavy, change the system.
 - A detached instance in a Figma screen with a tweaked fill → reattach and use a variant (figma-standard rule 27).
 - Three cards on three pages with slightly different padding → one card component.
+- Table rows are 53, 45 and 49px on three pages, and inputs have a 4px radius where every other control has 8 → one row height per density and one radius per role ([*One size scale per screen*](#one-size-scale-per-screen), [*Elevation, borders, radius and shape*](#elevation-borders-radius-and-shape)).
+- Three list pages show a filter three ways and a destructive action three ways → one filter component and one row-action treatment, used on every page.
 - A one-off purple for a "beta" badge → a role token in the system or an existing role.
 - A team restyles the primary button in brand gradient → the accent role on the system button; GOV.UK's reason is maintenance and accessibility ([extending and modifying](https://design-system.service.gov.uk/get-started/extending-and-modifying-components/)).
 
