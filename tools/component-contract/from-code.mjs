@@ -1308,8 +1308,7 @@ export function zeroTokens(e, fe, value, { fill = false } = {}) {
 }
 
 /* Stacking first on top as the design does, where the code's children cannot overlap (no gap below 0 at any
-   combination, read by the number it leads with: 16px, a token written 16px (1rem); none placed absolutely where the
-   design places none): then the order they paint in shows nowhere and the code renders the same either way. Held per combination the design draws, on what each combination expands to,
+   combination, read by the number it leads with: 16px, a token written 16px (1rem); none placed absolutely): then the order they paint in shows nowhere and the code renders the same either way. Held per combination the design draws, on what each combination expands to,
    so a part a variant adds, a layout a variant sets whole and one the design stacks at some props only all take the
    design's there and no other: each layout the contract writes takes what its combinations want, and a combination
    that wants otherwise than the rest of its layout's gets a layer of its own. `code` is changed in place. */
@@ -1322,10 +1321,10 @@ export function stackLikeDesign(code, design, value) {
   for (const [k, vs] of axes) combos = combos.flatMap((c) => vs.map((v) => ({ ...c, [k]: v })));
   combos = combos.filter((c) => !(design.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v))));
   const vars = code.variants || (code.variants = []);
-  // a child placed absolutely where the design places none (a focus ring the design places too paints as it stacks it)
-  const placedToo = (cid) => [design.anatomy || {}, ...(design.variants || []).map((v) => v.add || {})].some((a) => (a[cid] || {}).position === 'absolute');
-  const loose = (id) => [code.anatomy, ...vars.map((v) => v.add || {})].some((a) => Object.entries(a).some(([cid, c]) => c.parent === id && c.position === 'absolute' && !placedToo(cid)))
-    || vars.some((v) => Object.entries(v.set || {}).some(([f, x]) => /\.position$/.test(f) && x === 'absolute' && ((code.anatomy[f.slice(0, -9)] || {}).parent === id) && !placedToo(f.slice(0, -9))));
+  // a child placed absolutely where it has a sibling, at a combination: it can overlap the rest there, so how they stack
+  // is the code's as read (by its z-index, rules.mjs stackedFirst, or by paint), the design's place for it too, never
+  // copied; a box with one child there has nothing to stack
+  const loose = (x, id) => { const kids = Object.values(x).filter((c) => c && c.parent === id); return kids.length > 1 && kids.some((c) => c.position === 'absolute' || !!c.absolute); };
   // every layout the contract writes, marked so each combination's expanded layout names the one it came from
   const sources = [];
   const mark = (l) => { if (!l || typeof l !== 'object') return; if (!sources.includes(l)) sources.push(l); Object.defineProperty(l, '__src', { value: sources.indexOf(l), enumerable: true, configurable: true }); };
@@ -1338,10 +1337,10 @@ export function stackLikeDesign(code, design, value) {
   const ids = [...new Set(C.flatMap((x) => Object.keys(x)))];
   const wants = new Map(); // source → [[combo index, id, want]]
   for (const id of ids) {
-    if (loose(id) || C.some((x) => x[id] && x[id].layout && x[id].layout.gap != null && !(parseFloat(val(x[id].layout.gap)) >= 0))) continue;
+    if (C.some((x) => x[id] && x[id].layout && x[id].layout.gap != null && !(parseFloat(val(x[id].layout.gap)) >= 0))) continue;
     C.forEach((x, i) => {
       const l = x[id] && x[id].layout, dl = D[i][id] && D[i][id].layout;
-      if (!l || !dl || l.__src == null) return;
+      if (!l || !dl || l.__src == null || loose(x, id)) return;
       wants.set(l.__src, [...(wants.get(l.__src) || []), [i, id, !!dl.firstOnTop]]);
     });
   }
@@ -2685,13 +2684,22 @@ async function main() {
         const [siblingOrder, stackedFirst, childOrder] = new Function(`return ${siblingOrderSrc}`)();
         for (const [pid, xs] of Object.entries(byParent)) {
           // (inside a placed component too, where the box's own layout is not read: its children's order all the same)
-          const { first, ranked } = childOrder(xs, siblingOrder, stackedFirst), box = first && out.find((e) => e.id === pid);
-          if (box && box.layout) box.layout.firstOnTop = true;
+          const { first, ranked } = childOrder(xs, siblingOrder, stackedFirst), box = first !== false && out.find((e) => e.id === pid);
+          if (box && first && box.layout) box.layout.firstOnTop = true;
+          // (which way their z-index counts the code does not say: read as painted, and noted, below)
+          if (box && first === null) box.stackUnknown = true;
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         }
         return out;
       }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
+      // a box whose children say by z-index how they stack but not the design's order of them (one in the flow, no CSS
+      // order: rules.mjs stackedFirst): its children read as painted, and said so; the box keeps the mark (stackUnknown),
+      // to-figma's one row for it, its children's order compared in the design's direction (ranked)
+      for (const e of raw) if (e.stackUnknown) {
+        const said = `${e.id}: its children say how they stack by z-index, but not the design's order of them (one child in the flow, no CSS order), so not which way it counts; read as painted`;
+        if (!notes.includes(said)) notes.push(said);
+      }
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
       for (const e of raw) if (e.name && (e.parent == null || !keepsName(e.name, e.id))) delete e.name;

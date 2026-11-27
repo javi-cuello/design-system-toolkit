@@ -937,7 +937,15 @@ else {
     // (but one a later variant of its own adds there again is back: an action row's margin, at Close off and long)
     const back = { ...late, variants: [bar.variants[0], late.variants[1], { when: { sm: true, tip: true }, add: { menu: { kind: 'container', parent: 'root' } } }, { when: { sm: true, tip: true }, add: { 'menu/tip': { kind: 'container', parent: 'menu' } } }] };
     const backTip = toReact(back, 'bar', { naming: CLASS, library: { Bar: { ...back, folder: 'bar' } } }).split('\n').filter((l) => /\{.*&& \($/.test(l)).at(-1) || '';
-    ok('a child pruned as it lands that a later variant of its own adds again is drawn there', /\btip\b/.test(backTip) && !/!/.test(backTip), backTip); }
+    ok('a child pruned as it lands that a later variant of its own adds again is drawn there', /\btip\b/.test(backTip) && !/!/.test(backTip), backTip);
+    // (one that covers the prune in part brings it back there alone: pruned exactly where nothing adds it again)
+    const part = { ...late, variants: [...late.variants, { when: { end: true, tip: true }, add: { 'menu/tip': { kind: 'container', parent: 'menu' } } }] };
+    const partTip = toReact(part, 'bar', { naming: CLASS, library: { Bar: { ...part, folder: 'bar' } } }).split('\n').filter((l) => /\{.*&& \($/.test(l)).at(-1) || '';
+    ok('a child pruned as it lands that a later add covers in part is pruned only where it stays uncovered', /!\(sm && tip && !end\)/.test(partTip), partTip);
+    // (and one by a prop whose values are not listed, a text, brings it back where that add holds)
+    const worded = { ...late, props: { ...late.props, hint: { type: 'string', default: '', figma: 'Hint' } }, variants: [...late.variants, { when: { hint: 'Help', tip: true }, add: { 'menu/tip': { kind: 'container', parent: 'menu' } } }] };
+    const wordTip = toReact(worded, 'bar', { naming: CLASS, library: { Bar: { ...worded, folder: 'bar' } } }).split('\n').filter((l) => /\{.*&& \($/.test(l)).at(-1) || '';
+    ok('a child pruned as it lands that a later add by a text covers in part is back where that add holds', /\|\| \(sm && tip && hint === "Help"\)/.test(wordTip), wordTip); }
   // a narrower removal stacked on the put-back still takes it away
   const bar3 = { ...bar, props: { ...bar.props, busy: { type: 'boolean', default: false, figma: 'Busy' } }, variants: [...bar.variants, { when: { sm: true, end: true, busy: true }, remove: ['menu'] }] };
   ok('a removal narrower than a put-back still takes the part away', /\(sm && end\) && !\(sm && end && busy\)/.test(toReact(bar3, 'bar', { naming: CLASS, library: { Bar: { ...bar3, folder: 'bar' } } })));

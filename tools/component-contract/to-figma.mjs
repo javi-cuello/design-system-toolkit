@@ -656,11 +656,22 @@ function unswapped(x, other) {
 
 /* A child's order as its place among its siblings: Figma's numbers can tie or skip where variants combine (an icon and
    an avatar both 0, the texts 1), a reading's run 0..n; the place is what is drawn. Ties keep their listed order. Only
-   the siblings both sides draw are placed: one missing on one side is its own row, not a shift of every place after it. */
+   the siblings both sides draw are placed: one missing on one side is its own row, not a shift of every place after it.
+   A box whose stacking the reading could not tell (from-code's `stackUnknown`: its children read as painted, bottom
+   first) takes the other side's direction, its children's places turned to match and its firstOnTop the other's: the
+   one row is its stackUnknown, never one per child; a wrong order is still a row each. */
 function ranked(x, other) {
   const out = { ...x }, by = {};
   Object.entries(x).forEach(([id, e], i) => { if (e && e.parent != null && typeof e.order === 'number' && other[id]) (by[e.parent] ||= []).push([id, e.order, i]); });
-  for (const xs of Object.values(by)) xs.sort((a, b) => a[1] - b[1] || a[2] - b[2]).forEach(([id], k) => { out[id] = { ...out[id], order: k }; });
+  const turned = (pid) => !!(x[pid] && x[pid].stackUnknown && other[pid] && (other[pid].layout || {}).firstOnTop);
+  for (const [pid, xs] of Object.entries(by)) {
+    xs.sort((a, b) => a[1] - b[1] || a[2] - b[2]);
+    (turned(pid) ? xs.reverse() : xs).forEach(([id], k) => { out[id] = { ...out[id], order: k }; });
+  }
+  for (const [pid, e] of Object.entries(x)) if (e && e.stackUnknown && e.layout && other[pid] && other[pid].layout) {
+    const { firstOnTop: _, ...layout } = e.layout;
+    out[pid] = { ...out[pid], layout: other[pid].layout.firstOnTop ? { ...layout, firstOnTop: true } : layout };
+  }
   return out;
 }
 

@@ -178,7 +178,29 @@ const upright = { contract: 1, component: 'Upright', props: { orientation: { typ
     && !/z-index/.test(css(-4, false)) && !/z-index/.test(css(4, true)));
   // (a variant that sets only the gap, by a dotted path, makes the group overlap there: said so too)
   const tight = { ...pile(4, true), props: { tight: { type: 'boolean', default: false, figma: 'Tight' } }, variants: [{ when: { tight: true }, set: { 'root.layout.gap': -4 } }] };
-  ok('a gap a variant sets below 0 by a dotted path restacks the group as a whole layout would', /z-index: 3;/.test(toCss(tight, 'pile', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }))); }
+  ok('a gap a variant sets below 0 by a dotted path restacks the group as a whole layout would', /z-index: 3;/.test(toCss(tight, 'pile', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
+  // (and each child says its place in the design by order too, a part out of the flow as well: the one reference a
+  // reading has for which way the z-index counts where the flow holds a single child)
+  const lone = { ...pile(0, true), anatomy: { ...pile(0, true).anatomy, b: { ...pile(0, true).anatomy.b, position: 'absolute' }, c: { ...pile(0, true).anatomy.c, position: 'absolute' } } };
+  const lcss = toCss(lone, 'pile', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('a restacked box\'s children say their place in the design by order as well, those out of the flow too',
+    /order: 1;/.test(rule(lcss, '.ds-pile > .ds-pile__a')) && /order: 3;/.test(rule(lcss, '.ds-pile > .ds-pile__c')) && /z-index: 1;/.test(rule(lcss, '.ds-pile > .ds-pile__c')), lcss);
+  // (a box stacked first on top whose children can overlap says it by z-index though the browser would paint them so
+  // already: the only way a reading tells which way the design numbers them)
+  const over = { contract: 1, component: 'Over', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', firstOnTop: true } }, icon: { kind: 'graphic', parent: 'root', order: 0, width: 8, height: 8, position: 'absolute', absolute: { x: 0, y: 0 } }, text: { kind: 'graphic', parent: 'root', order: 1, width: 8, height: 8 } } };
+  const ocss = toCss(over, 'over', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('a box stacked first on top whose children can overlap says so by z-index where the browser already paints them so', /z-index: 2;/.test(rule(ocss, '.ds-over > .ds-over__icon')) && /z-index: 1;/.test(rule(ocss, '.ds-over > .ds-over__text')), ocss);
+  // (so does a holder where it takes a part out of a box a placed component restacks, leaving one child in its flow: a
+  // field that hides its icons at open, between its text and its background)
+  const g = (parent, o, abs) => ({ kind: 'graphic', parent, order: o, width: 8, height: 8, ...(abs && { position: 'absolute', absolute: { x: 0, y: 0 } }) });
+  const lay = { direction: 'row', gap: 4, firstOnTop: true };
+  const held = { contract: 1, component: 'Held', folder: 'held', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, box: { kind: 'container', parent: 'root', layout: lay }, 'box/a': g('box', 0), 'box/i': g('box', 1), 'box/bg': g('box', 2, true) } };
+  const field = { contract: 1, component: 'Field', props: { open: { type: 'boolean', default: false, figma: 'Open' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, p: { kind: 'instance', parent: 'root', order: 0, component: 'Held', key: 'k' }, 'p/box': { kind: 'container', parent: 'p', order: 0, layout: lay }, 'p/box/a': g('p/box', 0), 'p/box/i': g('p/box', 1), 'p/box/bg': g('p/box', 2, true) },
+    variants: [{ when: { open: true }, remove: ['p/box/i'] }] };
+  const fcss = toCss(field, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Held' ? held : null) });
+  ok('a holder that leaves one child in the flow of a box a placed component restacks says each one\'s place by order, at every combination',
+    /order: 1;/.test(rule(fcss, '.ds-field > .ds-field__p > .ds-held__box > .ds-held__a')) && /order: 2;/.test(rule(fcss, '.ds-field > .ds-field__p > .ds-held__box > .ds-held__i')) && /order: 2;/.test(rule(fcss, '.ds-field:where([data-open]:not([data-open="false"])) > .ds-field__p > .ds-held__box > .ds-held__bg')), fcss); }
 // a turned part in a restacked box: its wrapper is what the box lays out and stacks (a size container, its own stacking
 // context: css-contain-3 §3), so its place by z-index is said on the wrapper, beside its order, and not on the part inside
 { const row = { contract: 1, component: 'Row', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } },

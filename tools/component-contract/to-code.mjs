@@ -221,8 +221,22 @@ export function partsOf(c, t = HOUSE) {
       if (at && at.base && typeof w === 'string' && (swaps || !/^\{.*\}$/.test(w)) && (w !== at.e.content || at.words.length)) at.words.push([when, w]);
     }
   }
+  // (pruned exactly where no later add of its own covers it: each such add taken out of the prune, the rest said by the
+  // values of the props it names that it does not hold; where one of those is a prop whose values are not listed (a
+  // text), the prune stays whole and where both hold is an add of its own, which puts it back there: to-markup's backs)
+  const valuesOf = (k) => ((props[k] || {}).type === 'boolean' ? [true, false] : (props[k] || {}).type === 'enum' ? props[k].values : null);
+  const minus = (r, a, backs) => {
+    if (Object.entries(a).some(([k, x]) => k in r && r[k] !== x)) return [r];
+    const free = Object.keys(a).filter((k) => !(k in r));
+    if (free.some((k) => !valuesOf(k))) { backs.push({ ...r, ...a }); return [r]; }
+    const out = []; let held = r;
+    for (const k of free) { for (const x of valuesOf(k)) if (x !== a[k]) out.push({ ...held, [k]: x }); held = { ...held, [k]: a[k] }; }
+    return out;
+  };
   for (const [id, list] of landed) for (const [r, vi] of list) {
-    if (!(addedAt.get(id) || []).some(([a, ai]) => ai > vi && Object.entries(r).every(([k, x]) => a[k] === undefined || a[k] === x) && Object.entries(a).every(([k, x]) => r[k] === x))) parts.get(id).removes.push(r);
+    let left = [r]; const backs = [];
+    for (const [a, ai] of addedAt.get(id) || []) if (ai > vi) left = left.flatMap((x) => minus(x, a, backs));
+    parts.get(id).removes.push(...left); parts.get(id).adds.push(...backs);
   }
   for (const part of parts.values()) {
     // a part only variants draw, each with its own words (a message at error says the error text, at warning the warning
@@ -386,7 +400,9 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
         const ranked = [...here].sort((x, y) => at(x) - at(y) || dom.get(x.id) - dom.get(y.id)), want = (L.firstOnTop ? ranked.reverse() : ranked).map((p) => p.id).join();
         // (an unknown one drawn both ways: the box is restacked where either paints out of the design's order)
         const paints = (unknown) => siblingOrder([...here].sort((x, y) => dom.get(x.id) - dom.get(y.id)).map((p) => { const out = outOf(asAt(p)), l = lift.get(p.id) ?? unknown; return { id: p.id, cssOrder: out ? 0 : at(p), stack: { ...(out && { out: true }), ...(l && { lifted: true }) } }; })).map((e) => e.id).join();
-        if (paints(true) !== want || paints(false) !== want) { boxes.add(box); grew = true; break; }
+        // (and a box stacked first on top, though the browser paints them so already: its z-index is the one way a
+        // reading tells which way the design numbers them, rules.mjs stackedFirst)
+        if (L.firstOnTop || paints(true) !== want || paints(false) !== want) { boxes.add(box); grew = true; break; }
       }
     }
     }
@@ -788,6 +804,19 @@ const drawnWhere = (c, id) => { const adds = (c.variants || []).find((v) => !v.c
 const NO_MAINS = () => null;
 /* A part's place among its siblings in an expanded anatomy: by order, a tie kept in the order they are listed (to-figma
    ranked, the compare's rule), 0 first. */
+// (whether a box's flow holds one child or none at any combination its variants draw: each variant's when over the
+// defaults, as expand draws it; then its children say their place by order wherever it is restacked, every combination
+// alike, as their z-index is said, so no rule layered over another leaves one child of it with an order and one without)
+const LONE = new WeakMap();
+function loneSomewhere(c, box) {
+  if (!LONE.has(c)) LONE.set(c, new Map());
+  const memo = LONE.get(c);
+  if (!memo.has(box)) {
+    const out = (y) => y.position === 'absolute' || !!y.absolute, D = variantDefaults(c);
+    memo.set(box, [{}, ...(c.variants || [])].some((v) => { const A = expand(c, { ...D, ...(v.when || {}) }); return !!A[box] && Object.values(A).filter((y) => y.parent === box && !out(y)).length < 2; }));
+  }
+  return memo.get(box);
+}
 function rankIn(a, id) {
   const up = a[id].parent, sibs = Object.keys(a).map((k, i) => [k, a[k].order ?? 0, i]).filter(([k]) => a[k].parent === up);
   return sibs.sort((x, y) => x[1] - y[1] || x[2] - y[2]).findIndex(([k]) => k === id);
@@ -884,7 +913,16 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
       // among them: a rule before this one that does is answered with that value, never left to the cascade's unset,
       // which would undo the component's own; elsewhere nothing is written)
       const ever = everInside(c, id, mains);
-      const decls = [...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p) || ever.has(p)).map(([p, v, note]) => [p, v, note, over.theirs.get(p) === v]), ...over.removed.map((p) => [p, 'unset']), ...[...base].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset', undefined, true])];
+      // (where a combination leaves a box that component restacks with one child in the flow or none, each child says its
+      // place in the design by order at every combination, as that component's own sheet does where it draws so
+      // (loneSomewhere): the reference a reading has for which way its z-index counts)
+      const heldOrder = (A) => {
+        const x = A[id], P = x && A[x.parent];
+        if (!P || !P.layout || !restacked(m, t, mains).has(x.parent === host ? 'root' : x.parent.slice(host.length + 1))) return null;
+        return loneSomewhere(c, x.parent) ? String(rankIn(A, id) + 1) : null;
+      };
+      const ord = heldOrder(a), ordAt = B[id] ? heldOrder(B) : null, order = ord ? [['order', ord]] : ordAt ? [['order', 'unset']] : [];
+      const decls = [...order, ...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p) || ever.has(p)).map(([p, v, note]) => [p, v, note, over.theirs.get(p) === v]), ...over.removed.map((p) => [p, 'unset']), ...[...base].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset', undefined, true])];
       if (decls.length) out[id] = { decls: new Map(decls.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: [] };
       continue;
     }
@@ -997,12 +1035,18 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     if (sample) kept.push(['inline-size', '100%']);
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
     // (only where an auto layout lays it out, and never on a part out of the flow: order moves neither, CSS Flexbox 4.1)
-    if (parent && parent.layout && reordered(c).has(e.parent) && typeof e.order === 'number' && !(e.position === 'absolute' || e.absolute)) kept.push(['order', String(e.order)]);
+    // (but in a box restacked, below, whose flow holds one child or none at some combination, every child says its place
+    // by order, one out of the flow too, where it moves nothing: the one reference a reading has for which way the
+    // z-index counts there, rules.mjs stackedFirst; a flow of two or more is that reference itself; loneSomewhere)
+    const restack = e.parent && restacked(c, t, mains).has(e.parent) && !slotted;
+    const lone = restack && loneSomewhere(c, e.parent);
+    if (parent && parent.layout && lone) kept.push(['order', String(rankIn(a, id) + 1)]);
+    else if (parent && parent.layout && reordered(c).has(e.parent) && typeof e.order === 'number' && !(e.position === 'absolute' || e.absolute)) kept.push(['order', String(e.order)]);
     // where the browser would paint the box's children in another order than the design (restacked), each says its place
     // by z-index, one over its order (above the box's unpositioned children, which take none); the box is isolated, below
     // (its place, as the design ranks it: by order, a tie kept in the order the layers are listed, as the compare ranks
     // them (to-figma ranked), so two a variant numbers alike paint as listed, never by the markup's order)
-    if (e.parent && restacked(c, t, mains).has(e.parent) && !slotted) kept.push(['z-index', String(paintRankIn(a, id))]);
+    if (restack) kept.push(['z-index', String(paintRankIn(a, id))]);
     if (restacked(c, t, mains).has(id)) kept.push(['isolation', 'isolate']);
     // (a box restacked says which child paints on top by its children's z-index: its firstOnTop written so)
     if (restacked(c, t, mains).has(id) && unread.includes('layout.firstOnTop')) unread.splice(unread.indexOf('layout.firstOnTop'), 1);

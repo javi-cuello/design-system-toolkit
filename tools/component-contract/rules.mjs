@@ -568,26 +568,31 @@ export function siblingOrder(xs) {
 
 /* Whether a box's children paint first on top (Figma's firstOnTop), as to-code says it where they can overlap: two or more
    children, every one carrying a z-index (a flex item takes one unpositioned, CSS Flexbox 4.3; one placed absolutely
-   too, to-code giving every child its place), the z-index falling strictly from the first child in the flow (by CSS
-   order, ties as written) to the last, two or more of them. siblingOrder keeps the
-   flow in its laid-out order, as a child there says its layout; this reads its paint. Then each child's order is its
-   place in the layout. Runs in the page as well (passed as source); tested by test-from-code.mjs. */
+   too, to-code giving every child its place), the z-index falling strictly along the design's order of them. That order
+   is read where the code says it: every child's CSS order (to-code writes it where the flow holds one child or none),
+   else the flow of two or more as it is laid out (CSS order, then markup). Where neither says it (one child in the flow,
+   no CSS order), which way the z-index counts cannot be known: null, read as painted, and said in a note (childOrder),
+   never judged by the markup's order, which a part placed absolutely need not follow. Runs in the page as well (passed
+   as source); tested by test-from-code.mjs. */
 export function stackedFirst(xs) {
   if (xs.some((e) => !e.stack || e.stack.z == null)) return false;
-  // (the flow's laid-out order is the design's, the reference; a part placed absolutely has none to read against, but
-  // where one child alone is in the flow, the markup's order, which follows the design's, is all there is)
-  const all = xs.map((e, i) => [e, i]), inFlow = all.filter(([e]) => !e.stack.out), flow = inFlow.length >= 2 ? inFlow : all;
+  const all = xs.map((e, i) => [e, i]), inFlow = all.filter(([e]) => !e.stack.out);
+  const flow = all.every(([e]) => e.cssOrder != null) ? all : inFlow.length >= 2 ? inFlow : null;
+  if (!flow) return all.length >= 2 ? null : false;
   if (flow.length < 2) return false;
   const laid = flow.sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).map(([e]) => e.stack.z);
   return laid.every((z, i) => i === 0 || z < laid[i - 1]);
 }
 
 /* A box's children in their order, as the reading numbers them: the reverse of their paint where they say first on top
-   (stackedFirst: to-code's z-index counting down from the first, a part placed absolutely among them), else as the browser
-   paints them (siblingOrder). `first` says which. Runs in the page as well (passed as source, with the two it calls);
-   tested by test-from-code.mjs. */
+   (stackedFirst: to-code's z-index counting down from the first, a part placed absolutely among them), two at one
+   z-index the later in their laid-out order (CSS order, then markup) on top; else as the browser paints them
+   (siblingOrder). `first` says which: true, false, or null where it cannot be known (read as painted; the caller notes
+   it). Runs in the page as well (passed as source, with the two it calls); tested by test-from-code.mjs. */
 export function childOrder(xs, order = siblingOrder, first = stackedFirst) {
-  return first(xs) ? { first: true, ranked: [...xs].sort((a, b) => b.stack.z - a.stack.z) } : { first: false, ranked: order(xs) };
+  const f = first(xs), at = (e) => [e.cssOrder || 0, xs.indexOf(e)];
+  const later = (a, b) => { const p = at(a), q = at(b); return q[0] - p[0] || q[1] - p[1]; };
+  return f ? { first: true, ranked: [...xs].sort((a, b) => b.stack.z - a.stack.z || later(a, b)) } : { first: f, ranked: order(xs) };
 }
 
 /* Whether a box in the flow paints with the positioned ones (siblingOrder's `lifted`), in markup order, with no z-index of

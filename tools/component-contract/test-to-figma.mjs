@@ -740,6 +740,11 @@ delete globalThis.figma;
   { const box = (gap, align, orders) => ({ component: 'Bar', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap, align } }, ...Object.fromEntries(orders.map((o, i) => [`c${i}`, { kind: 'container', parent: 'root', order: o }])) }, variants: [] });
     ok('a gap under space-between is no value: Figma spaces the children itself', roundTrip(box(12, 'space-between', [0, 1]), box('Spacing/0', 'space-between', [0, 1])).rows.length === 0 && roundTrip(box(12, 'start', [0, 1]), box('Spacing/0', 'start', [0, 1])).rows.length === 1);
     ok('a child\'s order is its place among its siblings: ties and gaps are the same places; another place is a difference', roundTrip(box(0, 'start', [0, 0, 2]), box(0, 'start', [0, 1, 2])).rows.length === 0 && roundTrip(box(0, 'start', [1, 0]), box(0, 'start', [0, 1])).rows.length === 2);
+    // (a box whose stacking the reading could not tell, read as painted: its children's order compared in the design's
+    // direction, one row for the stacking it could not read, never one per child; a wrong order still each its own)
+    { const first = (orders) => { const x = box(0, 'start', orders); x.anatomy.root.layout.firstOnTop = true; return x; }, unknown = (orders) => { const x = box(0, 'start', orders); x.anatomy.root.stackUnknown = true; return x; };
+      const r = roundTrip(first([0, 1, 2]), unknown([2, 1, 0])).rows, w = roundTrip(first([0, 1, 2]), unknown([1, 2, 0])).rows;
+      ok('a box whose stacking the reading could not tell is one row, its children\'s order compared in the design\'s direction', r.length === 1 && !r.some((x) => /\.order$/.test(x.at)) && w.some((x) => /\.order$/.test(x.at)), JSON.stringify(r)); }
     { const L = { layoutUnit: true }, abs = (x) => { x.anatomy.c1.position = 'absolute'; return x; }, slot = (x) => { x.anatomy.root.kind = 'slot'; return x; };
       ok('a gap below 0 with fewer than two children in the flow is no value against a reading from code: there is nothing to space', roundTrip(box(-8, 'start', [0]), box(0, 'start', [0]), L).rows.length === 0
         && roundTrip(abs(box(-8, 'start', [0, 1])), abs(box(0, 'start', [0, 1])), L).rows.length === 0

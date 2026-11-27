@@ -791,7 +791,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       { when: { size: 'sm', open: true }, set: { 'pop.layout': { direction: 'column' } } }] };
   const code = { props: structuredClone(design.props),
     anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0 } }, bar: { kind: 'container', parent: 'root', layout: { direction: 'row' } },
-      free: { kind: 'container', parent: 'root', layout: { direction: 'row' } }, ring: { kind: 'container', parent: 'free', position: 'absolute' } },
+      free: { kind: 'container', parent: 'root', layout: { direction: 'row' } }, dot: { kind: 'container', parent: 'free' }, ring: { kind: 'container', parent: 'free', position: 'absolute' } },
     variants: [{ when: { size: 'sm' }, set: { 'root.layout': { direction: 'row', gap: 4 } } },
       { when: { open: true }, add: { pop: { kind: 'container', parent: 'root', layout: { direction: 'column', firstOnTop: true } }, tip: { kind: 'container', parent: 'root', layout: { direction: 'row' } } } }] };
   stackLikeDesign(code, design, (t) => t);
@@ -801,6 +801,12 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     combos.every((w) => ['root', 'bar', 'tip', 'pop'].every((id) => fot(code, w, id) === undefined || fot(code, w, id) === fot(design, w, id)))
     && fot(code, { size: 'sm', open: false }, 'root') === true && fot(code, { size: 'md', open: true }, 'tip') === true && fot(code, { size: 'sm', open: true }, 'pop') === false
     && combos.every((w) => fot(code, w, 'free') === false)); }
+{ // a child placed absolutely can overlap the rest, though the design places it so too: its stacking is the code's as
+  // read (by z-index or paint), never the design's copied, so a background painted over its text is a row
+  const design = { props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, firstOnTop: true } }, text: { kind: 'text', parent: 'root', order: 0 }, bg: { kind: 'graphic', parent: 'root', order: 1, position: 'absolute' } }, variants: [] };
+  const code = { props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0 } }, text: { kind: 'text', parent: 'root', order: 0 }, bg: { kind: 'graphic', parent: 'root', order: 1, position: 'absolute' } }, variants: [] };
+  stackLikeDesign(code, design, (t) => t);
+  ok('a box with a child placed absolutely keeps the stacking read off the code, where the design places it so too', !code.anatomy.root.layout.firstOnTop); }
 { // a reading's rest state is the design's Enabled (a library's slider): its stacking goes on the reading's own rest, never
   // on a layer naming `enabled`, a state the reading has no word for, which held at no combination it draws
   const st = (values, def) => ({ type: 'enum', values, default: def, figma: 'State', role: 'interaction', pointer: ['hover'] });
@@ -1528,7 +1534,12 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   const k = (z, extra = {}) => ({ stack: { z, ...extra } });
   const rev = [k(3), k(2), k(1)], fwd = [k(1), k(2), k(3)];
   ok('children whose z-index paints the first on top read as first on top, one placed absolutely among them too; the last on top, or a child with none, not',
-    stackedFirst(rev) && !stackedFirst(fwd) && !stackedFirst([k(3), { stack: {} }, k(1)]) && stackedFirst([k(3), k(2, { out: true }), k(1)]) && stackedFirst([k(3), k(1, { out: true }), k(2)]) && stackedFirst([k(3), k(1, { out: true })]) && !stackedFirst([k(1), k(3, { out: true })]) && !stackedFirst([k(1)])); }
+    stackedFirst(rev) && !stackedFirst(fwd) && !stackedFirst([k(3), { stack: {} }, k(1)]) && stackedFirst([k(3), k(2, { out: true }), k(1)]) && stackedFirst([k(3), k(1, { out: true }), k(2)]) && stackedFirst([k(3), k(1, { out: true })]) === null && stackedFirst([k(3), k(2, { out: true }), k(1, { out: true })]) === null && !stackedFirst([k(1), k(3, { out: true })]) && !stackedFirst([k(1)]));
+  // (where each child says its place in the design by order, as to-code writes it in a restacked box, that is the
+  // reference, a part out of the flow written out of the design's order among them too)
+  const o = (z, cssOrder, extra = {}) => ({ cssOrder, stack: { z, ...extra } });
+  ok('children that say their design place by order are judged against it, not the markup\'s order',
+    stackedFirst([o(2, 2), o(1, 3, { out: true }), o(3, 1, { out: true })]) && !stackedFirst([o(2, 2), o(3, 3, { out: true }), o(1, 1, { out: true })])); }
 // a first-on-top box's children numbered the reverse of their paint, a part placed absolutely last though written first
 // (a field's background under its text, inside a placed component whose box's layout is not read); else as painted
 { const { childOrder } = await import('./rules.mjs');
@@ -1536,7 +1547,15 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   const ids = (r) => r.ranked.map((e) => e.id).join();
   ok('a first-on-top box\'s children are numbered the reverse of their paint, its absolute part among them; else as painted',
     ids(childOrder([text, bg, icons])) === 'text,icons,bg' && childOrder([text, bg, icons]).first
-    && ids(childOrder([{ id: 'a' }, { id: 'b', stack: { out: true } }])) === 'a,b' && !childOrder([{ id: 'a' }, { id: 'b' }]).first); }
+    && ids(childOrder([{ id: 'a' }, { id: 'b', stack: { out: true } }])) === 'a,b' && !childOrder([{ id: 'a' }, { id: 'b' }]).first);
+  // (two at the same z-index paint the later on top, so the later is the first of the two)
+  const z = (id, v) => ({ id, stack: { z: v } });
+  ok('children at the same z-index are numbered as they paint, the later one on top', ids(childOrder([z('a', 2), z('b', 1), z('c', 1)], undefined, () => true)) === 'a,c,b');
+  // (later as laid out: by CSS order before the markup's)
+  ok('children at the same z-index are numbered by their laid-out order, CSS order first', ids(childOrder([z('a', 2), { ...z('b', 1), cssOrder: 3 }, { ...z('c', 1), cssOrder: 2 }], undefined, () => true)) === 'a,b,c');
+  // (one child in the flow and no CSS order: which way the z-index counts is not known, read as painted)
+  const u = childOrder([z('a', 2), { id: 'b', stack: { z: 1, out: true } }]);
+  ok('a box whose order the code does not say reads as painted, its first-on-top unknown', u.first === null && ids(u) === 'b,a', JSON.stringify(u)); }
 // a design prop the engine's rule joined to no arg, where the toolkit's markup renamed it off an HTML attribute's name,
 // joins that arg: a flag's title (titleOption) keeps the design's name, never read back as Title beside it
 { const design = { title: { type: 'string' }, size: { type: 'string' }, label: { type: 'string' }, hidden: { type: 'string' } };
