@@ -34,7 +34,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
 import { expand, drawLayers, variantDefaults, kebab, camel, placedOf as heldBy, openForeign } from './layers.mjs';
-import { declarations, holds, rem } from './css.mjs';
+import { declarations, holds, rem, borderBox } from './css.mjs';
 import { negative, heldOpacity, heldGlyph, bareGlyph, siblingOrder, liftsAlone, CLEARED, UNCLIPPED } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
@@ -1031,7 +1031,8 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
       const content = along ? flow.reduce((t, x) => t + x[k], 0) + (flow.length - 1) * (l.gap ?? 0) : Math.max(...flow.map((x) => x[k]));
       return +Math.max(content + (ends[0] ?? 0) + (ends[1] ?? 0), p[k === 'width' ? 'minWidth' : 'minHeight'] ?? 0).toFixed(2);
     };
-    const box = parent ? { width: sizeOf(e.parent, 'width'), height: sizeOf(e.parent, 'height') } : null;
+    // (and the border its stroke draws, which a share of it is measured inside: css.mjs borderBox)
+    const box = parent ? { width: sizeOf(e.parent, 'width'), height: sizeOf(e.parent, 'height'), border: borderBox(parent) } : null;
     // in a box whose gap is below 0 in any combination, every child says its pull back in every one: the gap after
     // the first in the flow, 0 for the first and for a placed part, 0 where the gap is not below 0 (a variant's own
     // value, never an unset that would leave the base's)

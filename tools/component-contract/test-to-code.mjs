@@ -1205,5 +1205,11 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const at = (p) => (d.decls.find(([q]) => q === p) || [])[1];
   ok('a scaled glyph with its point inside a 16 frame is written as shares: 6.25% in, 87.5% wide and high, nothing unshared',
     at('position') === 'absolute' && at('inset-inline-start') === '6.25%' && at('inset-block-start') === '6.25%' && at('inline-size') === '87.5%' && at('block-size') === '87.5%' && !d.unshared.length);
+  // (in a parent whose inside stroke is a CSS border, 2 all round: CSS takes the percentage of the 12 inside it, and the
+  // offset from inside it, Figma's 2 from the outer edge; through toCss, as the sheet reads the parent)
+  const c = { component: 'Badge', props: {}, variants: [], anatomy: { root: { kind: 'container', width: 16, height: 16, border: { color: 'C/line', width: 2, align: 'inside', inLayout: true } },
+    glyph: { kind: 'graphic', parent: 'root', width: 6, height: 6, absolute: { x: 5, y: 5 }, constraints: { horizontal: 'scale', vertical: 'scale' }, background: 'C/fill' } } };
+  const css = toCss(c, 'badge');
+  ok('…and in a parent with a 2 border, of the 12 inside it, from inside it: 25% in, 50% wide', /inset-inline-start: 25%;/.test(css) && /inline-size: 50%;/.test(css) && /border-top: 2px solid/.test(css), css);
 }
 console.log(`${n} passed`);

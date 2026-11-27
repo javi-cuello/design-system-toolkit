@@ -35,6 +35,15 @@ export const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
    offset and its own size, each a number (the parent's above 0). Where not (a parent that hugs or fills, a part with no
    size or point of its own there), the sheet says it unread and declarations() returns the axis as unshared; what code
    draws there is code's (eval.mjs leftToCode, through to-code's unsharedAt). */
+/* The widths a part's stroke takes as a CSS border, by side (start, end, top, bottom): only an inside stroke in the
+   layout is one (declarations' border), else 0 all round; a side whose width is a token, null (no number to take off).
+   A child placed in it is offset from inside that border (CSS's padding box), Figma's from the outer edge. */
+export function borderBox(P) {
+  const b = P && P.border, none = { start: 0, end: 0, top: 0, bottom: 0 };
+  if (!b || b.color === undefined || (b.align || 'inside') !== 'inside' || !b.inLayout) return none;
+  const widths = Array.isArray(b.width) ? b.width : SIDES.map((x) => b.width ?? (b.sides && typeof b.sides[x] === 'number' ? b.sides[x] : 1));
+  return Object.fromEntries(SIDES.map((x, i) => [x, (b.sides ? !b.sides[x] : widths[i] === 0) ? 0 : typeof widths[i] === 'number' ? widths[i] : null]));
+}
 export const shareable = (whole, offset, own) => typeof whole === 'number' && whole > 0 && typeof offset === 'number' && typeof own === 'number';
 
 export function declarations(e, { root = false, holds = false, row = true, wrap = false, anchors = false, box = null, pull = null, words = null } = {}, names) {
@@ -234,12 +243,15 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
       // scaled with its parent: CSS has no such constraint, and its synonym (rules.mjs SCALE) is a share of the parent,
       // its offset and its size each a percentage of the parent's size
       else if (to === 'scale') {
-        const whole = box && box[k], own = e[k];
+        // (of the parent's padding box, as CSS takes a percentage: its border, where its stroke is one, taken off the
+        // whole and the offset, Figma's both from the outer edge)
+        const bd = (box && box.border) || {}, [b0, b1] = k === 'width' ? [bd.start ?? 0, bd.end ?? 0] : [bd.top ?? 0, bd.bottom ?? 0];
+        const whole = box && typeof box[k] === 'number' && typeof b0 === 'number' && typeof b1 === 'number' ? box[k] - b0 - b1 : null, own = e[k];
         if (shareable(whole, o, own)) {
-          put(near, share(o, whole));
+          put(near, share(o - b0, whole));
           for (let i = decls.length - 1; i >= 0; i--) if (decls[i][0] === size) decls.splice(i, 1);
           put(size, share(own, whole));
-        } else { unread.push(`constraints (scale: its parent's ${k}, its own or its offset is no number, so no share of it can be written)`); unshared.push(k === 'width' ? 'horizontal' : 'vertical'); }
+        } else { unread.push(`constraints (scale: its parent's ${k} inside its border, its own or its offset is no number, so no share of it can be written)`); unshared.push(k === 'width' ? 'horizontal' : 'vertical'); }
       }
       else put(near, off);
     }
