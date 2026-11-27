@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations } from './css.mjs';
-import { combinations, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
+import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp } from './layers.mjs';
 
@@ -396,7 +396,22 @@ const inOrder = (c, list) => markupOrder(c, list).order;
 /* The placed instance a part sits straight in (no nearer instance between them), where some variant detaches it (sets
    its kind to a frame, a field's menu at read-only); else null. Where it is detached, the part is this component's own,
    named as the sheet names it there (to-code's chain: as the placed component names its own parts). */
-const detaches = (c, id) => (c.variants || []).some((v) => !pointerWords(c, v.when) && (v.set || {})[`${id}.kind`] && v.set[`${id}.kind`] !== 'instance');
+// (at the combination of a variant that detaches it, as expand draws it there: a narrower variant may set it back)
+const detaches = (c, id) => (c.variants || []).some((v) => !pointerWords(c, v.when) && (v.set || {})[`${id}.kind`] && v.set[`${id}.kind`] !== 'instance' && ((expand(c, { ...variantDefaults(c), ...(v.when || {}) })[id] || {}).kind || 'instance') !== 'instance');
+/* The root condition under which every detaching instance a layer sits in is a frame, as the sheet says a prop's value
+   (to-code's condition): each variant that detaches one, but where a later one places it again. A layer read by its own
+   hook only there; where the instance is placed it is the placed component's, which only its own mapping reads. */
+function detachedWhere(c, n, id, { settings, mains, library }) {
+  const whenSel = (w) => Object.entries(w || {}).map(([k, v]) => condition(c, n, k, v, settings, mains, library)).join('');
+  let out = '';
+  for (let up = (at(c, id) || {}).parent; up && up !== 'root'; up = (at(c, up) || {}).parent) {
+    if ((at(c, up) || {}).kind !== 'instance' || !detaches(c, up)) continue;
+    const kinds = (c.variants || []).filter((v) => !pointerWords(c, v.when) && (v.set || {})[`${up}.kind`]), byOrder = [...kinds.filter((v) => !v.combination), ...kinds.filter((v) => v.combination)];
+    const first = byOrder.findIndex((v) => v.set[`${up}.kind`] !== 'instance');
+    out += `:is(${byOrder.filter((v) => v.set[`${up}.kind`] !== 'instance').map((v) => whenSel(v.when) || '*').join(', ')})` + byOrder.slice(first + 1).filter((v) => v.set[`${up}.kind`] === 'instance').map((v) => `:not(${whenSel(v.when)})`).join('');
+  }
+  return out;
+}
 export function detachedHost(c, id) {
   for (let up = (at(c, id) || {}).parent; up && up !== 'root'; up = (at(c, up) || {}).parent) if ((at(c, up) || {}).kind === 'instance') return detaches(c, up) ? up : null;
   return null;
@@ -487,7 +502,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const detachedHook = (id) => {
     if (!detachedHost(c, id)) return null;
     const last = selectorOf(c, n, id, (name, key = null) => placedOf(library, { component: name, key }), library).split(' > ').pop();
-    const m = n.element ? /^\[data-part="([^"]+)"\]$/.exec(last) : /^\.([\w-]+)$/.exec(last);
+    // (a numbered copy's hook is its first's, the sheet counting it among those: partSelector's :nth-child)
+    const m = n.element ? /^\[data-part="([^"]+)"\](?::nth-child\([^)]*\))?$/.exec(last) : /^\.([\w-]+)(?::nth-child\([^)]*\))?$/.exec(last);
+    if (!m) gaps.push(`${partName(id)}: inside ${partName(detachedHost(c, id))}, which a variant detaches, the sheet reaches it by ${last}, no hook the markup can draw: drawn by its own name, which nothing styles or reads`);
     return m && [n.element ? 'data-part' : 'className', { lit: m[1] }];
   };
   const hook = (id) => [detachedHook(id) || (n.element ? ['data-part', { lit: seg(id) }] : ['className', { lit: n.part(seg(id)).slice(1) }]), ...nameAttr(id), ...modeAttrs(id)];
@@ -698,10 +715,14 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // an instance a variant detaches (Figma's detach: a frame of its own with the layers listed under it, a field's
       // menu at read-only): that frame, its layers drawn as this component's own, where the variant holds; the placed
       // component elsewhere
-      const detach = (c.variants || []).filter((v) => !pointerWords(c, v.when) && (v.set || {})[`${id}.kind`] && v.set[`${id}.kind`] !== 'instance').map((v) => testOf(v.when || {})).filter(Boolean);
+      // (each variant that sets its kind, in the order expand applies them, a combination last: a narrower one that sets it
+      // back to an instance places the component again there)
+      const kinds = (c.variants || []).filter((v) => !pointerWords(c, v.when) && (v.set || {})[`${id}.kind`]), byOrder = [...kinds.filter((v) => !v.combination), ...kinds.filter((v) => v.combination)];
+      const detach = byOrder.filter((v) => v.set[`${id}.kind`] !== 'instance').map((v) => testOf(v.when || {})).filter(Boolean);
       if (!detach.length) return instanceOut(when);
       const wrap = (x) => (/^!?[\w$]+$/.test(x) ? x : `(${x})`);
-      const d = detach.includes('true') ? 'true' : detach.length === 1 ? detach[0] : detach.map(wrap).join(' || ');
+      const d = byOrder.every((v) => v.set[`${id}.kind`] !== 'instance') ? (detach.includes('true') ? 'true' : detach.length === 1 ? detach[0] : detach.map(wrap).join(' || '))
+        : byVariant(byOrder, (v) => String(v.set[`${id}.kind`] !== 'instance'), 'false');
       const and = (x, y) => (!x ? y : `${wrap(x)} && ${wrap(y)}`);
       const frame = { tag: control || inline ? 'span' : 'div', attrs: hook(id), children: (kids.get(id) || []).flatMap((k) => node(k, { yes: new Set([...known.yes, d]), no: known.no }, true)).filter(Boolean) };
       return [...(d === 'true' ? [] : instanceOut(and(when, `!${wrap(d)}`))), d === 'true' && !when ? frame : { when: d === 'true' ? when : and(when, d), node: frame }];
@@ -1211,7 +1232,10 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     // and what it puts in a placed component's slot (a menu's items), by its own hook under that slot
     const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains, library)) || (x.inside && framework === 'web-components' && copySelector(c, n, x.id, mains, library)) || (x.inside && sampleSelector(c, n, x.id, mains, library));
     // (one in an instance a variant detaches is this component's own there: read by the hook the markup draws it with)
-    const at = nested ? nested : x.inside && detachedHost(c, x.id) ? partSelector(c, n, x.id, x, library) : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
+    // (only where the layer is drawn nowhere but there: elsewhere it is the placed component's, skipped as before)
+    const free = x.inside && !nested && detachedHost(c, x.id);
+    const own = free && partSelector(c, n, x.id, x, library);
+    const at = nested ? nested : own && own.startsWith(`${root} > `) ? `${root}${detachedWhere(c, n, x.id, { settings, mains, library })}${own.slice(root.length)}` : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
       // (a sample in a placed component's slot, where this one puts nothing there: that component's to draw)
       : x.slotted && (parts.get(x.slotted) || {}).inside ? { skip: 'a sample of what a caller puts in the slot' }
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }

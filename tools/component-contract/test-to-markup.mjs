@@ -957,7 +957,24 @@ else {
     /\(!\(state === "read-only"\)\) && placed\(parts\["base"\], renderBase/.test(el) && /\(state === "read-only"\) && h\("div", \{ "data-part": "base" \},\s*h\("div", \{ "data-part": "items" \},\s*h\("span", \{ "data-part": "words" \},\s*"Read"\)/.test(el), el);
   // (and read back by that hook: the mapping names the detached layer as the sheet and the markup do, never skipped)
   const layers = toParity(field, 'field', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers;
-  ok('a layer listed under a detached instance is mapped by the hook it is drawn with there', layers['Base > Items > Words'] === 'ds-field > [data-part="base"] > [data-part="items"] > [data-part="words"]', JSON.stringify(layers)); }
+  ok('a layer listed under a detached instance is mapped by the hook it is drawn with there', layers['Base > Items > Words'] === 'ds-field:is([state="read-only"]) > [data-part="base"] > [data-part="items"] > [data-part="words"]', JSON.stringify(layers));
+  // an instance placed in the detached one, detached in turn (its id not under its box's): drawn, styled and read by one
+  // hook, never an empty one
+  const nest = { ...field, anatomy: { ...field.anatomy, inner: { kind: 'instance', parent: 'base/items', component: 'Base', order: 1 }, 'inner/items': { kind: 'container', parent: 'inner', order: 0 } },
+    variants: [{ when: { state: 'read-only' }, set: { 'base.kind': 'container', 'base.component': null, 'inner.kind': 'container', 'inner.component': null, 'inner/items.layout': { direction: 'row', gap: 8 } } }] };
+  const nl = { ...lib, Field: { ...nest, folder: 'field' } }, nel = toElement(nest, 'field', { naming: ELEMENT, library: nl }), ncss = toCss(nest, 'field', { naming: ELEMENT, library: nl }), nmap = toParity(nest, 'field', { naming: ELEMENT, library: nl, framework: 'web-components' }).layers;
+  ok('an instance nested in a detached one and detached too is drawn, styled and mapped by the same hook',
+    /h\("div", \{ "data-part": "inner" \},\s*h\("div", \{ "data-part": "items" \}/.test(nel) && !ncss.includes('[data-part=""]') && /\[data-part="inner"\] > \[data-part="items"\] \{/.test(ncss) && nmap['Base > Items > Inner'] === 'ds-field:is([state="read-only"]) > [data-part="base"] > [data-part="items"] > [data-part="inner"]', `${nel}\n${ncss}\n${JSON.stringify(nmap)}`);
+  // a layer under the detached instance that is also drawn where the instance is placed (a variant adds it there too) is
+  // the placed component's there: mapped only where the instance is detached, never by one selector blind to the
+  // combination, which would name whatever the placed component draws at that hook; and a narrower
+  // variant that places the instance again draws the placed component there
+  const back = { ...field, props: { ...field.props, small: { type: 'boolean', default: false, figma: 'Small' } },
+    variants: [field.variants[0], { when: { small: true }, add: { 'base/items/extra': { kind: 'text', parent: 'base/items', content: 'X', order: 1 } } },
+      { when: { state: 'read-only', small: true }, combination: true, set: { 'base.kind': 'instance', 'base.component': 'Base' } }] };
+  const bl = { ...lib, Field: { ...back, folder: 'field' } }, bel = toElement(back, 'field', { naming: ELEMENT, library: bl }), bmap = toParity(back, 'field', { naming: ELEMENT, library: bl, framework: 'web-components' }).layers;
+  ok('a layer a detached instance also draws placed is mapped only where the instance is detached', bmap['Base > Items > Extra'] === 'ds-field:is([state="read-only"]):not([state="read-only"][small]:not([small="false"])) > [data-part="base"] > [data-part="items"] > [data-part="extra"]', JSON.stringify(bmap));
+  ok('a narrower variant that sets a detached instance back places the component there', /\(state === "read-only" && small\) \? false : \(\(state === "read-only"\) \? true : false\)/.test(bel), bel); }
 
 // a variable mode a holder sets on a placed instance overrides that component's own (Figma's instance override): the
 // component writes its own mode before the host's attributes, and the holder sets none (null) where it overrides nothing

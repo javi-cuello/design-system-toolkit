@@ -1225,7 +1225,10 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
     // each placed component names its own parts, down to the next one placed in it, which names the rest
     for (let h = host, hm = m, rest = segs.slice(hostAt + 1); rest.length && hm;) {
       const n2 = namer(hm.folder || folderOf(hm.component), n.naming);
-      const { M, back } = placedAs(all, h, hm, mains), match = placedOf(all, h, M), own = (s) => back[match[s.slice(h.length + 1)]] || s.slice(h.length + 1);
+      // (a layer's path under the instance: its id past the instance's, or, for an id that does not start with it, its
+      // boxes' down from the instance, its own last: never an id cut at the instance's length, which names nothing)
+      const rel = (s) => (s.startsWith(`${h}/`) ? s.slice(h.length + 1) : (((all[s] || {}).parent === h || !(all[s] || {}).parent) ? s.split('/').pop() : `${rel(all[s].parent)}/${s.split('/').pop()}`));
+      const { M, back } = placedAs(all, h, hm, mains), match = placedOf(all, h, M), own = (s) => back[match[rel(s)]] || rel(s);
       const next = rest.slice(0, -1).findIndex((s) => all[s] && all[s].kind === 'instance' && mains(all[s].component, all[s].key));
       const take = next >= 0 ? rest.slice(0, next + 1) : rest;
       // (a numbered copy of the placed component's, which shares its first's hook, counted among those: partSelector's)
