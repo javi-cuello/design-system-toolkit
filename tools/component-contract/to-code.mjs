@@ -1051,10 +1051,42 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE) {
 
 /* What the rules give one part at one combination: per property, the winner by specificity then order. */
 function cascade(rules, full, id) {
+  return cascadeOf(rulesAt(rules, full), id);
+}
+/* The rules that hold at one combination, in their order, once for every part read there. Found by an index, not by
+   testing each rule: rules grouped by the props they name, then by those props' values, so a combination looks up one
+   entry per group (a contract with thousands of combinations has as many rules: testing each at each was most of its
+   check, over two minutes). The index follows the list as rulesOf adds to it; a rule's `when` is never changed. */
+const RULE_INDEX = new WeakMap();
+const valueKey = (keys, w) => keys.map((k) => `${typeof w[k]}:${String(w[k])}`).join('\u0000');
+function rulesAt(rules, full) {
+  let x = RULE_INDEX.get(rules);
+  if (!x) RULE_INDEX.set(rules, (x = { n: 0, groups: new Map() }));
+  for (; x.n < rules.length; x.n++) {
+    const keys = Object.keys(rules[x.n].when).sort(), g = keys.join('\u0000');
+    if (!x.groups.has(g)) x.groups.set(g, { keys, by: new Map() });
+    const by = x.groups.get(g).by, v = valueKey(keys, rules[x.n].when);
+    if (!by.has(v)) by.set(v, []);
+    by.get(v).push(x.n);
+  }
+  const at = [];
+  for (const { keys, by } of x.groups.values()) at.push(...(by.get(valueKey(keys, full)) || []));
+  return at.sort((a, b) => a - b).map((i) => rules[i]);
+}
+/* drawn, and expand, once per combination within one rulesOf or selfCheck (each reads a combination as itself and as
+   the rest of a pointer state: the same combination drawn twice and more). Their results are only read. */
+const fullKey = (full) => JSON.stringify(Object.entries(full).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+const drawnOnce = (memo) => {
+  const draw = (c, full, mains, t) => { const k = `d${fullKey(full)}`; if (!memo.has(k)) memo.set(k, drawn(c, full, mains, t)); return memo.get(k); };
+  draw.expand = (c, full) => { const k = `e${fullKey(full)}`; if (!memo.has(k)) memo.set(k, expand(c, full)); return memo.get(k); };
+  return draw;
+};
+function cascadeOf(held, id) {
   const won = new Map();
-  for (const r of rules) {
-    if (!Object.entries(r.when).every(([k, v]) => full[k] === v)) continue;
-    for (const [p, d] of (r.parts[id] || new Map())) {
+  for (const r of held) {
+    const ps = r.parts[id];
+    if (!ps) continue;
+    for (const [p, d] of ps) {
       const had = won.get(p);
       if (!had || had.weight <= r.weight) won.set(p, { ...d, weight: r.weight });
     }
@@ -1068,10 +1100,10 @@ function cascade(rules, full, id) {
 // a part hidden at a pointer state, and, where it is drawn in a turn's wrapper (turnedParts), the wrapper too, so no box
 // keeps its room and its share of the gap
 const withTurns = (c, ids) => { const T = turnedParts(c); return ids.flatMap((id) => (T.has(id) ? [id, `${id}::turn`] : [id])); };
-function pointerGone(c, full, dflt, mains, t = HOUSE) {
+function pointerGone(c, full, dflt, mains, t = HOUSE, draw = drawn) {
   const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
   if (!pk || full[pk] === dflt[pk] || !(c.props[pk].pointer || []).includes(full[pk])) return [];
-  const at = { ...full, [pk]: dflt[pk] }, rest = drawn(c, at, mains, t), restA = expand(c, at), nowA = expand(c, full);
+  const ex = draw.expand || expand, at = { ...full, [pk]: dflt[pk] }, rest = draw(c, at, mains, t), restA = ex(c, at), nowA = ex(c, full);
   // (a part inside a placed component is drawn at rest only where it overrides the component: one that says only the
   // component's own values, given, is the component's part, and a pointer state that drops it draws it as the component)
   return Object.keys(rest).filter((id) => [...rest[id].decls.values()].some((d) => !d.given) && restA[id] && !nowA[id] && !id.includes('::') && (!restA[id].parent || restA[id].parent === 'root' || nowA[restA[id].parent]));
@@ -1090,10 +1122,10 @@ function shownPartsOf(c, t) {
   // draw is no element this markup holds)
   return [...partsOf(c, t).values()].filter((p) => p.pointerShown && !p.id.includes('::')).map((p) => p.id);
 }
-function pointerShown(c, full, t = HOUSE) {
+function pointerShown(c, full, t = HOUSE, ex = expand) {
   const ids = shownParts(c, t);
   if (!ids.length) return [];
-  const nowA = expand(c, full), all = { ...Object.assign({}, ...(c.variants || []).map((v) => v.add || {})), ...c.anatomy };
+  const nowA = ex(c, full), all = { ...Object.assign({}, ...(c.variants || []).map((v) => v.add || {})), ...c.anatomy };
   return ids.filter((id) => { const p = all[id].parent; return !nowA[id] && (!p || p === 'root' || nowA[p]); });
 }
 
@@ -1102,18 +1134,18 @@ export function rulesOf(c, mains, t = HOUSE) {
   const layers = [{ when: {} }, ...(c.variants || []).filter((v) => !v.combination), ...(c.variants || []).filter((v) => v.combination)]
     .map((v, i) => ({ v, i })).sort((x, y) => Object.keys(x.v.when || {}).length - Object.keys(y.v.when || {}).length || x.i - y.i).map((x) => x.v);
   // (unshared: the parts each axis's scale constraint went unwritten on at some layer, sharesNeverWritten's)
-  const rules = [], unread = new Map(), unshared = new Map();
+  const rules = [], unread = new Map(), unshared = new Map(), draw = drawnOnce(new Map());
   for (const v of layers) {
     const when = v.combination ? { ...v.when } : Object.fromEntries(Object.entries(v.when || {}).filter(([k, x]) => x !== dflt[k] || v.combination));
-    const full = { ...dflt, ...when };
-    const now = drawn(c, full, mains, t);
+    const full = { ...dflt, ...when }, held = rulesAt(rules, full);
+    const now = draw(c, full, mains, t);
     // (the parts a pointer state takes away here, hidden below)
-    const gone = new Set(withTurns(c, pointerGone(c, full, dflt, mains, t)));
+    const gone = new Set(withTurns(c, pointerGone(c, full, dflt, mains, t, draw)));
     const parts = {};
     for (const [id, { decls, unread: u, unshared: x }] of Object.entries(now)) {
       for (const f of u) { if (!unread.has(f)) unread.set(f, new Set()); unread.get(f).add(id); }
       for (const axis of x || []) { if (!unshared.has(axis)) unshared.set(axis, new Set()); unshared.get(axis).add(id); }
-      const given = cascade(rules, full, id);
+      const given = cascadeOf(held, id);
       const own = new Map();
       for (const [p, d] of decls) if (d.given ? given.has(p) && given.get(p).v !== d.v : !given.has(p) || given.get(p).v !== d.v) own.set(p, d);
       // a property the rules before it set that this combination does not draw goes back to the element's own
@@ -1122,7 +1154,7 @@ export function rulesOf(c, mains, t = HOUSE) {
     }
     // a part a pointer state takes away (a field's chevron at focus, where another stands): the markup holds it at every
     // state, so the sheet hides it there (to-markup names it pointerGone); the outermost part gone, its insides with it
-    for (const id of gone) if ((cascade(rules, full, id).get('display') || {}).v !== 'none') (parts[id] ||= new Map()).set('display', { v: 'none' });
+    for (const id of gone) if ((cascadeOf(held, id).get('display') || {}).v !== 'none') (parts[id] ||= new Map()).set('display', { v: 'none' });
     // (one a pointer state puts in, held by the markup beyond where the contract draws it, is hidden by selfCheck's rules
     // alone, each naming its whole combination: a hide on a layer would reach combinations that draw it, and showing it
     // again there would take a display this sheet cannot know, a placed component's own)
@@ -1139,7 +1171,7 @@ export function rulesOf(c, mains, t = HOUSE) {
     const base = rules.find((r) => !Object.keys(r.when).length);
     for (const id of withTurns(c, held)) (base.parts[id] ||= new Map()).set('display', { v: 'none' });
   }
-  for (const [key, miss] of groupBy(selfCheck(c, rules, mains, t), (o) => JSON.stringify([o.when, o.except || []]))) {
+  for (const [key, miss] of groupBy(selfCheck(c, rules, mains, t, draw), (o) => JSON.stringify([o.when, o.except || []]))) {
     const [when, except] = JSON.parse(key), parts = {};
     for (const o of miss) (parts[o.part] ||= new Map()).set(o.property, { v: o.want ?? 'unset', ...(o.knob && { knob: o.knob }) });
     rules.push({ when, weight: Object.keys(when).length, parts, ...(except.length && { except }) });
@@ -1174,15 +1206,15 @@ export function sharesNeverWritten(c, mains = NO_MAINS, t = HOUSE) {
 }
 
 /* The combinations whose drawn declarations the cascade does not rebuild: none, or it is a defect. */
-export function selfCheck(c, rules, mains, t = HOUSE) {
+export function selfCheck(c, rules, mains, t = HOUSE, draw = drawnOnce(new Map())) {
   rules ||= rulesOf(c, mains, t).rules;
   const dflt = variantDefaults(c);
-  const out = [];
+  const out = [], P = partsOf(c, t);
   for (const m of combinations(c)) {
-    const full = { ...dflt, ...m };
-    const gone = new Set(withTurns(c, pointerGone(c, full, dflt, mains, t)));
-    for (const [id, { decls }] of Object.entries(drawn(c, full, mains, t))) {
-      const got = cascade(rules, full, id);
+    const full = { ...dflt, ...m }, held = rulesAt(rules, full);
+    const gone = new Set(withTurns(c, pointerGone(c, full, dflt, mains, t, draw)));
+    for (const [id, { decls }] of Object.entries(draw(c, full, mains, t))) {
+      const got = cascadeOf(held, id);
       for (const [p, d] of decls) if (d.given ? got.has(p) && got.get(p).v !== d.v : !got.has(p) || got.get(p).v !== d.v) out.push({ when: m, part: id, property: p, want: d.v, got: got.get(p)?.v, ...(d.knob && { knob: d.knob }) });
       // (a pointer state's hide is the check below's, never a declaration this one lacks)
       for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset' && !(p === 'display' && gone.has(id))) out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
@@ -1190,9 +1222,9 @@ export function selfCheck(c, rules, mains, t = HOUSE) {
     // and a part a pointer state takes away stays hidden there, whatever a rule of the same weight gives it
     // (one only a pointer state draws is hidden here except while its own state holds, which the browser can match at once
     // with this combination's: a menu open at focus stays open while the box is also hovered)
-    const P = partsOf(c, t), ptr = (k, v) => (c.props[k] || {}).role === 'interaction' && ((c.props[k] || {}).pointer || []).includes(v);
+    const ptr = (k, v) => (c.props[k] || {}).role === 'interaction' && ((c.props[k] || {}).pointer || []).includes(v);
     const exceptOf = (id) => { const x = P.get(id.replace(/::turn$/, '')); return x && x.pointerHeld ? [...new Set(x.pointerAdds.flatMap((w) => Object.entries(w).filter(([k, v]) => ptr(k, v) && full[k] !== v).map(([k, v]) => `${k}=${v}`)))].map((kv) => kv.split('=')) : []; };
-    for (const id of withTurns(c, [...pointerGone(c, full, dflt, mains, t), ...pointerShown(c, full, t)])) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') { const ex = exceptOf(id); out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v, ...(ex.length && { except: ex }) }); } }
+    for (const id of withTurns(c, [...pointerGone(c, full, dflt, mains, t, draw), ...pointerShown(c, full, t, draw.expand)])) { const g = cascadeOf(held, id).get('display'); if (!g || g.v !== 'none') { const ex = exceptOf(id); out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v, ...(ex.length && { except: ex }) }); } }
   }
   return out;
 }

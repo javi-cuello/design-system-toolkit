@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt } from './from-code.mjs';
+import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1399,6 +1399,28 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
     namedAt(named, { 'select/field/clear': {} }).map((x) => x[1]).join() === 'root,select/field,select/field/clear'
     && namedAt(named, { 'select/field/down': {} }).map((x) => x[1]).join() === 'root,select/field,select/field/down'
     && namedAt(named, {}).map((x) => x[1]).join() === 'root,select/field,select/field/down,select/field/clear'); }
+{ // and named by what the element draws: a wrong stand-in (the chevron drawn where the clear icon is due) reads as the
+  // layer it is, so it differs, never as the layer the design wants there
+  const design = { anatomy: { root: { kind: 'container' }, 'f/down': { kind: 'instance', parent: 'root', component: 'Mark', with: { '<icon>': 'Chevron down' } } },
+    variants: [{ when: { s: 'rest' }, remove: ['f/down'], add: { 'f/clear': { kind: 'instance', parent: 'root', component: 'Mark', with: { '<icon>': 'Cross circle' } } } }] };
+  const named = [['a', 'root', null], ['b', 'f/down', null], ['b', 'f/clear', null]], names = (id) => layerNamesOf(design, id);
+  ok('namedAt: a shared element is named by the glyph it draws, drawn here or not; with no glyph that fits, by what is drawn here',
+    namedAt(named, { 'f/clear': {} }, { b: 'Chevron down' }, names).map((x) => x[1]).join() === 'root,f/down'
+    && namedAt(named, { 'f/clear': {} }, { b: 'Cross circle' }, names).map((x) => x[1]).join() === 'root,f/clear'
+    && namedAt(named, { 'f/clear': {} }, { b: 'Star' }, names).map((x) => x[1]).join() === 'root,f/clear'
+    && layerNamesOf(design, 'f/down').includes('Chevron down')); }
+{ // and a place another variant in force sets (placed absolutely at sm), and, where no add holds, only adds that may hold
+  // with the variant: never one it rules out (a menu drawn in flow at disabled hover)
+  const base = { contract: 1, component: 'P', props: { state: { type: 'enum', values: ['rest', 'focus', 'hover'], default: 'rest' }, size: { type: 'enum', values: ['md', 'sm'], default: 'md' }, off: { type: 'boolean', default: false } } };
+  const setBy = { ...base, anatomy: { root: { kind: 'container' }, pick: { kind: 'instance', parent: 'root', component: 'Pick' }, 'pick/menu': { kind: 'container', parent: 'pick' } },
+    variants: [{ when: { size: 'sm' }, set: { 'pick/menu.position': 'absolute' } }, { when: { size: 'sm', state: 'focus' }, set: { 'pick/menu.absolute': { x: 0, y: 40 } } }] };
+  const maybe = { ...base, anatomy: { root: { kind: 'container' }, pick: { kind: 'instance', parent: 'root', component: 'Pick' } },
+    variants: [{ when: { state: 'focus', size: 'sm' }, add: { 'pick/menu': { kind: 'container', parent: 'pick', position: 'absolute', absolute: { x: 0, y: 40 } } } },
+      { when: { state: 'focus' }, set: { 'pick/menu.absolute': { x: 0, y: 48 } } },
+      { when: { state: 'hover', off: true }, add: { 'pick/menu': { kind: 'container', parent: 'pick' } } }] };
+  const at = (c, w) => (asFigma(c).contract.variants.find((x) => JSON.stringify(x.when) === JSON.stringify(w)).set || {})['pick/menu.absolute'];
+  ok('asFigma: a place set by another variant in force counts, and where no add holds only adds that may hold with it do',
+    JSON.stringify(at(setBy, { size: 'sm', state: 'focus' })) === '{"x":0,"y":40}' && JSON.stringify(at(maybe, { state: 'focus' })) === '{"x":0,"y":48}'); }
 { // (and roundTrip, given such a reading against a design whose axis is `state`, raises no props row; review)
   const { roundTrip } = await import('./to-figma.mjs');
   const design = { contract: 1, component: 'L', props: { state: { type: 'enum', values: ['default', 'hover'], default: 'default', role: 'interaction', pointer: ['hover'], figma: 'state' } }, anatomy: { root: { kind: 'container' } }, variants: [] };

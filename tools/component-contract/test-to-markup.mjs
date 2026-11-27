@@ -1051,7 +1051,7 @@ else {
   const po = toElement(pick, 'pick', { naming: ELEMENT, library: L }), dout = toElement(date, 'date', { naming: ELEMENT, library: L });
   const m = toParity(date, 'date', { naming: ELEMENT, library: L, framework: 'web-components' }).byId;
   ok('a placeholder swap a holder fills with a library component is content: passed, drawn in its place, read under the holder\'s hook',
-    /\(slotOptions != null\) && slotOptions/.test(po) && /\(slotOptions == null\) && h\("span", \{ "data-part": "slot"/.test(po)
+    /typeof slotOptions !== "string"\) && slotOptions/.test(po) && /typeof slotOptions === "string"\) && h\("span", \{ "data-part": "slot"/.test(po)
     && /slotOptions: \[placed\(parts\["grid"\], renderGrid/.test(dout)
     && m['pick/menu/grid'] === 'ds-date > [data-part="pick"] > [data-part="menu"] > [data-part="grid"]'
     && m['pick/menu/grid/cell'] === 'ds-date > [data-part="pick"] > [data-part="menu"] > [data-part="grid"] > [data-part="cell"]', po + dout + JSON.stringify(m)); }
@@ -1076,5 +1076,20 @@ else {
   const L = { Pick: { ...pick, folder: 'pick' }, Date: { ...date, folder: 'date' } };
   const m = toParity(date, 'date', { naming: ELEMENT, library: L, framework: 'web-components' }).byId, chev = 'ds-date > [data-part="pick"] > [data-part="field"] > [data-part="chev"]';
   ok('two layers of the holder in one part of the placed component, at their own combinations, are each read there', m['pick/field/down'] === chev && m['pick/field/clear'] === chev, JSON.stringify(m)); }
+
+{ // a placeholder swap one holder fills with a library component and another with a drawing by name (a star): each
+  // holder decides its own; the drawing is passed by name and drawn as a mark, never the placeholder in its place
+  const slot = { component: 'Slot', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const grid = { component: 'Grid', props: {}, anatomy: { root: { kind: 'container' }, cell: { kind: 'text', parent: 'root', content: '1' } }, variants: [] };
+  const pick = { component: 'Pick', props: { slotOptions: { type: 'instance', figma: 'slot {Options}', swaps: ['menu/slot'] } },
+    anatomy: { root: { kind: 'container' }, menu: { kind: 'container', parent: 'root' }, 'menu/slot': { kind: 'instance', parent: 'menu', component: 'Slot', swappedBy: 'slotOptions' } }, variants: [] };
+  const date = { component: 'Date', props: {}, anatomy: { root: { kind: 'container' }, pick: { kind: 'instance', parent: 'root', component: 'Pick', with: { 'slot {Options}': 'Grid' } },
+    'pick/menu': { kind: 'container', parent: 'pick' }, 'pick/menu/grid': { kind: 'instance', parent: 'pick/menu', component: 'Grid' } }, variants: [] };
+  const rate = { component: 'Rate', props: {}, anatomy: { root: { kind: 'container' }, pick: { kind: 'instance', parent: 'root', component: 'Pick', with: { 'slot {Options}': 'Star' } },
+    'pick/menu': { kind: 'container', parent: 'pick' }, 'pick/menu/star': { kind: 'instance', parent: 'pick/menu', component: 'Star' } }, variants: [] };
+  const L = { Slot: { ...slot, folder: 'slot' }, Grid: { ...grid, folder: 'grid' }, Pick: { ...pick, folder: 'pick' }, Date: { ...date, folder: 'date' }, Rate: { ...rate, folder: 'rate' } };
+  const po = toElement(pick, 'pick', { naming: ELEMENT, library: L }), ro = toElement(rate, 'rate', { naming: ELEMENT, library: L });
+  ok('a placeholder swap is decided per holder: a drawing passed by name is drawn as its mark, never the placeholder',
+    /slotOptions: "Star"/.test(ro) && /"data-icon": typeof slotOptions === "string" \? slotOptions : "Slot"/.test(po) && /typeof slotOptions !== "string"\) && slotOptions/.test(po), po + ro); }
 
 console.log(`${n} passed`);

@@ -1419,8 +1419,23 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
   // (a variant's own: what it sets of the element, its parent, position and place, over the element as drawn where the
   // variant holds: the base's, else the adds of the variants in force there, never another variant's add of it, which
   // may draw it otherwise: a menu one ruled-out combination draws in flow)
+  // (in force there: every value it names holds there; compatible: none it names says otherwise, so both may hold at once)
   const holds = (u, v) => Object.entries(u.when || {}).every(([k, x]) => (v.when || {})[k] === x);
-  const drawnAt = (v, id) => contract.anatomy[id] || (variants.some((u) => u !== v && (u.add || {})[id] && holds(u, v)) ? Object.assign({}, ...variants.filter((u) => u !== v && (u.add || {})[id] && holds(u, v)).map((u) => u.add[id])) : all[id]);
+  const compatible = (u, v) => Object.entries(u.when || {}).every(([k, x]) => !(k in (v.when || {})) || v.when[k] === x);
+  const PLACE = ['parent', 'position', 'absolute', 'constraints'];
+  const drawnAt = (v, id) => {
+    const force = variants.filter((u) => u !== v && holds(u, v));
+    // (the base's and each add in force, in order, with the place each variant in force sets over it; where neither draws
+    // it, the adds of the variants that may hold with this one, never one it rules out)
+    let e = contract.anatomy[id] ? { ...contract.anatomy[id] } : null;
+    for (const u of force) {
+      if ((u.add || {})[id]) e = { ...(e || {}), ...u.add[id] };
+      for (const f of PLACE) if (e && `${id}.${f}` in (u.set || {})) e[f] = u.set[`${id}.${f}`];
+    }
+    if (e) return e;
+    const maybe = variants.filter((u) => u !== v && (u.add || {})[id] && compatible(u, v));
+    return maybe.length ? Object.assign({}, ...maybe.map((u) => u.add[id])) : null;
+  };
   const asIn = (v, id) => { const e = { ...(drawnAt(v, id) || {}), ...((v.add || {})[id] || {}) }; for (const f of ['parent', 'position', 'absolute', 'constraints']) if (`${id}.${f}` in (v.set || {})) e[f] = v.set[`${id}.${f}`]; return e; };
   const insideIn = (v, id) => { for (let up = asIn(v, id).parent; up; up = asIn(v, up).parent) if (asIn(v, up).kind === 'instance') return true; return false; };
   const gone = (v, k) => { const m = /^(.+)\.(constraints|absolute|content)(\.|$)/.exec(k); if (!m || !insideIn(v, m[1])) return false; const e = asIn(v, m[1]); return m[2] === 'content' ? e.kind === 'slot' : m[2] === 'absolute' ? framed(e) : loose(e); };
@@ -2068,11 +2083,29 @@ export function passedSwaps(fc, id, raw, bySlug, byName) {
 /** The mapping's layers in the order the walk takes them at one combination (`drawn`: the design's anatomy there):
  * shallower first, and of two at one depth, one the design draws here first, so where two layers share an element (a
  * picker's chevron at rest, its clear icon where a value is held) the one drawn here takes it, never the one listed
- * first, and the other, not drawn here, is left out. Tested by test-from-code.mjs. */
-export function namedAt(named, drawn) {
-  const depth = (x) => x[1].split('/').length, here = (x) => (drawn && x[1] in drawn ? 0 : 1);
-  const taken = new Set(named.filter((x) => !here(x)).map((x) => x[0]));
-  return named.filter((x) => !here(x) || !taken.has(x[0])).sort((a, b) => depth(a) - depth(b) || here(a) - here(b));
+ * first, and the other, not drawn here, is left out. Named by what the page draws first: where the element's glyph
+ * (`glyphs`, by selector: its own icon name, else the first inside it) is among the names one layer of them draws
+ * (`names(id)`: its component, its props' words, what is placed inside it), that one takes it, drawn here or not, so a
+ * wrong stand-in reads as the layer it is and differs. Tested by test-from-code.mjs. */
+export function namedAt(named, drawn, glyphs = {}, names = () => []) {
+  const depth = (x) => x[1].split('/').length, low = (v) => String(v).toLowerCase();
+  const shared = (x) => named.filter((y) => y[0] === x[0]);
+  const fits = (x) => glyphs[x[0]] != null && names(x[1]).map(low).includes(low(glyphs[x[0]]));
+  // (of a shared element: the layers its glyph names, else the ones the design draws here)
+  const best = (x) => { const all = shared(x); if (all.length < 2) return true; const fit = all.filter(fits); const pool = fit.length ? fit : all.filter((y) => drawn && y[1] in drawn); return !pool.length || pool.includes(x); };
+  const here = (x) => (drawn && x[1] in drawn ? 0 : 1);
+  return named.filter(best).sort((a, b) => depth(a) - depth(b) || here(a) - here(b));
+}
+/* The names a layer of the design draws (namedAt's `names`): its component and its last segment, the words its props
+   give, and the same of each instance inside it, at any combination. */
+export function layerNamesOf(design, id) {
+  const all = { ...(design.anatomy || {}), ...Object.assign({}, ...(design.variants || []).map((v) => v.add || {})) }, out = new Set();
+  for (const [k, e] of Object.entries(all)) {
+    if (!e || (k !== id && !k.startsWith(`${id}/`)) || e.kind !== 'instance') continue;
+    if (e.component) { out.add(e.component); out.add(String(e.component).split('/').pop()); }
+    for (const v of Object.values(e.with || {})) if (typeof v === 'string') out.add(v);
+  }
+  return [...out];
 }
 async function main() {
   const argv = process.argv.slice(2);
@@ -2307,6 +2340,9 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
+      // each element two layers of the design share, by what it draws (namedAt): its icon's name, else the first inside it
+      const twice = [...new Set(named.map((x) => x[0]).filter((sl, i, a) => a.indexOf(sl) !== i))];
+      const glyphs = twice.length ? await call(L.tab, (sels) => Object.fromEntries(sels.map((sl) => { const n = document.querySelector(sl), g = n && (n.getAttribute('data-icon') || (n.querySelector('[data-icon]') || { getAttribute: () => null }).getAttribute('data-icon')); return [sl, g || null]; })), twice) : {};
       const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)();
@@ -2574,7 +2610,7 @@ async function main() {
         const siblingOrder = new Function(`return ${siblingOrderSrc}`)();
         for (const xs of Object.values(byParent)) siblingOrder(xs).forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere()), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)

@@ -210,6 +210,9 @@ export function givenOf(placed, w, library = {}, lang = JS, settings = HOUSE) {
   const theirs = propsOf(placed, library, lang, settings), low = (v) => String(v).toLowerCase(), out = {};
   for (const [fig, v] of Object.entries(w || {})) {
     const x = theirs.find((y) => (y.figmas || [y.p.figma]).some((f) => f && low(f) === low(bareProp(fig))));
+    // (a swap that takes content, given a drawing by name, not a component of the library's this holder passes as its
+    // own instance (placedItem): that name, which the placed one draws as its mark, swapOf's `swapped`)
+    if (x && x.type === 'node' && x.swapped && typeof v === 'string' && !Object.values(library).some((m) => m && !isDrawing(m) && (m.component === v || String(m.component).split('/').pop() === v))) { out[x.name] = v; continue; }
     if (!x || ['value', 'node', 'event'].includes(x.type)) continue;
     if (x.type === 'boolean') { out[x.name] = v === true || /^true$/i.test(String(v)); continue; }
     const i = (x.p.figmaValues || []).map(low).indexOf(low(v)), lit = i >= 0 ? x.p.values[i] : v;
@@ -735,10 +738,11 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       out = { tag: 'span', attrs: [...hook(id), ['data-icon', glyph], ...(size ? [['data-icon-size', { lit: size }]] : []), ['aria-hidden', { lit: 'true' }]], children: [] };
     } else if (slot && slot.swapped && !lang.php) {
       // a swap that takes content (swapOf's `swapped`): what the caller passes stands in the swapped layer's place, as
-      // the design swaps that layer for it; else the design's own placeholder, marked by name as an icon is
-      const mark = { tag: 'span', attrs: [...hook(id), ['data-icon', { lit: e.component }], ['aria-hidden', { lit: 'true' }]], children: [] };
-      const and = (t) => (when ? `(${when}) && ${t}` : t);
-      return [{ when: and(`${ref(slot.name)} != null`), node: { code: ref(slot.name) } }, { when: and(`${ref(slot.name)} == null`), node: mark }];
+      // the design swaps that layer for it; a drawing passed by name (a holder's own choice: givenOf), marked by that
+      // name as an icon is; else the design's own placeholder, so marked
+      const r = ref(slot.name), mark = { tag: 'span', attrs: [...hook(id), ['data-icon', { code: `typeof ${r} === "string" ? ${r} : ${lang.str(e.component)}` }], ['aria-hidden', { lit: 'true' }]], children: [] };
+      const and = (t) => (when ? `(${when}) && (${t})` : t);
+      return [{ when: and(`${r} != null && typeof ${r} !== "string"`), node: { code: r } }, { when: and(`${r} == null || typeof ${r} === "string"`), node: mark }];
     } else if (slot) {
       // marked as a slot, so a reading of a component that fills it finds it (from-code)
       const given = lang.php ? `$slots->${slot.name}()` : slot.name;
