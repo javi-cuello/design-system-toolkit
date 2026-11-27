@@ -248,6 +248,11 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const mixed = roundTrip(st([{ when: { selected: true }, set: { 't.content': 'Picked' } }, { when: { state: 'focus' }, set: { 't.content': 'Search' } }]), st([{ when: { state: 'focus' }, set: { 't.content': 'Other' } }]), o).rows.find((y) => y.library === 'Search');
     ok('a pointer row carries the design\'s value at rest there; one over combinations whose rests differ, or no pointer state\'s, carries none',
       Object.hasOwn(r, 'rest') && r.rest === r.drawn && !Object.hasOwn(h, 'rest') && mixed && mixed.pointer === true && mixed.in === 2 && !Object.hasOwn(mixed, 'rest'), [r, h, mixed]);
+    // (review: the rest is held to the reading as the rows are, through diff()'s spellings: a placed instance's boolean
+    // prop true at rest, read back as True, is the rest the reading drew, so the row carries the reading's spelling)
+    const sw = (variants) => ({ ...st(variants), anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switch', with: { On: true } } } });
+    const [spelt] = roundTrip(sw([{ when: { state: 'focus' }, set: { 'sw.with': { On: false } } }]), sw([{ when: {}, set: { 'sw.with': { On: 'True' } } }]), o).rows.filter((y) => y.pointer);
+    ok('a pointer row\'s rest is read through diff()\'s spellings: a boolean true at rest read back as True is the rest drawn', spelt && spelt.at === 'sw.with.On' && spelt.rest === 'True', spelt);
     // (held to a reading, the pointer states are the design's: a reading may force disabled as a pseudo state too)
     const reading = st([{ when: { state: 'disabled' }, set: { 't.content': 'Off' } }], ['hover', 'focus', 'disabled']);
     ok('the pointer states are the given design\'s, never the reading\'s own list', roundTrip(reading, st([]), { ...o, pointerFrom: st([]) }).rows[0].pointer === undefined && roundTrip(reading, st([]), o).rows[0].pointer === true); }
@@ -669,6 +674,13 @@ delete globalThis.figma;
   const mains = (n) => (n === 'Tag' ? tag : null), at = (r) => r.rows.map((x) => x.at);
   ok('a placed part a combination overrides, drawn where the design leaves it to its component, is that component\'s own there',
     at(roundTrip(field('one'), field('both'), { mains })).length === 0, JSON.stringify(roundTrip(field('one'), field('both'), { mains }).rows));
+  // (review: a pointer row on such a part has the rest the rows' design side has there, filled as that component's own,
+  // never none: a tag's label pulled in at focus, read back with the tag's own words)
+  { const lt = { component: 'Tag', props: {}, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'A' } }, variants: [] };
+    const fp = (lib) => ({ component: 'Field', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, tag: { kind: 'instance', parent: 'root', component: 'Tag' }, ...(!lib && { 'tag/label': { kind: 'text', parent: 'tag', content: 'A' } }) },
+      variants: lib ? [{ when: { state: 'focus' }, add: { 'tag/label': { kind: 'text', parent: 'tag', content: 'Hot' } } }] : [] });
+    const [lr] = roundTrip(fp(true), fp(false), { mains: (n) => (n === 'Tag' ? lt : null), layoutUnit: true }).rows;
+    ok('a pointer row on a part filled as its component\'s own carries that own value as its rest', lr && lr.at === 'tag/label.content' && lr.pointer === true && lr.rest === 'A', lr); }
   const off = field('both'); off.anatomy['tag/content'] = { ...off.anatomy['tag/content'], layout: { direction: 'row', gap: 8 } };
   ok('…and one the code draws otherwise there is a row of that field, never an extra part', JSON.stringify(at(roundTrip(field('one'), off, { mains }))) === '["tag/content.layout.gap"]', JSON.stringify(roundTrip(field('one'), off, { mains }).rows));
   // (a part the component has no such layer for is no component's own: still an extra part where the code draws it)

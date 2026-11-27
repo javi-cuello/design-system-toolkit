@@ -412,10 +412,13 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   // (a row found only where pointer states' variants, a hover's or a focus's, alone set that field says so, `pointer`, where
   // one side is a browser's reading: what such a variant draws no markup holds, eval's leftToCode)
   // (and, for such a row, what the design holds at rest there, `rest`: the same combination with each pointer state at
-  // its rest, as the markup draws it, which holds no pointer state; one value over every combination the row was found
-  // in, else none. eval's gapOf excuses the row only where the reading drew that)
-  let byPointer = () => false, restAt = () => null;
-  const add = (at, a, b) => { adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0, pointer: true, rests: new Set() }; r.in++; r.pointer = r.pointer && byPointer(at); if (r.pointer) r.rests.add(restAt(at)); rows.set(k, r); };
+  // its rest, as the markup draws it, which holds no pointer state; the reading's own value where it is that rest at
+  // every combination the row was found in, as diff() holds two values the same, else the one rest there, else none.
+  // eval's gapOf excuses the row only where the reading drew it)
+  let byPointer = () => false, restAt = () => [null, false], probe = null;
+  const add = (at, a, b) => { if (probe) { probe.n++; return; } adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0, pointer: true, rests: new Set(), drawnAtRest: true }; r.in++; r.pointer = r.pointer && byPointer(at); if (r.pointer) { const [key, same] = restAt(at, b); r.rests.add(key); r.drawnAtRest &&= same; } rows.set(k, r); };
+  // (whether diff() holds two values the same at a place: it runs adding nothing)
+  const sameAt = (a, b, at) => { const was = probe; probe = { n: 0 }; try { diff(a, b, at); return probe.n === 0; } finally { probe = was; } };
   const diff = (a, b, at) => {
     if (JSON.stringify(a) === JSON.stringify(b)) return;
     // a placed instance's key is which component it is, compared only where both sides hold one (a reading from code
@@ -505,13 +508,14 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // (the anatomy without each last variant, once per combination; a combination skipped lets a second matching one in,
     // which two combinations matching one set of props would need: named, not met)
     const withoutOf = new Map();
-    let hereFolded = null, restFolded = null;
-    // (the value at rest, read as the rows are, through same(); keys sorted, and an empty map none, as a reading leaves
-    // out a map it holds nothing in)
-    restAt = (at) => {
-      if (!restFolded) restFolded = same(structuredClone(expand(library, { ...defaults, ...c, ...Object.fromEntries(Object.keys(c).filter((k) => pointerAt({ [k]: c[k] })).map((k) => [k, library.props[k].default])) })));
-      const el = at.split('.')[0], v = at.split('.').slice(1).reduce((y, q) => (y == null ? undefined : y[q]), restFolded[el]);
-      return restKey(v);
+    let hereFolded = null, restSide = null;
+    // (the value at rest, the design's side made as the rows' is, sidesOf below, from the rest's anatomy against this
+    // combination's drawing: its equivalences, the parts it fills from the drawing, its order and swaps; keys sorted, and
+    // an empty map none, as a reading leaves out a map it holds nothing in; and whether diff() holds the drawn value that)
+    restAt = (at, b) => {
+      if (!restSide) { const R = expand(library, { ...defaults, ...c, ...Object.fromEntries(Object.keys(c).filter((k) => pointerAt({ [k]: c[k] })).map((k) => [k, library.props[k].default])) }); restSide = sidesOf(R, mains && whole.size ? req('./derive.cjs').wholeIn(R, mains, { reading: !design }) : new Set())[0]; }
+      const v = at.split('.').reduce((y, q) => (y == null ? undefined : y[q]), restSide);
+      return [restKey(v), sameAt(v ?? null, b ?? null, at)];
     };
     byPointer = (at) => {
       const ss = atC.filter((v) => touches(v, at));
@@ -552,46 +556,52 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     };
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(unstroked(room(x)))))))), mains)), mains));
-    const A = expanded[i], B = expand(drawn, { ...variantDefaults(drawn), ...theirs });
-    // a host kept whole over the whole contract (the reading keeps it so in every combination) that this combination
-    // may hide no layer in: derive's own test of a hidden layer (ownInsides `found`: a part of its component not drawn
-    // there), the one derive keeps a host whole by. Only a host listing nothing inside passes it (it draws its component
-    // as is: a radio's icon box at focus and checked); one that lists insides and lacks a part may hide it, as a
-    // contract keeps no difference between a layer hidden and one left out as its component's (beside overrides only,
-    // the two read alike), so nothing is filled there and a part drawn there stays a difference. The design left the
-    // parts of the first out as its component's, so a part the drawing keeps there is held to that component's own, as
-    // the other way round below. Not a layer another combination hides: a combination listing nothing may hide it too, by
-    // visibility alone, and the snapshot never says so (the plugin walks an instance's insides only for an override other
-    // than visibility, design-system-snapshot code.js): one listing nothing and one hiding every layer it hides read
-    // alike, so a layer the design is seen to hide is never filled, and drawn there it stays a difference
-    const here = new Set();
-    if (mains) req('./derive.cjs').ownInsides(JSON.parse(JSON.stringify(A)), mains, { found: here });
-    // (only a host this combination lists whole, some layer it lists its component's own (wholeIn: a partial cut would
-    // shrink it): one listing only what it overrides had its unchanged layers left out as its component's, derive's
-    // cut, so a layer missing there is its component's, not hidden (Carbon's group label, shown by Label, beside an
-    // overridden row)). A host that hides a layer while every layer it shows is overridden lists alike, and is read so
-    // too: the contract keeps no word for which, and a layer the code draws there is then taken as its component's)
-    for (const h of [...here]) if (!listedWholeAt[i].has(h)) here.delete(h);
-    const loose = [...whole].filter((h) => !here.has(h));
-    // (and an instance the contract never keeps whole: it hides nothing (derive keeps a host whole by a hidden layer), so a
-    // part the drawing reads in it that this combination leaves out is its component's own there, as derive left it out:
-    // a tag's content another combination overrides, read wherever the tag is placed). Only a part its component has
-    // there is filled: one it lacks stays an extra part. Known limit: a layer the design hides by visibility alone on
-    // such an instance is not recorded by the snapshot (the plugin walks an instance's insides only for another
-    // override), so the host is not kept whole and code drawing that layer as the component's own raises no row)
-    const open = mains ? Object.keys(A).filter((h) => A[h] && A[h].kind === 'instance' && !whole.has(h)) : [];
-    const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k)) || open.some((h) => k.startsWith(`${h}/`))));
-    // (the drawn side held to the library as filled, so a part filled there is the library's to compare a field of too)
-    const A2 = loose.length || open.length ? ownInPlaced(theirsIn, A, mains, here) : A;
-    const a = same(A2), b = unaligned(same(ownInPlaced(A2, B, mains, whole)), a, layoutUnit);
-    if (layoutUnit) lone(a, b);
-    diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');
+    const A = expanded[i];
+    // (both sides as compared, from an anatomy of the design's at this combination and this combination's drawing, made
+    // afresh: a rest's too, restAt above)
+    const sidesOf = (A, listedWhole) => {
+      const B = expand(drawn, { ...variantDefaults(drawn), ...theirs });
+      // a host kept whole over the whole contract (the reading keeps it so in every combination) that this combination
+      // may hide no layer in: derive's own test of a hidden layer (ownInsides `found`: a part of its component not drawn
+      // there), the one derive keeps a host whole by. Only a host listing nothing inside passes it (it draws its component
+      // as is: a radio's icon box at focus and checked); one that lists insides and lacks a part may hide it, as a
+      // contract keeps no difference between a layer hidden and one left out as its component's (beside overrides only,
+      // the two read alike), so nothing is filled there and a part drawn there stays a difference. The design left the
+      // parts of the first out as its component's, so a part the drawing keeps there is held to that component's own, as
+      // the other way round below. Not a layer another combination hides: a combination listing nothing may hide it too, by
+      // visibility alone, and the snapshot never says so (the plugin walks an instance's insides only for an override other
+      // than visibility, design-system-snapshot code.js): one listing nothing and one hiding every layer it hides read
+      // alike, so a layer the design is seen to hide is never filled, and drawn there it stays a difference
+      const here = new Set();
+      if (mains) req('./derive.cjs').ownInsides(JSON.parse(JSON.stringify(A)), mains, { found: here });
+      // (only a host this combination lists whole, some layer it lists its component's own (wholeIn: a partial cut would
+      // shrink it): one listing only what it overrides had its unchanged layers left out as its component's, derive's
+      // cut, so a layer missing there is its component's, not hidden (Carbon's group label, shown by Label, beside an
+      // overridden row)). A host that hides a layer while every layer it shows is overridden lists alike, and is read so
+      // too: the contract keeps no word for which, and a layer the code draws there is then taken as its component's)
+      for (const h of [...here]) if (!listedWhole.has(h)) here.delete(h);
+      const loose = [...whole].filter((h) => !here.has(h));
+      // (and an instance the contract never keeps whole: it hides nothing (derive keeps a host whole by a hidden layer), so a
+      // part the drawing reads in it that this combination leaves out is its component's own there, as derive left it out:
+      // a tag's content another combination overrides, read wherever the tag is placed). Only a part its component has
+      // there is filled: one it lacks stays an extra part. Known limit: a layer the design hides by visibility alone on
+      // such an instance is not recorded by the snapshot (the plugin walks an instance's insides only for another
+      // override), so the host is not kept whole and code drawing that layer as the component's own raises no row)
+      const open = mains ? Object.keys(A).filter((h) => A[h] && A[h].kind === 'instance' && !whole.has(h)) : [];
+      const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k)) || open.some((h) => k.startsWith(`${h}/`))));
+      // (the drawn side held to the library as filled, so a part filled there is the library's to compare a field of too)
+      const A2 = loose.length || open.length ? ownInPlaced(theirsIn, A, mains, here) : A;
+      const a = same(A2), b = unaligned(same(ownInPlaced(A2, B, mains, whole)), a, layoutUnit);
+      if (layoutUnit) lone(a, b);
+      return [unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a)];
+    };
+    diff(...sidesOf(A, listedWholeAt[i]), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
-  byPointer = () => false; restAt = () => null;
+  byPointer = () => false; restAt = () => [null, false];
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));
   if (library.component !== drawn.component) add('name', library.component, drawn.component);
-  return { combinations: combos.length, ...(invalid && { invalid }), ...(cut && { cut }), rows: [...rows.values()].map(({ pointer, rests, ...r }) => (pointer && layoutUnit ? { ...r, pointer, ...(rests.size === 1 && { rest: JSON.parse([...rests][0]) }) } : r)) };
+  return { combinations: combos.length, ...(invalid && { invalid }), ...(cut && { cut }), rows: [...rows.values()].map(({ pointer, rests, drawnAtRest, ...r }) => (pointer && layoutUnit ? { ...r, pointer, ...(drawnAtRest ? { rest: r.drawn } : rests.size === 1 && { rest: JSON.parse([...rests][0]) }) } : r)) };
 }
 /* A value as a pointer row's `rest` holds it, to compare: keys sorted, an empty map or none null. Used by eval's gapOf. */
 export const restKey = (v) => JSON.stringify(v == null || (typeof v === 'object' && !Array.isArray(v) && !Object.keys(v).length) ? null : v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : w));
