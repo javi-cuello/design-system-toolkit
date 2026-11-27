@@ -197,7 +197,7 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   // parts, its name and props said for the reading (data-component, data-with) as a variant changes them; one nested in
   // it opens too; a held one, one a prop swaps, and one inside a held one stay closed (2026-11-27: a library's icons,
   // drawn as marks, left 341 rows to code, inside-foreign)
-  const tag = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' } } };
+  const tag = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' }, mark: { kind: 'instance', parent: 'root', component: 'Glyph' } } };
   const chip = { contract: 1, component: 'Chip', props: { tone: { type: 'enum', values: ['info', 'error'], default: 'info', figma: 'Tone' }, glyph: { type: 'instance', figma: 'Glyph', swaps: ['swapped'] } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 4 } },
       icon: { kind: 'instance', parent: 'root', order: 0, component: 'Status', key: 'k1', with: { Size: 'small' }, layout: { direction: 'row', padding: { top: 2, end: 2, bottom: 2, start: 2 } }, width: 20, height: 20 },
@@ -247,9 +247,13 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   // is drawn open in that part's place, its layout and layers said, its component, key and props for the reading)
   const b = { ...a, 'cell/slot': { kind: 'instance', parent: 'cell', component: 'Foreign', key: 'k9', with: { Size: '24' }, layout: { direction: 'row', align: 'center', crossAlign: 'center', gap: 0, padding: { top: 4, end: 4, bottom: 4, start: 4 } }, width: 24, height: 24 },
     'cell/slot/glyph': { kind: 'graphic', parent: 'cell/slot', order: 0, width: 16, height: 16, background: 'C/icon' } };
-  const seen = new Set(), node = ((insideOf(b, 'cell', mainOf, { seen }).slot || {}).render || {}).node;
+  // (which ones, openForeign says, the one rule eval measures by: listed, its kind kept; one the held cell draws there
+  // itself, Tile in its own slot, stays closed)
+  const host = { component: 'Host', props: {}, anatomy: b, variants: [] }, hostLib = { Cell: cell, Tile: tile, Host: host };
+  const opened = foreignOpened(host, hostLib), kept = foreignOpened({ ...host, anatomy: { ...b, 'cell/slot': { ...b['cell/slot'], component: 'Tile' } } }, hostLib);
+  const seen = new Set(), node = ((insideOf(b, 'cell', mainOf, { seen, opened }).slot || {}).render || {}).node;
   ok('…one whose layers the design records is drawn open in its place: a frame of its layout, its glyph a box, its component, key and props said',
-    !!node && node.tag === 'div' && node.attrs['data-component'] === 'Foreign' && node.attrs['data-key'] === 'k9' && node.attrs['data-with'] === '{"Size":"24"}' && /display: flex/.test(node.attrs.style) && /padding: 0\.25rem/.test(node.attrs.style)
+    [...opened].join() === 'cell/slot' && openForeign(host, hostLib).anatomy['cell/slot'].kind === 'instance' && !kept.size && !!node && node.tag === 'div' && node.attrs['data-component'] === 'Foreign' && node.attrs['data-key'] === 'k9' && node.attrs['data-with'] === '{"Size":"24"}' && /display: flex/.test(node.attrs.style) && /padding: 0\.25rem/.test(node.attrs.style)
       && node.kids.length === 1 && /background: var\(--c-icon\)/.test(node.kids[0].attrs.style) && seen.has('cell/slot/glyph'), JSON.stringify(node)); }
 ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(tone === "error"\) \? "Icon\/alert" : "Icon\/info"/.test(toElement(alert, 'alert', { naming: ELEMENT, library: {} })));
 { const two = { ...alert, props: { tone: { type: 'enum', values: ['info', 'warning', 'error'], default: 'info', figma: 'Tone' } }, variants: [{ when: { tone: 'warning' }, set: { 'icon.component': 'Icon/warn' } }, ...alert.variants] };

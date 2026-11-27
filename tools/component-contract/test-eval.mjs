@@ -799,7 +799,7 @@ ok('--check: only a strict count absent from accepted.json is spared; a `left` o
   // to the design as any part's, never inside-foreign or foreign-own; one it leaves closed (a prop swaps it, or it sits in
   // a held component) keeps them; a glyph inside scaled is said as a share of its frame, never excused unwritten
   // (2026-11-27: 341 rows of a library's icons left to code)
-  const tag = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const tag = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' }, mark: { kind: 'instance', parent: 'root', component: 'Glyph' } }, variants: [] };
   const c = { contract: 1, component: 'Chip', props: { glyph: { type: 'instance', figma: 'Glyph', swaps: ['swapped'] } },
     anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Status', with: { Size: 'small' }, layout: { direction: 'row' } },
       'icon/glyph': { kind: 'graphic', parent: 'icon', width: 10, height: 6, background: 'Fill/info', constraints: { horizontal: 'scale', vertical: 'scale' } },

@@ -129,7 +129,9 @@ export const glyphOnly = (g) => !!g && g.kind === 'graphic' && Object.keys(g).ev
    (what the caller passes draws there), one a variant detaches or swaps for a component the library holds, nor one
    inside an instance left closed (a held component's insides are its own sheet's). And one the library holds where a
    variant swaps another library's in, its layers recorded there (a status icon of its own at the error state): opened
-   in that variant alone, its set saying kind a container and `foreign`. The contract itself where none is opened,
+   in that variant alone, its set saying kind a container and `foreign`. And one inside a held instance that is not
+   what that component draws there (swapped where it has no prop for it), its layers recorded: listed, its kind kept,
+   to-markup's insideOf drawing it open in that part's place. The contract itself where none is opened,
    else a copy, one per contract and library (to-code's caches are keyed by the contract); `foreignOpened`, the ids
    opened. The one rule for to-markup, to-code and eval. Tested by test-to-markup.mjs. */
 const OPENED = new WeakMap();
@@ -148,15 +150,28 @@ function opening(c, library) {
   const all = { ...Object.assign({}, ...[...vs].reverse().map((v) => v.add || {})), ...anatomy };
   const driven = new Set(Object.values((c && c.props) || {}).flatMap((p) => [...(p.swaps || []), ...(p.slots || []), ...(p.slot ? [p.slot] : [])]));
   const held = (e) => !!placedOf(library, e);
-  const opened = new Set();
+  const opened = new Set(), inHeld = new Set();
+  // (the nearest instance above a layer, if any)
+  const nearOf = (id) => { for (let up = (all[id] || {}).parent; up && up !== 'root'; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') return up; return null; };
   for (const id of Object.keys(all).sort((a, b) => a.split('/').length - b.split('/').length)) {
     const es = [anatomy[id], ...vs.map((v) => (v.add || {})[id])].filter(Boolean);
     if (!es.length || es.some((e) => e.kind !== 'instance' || held(e)) || driven.has(id)) continue;
     if (!Object.values(all).some((e) => e && e.parent === id)) continue;
     if (vs.some((v) => { const s = v.set || {}; return `${id}.kind` in s || (typeof s[`${id}.component`] === 'string' && held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null })); })) continue;
-    let closed = false;
-    for (let up = all[id].parent; up && up !== 'root' && !closed; up = (all[up] || {}).parent) closed = (all[up] || {}).kind === 'instance' && !opened.has(up);
-    if (!closed) opened.add(id);
+    const near = nearOf(id);
+    if (!near || opened.has(near)) { opened.add(id); if (near && inHeld.has(near)) inHeld.add(id); continue; }
+    // (inside a held instance with no instance above it, one that is not what that component draws there (a cell's icon
+    // tile swapped for another library's, where the cell has no prop for it): opened in that part's place, to-markup's
+    // insideOf, its kind kept, as the held component's part it stands in)
+    // (the part it stands for by its name, else by its place, as derive's placedMatch takes a layer renamed in the
+    // instance: the one part of its kind at its order under its parent's; none, a layer added there, which insideOf
+    // draws open too)
+    const H = all[near], M = held(H) && !nearOf(near) && placedOf(library, H);
+    if (!M) continue;
+    const A = M.anatomy || {}, rel = id.slice(near.length + 1), up = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : 'root';
+    const byPlace = Object.keys(A).filter((k) => k !== 'root' && (A[k].parent || 'root') === up && A[k].kind === all[id].kind && (A[k].order ?? 0) === (all[id].order ?? 0));
+    const X = A[rel] || (byPlace.length === 1 ? A[byPlace[0]] : null);
+    if (!X || X.kind !== 'instance' || X.component !== all[id].component) { opened.add(id); inHeld.add(id); }
   }
   // one the library holds that a variant swaps for another library's whose layers that variant records under it (a
   // status icon of its own at the error state): opened where that variant swaps it in, as a variant that detaches an
@@ -172,7 +187,7 @@ function opening(c, library) {
     if (at.length) { swappedIn.set(id, new Set(at)); opened.add(id); }
   }
   if (!opened.size) return { c, opened };
-  const open = (o) => Object.fromEntries(Object.entries(o).map(([id, e]) => [id, opened.has(id) && !swappedIn.has(id) && e ? { ...e, kind: 'container', foreign: true } : e]));
+  const open = (o) => Object.fromEntries(Object.entries(o).map(([id, e]) => [id, opened.has(id) && !swappedIn.has(id) && !inHeld.has(id) && e ? { ...e, kind: 'container', foreign: true } : e]));
   const setOpen = (v, w) => { const ids = [...swappedIn].filter(([, at]) => at.has(v)).map(([id]) => id); return ids.length ? { ...w, set: { ...w.set, ...Object.fromEntries(ids.flatMap((id) => [[`${id}.kind`, 'container'], [`${id}.foreign`, true]])) } } : w; };
   const out = { ...c, anatomy: open(anatomy), variants: vs.map((v) => setOpen(v, v.add ? { ...v, add: open(v.add) } : v)) };
   // (opened twice is opened once: a reader handed the opened contract opens nothing more)
