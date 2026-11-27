@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations } from './css.mjs';
-import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts } from './to-code.mjs';
+import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp } from './layers.mjs';
 
@@ -257,6 +257,12 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     // (one the library does not hold, in place of one it does: marked where it goes, as this component marks its own)
     else if (L.kind === 'instance' && Xm && L.component) entry.render = { icon: L.component, attrs: swappedLook(L, inner, rel, e) };
     else if (L.kind === 'text' && X.kind === 'text' && typeof L.content === 'string' && !/^\{.*\}$/.test(L.content) && L.content !== X.content) entry.content = L.content;
+    // (a mark the library does not hold, the placed one's own, given another glyph by the prop it names its glyph by: a
+    // picker's chevron drawn as a clear icon where a value is held, as that mark's markup takes the glyph, swapKeysOf)
+    else if (L.kind === 'instance' && X.kind === 'instance' && !Lm && !Xm && L.component && L.component === X.component) {
+      const k = [...swapKeysOf(m, back[mk] || mk)].find((q) => typeof (L.with || {})[q] === 'string' && L.with[q] !== (X.with || {})[q]);
+      if (k) entry.attrs = { 'data-icon': L.with[k] };
+    }
     // its look, where no sheet reaches it (inside a component placed in the placed one, `sheet` false: to-code writes an
     // override one placed component deep): what the design draws there that the placed component's part does not
     if (!sheet && L.kind !== 'instance' && L.kind === X.kind) {
@@ -327,10 +333,37 @@ function addedOf(a, id, mainOf, { library, lang, settings }) {
 /* A main that is a drawing alone (no props, no words, nothing placed: an empty state's ghost, a slot's placeholder): a
    swap of it is drawn by name, as an icon's mark (swapOf), so its own layout and clipping are its drawing's, as a
    component the library does not hold (eval.mjs gapOf). */
-export const isDrawing = (m) => !!m && !Object.keys(m.props || {}).length && Object.values(m.anatomy || {}).every((x) => x && ['container', 'graphic'].includes(x.kind));
+export { isDrawing };
 
 /* A swap: among icons (a component the library does not hold), the icon's name; of a part inside a placed component,
    that component's own prop, passed to it; among the library's components, what is placed. */
+/* The components of the library's (none a drawing alone) that some holder in `library` swaps into `c`'s instance swap
+   `p`: by the value the holder gives the prop on its instance of `c` (on the part, a variant that adds it or sets its
+   props), where the holder draws an instance of that component beside the swapped layer. Tested by test-to-markup.mjs. */
+const SWAPPED_IN = new WeakMap();
+export function swappedIn(library, c, p) {
+  if (!library || !c || !p || !p.figma) return [];
+  const memo = SWAPPED_IN.get(library) || new Map(); SWAPPED_IN.set(library, memo);
+  const k = `${c.component}\u0000${p.figma}`;
+  if (memo.has(k)) return memo.get(k);
+  const out = new Set(), dirs = (p.swaps || []).map((sp) => (sp.includes('/') ? sp.slice(0, sp.lastIndexOf('/')) : ''));
+  for (const h of Object.values(library)) {
+    if (!h || h.component === c.component) continue;
+    const all = { ...(h.anatomy || {}), ...Object.assign({}, ...(h.variants || []).map((v) => v.add || {})) };
+    for (const [hid, he] of Object.entries(all)) {
+      if (!he || he.kind !== 'instance' || (placedOf(library, he) || {}).component !== c.component) continue;
+      const given = [(he.with || {})[p.figma], ...(h.variants || []).flatMap((v) => [((v.set || {})[`${hid}.with`] || {})[p.figma], (v.set || {})[`${hid}.with.${p.figma}`], (((v.add || {})[hid] || {}).with || {})[p.figma]])].filter((x) => typeof x === 'string');
+      for (const [kid, ke] of Object.entries(all)) {
+        if (!ke || ke.kind !== 'instance' || !dirs.some((d) => (ke.parent || '') === (d ? `${hid}/${d}` : hid))) continue;
+        const m = placedOf(library, ke);
+        if (m && !isDrawing(m) && given.some((g) => g === ke.component || g === String(ke.component).split('/').pop())) out.add(m.component);
+      }
+    }
+  }
+  const list = [...out];
+  memo.set(k, list);
+  return list;
+}
 function swapOf(c, p, library, lang, key) {
   // (the layer it drives where the layer says so, its default the component drawn there: an Icon (selected) on its own layer)
   const id = (p.swaps || []).find((x) => (at(c, x) || {}).swappedBy === key) || (p.swaps || [])[0];
@@ -348,8 +381,10 @@ function swapOf(c, p, library, lang, key) {
     return { type: theirs ? theirs.type : 'node', default: given ?? (theirs && theirs.default) ?? '', pass: { part: up, to: theirs ? theirs.name : to } };
   }
   // a swap of a drawing the code takes by name, as an icon is: one no main in the library draws, or one whose main is a
-  // drawing alone (isDrawing), where a component is the caller's to place
-  if (e && e.kind === 'instance' && (!placedOf(library, e) || isDrawing(placedOf(library, e)))) return { type: 'icon', default: e.component || '' };
+  // drawing alone (isDrawing), where a component is the caller's to place; but one a holder in the library fills with a
+  // component of the library's (a select's options slot, a placeholder by default, holding a calendar: swappedIn) is
+  // content the caller passes, drawn as the slot it is
+  if (e && e.kind === 'instance' && (!placedOf(library, e) || isDrawing(placedOf(library, e)))) return swappedIn(library, c, p).length ? { type: 'node', swapped: true } : { type: 'icon', default: e.component || '' };
   // a component of the library's, swapped: content the caller passes, the design's own instance where it passes none
   // (`placed`: each part it swaps drawn so, and the first's component, which a reading of the code takes as its default)
   if (e && e.kind === 'instance' && placedOf(library, e)) {
@@ -653,8 +688,10 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     // (`fill`: what this component puts in a placed component's slot, drawn as that slot's content)
     if (part.ring || ((part.inside || part.slotted) && !fill)) return null;
     if (entry && (id === entry.value || id === entry.placeholder)) return id === entry.value || !at(c, entry.value) ? input() : null;
-    if (part.pointerOnly) { gaps.push(`${partName(id)} is drawn only at a pointer state: the stylesheet's, or frontend-build's to add`); return { comment: `frontend-build: ${partName(id)}, drawn only at a pointer state` }; }
-    const { when, unknown, known } = conditionOf(c, part, props, holds, lang);
+    // (`fill` 'swap': a component this one passes into a placed component's swap, drawn as that content at every
+    // combination, the placed component's own sheet showing its swap where it draws it: a select's menu at focus)
+    if (part.pointerOnly && fill !== 'swap') { gaps.push(`${partName(id)} is drawn only at a pointer state: the stylesheet's, or frontend-build's to add`); return { comment: `frontend-build: ${partName(id)}, drawn only at a pointer state` }; }
+    const cond = conditionOf(c, part, props, holds, lang), { unknown, known } = cond, when = fill === 'swap' && cond.when === 'false' ? null : cond.when;
     if (part.pointerGone) gaps.push(`${partName(id)} is taken away at a pointer state: the stylesheet's, or frontend-build's to take away`);
     if (part.pointerHeld) gaps.push(`${partName(id)} is drawn only at a pointer state: held here, the stylesheet's to show there and hide elsewhere`);
     else if (part.pointerShown && (!part.base || part.removes.length)) gaps.push(`${partName(id)} is also drawn at a pointer state: held here, the stylesheet's to show there and hide elsewhere`);
@@ -696,6 +733,12 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       const widths = [e.width, ...(c.variants || []).map((v) => (v.set || {})[`${id}.width`]).filter((w) => w !== undefined)];
       const size = !icon && e.with && e.with.Size !== undefined && widths.some((w) => String(w) !== String(e.with.Size)) && !(c.variants || []).some((v) => `${id}.with` in (v.set || {})) ? String(e.with.Size) : null;
       out = { tag: 'span', attrs: [...hook(id), ['data-icon', glyph], ...(size ? [['data-icon-size', { lit: size }]] : []), ['aria-hidden', { lit: 'true' }]], children: [] };
+    } else if (slot && slot.swapped && !lang.php) {
+      // a swap that takes content (swapOf's `swapped`): what the caller passes stands in the swapped layer's place, as
+      // the design swaps that layer for it; else the design's own placeholder, marked by name as an icon is
+      const mark = { tag: 'span', attrs: [...hook(id), ['data-icon', { lit: e.component }], ['aria-hidden', { lit: 'true' }]], children: [] };
+      const and = (t) => (when ? `(${when}) && ${t}` : t);
+      return [{ when: and(`${ref(slot.name)} != null`), node: { code: ref(slot.name) } }, { when: and(`${ref(slot.name)} == null`), node: mark }];
     } else if (slot) {
       // marked as a slot, so a reading of a component that fills it finds it (from-code)
       const given = lang.php ? `$slots->${slot.name}()` : slot.name;
@@ -846,6 +889,17 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
         if (lang.php) { gaps.push(`${partName(id)}: what it puts in ${placed.component}'s ${x.name} (a snippet takes no markup there)`); continue; }
         // under the instance's own condition (known), so an item repeats none of it
         const items = under.flatMap((k) => node(k, known, true)).filter(Boolean);
+        if (!items.length) continue;
+        for (let i = given.length - 1; i >= 0; i--) if (given[i][0] === x.name) given.splice(i, 1);
+        given.push([x.name, { nodes: items }]);
+      }
+      // a component of the library's this one swaps into the placed one's swap that takes content (swapOf's `swapped`: a
+      // select's options slot holding a calendar): that component, drawn as the swap's content, never its name
+      for (const x of theirs.filter((y) => y.type === 'node' && y.swapped && !lang.php)) {
+        const names = new Set([(e.with || {})[x.p.figma], ...vs.map((v) => (stated(v).w || {})[x.p.figma])].filter((g) => typeof g === 'string'));
+        const dirs = (x.p.swaps || []).map((sp) => (sp.includes('/') ? `${id}/${sp.slice(0, sp.lastIndexOf('/'))}` : id));
+        const under = [...parts.values()].filter((k) => dirs.includes(k.e.parent) && k.e.kind === 'instance' && placedOf(library, k.e) && (names.has(k.e.component) || names.has(String(k.e.component).split('/').pop())));
+        const items = under.flatMap((k) => node(k, known, 'swap')).filter(Boolean);
         if (!items.length) continue;
         for (let i = given.length - 1; i >= 0; i--) if (given[i][0] === x.name) given.splice(i, 1);
         given.push([x.name, { nodes: items }]);

@@ -154,7 +154,9 @@ export const GAPS = {
   'carries-override': 'a placed component\'s part kept only as the way down to an override',
 };
 /* Which gap of GAPS excuses a row (at, row), or null where it is a difference: leftToCode, by name. */
-export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true } = {}) {
+export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true, read = null } = {}) {
+  // (`read`: the reading, as a contract; the parts it draws at any combination)
+  const readIds = read ? new Set([...Object.keys(read.anatomy || {}), ...(read.variants || []).flatMap((v) => Object.keys(v.add || {}))]) : null;
   // (a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
   const parts = partsOf(contract, settings);
   const reasonOf = (p) => (p.pointerOnly && !p.ring ? 'pointer-only-part' : ((u) => (!u ? null : /^exposed/.test(u) ? 'exposed-unforwarded' : 'unexposed-override'))(mainOf && unexposed(contract, p.id, mainOf)));
@@ -276,9 +278,10 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     // (modes, the markup's attributes, that only pointer states' variants set at every combination the row was found in:
     // roundTrip's `pointer`)
     // (a part only a pointer state draws inside a placed component is left to code only where the reading lacks it: one
-    // it reads, its placed component forced to that state too (from-code forwardedAt), differs as any part does)
+    // it reads, its placed component forced to that state too (from-code forwardedAt), differs as any part does, and so
+    // does a field of it the reading leaves out)
     return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) ? 'inside-foreign'
-      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' && row && row.drawn != null ? null : reasons.get(id)) : null);
+      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' && ((row && row.drawn != null) || (readIds && readIds.has(el))) ? null : reasons.get(id)) : null);
   };
 }
 /* What the toolkit's own markup leaves to code (gapOf), as yes or no. */
@@ -354,7 +357,7 @@ export function measure(where, only = [], now = {}) {
     else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, ...tagsOf(code), combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder))), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
@@ -364,7 +367,7 @@ export function measure(where, only = [], now = {}) {
       const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
-      legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
+      legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false, read: again.asFigma })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     // a reading whose geometry was not compared (taken before it was kept, or with no stored figma.json) is stale, as one

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp } from './from-code.mjs';
+import { lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1373,6 +1373,32 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   ok('a state called rest that is not the design\'s rest is read as itself',
     restOf(msg) === 'default' && read.default === 'default' && read.values.join() === 'default,hover,rest' && restOf(house) === 'rest' && stateProp(['hover'], [], house).values.join() === 'rest,hover');
 }
+{ // a placeholder swap given content (a picker's options slot holding a grid): read as the swap's value, by the passed
+  // component's name; a placeholder left in place, or a drawing there, gives nothing
+  const slot = { component: 'Slot', props: {}, anatomy: { root: { kind: 'container' } } }, grid = { component: 'Cal/Grid', props: {}, anatomy: { root: { kind: 'container' }, cell: { kind: 'text', parent: 'root' } } };
+  const pick = { component: 'Pick', props: { opts: { type: 'instance', figma: 'slot {Options}', swaps: ['menu/slot'] } }, anatomy: { root: { kind: 'container' } }, variants: [{ when: { s: 'open' }, add: { menu: { kind: 'container', parent: 'root' }, 'menu/slot': { kind: 'instance', parent: 'menu', component: 'Slot' } } }] };
+  const lib = { slot, grid }, byName = (nm) => Object.values(lib).find((y) => y.component === nm);
+  const got = (raw) => passedSwaps(pick, 'pick', raw, (sl) => lib[sl], byName);
+  ok('passedSwaps: a library component drawn in a placeholder swap\'s place is that swap\'s value; the placeholder itself is not',
+    JSON.stringify(got([{ id: 'pick/menu/grid', kind: 'instance', parent: 'pick/menu', slug: 'grid' }])) === '{"slot {Options}":"Grid"}'
+    && JSON.stringify(got([{ id: 'pick/menu/slot', kind: 'instance', parent: 'pick/menu', slug: 'slot' }])) === '{}' && JSON.stringify(got([])) === '{}'); }
+{ // a part placed absolutely inside a placed component, added at one prop and moved at another (a picker's menu, open at
+  // focus, lower at compact): the move is kept, judged by the part as the variant where it is drawn adds it, never by
+  // another variant's add of it (one the design rules out, which draws it in flow)
+  const code = { contract: 1, component: 'P', props: { state: { type: 'enum', values: ['rest', 'focus', 'hover'], default: 'rest' }, size: { type: 'enum', values: ['md', 'sm'], default: 'md' }, off: { type: 'boolean', default: false } },
+    anatomy: { root: { kind: 'container' }, pick: { kind: 'instance', parent: 'root', component: 'Pick' } },
+    variants: [{ when: { state: 'focus' }, add: { 'pick/menu': { kind: 'container', parent: 'pick', position: 'absolute', absolute: { x: 0, y: 48 } } } },
+      { when: { state: 'focus', size: 'sm' }, set: { 'pick/menu.absolute': { x: 0, y: 40 } } },
+      { when: { state: 'hover', off: true }, add: { 'pick/menu': { kind: 'container', parent: 'pick' } } }] };
+  const v = asFigma(code).contract.variants.find((x) => x.when.state === 'focus' && x.when.size === 'sm');
+  ok('asFigma: a move of a part placed absolutely inside a placed component is kept, judged by the add in force there', JSON.stringify((v.set || {})['pick/menu.absolute']) === '{"x":0,"y":40}', JSON.stringify(v)); }
+{ // two layers of the design on one element (a picker's chevron at rest, its clear icon where a value is held): the one
+  // the design draws at the combination read takes the element, whatever order the mapping lists them in
+  const named = [['a', 'root', null], ['b > i', 'select/field/down', null], ['b > i', 'select/field/clear', null], ['b', 'select/field', null]];
+  ok('namedAt: of two layers on one element, the one drawn here takes it, the other left out; shallower ones first; neither drawn, both kept',
+    namedAt(named, { 'select/field/clear': {} }).map((x) => x[1]).join() === 'root,select/field,select/field/clear'
+    && namedAt(named, { 'select/field/down': {} }).map((x) => x[1]).join() === 'root,select/field,select/field/down'
+    && namedAt(named, {}).map((x) => x[1]).join() === 'root,select/field,select/field/down,select/field/clear'); }
 { // (and roundTrip, given such a reading against a design whose axis is `state`, raises no props row; review)
   const { roundTrip } = await import('./to-figma.mjs');
   const design = { contract: 1, component: 'L', props: { state: { type: 'enum', values: ['default', 'hover'], default: 'default', role: 'interaction', pointer: ['hover'], figma: 'state' } }, anatomy: { root: { kind: 'container' } }, variants: [] };

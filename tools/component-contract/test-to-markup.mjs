@@ -1038,4 +1038,43 @@ else {
   const out = toElement(r, 'pick', { naming: ELEMENT, library: { Dot: { ...icon, folder: 'dot' } } });
   ok('an instance two pointer states draw keeps a prop one of them gives untestable, and says so', /renderDot, \{ on: false \}/.test(out) && /Dot is given props only a pointer state draws/.test(out), out); }
 
+{ // a placeholder swap a holder fills with a component of the library's (a picker's options slot holding a grid): the
+  // placed one takes it as content, drawn where its placeholder was, the placeholder only where none is passed; the holder
+  // passes its own instance there, and the mapping reads it, and what is inside it, under the holder's hook for it
+  const slot = { component: 'Slot', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const grid = { component: 'Grid', props: {}, anatomy: { root: { kind: 'container' }, cell: { kind: 'text', parent: 'root', content: '1' } }, variants: [] };
+  const pick = { component: 'Pick', props: { slotOptions: { type: 'instance', figma: 'slot {Options}', swaps: ['menu/slot'] } },
+    anatomy: { root: { kind: 'container' }, menu: { kind: 'container', parent: 'root' }, 'menu/slot': { kind: 'instance', parent: 'menu', component: 'Slot', swappedBy: 'slotOptions' } }, variants: [] };
+  const date = { component: 'Date', props: {}, anatomy: { root: { kind: 'container' }, pick: { kind: 'instance', parent: 'root', component: 'Pick', with: { 'slot {Options}': 'Grid' } },
+    'pick/menu': { kind: 'container', parent: 'pick' }, 'pick/menu/grid': { kind: 'instance', parent: 'pick/menu', component: 'Grid' }, 'pick/menu/grid/cell': { kind: 'text', parent: 'pick/menu/grid', content: '1' } }, variants: [] };
+  const L = { Slot: { ...slot, folder: 'slot' }, Grid: { ...grid, folder: 'grid' }, Pick: { ...pick, folder: 'pick' }, Date: { ...date, folder: 'date' } };
+  const po = toElement(pick, 'pick', { naming: ELEMENT, library: L }), dout = toElement(date, 'date', { naming: ELEMENT, library: L });
+  const m = toParity(date, 'date', { naming: ELEMENT, library: L, framework: 'web-components' }).byId;
+  ok('a placeholder swap a holder fills with a library component is content: passed, drawn in its place, read under the holder\'s hook',
+    /\(slotOptions != null\) && slotOptions/.test(po) && /\(slotOptions == null\) && h\("span", \{ "data-part": "slot"/.test(po)
+    && /slotOptions: \[placed\(parts\["grid"\], renderGrid/.test(dout)
+    && m['pick/menu/grid'] === 'ds-date > [data-part="pick"] > [data-part="menu"] > [data-part="grid"]'
+    && m['pick/menu/grid/cell'] === 'ds-date > [data-part="pick"] > [data-part="menu"] > [data-part="grid"] > [data-part="cell"]', po + dout + JSON.stringify(m)); }
+
+{ // a mark the placed component draws (a picker's chevron, a wrapper the library does not hold naming its glyph by a
+  // prop) that the holder draws with another glyph there (a clear icon where a value is held): passed as that glyph
+  const pick = { component: 'Pick', props: {}, anatomy: { root: { kind: 'container' }, field: { kind: 'container', parent: 'root' },
+    'field/chev': { kind: 'instance', parent: 'field', component: 'Mark', with: { '<icon>': 'Down' } }, 'field/chev/g': { kind: 'instance', parent: 'field/chev', component: 'Down' } }, variants: [] };
+  const date = { component: 'Date', props: {}, anatomy: { root: { kind: 'container' }, pick: { kind: 'instance', parent: 'root', component: 'Pick' }, 'pick/field': { kind: 'container', parent: 'pick' },
+    'pick/field/clear': { kind: 'instance', parent: 'pick/field', component: 'Mark', with: { '<icon>': 'Cross' } }, 'pick/field/clear/g': { kind: 'instance', parent: 'pick/field/clear', component: 'Cross' } }, variants: [] };
+  const L = { Pick: { ...pick, folder: 'pick' }, Date: { ...date, folder: 'date' } };
+  const out = toElement(date, 'date', { naming: ELEMENT, library: L });
+  ok('a mark of the placed component the holder draws with another glyph is passed that glyph', /"chev": \{ attrs: \{ "data-icon": "Cross" \} \}/.test(out), out); }
+
+{ // two layers of the holder in one part of the placed component, each at its own combination (a picker's chevron by
+  // default, its clear icon where a value is held): each read where the placed component draws that part
+  const pick = { component: 'Pick', props: {}, anatomy: { root: { kind: 'container' }, field: { kind: 'container', parent: 'root' },
+    'field/chev': { kind: 'instance', parent: 'field', component: 'Mark', with: { '<icon>': 'Down' } }, 'field/chev/g': { kind: 'instance', parent: 'field/chev', component: 'Down' } }, variants: [] };
+  const date = { component: 'Date', props: { held: { type: 'boolean', default: false, axis: true, figma: 'held' } }, anatomy: { root: { kind: 'container' }, pick: { kind: 'instance', parent: 'root', component: 'Pick' }, 'pick/field': { kind: 'container', parent: 'pick' },
+    'pick/field/down': { kind: 'instance', parent: 'pick/field', component: 'Mark', with: { '<icon>': 'Down' } }, 'pick/field/down/g': { kind: 'instance', parent: 'pick/field/down', component: 'Down' } },
+    variants: [{ when: { held: true }, remove: ['pick/field/down', 'pick/field/down/g'], add: { 'pick/field/clear': { kind: 'instance', parent: 'pick/field', component: 'Mark', with: { '<icon>': 'Cross' } }, 'pick/field/clear/g': { kind: 'instance', parent: 'pick/field/clear', component: 'Cross' } } }] };
+  const L = { Pick: { ...pick, folder: 'pick' }, Date: { ...date, folder: 'date' } };
+  const m = toParity(date, 'date', { naming: ELEMENT, library: L, framework: 'web-components' }).byId, chev = 'ds-date > [data-part="pick"] > [data-part="field"] > [data-part="chev"]';
+  ok('two layers of the holder in one part of the placed component, at their own combinations, are each read there', m['pick/field/down'] === chev && m['pick/field/clear'] === chev, JSON.stringify(m)); }
+
 console.log(`${n} passed`);

@@ -734,7 +734,14 @@ const placedOf = (a, host, M) => placedMatch(M, Object.fromEntries(Object.keys(a
 const hostIn = (c, id, mains, copies = false, sample = false) => { const a = allOf(c); const h = hostOf(a, id, sample), m = h && a[h].component && mains(a[h].component, a[h].key);
   if (!m || (!copies && (copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h))) || (hostOf(a, h, sample) && !hostIn(c, h, mains, false, sample))) return false;
   const withs = [a[h].with, ...(c.variants || []).flatMap((v) => [((v.add || {})[h] || {}).with, (v.set || {})[`${h}.with`]])].filter((w, i) => i === 0 || w);
-  return withs.some((w) => !!placedOf(a, h, placedAs({ ...a, [h]: { ...a[h], with: w } }, h, m, mains).M)[id.slice(h.length + 1)]); };
+  // (or among what the combination that draws the part draws alone: a base part beside a layer another combination draws
+  // in its place, a picker's chevron and the clear icon at rest, matched there; drawnWhere)
+  const at = drawnWhere(c, id);
+  return withs.some((w) => !!placedOf(a, h, placedAs({ ...a, [h]: { ...a[h], with: w } }, h, m, mains).M)[id.slice(h.length + 1)])
+    || !!(at && at[h] && placedOf(at, h, placedAs(at, h, m, mains).M)[id.slice(h.length + 1)]); };
+/* The anatomy of the combination that draws a part: the defaults' for a base part, else that of the first variant adding
+   it (expand); null where neither draws it. */
+const drawnWhere = (c, id) => { const adds = (c.variants || []).find((v) => !v.combination && v.add && v.add[id]); const at = adds ? expand(c, { ...variantDefaults(c), ...adds.when }) : c.anatomy[id] ? expand(c, variantDefaults(c)) : null; return at && at[id] ? at : null; };
 
 /* Each part's declarations at one combination, as a map property → value (with its note). */
 // no store given: what a placed component draws is not known, so none is taken to be missing from it
@@ -1229,7 +1236,10 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
     // (the placed component as the combination that adds this part draws it: a host each variant adds at its own props
     // names the part by the variant that draws it there, never by whichever variant allOf meets first)
     const adds = (c.variants || []).find((v) => !v.combination && v.add && v.add[own]);
-    const all = adds ? { ...allOf(c), ...expand(c, { ...variantDefaults(c), ...adds.when }) } : allOf(c), inner = [];
+    // (and matched to the placed component's parts among what is drawn there alone: a base part by the defaults, never
+    // beside a layer only another combination draws in its place, a picker's chevron and the clear icon at rest)
+    const here = drawnWhere(c, own);
+    const all = here || (adds ? { ...allOf(c), ...expand(c, { ...variantDefaults(c), ...adds.when }) } : allOf(c)), inner = [];
     // each placed component names its own parts, down to the next one placed in it, which names the rest
     for (let h = host, hm = m, rest = segs.slice(hostAt + 1); rest.length && hm;) {
       const n2 = namer(hm.folder || folderOf(hm.component), n.naming);
@@ -1243,7 +1253,10 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
       // (and one the placed component draws in its turn's wrapper, turnedParts, reached through that wrapper, as its own
       // sheet reaches it)
       const hmTurned = turnedParts(hm), ownSeg = (k) => { const first = /_\d+$/.test(k) && copyOfOnce(hm, k), p = n2.part(partSeg(hm, first || k)), w = hmTurned.has(first || k) ? `[data-turn="${partSeg(hm, first || k)}"] > ` : ''; return w + (first ? `${p}:nth-child(${Number(/_(\d+)$/.exec(k)[1])} of ${p})` : p); };
-      inner.push(...take.map((s, i) => ownSeg(own(s)) + (i === next ? through(n, all[s].component, heldIn(hm, own(s), mains)) : '')));
+      // (a component of the library's this one puts where the placed one draws a placeholder drawing, a picker's options
+      // slot holding a grid, is passed to it as content: drawn under this one's own hook for it, to-markup's placedItem)
+      const passed = (s) => { const X = hm.anatomy[own(s)] || findAdded(hm, own(s)), mx = X && X.kind === 'instance' && heldBy(library || {}, X), ms = all[s] && heldBy(library || {}, all[s]); return !!(X && X.kind === 'instance' && Object.values(hm.props || {}).some((q) => q.type === 'instance' && (q.swaps || []).includes(own(s))) && X.component !== all[s].component && (!mx || isDrawing(mx)) && ms && !isDrawing(ms)); };
+      inner.push(...take.map((s, i) => ((i === next || i === take.length - 1) && passed(s) ? n.part(partSeg(c, s)) : ownSeg(own(s))) + (i === next ? through(n, all[s].component, heldIn(hm, own(s), mains)) : '')));
       rest = rest.slice(take.length);
       if (rest.length) { h = take[take.length - 1]; hm = mains(all[h].component, all[h].key); }
     }
@@ -1253,6 +1266,8 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
 }
 // the selector the sheet styles a part by, at no condition: what the markup's parity mapping names it by
 /* A part inside a placed component this library holds, by that component's own names under the instance; else null. */
+/* A component that is a drawing alone: no props, nothing but boxes and shapes (a placeholder slot, a mark). */
+export const isDrawing = (m) => !!m && !Object.keys(m.props || {}).length && Object.values(m.anatomy || {}).every((x) => x && ['container', 'graphic'].includes(x.kind));
 export const nestedSelector = (c, n, id, mains, library = {}) => (hostIn(c, id, mains) ? chain(c, n, id, '', mains, library) : null);
 /* The same for a part inside a placed component this one draws in its own slot's sample (a card's avatar, a rail's
    items): no sheet rule of this one's reaches it, its component's own sheet draws it, but a reading finds it there. */

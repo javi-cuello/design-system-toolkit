@@ -159,6 +159,11 @@ ok('a component measured since the accept is held until accepted; one that came 
   // (but one the reading has, its placed component forced to that state too, differs as any part does)
   ok('a pointer-only part inside a placed component that the reading draws is a difference, missing it is left to code', gapOf(inPlaced)('picker/hint.content', { library: 'A', drawn: 'B' }) === null
     && gapOf(inPlaced)('picker/hint', { library: { kind: 'text' }, drawn: null }) === 'pointer-only-part');
+  // (and a field of it the reading lacks, where the reading draws the part itself, is a difference too: a look missing)
+  const read = { anatomy: { root: { kind: 'container' } }, variants: [{ when: { state: 'focus' }, add: { 'picker/hint': { kind: 'text', parent: 'picker' } } }] };
+  ok('a field of a pointer-only part the reading draws, missing from it, is a difference; the reading given none, left to code',
+    gapOf(inPlaced, null, undefined, { read })('picker/hint.color', { library: 'red', drawn: null }) === null && gapOf(inPlaced)('picker/hint.color', { library: 'red', drawn: null }) === 'pointer-only-part'
+    && gapOf(inPlaced, null, undefined, { read: { anatomy: {}, variants: [] } })('picker/hint.color', { library: 'red', drawn: null }) === 'pointer-only-part');
   const placed = { ...c, anatomy: { ...c.anatomy, picker: { kind: 'instance', parent: 'root', component: 'Menu' }, 'picker/items': { kind: 'slot', parent: 'picker' }, 'picker/items/one': { kind: 'text', parent: 'picker/items', content: 'One' } } };
   ok('what this component puts in a placed component\'s slot is drawn, so stays a difference', !leftToCode(placed)('picker/items/one.content'));
   const sw = { component: 'Switcher', props: { label: { type: 'string', figma: 'Label', sets: ['label'] } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Org' }, dot: { kind: 'graphic', parent: 'root', background: 'Icon/strong' } }, variants: [] };

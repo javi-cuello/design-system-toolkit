@@ -45,7 +45,7 @@ import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop, shorthandOf, sidePiece } from '../parity/values.mjs';
 export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
-import { ringOf, pseudoClasses } from './to-code.mjs';
+import { ringOf, pseudoClasses, isDrawing } from './to-code.mjs';
 import { swapKeysOf } from './to-markup.mjs';
 import { inWordsOf } from './to-figma.mjs';
 import { sameAsRead, layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, liftsAlone, autoResizeOf, growsDown, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, GLYPH_WORDS, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
@@ -1416,8 +1416,12 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
   // (nor a slot's binding: the placed component's own prop, which derive states only on its own slots)
   const one = (id, e) => { if (!inside(id)) return e; const { absolute, constraints, ...rest } = e; if (rest.kind === 'slot') delete rest.content; return { ...rest, ...(absolute && !framed(e) && { absolute }), ...(constraints && !loose(e) && { constraints }) }; };
   const strip = (anatomy) => Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, one(id, e)]));
-  // (a variant's own: what it sets of the element, its parent, position and place, over the element)
-  const asIn = (v, id) => { const e = { ...(all[id] || {}), ...((v.add || {})[id] || {}) }; for (const f of ['parent', 'position', 'absolute', 'constraints']) if (`${id}.${f}` in (v.set || {})) e[f] = v.set[`${id}.${f}`]; return e; };
+  // (a variant's own: what it sets of the element, its parent, position and place, over the element as drawn where the
+  // variant holds: the base's, else the adds of the variants in force there, never another variant's add of it, which
+  // may draw it otherwise: a menu one ruled-out combination draws in flow)
+  const holds = (u, v) => Object.entries(u.when || {}).every(([k, x]) => (v.when || {})[k] === x);
+  const drawnAt = (v, id) => contract.anatomy[id] || (variants.some((u) => u !== v && (u.add || {})[id] && holds(u, v)) ? Object.assign({}, ...variants.filter((u) => u !== v && (u.add || {})[id] && holds(u, v)).map((u) => u.add[id])) : all[id]);
+  const asIn = (v, id) => { const e = { ...(drawnAt(v, id) || {}), ...((v.add || {})[id] || {}) }; for (const f of ['parent', 'position', 'absolute', 'constraints']) if (`${id}.${f}` in (v.set || {})) e[f] = v.set[`${id}.${f}`]; return e; };
   const insideIn = (v, id) => { for (let up = asIn(v, id).parent; up; up = asIn(v, up).parent) if (asIn(v, up).kind === 'instance') return true; return false; };
   const gone = (v, k) => { const m = /^(.+)\.(constraints|absolute|content)(\.|$)/.exec(k); if (!m || !insideIn(v, m[1])) return false; const e = asIn(v, m[1]); return m[2] === 'content' ? e.kind === 'slot' : m[2] === 'absolute' ? framed(e) : loose(e); };
   const kept = variants.map((v) => ({ ...v, ...(v.add && { add: strip(v.add) }), ...(v.set && { set: Object.fromEntries(Object.entries(v.set).filter(([k]) => !gone(v, k))) }) }));
@@ -2043,6 +2047,33 @@ export function restOf(design) {
   const p = design && Object.values(design.props || {}).find((q) => q.role === 'interaction');
   return p && p.default !== 'rest' && (p.values || []).includes('rest') ? p.default : 'rest';
 }
+/** What a placed component's swap that takes content (a placeholder drawing in its layer, a picker's options slot) is
+ * given, read from what the page draws there: a component of the library's, not a drawing, under the swapped layer's
+ * parent in place of the placeholder, by its name as the design's swap value spells it (its last segment). `bySlug` and
+ * `byName` find a contract. Tested by test-from-code.mjs. */
+export function passedSwaps(fc, id, raw, bySlug, byName) {
+  const w = {}, all = { ...(fc.anatomy || {}), ...Object.assign({}, ...(fc.variants || []).map((v) => v.add || {})) };
+  for (const q of Object.values(fc.props || {})) {
+    if (q.type !== 'instance' || !q.figma) continue;
+    for (const sp of q.swaps || []) {
+      const layer = all[sp], lm = layer && layer.component && byName(layer.component);
+      if (!layer || layer.kind !== 'instance' || (lm && !isDrawing(lm))) continue;
+      const dir = sp.includes('/') ? sp.slice(0, sp.lastIndexOf('/')) : '', under = dir ? `${id}/${dir}` : id;
+      const m = raw.filter((e) => e.kind === 'instance' && e.parent === under && e.slug).map((e) => bySlug(e.slug)).find((x) => x && !isDrawing(x) && x.component !== layer.component);
+      if (m) w[q.figma] = String(m.component).split('/').pop();
+    }
+  }
+  return w;
+}
+/** The mapping's layers in the order the walk takes them at one combination (`drawn`: the design's anatomy there):
+ * shallower first, and of two at one depth, one the design draws here first, so where two layers share an element (a
+ * picker's chevron at rest, its clear icon where a value is held) the one drawn here takes it, never the one listed
+ * first, and the other, not drawn here, is left out. Tested by test-from-code.mjs. */
+export function namedAt(named, drawn) {
+  const depth = (x) => x[1].split('/').length, here = (x) => (drawn && x[1] in drawn ? 0 : 1);
+  const taken = new Set(named.filter((x) => !here(x)).map((x) => x[0]));
+  return named.filter((x) => !here(x) || !taken.has(x[0])).sort((a, b) => depth(a) - depth(b) || here(a) - here(b));
+}
 async function main() {
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
@@ -2543,7 +2574,7 @@ async function main() {
         const siblingOrder = new Function(`return ${siblingOrderSrc}`)();
         for (const xs of Object.values(byParent)) siblingOrder(xs).forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere()), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), siblingOrder.toString(), liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -2816,6 +2847,8 @@ async function main() {
           // the glyph goes to the swap that drives a layer drawn at these props: a button's Icon (16) or Icon (20), by its
           // size, never both; a prop no drawn layer of which it drives is left its default
           if (fc) for (const [f, g] of glyphSwaps(fc, w, x.glyphs, x.layerGlyphs)) { w[f] = g; glyphOf.push(f); }
+          // and content it is passed into a placeholder swap (passedSwaps)
+          if (fc) for (const [f, g] of Object.entries(passedSwaps(fc, id, raw, (sl) => official.get(sl), (nm) => [...official.values()].find((y) => y.component === nm)))) if (w[f] === undefined) w[f] = g;
           if (Object.keys(w).length) x.with = w;
           // which of them name the glyph it draws: content, which the swap test below sets aside
           if (glyphOf.length) Object.defineProperty(x, 'glyphOf', { value: glyphOf });
