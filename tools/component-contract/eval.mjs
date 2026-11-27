@@ -54,7 +54,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { contracts, hashOf } from './official.mjs';
-import { roundTrip, drawSettings } from './to-figma.mjs';
+import { roundTrip, drawSettings, restKey } from './to-figma.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, isDrawing, swapKeysOf } from './to-markup.mjs';
 import { sharesNeverWritten, tokenNames } from './to-code.mjs';
@@ -164,16 +164,16 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const ids = [...reasons.keys()];
   // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them
   // (per text, the words its pointer states draw: a row is theirs only where the design side holds one of them, as rows
-  // merge every combination under one place; and only where no other state sets them, or where a pointer state's variant
-  // sets them at every combination the row was found in (roundTrip's `pointer`: a search's query, typed at focus and when
-  // filled, read wrong only at focus)
-  const only = new Map(), words = new Map();
-  for (const v of contract.variants || []) for (const [k, w] of Object.entries(v.set || {})) if (k.endsWith('.content') || k.endsWith('.with')) {
-    const p = pointerWords(contract, v.when);
-    only.set(k, (only.get(k) ?? true) && p);
-    if (p) words.set(k, [...(words.get(k) || []), w]);
-  }
-  const said = (at, row) => !!row && (only.get(at) || row.pointer === true) && (words.get(at) || []).includes(row.library);
+  // merge every combination under one place; and only where a pointer state's variant decides them at every combination
+  // the row was found in (roundTrip's `pointer`: a search's query, typed at focus and when filled, read wrong only at
+  // focus; a row found apart from a pointer state, words only pointer states set or not, stays a difference)
+  const words = new Map();
+  for (const v of contract.variants || []) for (const [k, w] of Object.entries(v.set || {})) if ((k.endsWith('.content') || k.endsWith('.with')) && pointerWords(contract, v.when)) words.set(k, [...(words.get(k) || []), w]);
+  // (and only where the reading drew what the design holds at rest there, roundTrip's `rest`: the markup holds no pointer
+  // state, so the rest is all code is entitled to draw at a pointer combination; a wrong word there is code's, a
+  // difference. A row with no `rest` (found apart from pointer states, or over combinations whose rests differ) stays one)
+  const atRest = (row) => !!row && row.pointer === true && Object.hasOwn(row, 'rest') && restKey(row.drawn) === restKey(row.rest);
+  const said = (at, row) => atRest(row) && (words.get(at) || []).includes(row.library);
   const over = new Map(mainOf ? [...parts.values()].map((p) => [p.id, unexposed(contract, p.id, mainOf)]).filter(([, w]) => w) : []);
   // (of such an override, only what markup would pass: the part itself, its kind, component, words and props; its
   // styles the sheet reaches, and a name the reading gives it is the reader's)
@@ -258,16 +258,23 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     const rest = ((contract.anatomy || {})[el] || {}).with || {};
     const elsewhere = (k, v) => same(rest[k], v) || vs.some((x) => !pointerWords(contract, x.when) && (((x.add || {})[el] || {}).with || {})[k] !== undefined && same(((x.add || {})[el] || {}).with[k], v));
-    const byMine = (only.get(`${el}.with`) || row.pointer === true) && Object.entries(lib).every(([k, v]) => !elsewhere(k, v))
+    const byMine = atRest(row) && Object.entries(lib).every(([k, v]) => !elsewhere(k, v))
       && (words.get(`${el}.with`) || []).some((w) => w && typeof w === 'object' && Object.entries(lib).every(([k, v]) => same(w[k], v)));
-    return byMine || Object.entries(lib).every(([k, v]) => ownPointer(el, k, v));
+    // (an instance's own pointer state: code places it at its rest, so the reading draws those props at their default or
+    // leaves them out; anything else it draws there is a difference)
+    const m = mainOf && (all[el] || {}).kind === 'instance' && mainOf(all[el].component, all[el].key);
+    const restOf = (k) => { const q = m && Object.values(m.props || {}).find((y) => low(y.figma || '') === low(k)); if (!q) return undefined; const i = (q.values || []).indexOf(q.default); return (q.figmaValues || [])[i] ?? q.default; };
+    const drawnRest = (k, v) => v == null || low(v) === low(restOf(k));
+    const drawn = field === 'with' ? row.drawn : row.drawn == null ? null : { [field.slice(5)]: row.drawn };
+    const ownAtRest = drawn == null || (typeof drawn === 'object' && Object.entries(drawn).every(([k, v]) => k in lib && drawnRest(k, v)));
+    return byMine || (ownAtRest && Object.entries(lib).every(([k, v]) => ownPointer(el, k, v)));
   };
   // modes a pointer state's variant sets on that layer at the design's value, or drops by adding the layer again, at every
-  // combination the row was found in (roundTrip's `pointer`): one no pointer state sets there stays a difference. (Any
-  // pointer variant of the contract is read, not only those at the row's combinations: the row's `pointer` already says
-  // the pointer state decides it there, and the value must match; accepted, review of 2026-11-27.)
+  // combination the row was found in (roundTrip's `pointer`, read per combination from the variants that apply there): one
+  // no pointer state sets there stays a difference, and so does one where the reading drew other modes than the rest's
+  // (roundTrip's `rest`): code holds modes as attributes, so at a pointer combination it is entitled to the rest's alone
   const pointerModes = (el, field, row) => {
-    if (!row || row.pointer !== true || !/^modes(\.|$)/.test(field)) return false;
+    if (!atRest(row) || !/^modes(\.|$)/.test(field)) return false;
     const at = (x) => { const m = (x.set || {})[`${el}.modes`] !== undefined ? x.set[`${el}.modes`] : (x.add || {})[el] ? x.add[el].modes || null : undefined; return field === 'modes' || m === undefined ? m : m == null ? null : m[field.slice(6)] ?? null; };
     const key = (v) => JSON.stringify(v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : w));
     return vs.some((x) => pointerWords(contract, x.when) && at(x) !== undefined && key(at(x)) === key(row.library));

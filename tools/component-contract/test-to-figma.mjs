@@ -243,6 +243,11 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     // them through the other state: a wrong reading there stays a difference)
     const [fs] = roundTrip(design, st([sel, { when: { state: 'focus', selected: true }, set: { 't.content': '{p}' } }]), o).rows;
     ok('a row found where a pointer state and another state both set the words is no pointer state\'s', fs && fs.in === 2 && fs.pointer === undefined);
+    // (review of 2026-11-27: a pointer row carries the design's value at rest there, `rest`, the one thing the markup can
+    // draw at a pointer combination, for eval's gapOf to hold the reading to; one no pointer state's carries none)
+    const mixed = roundTrip(st([{ when: { selected: true }, set: { 't.content': 'Picked' } }, { when: { state: 'focus' }, set: { 't.content': 'Search' } }]), st([{ when: { state: 'focus' }, set: { 't.content': 'Other' } }]), o).rows.find((y) => y.library === 'Search');
+    ok('a pointer row carries the design\'s value at rest there; one over combinations whose rests differ, or no pointer state\'s, carries none',
+      Object.hasOwn(r, 'rest') && r.rest === r.drawn && !Object.hasOwn(h, 'rest') && mixed && mixed.pointer === true && mixed.in === 2 && !Object.hasOwn(mixed, 'rest'), [r, h, mixed]);
     // (held to a reading, the pointer states are the design's: a reading may force disabled as a pseudo state too)
     const reading = st([{ when: { state: 'disabled' }, set: { 't.content': 'Off' } }], ['hover', 'focus', 'disabled']);
     ok('the pointer states are the given design\'s, never the reading\'s own list', roundTrip(reading, st([]), { ...o, pointerFrom: st([]) }).rows[0].pointer === undefined && roundTrip(reading, st([]), o).rows[0].pointer === true); }
@@ -258,7 +263,7 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const after = (x) => roundTrip(lk([...pressAdd, x]), lk([]), { layoutUnit: true }).rows.find((y) => y.at === 'icon.modes');
     const laterSet = after({ when: { blank: true }, set: { 'icon.modes': null } }), laterAdd = after({ when: { blank: true }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' } } });
     const combo = roundTrip(lk([{ ...pressAdd[0], combination: true }, { when: { blank: true }, set: { 'icon.modes': { theme: 'link' } } }]), lk([]), { layoutUnit: true }).rows.find((y) => y.at === 'icon.modes');
-    ok('a field on a part a pointer state\'s variant adds again, last, is that state\'s; one another state sets is not', r && r.at === 'icon.modes' && r.pointer === true && n && n.pointer === undefined, [r, n]);
+    ok('a field on a part a pointer state\'s variant adds again, last, is that state\'s; one another state sets is not', r && r.at === 'icon.modes' && r.pointer === true && n && n.pointer === undefined && JSON.stringify(r.rest) === '{"theme":"link"}', [r, n]);
     // (and a pointer state's set, last, over another state's other value: a link's colour mode at press over its rest one)
     const md = (press) => ({ ...lk([]), anatomy: { root: { kind: 'container' } }, variants: [{ when: { blank: true }, set: { 'root.modes': { c: 'link' } } }, ...(press ? [{ when: { state: 'press', blank: true }, set: { 'root.modes': { c: press } } }] : [])] });
     const pm = roundTrip(md('link-pressed'), md(null), { layoutUnit: true }).rows.find((y) => y.at.startsWith('root.modes'));

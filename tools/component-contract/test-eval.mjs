@@ -195,13 +195,22 @@ ok('a component measured since the accept is held until accepted; one that came 
   const inDeep = leftToCode(deep, (n) => ({ Item: itemBox, Menu: menu })[n] || null);
   ok('a part of the item\'s own the design keeps only as the way down to an override goes with it, whole; its fields stay differences',
     inDeep('menu/items/item/box') && !inDeep('menu/items/item/box.layout') && inDeep('menu/items/item/box/avatar'));
+  // (a pointer row as roundTrip gives it: found only where the pointer state decides it, `pointer`, with the design's
+  // value at rest there, `rest`)
+  const P = (library, drawn, rest = drawn) => ({ library, drawn, pointer: true, rest });
   ok('words only a pointer state changes are left to code where the design holds them; a wrong rest text and another field stay differences',
-    leftToCode(typed)('field/text.content', { library: 'Search' }) && !leftToCode(typed)('field/text.content', { library: '{p}' }) && !leftToCode(typed)('field.width') && !leftToCode(c)('field/text.content', { library: 'Search' }));
+    leftToCode(typed)('field/text.content', P('Search', '{p}')) && !leftToCode(typed)('field/text.content', P('{p}', 'Search')) && !leftToCode(typed)('field.width') && !leftToCode(c)('field/text.content', P('Search', '{p}'))
+    // (review of 2026-11-27: one found apart from the pointer state, or with no rest to hold the reading to, stays a difference)
+    && !leftToCode(typed)('field/text.content', { library: 'Search', drawn: '{p}' }) && !leftToCode(typed)('field/text.content', { library: 'Search', drawn: '{p}', pointer: true }));
+  // (review of 2026-11-27: the code is entitled to the rest's words at a pointer combination, no others: a wrong word
+  // drawn there is code's, a difference, though the design's side is the pointer state's)
+  ok('pointer words are left to code only where the reading drew the rest\'s words there; a wrong word drawn stays a difference',
+    gapOf(typed)('field/text.content', P('Search', '{p}')) === 'pointer-words' && gapOf(typed)('field/text.content', P('Search', 'Wrong', '{p}')) === null && gapOf(typed)('field/text.content', P('Search', null, '{p}')) === null);
   // (words a pointer state and another state both set, a search's query at focus and when filled: a row found only where
   // a pointer state sets them (roundTrip's `pointer`) is still the markup's gap; one found at the other state too is a difference)
   const shared = { ...typed, props: { state: { ...c.props.state, values: ['rest', 'focus', 'filled'] } }, variants: [...typed.variants, { when: { state: 'filled' }, set: { 'field/text.content': 'Search' } }] };
   ok('words a pointer state sets, where another state sets them too, are left to code only in a row found where a pointer state sets them',
-    leftToCode(shared)('field/text.content', { library: 'Search', pointer: true }) && !leftToCode(shared)('field/text.content', { library: 'Search' }) && !leftToCode(shared)('field/text.content', { library: '{p}', pointer: true }));
+    leftToCode(shared)('field/text.content', P('Search', '{p}')) && !leftToCode(shared)('field/text.content', { library: 'Search', drawn: '{p}' }) && !leftToCode(shared)('field/text.content', P('{p}', 'Search')));
   // a placed instance's props only a pointer state gives: its own state at a pointer value, or what this one's pointer state
   // alone sets on it; a prop at rest beside it, or one another state sets too, stays a difference
   { const link = { component: 'Link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
@@ -210,16 +219,25 @@ ok('a component measured since the accept is held until accepted; one that came 
     ok('a placed instance\'s props only a pointer state gives are left to code; a prop at rest beside them, or one another state sets too, stays a difference',
       L(card())('link.with', { library: { State: 'Hover' }, drawn: null }) && L(card())('link.with.State', { library: 'Hover', drawn: null })
       && !L(card())('link.with', { library: { State: 'Hover', On: 'True' }, drawn: null })
-      && L(card())('link.with.On', { library: 'True', drawn: null }) && !L(card())('link.with.On', { library: 'False', drawn: null })
-      && !L({ ...card(), anatomy: { ...card().anatomy, link: { ...card().anatomy.link, with: { On: 'True' } } } })('link.with.On', { library: 'True', drawn: null })
-      && !L(card([{ when: { state: 'rest' }, set: { 'link.with': { On: 'True' } } }]))('link.with.On', { library: 'True', drawn: null })
-      && L(card([{ when: { state: 'rest' }, set: { 'link.with': { On: 'True' } } }]))('link.with', { library: { On: 'True' }, drawn: null, pointer: true })); }
+      && L(card())('link.with.On', P('True', 'False')) && !L(card())('link.with.On', P('False', 'True'))
+      && !L({ ...card(), anatomy: { ...card().anatomy, link: { ...card().anatomy.link, with: { On: 'True' } } } })('link.with.On', P('True', 'False'))
+      && !L(card([{ when: { state: 'rest' }, set: { 'link.with': { On: 'True' } } }]))('link.with.On', { library: 'True', drawn: 'False' })
+      && L(card([{ when: { state: 'rest' }, set: { 'link.with': { On: 'True' } } }]))('link.with', P({ On: 'True' }, null))); }
+  { // (review of 2026-11-27: at a pointer combination the code is entitled to the rest's props alone; a wrong prop drawn
+    // there, or the instance's own state drawn other than at its rest, is code's, a difference)
+    const link = { component: 'Link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+    const card = { ...c, anatomy: { ...c.anatomy, link: { kind: 'instance', parent: 'root', component: 'Link', with: { On: 'False' } } }, variants: [{ when: { state: 'focus' }, set: { 'link.with': { On: 'True' } } }] };
+    const G = gapOf(card, (n) => (n === 'Link' ? link : null));
+    ok('pointer props are left to code only where the reading drew the rest\'s props there; a wrong prop drawn stays a difference',
+      G('link.with.On', P('True', 'False')) === 'pointer-with' && G('link.with.On', P('True', 'Maybe', 'False')) === null && G('link.with', P({ On: 'True' }, { On: 'Maybe' }, { On: 'False' })) === null
+      && G('link.with.State', { library: 'Hover', drawn: null }) === 'pointer-with' && G('link.with.State', { library: 'Hover', drawn: 'Rest' }) === 'pointer-with'
+      && G('link.with.State', { library: 'Hover', drawn: 'Pressed' }) === null && G('link.with', { library: { State: 'Hover' }, drawn: { State: 'Pressed' } }) === null && G('link.with', { library: { State: 'Hover' }, drawn: { On: 'True' } }) === null); }
   { // (review: a variant at another state that adds the instance with the same props makes them no pointer state's alone)
     const link = { component: 'Link', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
     const card = { ...c, props: { ...c.props, size: { type: 'enum', values: ['sm', 'lg'], default: 'sm', figma: 'Size' } }, anatomy: { ...c.anatomy, link: { kind: 'instance', parent: 'root', component: 'Link', with: { On: 'False' } } },
       variants: [{ when: { state: 'focus' }, set: { 'link.with': { On: 'True' } } }, { when: { size: 'lg' }, add: { link: { kind: 'instance', parent: 'root', component: 'Link', with: { On: 'True' } } } }] };
     const L = leftToCode(card, (n) => (n === 'Link' ? link : null));
-    ok('props another state adds the instance with are no pointer state\'s: a difference there stays one', !L('link.with.On', { library: 'True', drawn: null }) && !L('link.with', { library: { On: 'True' }, drawn: null, pointer: true })); }
+    ok('props another state adds the instance with are no pointer state\'s: a difference there stays one', !L('link.with.On', { library: 'True', drawn: null }) && !L('link.with', P({ On: 'True' }, null))); }
   ok('the rows left to code are counted, as a leg of their own, so a rise there is said', worse(counts({ self: { a: { rows: [], left: [{}, {}] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).some((w) => /self left a: 1 → 2/.test(w))
     && !worse(counts({ self: { a: { rows: [], left: [] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).length); }
 
@@ -606,18 +624,23 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
     && g('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) === 'one-css-name' && leftToCode(c)('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) && g('tip.layout.padding.start', { library: 'Space050', drawn: 'Space025' }) === null && g('slot/sample.content', { library: 'Label', drawn: 'label' }) === null && g('tip.content', { library: 'Label', drawn: 'label' }) === null);
   // (modes only pointer states set where the row was found, roundTrip's `pointer`: the gap; modes found apart from them stay a difference)
   const cm = { ...c, variants: [...c.variants, { when: { state: 'focus' }, set: { 'root.modes': { theme: 'a' } } }] }, gm = gapOf(cm);
-  ok('variable modes only a pointer state sets are left to code; any other mode row is a difference', gm('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true }) === 'pointer-modes'
-    && leftToCode(cm)('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true }) && gm('root.modes', { library: { theme: 'a' }, drawn: null }) === null && gm('root.width', { library: 1, drawn: 2, pointer: true }) === null
+  ok('variable modes only a pointer state sets are left to code; any other mode row is a difference', gm('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true, rest: null }) === 'pointer-modes'
+    && leftToCode(cm)('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true, rest: null }) && gm('root.modes', { library: { theme: 'a' }, drawn: null }) === null && gm('root.width', { library: 1, drawn: 2, pointer: true }) === null
     // (and only at a value a pointer state's variant sets on that layer: another value, or none set, stays a difference)
-    && gm('root.modes', { library: { theme: 'b' }, drawn: null, pointer: true }) === null && g('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true }) === null
-    && gm('root.modes.theme', { library: 'a', drawn: null, pointer: true }) === 'pointer-modes'
+    && gm('root.modes', { library: { theme: 'b' }, drawn: null, pointer: true, rest: null }) === null && g('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true, rest: null }) === null
+    && gm('root.modes.theme', { library: 'a', drawn: null, pointer: true, rest: null }) === 'pointer-modes'
     // (modes of several keys match in any key order)
-    && gapOf({ ...c, variants: [{ when: { state: 'focus' }, set: { 'root.modes': { theme: 'a', density: 'b' } } }] })('root.modes', { library: { density: 'b', theme: 'a' }, drawn: null, pointer: true }) === 'pointer-modes');
+    && gapOf({ ...c, variants: [{ when: { state: 'focus' }, set: { 'root.modes': { theme: 'a', density: 'b' } } }] })('root.modes', { library: { density: 'b', theme: 'a' }, drawn: null, pointer: true, rest: null }) === 'pointer-modes'
+    // (review of 2026-11-27: code holds modes as attributes, so at a pointer combination it is entitled to the rest's
+    // alone; other modes drawn there are code's, a difference, and a row with no rest to hold them to stays one too)
+    && gm('root.modes', { library: { theme: 'a' }, drawn: { theme: 'z' }, pointer: true, rest: null }) === null && gm('root.modes.theme', { library: 'a', drawn: 'z', pointer: true, rest: 'r' }) === null
+    && gm('root.modes.theme', { library: 'a', drawn: 'r', pointer: true, rest: 'r' }) === 'pointer-modes' && gm('root.modes', { library: { theme: 'a' }, drawn: { theme: 'r' }, pointer: true, rest: { theme: 'r' } }) === 'pointer-modes'
+    && gm('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true }) === null);
   // (2026-11-26, a link's press: a pointer state's variant that adds a part again carries only the modes it says, none
   // where it says none; the part's modes another variant set are not drawn there)
   { const ca = { ...c, anatomy: { ...c.anatomy, icon: { kind: 'instance', parent: 'root', component: 'Icon', modes: { theme: 'link' } } }, variants: [...c.variants, { when: { state: 'focus' }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' } } }] };
     ok('modes a pointer state\'s variant drops by adding the part again are left to code; modes it adds with are, at that value',
-      gapOf(ca)('icon.modes', { library: null, drawn: { theme: 'link' }, pointer: true }) === 'pointer-modes' && ((cb) => gapOf(cb)('icon.modes.theme', { library: null, drawn: 'link', pointer: true }) === 'pointer-modes')({ ...ca, variants: [...c.variants, { when: { state: 'focus' }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', modes: { d: 'a' } } } }] }) && gapOf(ca)('icon.modes', { library: null, drawn: { theme: 'link' } }) === null); }
+      gapOf(ca)('icon.modes', { library: null, drawn: { theme: 'link' }, pointer: true, rest: { theme: 'link' } }) === 'pointer-modes' && ((cb) => gapOf(cb)('icon.modes.theme', { library: null, drawn: 'link', pointer: true, rest: 'link' }) === 'pointer-modes')({ ...ca, variants: [...c.variants, { when: { state: 'focus' }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', modes: { d: 'a' } } } }] }) && gapOf(ca)('icon.modes', { library: null, drawn: { theme: 'link' } }) === null); }
   ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'exposed-unforwarded', 'pointer-words', 'pointer-with', 'pointer-modes', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
   ok('leftToCode is gapOf said as yes or no', leftToCode(c)('picker/hint') === true && leftToCode(c)('root.width') === false); }
 

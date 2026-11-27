@@ -411,8 +411,11 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   let adds = 0; // every row added, a repeat too (diff reads it to tell whether a component differed)
   // (a row found only where pointer states' variants, a hover's or a focus's, alone set that field says so, `pointer`, where
   // one side is a browser's reading: what such a variant draws no markup holds, eval's leftToCode)
-  let byPointer = () => false;
-  const add = (at, a, b) => { adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0, pointer: true }; r.in++; r.pointer = r.pointer && byPointer(at); rows.set(k, r); };
+  // (and, for such a row, what the design holds at rest there, `rest`: the same combination with each pointer state at
+  // its rest, as the markup draws it, which holds no pointer state; one value over every combination the row was found
+  // in, else none. eval's gapOf excuses the row only where the reading drew that)
+  let byPointer = () => false, restAt = () => null;
+  const add = (at, a, b) => { adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0, pointer: true, rests: new Set() }; r.in++; r.pointer = r.pointer && byPointer(at); if (r.pointer) r.rests.add(restAt(at)); rows.set(k, r); };
   const diff = (a, b, at) => {
     if (JSON.stringify(a) === JSON.stringify(b)) return;
     // a placed instance's key is which component it is, compared only where both sides hold one (a reading from code
@@ -502,7 +505,14 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // (the anatomy without each last variant, once per combination; a combination skipped lets a second matching one in,
     // which two combinations matching one set of props would need: named, not met)
     const withoutOf = new Map();
-    let hereFolded = null;
+    let hereFolded = null, restFolded = null;
+    // (the value at rest, read as the rows are, through same(); keys sorted, and an empty map none, as a reading leaves
+    // out a map it holds nothing in)
+    restAt = (at) => {
+      if (!restFolded) restFolded = same(structuredClone(expand(library, { ...defaults, ...c, ...Object.fromEntries(Object.keys(c).filter((k) => pointerAt({ [k]: c[k] })).map((k) => [k, library.props[k].default])) })));
+      const el = at.split('.')[0], v = at.split('.').slice(1).reduce((y, q) => (y == null ? undefined : y[q]), restFolded[el]);
+      return restKey(v);
+    };
     byPointer = (at) => {
       const ss = atC.filter((v) => touches(v, at));
       // (whatever else holds, the last variant to touch the row or put its part there decides it: a pointer state's set
@@ -578,11 +588,13 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     diff(unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
-  byPointer = () => false;
+  byPointer = () => false; restAt = () => null;
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));
   if (library.component !== drawn.component) add('name', library.component, drawn.component);
-  return { combinations: combos.length, ...(invalid && { invalid }), ...(cut && { cut }), rows: [...rows.values()].map(({ pointer, ...r }) => (pointer && layoutUnit ? { ...r, pointer } : r)) };
+  return { combinations: combos.length, ...(invalid && { invalid }), ...(cut && { cut }), rows: [...rows.values()].map(({ pointer, rests, ...r }) => (pointer && layoutUnit ? { ...r, pointer, ...(rests.size === 1 && { rest: JSON.parse([...rests][0]) }) } : r)) };
 }
+/* A value as a pointer row's `rest` holds it, to compare: keys sorted, an empty map or none null. Used by eval's gapOf. */
+export const restKey = (v) => JSON.stringify(v == null || (typeof v === 'object' && !Array.isArray(v) && !Object.keys(v).length) ? null : v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : w));
 
 /* A gap Figma does not draw: with space-between it spaces the children itself, its stored item spacing unused (css.mjs
    writes none), so it is no value of either side. Tested by test-to-figma.mjs. */
