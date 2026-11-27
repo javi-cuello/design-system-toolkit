@@ -1608,5 +1608,10 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
     [...ids].sort().join() === 'extra,icon' && a.icon.kind === 'instance' && a.icon.component === 'Status' && JSON.stringify(a.icon.with) === '{"Size":"small"}' && a.icon.key === 'k1' && !('foreign' in a.icon) && !('foreignKey' in a.icon) && !('foreignWith' in a.icon) && a.icon.layout.direction === 'row'
       && JSON.stringify(read.variants[0].set) === '{"icon.with":{"Size":"large"},"icon.component":"Status/Error","icon.key":"k2"}' && read.variants[1].set['icon.with'] === null && read.variants[2].add.extra.kind === 'instance' && read.variants[2].add.extra.component === 'Badge' && !('with' in read.variants[2].add.extra)
       && a['icon/glyph'].kind === 'container' && a.box.kind === 'container');
+  // (one a variant opened over a held instance, layers.mjs openForeign: that variant's frame is the instance again, its
+  // kind no longer set, its component and key the swap's)
+  const held = { anatomy: { root: { kind: 'container' }, st: { kind: 'instance', parent: 'root', component: 'Tag' } }, variants: [{ when: { tone: 'error' }, set: { 'st.kind': 'container', 'st.foreign': 'Err', 'st.foreignKey': 'k7' } }] };
+  foreignAsInstance(held);
+  ok('…and a variant\'s frame opened over a held instance is that variant\'s swap again, no kind set', JSON.stringify(held.variants[0].set) === '{"st.component":"Err","st.key":"k7"}', JSON.stringify(held.variants[0].set));
 }
 console.log(`${n}/${n} passed`);

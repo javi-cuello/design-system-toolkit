@@ -125,9 +125,11 @@ export const glyphOnly = (g) => !!g && g.kind === 'graphic' && Object.keys(g).ev
 /* The instances of a component the library does not hold (another library's) whose insides the contract records,
    opened: each a frame of this component's own, its layers drawn as this component's, as a detached instance is
    (to-markup's detach), its kind a container marked `foreign` and its component, key and props kept on it, for the
-   markup to say (data-component, data-with) and the reading to give back. Not one a prop swaps or fills (what the
-   caller passes draws there), one a variant detaches or swaps for a component the library holds, nor one inside an
-   instance left closed (a held component's insides are its own sheet's). The contract itself where none is opened,
+   markup to say (data-component, data-key, data-with) and the reading to give back. Not one a prop swaps or fills
+   (what the caller passes draws there), one a variant detaches or swaps for a component the library holds, nor one
+   inside an instance left closed (a held component's insides are its own sheet's). And one the library holds where a
+   variant swaps another library's in, its layers recorded there (a status icon of its own at the error state): opened
+   in that variant alone, its set saying kind a container and `foreign`. The contract itself where none is opened,
    else a copy, one per contract and library (to-code's caches are keyed by the contract); `foreignOpened`, the ids
    opened. The one rule for to-markup, to-code and eval. Tested by test-to-markup.mjs. */
 const OPENED = new WeakMap();
@@ -156,9 +158,23 @@ function opening(c, library) {
     for (let up = all[id].parent; up && up !== 'root' && !closed; up = (all[up] || {}).parent) closed = (all[up] || {}).kind === 'instance' && !opened.has(up);
     if (!closed) opened.add(id);
   }
+  // one the library holds that a variant swaps for another library's whose layers that variant records under it (a
+  // status icon of its own at the error state): opened where that variant swaps it in, as a variant that detaches an
+  // instance draws a frame there (to-markup's detach); the held one elsewhere
+  const swappedIn = new Map();
+  for (const id of Object.keys(anatomy)) {
+    const e = anatomy[id];
+    if (!e || e.kind !== 'instance' || !held(e) || driven.has(id)) continue;
+    let closed = false;
+    for (let up = e.parent; up && up !== 'root' && !closed; up = (all[up] || {}).parent) closed = (all[up] || {}).kind === 'instance' && !opened.has(up);
+    if (closed) continue;
+    const at = vs.filter((v) => { const s = v.set || {}; return typeof s[`${id}.component`] === 'string' && !(`${id}.kind` in s) && !held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null }) && Object.values(v.add || {}).some((x) => x && x.parent === id); });
+    if (at.length) { swappedIn.set(id, new Set(at)); opened.add(id); }
+  }
   if (!opened.size) return { c, opened };
-  const open = (o) => Object.fromEntries(Object.entries(o).map(([id, e]) => [id, opened.has(id) && e ? { ...e, kind: 'container', foreign: true } : e]));
-  const out = { ...c, anatomy: open(anatomy), variants: vs.map((v) => (v.add ? { ...v, add: open(v.add) } : v)) };
+  const open = (o) => Object.fromEntries(Object.entries(o).map(([id, e]) => [id, opened.has(id) && !swappedIn.has(id) && e ? { ...e, kind: 'container', foreign: true } : e]));
+  const setOpen = (v, w) => { const ids = [...swappedIn].filter(([, at]) => at.has(v)).map(([id]) => id); return ids.length ? { ...w, set: { ...w.set, ...Object.fromEntries(ids.flatMap((id) => [[`${id}.kind`, 'container'], [`${id}.foreign`, true]])) } } : w; };
+  const out = { ...c, anatomy: open(anatomy), variants: vs.map((v) => setOpen(v, v.add ? { ...v, add: open(v.add) } : v)) };
   // (opened twice is opened once: a reader handed the opened contract opens nothing more)
   OPENED.set(out, new WeakMap([[library, { c: out, opened }]]));
   return { c: out, opened };

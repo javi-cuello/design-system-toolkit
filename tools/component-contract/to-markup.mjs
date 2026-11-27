@@ -570,9 +570,16 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // the order expand applies them, a combination last
   const foreignAttrs = (id) => {
     const e = ((parts.get(id) || {}).e) || {};
-    if (!e.foreign) return [];
     const vs = c.variants || [], order = [...vs.filter((v) => !v.combination), ...vs.filter((v) => v.combination)].filter((v) => !pointerWords(c, v.when));
     const at = (v, f) => (v.set && `${id}.${f}` in v.set ? { x: v.set[`${id}.${f}`] } : v.add && v.add[id] ? { x: v.add[id][f] } : null);
+    // (one the library holds that a variant swaps another library's in for, opened there alone, layers.mjs openForeign:
+    // said where those variants hold, nothing elsewhere, where the held one is drawn)
+    const swapped = order.filter((v) => v.set && v.set[`${id}.foreign`] === true);
+    if (!e.foreign && swapped.length) {
+      const one = (f, name, say) => { if (swapped.every((v) => !say((at(v, f) || { x: e[f] }).x))) return []; const code = byVariant(swapped, (v) => lang.str(say((at(v, f) || { x: e[f] }).x)), lang.str('')); return code ? [[name, { code }]] : []; };
+      return [...one('component', 'data-component', (x) => (typeof x === 'string' ? x : '')), ...one('key', 'data-key', (x) => (typeof x === 'string' ? x : '')), ...one('with', 'data-with', (w) => (w && typeof w === 'object' && Object.keys(w).length ? JSON.stringify(w) : ''))];
+    }
+    if (!e.foreign) return [];
     const attr = (f, name, say) => {
       // (none where every variant gives the base's own: an instance only variants add says it once)
       const sets = order.filter((v) => at(v, f)), code = sets.some((v) => say(at(v, f).x) !== say(e[f])) && byVariant(sets, (v) => lang.str(say(at(v, f).x)), lang.str(say(e[f])));

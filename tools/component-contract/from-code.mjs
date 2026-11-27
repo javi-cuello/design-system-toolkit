@@ -1217,6 +1217,8 @@ export function foreignAsInstance(fromCode) {
       const m = /^(.+)\.(foreign|foreignKey|foreignWith)$/.exec(k);
       if (!m) continue;
       const x = v.set[k]; delete v.set[k]; ids.add(m[1]);
+      // (one a variant opened over a held one, layers.mjs openForeign: that variant's frame is the instance again)
+      if (m[2] === 'foreign' && v.set[`${m[1]}.kind`] === 'container') delete v.set[`${m[1]}.kind`];
       if (m[2] === 'foreign') v.set[`${m[1]}.component`] = x;
       else if (m[2] === 'foreignKey') v.set[`${m[1]}.key`] = x;
       else v.set[`${m[1]}.with`] = x && typeof x === 'object' && Object.keys(x).length ? x : null;

@@ -223,6 +223,15 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   const m = toParity(chip, 'chip', { naming: ELEMENT, library: lib, framework: 'web-components' });
   ok('…read by its own hooks', m.layers['Icon > Inner > Vector'] === 'ds-chip > [data-part="icon"] > [data-part="inner"] > [data-part="icon-inner-vector"]' && typeof m.layers['Swapped > Vector'] === 'object');
   ok('…without a library the markup opens nothing, though none would be held (every instance with insides opens)', !toElement(chip, 'chip', { naming: ELEMENT, library: {} }).includes('data-component') && [...foreignOpened(chip, {})].sort().join() === 'icon,icon/inner,plain,tag,tag/mark');
+  // (2026-11-27, review: a held one a variant swaps for another library's, its layers recorded there (a status icon of its
+  // own at the error state), is opened in that variant alone, a frame where it holds, the held one elsewhere)
+  const note = { contract: 1, component: 'Note', props: { tone: { type: 'enum', values: ['info', 'error'], default: 'info', figma: 'Tone' } },
+    anatomy: { root: { kind: 'container' }, st: { kind: 'instance', parent: 'root', component: 'Tag', width: 20, height: 20 } },
+    variants: [{ when: { tone: 'error' }, set: { 'st.component': 'Err', 'st.key': 'k7', 'st.with': null }, add: { 'st/glyph': { kind: 'graphic', parent: 'st', order: 0, width: 16, height: 16, background: 'C/err' } } }] };
+  const lib2 = { Tag: tag, Note: note }, on = openForeign(note, lib2), errSet = on.variants[0].set, nel = toElement(note, 'note', { naming: ELEMENT, library: lib2 });
+  ok('…a held one a variant swaps for another library\'s with recorded layers opens in that variant alone: a frame there, its component and key said there, the held one elsewhere',
+    [...foreignOpened(note, lib2)].join() === 'st' && on.anatomy.st.kind === 'instance' && errSet['st.kind'] === 'container' && errSet['st.foreign'] === true
+      && /\(tone === "error"\) && h\("(div|span)", \{ "data-part": "st", "data-component": \(tone === "error"\) \? "Err" : "", "data-key": \(tone === "error\"\) \? "k7" : "" \}/.test(nel) && !/data-with/.test(nel) && /renderTag|ds-tag/.test(nel), nel);
 }
 { // a component the library does not hold, swapped in where no prop swaps it: its look and the limits of its size inline
   const tile = { component: 'Tile', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
