@@ -636,7 +636,8 @@
      spaced in one row", the selected one by fill). The segmented control's states and limits; only the look differs.
      Selected is the --selected fill and a 2px accent ring for the 1px line, a heavier edge as well as a colour
      (WCAG 1.4.1, 1.4.11: the accent holds 3:1 against fill and ground, as the segment's bar), drawn as a shadow so
-     the chip keeps its size. Links in a labelled nav (a view in the address), or buttons with aria-pressed.
+     the chip keeps its size. Links in a labelled nav, the choice in the address (aria-current); in a form, radios
+     styled as chips, never aria-pressed on a single choice (chip.md *Choice chips*, Build).
      <nav class="chips" aria-label="Client"><a class="chip" href="…" aria-current="true">All clients</a>…</nav> */
   .chips { display: flex; flex-wrap: nowrap; gap: var(--space-8); max-inline-size: 100%; overflow-x: auto; scrollbar-width: none; }
   .chip {
@@ -649,8 +650,9 @@
   .chip:is([aria-pressed="true"], [aria-current="true"]) { background: var(--selected); color: var(--fg); box-shadow: inset 0 0 0 var(--stroke-2) var(--accent); }
   @media (hover: hover) { .chip:hover:not([aria-pressed="true"], [aria-current="true"], :active) { color: var(--fg); background: var(--hover); } }
   .chip:active:not([aria-pressed="true"], [aria-current="true"]) { color: var(--fg); background: var(--pressed); }
-  /* inside, as the row's scroll would clip it outside, clear of the 2px ring */
-  .chip:focus-visible { outline-width: 3px; outline-offset: -5px; }
+  /* inside, as the row's scroll would clip it outside, with a 1px gap of fill inside the 2px selected ring, so a
+     focused selected chip shows two rings, not one thick band */
+  .chip:focus-visible { outline-width: 3px; outline-offset: -6px; }
 
   /* The page frame's components (its layout and markup are above, before this layer). Last in the layer, so the
      Menu button's hiding beats .button's display by order. */
