@@ -794,4 +794,25 @@ ok('every gap id is met by a fixture', Object.keys(GAPS).every((g) => seenGaps.h
 ok('--check: only a strict count absent from accepted.json is spared; a `left` or `predicted` count absent still fails',
   worse({ self: { a: 0 }, 'self left': { a: 2 }, 'self predicted': { a: 3 } }, { self: { a: 0 } }).length === 2
   && !unaccepted({ 'self left': { a: 2 } }, { self: { a: 0 } }).length);
+{ // another library's instance the markup draws open (layers.mjs openForeign): its insides, props and layout are held
+  // to the design as any part's, never inside-foreign or foreign-own; one it leaves closed (a prop swaps it, or it sits in
+  // a held component) keeps them; a glyph inside scaled with no point recorded is unwritten-scale, read with none
+  // (2026-11-27: 341 rows of a library's icons left to code)
+  const tag = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const c = { contract: 1, component: 'Chip', props: { glyph: { type: 'instance', figma: 'Glyph', swaps: ['swapped'] } },
+    anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Status', with: { Size: 'small' }, layout: { direction: 'row' } },
+      'icon/glyph': { kind: 'graphic', parent: 'icon', width: 10, height: 6, background: 'Fill/info', constraints: { horizontal: 'scale', vertical: 'scale' } },
+      swapped: { kind: 'instance', parent: 'root', component: 'Other', with: { Size: 'small' } }, 'swapped/vector': { kind: 'graphic', parent: 'swapped', background: 'Fill/info' },
+      tag: { kind: 'instance', parent: 'root', component: 'Tag' }, 'tag/mark': { kind: 'instance', parent: 'tag', component: 'Glyph', with: { Size: 'small' } }, 'tag/mark/vector': { kind: 'graphic', parent: 'tag/mark' } }, variants: [] };
+  const mains = (nm) => (nm === 'Tag' ? tag : null), library = { Tag: tag, Chip: c };
+  const open = gapOf(c, mains, undefined, { library }), closed = gapOf(c, mains);
+  ok('another library\'s instance drawn open: its insides and props are held to the design; without the library they stay excused as before',
+    open('icon/glyph', { library: { kind: 'graphic' }, drawn: null }) === null && open('icon.with', { library: { Size: 'small' }, drawn: null }) === null && open('icon.layout', { library: { direction: 'row' }, drawn: null }) === null
+      && closed('icon/glyph', { library: { kind: 'graphic' }, drawn: null }) === 'inside-foreign' && closed('icon.with', { library: { Size: 'small' }, drawn: null }) === 'foreign-own');
+  ok('…one the markup leaves closed, a prop\'s swap or inside a held component, keeps its excuse',
+    open('swapped/vector', { library: { kind: 'graphic' }, drawn: null }) === 'inside-foreign' && open('swapped.with', { library: { Size: 'small' }, drawn: null }) === 'foreign-own' && open('tag/mark/vector', { library: { kind: 'graphic' }, drawn: null }) === 'inside-foreign');
+  ok('…a glyph inside scaled with no point recorded, read with no constraints, is unwritten-scale; read otherwise, a difference',
+    open('icon/glyph.constraints', { library: { horizontal: 'scale', vertical: 'scale' }, drawn: null }) === 'unwritten-scale' && open('icon/glyph.constraints', { library: { horizontal: 'scale', vertical: 'scale' }, drawn: { horizontal: 'min', vertical: 'min' } }) === null
+      && closed('icon/glyph.constraints', { library: { horizontal: 'scale', vertical: 'scale' }, drawn: null }) === 'inside-foreign');
+}
 console.log(`${n} passed`);

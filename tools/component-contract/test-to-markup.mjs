@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { toReact, toElement, toSnippet, toGallery, toParity, toStories, partsOf, propsOf, filesFor, namingFault, partSelector, storyIdOf, storybookOf, BANNER, DOM, unexposed, swapKeysOf, insideOf } from './to-markup.mjs';
 import { siteFiles, serveSite } from './site.mjs';
 import { combinations, toCss, namer, drawn, entryOf, sampleSelector } from './to-code.mjs';
-import { expand, variantDefaults } from './layers.mjs';
+import { expand, variantDefaults, foreignOpened, openForeign } from './layers.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { findChrome, launch, newPage, attach, navigate, forceState } from '../shared/cdp.mjs';
 
@@ -193,6 +193,36 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
     toElement(banner, 'banner', { naming: ELEMENT, library: {} }).includes('"data-icon": (tone === "error") ? "Error" : "Info"') && [...swapKeysOf(banner, 'icon')].join() === '<icon>');
   const added = { ...banner, anatomy: { root: banner.anatomy.root }, variants: [{ when: { tone: 'info' }, add: { icon: banner.anatomy.icon, 'icon/info': banner.anatomy['icon/info'] } }, { when: { tone: 'error' }, add: { icon: { ...banner.anatomy.icon, with: { '<icon>': 'Error' } }, 'icon/error': { kind: 'instance', parent: 'icon', component: 'Error' } } }] };
   ok('a wrapper each variant adds at props of its own marks the glyph that variant gives it', toElement(added, 'banner', { naming: ELEMENT, library: {} }).includes('"data-icon": (tone === "error") ? "Error" : ((tone === "info") ? "Info" : "Info")'), toElement(added, 'banner', { naming: ELEMENT, library: {} })); }
+{ // another library's instance whose insides the contract records: drawn open, its frames and glyphs this component's own
+  // parts, its name and props said for the reading (data-component, data-with) as a variant changes them; one nested in
+  // it opens too; a held one, one a prop swaps, and one inside a held one stay closed (2026-11-27: a library's icons,
+  // drawn as marks, left 341 rows to code, inside-foreign)
+  const tag = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' } } };
+  const chip = { contract: 1, component: 'Chip', props: { tone: { type: 'enum', values: ['info', 'error'], default: 'info', figma: 'Tone' }, glyph: { type: 'instance', figma: 'Glyph', swaps: ['swapped'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 4 } },
+      icon: { kind: 'instance', parent: 'root', order: 0, component: 'Status', key: 'k1', with: { Size: 'small' }, layout: { direction: 'row', padding: { top: 2, end: 2, bottom: 2, start: 2 } }, width: 20, height: 20 },
+      'icon/inner': { kind: 'instance', parent: 'icon', order: 0, component: 'Glyph', key: 'k2', width: 16, height: 16 },
+      'icon/inner/vector': { kind: 'graphic', parent: 'icon/inner', order: 0, width: 16, height: 16, background: 'Fill/info' },
+      swapped: { kind: 'instance', parent: 'root', order: 1, component: 'Other', width: 16, height: 16 },
+      'swapped/vector': { kind: 'graphic', parent: 'swapped', order: 0, background: 'Fill/info' },
+      tag: { kind: 'instance', parent: 'root', order: 2, component: 'Tag' },
+      'tag/mark': { kind: 'instance', parent: 'tag', order: 0, component: 'Glyph', width: 8, height: 8 },
+      'tag/mark/vector': { kind: 'graphic', parent: 'tag/mark', order: 0 } },
+    variants: [{ when: { tone: 'error' }, set: { 'icon.with': { Size: 'large' }, 'icon.name': 'Error icon', 'icon/inner/vector.background': 'Fill/error' } }] };
+  const lib = { Tag: tag, Chip: chip };
+  ok('another library\'s instance with recorded insides opens, one nested in it too; a held one, one a prop swaps and one inside a held one stay closed',
+    [...foreignOpened(chip, lib)].sort().join() === 'icon,icon/inner' && openForeign(chip, lib).anatomy.icon.kind === 'container' && openForeign(chip, lib).anatomy.swapped.kind === 'instance' && openForeign(openForeign(chip, lib), lib) === openForeign(chip, lib));
+  const el = toElement(chip, 'chip', { naming: ELEMENT, library: lib });
+  ok('…drawn as frames of this component\'s own, its name and props said as a variant changes them, its glyph a part; said a gap, the glyph a box',
+    el.includes('"data-component": "Status", "data-with": (tone === "error") ? "{\\"Size\\":\\"large\\"}" : "{\\"Size\\":\\"small\\"}"') && /"data-part": "inner", "data-component": "Glyph" \},\s*h\("span", \{ "data-part": "icon-inner-vector"/.test(el)
+      && /Status, another library's, drawn from the layers the design records \(a glyph as a box of its size and colour\)/.test(el) && /"data-part": "swapped", "data-icon": glyph/.test(el), el);
+  const css = toCss(chip, 'chip', { naming: ELEMENT, library: lib });
+  ok('…and styled by the sheet as its own: the frame\'s padding, the glyph\'s size and fill, as a variant changes it; its key and mark no unwritten field',
+    /\[data-part="icon"\] \{[^}]*padding: 0\.125rem/.test(css) && /\[data-part="icon-inner-vector"\] \{[^}]*block-size: 1rem;[^}]*background: var\(--fill-info\)/.test(css) && /\[tone="error"\]\) > [^{]*\[data-part="icon-inner-vector"\] \{\s*background: var\(--fill-error\)/.test(css) && !/key on|foreign on/.test(css), css);
+  const m = toParity(chip, 'chip', { naming: ELEMENT, library: lib, framework: 'web-components' });
+  ok('…read by its own hooks, under each name a variant gives the frame above it', m.layers['Icon > Inner > Vector'] === 'ds-chip > [data-part="icon"] > [data-part="inner"] > [data-part="icon-inner-vector"]' && m.layers['Error icon > Inner > Vector'] === m.layers['Icon > Inner > Vector'] && typeof m.layers['Swapped > Vector'] === 'object');
+  ok('…without a library the markup opens nothing, though none would be held (every instance with insides opens)', !toElement(chip, 'chip', { naming: ELEMENT, library: {} }).includes('data-component') && [...foreignOpened(chip, {})].sort().join() === 'icon,icon/inner,tag,tag/mark');
+}
 { // a component the library does not hold, swapped in where no prop swaps it: its look and the limits of its size inline
   const tile = { component: 'Tile', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
   const cell = { component: 'Cell', props: {}, anatomy: { root: { kind: 'container' }, slot: { kind: 'instance', parent: 'root', component: 'Tile' } }, variants: [] };

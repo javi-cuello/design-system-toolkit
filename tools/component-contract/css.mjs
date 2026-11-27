@@ -23,7 +23,7 @@
 const SIDES = ['top', 'end', 'bottom', 'start'];
 import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, pathsToCss, pathsToMask, blendToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
-const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
+const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma', 'foreign']);
 const NOTE = 'no token in the design';
 // a text's own values say why they are values and no more: a variable may be bound to one, which the snapshot does not record
 const TEXT_NOTE = 'no text style in the design';
@@ -245,6 +245,10 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     }
     if (shift.includes('-50%')) put('translate', shift.join(' '));
   } else if (anchors) put('position', 'relative');
+  // a part scaled with its parent that states no point in it (a glyph inside another library's instance, drawn open: derive
+  // keeps its scale both ways but no place there, figma-fact:no-nested-position-override): drawn where it flows, and no
+  // share of it can be written, said so, as one whose offset is no number
+  if (cons && position !== 'absolute' && !at) for (const [axis, k] of [['horizontal', 'width'], ['vertical', 'height']]) if (cons[axis] === 'scale') { unread.push(`constraints (scale: no point in its parent is recorded, so no share of its ${k} can be written)`); unshared.push(axis); }
 
   const ts = take('typography'), own = typeOfValue(ts);
   // a text with no style, by its values (rules.mjs typeValue), written as values, never a var() no token defines; one
@@ -296,7 +300,8 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     else if (va !== 'start') unread.push(`verticalAlign (${va}: no CSS writes it)`);
   }
 
-  for (const k of Object.keys(e)) if (!done.has(k) && !STRUCTURE.has(k)) unread.push(k);
+  // (another library's instance drawn open, layers.mjs openForeign: its key is who it is, the markup's to say, no style)
+  for (const k of Object.keys(e)) if (!done.has(k) && !STRUCTURE.has(k) && !(k === 'key' && e.foreign)) unread.push(k);
   return { decls, unread, unshared };
 }
 

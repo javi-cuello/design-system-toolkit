@@ -33,7 +33,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
-import { expand, drawLayers, variantDefaults, kebab, camel, placedOf as heldBy } from './layers.mjs';
+import { expand, drawLayers, variantDefaults, kebab, camel, placedOf as heldBy, openForeign } from './layers.mjs';
 import { declarations, holds, rem } from './css.mjs';
 import { negative, heldOpacity, heldGlyph, bareGlyph, siblingOrder, liftsAlone, CLEARED, UNCLIPPED } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
@@ -1516,6 +1516,8 @@ export function toCss(c, folder, { naming, layer = 'components', settings = HOUS
   // library the markup is given, as the markup asks it (layers.mjs placedOf); `mains` only where no library is given
   const mains = library ? heldOf(library) : given;
   library ||= {};
+  // (another library's instance whose insides the contract records is drawn open, as the markup draws it: openForeign)
+  if (Object.keys(library).length) c = openForeign(c, library);
   const { rules, unread } = rulesOf(c, mains, settings);
   const lines = [`/* ${BANNER} */`];
   const keys = [...new Set(rules.flatMap((r) => Object.keys(r.when)))];

@@ -58,7 +58,7 @@ import { roundTrip, drawSettings, restKey } from './to-figma.mjs';
 import { parseColour } from '../parity/values.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, swapKeysOf } from './to-markup.mjs';
-import { expand, variantDefaults } from './layers.mjs';
+import { expand, variantDefaults, foreignOpened, openForeign } from './layers.mjs';
 import { sharesNeverWritten, tokenNames } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
@@ -150,13 +150,16 @@ export const GAPS = {
   'one-css-name': 'a token the design names that code spells as the same custom property as another (a name marked with an emoji beside the plain one): no sheet can tell the two apart',
   'icon-own-colour': 'a placed icon\'s colour where the design leaves it the icon set\'s own',
   'placed-own-look': 'a placed component\'s own look the design overrides on the instance',
-  'inside-foreign': 'the insides of a component the library does not hold',
-  'foreign-own': 'the props, layout and clipping of a component the library does not hold',
+  'inside-foreign': 'the insides of a component the library does not hold, where the markup leaves it closed (a prop swaps it, or it sits in a held component): one it draws open is compared',
+  'foreign-own': 'the props, layout and clipping of a component the library does not hold, where the markup leaves it closed',
   'swapped-own': 'the key, modes and look of a swapped-in component no prop passes',
   'carries-override': 'a placed component\'s part kept only as the way down to an override',
 };
 /* Which gap of GAPS excuses a row (at, row), or null where it is a difference: leftToCode, by name. */
-export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true, read = null } = {}) {
+export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true, read = null, library = null } = {}) {
+  // (`library`: the one the markup was drawn with, { component: contract }; another library's instance it draws open,
+  // its insides, props and layout this component's own, is held to the design as any part: layers.mjs openForeign)
+  const opened = library && Object.keys(library).length ? foreignOpened(contract, library) : new Set();
   // (`read`: the reading, as a contract; the parts it draws at any combination)
   const readIds = read ? new Set([...Object.keys(read.anatomy || {}), ...(read.variants || []).flatMap((v) => Object.keys(v.add || {}))]) : null;
   // (a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
@@ -342,7 +345,8 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // swapped by a prop, has a main: its look is held to that, placed-own-look's)
   // (its insides only where the library holds no main for it: a drawing it holds, swapped by a prop, is drawn by name
   // from that main, so what is inside it is compared)
-  const noMain = (el) => { const e = all[el] || {}; return !!mainOf && e.kind === 'instance' && !mainOf(e.component, e.key); };
+  // (only one the markup leaves closed, a mark: one it draws open is drawn, openForeign)
+  const noMain = (el) => { const e = all[el] || {}; return !!mainOf && e.kind === 'instance' && !mainOf(e.component, e.key) && !opened.has(el); };
   const inForeign = (el) => el.split('/').some((_, i, s) => i < s.length - 1 && noMain(s.slice(0, i + 1).join('/')));
   // (but its Size: to-markup passes that one, data-icon-size, and from-code reads it back)
   // (nor a swap: the prop whose value names the component placed in it, its glyph, which code draws or does not, and
@@ -371,7 +375,8 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // a scale constraint the sheet never writes (to-code's sharesNeverWritten: css.mjs shareable fails wherever drawn()
   // places the part): where it is pinned instead is code's to say. Only where the rows are held to the contract the
   // sheet was written from (`ownSheet`): the second leg's are held to the first reading, in its words
-  const unscaled = ownSheet ? sharesNeverWritten(contract, mainOf || undefined, settings) : new Set();
+  // (of the contract the sheet was written from: another library's instance it draws open is its own parts there)
+  const unscaled = ownSheet ? sharesNeverWritten(opened.size ? openForeign(contract, library) : contract, mainOf || undefined, settings) : new Set();
   // and a radius the design holds only as mixed on a path (a vector's corners, each its own, which the snapshot records
   // for no part but a box's four): no CSS box's corners say it and the contract does not hold it (css.mjs says it
   // unread). A box's mixed (an older snapshot's), or a part some layer makes or keeps a box, stays a difference
@@ -381,7 +386,9 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // it unread), which no sheet draws, so the reading finds none: where the reading draws one, it stays a difference
   // (each only where the reading drew what the sheet writes instead: the part pinned at its size from the start, read
   // `min`, or no constraints at all, as from-code drops them where both axes are min; a path's corners as none, null or 0; anything else drawn there is code's, a difference)
-  const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) && (row.drawn == null || row.drawn === 'min') ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) && (row.drawn == null || row.drawn === 0) ? 'path-radius'
+  // (a part whose every axis is such a scale, read with no constraints at all, is one row on the whole field: the same)
+  const allScale = (at, v) => /\.constraints$/.test(at) && !!v && typeof v === 'object' && Object.keys(v).length > 0 && Object.entries(v).every(([axis, x]) => x === 'scale' && unscaled.has(`${at}.${axis}`));
+  const unwritten = (at, row) => (!row ? null : ((row.library === 'scale' && unscaled.has(at) && (row.drawn == null || row.drawn === 'min')) || (allScale(at, row.library) && row.drawn == null)) ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) && (row.drawn == null || row.drawn === 0) ? 'path-radius'
     : row.library === 'literal' && row.drawn == null && /\.shadow$/.test(at) ? 'unrecorded-effect'
     : typeof row.library === 'string' && typeof row.drawn === 'string' && row.library !== row.drawn && /\.(background|color|radius|border|shadow|type|typography|width|height|min\w*|max\w*|opacity|layout)(\.|$)/.test(at) && !/^(#|rgba?\(|literal$|mixed$|scale$)/.test(row.library) && tokenNames.token(row.library) === tokenNames.token(row.drawn) ? 'one-css-name' : null);
   // a placed instance's props only a pointer state gives: one of its own (a definition drawn hovered, its State Hover), or
@@ -497,6 +504,8 @@ export function measure(where, only = [], now = {}) {
       : now.reader && t.reader && t.reader !== now.reader ? 'its inputs changed since, the reader\'s code among them' : 'its inputs changed since'));
   // each component by its name, as the pipeline resolves it, for what an instance of it draws at its defaults
   const mains = req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract));
+  // and the library the self leg's markup is drawn with (from-code selfSource), for what it draws open (gapOf)
+  const library = Object.fromEntries(contracts(where).map(({ folder, contract }) => [contract.component, { ...contract, folder }]));
   // the combinations a reading left unread and predicted from its layers (from-code's `unread`; one read before it was
   // kept, its self-check's words): held apart, never measured. One that does not say (a self-check that failed, or
   // none) is `unknown`: never the same, and no count
@@ -513,7 +522,7 @@ export function measure(where, only = [], now = {}) {
     else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, ...tagsOf(code), combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma, library })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
@@ -523,7 +532,7 @@ export function measure(where, only = [], now = {}) {
       const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract, whens: true }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
-      legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false, read: again.asFigma })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
+      legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false, read: again.asFigma, library })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     // a reading whose geometry was not compared (taken before it was kept, or with no stored figma.json) is stale, as one

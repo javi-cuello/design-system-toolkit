@@ -114,6 +114,47 @@ export function placedOf(library, e) {
   const named = library[e.component];
   return named && keyMatches(named.figma && named.figma.key, e.key) ? named : null;
 }
+/* The instances of a component the library does not hold (another library's) whose insides the contract records,
+   opened: each a frame of this component's own, its layers drawn as this component's, as a detached instance is
+   (to-markup's detach), its kind a container marked `foreign` and its component, key and props kept on it, for the
+   markup to say (data-component, data-with) and the reading to give back. Not one a prop swaps or fills (what the
+   caller passes draws there), one a variant detaches or swaps for a component the library holds, nor one inside an
+   instance left closed (a held component's insides are its own sheet's). The contract itself where none is opened,
+   else a copy, one per contract and library (to-code's caches are keyed by the contract); `foreignOpened`, the ids
+   opened. The one rule for to-markup, to-code and eval. Tested by test-to-markup.mjs. */
+const OPENED = new WeakMap();
+export function openForeign(c, library = {}) { return openedWith(c, library).c; }
+export function foreignOpened(c, library = {}) { return openedWith(c, library).opened; }
+function openedWith(c, library) {
+  if (!c || typeof c !== 'object') return { c, opened: new Set() };
+  const lib = library || {};
+  if (!OPENED.has(c)) OPENED.set(c, new WeakMap());
+  const got = OPENED.get(c);
+  if (!got.has(lib)) got.set(lib, opening(c, lib));
+  return got.get(lib);
+}
+function opening(c, library) {
+  const vs = (c && c.variants) || [], anatomy = (c && c.anatomy) || {};
+  const all = { ...Object.assign({}, ...[...vs].reverse().map((v) => v.add || {})), ...anatomy };
+  const driven = new Set(Object.values((c && c.props) || {}).flatMap((p) => [...(p.swaps || []), ...(p.slots || []), ...(p.slot ? [p.slot] : [])]));
+  const held = (e) => !!placedOf(library, e);
+  const opened = new Set();
+  for (const id of Object.keys(all).sort((a, b) => a.split('/').length - b.split('/').length)) {
+    const es = [anatomy[id], ...vs.map((v) => (v.add || {})[id])].filter(Boolean);
+    if (!es.length || es.some((e) => e.kind !== 'instance' || held(e)) || driven.has(id)) continue;
+    if (!Object.values(all).some((e) => e && e.parent === id)) continue;
+    if (vs.some((v) => { const s = v.set || {}; return `${id}.kind` in s || (typeof s[`${id}.component`] === 'string' && held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null })); })) continue;
+    let closed = false;
+    for (let up = all[id].parent; up && up !== 'root' && !closed; up = (all[up] || {}).parent) closed = (all[up] || {}).kind === 'instance' && !opened.has(up);
+    if (!closed) opened.add(id);
+  }
+  if (!opened.size) return { c, opened };
+  const open = (o) => Object.fromEntries(Object.entries(o).map(([id, e]) => [id, opened.has(id) && e ? { ...e, kind: 'container', foreign: true } : e]));
+  const out = { ...c, anatomy: open(anatomy), variants: vs.map((v) => (v.add ? { ...v, add: open(v.add) } : v)) };
+  // (opened twice is opened once: a reader handed the opened contract opens nothing more)
+  OPENED.set(out, new WeakMap([[library, { c: out, opened }]]));
+  return { c: out, opened };
+}
 export const bareProp = (k) => String(k).replace(/#\d+:\d+$/, '');
 export const spellValue = (v) => kebab(String(v).replace(/^\s*-/, 'minus ').replace(/\+/g, ' plus ').replace(/&/g, ' and '));
 export function valueIds(list) {

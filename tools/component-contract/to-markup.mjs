@@ -30,7 +30,10 @@ import { fileURLToPath } from 'node:url';
 import { declarations } from './css.mjs';
 import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
-import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp } from './layers.mjs';
+import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign } from './layers.mjs';
+// (another library's instance whose insides the contract records is drawn open, its layers this component's own:
+// layers.mjs openForeign, asked only of a library the markup is given, as no library holds nothing)
+const opened = (c, library) => (library && Object.keys(library).length ? openForeign(c, library) : c);
 
 const require = createRequire(import.meta.url);
 const MODES = require('../tokens/modes.cjs');
@@ -511,6 +514,7 @@ function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, 
 /* The tree, built once for both frameworks: each element as a tag, its attributes (a literal, or code) and its
    children, printed as JSX or as `h()` calls. */
 function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOUSE }) {
+  c = opened(c, library);
   const n = namer(folder, naming);
   const props = propsOf(c, library, lang, settings), ref = lang.ref;
   const parts = partsOf(c, settings);
@@ -548,7 +552,22 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     if (!m) gaps.push(`${partName(id)}: inside ${partName(detachedHost(c, id))}, which a variant detaches, the sheet reaches it by ${last}, no hook the markup can draw: drawn by its own name, which nothing styles or reads`);
     return m && [n.element ? 'data-part' : 'className', { lit: m[1] }];
   };
-  const hook = (id) => [detachedHook(id) || (n.element ? ['data-part', { lit: seg(id) }] : ['className', { lit: n.part(seg(id)).slice(1) }]), ...nameAttr(id), ...modeAttrs(id)];
+  const hook = (id) => [detachedHook(id) || (n.element ? ['data-part', { lit: seg(id) }] : ['className', { lit: n.part(seg(id)).slice(1) }]), ...nameAttr(id), ...modeAttrs(id), ...foreignAttrs(id)];
+  // another library's instance drawn open (openForeign): the component it is and the props it is given, as the design
+  // places it, so a reading gives the instance back (from-code foreignAsInstance); each as the variants change them, in
+  // the order expand applies them, a combination last
+  const foreignAttrs = (id) => {
+    const e = ((parts.get(id) || {}).e) || {};
+    if (!e.foreign) return [];
+    const vs = c.variants || [], order = [...vs.filter((v) => !v.combination), ...vs.filter((v) => v.combination)].filter((v) => !pointerWords(c, v.when));
+    const at = (v, f) => (v.set && `${id}.${f}` in v.set ? { x: v.set[`${id}.${f}`] } : v.add && v.add[id] ? { x: v.add[id][f] } : null);
+    const attr = (f, name, say) => {
+      // (none where every variant gives the base's own: an instance only variants add says it once)
+      const sets = order.filter((v) => at(v, f)), code = sets.some((v) => say(at(v, f).x) !== say(e[f])) && byVariant(sets, (v) => lang.str(say(at(v, f).x)), lang.str(say(e[f])));
+      return code ? [[name, { code }]] : say(e[f]) ? [[name, { lit: say(e[f]) }]] : [];
+    };
+    return [...attr('component', 'data-component', (x) => (typeof x === 'string' ? x : '')), ...attr('with', 'data-with', (w) => (w && typeof w === 'object' && Object.keys(w).length ? JSON.stringify(w) : ''))];
+  };
   const named = (key) => props.find((x) => x.key === key);
   // the code that holds at a variant's props (null: never in markup; 'true': always)
   const testOf = (when) => {
@@ -802,6 +821,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     } else if (e.kind === 'text') {
       out = { tag, attrs: hook(id), children: [textOf(id, e, part.words)] };
     } else {
+      // (another library's instance drawn open: its glyphs boxes of their size and colour, no path data being recorded)
+      if (e.foreign) { const gap = `${partName(id)}: ${e.component}, another library's, drawn from the layers the design records (a glyph as a box of its size and colour): draw it as the project draws that library's`; if (!gaps.includes(gap)) gaps.push(gap); }
       out = { tag, attrs: hook(id), children: (kids.get(id) || []).flatMap((k) => node(k, known, fill)).filter(Boolean) };
     }
     return when ? { when, node: out } : out;
@@ -1284,6 +1305,7 @@ export function partSelector(c, n, id, part = partsOf(c).get(id), library = {}) 
    option, so the run measures the whole set (code-standard rule 33), each by the args its story takes; every layer by
    the selector the sheet styles it by (to-code's). */
 export function toParity(c, folder, { naming, library = {}, platform = null, framework = 'react', settings = HOUSE } = {}) {
+  c = opened(c, library);
   const n = namer(folder, naming);
   // each variant's args by the names its markup takes: a snippet's variables, where those differ
   const props = propsOf(c, library, framework === 'kirby' ? PHP : JS, settings);
@@ -1320,6 +1342,20 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   // a layer as the store spells its path (tools/parity layers.mjs): a repeat by its number, Item#2
   const nameOf = (id) => { const e = (parts.get(id) || {}).e || {}; const m = /_(\d+)$/.exec(id); return (e.name || partName(id)) + (m ? `#${m[1]}` : ''); };
   const pathOf = (id) => { const names = []; for (let up = id; up && up !== 'root'; up = (parts.get(up) || {}).e?.parent) names.unshift(nameOf(up)); return names.join(' > '); };
+  const renamedPaths = (id) => {
+    const out = new Set(), base = pathOf(id);
+    for (const v of c.variants || []) {
+      if (pointerWords(c, v.when)) continue;
+      const names = [];
+      for (let up = id; up && up !== 'root'; up = (parts.get(up) || {}).e?.parent) {
+        const set = v.set && `${up}.name` in v.set ? v.set[`${up}.name`] : undefined, m = /_(\d+)$/.exec(up);
+        names.unshift(typeof set === 'string' && set ? set + (m ? `#${m[1]}` : '') : nameOf(up));
+      }
+      const p = names.join(' > ');
+      if (p !== base) out.add(p);
+    }
+    return out;
+  };
   const layers = {}, byId = {};
   const mains = (name, key = null) => placedOf(library, { component: name, key });
   // what this component puts in a placed component's slot, at any depth there: that slot's selector, then each box's own
@@ -1348,6 +1384,9 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
       : partSelector(c, n, x.id, x, library);
     layers[pathOf(x.id)] = at;
+    // (and under each name a variant gives a box above it, as the store spells the path where that variant holds: an
+    // icon's frame a type renames, holding the glyph that type adds; never over a path another part has)
+    if (typeof at === 'string') for (const p of renamedPaths(x.id)) if (!(p in layers)) layers[p] = at;
     // each part's selector by its id too (not in the mapping written): a stored path may be two parts never drawn
     // together, where the self leg needs each one's own (from-code swapPartsOf)
     if (typeof at === 'string') byId[x.id] = at;

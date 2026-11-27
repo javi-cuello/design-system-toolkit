@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins } from './from-code.mjs';
+import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1598,5 +1598,15 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
         got.flex && got.flow.direction === 'row' && Object.values(got.pad).every((v) => v === 4) && got.w === 24 && got.h === 24 && got.mask === 'content-box' && got.bg === 'content-box', JSON.stringify(got));
     } finally { await browser.close(); }
   }
+}
+{ // another library's instance the markup drew open (data-component, data-with), read back as the instance it is: its
+  // component and props on the element and in each variant's set and add of them (2026-11-27)
+  const read = { anatomy: { root: { kind: 'container' }, icon: { kind: 'container', parent: 'root', foreign: 'Status', foreignWith: { Size: 'small' }, layout: { direction: 'row' } }, 'icon/glyph': { kind: 'container', parent: 'icon' }, box: { kind: 'container', parent: 'root' } },
+    variants: [{ when: { tone: 'error' }, set: { 'icon.foreignWith': { Size: 'large' }, 'icon.foreign': 'Status/Error' } }, { when: { tone: 'none' }, set: { 'icon.foreignWith': null } }, { when: { big: true }, add: { extra: { kind: 'container', parent: 'root', foreign: 'Badge' } } }] };
+  const ids = foreignAsInstance(read), a = read.anatomy;
+  ok('foreignAsInstance: a frame the markup drew for another library\'s instance is that instance again, its component and props as the markup says them, in every variant; a frame of its own stays one',
+    [...ids].sort().join() === 'extra,icon' && a.icon.kind === 'instance' && a.icon.component === 'Status' && JSON.stringify(a.icon.with) === '{"Size":"small"}' && !('foreign' in a.icon) && !('foreignWith' in a.icon) && a.icon.layout.direction === 'row'
+      && JSON.stringify(read.variants[0].set) === '{"icon.with":{"Size":"large"},"icon.component":"Status/Error"}' && read.variants[1].set['icon.with'] === null && read.variants[2].add.extra.kind === 'instance' && read.variants[2].add.extra.component === 'Badge' && !('with' in read.variants[2].add.extra)
+      && a['icon/glyph'].kind === 'container' && a.box.kind === 'container');
 }
 console.log(`${n}/${n} passed`);
