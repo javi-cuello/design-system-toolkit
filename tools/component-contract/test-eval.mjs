@@ -249,7 +249,12 @@ ok('a component measured since the accept is held until accepted; one that came 
     variants: [{ when: { selected: true }, remove: ['icon/icon'] }] };
   const left = leftToCode(t, () => null);
   ok('a placed icon left its own colour (its override taken away) is code\'s to say, where no main holds that colour',
-    left('icon.background', { library: null, drawn: 'C/black' }) && !left('icon.background', { library: 'C/x', drawn: 'C/black' }) && !leftToCode({ ...t, anatomy: { ...t.anatomy, 'icon/icon': { kind: 'graphic', parent: 'icon', width: 12 } } }, () => null)('icon.background', { library: null, drawn: 'C/black' }) && !leftToCode(t, (n) => (n === 'Icon/plus' ? { contract: 1, component: n, props: {}, anatomy: { root: { kind: 'container' } }, variants: [] } : null))('icon.background', { library: null, drawn: 'C/black' })); }
+    left('icon.background', { library: null, drawn: 'C/medium' }) && !left('icon.background', { library: 'C/x', drawn: 'C/medium' }) && !leftToCode({ ...t, anatomy: { ...t.anatomy, 'icon/icon': { kind: 'graphic', parent: 'icon', width: 12 } } }, () => null)('icon.background', { library: null, drawn: 'C/medium' }) && !leftToCode(t, (n) => (n === 'Icon/plus' ? { contract: 1, component: n, props: {}, anatomy: { root: { kind: 'container' } }, variants: [] } : null))('icon.background', { library: null, drawn: 'C/medium' }));
+  // (review of 2026-11-27: Figma keeps the instance's colour where its glyph's override goes, so code is entitled to its
+  // rest colour there, no other; and only where every combination leaving it no colour takes the override away)
+  const t2 = { ...t, props: { ...t.props, bare: { type: 'boolean', default: false, axis: true } }, variants: [...t.variants, { when: { bare: true }, set: { 'icon/icon.background': null } }] };
+  ok('a placed icon left its own colour is left to code only where the reading drew its rest colour, and only where every combination leaving it none takes the override away',
+    !left('icon.background', { library: null, drawn: 'C/black' }) && !leftToCode(t2, () => null)('icon.background', { library: null, drawn: 'C/medium' })); }
 { const pill = { contract: 1, component: 'Pill', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column', align: 'start' } } }, variants: [] };
   const c = { contract: 1, component: 'C', props: {}, anatomy: { root: { kind: 'container' }, p: { kind: 'instance', parent: 'root', component: 'Pill' } }, variants: [] };
   const left = leftToCode(c, (n) => (n === 'Pill' ? pill : null));
@@ -261,11 +266,15 @@ ok('a component measured since the accept is held until accepted; one that came 
 { // a placed component a variant swaps for one the library does not hold: the colour read there, where the design
   // expanded at that variant gives none, is the swapped-in icon's own (named); where it gives one, a difference
   const st = { contract: 1, component: 'Status', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
-  const c = (bg) => ({ contract: 1, component: 'Note', props: { status: { type: 'enum', values: ['info', 'error'], default: 'info' } }, anatomy: { root: { kind: 'container' }, s: { kind: 'instance', parent: 'root', component: 'Status' } },
-    variants: [{ when: { status: 'error' }, set: { 's.component': 'Status/Error', 's.key': 'k', ...(bg && { 's.background': bg }) } }] });
+  const c = (bg, bare = false) => ({ contract: 1, component: 'Note', props: { status: { type: 'enum', values: ['info', 'error', 'none'], default: 'info' } }, anatomy: { root: { kind: 'container' }, s: { kind: 'instance', parent: 'root', component: 'Status', background: '#000000' } },
+    variants: [{ when: { status: 'error' }, set: { 's.component': 'Status/Error', 's.key': 'k', 's.background': bg } }, ...(bare ? [{ when: { status: 'none' }, set: { 's.background': null } }] : [])] });
   const mains = (n) => (n === 'Status' ? st : null);
   ok('the colour of a component the library does not hold, swapped in where the design gives none, is its own; given one, a difference',
-    gapOf(c(null), mains)('s.background', { library: null, drawn: 'rgb(0 0 0 / 1)' }) === 'icon-own-colour' && gapOf(c('Icon/red'), mains)('s.background', { library: null, drawn: 'rgb(0 0 0 / 1)' }) == null); }
+    gapOf(c(null), mains)('s.background', { library: null, drawn: '#000000' }) === 'icon-own-colour' && gapOf(c('Icon/red'), mains)('s.background', { library: null, drawn: '#000000' }) == null
+    // (review of 2026-11-27: code is entitled to the colour the instance has at rest, which Figma keeps across the swap; and
+    // only where the swap is in force at every combination that leaves it no colour, not at any variant anywhere)
+    && gapOf(c(null), mains)('s.background', { library: null, drawn: 'rgb(0 0 0 / 1)' }) === 'icon-own-colour' && gapOf(c(null), mains)('s.background', { library: null, drawn: 'Icon/blue' }) == null
+    && gapOf(c(null, true), mains)('s.background', { library: null, drawn: '#000000' }) == null); }
 { // a swap of a drawing alone (a slot's placeholder: no props, nothing but boxes and shapes) is drawn by name, as an
   // icon's mark: its own layout is its drawing's, as a component the library does not hold; unswapped, it is placed
   const slot = { contract: 1, component: 'Slot', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', align: 'start' } }, bg: { kind: 'graphic', parent: 'root' } }, variants: [] };

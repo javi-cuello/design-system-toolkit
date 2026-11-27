@@ -194,8 +194,6 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const P = partsOf(contract);
   const placedIn = (el) => { const q = P.get(el); if (!q || !q.inside) return false; for (let up = q.e.parent; up && up !== q.slotted; up = ((P.get(up) || {}).e || {}).parent) if ((((P.get(up) || {}).e) || {}).kind === 'instance') return true; return !q.slotted; };
   const carries = (el) => mainOf && !over.has(el) && [...over.keys()].some((id) => id.startsWith(`${el}/`)) && placedIn(el);
-  // a placed icon's colour where the design leaves it its own (a combination that takes the glyph's override away): the
-  // icon set's own colour, which no main in the library holds, so what code draws there is its own to say
   const all = { ...(contract.anatomy || {}), ...Object.assign({}, ...(contract.variants || []).map((v) => v.add || {})) };
   // what code that draws each placed component as its own draws at a part, the placed main's own value (a gap excuses a
   // row only where the reading drew that: the markup cannot pass the design's override, so the component's own is all
@@ -252,12 +250,38 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
       return restKey(v) === restKey(d) || (!!colour(v) && colour(v) === colour(d));
     });
   };
-  const ownColour = (el, field, row) => field === 'background' && row && row.library == null && mainOf && (all[el] || {}).kind === 'instance' && ((!mainOf(all[el].component, all[el].key)
-    && (contract.variants || []).some((v) => (v.remove || []).some((r) => r.startsWith(`${el}/`) && all[r] && all[r].background != null))) || swappedColour(el));
-  // (and one a variant swaps in that the library does not hold, where the design expanded there gives it no colour: the
-  // swapped-in icon's own, which to-markup can only mark (foreignMark) and from-code reads as drawn, swappedMark)
-  const swappedColour = (el) => (contract.variants || []).some((v) => { const n = (v.set || {})[`${el}.component`]; if (typeof n !== 'string' || mainOf(n, v.set[`${el}.key`])) return false;
-    const x = expand(contract, { ...variantDefaults(contract), ...v.when })[el]; return !!x && x.background == null; });
+  // a placed icon's colour where the design leaves it its own (a combination that takes the glyph's override away): the
+  // icon set's own colour, which no main in the library holds; and one a variant swaps in that the library does not hold,
+  // where the design expanded there gives it no colour: the swapped-in icon's own, which to-markup can only mark
+  // (foreignMark) and from-code reads as drawn, swappedMark. Figma keeps an instance's colour across both, so code is
+  // entitled to the colour the instance has at rest, no other: what it draws there otherwise is a difference. And only
+  // where every combination that leaves the instance no colour is one of these (the variants in force there), as rows
+  // merge every combination under one place: one found where neither is in force stays a difference
+  const ownColour = (el, field, row) => field === 'background' && row && row.library == null && mainOf && (all[el] || {}).kind === 'instance' && leftOwn(el)
+    && ((r) => r != null && (restKey(r) === restKey(row.drawn ?? null) || (!!colour(r) && colour(r) === colour(row.drawn))))(colourIn(expand(contract, variantDefaults(contract)), el));
+  // (an instance's colour at a combination: its own, else its glyph's, as the rows fold it; undefined where it is not drawn)
+  const colourIn = (A, el) => { const x = A[el]; if (!x) return undefined; if (x.background != null) return x.background; const g = Object.entries(A).find(([k, y]) => k.startsWith(`${el}/`) && y && y.kind === 'graphic' && y.background != null); return g ? g[1].background : null; };
+  const combosOf = (() => { let seen; return () => {
+    if (seen !== undefined) return seen;
+    let cs = [{}];
+    for (const [k, q] of Object.entries(contract.props || {})) if (q.type === 'enum' || q.type === 'boolean') { cs = cs.flatMap((c) => (q.type === 'enum' ? q.values : [true, false]).map((v) => ({ ...c, [k]: v }))); if (cs.length > 4096) return (seen = null); }
+    return (seen = cs.filter((c) => !(contract.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v)))));
+  }; })();
+  const leftOwn = (el) => {
+    const cs = combosOf(), dflt = variantDefaults(contract);
+    if (!cs) return false;
+    const held = !!mainOf(all[el].component, all[el].key);
+    let any = false;
+    for (const c of cs) {
+      const w = { ...dflt, ...c }, A = expand(contract, w);
+      if (colourIn(A, el) !== null) continue;
+      const removed = !held && (contract.variants || []).some((v) => Object.entries(v.when || {}).every(([k, x]) => String(w[k]) === String(x)) && (v.remove || []).some((r) => r.startsWith(`${el}/`) && all[r] && all[r].background != null));
+      const swapped = typeof A[el].component === 'string' && A[el].component !== all[el].component && !mainOf(A[el].component, A[el].key);
+      if (!removed && !swapped) return false;
+      any = true;
+    }
+    return any;
+  };
   // a placed component's own look the design overrides on the instance (its layout, corners, stroke, effect, clipping,
   // smoothing): code places a component and leaves its look to its own sheet (to-code's PLACED, code-standard rule 5),
   // so what the markup cannot pass is code's to say. (Not its fill: on an instance that is an icon's colour, which code
