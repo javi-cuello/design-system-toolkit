@@ -14,7 +14,7 @@ It needs no bridge plugin, no toolkit checkout, no Node and no project setup. It
 6. Press **Run audit**. With nothing selected, it audits every component. With components selected, or a section or frame holding them, it audits only those, and the report says so. The report downloads as `audit-<file>-<date>.md`.
 7. Upload the report to a Claude chat, type `show me results`, and answer chat or page.
 
-Claude ends by offering the results, and any drafted document, as files. On a 71-component library its reply takes about a minute. Most of that is writing the tables.
+Claude ends by offering the results, and any drafted document, as files. On a 71-component library its reply takes about a minute.
 
 A changed manifest needs a re-import. "Run last plugin" will not pick it up.
 
@@ -49,7 +49,7 @@ Every later run judges by them. Marks and notes stay in that browser.
 | `report.html` | The page Claude fills in. figma-components-audit publishes the same page through `tools/figma-audit/fix-queue.mjs --page`. |
 | `tests/test-audit-lite.mjs` | Builds a report from fixtures, runs the stages against a fake Figma and renders the page. |
 
-The generated block holds the list of stages, the audit scripts, the snapshot plugin's facts mode, and the full audit's context-document readers and discovery. It also holds the judging prompt, the buckets, the universal conventions and the house settings. The block also carries copies of `instructions.md` and `report.html`. The toolkit's `bin/check` runs `sync.mjs --check` through `standards/tests/check.sh`. It fails when the block differs from its sources.
+The generated block holds the list of stages, the audit scripts and the snapshot plugin's facts mode. It holds the full audit's context-document readers, discovery, judging prompt and house settings, and copies of `instructions.md` and `report.html`. Its check, `sync.mjs --check`, fails when the block differs from its sources.
 
 The test checks that a context document gives the settings and rulings the full audit reads from it. Its document is `tests/fixtures/design-system-context.md`.
 
