@@ -203,7 +203,11 @@ function opening(c, library) {
     if (!ids.length && !back.length) return w;
     return { ...w, set: { ...w.set, ...Object.fromEntries(ids.flatMap((id) => [[`${id}.kind`, 'container'], [`${id}.foreign`, true]])), ...Object.fromEntries(back.flatMap((id) => [[`${id}.kind`, 'instance'], [`${id}.foreign`, false]])) } };
   };
-  const out = { ...c, anatomy: open(anatomy), variants: vs.map((v) => setOpen(v, v.add ? { ...v, add: open(v.add) } : v)) };
+  // (one listed inside a held instance, where a variant detaches that instance: there the layers are this component's
+  // own, so it is opened as one of its own is, a read-only field's open chevron in its detached menu)
+  const D = variantDefaults(c), nearHeld = (id) => { for (let up = (all[id] || {}).parent; up && up !== 'root'; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') return up; return null; };
+  const freed = (v, o) => { const ids = Object.keys(o).filter((id) => inHeld.has(id)); if (!ids.length) return o; const a = expand(c, { ...D, ...(v.when || {}) }); return Object.fromEntries(Object.entries(o).map(([id, e]) => [id, ids.includes(id) && e && a[nearHeld(id)] && a[nearHeld(id)].kind !== 'instance' ? { ...e, kind: 'container', foreign: true } : e])); };
+  const out = { ...c, anatomy: open(anatomy), variants: vs.map((v) => setOpen(v, v.add ? { ...v, add: freed(v, open(v.add)) } : v)) };
   // (opened twice is opened once: a reader handed the opened contract opens nothing more)
   OPENED.set(out, new WeakMap([[library, { c: out, opened }]]));
   return { c: out, opened };
