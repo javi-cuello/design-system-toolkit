@@ -344,7 +344,8 @@ export async function navigate(tab, url, { until = 'load', timeout = 30_000, htm
  * resets the node ids the browser holds a forced state against, which dropped
  * every state but the last on a page of many sections.
  * A target marked `optional` that matches nothing is passed over (a placed
- * part a combination does not draw); any other throws.
+ * part a combination does not draw) and named in the answer's `missed`, so a
+ * caller can tell one that matched at no render; any other throws.
  */
 export async function forceState(tab, targets) {
   await tab.send('DOM.getDocument', { depth: 0 });
@@ -352,7 +353,7 @@ export async function forceState(tab, targets) {
     const { result } = await tab.send('Runtime.getProperties', { objectId, ownProperties: true });
     return Promise.all(result.filter((x) => /^\d+$/.test(x.name)).map(async (x) => (await tab.send('DOM.requestNode', { objectId: x.value.objectId })).nodeId));
   };
-  const held = new Map();
+  const held = new Map(), missed = [];
   const hold = (nodeId, classes) => held.set(nodeId, [...new Set([...(held.get(nodeId) || []), ...classes])]);
   for (const { selector, pseudo, within = null, optional = false } of targets) {
     const focus = /^focus/.test(pseudo);
@@ -368,13 +369,14 @@ export async function forceState(tab, targets) {
     });
     const { result: pair } = await tab.send('Runtime.getProperties', { objectId: result.objectId, ownProperties: true });
     const [hit, above] = await Promise.all(['0', '1'].map((i) => nodes(pair.find((x) => x.name === i).value.objectId)));
-    if (!hit.length && optional) { await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {}); continue; }
+    if (!hit.length && optional) { missed.push(selector); await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {}); continue; }
     if (!hit.length) throw new Error(`state selector matched no element: ${selector}${within ? ` in ${within}` : ''}`);
     for (const n of above) hold(n, [focus ? 'focus-within' : pseudo]);
     for (const n of hit) hold(n, focus ? ['focus', 'focus-visible'] : [pseudo]);
     await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {});
   }
   for (const [nodeId, forcedPseudoClasses] of held) await tab.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses });
+  return { missed };
 }
 
 /* The page's size in CSS pixels, at scale 1 — as narrow as a phone frame,

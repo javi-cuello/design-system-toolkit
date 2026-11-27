@@ -1448,49 +1448,42 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
  */
 /* A pointer state forced where the mapping says that state is taken (`on`, a selector in the page), then
    held until its transitions have run: what both kinds of source do after a render. */
-async function forceAt(tab, at) {
+async function forceAt(tab, at, also = []) {
   // a render at rest releases what the last one forced: fetching the document again drops every forced state
   // (shared/cdp.mjs forceState), which matchedLevels no longer does on each read
-  if (!at || !at.on) { await tab.send('DOM.getDocument', { depth: 0 }); return; }
+  if (!at || !at.on) { await tab.send('DOM.getDocument', { depth: 0 }); return { missed: [] }; }
   const { forceState, waitFor } = await import('../shared/cdp.mjs');
-  // (and on each placed component the design passes a pointer state of its own there, `also` (forwardedStates): real
-  // focus or hover lands inside it, so its own pseudo-class fires beside the holder's; one a combination does not draw
-  // is passed over)
-  await forceState(tab, [{ selector: at.on, pseudo: at.pseudo }, ...(at.also || []).map((x) => ({ ...x, optional: true }))]);
+  // (and on each placed component the design passes a pointer state of its own at this combination, `also`
+  // (forwardedAt): real focus or hover lands inside it, so its own pseudo-class fires beside the holder's; one the page
+  // does not draw here is passed over and answered as missed)
+  const got = await forceState(tab, [{ selector: at.on, pseudo: at.pseudo }, ...also.map((x) => ({ ...x, optional: true }))]);
   await waitFor(tab, 'document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)', { timeout: 3000 }).catch(() => {});
+  return got || { missed: [] };
 }
 
-/* The placed components the design passes a pointer state of their own at this component's pointer state `state` (a
-   radio's icon given State Focus at focus, a picker's select at hover): each part id with the pseudo-class, without its
-   colon, that draws that state in its own sheet. Read from the variants at `state` that add the instance or set its
-   props (whole, or the one prop), never at rest. `mainOf(component, key)` finds the placed contract, `pseudoFor(main,
-   value)` its pseudo-class for one of its pointer values. Real focus or hover lands inside such a component, so its own
-   pseudo-class and the holder's both fire: the reader forces both (forceAt). Tested by test-from-code.mjs. */
-export function forwardedStates(c, state, mainOf, pseudoFor) {
+/* The placed components the design passes a pointer state of their own at this combination `combo` of this one's
+   props, itself at a pointer state (a radio's icon given State Focus at focus, a picker's select at hover): each part id
+   with the pseudo-class, without its colon, that draws that state in its own sheet. Read from the anatomy the variants
+   make at that combination (derive's expand), so a later variant giving the instance its rest takes it out, and one the
+   anatomy draws at a pointer value of its own is in; never at rest. `mainOf(component, key)` finds the placed contract,
+   `pseudoFor(main, value)` its pseudo-class for one of its pointer values. Real focus or hover lands inside such a
+   component, so its own pseudo-class and the holder's both fire: the reader forces both (forceAt). Tested by
+   test-from-code.mjs. */
+export function forwardedAt(c, combo, mainOf, pseudoFor) {
   const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
-  if (!pk || !(c.props[pk].pointer || []).includes(state)) return [];
-  const added = Object.assign({}, ...(c.variants || []).map((v) => v.add || {}));
-  const out = new Map();
-  for (const v of c.variants || []) {
-    if ((v.when || {})[pk] !== state) continue;
-    const given = [...Object.entries(v.add || {}).map(([id, e]) => [id, e.with || {}])];
-    for (const [k, w] of Object.entries(v.set || {})) {
-      const m = /^(.+)\.with(?:\.(.+))?$/.exec(k);
-      if (m && w != null) given.push([m[1], m[2] ? { [m[2]]: w } : w]);
-    }
-    for (const [id, w] of given) {
-      const e = (v.add || {})[id] || (c.anatomy || {})[id] || added[id];
-      if (!e || e.kind !== 'instance' || !w || typeof w !== 'object') continue;
-      const main = mainOf(e.component, e.key ?? null);
-      const q = main && Object.values(main.props || {}).find((x) => x.role === 'interaction');
-      if (!q || w[q.figma] === undefined) continue;
-      const low = (x) => String(x).toLowerCase(), i = (q.figmaValues || []).map(low).indexOf(low(w[q.figma]));
-      const value = i >= 0 ? q.values[i] : w[q.figma];
-      const ps = (q.pointer || []).includes(value) && pseudoFor(main, value);
-      if (ps) out.set(id, ps.replace(/^:/, ''));
-    }
+  if (!pk || !(c.props[pk].pointer || []).includes(combo[pk])) return [];
+  const out = [];
+  for (const [id, e] of Object.entries(expand(c, { ...variantDefaults(c), ...combo }))) {
+    if (!e || e.kind !== 'instance' || !e.with || typeof e.with !== 'object') continue;
+    const main = mainOf(e.component, e.key ?? null);
+    const q = main && Object.values(main.props || {}).find((x) => x.role === 'interaction');
+    if (!q || e.with[q.figma] === undefined) continue;
+    const low = (x) => String(x).toLowerCase(), i = (q.figmaValues || []).map(low).indexOf(low(e.with[q.figma]));
+    const value = i >= 0 ? q.values[i] : e.with[q.figma];
+    const ps = (q.pointer || []).includes(value) && pseudoFor(main, value);
+    if (ps) out.push({ id, pseudo: ps.replace(/^:/, '') });
   }
-  return [...out].map(([id, pseudo]) => ({ id, pseudo }));
+  return out;
 }
 
 /* Whether the self page can take the next render without loading again (run in the page): loaded, and nothing left
@@ -1864,13 +1857,12 @@ async function selfSource(project, name, { second = false } = {}) {
   const t = targetOf(c);
   const b = bridge(store.readSpec(project.paths.components, name, { compact: true }));
   const G = governedReading(t, b, { stateAxis: lib.tokens && lib.tokens.stateAxis, container });
-  // each pointer state forced on the placed components the design passes one of their own there too (forwardedStates),
-  // found by the markup's own selector for that part
-  {
-    const mainOf = req('./derive.cjs').byComponentName(Object.values(library)), byId = partsById(() => drawnMapping(c), container) || {};
-    const pseudoFor = (main, v) => pseudoClasses(settingsOf(main.folder))[v];
-    for (const [s, at] of Object.entries(G.pseudoOf)) { const also = forwardedStates(c, s, mainOf, pseudoFor).filter((x) => byId[x.id]).map((x) => ({ selector: byId[x.id], pseudo: x.pseudo })); if (also.length) at.also = also; }
-  }
+  // each pointer state forced on the placed components the design passes one of their own at that combination too
+  // (forwardedAt), found by the markup's own selector for that part; one forced at live renders that matched at none is
+  // refused at close, never skipped in silence (a stale selector)
+  const forwardMain = req('./derive.cjs').byComponentName(Object.values(library)), forwardSel = partsById(() => drawnMapping(c), container) || {};
+  const forwardPseudo = (main, v) => pseudoClasses(settingsOf(main.folder))[v];
+  const forwardTried = new Map();
   let elements;
   try { elements = G.elements(); } catch (e) { throw Object.assign(new Error(`${name}'s mapping from to-markup: ${e.message}`), { usage: true }); }
   // the tokens as the project's token build writes them (plain custom properties); its fonts are not loaded, so text
@@ -1934,6 +1926,13 @@ async function selfSource(project, name, { second = false } = {}) {
     statesAsArg: true,
     async render(all) {
       const { __state, ...args } = all;
+      // (the design's combination this render draws: each of the markup's props by its contract key, the has-value flag
+      // by its own, the state by the design's value; what forwardedAt reads)
+      const combo = Object.fromEntries(own.filter((x) => x.key && args[x.name] !== undefined).map((x) => [x.key, args[x.name]]));
+      if (flag && flag.name in args && entry) combo[entry.flag] = args[flag.name];
+      const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
+      if (pk && __state !== undefined && __state !== 'rest') combo[pk] = __state;
+      const also = src.pseudoOf[__state] ? forwardedAt(c, combo, forwardMain, forwardPseudo).filter((x) => forwardSel[x.id]).map((x) => ({ selector: forwardSel[x.id], pseudo: x.pseudo })) : [];
       // a state no pointer reaches is the markup's own prop (state="loading")
       if (__state !== undefined && __state !== 'rest' && !src.pseudoOf[__state] && src.stateArg) args[src.stateArg] = __state;
       // the has-value flag is the input's: on, it holds its value (the sample where none is given); off, it is left as given,
@@ -1961,13 +1960,18 @@ async function selfSource(project, name, { second = false } = {}) {
         document.getElementById('stage').replaceChildren(s);
         return document.fonts.ready.then(() => true);
       }, [name, args, String(tier).toLowerCase()]);
-      await forceAt(tab, src.pseudoOf[__state]);
+      const { missed } = await forceAt(tab, src.pseudoOf[__state], also);
+      for (const { selector } of also) { const t = forwardTried.get(selector) || { tried: 0, hit: 0 }; t.tried++; if (!missed.includes(selector)) t.hit++; forwardTried.set(selector, t); }
     },
     api: async () => api,
     elements: async () => elements,
     joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
     argsOf: (all) => G.argsOf(all) || {},
-    close: async () => { if (browser) await browser.close(); if (site) await site.close(); },
+    close: async () => {
+      if (browser) await browser.close(); if (site) await site.close();
+      const stale = [...forwardTried].filter(([, t]) => t.tried && !t.hit).map(([sel]) => sel);
+      if (stale.length) throw new Error(`${name}: a placed component the design forwards a pointer state to matched no element at any render: ${stale.join(', ')}`);
+    },
   };
   if (cacheOff()) { src.tab = await live(); return src; }
   // the read cache (read-cache.mjs): the page's key, every render a combination of it, and every question put to the

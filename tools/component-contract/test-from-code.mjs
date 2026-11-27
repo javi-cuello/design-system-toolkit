@@ -1371,17 +1371,20 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   const reading = (named) => ({ ...design, props: { state: named ? stateProp(['hover'], [], design) : { ...stateProp(['hover'], [], null), figma: 'State' } } });
   const props = (r) => roundTrip(design, r, { layoutUnit: true, pointerFrom: design }).rows.filter((x) => x.at === 'props').length;
   ok('a reading whose state prop takes the design\'s axis name raises no props row; one named the house\'s way would', props(reading(true)) === 0 && props(reading(false)) === 1); }
-{ // a placed component the design passes a pointer state of its own at this one's (an icon given State Focus at focus,
-  // by the instance a focus adds, or by a variant setting that one prop at hover): forced there too, by its own sheet's
-  // pseudo-class; one given its rest, or a pointer value at rest only, is not
-  const { forwardedStates } = await import('./from-code.mjs');
+{ // a placed component the design passes a pointer state of its own at this combination (an icon given State Focus by
+  // the instance a focus adds, one the anatomy draws hovered of its own at hover): forced there too, by its own sheet's
+  // pseudo-class; where a later variant gives it its rest (focus and on: State Default), at rest, or a prop that is no
+  // pointer state, it is not
+  const { forwardedAt } = await import('./from-code.mjs');
   const state = (pointer) => ({ type: 'enum', values: ['default', 'hover', 'focus'], default: 'default', figmaValues: ['Default', 'Hover', 'Focus'], role: 'interaction', pointer, figma: 'State' });
   const icon = { component: 'Icon', props: { state: state(['hover', 'focus']) }, anatomy: { root: { kind: 'container' } }, variants: [] };
   const plain = { component: 'Plain', props: { on: { type: 'boolean', default: false, figma: 'on' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
-  const c = { component: 'Pick', props: { state: state(['hover', 'focus']) }, anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Icon', with: { State: 'Hover' } }, p: { kind: 'instance', parent: 'root', component: 'Plain', with: { on: 'true' } } },
+  const c = { component: 'Pick', props: { state: state(['hover', 'focus']), on: { type: 'boolean', default: false, axis: true, figma: 'on' } },
+    anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Icon', with: { State: 'Hover' } }, p: { kind: 'instance', parent: 'root', component: 'Plain', with: { on: 'true' } } },
     variants: [{ when: { state: 'focus' }, add: { b: { kind: 'instance', parent: 'root', component: 'Icon', with: { State: 'Focus' } } }, remove: ['a'] },
-      { when: { state: 'hover' }, set: { 'a.with.State': 'Hover', 'p.with': { on: 'false' } } }, { when: { state: 'focus', on: true }, set: { 'b.with': { State: 'Default' } } }] };
+      { when: { state: 'hover' }, set: { 'p.with': { on: 'false' } } }, { when: { state: 'focus', on: true }, set: { 'b.with': { State: 'Default' } } }] };
   const mains = { Icon: icon, Plain: plain }, PS = { hover: ':hover', focus: ':focus-visible' };
-  const f = (s) => JSON.stringify(forwardedStates(c, s, (name) => mains[name], (m, v) => PS[v]));
-  ok('a placed component given a pointer state of its own at this one\'s is forced there by its own pseudo-class', f('focus') === '[{"id":"b","pseudo":"focus-visible"}]' && f('hover') === '[{"id":"a","pseudo":"hover"}]' && f('default') === '[]', f('focus') + f('hover')); }
+  const f = (w) => JSON.stringify(forwardedAt(c, w, (name) => mains[name], (m, v) => PS[v]));
+  ok('a placed component given a pointer state of its own at this combination is forced there by its own pseudo-class, nowhere else', f({ state: 'focus' }) === '[{"id":"b","pseudo":"focus-visible"}]'
+    && f({ state: 'focus', on: true }) === '[]' && f({ state: 'hover' }) === '[{"id":"a","pseudo":"hover"}]' && f({ state: 'default' }) === '[]', f({ state: 'focus' }) + f({ state: 'focus', on: true }) + f({ state: 'hover' })); }
 console.log(`${n}/${n} passed`);

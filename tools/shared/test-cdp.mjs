@@ -7,7 +7,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSy
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { launch, pageTarget, newPage, attach, navigate, viewport, media, screenshot, call, waitFor, pool, paintReady, findChrome } from './cdp.mjs';
+import { launch, pageTarget, newPage, attach, navigate, viewport, media, screenshot, call, waitFor, pool, paintReady, findChrome, forceState } from './cdp.mjs';
 
 // launch() reaps first: a "toolkit Chrome" whose parent is gone (here node run under the name chrome, orphaned by its shell) is
 // killed and its profile removed before another browser is added. Before the Chrome skip: it needs no Chrome.
@@ -117,6 +117,12 @@ try {
   const early = await tab.evaluate('document.readyState !== "complete" && !!document.querySelector("p")');
   await within(10_000, navigate(tab, `${SITE}/img`), 'navigate load');
   ok('navigate waits for DOMContentLoaded or, by default, load', early && await tab.evaluate('document.readyState') === 'complete');
+
+  // a forced state's optional target that matches nothing is passed over and named; any other throws
+  const skipped = await within(5000, forceState(tab, [{ selector: 'p', pseudo: 'hover' }, { selector: '#no-such', pseudo: 'hover', optional: true }]), 'forceState optional');
+  const unforced = await within(5000, forceState(tab, [{ selector: '#no-such', pseudo: 'hover' }]).then(() => null, (e) => e), 'forceState refused');
+  ok('forceState passes over an optional target that matches nothing, naming it, and throws on any other', JSON.stringify(skipped.missed) === '["#no-such"]'
+    && /matched no element: #no-such/.test(String(unforced && unforced.message)));
 
   await within(10_000, navigate(tab, `${SITE}/late`), 'navigate load, late fetch');
   const atLoad = await tab.evaluate('window.done === true');
