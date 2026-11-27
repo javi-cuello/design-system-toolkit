@@ -185,8 +185,10 @@ ok('a component measured since the accept is held until accepted; one that came 
     over('org/icon', { library: { kind: 'instance' }, drawn: null }) && over('org/icon.component', { library: 'Icon/case', drawn: null }) && !over('org/icon', { library: null, drawn: { kind: 'instance' } }) && !over('org/icon.width') && !over('org/icon.name') && !over('org/label.content') && !over('org/dot') && !over('org/dot.background'));
   // (a library's Column / Page: a cell's slot swapped to an icon tile the cell has no prop for, its key, corners, fill
   // and modes that tile's own)
-  ok('a swap no prop passes takes its key and its component\'s own look and modes with it; its size stays a difference',
-    over('org/icon.key', { library: 'K', drawn: null }) && over('org/icon.radius', { library: 4, drawn: null }) && over('org/icon.background', { library: 'x', drawn: null }) && over('org/icon.modes.tile-colour', { library: 'a', drawn: null }) && !over('org/icon.height') && !over('org/icon.minWidth') && !over('org/dot.background'));
+  // (third review of 2026-11-27: a swapped-in component the library does not hold has no own to hold the reading to, so
+  // its key, look and modes stay rows; only its insides are left, inside-foreign's)
+  ok('a swap no prop passes, to a component the library does not hold, keeps its key, look and modes rows; its size stays a difference',
+    !over('org/icon.key', { library: 'K', drawn: 'J' }) && !over('org/icon.radius', { library: 4, drawn: null }) && !over('org/icon.background', { library: 'x', drawn: null }) && !over('org/icon.modes.tile-colour', { library: 'a', drawn: null }) && !over('org/icon.height') && !over('org/icon.minWidth') && !over('org/dot.background'));
   const typed = { ...c, anatomy: { ...c.anatomy, 'field/text': { kind: 'text', parent: 'field', content: '{p}' } }, variants: [...c.variants, { when: { state: 'focus' }, set: { 'field/text.content': 'Search', 'field.width': 10 } }] };
   const item = { component: 'Item', props: { label: { type: 'string', figma: 'Label', sets: ['label'] } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'A' } }, variants: [] };
   const menu = { component: 'Menu', props: {}, anatomy: { root: { kind: 'container' }, items: { kind: 'slot', parent: 'root' } }, variants: [] };
@@ -254,7 +256,11 @@ ok('a component measured since the accept is held until accepted; one that came 
   // rest colour there, no other; and only where every combination leaving it no colour takes the override away)
   const t2 = { ...t, props: { ...t.props, bare: { type: 'boolean', default: false, axis: true } }, variants: [...t.variants, { when: { bare: true }, set: { 'icon/icon.background': null } }] };
   ok('a placed icon left its own colour is left to code only where the reading drew its rest colour, and only where every combination leaving it none takes the override away',
-    !left('icon.background', { library: null, drawn: 'C/black' }) && !leftToCode(t2, () => null)('icon.background', { library: null, drawn: 'C/medium' })); }
+    !left('icon.background', { library: null, drawn: 'C/black' }) && !leftToCode(t2, () => null)('icon.background', { library: null, drawn: 'C/medium' }));
+  // (third review: past 4096 combinations, none is worked out from a sample: a row without its own combinations is no excuse)
+  const many = { ...t, props: { ...t.props, ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`p${i}`, { type: 'boolean', default: false, axis: true }])) } };
+  ok('a placed icon\'s own colour past 4096 combinations is left only at the row\'s own combinations',
+    !leftToCode(many, () => null)('icon.background', { library: null, drawn: 'C/medium' }) && leftToCode(many, () => null)('icon.background', { library: null, drawn: 'C/medium', whens: [{ selected: true }] })); }
 { const pill = { contract: 1, component: 'Pill', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column', align: 'start' } } }, variants: [] };
   const c = { contract: 1, component: 'C', props: {}, anatomy: { root: { kind: 'container' }, p: { kind: 'instance', parent: 'root', component: 'Pill' } }, variants: [] };
   const left = leftToCode(c, (n) => (n === 'Pill' ? pill : null));
@@ -313,7 +319,15 @@ ok('a component measured since the accept is held until accepted; one that came 
   const tl = { ...c, anatomy: { ...c.anatomy, icon: { ...c.anatomy.icon, layout: { direction: 'row' } } } };
   ok('a foreign component\'s own props, layout and clipping are left to code only where the reading drew its own as the snapshot holds it',
     left('icon.with.size', { library: 'S', drawn: null }) && !left('icon.with.size', { library: 'S', drawn: 'M' }) && !left('icon.layout', { library: null, drawn: { direction: 'column' } })
-    && leftToCode(tl, () => null)('icon.layout.direction', { library: 'column', drawn: 'row' }) && !leftToCode(tl, () => null)('icon.layout.direction', { library: 'column', drawn: 'wrap' })); }
+    && leftToCode(tl, () => null)('icon.layout.direction', { library: 'column', drawn: 'row' }) && !leftToCode(tl, () => null)('icon.layout.direction', { library: 'column', drawn: 'wrap' }));
+  // (third review of 2026-11-27: held at the row's own combinations, a size l giving it M; and where the instance is not
+  // drawn, no own to hold it to, so no excuse. A part the design leaves out that the reading draws is readable: a row)
+  const sized = { ...c, props: { size: { type: 'enum', values: ['s', 'l'], default: 's' } }, variants: [{ when: { size: 'l' }, set: { 'icon.with': { size: 'M' } } }] };
+  const late = { ...c, props: { size: { type: 'enum', values: ['s', 'l'], default: 's' } }, anatomy: { root: c.anatomy.root }, variants: [{ when: { size: 'l' }, add: { icon: c.anatomy.icon } }] };
+  ok('a foreign component\'s own is the one at the row\'s own combinations, none where it is not drawn; a part the design leaves out inside it that the reading draws is a row',
+    leftToCode(sized, () => null)('icon.with.size', { library: 'M', drawn: 'M', whens: [{ size: 'l' }] }) && !leftToCode(sized, () => null)('icon.with.size', { library: 'M', drawn: 'S', whens: [{ size: 'l' }] })
+    && !leftToCode(late, () => null)('icon.layout', { library: { direction: 'row' }, drawn: { direction: 'column' } })
+    && !left('icon/glyph', { library: null, drawn: { kind: 'graphic' } }) && left('icon/glyph', { library: { kind: 'graphic' }, drawn: null })); }
 
 { const box = (h, sized = true) => ({ contract: 1, component: 'Badge', props: { size: { type: 'enum', values: ['s', 'l'], default: 's' }, tone: { type: 'enum', values: ['a', 'b'], default: 'a' } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, frame: { kind: 'container', parent: 'root', layout: { direction: 'row' }, width: 12, height: h },
@@ -735,14 +749,15 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
 { const main = (exposed) => ({ component: 'Item', props: {}, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switch', ...(exposed && { exposed: true }) } }, variants: [] });
   const c = { contract: 1, component: 'Toggle', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item' }, 'item/sw': { kind: 'instance', parent: 'item', component: 'Checkbox', key: 'K' }, 'item/sw/box': { kind: 'container', parent: 'item/sw', width: 16 } }, variants: [] };
   const g = (e) => gapOf(c, (n) => (n === 'Item' ? main(e) : null));
-  ok('a swap into an exposed instance excuses its key, modes and insides as a swap into an unexposed one does',
-    ['item/sw.key', 'item/sw.modes', 'item/sw/box.width'].every((at) => !!g(true)(at) === !!g(false)(at) && !!g(true)(at)), ['item/sw.key', 'item/sw.modes', 'item/sw/box.width'].map((at) => [g(true)(at), g(false)(at)]));
+  ok('a swap into an exposed instance leaves its insides as a swap into an unexposed one does; to a component the library does not hold, its key and modes stay rows',
+    g(true)('item/sw/box.width') === 'inside-foreign' && g(false)('item/sw/box.width') === 'inside-foreign' && ['item/sw.key', 'item/sw.modes'].every((at) => g(true)(at, { library: 'K', drawn: 'J' }) === null && g(false)(at, { library: 'K', drawn: 'J' }) === null));
   // (review of 2026-11-27: the swap into an exposed instance is the toolkit's to forward, exposed-unforwarded, never
   // swapped-own; and a swapped-in component the library holds is left to code only where the reading drew its own look)
   const box = { component: 'Checkbox', props: {}, anatomy: { root: { kind: 'container', radius: 2 } }, variants: [] };
   const h = (e) => gapOf(c, (n) => ({ Item: main(e), Checkbox: box })[n] || null);
   ok('a swap into an exposed instance is exposed-unforwarded, into an unexposed one swapped-own; each only where the reading drew the swapped-in component\'s own look',
-    g(true)('item/sw.modes') === 'exposed-unforwarded' && g(false)('item/sw.modes') === 'swapped-own'
+    leftToCode(c, (n) => ({ Item: main(false), Checkbox: box })[n] || null)('item/sw.radius', { library: 8, drawn: 2 })
+    && h(true)('item/sw.modes', { library: { a: 'b' }, drawn: null }) === 'exposed-unforwarded' && h(false)('item/sw.modes', { library: { a: 'b' }, drawn: null }) === 'swapped-own'
     && h(true)('item/sw.radius', { library: 8, drawn: 2 }) === 'exposed-unforwarded' && h(false)('item/sw.radius', { library: 8, drawn: 2 }) === 'swapped-own' && h(false)('item/sw.radius', { library: 8, drawn: null }) === 'swapped-own'
     && h(true)('item/sw.radius', { library: 8, drawn: 5 }) === null && h(false)('item/sw.radius', { library: 8, drawn: 5 }) === null && h(false)('item/sw.key', { library: 'K', drawn: 'J' }) === null
     // (second review: none read is the component's own only where the reader clears it, a field of OWN on the instance
@@ -761,7 +776,9 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
     g('list/item.with.Size', { library: 'L', drawn: 'S', whens: [{ size: 's' }] }) === 'unexposed-override' && g('list/item.with.Size', { library: 'L', drawn: 'M', whens: [{ size: 's' }] }) === null
     // (second review: at the row's own combinations only: Small drawn where the list is placed Large is code's; a row with
     // no combinations is held at the default one)
-    && g('list/item.with.Size', { library: 'L', drawn: 'S', whens: [{ size: 'l' }] }) === null && g('list/item.with.Size', { library: 'L', drawn: 'S', whens: [{ size: 's' }, { size: 'l' }] }) === null && g('list/item.with.Size', { library: 'L', drawn: 'S' }) === null); }
+    && g('list/item.with.Size', { library: 'L', drawn: 'S', whens: [{ size: 'l' }] }) === null && g('list/item.with.Size', { library: 'L', drawn: 'S', whens: [{ size: 's' }, { size: 'l' }] }) === null && g('list/item.with.Size', { library: 'L', drawn: 'S' }) === null
+    // (third review: a combination whose value none of ours matches is no combination of ours: no excuse)
+    && g('list/item.with.Size', { library: 'S', drawn: 'L', whens: [{ size: 'l' }] }) === 'unexposed-override' && g('list/item.with.Size', { library: 'S', drawn: 'L', whens: [{ size: 'xl' }] }) === null); }
 // (and a part a swap the placed component's prop passes put there, kept under the swapped-out part's name where the
 // library holds no main for the target: held to that part, so code drawing the swapped icon where the main does is excused)
 { const button = { contract: 1, component: 'Button', props: { icon: { type: 'instance', figma: 'Swap icon', swaps: ['icon/add'] } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'container', parent: 'root' }, 'icon/add': { kind: 'instance', parent: 'icon', component: 'Add', width: 16 } }, variants: [] };

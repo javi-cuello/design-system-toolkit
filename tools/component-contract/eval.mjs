@@ -183,11 +183,11 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // (a placed instance the markup cannot place at all, a swap no prop passes: its key, modes and look are the swapped-in
   // component's own, gone with it; its size and place in this one stay, as the sheet reaches them)
   // (only where the reading drew the swapped-in component's own there, its main's root; one the library does not hold has
-  // no own the markup could say, as a foreign component's. A swap into an exposed instance is a prop the placed component
+  // no own to hold it to, so its key, modes and look stay rows, and only its insides are left, inside-foreign's. A swap into an exposed instance is a prop the placed component
   // declares, which the markup does not forward yet: exposed-unforwarded, below)
   const SWAPPED = /^(key|modes|background|radius|border|shadow|layout|overflow|smoothing)(\.|$)/;
   const swappedOwn = (el, field, row) => over.get(el) === 'part' && (all[el] || {}).kind === 'instance' && SWAPPED.test(field) && swappedIn(el, field, row);
-  const swappedIn = (el, field, row) => { const e = all[el]; if (!mainOf(e.component, e.key)) return !/^layout(\.|$)/.test(field); return asOwn(el, field, row, { roots: true }); };
+  const swappedIn = (el, field, row) => { const e = all[el]; return !!mainOf(e.component, e.key) && asOwn(el, field, row, { roots: true }); };
   // (a whole part the component does not draw takes its insides with it; a field it draws otherwise, only that field)
   // a part of a placed component's own that the design keeps only as the way down to such an override (an item's
   // content, holding the avatar it has no prop for): its whole-part row goes with the override, its fields stay
@@ -218,15 +218,19 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const OWN = new Set(req('./derive.cjs').OWN);
   const anatomyAt = (() => { const seen = new Map(); return (w) => { const k = JSON.stringify(w); if (!seen.has(k)) seen.set(k, expand(contract, { ...variantDefaults(contract), ...w })); return seen.get(k); }; })();
   // (a combination in another side's words, the second leg's reading: each prop by its key or Figma name, its value by
-  // its word in any case)
-  const inOurs = (w) => Object.fromEntries(Object.entries(w || {}).flatMap(([k, v]) => {
+  // its word in any case; a value none of ours matches is no combination of ours, null: no excuse there)
+  const NONE = {};
+  const inOurs = (w) => { const out = {}; for (const [k, v] of Object.entries(w || {})) {
     const [mk, q] = Object.entries(contract.props || {}).find(([x, y]) => x === k || low(y.figma || x) === low(k)) || [];
-    if (!q) return [];
-    if (q.type !== 'enum') return [[mk, v]];
+    if (!q) continue;
+    if (q.type !== 'enum') { out[mk] = v; continue; }
     const i = (q.figmaValues || []).map(low).indexOf(low(v)), x = i >= 0 ? q.values[i] : q.values.find((y) => low(y) === low(v));
-    return x === undefined ? [] : [[mk, x]];
-  }));
-  const rowAnatomies = (row) => (row && Array.isArray(row.whens) && row.whens.length ? row.whens.map((w) => anatomyAt(inOurs(w))) : [anatomyAt({})]);
+    if (x === undefined) return null;
+    out[mk] = x;
+  } return out; };
+  // (the anatomies a row is held at: its own combinations; with none given, the default one; a combination not ours, an
+  // empty anatomy, where nothing is excused)
+  const rowAnatomies = (row) => (row && Array.isArray(row.whens) && row.whens.length ? row.whens.map((w) => { const c = inOurs(w); return c ? anatomyAt(c) : NONE; }) : [anatomyAt({})]);
   const ownsSeen = new Map();
   const ownsIn = (A, el) => {
     const s = el.split('/'), hosts = s.map((_, i) => s.slice(0, i).join('/')).filter((h) => h && (A[h] || {}).kind === 'instance');
@@ -266,6 +270,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // (at every combination the row was found in, the drawn value one the main draws there; `roots` alone, the part's own
   // component's: swapped-own's)
   const asOwn = (el, field, row, { roots = false } = {}) => !!row && rowAnatomies(row).every((A) => {
+    if (A === NONE) return false;
     const found = ownsIn(A, el);
     const useRoot = found.root && field !== '' && !/^(with|content|component|kind)(\.|$)/.test(field);
     const owns = roots ? (found.root ? [found.root] : []) : useRoot ? [found.root, ...found] : found;
@@ -295,18 +300,20 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     && ((r) => r != null && (restKey(r) === restKey(row.drawn ?? null) || (!!colour(r) && colour(r) === colour(row.drawn))))(colourIn(expand(contract, variantDefaults(contract)), el));
   // (an instance's colour at a combination: its own, else its glyph's, as the rows fold it; undefined where it is not drawn)
   const colourIn = (A, el) => { const x = A[el]; if (!x) return undefined; if (x.background != null) return x.background; const g = Object.entries(A).find(([k, y]) => k.startsWith(`${el}/`) && y && y.kind === 'graphic' && y.background != null); return g ? g[1].background : null; };
-  // (every combination the design draws, or past 4096 a fixed sample of them, each a real one: never a merge of variants)
+  // (every combination the design draws, each a real one, never a merge of variants; past 4096, none: no excuse is
+  // worked out from a sample)
   const combosOf = (() => { let seen; return () => {
     if (seen !== undefined) return seen;
     const axes = Object.entries(contract.props || {}).filter(([, q]) => q.type === 'enum' || q.type === 'boolean').map(([k, q]) => [k, q.type === 'enum' ? q.values : [true, false]]);
-    const total = axes.reduce((n, [, vs]) => n * vs.length, 1), step = total > 4096 ? Math.floor(total / 4096) : 1;
-    const cs = [];
-    for (let i = 0; i < total && cs.length < 4096; i += step) { let r = i; const c = {}; for (const [k, vs] of axes) { c[k] = vs[r % vs.length]; r = Math.floor(r / vs.length); } cs.push(c); }
+    if (axes.reduce((n, [, vs]) => n * vs.length, 1) > 4096) return (seen = null);
+    let cs = [{}];
+    for (const [k, vs] of axes) cs = cs.flatMap((c) => vs.map((v) => ({ ...c, [k]: v })));
     return (seen = cs.filter((c) => !(contract.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v)))));
   }; })();
   // (at the row's own combinations where roundTrip gives them, else at every combination, combosOf)
   const leftOwn = (el, row) => {
     const dflt = variantDefaults(contract), cs = row && Array.isArray(row.whens) && row.whens.length ? row.whens.map(inOurs) : combosOf();
+    if (!cs || cs.some((c) => !c)) return false;
     const held = !!mainOf(all[el].component, all[el].key);
     let any = false;
     for (const c of cs) {
@@ -349,17 +356,18 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   };
   // (never its size or place inside this one, which the sheet writes, however the layout holds them)
   // (and only where the reading drew that component's own as the snapshot knows it, the instance's own fields at the
-  // default combination; a prop none, as the markup passes none; where the snapshot does not draw it there, not known)
+  // row's own combinations; a prop none, as the markup passes none; where the snapshot does not draw it there, no excuse)
   const foreignOwn = (el, field, row) => noMain(el) && field !== 'with.Size' && /^(with|layout|overflow)(\.|$)/.test(field) && !/^layout\.(width|height|position)(\.|$)/.test(field) && !swapRow(el, field, row) && foreignAsOwn(el, field, row);
-  const foreignAsOwn = (el, field, row) => {
-    const x = anatomyAt({})[el], d = (row || {}).drawn ?? null;
-    if (!x) return true;
+  const foreignAsOwn = (el, field, row) => !!row && rowAnatomies(row).every((A) => {
+    const x = A !== NONE && A[el], d = row.drawn ?? null;
+    // (no instance there, no own to hold it to: no excuse)
+    if (!x) return false;
     if (/^with(\.|$)/.test(field) && d == null) return true;
     const v = field.split('.').reduce((y, q) => (y == null ? undefined : y[q]), x) ?? null;
     // (of its props, those the reading has: each the snapshot's, the rest none, as the markup passes none)
     if (field === 'with' && d && typeof d === 'object') return Object.entries(d).every(([k, w]) => restKey(w) === restKey((v || {})[k] ?? null));
     return restKey(v) === restKey(d) || (!!colour(v) && colour(v) === colour(d));
-  };
+  });
   // a scale constraint the sheet never writes (to-code's sharesNeverWritten: css.mjs shareable fails wherever drawn()
   // places the part): where it is pinned instead is code's to say. Only where the rows are held to the contract the
   // sheet was written from (`ownSheet`): the second leg's are held to the first reading, in its words
@@ -425,7 +433,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     // (a part only a pointer state draws inside a placed component is left to code only where the reading lacks it: one
     // it reads, its placed component forced to that state too (from-code forwardedAt), differs as any part does, and so
     // does a field of it the reading leaves out)
-    return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) ? 'inside-foreign'
+    return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) && !(row && row.library == null && row.drawn != null) ? 'inside-foreign'
       : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field, row) ? 'swapped-own' : field === '' && carries(el) && (row || {}).drawn == null ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' ? ((row && row.drawn != null) || (readIds && readIds.has(el)) ? null : reasons.get(id))
         // (an override the markup cannot pass is left to code only where the reading drew the placed main's own there)
         // (a swap into an exposed instance, its key, modes and look: held to the swapped-in component's own, as swapped-own's)
