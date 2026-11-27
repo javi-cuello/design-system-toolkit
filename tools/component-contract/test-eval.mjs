@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, isSameApartFromForeign, isSameApartFromLibrary, gapOf, GAPS, leftToCode as leftToCode0, unaccepted, identifiedNote } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, rewriteHint, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, isSameApartFromForeign, isSameApartFromLibrary, gapOf, GAPS, leftToCode as leftToCode0, unaccepted, identifiedNote } from './eval.mjs';
 import { drawSettings } from './to-figma.mjs';
 import { partsOf } from './to-code.mjs';
 import { spawnSync } from 'node:child_process';
@@ -367,6 +367,7 @@ ok('a component measured since the accept is held until accepted; one that came 
   const spec = compact({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'VERTICAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi' }] }] });
   for (const [f, c] of [['fresh', derive(spec, ['T'], {})], ['old', { ...derive(spec, ['T'], {}), anatomy: { root: { kind: 'container' } } }], ['gone', null]]) {
     fs.mkdirSync(path.join(d, f)); fs.writeFileSync(path.join(d, f, 'figma.json'), JSON.stringify(spec)); if (c) fs.writeFileSync(path.join(d, f, 'contract.json'), JSON.stringify(c)); }
+  ok('the rewrite a stale store asks for carries the projects root the run read, so the store it writes is the one the run reads', rewriteHint('/x/components', '/r') === 'TOOLKIT_PROJECTS_ROOT=/r node tools/component-contract/write.cjs /x/components' && rewriteHint('/x/components', '') === 'node tools/component-contract/write.cjs /x/components');
   ok('an official contract an older derive.cjs wrote is named, so a measure is never taken against yesterday\'s rules', JSON.stringify(staleContracts(d)) === '["gone","old"]' && staleContracts(path.join(d, 'none')).length === 0);
   fs.rmSync(d, { recursive: true, force: true }); }
 {

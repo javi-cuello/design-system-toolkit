@@ -457,6 +457,11 @@ const tagsOf = (r) => (r && r.assisted && typeof r.assisted === 'object' ? { ass
 export const identifiedNote = (m) => { const k = m.filter(([, x]) => x.declared && x.declared.length).length; return k ? `; ${k} identified by the code's own label` : ''; };
 
 /* The components whose stored contract.json is missing, or not what derive.cjs makes of their spec today (check-specs' own test). */
+/* The command that rewrites a stale store: under the projects root this run read (TOOLKIT_PROJECTS_ROOT), since what
+   derive writes depends on the project it resolves, and one rewritten without it stays stale to this run (2026-11-27). */
+export const rewriteHint = (dir, root = process.env.TOOLKIT_PROJECTS_ROOT) =>
+  `${root ? `TOOLKIT_PROJECTS_ROOT=${root} ` : ''}node tools/component-contract/write.cjs ${dir}`;
+
 export function staleContracts(dir) {
   if (!dir || !fs.existsSync(dir)) return [];
   const { checkSpecs } = req('../snapshot/check-specs.cjs');
@@ -1038,7 +1043,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       // an official contract derive would write otherwise is said; whether a reading's inputs moved since is not asked here
       // (todayOf hashes every drawing: minutes, too slow for a ranking), so the run says so
       const old = staleContracts(w.paths.components).filter((f) => panel.includes(f));
-      if (old.length) console.log(`warning: ${p}: ${old.length} official contract(s) are not what their specs derive now: run node tools/component-contract/write.cjs ${w.paths.components}`);
+      if (old.length) console.log(`warning: ${p}: ${old.length} official contract(s) are not what their specs derive now: run ${rewriteHint(w.paths.components)}`);
       const m = measure(w, panel);
       for (const l of legs) for (const [c, x] of Object.entries(m.legs[l] || {})) if (x.rows) { by[`${p}:${c}${legs.length > 1 ? ` (${l})` : ''}`] = x.rows; if (x.stale) stale.push(`${p}:${c}`); if (isSame(x)) same.push(`${p}:${c}`); if (isSameApartFromForeign(x)) apart.push(`${p}:${c}`); if (isSameApartFromLibrary(x)) held.push(`${p}:${c}`); }
     }
@@ -1105,7 +1110,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // store not rewritten) holds the design side to yesterday's rules while the reading takes today's, so the long legs
   // refuse, and the short ones say so
   { const old = staleContracts(where.paths.components).filter((f) => !argv.length || argv.includes(f));
-    if (old.length) { const say = `${old.length} official contract(s) are not what their specs derive now (${old.slice(0, 3).join(', ')}${old.length > 3 ? ', …' : ''}): derive.cjs changed since the store was written; run node tools/component-contract/write.cjs ${where.paths.components}`;
+    if (old.length) { const say = `${old.length} official contract(s) are not what their specs derive now (${old.slice(0, 3).join(', ')}${old.length > 3 ? ', …' : ''}): derive.cjs changed since the store was written; run ${rewriteHint(where.paths.components)}`;
       if (into || self || second) { console.error(say); process.exit(2); } console.log(`warning: ${say}`); } }
   // the long legs hold the one measuring lock, niced (tools/shared/lock.mjs); from-code, run under it, does not wait
   if (into || self || second) await (await import('../shared/lock.mjs')).hold(`eval.mjs ${process.argv.slice(2).join(' ')}`);
