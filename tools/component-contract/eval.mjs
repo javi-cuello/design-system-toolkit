@@ -55,6 +55,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { contracts, hashOf } from './official.mjs';
 import { roundTrip, drawSettings, restKey } from './to-figma.mjs';
+import { parseColour } from '../parity/values.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, isDrawing, swapKeysOf } from './to-markup.mjs';
 import { expand, variantDefaults } from './layers.mjs';
@@ -191,6 +192,61 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // a placed icon's colour where the design leaves it its own (a combination that takes the glyph's override away): the
   // icon set's own colour, which no main in the library holds, so what code draws there is its own to say
   const all = { ...(contract.anatomy || {}), ...Object.assign({}, ...(contract.variants || []).map((v) => v.add || {})) };
+  // what code that draws each placed component as its own draws at a part, the placed main's own value (a gap excuses a
+  // row only where the reading drew that: the markup cannot pass the design's override, so the component's own is all
+  // code is entitled to draw there; anything else is code's, a difference). Each element that may stand for it: the
+  // part's own component's root, where it is a placed instance (its glyph's colour as its own background, as the rows fold
+  // it); the outermost placed component it sits in, as placed (derive's placedAs: its swaps applied, its layers named as
+  // the instance names them), down through the instances nested in it; and the nearest instance it sits in, at its props
+  const { atProps, placedAs, glyphColour } = req('./derive.cjs');
+  const down = (m, w, rel) => {
+    const A = atProps(m, w);
+    if (!rel) return A.root;
+    if (A[rel]) return A[rel];
+    const s = rel.split('/');
+    for (let i = s.length - 1; i >= 1; i--) { const x = A[s.slice(0, i).join('/')]; if (x && x.kind === 'instance') { const n = mainOf(x.component, x.key); return n ? down(n, x.with, s.slice(i).join('/')) : undefined; } }
+    return undefined;
+  };
+  const ownsSeen = new Map();
+  const ownsOf = (el) => (ownsSeen.has(el) ? ownsSeen.get(el) : ownsSeen.set(el, ownsAt(el)).get(el));
+  const ownsAt = (el) => {
+    const out = [], e = all[el] || {}, s = el.split('/');
+    // (its own root says its look alone: which component it is, its props and words are the holder's to place)
+    const m = e.kind === 'instance' && mainOf(e.component, e.key);
+    if (m) { const r = atProps(m, e.with).root || {}, g = glyphColour(m, e.with); out.root = r.background == null && g != null ? { ...r, background: g } : r; }
+    const hosts = s.map((_, i) => s.slice(0, i).join('/')).filter((h) => h && (all[h] || {}).kind === 'instance');
+    const host = hosts.find((h) => mainOf(all[h].component, all[h].key));
+    if (host) { try { const { M } = placedAs(all, host, mainOf(all[host].component, all[host].key), mainOf), rel = el.slice(host.length + 1); out.push(rel in M ? M[rel] : down(mainOf(all[host].component, all[host].key), all[host].with, rel)); } catch { /* a main placedAs cannot read: no candidate */ } }
+    const near = hosts[hosts.length - 1], nm = near && mainOf(all[near].component, all[near].key);
+    if (nm && near !== host) out.push(down(nm, all[near].with, el.slice(near.length + 1)));
+    return out;
+  };
+  // (a placed instance's prop at its component's default is unstated: a reading leaves it out)
+  const unstated = (el, k, v) => {
+    const e = all[el] || {}, m = e.kind === 'instance' && mainOf(e.component, e.key);
+    const q = m && Object.values(m.props || {}).find((y) => low(y.figma || '') === low(k));
+    if (!q) return v == null;
+    const i = (q.values || []).indexOf(q.default);
+    return v == null || low(v) === low((q.figmaValues || [])[i] ?? q.default);
+  };
+  const props = (el, w) => restKey(w && typeof w === 'object' ? Object.fromEntries(Object.entries(w).filter(([k, v]) => !unstated(el, k, v))) : w);
+  const colour = (v) => typeof v === 'string' && /^(#|rgba?\()/i.test(v.trim()) && JSON.stringify(parseColour(v));
+  const asOwn = (el, field, row, found = ownsOf(el)) => {
+    const owns = found.root && !/^(with|content|component|kind|key)(\.|$)/.test(field) && field !== '' ? [found.root, ...found] : found;
+    if (!row || !owns.length) return false;
+    const d = row.drawn ?? null;
+    // (a whole part: there where the main draws one, gone where it draws none)
+    if (field === '') return owns.some((x) => (x == null) === (d == null));
+    return owns.some((x) => {
+      const v = field.split('.').reduce((y, q) => (y == null ? undefined : y[q]), x) ?? null;
+      if (field === 'with') return props(el, v) === props(el, d);
+      if (field.startsWith('with.')) return restKey(v) === restKey(d) || (d == null && unstated(el, field.slice(5), v));
+      // (a field of its own a reading leaves unsaid is its component's, as both sides leave out what equals it: derive's
+      // ownStyling, from-code's colourKept; never words, a kind or a component, which a reading always says)
+      if (d == null && !field.includes('.') && !['content', 'kind', 'component'].includes(field)) return true;
+      return restKey(v) === restKey(d) || (!!colour(v) && colour(v) === colour(d));
+    });
+  };
   const ownColour = (el, field, row) => field === 'background' && row && row.library == null && mainOf && (all[el] || {}).kind === 'instance' && ((!mainOf(all[el].component, all[el].key)
     && (contract.variants || []).some((v) => (v.remove || []).some((r) => r.startsWith(`${el}/`) && all[r] && all[r].background != null))) || swappedColour(el));
   // (and one a variant swaps in that the library does not hold, where the design expanded there gives it no colour: the
@@ -204,7 +260,8 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const LOOK = new Set(['layout', 'radius', 'border', 'shadow', 'overflow', 'smoothing']);
   // (only where the design states one: a look the reading shows and the design leaves to the component is the
   // component's own sheet drifting, a difference)
-  const ownLook = (el, field, row) => !!mainOf && !!row && row.library != null && LOOK.has(field.split('.')[0]) && (all[el] || {}).kind === 'instance' && !!mainOf(all[el].component, all[el].key) && !foreign(el);
+  // (and only where the reading drew the placed component's own there, asOwn: a look code drew of its own is a difference)
+  const ownLook = (el, field, row) => !!mainOf && !!row && row.library != null && LOOK.has(field.split('.')[0]) && (all[el] || {}).kind === 'instance' && !!mainOf(all[el].component, all[el].key) && !foreign(el) && asOwn(el, field, row);
   // a component the library does not hold (an icon set's, or one the snapshot never read): to-markup can only mark where
   // it goes (data-icon), so its insides, the props it is given and its own layout and clipping are its own component's,
   // which code draws; its size and place in this one are this one's, and stay measured
@@ -293,7 +350,9 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     // it reads, its placed component forced to that state too (from-code forwardedAt), differs as any part does, and so
     // does a field of it the reading leaves out)
     return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) ? 'inside-foreign'
-      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' && ((row && row.drawn != null) || (readIds && readIds.has(el))) ? null : reasons.get(id)) : null);
+      : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field) ? 'swapped-own' : field === '' && carries(el) ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' ? ((row && row.drawn != null) || (readIds && readIds.has(el)) ? null : reasons.get(id))
+        // (an override the markup cannot pass is left to code only where the reading drew the placed main's own there)
+        : asOwn(el, field, row) ? reasons.get(id) : null) : null);
   };
 }
 /* What the toolkit's own markup leaves to code (gapOf), as yes or no. */

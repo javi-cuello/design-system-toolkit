@@ -175,26 +175,30 @@ ok('a component measured since the accept is held until accepted; one that came 
   const holderW = { ...holder, anatomy: { ...holder.anatomy, 'org/icon/glyph': { kind: 'graphic', parent: 'org/icon', background: 'x' }, 'org/box': { kind: 'container', parent: 'org' }, 'org/box/t': { kind: 'text', parent: 'org/box', content: 'b' }, 'org/box/t/x': { kind: 'graphic', parent: 'org/box/t', background: 'y' } } };
   const overW = leftToCode(holderW, (n) => (n === 'Switcher' ? swW : null));
   ok('a swap no prop passes is left, its insides with it, even where a deeper prop sets them; words no prop passes are left, the insides\' styles stay differences',
-    overW('org/icon.component') && overW('org/icon/glyph.background') && overW('org/box/t.content') && !overW('org/box/t/x.background') && !overW('org/box/t.width'));
+    overW('org/icon.component', { library: 'Icon/case', drawn: 'Icon/dot' }) && overW('org/icon/glyph.background') && overW('org/box/t.content', { library: 'b', drawn: 'a' }) && !overW('org/box/t/x.background') && !overW('org/box/t.width'));
+  // (review of 2026-11-27: only where the reading drew the placed main's own there, the component's own words or glyph;
+  // any other drawn there is code's, a difference)
+  ok('an override no prop passes is left to code only where the reading drew the placed main\'s own; another value drawn there is a difference',
+    !overW('org/icon.component', { library: 'Icon/case', drawn: 'Icon/star' }) && !overW('org/box/t.content', { library: 'b', drawn: 'c' }) && !overW('org/box/t.content'));
   ok('a part whose override is a field, not a swap, keeps its key a difference: two components of one name', !overW('org/box/t.key'));
   ok('an override a placed component has no prop for is left to code, its structure only; one a prop carries, a style the sheet reaches, and a name the reader gives stay differences',
-    over('org/icon') && over('org/icon.component') && !over('org/icon.width') && !over('org/icon.name') && !over('org/label.content') && !over('org/dot') && !over('org/dot.background'));
+    over('org/icon', { library: { kind: 'instance' }, drawn: null }) && over('org/icon.component', { library: 'Icon/case', drawn: null }) && !over('org/icon', { library: null, drawn: { kind: 'instance' } }) && !over('org/icon.width') && !over('org/icon.name') && !over('org/label.content') && !over('org/dot') && !over('org/dot.background'));
   // (a library's Column / Page: a cell's slot swapped to an icon tile the cell has no prop for, its key, corners, fill
   // and modes that tile's own)
   ok('a swap no prop passes takes its key and its component\'s own look and modes with it; its size stays a difference',
-    over('org/icon.key') && over('org/icon.radius') && over('org/icon.background') && over('org/icon.modes.tile-colour') && !over('org/icon.height') && !over('org/icon.minWidth') && !over('org/dot.background'));
+    over('org/icon.key', { library: 'K', drawn: null }) && over('org/icon.radius', { library: 4, drawn: null }) && over('org/icon.background', { library: 'x', drawn: null }) && over('org/icon.modes.tile-colour', { library: 'a', drawn: null }) && !over('org/icon.height') && !over('org/icon.minWidth') && !over('org/dot.background'));
   const typed = { ...c, anatomy: { ...c.anatomy, 'field/text': { kind: 'text', parent: 'field', content: '{p}' } }, variants: [...c.variants, { when: { state: 'focus' }, set: { 'field/text.content': 'Search', 'field.width': 10 } }] };
   const item = { component: 'Item', props: { label: { type: 'string', figma: 'Label', sets: ['label'] } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'A' } }, variants: [] };
   const menu = { component: 'Menu', props: {}, anatomy: { root: { kind: 'container' }, items: { kind: 'slot', parent: 'root' } }, variants: [] };
   const bar = { ...c, anatomy: { root: { kind: 'container' }, menu: { kind: 'instance', parent: 'root', component: 'Menu' }, 'menu/items': { kind: 'slot', parent: 'menu' }, 'menu/items/item': { kind: 'instance', parent: 'menu/items', component: 'Item' }, 'menu/items/item/label': { kind: 'text', parent: 'menu/items/item', content: 'B' }, 'menu/items/item/avatar': { kind: 'instance', parent: 'menu/items/item', component: 'Avatar' } } };
   const inFill = leftToCode(bar, (n) => ({ Item: item, Menu: menu })[n] || null);
   ok('in a slot this component fills, an override the placed item has no prop for is left to code; its words a prop passes, and the item itself, stay differences',
-    inFill('menu/items/item/avatar') && !inFill('menu/items/item/label.content') && !inFill('menu/items/item'));
+    inFill('menu/items/item/avatar', { library: { kind: 'instance' }, drawn: null }) && !inFill('menu/items/item/label.content') && !inFill('menu/items/item'));
   const deep = { ...bar, anatomy: { ...bar.anatomy, 'menu/items/item/box': { kind: 'container', parent: 'menu/items/item' }, 'menu/items/item/box/avatar': { kind: 'instance', parent: 'menu/items/item/box', component: 'Avatar' } } };
   const itemBox = { ...item, anatomy: { ...item.anatomy, box: { kind: 'container', parent: 'root' } } };
   const inDeep = leftToCode(deep, (n) => ({ Item: itemBox, Menu: menu })[n] || null);
   ok('a part of the item\'s own the design keeps only as the way down to an override goes with it, whole; its fields stay differences',
-    inDeep('menu/items/item/box') && !inDeep('menu/items/item/box.layout') && inDeep('menu/items/item/box/avatar'));
+    inDeep('menu/items/item/box') && !inDeep('menu/items/item/box.layout') && inDeep('menu/items/item/box/avatar', { library: { kind: 'instance' }, drawn: null }));
   // (a pointer row as roundTrip gives it: found only where the pointer state decides it, `pointer`, with the design's
   // value at rest there, `rest`)
   const P = (library, drawn, rest = drawn) => ({ library, drawn, pointer: true, rest });
@@ -250,8 +254,10 @@ ok('a component measured since the accept is held until accepted; one that came 
   const c = { contract: 1, component: 'C', props: {}, anatomy: { root: { kind: 'container' }, p: { kind: 'instance', parent: 'root', component: 'Pill' } }, variants: [] };
   const left = leftToCode(c, (n) => (n === 'Pill' ? pill : null));
   ok('a placed component\'s own layout overridden on the instance is code\'s to say (its own sheet styles it); its size, its fill, and a look the design leaves to the component (its sheet drifting), are not',
-    left('p.layout', { library: { align: 'center' } }) && left('p.layout.align', { library: 'center' }) && !left('p.width', { library: 'fill' }) && !left('p.background', { library: 'C/x' })
-    && !left('p.layout', { library: null, drawn: { align: 'end' } })); }
+    left('p.layout', { library: { align: 'center' } }) && left('p.layout.align', { library: 'center', drawn: 'start' }) && !left('p.width', { library: 'fill' }) && !left('p.background', { library: 'C/x' })
+    && !left('p.layout', { library: null, drawn: { align: 'end' } })
+    // (review of 2026-11-27: only where the reading drew the component's own look there; another drawn is code's)
+    && !left('p.layout.align', { library: 'center', drawn: 'end' }) && !left('p.layout', { library: { align: 'center' }, drawn: { direction: 'row', align: 'end' } }) && left('p.layout', { library: { align: 'center' }, drawn: { direction: 'column', align: 'start' } })); }
 { // a placed component a variant swaps for one the library does not hold: the colour read there, where the design
   // expanded at that variant gives none, is the swapped-in icon's own (named); where it gives one, a difference
   const st = { contract: 1, component: 'Status', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
@@ -276,7 +282,9 @@ ok('a component measured since the accept is held until accepted; one that came 
   const holder = { contract: 1, component: 'Drop', props: {}, anatomy: { root: { kind: 'container' }, list: { kind: 'instance', parent: 'root', component: 'List' }, 'list/item': { kind: 'instance', parent: 'list', component: 'Item', with: { Size: 'L', Type: 'Multi' } } }, variants: [] };
   const left = leftToCode(holder, (n) => ({ List: list, Item: item })[n] || null);
   ok('a prop given to an instance nested in a placed component that no variant of it ever sets so is code\'s to say, though another prop of that instance varies; one a variant sets is passed',
-    left('list/item.with.Type', { library: 'Multi' }) && left('list/item.with', { library: { Size: 'L', Type: 'Multi' } })
+    left('list/item.with.Type', { library: 'Multi' }) && left('list/item.with', { library: { Size: 'L', Type: 'Multi' }, drawn: { Size: 'L' } })
+    // (review of 2026-11-27: only where the reading drew the list's own props for it; another drawn is code's)
+    && !left('list/item.with.Type', { library: 'Multi', drawn: 'Single' }) && !left('list/item.with', { library: { Size: 'L', Type: 'Multi' }, drawn: { Size: 'S' } })
     && !leftToCode({ ...holder, anatomy: { ...holder.anatomy, 'list/item': { ...holder.anatomy['list/item'], with: { Size: 'S' } } } }, (n) => ({ List: list, Item: item })[n] || null)('list/item.with.Size', { library: 'S' })); }
 { const c = { contract: 1, component: 'Tile', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Glyph', width: 'fill', with: { size: 'S' } }, 'icon/glyph': { kind: 'graphic', parent: 'icon' } }, variants: [] };
   const left = leftToCode(c, () => null), known = leftToCode(c, (n) => (n === 'Glyph' ? { contract: 1, component: n, props: {}, anatomy: { root: { kind: 'container' } }, variants: [] } : null));
@@ -690,9 +698,13 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
 // same on one it does not expose is the library's (unexposed-override)
 { const main = (exposed) => ({ component: 'Item', props: {}, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switch', with: { Toggled: 'False' }, ...(exposed && { exposed: true }) } }, variants: [] });
   const c = { contract: 1, component: 'Toggle', props: {}, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item' }, 'item/sw': { kind: 'instance', parent: 'item', component: 'Switch', with: { Toggled: 'True' } } }, variants: [] };
+  const sw = { component: 'Switch', props: { toggled: { type: 'enum', values: ['false', 'true'], default: 'false', figma: 'Toggled', figmaValues: ['False', 'True'] } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const M = (e) => (n) => ({ Item: main(e), Switch: sw })[n] || null;
   ok('an exposed instance\'s overridden prop is left to code as exposed-unforwarded, an unexposed one\'s as unexposed-override',
-    leftToCode(c, (n) => (n === 'Item' ? main(true) : null))('item/sw') && gapOf(c, (n) => (n === 'Item' ? main(true) : null))('item/sw') === 'exposed-unforwarded'
-    && gapOf(c, (n) => (n === 'Item' ? main(false) : null))('item/sw') === 'unexposed-override'); }
+    leftToCode(c, M(true))('item/sw.with.Toggled', { library: 'True', drawn: 'False' }) && gapOf(c, M(true))('item/sw.with.Toggled', { library: 'True', drawn: 'False' }) === 'exposed-unforwarded'
+    && gapOf(c, M(false))('item/sw.with.Toggled', { library: 'True', drawn: 'False' }) === 'unexposed-override'
+    // (review of 2026-11-27: only where the reading drew the item's own prop there; another drawn is code's, a difference)
+    && gapOf(c, M(true))('item/sw.with.Toggled', { library: 'True', drawn: 'Maybe' }) === null && gapOf(c, M(false))('item/sw.with', { library: { Toggled: 'True' }, drawn: { Toggled: 'Maybe' } }) === null); }
 // (and a component swapped into an exposed instance: its key, modes and look are swapped-own and its insides left to
 // code, as on an unexposed one, never difference rows; review of 2026-11-26)
 { const main = (exposed) => ({ component: 'Item', props: {}, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switch', ...(exposed && { exposed: true }) } }, variants: [] });
