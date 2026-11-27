@@ -345,7 +345,11 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
         const asAt = (p) => partAtVariant(v, p.id, p.e);
         const { drawnHere, orderAt } = heldAt(c, v, list);
         const here = list.filter((p) => !p.ring && (asAt(p).parent || 'root') === box && ((p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id)) || drawnHere(p)));
-        if (!here.some((p) => outOf(asAt(p)))) continue;
+        // (children that can overlap: one out of the flow, or a gap below 0; and the design's paint order there, first on
+        // top where the box's layout says so, as Figma reverses the stack, firstOnTop)
+        const boxAt = B ? asAt(B) : { ...(c.anatomy[box] || {}), ...(set[`${box}.layout`] && { layout: set[`${box}.layout`] }) };
+        const L = boxAt.layout || {}, gap = L.gap != null && parseFloat(String(L.gap));
+        if (!here.some((p) => outOf(asAt(p))) && !(gap < 0)) continue;
         const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? orderAt(p) ?? p.e.order ?? 0;
         // (it holds a part out of the flow here, not a ring: positioned, its containing block)
         const anchors = (p) => (kids.get(p.id) || []).some((q) => !q.ring && ((q.base && !gone.has(q.id)) || q.id in add) && (asAt(q).parent || 'root') === p.id && outOf(asAt(q)));
@@ -362,7 +366,7 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
           return either(own, lifts(declarations(R, { root: true, holds: holds(R.kind), row: true, anchors: rootAnchors, box: null, pull: null }, tokenNames).decls));
         };
         const lift = new Map(here.map((p) => [p.id, outOf(asAt(p)) ? false : lifted(p)]));
-        const want = [...here].sort((x, y) => at(x) - at(y) || dom.get(x.id) - dom.get(y.id)).map((p) => p.id).join();
+        const ranked = [...here].sort((x, y) => at(x) - at(y) || dom.get(x.id) - dom.get(y.id)), want = (L.firstOnTop ? ranked.reverse() : ranked).map((p) => p.id).join();
         // (an unknown one drawn both ways: the box is restacked where either paints out of the design's order)
         const paints = (unknown) => siblingOrder([...here].sort((x, y) => dom.get(x.id) - dom.get(y.id)).map((p) => { const out = outOf(asAt(p)), l = lift.get(p.id) ?? unknown; return { id: p.id, cssOrder: out ? 0 : at(p), stack: { ...(out && { out: true }), ...(l && { lifted: true }) } }; })).map((e) => e.id).join();
         if (paints(true) !== want || paints(false) !== want) { boxes.add(box); grew = true; break; }
@@ -771,6 +775,11 @@ function rankIn(a, id) {
   const up = a[id].parent, sibs = Object.keys(a).map((k, i) => [k, a[k].order ?? 0, i]).filter(([k]) => a[k].parent === up);
   return sibs.sort((x, y) => x[1] - y[1] || x[2] - y[2]).findIndex(([k]) => k === id);
 }
+// its place in paint, bottom first, from 1: its rank, or the reverse where its parent stacks first on top (firstOnTop)
+function paintRankIn(a, id) {
+  const up = a[id].parent, n = Object.values(a).filter((x) => x.parent === up).length, r = rankIn(a, id);
+  return ((a[up] || {}).layout || {}).firstOnTop ? n - r : r + 1;
+}
 export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   mains ||= NO_MAINS;
   // (`known`: the anatomies already drawn there and at the defaults, as drawnOnce keeps them; only read here)
@@ -976,8 +985,10 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     // by z-index, one over its order (above the box's unpositioned children, which take none); the box is isolated, below
     // (its place, as the design ranks it: by order, a tie kept in the order the layers are listed, as the compare ranks
     // them (to-figma ranked), so two a variant numbers alike paint as listed, never by the markup's order)
-    if (e.parent && restacked(c, t, mains).has(e.parent) && !slotted) kept.push(['z-index', String(rankIn(a, id) + 1)]);
+    if (e.parent && restacked(c, t, mains).has(e.parent) && !slotted) kept.push(['z-index', String(paintRankIn(a, id))]);
     if (restacked(c, t, mains).has(id)) kept.push(['isolation', 'isolate']);
+    // (a box restacked says which child paints on top by its children's z-index: its firstOnTop written so)
+    if (restacked(c, t, mains).has(id) && unread.includes('layout.firstOnTop')) unread.splice(unread.indexOf('layout.firstOnTop'), 1);
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: (e.kind === 'instance' && !unheld) || slotted ? [] : unheld ? unread.filter((f) => !/^(key|component|with|swappedBy)\b/.test(f)) : unread,
       // (the axes a scale constraint went unwritten on: eval.mjs leftToCode leaves what code draws there to code)
       ...(unshared.length && !slotted && { unshared }) };

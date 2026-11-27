@@ -770,16 +770,26 @@ const emptyless = (e) => { if (!e || !e.whileEmpty) return e; const r = { ...e }
 // a text grows to its words where it resizes so, or says no resizing and hugs or states no height (to-figma's unaligned
 // asks the same)
 const textGrows = (d) => /^(width_and_height|height)$/.test(d.autoResize || '') || (!d.autoResize && (d.height == null || d.height === 'hug'));
-function unsayable(x, y, reading) {
+/* Whether a part's children can overlap, in a component's expanded anatomy `M`: its layout's gap below 0 (read by the
+   number it leads with: -4, a token written -4px (…)), or a child placed absolutely. Else which paints on top shows
+   nowhere (from-code's stackLikeDesign holds the same). */
+function overlaps(M, id) {
+  const e = M[id] || {}, g = e.layout && e.layout.gap;
+  if (g != null && parseFloat(String(g)) < 0) return true;
+  return Object.values(M).some((c) => c && c.parent === id && (c.position === 'absolute' || !!c.absolute));
+}
+function unsayable(x, y, reading, overlap = true) {
   if (!reading || !x || !y) return x;
   const r = { ...x };
   if (r.fillStyle !== undefined && y.fillStyle === undefined) delete r.fillStyle;
   // (and whether a nested instance is exposed, the Figma component's API, which no reading from code holds: to-figma's
   // roundTrip never compares it; a notification's close button's Close icon, read as an override in every combination)
   if (r.exposed !== undefined && y.exposed === undefined) delete r.exposed;
-  // (and which child paints on top, a layout's firstOnTop: a reading says none when it cuts, from-code's stackLikeDesign
-  // taking it from the design after; a menu item's content, read as an override in every combination)
-  if (r.layout && r.layout.firstOnTop !== undefined && y.layout && y.layout.firstOnTop === undefined) { const { firstOnTop: _, ...l } = r.layout; r.layout = l; }
+  // (and which child paints on top, a layout's firstOnTop, where its children cannot overlap (`overlap` false: no gap
+  // below 0, none placed absolutely): there the order they paint in shows nowhere, and a reading says none when it cuts,
+  // from-code's stackLikeDesign taking the design's after by the same rule (a menu item's content). Where they can
+  // overlap the code says it by z-index (to-code restacked) and the reading reads it back, so a difference stays one)
+  if (!overlap && r.layout && r.layout.firstOnTop !== undefined && y.layout && y.layout.firstOnTop === undefined) { const { firstOnTop: _, ...l } = r.layout; r.layout = l; }
   if (r.kind === 'text' && r.verticalAlign !== undefined && y.verticalAlign === undefined && textGrows(r)) delete r.verticalAlign;
   return r;
 }
@@ -938,7 +948,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       if (!x3 || !keyMatches(anatomy[k].key, x3.key)) return false;
       // (a layer of an instance nested in this one has its position-less constraints left out at that instance's own
       // turn, as this component's own contract already has them: compared so, where the component's part has none)
-      const y1 = asGlyphOf(anatomy[k], x3, reading), x = strokeForm(unsayable(x3, anatomy[k], reading), reading), y0 = strokeForm(y1, reading);
+      const y1 = asGlyphOf(anatomy[k], x3, reading), x = strokeForm(unsayable(x3, anatomy[k], reading, overlaps(M, mk)), reading), y0 = strokeForm(y1, reading);
       const y = host(k) !== id && y0.constraints && !y0.absolute && !x.constraints ? (({ constraints: _, ...r }) => r)(y0) : y0;
       if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(arcForm(bare(y))) === look(arcForm(bare(x))); }
       if (look(arcForm(y)) === look(arcForm(x))) return true;

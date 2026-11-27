@@ -954,6 +954,12 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   for (const a of [sameLay, otherLay]) ownInsides(a, (x) => (x === 'Item' ? item : null), { partial: true, reading: true });
   ok('a reading\'s placed box at its component\'s layout, saying nothing of which child paints on top, is that component\'s; another gap is kept',
     !('i/content' in sameLay) && 'i/content' in otherLay);
+  // where the children can overlap (a gap below 0, an avatar group), the code says which paints on top (to-code's
+  // z-index) and a reading that says the other order is a difference: kept
+  const pile = { ...item, anatomy: { ...item.anatomy, content: { ...item.anatomy.content, layout: { direction: 'row', gap: -8, firstOnTop: true } } } };
+  const pileLay = { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Item' }, 'i/content': { kind: 'container', parent: 'i', layout: { direction: 'row', gap: -8 }, order: 0 } };
+  ownInsides(pileLay, (x) => (x === 'Item' ? pile : null), { partial: true, reading: true });
+  ok('a reading\'s overlapping group stacked the other way than its component\'s is kept as the difference it is', 'i/content' in pileLay);
 }
 
 { // a mirrored layer stands where its box does (the snapshot's visual), not at its matrix's origin: CSS's left and code's box

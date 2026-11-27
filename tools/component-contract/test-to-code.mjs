@@ -166,6 +166,16 @@ const upright = { contract: 1, component: 'Upright', props: { orientation: { typ
       /:hover[^{]*> \[data-turn="track"\] \{\s*display: none;/.test(t2) && selfCheck(hover).length === 0); }
   const slant = { ...upright, variants: [{ when: { orientation: 'vertical' }, set: { 'track.rotation': 45 } }] };
   ok('any other turn is turned in place, as before: no wrapper', !/data-turn/.test(toCss(slant, 'upright'))); }
+// an overlapping group (a gap below 0) the design stacks first on top: each child says its place by z-index, the first
+// highest, the box isolated; the same group stacked last on top, or not overlapping, writes none
+{ const pile = (gap, top) => ({ contract: 1, component: 'Pile', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap, ...(top && { firstOnTop: true }) } },
+    a: { kind: 'graphic', parent: 'root', order: 0, width: 8, height: 8 }, b: { kind: 'graphic', parent: 'root', order: 1, width: 8, height: 8 }, c: { kind: 'graphic', parent: 'root', order: 2, width: 8, height: 8 } } });
+  const css = (g, top) => toCss(pile(g, top), 'pile', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  const rule = (x, sel) => { const i = x.indexOf(`${sel} {`); return i < 0 ? '' : x.slice(i, x.indexOf('}', i)); };
+  const top = css(-4, true);
+  ok('an overlapping group stacked first on top says it by z-index, the first highest; last on top, or apart, says none',
+    /z-index: 3;/.test(rule(top, '.ds-pile > .ds-pile__a')) && /z-index: 1;/.test(rule(top, '.ds-pile > .ds-pile__c')) && /isolation: isolate/.test(rule(top, '.ds-pile')) && !/firstOnTop/.test(top)
+    && !/z-index/.test(css(-4, false)) && !/z-index/.test(css(4, true))); }
 // a turned part in a restacked box: its wrapper is what the box lays out and stacks (a size container, its own stacking
 // context: css-contain-3 §3), so its place by z-index is said on the wrapper, beside its order, and not on the part inside
 { const row = { contract: 1, component: 'Row', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } },
