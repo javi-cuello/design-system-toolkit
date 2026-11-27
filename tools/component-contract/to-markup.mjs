@@ -512,7 +512,8 @@ function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, 
   if (pruned !== 'false' && cond !== 'false') cond = pruned === 'true' ? 'false' : cond === 'true' ? not(pruned) : `${wrap(cond)} && ${not(pruned)}`;
   // (a removal it is put back over rules nothing else out for its children: they keep their own)
   return { when: cond === 'true' ? null : cond, unknown, known: { yes: new Set([...known.yes, add]), no: new Set([...known.no, ...(back === 'false' ? no : [])]),
-    backs: part.adds.filter((w) => part.removes.some((r) => within(r, w))) } };
+    // (and so for its children: each add of its own over a removal, its own or one it went with, puts it back alone)
+    backs: part.adds.filter((w) => [...part.removes, ...(known.backs || [])].some((r) => within(r, w))) } };
 }
 
 /* The tree, built once for both frameworks: each element as a tag, its attributes (a literal, or code) and its

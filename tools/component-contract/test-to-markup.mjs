@@ -918,7 +918,12 @@ else {
       variants: [{ when: { tip: true }, add: { 'menu/tip': { kind: 'container', parent: 'menu' } } }, ...bar.variants, ...(own ? [{ when: { sm: true, end: true, tip: true }, add: { 'menu/tip': { kind: 'container', parent: 'menu' } } }] : [])] });
     const tipOf = (x) => toReact(x, 'bar', { naming: CLASS, library: { Bar: { ...x, folder: 'bar' } } }).split('\n').find((l) => /\{.*&& \($/.test(l) && /tip/.test(l)) || '';
     const pruned = tipOf(tipBar(false)), kept = tipOf(tipBar(true));
-    ok('a child an earlier variant adds is not revived where its parent alone is put back; an add of its own as narrow draws it', /tip && !\(sm && end\)/.test(pruned) && !/!\(sm && end\)/.test(kept), pruned + ' | ' + kept); }
+    ok('a child an earlier variant adds is not revived where its parent alone is put back; an add of its own as narrow draws it', /tip && !\(sm && end\)/.test(pruned) && !/!\(sm && end\)/.test(kept), pruned + ' | ' + kept);
+    // two down: a box put back by an add of its own where its parent is put back, but not its child an earlier variant adds
+    const deep = { ...bar, props: { ...bar.props, tip: { type: 'boolean', default: false, figma: 'Tip' } }, anatomy: { ...bar.anatomy, 'menu/box': { kind: 'container', parent: 'menu' } },
+      variants: [{ when: { tip: true }, add: { 'menu/box/tip': { kind: 'container', parent: 'menu/box' } } }, ...bar.variants, { when: { sm: true, end: true }, add: { 'menu/box': { kind: 'container', parent: 'menu' } } }] };
+    const deepTip = toReact(deep, 'bar', { naming: CLASS, library: { Bar: { ...deep, folder: 'bar' } } }).split('\n').find((l) => /\{.*&& \($/.test(l) && /tip/.test(l)) || '';
+    ok('a child two down, under a box put back by its own add where its parent is, is not revived there', /tip && !\(sm && end\)/.test(deepTip), deepTip); }
   // a narrower removal stacked on the put-back still takes it away
   const bar3 = { ...bar, props: { ...bar.props, busy: { type: 'boolean', default: false, figma: 'Busy' } }, variants: [...bar.variants, { when: { sm: true, end: true, busy: true }, remove: ['menu'] }] };
   ok('a removal narrower than a put-back still takes the part away', /\(sm && end\) && !\(sm && end && busy\)/.test(toReact(bar3, 'bar', { naming: CLASS, library: { Bar: { ...bar3, folder: 'bar' } } })));
