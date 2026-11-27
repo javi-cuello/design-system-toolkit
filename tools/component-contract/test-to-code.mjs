@@ -801,6 +801,15 @@ else console.log('skip: no stored contracts on this machine');
   const two2 = { ...loud, props: { ...loud.props, big: { type: 'boolean', default: false, axis: true, figma: 'Big' } }, variants: [{ when: { loud: true }, set: { 'tag/text.color': 'C/x' } }, { when: { loud: true, big: true }, remove: ['tag/text'] }] };
   const t2 = toCss(two2, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
   ok('what a variant rule gave a layer a later combination drops goes back to the component\'s own; nowhere else is it restated', selfCheck(two2, rulesOf(two2, mains).rules, mains).length === 0 && /data-big[^{]*> \.ds-tag__text \{\s*color: var\(--c-strong\);\s*\}/.test(t2) && (t2.match(/\.ds-tag__text \{/g) || []).length === 3);
+  // an override on a layer of an instance placed in another placed component, where a variant drops the instance's listing
+  // too (a slider's stop in Stops at value 0, its dot cleared at the defaults): the outer component's own value there
+  { const dot = { contract: 1, component: 'Dot', props: {}, anatomy: { root: { kind: 'container' }, dot: { kind: 'graphic', parent: 'root', background: 'C/on', shape: 'ellipse', width: 4, height: 4 } }, variants: [] };
+    const stops = { contract: 1, component: 'Stops', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0 } }, stop: { kind: 'instance', parent: 'root', component: 'Dot', with: {} } }, variants: [] };
+    const slider = { contract: 1, component: 'Slider', props: { zero: { type: 'boolean', default: false, axis: true, figma: 'Zero' } }, anatomy: { root: { kind: 'container' }, stops: { kind: 'instance', parent: 'root', component: 'Stops', with: {} }, 'stops/stop': { kind: 'instance', parent: 'stops', component: 'Dot', with: {} }, 'stops/stop/dot': { kind: 'graphic', parent: 'stops/stop', background: 'none', shape: 'ellipse', width: 4, height: 4 } }, variants: [{ when: { zero: true }, remove: ['stops/stop', 'stops/stop/dot'] }] };
+    const mainsS = (n) => ({ Dot: dot, Stops: stops }[n] || null);
+    const ss = toCss(slider, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: mainsS });
+    ok('an override inside an instance placed in another, both dropped by a variant, goes back to the outer component\'s value there',
+      /data-zero[^{]*> \.ds-stops__stop > \.ds-dot__dot \{\s*background: var\(--c-on\);/.test(ss) && /\.ds-slider > \.ds-slider__stops > \.ds-stops__stop > \.ds-dot__dot \{\s*background: none;/.test(ss)); }
   // a variant that places another component there and drops the override (drawn as that component draws it): nothing of
   // the base's override reaches it, as nothing does where it keeps the layer (a selected menu item's trailing element)
   const tagSel = { ...tag, component: 'Tag selected' };

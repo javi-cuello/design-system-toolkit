@@ -1131,17 +1131,22 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   // component does): the component's own value here, so the base rule's override does not hold where it is gone
   // whatever a rule gave it goes back to the component's own value (`given`: written only where a rule set it), the rest
   // to unset (rulesOf); nowhere set, nothing is written, so the component's own sheet, its states included, holds
+  // (and one whose instance this combination no longer records either, itself placed in a placed component that it does
+  // record (a stop in Stops, which a slider's value drops from its list): drawn as that outer component draws it there,
+  // reached through the instance as the defaults place it)
   for (const id of Object.keys(ALL)) {
     if (id in a || out[id]) continue;
-    const host = hostThrough(ALL, id, mains), m = host && a[host] && mains(a[host].component, a[host].key);
+    const near = hostThrough(ALL, id, mains), up = near && !a[near] && ALL[near] && hostOf(ALL, near);
+    const at = up && a[up] && mains(a[up].component, a[up].key) ? { ...a, [near]: ALL[near] } : a;
+    const host = near, m = host && at[host] && mains(at[host].component, at[host].key);
     if (!m || (hostOf(ALL, host) && !hostIn(c, host, mains)) || copyOf(c, host) || Object.keys(ALL).some((k) => k !== host && copyOf(c, k) === host)) continue;
     // (where a variant places another component there, the part is that one's own drawing: nothing of the base's
     // override holds, as a part it records there says nothing either, above)
-    if (ALL[host].component !== a[host].component) { out[id] = { decls: new Map(), unread: [] }; continue; }
-    const now = overrideOf(a, host, id.slice(host.length + 1), m, mains, ALL, c);
+    if (ALL[host].component !== at[host].component) { out[id] = { decls: new Map(), unread: [] }; continue; }
+    const now = overrideOf(at, host, id.slice(host.length + 1), m, mains, ALL, c);
     if (now) out[id] = { decls: new Map([...now.theirs].map(([p, v]) => [p, { v, given: true }])), unread: [] };
     // (an icon's colour too: back to the one the placed component draws it in, not unset, which would inherit)
-    const own = now && ALL[id].kind === 'instance' && placedGlyph({ ...ALL, [host]: a[host] || ALL[host] }, host, id.slice(host.length + 1), m, mains);
+    const own = now && ALL[id].kind === 'instance' && placedGlyph({ ...ALL, [host]: at[host] || ALL[host] }, host, id.slice(host.length + 1), m, mains);
     if (own) out[id].decls.set('color', { v: tokenNames.token(own), given: true });
   }
   // the sample's own children are reached by the rule for any child too: what it says that theirs does not is unset on
