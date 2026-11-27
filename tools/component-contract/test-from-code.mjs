@@ -815,7 +815,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const { wordsRect } = await import('./from-code.mjs');
   const t = (w, l, r) => ({ nodeType: 3, textContent: w, b: { left: l, top: 0, right: r, bottom: 5, width: r - l, height: 5 } });
   const range = { selectNodeContents(c) { this.c = c; }, getBoundingClientRect() { return this.c.b; } };
-  ok('a box\'s own words are measured as the union of their text nodes\' boxes', JSON.stringify(typeof wordsRect === 'function' && wordsRect({ childNodes: [t('a', 0, 10), { nodeType: 1 }, t(' ', 40, 44), t('b', 20, 30)] }, range)) === '[0,0,30,5]'); }
+  ok('a box\'s own words are measured run by run, each text node\'s box its own, so an element between two runs is not covered', JSON.stringify(wordsRect({ childNodes: [t('a', 0, 10), { nodeType: 1 }, t(' ', 40, 44), t('b', 20, 30)] }, range)) === '[[0,0,10,5],[20,0,30,5]]'); }
 { // a reading's rest state is the design's Enabled (a library's slider): its stacking goes on the reading's own rest, never
   // on a layer naming `enabled`, a state the reading has no word for, which held at no combination it draws
   const st = (values, def) => ({ type: 'enum', values, default: def, figma: 'State', role: 'interaction', pointer: ['hover'] });

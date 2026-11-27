@@ -222,6 +222,10 @@ const upright = { contract: 1, component: 'Upright', props: { orientation: { typ
     variants: [{ when: { ro: true }, set: { 'p.kind': 'container', 'p.component': null, 'p.key': null } }, { when: { ro: true, x: true }, set: { 'p/box/bg.position': 'absolute', 'p/box/bg.absolute': { x: 0, y: 0 } } }] };
   const scss = toCss(shut, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Held' ? plain : null) });
   ok('a copy another variant opens is restacked where a variant of its own sets a part out of the flow there', /isolation: isolate/.test(scss) && /z-index: 1;/.test(scss), scss);
+  // (a part set out of the flow under one prop, in a copy another prop opens: read at the combination of the two)
+  const pair = { ...shut, variants: [shut.variants[0], { when: { x: true }, set: { 'p/box/bg.position': 'absolute', 'p/box/bg.absolute': { x: 0, y: 0 } } }] };
+  const pcss = toCss(pair, 'field', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (n) => (n === 'Held' ? plain : null) });
+  ok('a copy one prop opens is restacked where another prop sets a part of it out of the flow, at the two together', /isolation: isolate/.test(pcss) && /z-index/.test(pcss), pcss);
   // (a child of the copy positioned to anchor a part another layer adds there paints with the positioned ones: read off
   // the copy as drawn, so a background already under it is not restacked)
   const anchor = { ...shut, anatomy: { ...shut.anatomy, 'p/box/bg': g('p/box', 0, true) }, variants: [shut.variants[0], { when: { ro: true }, add: { 'p/box/a/dot': g('p/box/a', 0, true) } }] };

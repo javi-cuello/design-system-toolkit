@@ -355,8 +355,10 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
   if (!memo.has(mains)) {
     const boxes = new Set(), parts = partsOf(c, t), kids = childrenOf(parts);
     const outOf = (e) => e.position === 'absolute' || !!e.absolute;
-    // (what a variant's combination draws, whole, as expand draws it: each once)
-    const D = variantDefaults(c), whole = new Map(), drawnAt = (v) => whole.get(v) || whole.set(v, expand(c, { ...D, ...(v.when || {}) })).get(v);
+    // (every combination the sheet draws, whole, as expand draws it (combinations, as selfCheck walks them): each once)
+    const D = variantDefaults(c);
+    let drawnAll = null;
+    const everyDrawn = () => (drawnAll ||= combinations(c).map((m) => ({ when: m, whole: expand(c, { ...D, ...m }) })));
     // (whether declarations lift a box: true, false, or null where an opacity by a token decides it, its value unknown here)
     const lifts = (decls) => {
       const d = new Map(decls), o = d.get('opacity');
@@ -371,12 +373,13 @@ function restacked(c, t = HOUSE, mains = NO_MAINS) {
       const B = parts.get(box);
       if (boxes.has(box) || (B && (B.slotted || B.e.kind === 'slot'))) continue;
       const dom = new Map(markupOrder(c, list).order.map((p, i) => [p.id, i]));
-      for (const v of [{}, ...(c.variants || [])]) {
+      // (a box inside a placed instance, or one, is that component's sheet's to stack; but at a combination that opens the
+      // instance into a container, the copy is this component's own drawing: read at every combination the sheet draws,
+      // whole, its parts set or added by any variant there; the rest by each variant, as it says)
+      const inPlaced = !!B && (B.inside || B.e.kind === 'instance');
+      for (const v of inPlaced ? everyDrawn() : [{}, ...(c.variants || [])]) {
         const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
-        // (a box inside a placed instance, or one, is that component's sheet's to stack; but at a combination that opens
-        // the instance into a container, by this variant or another, the copy is this component's own drawing: read
-        // whole as the variant's combination expands it, its parts added by other variants too)
-        const W = B && (B.inside || B.e.kind === 'instance') ? drawnAt(v) : null;
+        const W = inPlaced ? v.whole : null;
         const placedAt = (id) => { for (let up = id; up && W[up]; up = W[up].parent) if (W[up].kind === 'instance') return true; return false; };
         if (W && (!W[box] || placedAt(box))) continue;
         const asAt = (p) => (W && W[p.id]) || partAtVariant(v, p.id, p.e);

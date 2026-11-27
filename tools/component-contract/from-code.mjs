@@ -143,19 +143,19 @@ export function turnOf(n, style) {
    the positioned in the flow (rules.mjs liftsAlone, passed in: positioned, or a stacking context of its own), and `z`, its z-index where one applies (a positioned box, or a flex or grid item: CSS
    Flexbox 4.3). Read off the box it renders at, as cssOrderOf. rules.mjs siblingOrder orders by it. Runs in the page
    (passed as source); tested by test-from-code.mjs. */
-/* The box a box's own words take on the page: the union of its text nodes' boxes, by `range` (a DOM Range), each
-   blank or empty one left out; null where none draws. So a sibling a margin pulls over them is seen to overlap (the
-   page's overlap, stackLikeDesign). Runs in the page (passed as source); tested by test-from-code.mjs. */
+/* The boxes a box's own words take on the page: each text node's box, run by run, by `range` (a DOM Range), each
+   blank or empty one left out; null where none draws. Each its own, so an element between two runs is not taken as
+   covered, and a sibling a margin pulls over one is seen to overlap (the page's overlap, stackLikeDesign). Runs in the
+   page (passed as source); tested by test-from-code.mjs. */
 export function wordsRect(n, range) {
-  let r = null;
+  const out = [];
   for (const c of n.childNodes) {
     if (c.nodeType !== 3 || !c.textContent.trim()) continue;
     range.selectNodeContents(c);
     const b = range.getBoundingClientRect();
-    if (!(b.width > 0 && b.height > 0)) continue;
-    r = r ? [Math.min(r[0], b.left), Math.min(r[1], b.top), Math.max(r[2], b.right), Math.max(r[3], b.bottom)] : [b.left, b.top, b.right, b.bottom];
+    if (b.width > 0 && b.height > 0) out.push([b.left, b.top, b.right, b.bottom]);
   }
-  return r;
+  return out.length ? out : null;
 }
 export function stackOf(n, style, liftsAlone) {
   // (a part turned in a wrapper that is a box, as turnOf reads it: the wrapper is what its parent lays out and stacks)
@@ -2680,10 +2680,10 @@ async function main() {
                 seen[tid] = (seen[tid] || 0) + 1; if (seen[tid] > 1) tid += seen[tid];
                 // drawn over this box's own fill where it paints one, else over what this box is drawn over
                 const over = clear(s.backgroundColor) ? under : s.backgroundColor;
-                // (its box, the union of its words' own, so a sibling drawn over them is seen to overlap: wordsRect)
-                const rect = new Function(`return ${wordsRectSrc}`)()(n, document.createRange());
+                // (its boxes, its words' own run by run, so a sibling drawn over them is seen to overlap: wordsRect)
+                const rects = new Function(`return ${wordsRectSrc}`)()(n, document.createRange());
                 out.push({ id: tid, kind: 'text', parent: id, order: i++, color: s.color, type: typeOf(n, s),
-                  textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign, content: text, under: over, ...(rect && { rect }) });
+                  textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign, content: text, under: over, ...(rects && { rects }) });
               }
             }
           }
@@ -2706,10 +2706,11 @@ async function main() {
           // (which way their z-index counts the code does not say: read as painted, and noted, below)
           if (box && first === null) box.stackUnknown = true;
           // (two children whose boxes intersect, however laid out: a grid cell, a margin; stackLikeDesign reads it)
-          const rs = xs.map((e) => e.rect).filter(Boolean), meet = (a, b) => Math.min(a[2], b[2]) - Math.max(a[0], b[0]) > 0.5 && Math.min(a[3], b[3]) - Math.max(a[1], b[1]) > 0.5;
-          const host = rs.some((a, i) => rs.slice(i + 1).some((b) => meet(a, b))) && out.find((e) => e.id === pid);
+          // (a box's own words by their runs, wordsRect: two boxes of one child never count)
+          const rs = xs.flatMap((e) => (e.rects || (e.rect ? [e.rect] : [])).map((r) => [r, e])), meet = (a, b) => Math.min(a[2], b[2]) - Math.max(a[0], b[0]) > 0.5 && Math.min(a[3], b[3]) - Math.max(a[1], b[1]) > 0.5;
+          const host = rs.some(([a, x], i) => rs.slice(i + 1).some(([b, y]) => x !== y && meet(a, b))) && out.find((e) => e.id === pid);
           if (host) host.overlap = true;
-          ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; });
+          ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; delete e.rects; });
         }
         return out;
       }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString()]);
