@@ -2077,7 +2077,11 @@ export function passedSwaps(fc, id, raw, bySlug, byName) {
       const layer = all[sp], lm = layer && layer.component && byName(layer.component);
       if (!layer || layer.kind !== 'instance' || (lm && !isDrawing(lm))) continue;
       const dir = sp.includes('/') ? sp.slice(0, sp.lastIndexOf('/')) : '', under = dir ? `${id}/${dir}` : id;
-      const m = raw.filter((e) => e.kind === 'instance' && e.parent === under && e.slug).map((e) => bySlug(e.slug)).find((x) => x && !isDrawing(x) && x.component !== layer.component);
+      // (never one the component places there itself, beside the swap, at any variant: an app bar's title text beside its
+      // thumbnail, another text at another size)
+      const mine = (k) => k !== sp && all[k] && all[k].kind === 'instance' && (all[k].parent === 'root' ? '' : all[k].parent || '') === dir;
+      const own = new Set([...Object.keys(all).filter(mine).map((k) => all[k].component), ...(fc.variants || []).flatMap((v) => Object.entries(v.set || {}).filter(([f]) => f.endsWith('.component') && mine(f.slice(0, -'.component'.length))).map(([, x]) => x))].filter(Boolean));
+      const m = raw.filter((e) => e.kind === 'instance' && e.parent === under && e.slug).map((e) => bySlug(e.slug)).find((x) => x && !isDrawing(x) && x.component !== layer.component && !own.has(x.component));
       if (m) w[q.figma] = String(m.component).split('/').pop();
     }
   }

@@ -1382,6 +1382,14 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   ok('passedSwaps: a library component drawn in a placeholder swap\'s place is that swap\'s value; the placeholder itself is not',
     JSON.stringify(got([{ id: 'pick/menu/grid', kind: 'instance', parent: 'pick/menu', slug: 'grid' }])) === '{"slot {Options}":"Grid"}'
     && JSON.stringify(got([{ id: 'pick/menu/slot', kind: 'instance', parent: 'pick/menu', slug: 'slot' }])) === '{}' && JSON.stringify(got([])) === '{}'); }
+{ // a swap whose box also holds the component's own parts (an app bar's thumbnail beside its title text): the title is
+  // the component's own, never the swap's value; the swap left in place gives nothing
+  const thumb = { component: 'Thumb', props: {}, anatomy: { root: { kind: 'container' } } }, title = { component: 'Text Large', props: {}, anatomy: { root: { kind: 'container' }, t: { kind: 'text', parent: 'root' } } };
+  const bar = { component: 'Bar', props: { image: { type: 'instance', figma: 'Image', swaps: ['content/thumb'] } },
+    anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/thumb': { kind: 'instance', parent: 'content', component: 'Thumb', swappedBy: 'image' }, 'content/title': { kind: 'instance', parent: 'content', component: 'Text Large' } }, variants: [] };
+  const lib = { thumb, title }, byName = (nm) => Object.values(lib).find((y) => y.component === nm);
+  ok('passedSwaps: the component\'s own part beside a swap is never read as the swap\'s value',
+    JSON.stringify(passedSwaps(bar, 'bar', [{ id: 'bar/content/thumb', kind: 'instance', parent: 'bar/content', slug: 'thumb' }, { id: 'bar/content/title', kind: 'instance', parent: 'bar/content', slug: 'title' }], (sl) => lib[sl], byName)) === '{}'); }
 { // a part placed absolutely inside a placed component, added at one prop and moved at another (a picker's menu, open at
   // focus, lower at compact): the move is kept, judged by the part as the variant where it is drawn adds it, never by
   // another variant's add of it (one the design rules out, which draws it in flow)
