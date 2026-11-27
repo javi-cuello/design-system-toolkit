@@ -866,6 +866,43 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     whole['b/content/icon'].background === 'C/strong');
 }
 
+{ // a placed layer is held to its component's part field by field, whatever order a reading writes a stroke's fields in: a
+  // dashed underline code draws as its component does, read as color, width, dash, is that component's (strokeForm leaves
+  // the part's as color, dash, width), never an override the design does not state
+  const main = { component: 'Def', props: {}, anatomy: { root: { kind: 'container' }, underline: { kind: 'graphic', parent: 'root', width: 'fill', height: 0, border: { color: 'C/line', align: 'center', dash: [1, 1], cap: 'square', width: 1 }, order: 0 } } };
+  const read = (border) => ({ root: { kind: 'container' }, d: { kind: 'instance', parent: 'root', component: 'Def' }, 'd/underline': { kind: 'graphic', parent: 'd', order: 0, border, width: 'fill', height: 0 } });
+  const same = read({ color: 'C/line', width: 1, dash: 'dashed' }), other = read({ color: 'C/other', width: 1, dash: 'dashed' });
+  for (const a of [same, other]) ownInsides(a, (x) => (x === 'Def' ? main : null), { partial: true, reading: true });
+  ok('a reading\'s placed layer equal to its component\'s part in another key order is that component\'s; another colour is kept',
+    !('d/underline' in same) && other['d/underline'] && other['d/underline'].border.color === 'C/other');
+}
+{ // a colour style is Figma's alone: a reading from code holds none, so a placed part its component paints with one (a
+  // track's fill, a stop's dot) is that component's where its colour is, and kept where its colour differs; the design's
+  // own cut still holds the style
+  const main = { component: 'Track', props: {}, anatomy: { root: { kind: 'container' }, track: { kind: 'graphic', parent: 'root', width: 'fill', height: 'fill', background: 'C/track', fillStyle: 'S/track', order: 0 } } };
+  const m = (x) => (x === 'Track' ? main : null);
+  const read = (bg, style) => ({ root: { kind: 'container' }, t: { kind: 'instance', parent: 'root', component: 'Track' }, 't/track': { kind: 'graphic', parent: 't', order: 0, background: bg, ...(style && { fillStyle: style }), width: 'fill', height: 'fill' } });
+  const same = read('C/track'), other = read('C/other'), design = read('C/track');
+  ownInsides(same, m, { partial: true, reading: true }); ownInsides(other, m, { partial: true, reading: true }); ownInsides(design, m, { partial: true });
+  ok('a reading\'s placed part at its component\'s colour is that component\'s, whatever colour style the component names; another colour, or the design\'s cut, keeps it',
+    !('t/track' in same) && other['t/track'] && 't/track' in design);
+  // and a text that grows to its words, whose vertical alignment shows nowhere and no CSS writes: a reading saying none
+  // there is its component's; one of a fixed height keeps its alignment, a difference
+  const btn = (h) => ({ component: 'Btn', props: {}, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Go', color: 'C/t', width: 'hug', height: h, autoResize: h === 'hug' ? 'width_and_height' : 'none', verticalAlign: 'center', order: 0 } } });
+  const said = (h) => ({ root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Btn' }, 'b/label': { kind: 'text', parent: 'b', order: 0, content: 'Go', color: 'C/t', width: 'hug', height: h, autoResize: h === 'hug' ? 'width_and_height' : 'none' } });
+  const grows = said('hug'), fixed = said(20);
+  ownInsides(grows, () => btn('hug'), { partial: true, reading: true }); ownInsides(fixed, () => btn(20), { partial: true, reading: true });
+  ok('a reading\'s placed text that grows to its words, saying no vertical alignment, is its component\'s; one of a fixed height is kept',
+    !('b/label' in grows) && 'b/label' in fixed);
+  // and whether a nested instance is exposed, the Figma component's API no reading holds: a reading's icon at its
+  // component's own is that component's, with the layers above it that held it
+  const ib = { component: 'IconBtn', props: {}, anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root', order: 0 }, 'content/close': { kind: 'instance', parent: 'content', component: 'Close', exposed: true, width: 16, height: 16, order: 0 } } };
+  const held = { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'IconBtn' }, 'b/content': { kind: 'container', parent: 'b', order: 0 }, 'b/content/close': { kind: 'instance', parent: 'b/content', component: 'Close', width: 16, height: 16, order: 0 } };
+  ownInsides(held, (x) => (x === 'IconBtn' ? ib : null), { partial: true, reading: true });
+  ok('a reading\'s placed instance at its component\'s own, saying nothing of exposed, is that component\'s, and so is the box that held it',
+    !('b/content/close' in held) && !('b/content' in held));
+}
+
 { // a mirrored layer stands where its box does (the snapshot's visual), not at its matrix's origin: CSS's left and code's box
   const box = { name: 'Box', id: '9:1', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 64, h: 64, children: [
     { name: 'Art', type: 'FRAME', w: 176, h: 176, x: 64, y: -56, visual: { x: -112, y: -56, w: 176, h: 176 }, flip: 'x', absolute: true, constraints: 'MAX/MIN' }] }] };

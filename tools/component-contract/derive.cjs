@@ -580,7 +580,9 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
    is kept. (A contract annotation of the component's own props, swappedBy, says nothing of how a layer looks.) */
 // (nor does an instance's key, a look a reading from code never has: two keys that differ are held apart in own())
 const IGNORED = new Set(['parent', 'order', 'name', 'swappedBy', 'key']);
-const look = (e) => j(Object.fromEntries(Object.entries(e).filter(([k]) => !IGNORED.has(k)).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))));
+// (every object's keys in order, a stroke's among them: a reading writes a dashed line's fields in another order than
+// strokeForm leaves its component's, so Carbon's definition tooltip's underline, drawn as its component's, read as an override)
+const look = (e) => sorted(Object.fromEntries(Object.entries(e).filter(([k]) => !IGNORED.has(k))));
 /* An instance's own styling is its component's root's too: a field the instance states (its layout, corners, fill,
    stroke, effect, opacity, clipping, blend, smoothing, min and max sizes) that equals its component's root at the instance's
    props is the component's, and left out, so code and a drawing leave it to the component and no sheet writes it
@@ -750,6 +752,22 @@ const emptyless = (e) => { if (!e || !e.whileEmpty) return e; const r = { ...e }
 /* A stroke in the form a reading from code can say it, for a reading only (to-figma's dashes and line equivalences): a
    dash as dashed, its pattern and cap unstated in CSS; a line's stroke (a graphic of no width or height) without its
    alignment, which draws it nowhere else. So a placed layer code draws as its component does is its component's. */
+/* A component's part without what a reading from code cannot say, where the reading says none (to-figma's roundTrip holds
+   neither there): a colour style, Figma's alone, its colour still compared (Material's slider's inactive track and its
+   stop's dot); and the vertical alignment of a text that grows to its words, where it shows nowhere and no CSS writes it
+   (an action button's label); and whether a nested instance is exposed. Else every such part read as an override the
+   design does not state. For a reading only. */
+function unsayable(x, y, reading) {
+  if (!reading || !x || !y) return x;
+  const r = { ...x };
+  if (r.fillStyle !== undefined && y.fillStyle === undefined) delete r.fillStyle;
+  // (and whether a nested instance is exposed, the Figma component's API, which no reading from code holds: to-figma's
+  // roundTrip never compares it; a notification's close button's Close icon, read as an override in every combination)
+  if (r.exposed !== undefined && y.exposed === undefined) delete r.exposed;
+  const grows = /^(width_and_height|height)$/.test(r.autoResize || '') || (!r.autoResize && (r.height == null || r.height === 'hug'));
+  if (r.kind === 'text' && r.verticalAlign !== undefined && y.verticalAlign === undefined && grows) delete r.verticalAlign;
+  return r;
+}
 function strokeForm(e, reading) {
   if (!reading || !e || !e.border || typeof e.border !== 'object') return e;
   const b = { ...e.border };
@@ -870,7 +888,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       if (!x3 || !keyMatches(anatomy[k].key, x3.key)) return false;
       // (a layer of an instance nested in this one has its position-less constraints left out at that instance's own
       // turn, as this component's own contract already has them: compared so, where the component's part has none)
-      const y1 = asGlyphOf(anatomy[k], x3, reading), x = strokeForm(x3, reading), y0 = strokeForm(y1, reading);
+      const y1 = asGlyphOf(anatomy[k], x3, reading), x = strokeForm(unsayable(x3, anatomy[k], reading), reading), y0 = strokeForm(y1, reading);
       const y = host(k) !== id && y0.constraints && !y0.absolute && !x.constraints ? (({ constraints: _, ...r }) => r)(y0) : y0;
       if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(arcForm(bare(y))) === look(arcForm(bare(x))); }
       if (look(arcForm(y)) === look(arcForm(x))) return true;
