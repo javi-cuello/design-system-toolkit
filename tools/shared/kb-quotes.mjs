@@ -65,7 +65,7 @@ export function extractQuotes(markdown, { lines: only = null } = {}) {
     for (const l of links) { const u = line.indexOf('](', l.at) + 1; bare = bare.slice(0, u) + blank(bare.slice(u, l.end)) + bare.slice(l.end); }
     if (!only || only.has(n)) {
       // a quote opens after a space, a bracket or the line's start, and closes before a space, a bracket or punctuation
-      for (const q of bare.matchAll(/(?<=^|[\s([{:;—–-])"([^"]{8,}?)"(?=$|[\s)\]},.;:!?…—–-])/g)) {
+      for (const q of bare.matchAll(/(?<=^|[\s([{:;—–*_-])"([^"]{8,}?)"(?=$|[\s)\]},.;:!?…—–*_-])/g)) {
         if (links.some((l) => q.index > l.at && q.index < l.end)) continue;
         const after = q.index + q[0].length;
         const known = [...names.entries(), ...links.filter((l) => l.end <= q.index).map((l) => [l.name, l.url])];
@@ -161,45 +161,54 @@ export async function fetchRendered(url) {
       console.error(`kb-quotes: ${noBrowser}`);
       return { error: noBrowser };
     }
-    const tab = await cdp.attach(await cdp.newPage(browser.endpoint));
+    let tab = null;
     try {
+      tab = await cdp.attach(await cdp.newPage(browser.endpoint));
       let status = 0;
       tab.on('Network.responseReceived', (p) => { if (p.type === 'Document' && !status) status = p.response.status; });
       await tab.send('Network.enable').catch(() => {});
       await cdp.navigate(tab, url, { until: 'load', timeout: 45_000 });
+      // refused or broken: a bot check, a rate limit or a server error is not the page
+      if ([401, 403, 429].includes(status) || status >= 500) return { error: `HTTP ${status}` };
       // a script-rendered site may answer a deep link with 404 and still draw the page, so the drawn text decides
-      // a script page fills in after load: wait until its text stops growing
       let last = -1, steady = 0, text = '';
       for (let k = 0; k < 40 && steady < 3; k++) {
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((res) => setTimeout(res, 500));
         text = await tab.evaluate('document.body ? document.body.innerText : ""');
         steady = text.length > 0 && text.length === last ? steady + 1 : 0;
         last = text.length;
       }
       return text ? { text } : { error: `HTTP ${status || 'no answer'}, nothing drawn` };
-    } catch (e) { return { error: `render: ${e.message}` }; } finally { tab.close(); }
+    } catch (e) { return { error: `render: ${e.message}` }; } finally {
+      if (tab) { tab.close(); await fetch(`${browser.endpoint}/json/close/${tab.id}`).catch(() => {}); }
+    }
   }, { fresh });
 }
 
-/** Each paired quote's verdict: missing when a source was read without it, unreachable when none could be read. */
+/**
+ * Each paired quote's verdict. A source is absent only when every pass that could
+ * be made read it without the quote; a quote is missing only when all its sources
+ * are absent, and unreachable when any could not be read.
+ */
 export async function check(quotes, { raw = fetchRaw, rendered = fetchRendered } = {}) {
   const missing = [], unreachable = [];
   for (const q of quotes) {
     if (!q.urls.length) continue;
     const parts = q.parts.map(normalise);
     const found = (page) => { const p = normalise(page); return parts.every((x) => p.includes(x)); };
-    let ok = false, read = 0;
     const errors = [];
-    for (const pass of [raw, rendered].filter(Boolean)) {
-      for (const u of q.urls) {
+    let ok = false, unknown = false;
+    for (const u of q.urls) {
+      let verdict = 'absent';
+      for (const pass of [raw, rendered].filter(Boolean)) {
         const got = await pass(u);
-        if (got.error) { errors.push(`${u}: ${got.error}`); continue; }
-        read++;
-        if (found(got.text)) { ok = true; break; }
+        if (got.error) { errors.push(`${u}: ${got.error}`); verdict = 'unknown'; continue; }
+        if (found(got.text)) { verdict = 'found'; break; }
       }
-      if (ok) break;
+      if (verdict === 'found') { ok = true; break; }
+      if (verdict === 'unknown') unknown = true;
     }
-    if (!ok) (read ? missing : unreachable).push({ ...q, errors });
+    if (!ok) (unknown ? unreachable : missing).push({ ...q, errors });
   }
   return { missing, unreachable };
 }
@@ -213,7 +222,11 @@ export function addedLines(diff) {
 /** Lines added to a file since `ref`, or null (every line) for a file git does not track yet. */
 export function linesSince(file, ref) {
   const cwd = dirname(file);
-  try { execFileSync('git', ['ls-files', '--error-unmatch', file], { cwd, stdio: 'ignore' }); } catch { return null; }
+  execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd, stdio: 'pipe' }); // not a repo, or no git: an error, said
+  try { execFileSync('git', ['ls-files', '--error-unmatch', file], { cwd, stdio: 'pipe' }); } catch (e) {
+    if (/did not match any file/.test(String(e.stderr))) return null;
+    throw e;
+  }
   return addedLines(execFileSync('git', ['diff', '-U0', ref, '--', file], { cwd, encoding: 'utf8' }));
 }
 
@@ -228,6 +241,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     console.error('usage: kb-quotes.mjs <page.md>... [--from <git-ref>] [--no-render] [--fresh]');
     process.exit(2);
   }
+  const fail = (why) => { console.error(`kb-quotes: ${why}`); process.exit(2); };
+  for (const f of files) if (!existsSync(resolve(f))) fail(`no such page: ${f}`);
+  if (from) { try { execFileSync('git', ['rev-parse', '--verify', '--quiet', `${from}^{commit}`], { cwd: dirname(resolve(files[0])), stdio: 'pipe' }); } catch { fail(`--from ${from} is not a commit here`); } }
   let total = 0, unpaired = 0, bad = 0, lost = 0;
   try {
     for (const f of files) {
@@ -239,7 +255,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       for (const q of missing) { bad++; console.log(`${f}:${q.line} MISSING [${q.urls.join(' | ')}] "${q.quote}"`); }
       for (const q of unreachable) { lost++; console.log(`${f}:${q.line} UNREACHABLE "${q.quote}" (${q.errors.join('; ')})`); }
     }
-  } finally { if (browser) await browser.close(); }
+  } catch (e) { console.error(`kb-quotes: ${e.stderr ? String(e.stderr).trim() : e.message}`); process.exitCode = 2; } finally { if (browser) await browser.close(); }
+  if (process.exitCode === 2) process.exit(2);
   console.log(`kb-quotes: ${total} quote(s), ${bad} not found, ${lost} unreachable, ${unpaired} with no source${from ? ' (a new quote needs one)' : ''}`);
   process.exit(bad || (from && unpaired) ? 1 : lost ? 3 : 0);
 }

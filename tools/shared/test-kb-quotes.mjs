@@ -115,6 +115,18 @@ await t('a source that cannot be read is unreachable, not missing', async () => 
   assert.equal(missing.length, 0); assert.equal(unreachable.length, 1); assert.match(unreachable[0].errors.join(), /HTTP 403/);
 });
 
+await t('a script shell read raw and a render that fails is unreachable, not missing', async () => {
+  const { missing, unreachable } = await check(extractQuotes('- "words drawn only by script" ([X](https://x.example))'), { raw: page('<div id=root></div>'), rendered: async () => ({ error: 'render: timeout' }) });
+  assert.equal(missing.length, 0); assert.equal(unreachable.length, 1);
+});
+await t('raw-only checking calls a read page without the quote missing', async () => {
+  const { missing } = await check(extractQuotes('- "words the page never had" ([X](https://x.example))'), { raw: page('other text'), rendered: null });
+  assert.equal(missing.length, 1);
+});
+await t('a quote wrapped in emphasis is still a quote', () => {
+  assert.equal(one('- the box reads **"Keep me signed in"** ([Smashing](https://s.example)).').quote, 'Keep me signed in');
+});
+
 // the cache
 await t('the cache keeps only fetched text, refetches after a week and under --fresh', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'kbq-test-'));
@@ -143,6 +155,8 @@ await t('--from on a real repo: added lines of a tracked file, every line of an 
     writeFileSync(join(dir, 'b.md'), 'untracked\n');
     assert.deepEqual([...linesSince(join(dir, 'a.md'), 'HEAD')], [2]);
     assert.equal(linesSince(join(dir, 'b.md'), 'HEAD'), null);
+    const outside = mkdtempSync(join(tmpdir(), 'kbq-nogit-')); writeFileSync(join(outside, 'c.md'), 'x\n');
+    assert.throws(() => linesSince(join(outside, 'c.md'), 'HEAD')); rmSync(outside, { recursive: true, force: true });
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
