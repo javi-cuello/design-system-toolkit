@@ -252,6 +252,14 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a placed component\'s own layout overridden on the instance is code\'s to say (its own sheet styles it); its size, its fill, and a look the design leaves to the component (its sheet drifting), are not',
     left('p.layout', { library: { align: 'center' } }) && left('p.layout.align', { library: 'center' }) && !left('p.width', { library: 'fill' }) && !left('p.background', { library: 'C/x' })
     && !left('p.layout', { library: null, drawn: { align: 'end' } })); }
+{ // a placed component a variant swaps for one the library does not hold: the colour read there, where the design
+  // expanded at that variant gives none, is the swapped-in icon's own (named); where it gives one, a difference
+  const st = { contract: 1, component: 'Status', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const c = (bg) => ({ contract: 1, component: 'Note', props: { status: { type: 'enum', values: ['info', 'error'], default: 'info' } }, anatomy: { root: { kind: 'container' }, s: { kind: 'instance', parent: 'root', component: 'Status' } },
+    variants: [{ when: { status: 'error' }, set: { 's.component': 'Status/Error', 's.key': 'k', ...(bg && { 's.background': bg }) } }] });
+  const mains = (n) => (n === 'Status' ? st : null);
+  ok('the colour of a component the library does not hold, swapped in where the design gives none, is its own; given one, a difference',
+    gapOf(c(null), mains)('s.background', { library: null, drawn: 'rgb(0 0 0 / 1)' }) === 'icon-own-colour' && gapOf(c('Icon/red'), mains)('s.background', { library: null, drawn: 'rgb(0 0 0 / 1)' }) == null); }
 { // a swap of a drawing alone (a slot's placeholder: no props, nothing but boxes and shapes) is drawn by name, as an
   // icon's mark: its own layout is its drawing's, as a component the library does not hold; unswapped, it is placed
   const slot = { contract: 1, component: 'Slot', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', align: 'start' } }, bg: { kind: 'graphic', parent: 'root' } }, variants: [] };

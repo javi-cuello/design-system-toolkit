@@ -1140,7 +1140,8 @@ const PLACE = GLYPH_WORDS;
 /* A placed instance a variant swaps for a component the library does not hold (a status icon set of its own at the error
    state): to-markup marks that component where the variant holds, and the reading reads the mark as a graphic naming its
    asset. Read back as the swap it is: that variant's component (the design's spelling, its key), the graphic's own fields
-   gone, and its colour where that variant sets none: a component the library does not hold draws its own. In place. */
+   gone. Its colour stays as read: compared where the design gives one there, and where it gives none the swapped-in
+   component's own, which eval names (gapOf's icon-own-colour), never dropped. In place. */
 export function swappedMark(fromCode, design) {
   for (const v of fromCode.variants || []) {
     const s = v.set || {};
@@ -1153,7 +1154,6 @@ export function swappedMark(fromCode, design) {
       delete s[k]; delete s[`${id}.kind`];
       s[`${id}.component`] = dv.set[`${id}.component`];
       s[`${id}.key`] = dv.set[`${id}.key`] ?? null;
-      if (!(`${id}.background` in dv.set)) delete s[`${id}.background`];
     }
   }
   return fromCode;

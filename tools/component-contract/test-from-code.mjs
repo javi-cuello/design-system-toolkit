@@ -1515,16 +1515,13 @@ ok('stateProp: the read-back interaction prop takes the design\'s axis name; non
   ok('a placed component given a pointer state of its own at this combination is forced there by its own pseudo-class, nowhere else', f({ state: 'focus' }) === '[{"id":"b","pseudo":"focus-visible"}]'
     && f({ state: 'focus', on: true }) === '[]' && f({ state: 'hover' }) === '[{"id":"a","pseudo":"hover"}]' && f({ state: 'default' }) === '[]', f({ state: 'focus' }) + f({ state: 'focus', on: true }) + f({ state: 'hover' })); }
 // a placed instance a variant swaps for a component the library does not hold, marked there by to-markup, read back as that
-// swap: the variant's component and key, no graphic fields, no colour the design does not set; a mark naming another
-// glyph than the design's swap stays the code's graphic
+// swap: the variant's component and key, no graphic fields, its colour as read (eval names it where the design gives
+// none); a mark naming another glyph than the design's swap stays the code's graphic
 { const design = { anatomy: { s: { kind: 'instance', component: 'Status' } }, variants: [{ when: { status: 'error' }, set: { 's.component': 'Status/Error', 's.key': 'k-err', 's.with': null } }] };
   const read = (asset) => ({ anatomy: { s: { kind: 'instance', component: 'Status' } }, variants: [{ when: { status: 'error' }, set: { 's.kind': 'graphic', 's.component': null, 's.with': null, 's.key': null, 's.asset': asset, 's.background': 'rgba(0, 0, 0, 1)' } }] });
   const a = swappedMark(read('Status/Error'), design).variants[0].set, b = swappedMark(read('Other'), design).variants[0].set;
   ok('a variant\'s mark of a component the library does not hold reads back as that variant\'s swap; another glyph stays the code\'s',
-    JSON.stringify(a) === JSON.stringify({ 's.component': 'Status/Error', 's.with': null, 's.key': 'k-err' }) && b['s.kind'] === 'graphic' && b['s.asset'] === 'Other', JSON.stringify(a));
-  // (the colour the base's instance carries is the library component's, not the swapped-in one's: dropped there too)
-  const tinted = { ...design, anatomy: { s: { kind: 'instance', component: 'Status', background: 'Icon/primary' } } };
-  ok('…its colour dropped though the base instance carries one, as the swapped-in component draws its own', !('s.background' in swappedMark(read('Status/Error'), tinted).variants[0].set)); }
+    JSON.stringify(a) === JSON.stringify({ 's.component': 'Status/Error', 's.with': null, 's.key': 'k-err', 's.background': 'rgba(0, 0, 0, 1)' }) && b['s.kind'] === 'graphic' && b['s.asset'] === 'Other', JSON.stringify(a)); }
 // children that say by z-index the first paints on top (to-code's firstOnTop over an overlapping group) read as first on
 // top; the last on top, one with no z-index, or one out of the flow does not
 { const { stackedFirst } = await import('./rules.mjs');

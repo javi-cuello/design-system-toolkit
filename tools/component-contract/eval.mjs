@@ -57,6 +57,7 @@ import { contracts, hashOf } from './official.mjs';
 import { roundTrip, drawSettings, restKey } from './to-figma.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, isDrawing, swapKeysOf } from './to-markup.mjs';
+import { expand, variantDefaults } from './layers.mjs';
 import { sharesNeverWritten, tokenNames } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
@@ -190,8 +191,12 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // a placed icon's colour where the design leaves it its own (a combination that takes the glyph's override away): the
   // icon set's own colour, which no main in the library holds, so what code draws there is its own to say
   const all = { ...(contract.anatomy || {}), ...Object.assign({}, ...(contract.variants || []).map((v) => v.add || {})) };
-  const ownColour = (el, field, row) => field === 'background' && row && row.library == null && mainOf && (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key)
-    && (contract.variants || []).some((v) => (v.remove || []).some((r) => r.startsWith(`${el}/`) && all[r] && all[r].background != null));
+  const ownColour = (el, field, row) => field === 'background' && row && row.library == null && mainOf && (all[el] || {}).kind === 'instance' && ((!mainOf(all[el].component, all[el].key)
+    && (contract.variants || []).some((v) => (v.remove || []).some((r) => r.startsWith(`${el}/`) && all[r] && all[r].background != null))) || swappedColour(el));
+  // (and one a variant swaps in that the library does not hold, where the design expanded there gives it no colour: the
+  // swapped-in icon's own, which to-markup can only mark (foreignMark) and from-code reads as drawn, swappedMark)
+  const swappedColour = (el) => (contract.variants || []).some((v) => { const n = (v.set || {})[`${el}.component`]; if (typeof n !== 'string' || mainOf(n, v.set[`${el}.key`])) return false;
+    const x = expand(contract, { ...variantDefaults(contract), ...v.when })[el]; return !!x && x.background == null; });
   // a placed component's own look the design overrides on the instance (its layout, corners, stroke, effect, clipping,
   // smoothing): code places a component and leaves its look to its own sheet (to-code's PLACED, code-standard rule 5),
   // so what the markup cannot pass is code's to say. (Not its fill: on an instance that is an icon's colour, which code
