@@ -946,6 +946,14 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ownInsides(held, (x) => (x === 'IconBtn' ? ib : null), { partial: true, reading: true });
   ok('a reading\'s placed instance at its component\'s own, saying nothing of exposed, is that component\'s, and so is the box that held it',
     !('b/content/close' in held) && !('b/content' in held));
+  // and which child paints on top (a layout's firstOnTop), which a reading says only after it cuts, from the design: a box
+  // at its component's own layout is its component's; one laid out otherwise is kept
+  const item = { component: 'Item', props: {}, anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root', layout: { direction: 'row', gap: 8, firstOnTop: true }, order: 0 } } };
+  const lay = (gap) => ({ root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Item' }, 'i/content': { kind: 'container', parent: 'i', layout: { direction: 'row', gap }, order: 0 } });
+  const sameLay = lay(8), otherLay = lay(4);
+  for (const a of [sameLay, otherLay]) ownInsides(a, (x) => (x === 'Item' ? item : null), { partial: true, reading: true });
+  ok('a reading\'s placed box at its component\'s layout, saying nothing of which child paints on top, is that component\'s; another gap is kept',
+    !('i/content' in sameLay) && 'i/content' in otherLay);
 }
 
 { // a mirrored layer stands where its box does (the snapshot's visual), not at its matrix's origin: CSS's left and code's box

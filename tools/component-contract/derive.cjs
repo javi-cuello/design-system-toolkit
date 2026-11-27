@@ -765,8 +765,8 @@ const emptyless = (e) => { if (!e || !e.whileEmpty) return e; const r = { ...e }
 /* A component's part without what a reading from code cannot say, where the reading says none (to-figma's roundTrip holds
    neither there): a colour style, Figma's alone, its colour still compared (a slider's inactive track and its stop's
    dot); and the vertical alignment of a text that grows to its words, where it shows nowhere and no CSS writes it
-   (an action button's label); and whether a nested instance is exposed. Else every such part read as an override the
-   design does not state. For a reading only. */
+   (an action button's label); whether a nested instance is exposed; and which child paints on top. Else every such
+   part read as an override the design does not state. For a reading only. */
 // a text grows to its words where it resizes so, or says no resizing and hugs or states no height (to-figma's unaligned
 // asks the same)
 const textGrows = (d) => /^(width_and_height|height)$/.test(d.autoResize || '') || (!d.autoResize && (d.height == null || d.height === 'hug'));
@@ -777,6 +777,9 @@ function unsayable(x, y, reading) {
   // (and whether a nested instance is exposed, the Figma component's API, which no reading from code holds: to-figma's
   // roundTrip never compares it; a notification's close button's Close icon, read as an override in every combination)
   if (r.exposed !== undefined && y.exposed === undefined) delete r.exposed;
+  // (and which child paints on top, a layout's firstOnTop: a reading says none when it cuts, from-code's stackLikeDesign
+  // taking it from the design after; a menu item's content, read as an override in every combination)
+  if (r.layout && r.layout.firstOnTop !== undefined && y.layout && y.layout.firstOnTop === undefined) { const { firstOnTop: _, ...l } = r.layout; r.layout = l; }
   if (r.kind === 'text' && r.verticalAlign !== undefined && y.verticalAlign === undefined && textGrows(r)) delete r.verticalAlign;
   return r;
 }
