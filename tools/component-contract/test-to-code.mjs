@@ -1361,5 +1361,10 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     /:where\(:active\)\s*\{\s*--ink: var\(--navy\);/.test(css) && /:where\(:active\):where\(\[tone="b"\]\)\s*\{\s*--ink: inherit;/.test(css) && !/--ink: var\(--blue\)/.test(css), css);
   ok('…only where the build declares every mode the state sets', pointerModesOf(c, t).has('root') && !pointerModesOf(c, HOUSE).has('root')
     && !pointerModesOf(c, { ...HOUSE, modeTokens: { ink: { link: [['--ink', 'x']] } } }).has('root'));
+  // (a key of the part's the build declares nothing under is left to its attribute; where the state takes it away too,
+  // the attribute would still say it, so that stays the gap)
+  const two = { ...c, anatomy: { root: { kind: 'container', modes: { ink: 'link', flag: 'on' } } }, variants: [c.variants[0]] };
+  ok('…a key of the part\'s the build declares nothing under is left to its attribute, and one the state takes away stays the gap',
+    /--ink: var\(--navy\);/.test(toCss(two, 'lnk', { naming: ELEMENT, settings: t })) && pointerModesOf(two, t).has('root') && !pointerModesOf({ ...two, variants: c.variants }, t).has('root'));
   ok('…and the markup names no gap there, but does where the build declares none', !/variable modes change/.test(toElement(c, 'lnk', { naming: ELEMENT, settings: t })) && /variable modes change/.test(toElement(c, 'lnk', { naming: ELEMENT }))); }
 console.log(`${n} passed`);

@@ -1278,9 +1278,13 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   for (const [id, { key, at, values }] of pointerModesOf(c, t)) {
     if (!a[id] || !at.has(when[key])) continue;
     const rest = (expand(c, { ...when, [key]: (c.props[key] || {}).default })[id] || {}).modes || {}, here = a[id].modes || {};
+    // (a key the build declares nothing under, or a mode of it it declares nothing for, is the attribute's alone: nothing
+    // of it is re-declared, so nothing of it is undone)
     for (const k of Object.keys(values)) {
+      const of = t.modeTokens[k] || {};
       if (here[k] == null && rest[k] == null) continue;
-      const decls = here[k] != null ? t.modeTokens[k][here[k]] : [...new Set(values[k].flatMap((v) => (t.modeTokens[k][v] || []).map(([nm]) => nm)))].map((nm) => [nm, 'inherit']);
+      const decls = here[k] != null ? of[here[k]] || [] : [...new Set(values[k].flatMap((v) => (of[v] || []).map(([nm]) => nm)))].map((nm) => [nm, 'inherit']);
+      if (!decls.length) continue;
       out[id] ||= { decls: new Map(), unread: [] };
       for (const [nm, v] of decls) out[id].decls.set(nm, { v });
     }
