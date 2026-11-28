@@ -59,7 +59,7 @@ import { parseColour } from '../parity/values.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, swapKeysOf } from './to-markup.mjs';
 import { expand, variantDefaults, foreignOpened, openForeign, placedOf } from './layers.mjs';
-import { sharesNeverWritten, tokenNames, pointerWordsOf, pointerModesOf, pointerWithOf, pseudoClasses } from './to-code.mjs';
+import { sharesNeverWritten, tokenNames, pointerWordsOf, pointerModesOf, pointerWithOf, pseudoClasses, ownPointerOf } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { closureOf } from './site.mjs';
@@ -429,13 +429,10 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   const low = (v) => String(v).toLowerCase();
   const ownPointer = (el, k, v) => {
     const m = mainOf && (all[el] || {}).kind === 'instance' && mainOf(all[el].component, all[el].key);
-    const q = m && Object.values(m.props || {}).find((y) => y.role === 'interaction' && low(y.figma || '') === low(k));
-    if (!q) return false;
-    const i = (q.figmaValues || []).map(low).indexOf(low(v));
+    const q = m && Object.values(m.props || {}).find((y) => y.role === 'interaction' && low(y.figma || '') === low(k)), o = q && ownPointerOf(m, { [q.figma]: v });
     // (one with a pseudo-class is drawn by this component's sheet where nothing forwards it, to-code's drawnAsOf, and read
     // back so where the page shows it so, from-code's drawnAsSeen: no gap; one it does not stays a difference)
-    const at = i >= 0 ? q.values[i] : v;
-    return (q.pointer || []).includes(at) && !pseudoClasses(settings)[at];
+    return !!o && !pseudoClasses(settings)[o.v];
   };
   const pointerWith = (el, field, row) => {
     if (!row || !/^with(\.|$)/.test(field)) return false;

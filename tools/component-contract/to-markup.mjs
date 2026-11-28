@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations, borderBox } from './css.mjs';
-import { combinations, condition, tokenNames, withTokenNames, missingSaid, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerWithOf, heldOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
+import { combinations, condition, tokenNames, withTokenNames, missingSaid, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerWithOf, ownPointerOf, heldOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign, foreignOpened } from './layers.mjs';
 // (another library's instance whose insides the contract records is drawn open, its layers this component's own:
@@ -592,7 +592,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // those at any other value of it never holding there)
   const foreignAttrs = (id, copy = null) => {
     const e = ((parts.get(id) || {}).e) || {}, ck = copy && copy !== 'rest' && copied.get(id).key;
-    const atCopy = (v) => (!ck || !(ck in (v.when || {})) ? (pointerWords(c, v.when) ? null : v) : v.when[ck] === copy ? { ...v, when: Object.fromEntries(Object.entries(v.when).filter(([k]) => k !== ck)) } : null);
+    const atCopy = (v) => (pointerWords(c, v.when) && !(ck && ck in (v.when || {})) ? null : atCopyOf(ck, copy)(v));
     const vs = c.variants || [], order = [...vs.filter((v) => !v.combination), ...vs.filter((v) => v.combination)].map(atCopy).filter(Boolean);
     const at = (v, f) => (v.set && `${id}.${f}` in v.set ? { x: v.set[`${id}.${f}`] } : v.add && v.add[id] ? { x: v.add[id][f] } : null);
     if (!e.foreign) return [];
@@ -968,7 +968,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // (a copy for one pointer state (`copy`, pointerWithOf): the variants at that state said by their other props, those
       // at any other value of it never holding there; the rest's copy, as any instance, tests none of them)
       const ck = copy && copy !== 'rest' && copied.get(id).key;
-      const atCopy = (s) => (!ck || !(ck in s.when) ? s : s.when[ck] === copy ? { ...s, when: Object.fromEntries(Object.entries(s.when).filter(([k]) => k !== ck)) } : null);
+      const atCopy = atCopyOf(ck, copy);
       const combos = vs.filter((v) => v.combination).map(stated).map(unheld).map(atCopy).filter(Boolean), varied = vs.filter((v) => !v.combination).reverse().map(stated).map(unheld).map(atCopy).filter((s) => s && s.sets.size);
       const litCode = (l) => (l === undefined ? (lang.php ? 'null' : 'undefined') : typeof l === 'boolean' || typeof l === 'number' ? String(l) : lang.str(String(l)));
       const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -1036,16 +1036,15 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       }
       // props only a pointer state gives the instance: one of its own (a definition item drawn hovered), or ones this
       // component's pointer state alone sets on it (a slider's item active at hover): no markup holds them, so a gap
-      const own = Object.values(placed.props || {}).find((q) => q.role === 'interaction'), low = (v) => String(v).toLowerCase();
-      const ownAt = (w) => !!own && w && w[own.figma] !== undefined && (own.pointer || []).includes(own.values[(own.figmaValues || []).map(low).indexOf(low(w[own.figma]))] ?? w[own.figma]);
+      const ownAt = (w) => !!ownPointerOf(placed, w);
       // (one with a pseudo-class this component's sheet draws where nothing forwards it, to-code's drawnAsOf: no gap)
-      const ownUndrawn = (w) => ownAt(w) && !pseudoClasses(settings)[own.values[(own.figmaValues || []).map(low).indexOf(low(w[own.figma]))] ?? w[own.figma]];
+      const ownUndrawn = (w) => { const o = ownPointerOf(placed, w); return !!o && !pseudoClasses(settings)[o.v]; };
       // (its own pointer state at one of this component's is the browser's: hovering or focusing this one lands inside it
       // too; one this component's other props give it, or props its pointer state gives that no copy draws, are not)
       // (held to the same combination with its pointer state at rest, as pointerWithOf holds it: a prop another of this
       // one's props gives there, a compact spacing, is that prop's attribute)
       const restWith = (when) => { const d = variantDefaults(c), w = { ...d, ...when }; for (const k of Object.keys(when)) if (pointerAt(c, k, when[k])) w[k] = d[k]; return (expand(c, w)[id] || {}).with || {}; };
-      const byMine = !copied.has(id) && vs.some((v) => pointerWords(c, v.when) && ((r) => Object.entries(stated(v).w).some(([k, w]) => !same(w, r[k]) && !(own && k === own.figma && ownAt({ [k]: w }))))(restWith(v.when)));
+      const byMine = !copied.has(id) && vs.some((v) => pointerWords(c, v.when) && ((r) => Object.entries(stated(v).w).some(([k, w]) => !same(w, r[k]) && !ownAt({ [k]: w })))(restWith(v.when)));
       const gap = `${partName(id)} is given props only a pointer state draws: the stylesheet's, or frontend-build's to add`;
       if ((ownUndrawn(e.with) || vs.map(stated).some(({ w, when }) => ownUndrawn(w) && !pointerWords(c, when)) || byMine) && !gaps.includes(gap)) gaps.push(gap);
       for (const x of props.filter((y) => y.pass && y.pass.part === id && y.type !== 'value')) { const i = given.findIndex(([k]) => k === x.pass.to); if (i >= 0) given.splice(i, 1); given.push([x.pass.to, { code: ref(x.name) }]); }
@@ -1376,6 +1375,11 @@ export function toGallery(c, { library = {} } = {}) {
     `    'controls' => [`, ...props.map((x) => `        ${phpStr(x.name)} => ${control(x)},`), '    ],',
     '];', ''].join('\n');
 }
+
+/* A variant, or a statement of one, as a pointer state's copy `copy` of a part holds it (to-code's pointerWithOf, its
+   state's prop `ck`): at that state said by its other props, at any other value of it null, never holding there; one
+   not chosen by that prop as it is. */
+const atCopyOf = (ck, copy) => (s) => (!ck || !(ck in (s.when || {})) ? s : s.when[ck] === copy ? { ...s, when: Object.fromEntries(Object.entries(s.when).filter(([k]) => k !== ck)) } : null);
 
 /* ── the mapping and the stories ─────────────────────────────────────── */
 

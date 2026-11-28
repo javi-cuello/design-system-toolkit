@@ -363,11 +363,23 @@ export function pointerWordsOf(c, t = HOUSE) {
    pseudo-class beside the holder's (from-code forwardedAt). Tested by test-to-code.mjs. */
 /* The display a component's own sheet gives its root at its defaults (`inline-flex` for one that hugs, drawn): what a
    holder shows a copy of it at (pointerWithOf), `revert-layer` where it draws none. */
+// (once per component, library and settings, as drawnAt keeps its looks)
 const ROOT_DISPLAY = new WeakMap();
 function rootDisplay(m, mains, t) {
   if (!m) return 'revert-layer';
-  if (!ROOT_DISPLAY.has(m)) ROOT_DISPLAY.set(m, ((drawn(m, variantDefaults(m), mains, t).root || { decls: new Map() }).decls.get('display') || {}).v || 'revert-layer');
-  return ROOT_DISPLAY.get(m);
+  const byLib = ROOT_DISPLAY.get(m) || new WeakMap(); ROOT_DISPLAY.set(m, byLib);
+  const memo = byLib.get(mains) || new Map(); byLib.set(mains, memo);
+  const k = t === HOUSE ? null : JSON.stringify(t);
+  if (!memo.has(k)) memo.set(k, ((drawn(m, variantDefaults(m), mains, t).root || { decls: new Map() }).decls.get('display') || {}).v || 'revert-layer');
+  return memo.get(k);
+}
+/* The pointer value a placed component's own State is at in its props `w` (by Figma's names), with that prop: `{ q, v }`,
+   or null where it is at none of its pointer values. */
+export function ownPointerOf(m, w) {
+  const q = m && Object.values(m.props || {}).find((y) => y.role === 'interaction');
+  if (!q || !w || w[q.figma] === undefined) return null;
+  const low = (x) => String(x).toLowerCase(), i = (q.figmaValues || []).map(low).indexOf(low(w[q.figma])), v = i >= 0 ? q.values[i] : w[q.figma];
+  return (q.pointer || []).includes(v) ? { q, v } : null;
 }
 /* The placed components (the library's own, `mains`) the design gives a pointer value of their own at this combination
    `when` where nothing forwards one, this component not at a pointer state there (a definition tooltip's item at Hover
@@ -379,16 +391,14 @@ function rootDisplay(m, mains, t) {
 export function drawnAsOf(c, when, mains = NO_MAINS, t = HOUSE, a = expand(c, when)) {
   const ps = pseudoClasses(t), pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
   if (pk && (c.props[pk].pointer || []).includes(when[pk]) && ps[when[pk]]) return [];
-  const low = (x) => String(x).toLowerCase(), out = [];
+  const out = [];
   for (const [id, e] of Object.entries(a)) {
     if (!e || e.kind !== 'instance' || !e.with) continue;
     let up = e.parent;
     while (up && !(a[up] && a[up].kind === 'instance')) up = a[up] && a[up].parent;
     if (up) continue;
-    const m = mains(e.component, e.key ?? null), q = m && Object.values(m.props || {}).find((y) => y.role === 'interaction');
-    if (!q || e.with[q.figma] === undefined) continue;
-    const i = (q.figmaValues || []).map(low).indexOf(low(e.with[q.figma])), v = i >= 0 ? q.values[i] : e.with[q.figma];
-    if (!(q.pointer || []).includes(v) || !ps[v]) continue;
+    const m = mains(e.component, e.key ?? null), { q, v } = ownPointerOf(m, e.with) || {};
+    if (!q || !ps[v]) continue;
     out.push({ id, m, w: e.with, rest: { ...e.with, [q.figma]: (q.figmaValues || [])[(q.values || []).indexOf(q.default)] ?? q.default }, pseudo: ps[v].replace(/^:/, '') });
   }
   return out;
@@ -420,13 +430,7 @@ export function pointerWithOf(c, t = HOUSE, mains = NO_MAINS) {
   const bad = new Set(), at = new Map();
   // (its props less its own state where the state gives it a pointer value of its own, which is the browser's: from-code
   // forwardedAt)
-  const low = (x) => String(x).toLowerCase();
-  const ownPointer = (e) => {
-    const m = e.kind === 'instance' && mains(e.component, e.key ?? null), q = m && Object.values(m.props || {}).find((y) => y.role === 'interaction');
-    if (!q || !e.with || e.with[q.figma] === undefined) return null;
-    const i = (q.figmaValues || []).map(low).indexOf(low(e.with[q.figma]));
-    return (q.pointer || []).includes(i >= 0 ? q.values[i] : e.with[q.figma]) ? q.figma : null;
-  };
+  const ownPointer = (e) => ((e.kind === 'instance' && ownPointerOf(mains(e.component, e.key ?? null), e.with)) || { q: {} }).q.figma || null;
   const without = (w, k) => (!k || !w ? w : Object.fromEntries(Object.entries(w).filter(([x]) => x !== k)));
   for (const v of c.variants || []) {
     const when = v.when || {}, ks = Object.keys(when).filter((k) => pointer(k, when[k]));
