@@ -1271,4 +1271,13 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const placed = { ...host, props: {} };
   const d2 = drawn(placed, {}, byComponentName([slot, placed])).slot.decls;
   ok('a drawing placed by no swap is its own component, laid out by its own sheet: no layout written on the instance', !d2.has('display'), JSON.stringify([...d2])); }
+// an icon of another library inside a held component, its room about the glyph changed by this one (a split button's
+// chevron padded 6 where the icon button pads it 4): that room is the mark's layout, which the held component's sheet
+// writes on it, so the override is written too, never dropped as the placed instance's own look (2026-11-28)
+{ const { byComponentName } = require('./derive.cjs');
+  const pad = (n) => ({ direction: 'row', gap: 0, align: 'center', crossAlign: 'center', padding: { top: n, end: n, bottom: n, start: n } });
+  const btn = { contract: 1, component: 'Btn', props: {}, anatomy: { root: { kind: 'container', layout: pad(0) }, icon: { kind: 'instance', parent: 'root', component: 'Mark', layout: pad(4), width: 'hug', height: 'hug' } }, variants: [] };
+  const host = { contract: 1, component: 'Split', props: {}, anatomy: { root: { kind: 'container', layout: pad(0) }, btn: { kind: 'instance', parent: 'root', component: 'Btn' }, 'btn/icon': { kind: 'instance', parent: 'btn', component: 'Mark', layout: pad(6), width: 'hug', height: 'hug' } }, variants: [] };
+  const d = drawn(host, {}, byComponentName([btn, host]))['btn/icon'], v = d && (d.decls.get('padding') || {}).v;
+  ok('an unheld icon\'s room changed inside a held component is written on it', v === '0.375rem', JSON.stringify(d && [...d.decls])); }
 console.log(`${n} passed`);

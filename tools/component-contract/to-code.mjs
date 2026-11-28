@@ -743,8 +743,9 @@ export function markRoom(e, a, id) {
 function placedDecls(x, ctx, mains, at = x) {
   const m = at.component && mains(at.component, at.key), R = m && atProps(m, at.with).root;
   const all = declarations(x, ctx, tokenNames).decls, placed = all.filter(([p]) => PLACED.test(p));
-  // (one the store does not hold, an icon of another library, has no sheet to draw its box: all it states is its own)
-  if (!m && at.component && mains && mains !== NO_MAINS) return all;
+  // (one the store does not hold, an icon of another library, has no sheet to draw its box: all it states is its own,
+  // its layout too, the room about its glyph, as drawn writes it on such a mark)
+  if (!m && at.component && mains && mains !== NO_MAINS) return declarations(x, { ...ctx, holds: true }, tokenNames).decls;
   if (!R) return placed;
   const whole = { ...R, ...Object.fromEntries(OWN.filter((f) => x[f] != null).map((f) => [f, x[f]])) };
   return [...placed, ...declarations(whole, { ...ctx, holds: holds(R.kind), words: wordsOf(m, whole) }, tokenNames).decls.filter(([p]) => !PLACED.test(p))];
