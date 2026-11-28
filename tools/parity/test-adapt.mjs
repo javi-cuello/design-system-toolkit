@@ -136,6 +136,16 @@ ok('without a transform an axis-aligned angle is judged and a diagonal is said, 
     && /^unresolved: a 135° gradient recorded without its transform/.test(grad(null));
 })());
 
+// a radial gradient: its ellipse in percentages of the box (values.mjs radialOf) against Chrome's computed radial, the
+// middle left out; a turned one said (2026-11-28)
+ok('a radial gradient is judged by its ellipse and stops; a turned one is said', (() => {
+  const rad = (transform) => of(F({ fills: [{ type: 'GRADIENT_RADIAL', transform, stops: [{ position: 0, color: '#ff0000' }, { position: 1, color: '#0000ff' }] }] }))['background-image'];
+  const e = rad([[1, 0, 0], [0, 1, 0]]);
+  return paints(e, 'radial-gradient(50% 50%, rgb(255, 0, 0) 0%, rgb(0, 0, 255) 100%)', 40, 20) && !paints(e, 'radial-gradient(40% 50%, rgb(255, 0, 0) 0%, rgb(0, 0, 255) 100%)', 40, 20)
+    && !paints(e, 'radial-gradient(50% 50% at 30% 50%, rgb(255, 0, 0) 0%, rgb(0, 0, 255) 100%)', 40, 20)
+    && /^unresolved: a radial gradient turned/.test(rad([[0.7071, 0.7071, 0], [-0.7071, 0.7071, 0.5]]));
+})());
+
 // ---- layout ---------------------------------------------------------------------------------
 ok('padding is four properties, each preferring its bound token',
   of(F({ pad: [12, 4, 12, 4], bindings: { pad: ['Spacing/12', null, 'Spacing/12', null] } }))['padding-top'] === '12px'

@@ -163,6 +163,39 @@ export function parseShadow(value) {
  * an absent one reads as 180deg (top to bottom) and the two become comparable;
  * `position` is a percentage as a number, or null where the stop names none.
  */
+/* A radial gradient's ellipse in the layer, as percentages of its box: Figma's gradient space puts the centre at (0.5, 0.5)
+   and the ends of the two radii at (1, 0.5) and (0.5, 1), each taken back into the layer's unit square through the
+   transform's inverse (figma-plugin-helpers extractRadialOrDiamondGradientParams, which reads it so). → { x, y, rx, ry }
+   (two decimals), or null where the radii are not along the box's axes (a turned ellipse, which no CSS radial draws) or
+   the transform has no inverse. */
+export function radialOf(t) {
+  if (!Array.isArray(t) || t.length < 2) return null;
+  const [[a, b, c], [d, e, f]] = t, det = a * e - b * d;
+  if (!det) return null;
+  const inv = (x, y) => [(e * (x - c) - b * (y - f)) / det, (-d * (x - c) + a * (y - f)) / det];
+  const C = inv(0.5, 0.5), H1 = inv(1, 0.5), H2 = inv(0.5, 1), r1 = [H1[0] - C[0], H1[1] - C[1]], r2 = [H2[0] - C[0], H2[1] - C[1]];
+  const tol = 1e-4, n = (v) => +(v * 100).toFixed(2);
+  let rx, ry;
+  if (Math.abs(r1[1]) < tol && Math.abs(r2[0]) < tol) [rx, ry] = [Math.abs(r1[0]), Math.abs(r2[1])];
+  else if (Math.abs(r1[0]) < tol && Math.abs(r2[1]) < tol) [rx, ry] = [Math.abs(r2[0]), Math.abs(r1[1])];
+  else return null;
+  return { x: n(C[0]), y: n(C[1]), rx: n(rx), ry: n(ry) };
+}
+/* A radial-gradient as the browser computes one with an ellipse in percentages (`radial-gradient(50% 40% at 50% 50%,
+   rgb(…) 0%, …)`, as the contract's css.mjs writes Figma's): { rx, ry, x, y, stops: [{ colour, position, raw }] }, or null
+   for another shape (a circle, a keyword size, a length) or a stop not at one percentage. */
+export function parseRadial(value) {
+  const inner = String(value == null ? '' : value).match(/^radial-gradient\(([\s\S]*)\)\s*$/);
+  if (!inner) return null;
+  const parts = splitTop(inner[1]).map((p) => p.trim());
+  // (the centre left out where it is the box's middle, as Chrome computes it: `radial-gradient(50% 50%, …)`)
+  const m = /^(?:ellipse\s+)?([\d.]+)%\s+([\d.]+)%(?:\s+at\s+(-?[\d.]+)%\s+(-?[\d.]+)%)?$/.exec(parts.shift() || '');
+  if (!m) return null;
+  const stops = parts.map((t) => { const c = t.match(COLOUR), pct = /^(-?[\d.]+)%$/.exec(t.replace(COLOUR, '').trim()); return c && pct ? { colour: parseColour(c[0]), position: +pct[1], raw: c[0] } : null; });
+  if (stops.length < 2 || stops.some((st) => !st)) return null;
+  const [rx, ry, x, y] = m.slice(1).map((v, i) => (v === undefined && i > 1 ? 50 : Number(v)));
+  return { rx, ry, x, y, stops };
+}
 export function parseGradient(value) {
   const s = String(value == null ? '' : value);
   const inner = s.match(/linear-gradient\(([\s\S]*)\)\s*$/);

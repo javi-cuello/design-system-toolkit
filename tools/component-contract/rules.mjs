@@ -16,7 +16,8 @@
  * normal (css-flexbox-1 §8.3); a block-level box's auto width fills its container, its auto height is its content's
  * (css2 §10.3.3, §10.6.3); an inline-level box (inline-flex) shrinks to fit.
  */
-import { splitTop, parseGradient, COLOUR, WEIGHTS, figmaWeight, weightName } from '../parity/values.mjs';
+import { splitTop, parseGradient, COLOUR, WEIGHTS, figmaWeight, weightName, radialOf, parseRadial } from '../parity/values.mjs';
+export { radialOf };
 import { stopPositions } from '../parity/schema.mjs';
 import { GLYPH_WORDS, GLYPH_BOX, glyphOnly } from './layers.mjs';
 
@@ -384,6 +385,18 @@ export function placeFromCss(own) {
    size is not a fixed number (its content's, its parent's, a token's), it is not said.
    `colour(name)` says a stop's colour. Returns { value, unread: [why] }. */
 export function gradientCss(g, box, colour) {
+  // a radial one: CSS's ellipse at its centre, each radius a percentage of the box's side along it (CSS Images 3 §3.2.1),
+  // a stop at t of the way out at t of the ray, as Figma's runs from the centre to the ellipse
+  if (g && g.type === 'GRADIENT_RADIAL' && Array.isArray(g.stops) && g.stops.length) {
+    const r = radialOf(g.transform);
+    if (!r) return { unread: ['background (a radial gradient turned off the box\'s axes, or recorded without its transform: no CSS radial draws a turned ellipse)'] };
+    if (g.stops.some((st) => colour(st.color) == null)) return { unread: [] };
+    return { value: `radial-gradient(${r.rx}% ${r.ry}% at ${r.x}% ${r.y}%, ${g.stops.map((st) => `${colour(st.color)} ${+(st.position * 100).toFixed(2)}%`).join(', ')})`, unread: [] };
+  }
+  // an angular one: where Figma's transform starts its sweep, and which way it turns, is not established from a source
+  // here, so a conic is not guessed; a diamond one no CSS gradient draws (four linear ramps meeting along the diagonals)
+  if (g && g.type === 'GRADIENT_ANGULAR') return { unread: ['background (an angular gradient: where Figma starts its sweep is not established, so no conic-gradient is guessed)'] };
+  if (g && g.type === 'GRADIENT_DIAMOND') return { unread: ['background (a diamond gradient, which no CSS gradient draws)'] };
   if (!g || g.type !== 'GRADIENT_LINEAR' || !Array.isArray(g.stops) || !g.stops.length) return { unread: ['background (a gradient other than linear)'] };
   const [a, b, c] = Array.isArray(g.transform) ? g.transform[0] : [null, null, null];
   let deg;
@@ -466,6 +479,16 @@ export function gradientFromCss(g, box) {
   const angle = Math.round((Math.atan2(b, a) * 180) / Math.PI + 90 + 360) % 360;
   return { type: 'GRADIENT_LINEAR', angle, transform: [[n(a), n(b), n(c)], [n(-b), n(a), n(c2)]], stops: g.stops.map((st, i) => ({ position: +(at[i] / 100).toFixed(4), color: colourOf(st.raw) })) };
 }
+/* A radial-gradient as gradientCss writes it, back to Figma's paint: `<rx>% <ry>% at <x>% <y>%`, each stop a colour at one
+   percentage, the transform the one whose inverse puts the centre and the radii's ends where radialOf reads them. Null
+   for any other shape (a circle, a keyword size, a length), which the caller says unread. */
+export function radialFromCss(css) {
+  const g = parseRadial(css);
+  if (!g || !g.rx || !g.ry) return null;
+  const [rx, ry, x, y] = [g.rx, g.ry, g.x, g.y].map((v) => v / 100);
+  const n = (v) => { const w = +v.toFixed(6); return Object.is(w, -0) ? 0 : w; };
+  return { type: 'GRADIENT_RADIAL', transform: [[n(1 / (2 * rx)), 0, n(-(x - rx) / (2 * rx))], [0, n(1 / (2 * ry)), n(-(y - ry) / (2 * ry))]], stops: g.stops.map((st) => ({ position: +(st.position / 100).toFixed(4), color: st.raw })) };
+}
 export function fillsFromCss(color, image, box, clear = (c) => !c || /^(transparent|rgba\(0, 0, 0, 0\))$/.test(c), { size = '', repeat = '' } = {}) {
   const fills = [], unread = [];
   if (!clear(color)) fills.push(color);
@@ -476,6 +499,8 @@ export function fillsFromCss(color, image, box, clear = (c) => !c || /^(transpar
     // an image: Figma's image fill, by how it is sized (fillCss writes it so)
     if (/^url\(/.test(l)) { const sz = per(size, i, layers.length), rp = per(repeat, i, layers.length); fills.push(/^repeat\b/.test(rp) && !/no-repeat/.test(rp) && !/contain|cover/.test(sz) ? 'IMAGE:TILE' : sz === 'contain' ? 'IMAGE:FIT' : 'IMAGE:FILL'); continue; }
     // (a repeating gradient is stripes, never one Figma gradient)
+    // a radial one at a centre and two radii in percentages, as gradientCss writes it (and Chrome computes it)
+    if (/^radial-gradient\(/.test(l)) { const p = radialFromCss(l); if (p) fills.push(p); else unread.push(`background (${l.slice(0, 40)}…: a layer no Figma paint reads)`); continue; }
     const g = /^linear-gradient\(/.test(l) ? parseGradient(l) : null;
     const solid = g && g.stops.length === 2 && g.stops[0].raw === g.stops[1].raw && g.stops.every((st) => st.position == null && st.colour);
     if (solid) { fills.push((g.stops[0].raw.match(COLOUR) || [g.stops[0].raw])[0]); continue; }

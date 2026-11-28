@@ -29,7 +29,7 @@
  */
 import { createRequire } from 'node:module';
 import { layerIndex } from './layers.mjs';
-import { parseColour, figmaWeight } from './values.mjs';
+import { parseColour, figmaWeight, radialOf } from './values.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { propAttr } from '../shared/prop-attr.mjs';
 import { css, KINDS } from './schema.mjs';
@@ -419,6 +419,8 @@ export function assertionsFor(at, ctx) {
     const missing = stops.find((s) => s.r.unresolved !== undefined);
     if (missing) return put('gradient', 'background-image', missing.r, from);
     const resolved = stops.map((s) => ({ colour: s.r.value, position: s.position }));
+    // a radial one, its ellipse in percentages of the box (values.mjs radialOf); turned off the axes, no CSS radial draws it
+    if (g.type === 'GRADIENT_RADIAL') { const r = radialOf(g.transform); return r ? add('gradient', 'background-image', { radial: r, stops: resolved }, from) : out.push({ kind: 'unresolved', prop: 'background-image', expected: null, from: 'a radial gradient turned off the box\'s axes, or recorded without its transform: no CSS radial draws a turned ellipse' }); }
     if (Array.isArray(g.transform)) return add('gradient', 'background-image', { transform: g.transform, stops: resolved }, from);
     if (g.angle % 90 !== 0) return out.push({ kind: 'unresolved', prop: 'background-image', expected: null, from: `a ${g.angle}° gradient recorded without its transform, which alone fixes a diagonal's direction on this box: snapshot again with design-system-snapshot 0.48.0` });
     add('gradient', 'background-image', { angle: g.angle, stops: resolved }, from);
@@ -427,12 +429,12 @@ export function assertionsFor(at, ctx) {
     const style = node.fillStyle && (ctx.snapshot.paintStyles || []).find((p) => p.name === node.fillStyle);
     const paints = (node.fills || []).filter((p) => !(typeof p === 'string' && p.startsWith('IMAGE')));
     if (node.fillStyle && !style) out.push({ kind: 'unresolved', prop: paintProp, expected: null, from: `colour style ${node.fillStyle}` });
-    else if (style && style.paints && style.paints.length === 1 && style.paints[0].type === 'GRADIENT_LINEAR') gradient(style.paints[0], node.fillStyle);
+    else if (style && style.paints && style.paints.length === 1 && /^GRADIENT_(LINEAR|RADIAL)$/.test(style.paints[0].type)) gradient(style.paints[0], node.fillStyle);
     else if (paints.length > 1 || (paints.length === 1 && node.fills[0] !== paints[0])) {
       out.push({ kind: 'unresolved', prop: paintProp, expected: null, from: `a stack of paints CSS has no one property for: ${JSON.stringify(node.fills)}` });
     } else if (paints.length === 1) {
       const p = paints[0];
-      if (p && typeof p === 'object' && p.type === 'GRADIENT_LINEAR') gradient(p, 'gradient fill');
+      if (p && typeof p === 'object' && /^GRADIENT_(LINEAR|RADIAL)$/.test(p.type)) gradient(p, 'gradient fill');
       else if (typeof p === 'string') put('colour', paintProp, V.colour(p), p, hint(paintProp, parseColour(p) ? null : p, p));
       else out.push({ kind: 'unresolved', prop: paintProp, expected: null, from: `a ${p && p.type} paint` });
     }

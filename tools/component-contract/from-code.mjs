@@ -696,6 +696,14 @@ export function centreRing(layers) {
 /* A box-shadow no style draws, as the contract says an effect with no style (derive's `{ layers }`, css.mjs's reverse):
    each layer as cssShadows parses it (parity/external.mjs) a shadow's type, offset, blur and spread, its colour as
    `colourOf` names it (the token the code wrote, else the value). Tested by test-from-code.mjs. */
+/* A border-image as css.mjs paints a gradient stroke, back to Figma's paint: the one gradient layer fillsFromCss reads
+   (rules.mjs), each stop's colour as `colourOf` names it. Null where it is not one gradient Figma reads. Tested by
+   test-from-code.mjs. */
+export async function borderGradient(im, colourOf) {
+  const { fills } = fillsFromCss(null, im.image, { w: im.w, h: im.h }, (c) => !c);
+  const g = fills.length === 1 && typeof fills[0] === 'object' ? fills[0] : null;
+  return g && { ...g, stops: await Promise.all(g.stops.map(async (st) => ({ ...st, color: await colourOf(st.color) }))) };
+}
 export async function shadowLayers(parsed, colourOf) {
   return { layers: await Promise.all(parsed.map(async (l) => ({ type: l.inset ? 'INNER_SHADOW' : 'DROP_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: await colourOf(l.color) }))) };
 }
@@ -2849,6 +2857,8 @@ async function main() {
               e.border = bw.every((v) => v === bw[0]) ? { color, width: bw[0], inLayout: true } : { color, width: bw, sides: { top: bw[0], end: bw[1], bottom: bw[2], start: bw[3] }, inLayout: true };
               // (dashed, as css.mjs writes a dashed stroke that takes room)
               if (EDGES.some((k, i) => bw[i] && s[`border${k}Style`] === 'dashed')) e.border.dash = 'dashed';
+              // (a gradient over it, as css.mjs paints a gradient stroke: its image and the box, for fillsFromCss to read)
+              if (s.borderImageSource && s.borderImageSource !== 'none') { const r = n.getBoundingClientRect(); e.border.image = { image: s.borderImageSource, w: r.width, h: r.height }; }
               // a line's square cap, its edge shadowed half its width along it each way (css.mjs; lineCap)
               capped = e.border.dash ? null : lineCap(bw, color, layers);
               if (capped) e.border.cap = capped.cap;
@@ -3229,6 +3239,13 @@ async function main() {
           if ('crossGap' in x.layout) x.layout.crossGap = await tok('space', x.layout.crossGap, `${id}.crossGap`, [x.layout.direction === 'column' ? 'column-gap' : 'row-gap', 'gap']);
         }
         delete x.rtl;
+        // a gradient stroke (css.mjs's border-image): its paint as fillsFromCss reads a gradient layer, every stop named by
+        // its token where the code names one; one no Figma paint reads is said
+        if (x.border && typeof x.border === 'object' && x.border.image) {
+          const im = x.border.image; delete x.border.image;
+          const g = await borderGradient(im, async (c) => tok('background', c, `${id}.border`, ['border-image', 'border-image-source'], null, false));
+          if (g) x.border.color = g; else notes.push(`${id}: border (a border-image no Figma paint reads)`);
+        }
         // its fills bottom up (rules.mjs fillsFromCss): the colour, then each layer over it, every colour named by its token
         if (x.paint) {
           const { fills, unread: lost } = fillsFromCss(x.background, x.paint.image, { w: x.paint.w, h: x.paint.h }, (c) => !c, { size: x.paint.size, repeat: x.paint.repeat });

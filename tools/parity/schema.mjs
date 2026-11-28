@@ -23,7 +23,7 @@
  * of 0.4 against 1 and a font size of 13 against 14. A tolerance per kind is
  * what lets a project allow a pixel of box rounding without allowing that.
  */
-import { parseColour, parseShadow, parseGradient } from './values.mjs';
+import { parseColour, parseShadow, parseGradient, parseRadial } from './values.mjs';
 
 /* What a kind's `read` returns when its question has nothing to be asked of:
    the differ reports no row (the reason is a row of its own elsewhere). */
@@ -238,12 +238,20 @@ export const KINDS = {
     show: (v) => {
       if (!v || typeof v !== 'object') return v;
       if (v.image !== undefined) return v.image;
+      if (v.radial) return `radial-gradient(${v.radial.rx}% ${v.radial.ry}% at ${v.radial.x}% ${v.radial.y}%, ${v.stops.map((st) => `${st.colour} ${st.position}%`).join(', ')})`;
       const head = v.transform ? `transform ${JSON.stringify(v.transform[0])}` : `${v.angle}deg`;
       return `linear-gradient(${head}, ${v.stops.map((st) => `${st.colour} ${st.position}%`).join(', ')})`;
     },
     compare: (e, a, _, t = {}) => {
       const image = a && typeof a === 'object' ? a.image : a;
       if (typeof e === 'string') return canonGradient(e) === canonGradient(image);
+      // a radial one: its ellipse, centre and radii in percentages of the box, each within half a percent, and its stops
+      if (e && e.radial) {
+        const r = parseRadial(image);
+        if (!r || !Array.isArray(e.stops) || r.stops.length !== e.stops.length) return false;
+        if (['rx', 'ry', 'x', 'y'].some((k) => Math.abs(r[k] - e.radial[k]) > 0.5)) return false;
+        return e.stops.every((st, i) => { const want = parseColour(st.colour), got = r.stops[i].colour; return !!want && !!got && sameColour(want, got, t.colour) && Math.abs(st.position - r.stops[i].position) <= (t.gradientStops || 0) + 1e-6; });
+      }
       const g = parseGradient(image);
       if (!g || !e || !Array.isArray(e.stops)) return false;
       const w = a && Number.isFinite(a.w) && a.w > 0 ? a.w : null, h = a && Number.isFinite(a.h) && a.h > 0 ? a.h : null;

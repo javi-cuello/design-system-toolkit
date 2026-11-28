@@ -1319,4 +1319,15 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const v = Object.fromEntries(d.decls.map(([p, x]) => [p, x]));
   ok('an effect with no style is drawn layer by layer as box-shadow, a blur said unread',
     v['box-shadow'] === 'inset 0 1px 3px 2px var(--shadow-inner), 0 2.5px 6px 0 rgb(0 0 0 / 0.25)' && d.unread.some((u) => /layer blur/.test(u)) && !d.unread.some((u) => /no style/.test(u)), JSON.stringify(d)); }
+// a gradient stroke: a border painted by border-image where it takes room, all round, square; any other said, never one
+// colour or a var(--object-object) (2026-11-28)
+{ const g = { type: 'GRADIENT_LINEAR', angle: 90, transform: [[1, 0, 0], [0, 1, 0]], stops: [{ position: 0, color: 'rgb(255 0 0)' }, { position: 1, color: 'rgb(0 0 255)' }] };
+  const v = (d) => Object.fromEntries(d.decls.map(([p, x]) => [p, x]));
+  const inLayout = declarations({ kind: 'container', width: 40, height: 20, border: { color: g, width: 2, inLayout: true } }, {}, names);
+  const ring = declarations({ kind: 'container', width: 40, height: 20, border: { color: g, width: 2 } }, {}, names);
+  const word = declarations({ kind: 'container', border: { color: 'GRADIENT_ANGULAR', width: 1 } }, {}, names);
+  ok('a gradient stroke in the layout is a border painted by border-image; off it, or one with no stops, is said',
+    v(inLayout).border === '2px solid transparent' && v(inLayout)['border-image'] === 'linear-gradient(90deg, rgb(255 0 0) 0%, rgb(0 0 255) 100%) 1'
+    && !('box-shadow' in v(ring)) && !('outline' in v(ring)) && ring.unread.some((u) => /gradient stroke/.test(u))
+    && word.unread.some((u) => /angular stroke recorded without its stops/.test(u)) && !JSON.stringify(word.decls).includes('object'), JSON.stringify([inLayout, ring, word])); }
 console.log(`${n} passed`);

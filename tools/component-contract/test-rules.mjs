@@ -184,4 +184,24 @@ ok('corner smoothing goes to corner-shape and back the same, 0.1 to 1; none, 0 a
 }
 ok('a number read to two decimals is the same within half the last digit, at the edge too; a hundredth off is not, nor a word',
   sameAsRead(4.800000190734863, 4.8) && sameAsRead(7.815, 7.81) && !sameAsRead(7.816, 7.81) && !sameAsRead(4.81, 4.8) && !sameAsRead('4.8', 4.8));
+// a radial gradient: Figma's ellipse taken back through the transform's inverse, as CSS's radii and centre in percentages;
+// read back from Chrome's computed form (the middle left out) to the same transform; a turned one, an angular and a
+// diamond are said, never guessed (2026-11-28)
+{ const { gradientCss, fillsFromCss, radialOf } = await import('./rules.mjs');
+  const stops = [{ position: 0, color: 'Brand/start' }, { position: 1, color: 'rgb(0 0 255 / 0.5)' }], col = (c) => (c.startsWith('rgb') ? c : `var(--${c.toLowerCase().replace('/', '-')})`);
+  const centred = gradientCss({ type: 'GRADIENT_RADIAL', transform: [[1, 0, 0], [0, 1, 0]], stops }, null, col);
+  const off = [[1 / 0.75, 0, -(0.3 - 0.375) / 0.75], [0, 1 / 0.4, -(0.7025 - 0.2) / 0.4]];
+  const placed = gradientCss({ type: 'GRADIENT_RADIAL', transform: off, stops }, null, col);
+  const turned = gradientCss({ type: 'GRADIENT_RADIAL', transform: [[0.7071, 0.7071, 0], [-0.7071, 0.7071, 0.5]], stops }, null, col);
+  ok('a radial gradient is CSS\'s ellipse at its centre in percentages; a turned one, an angular and a diamond are said',
+    centred.value === 'radial-gradient(50% 50% at 50% 50%, var(--brand-start) 0%, rgb(0 0 255 / 0.5) 100%)'
+    && placed.value === 'radial-gradient(37.5% 20% at 30% 70.25%, var(--brand-start) 0%, rgb(0 0 255 / 0.5) 100%)'
+    && !turned.value && /turned/.test(turned.unread[0])
+    && /angular/.test(gradientCss({ type: 'GRADIENT_ANGULAR', transform: [[1, 0, 0], [0, 1, 0]], stops }, null, col).unread[0])
+    && /diamond/.test(gradientCss({ type: 'GRADIENT_DIAMOND', transform: [[1, 0, 0], [0, 1, 0]], stops }, null, col).unread[0]), JSON.stringify([centred, placed, turned]));
+  const back = fillsFromCss(null, 'radial-gradient(37.5% 20% at 30% 70.25%, rgb(255, 0, 0) 0%, rgb(0, 0, 255) 100%)', null).fills[0];
+  const mid = fillsFromCss(null, 'radial-gradient(50% 50%, rgb(255, 0, 0) 0%, rgba(0, 0, 255, 0.5) 100%)', null).fills[0];
+  ok('…and read back from Chrome\'s computed radial to the transform whose ellipse it is, the middle left out too',
+    back.type === 'GRADIENT_RADIAL' && JSON.stringify(radialOf(back.transform)) === JSON.stringify({ x: 30, y: 70.25, rx: 37.5, ry: 20 })
+    && JSON.stringify(radialOf(mid.transform)) === JSON.stringify({ x: 50, y: 50, rx: 50, ry: 50 }) && mid.stops[1].color === 'rgba(0, 0, 255, 0.5)', JSON.stringify([back, mid])); }
 console.log(`${n}/${n} passed`);

@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, centreOffset, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss, pathsToCss, pathsToMask, blendToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
+import { alignToCss, centreOffset, share, negative, pullProp, fillCss, gradientCss, rawColour as raw, smoothingToCss, pathsToCss, pathsToMask, blendToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma', 'foreign']);
 const NOTE = 'no token in the design';
@@ -161,7 +161,20 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
   // a stroke with no paint draws nothing, whatever its weight
   const b = take('border');
   const rings = [];
-  if (b && b.color !== undefined) {
+  // a gradient stroke: box-shadow and outline paint one colour, so its one channel is border-image over a border, which
+  // takes room as a stroke Figma puts in the layout does, all round at one width with square corners (border-image draws
+  // no rounded corner, CSS Backgrounds 3 §6); any other gradient stroke is said, not painted one colour
+  const graded = b && b.color !== undefined && ((b.color && typeof b.color === 'object' && !Array.isArray(b.color)) || (typeof b.color === 'string' && b.color.startsWith('GRADIENT_')));
+  if (graded) {
+    const W = Array.isArray(b.width) ? b.width : [b.width ?? 1];
+    const g = typeof b.color === 'object' ? gradientCss(b.color, { w: e.width, h: e.height }, (f) => (raw(f) ? f : names.token(f))) : { unread: [`border (a ${b.color.toLowerCase().replace(/_/g, ' ')} stroke recorded without its stops)`] };
+    const square = !e.radius || (Array.isArray(e.radius) ? e.radius.every((r) => !r) : false);
+    const allRound = !b.sides || SIDES.every((k) => b.sides[k]);
+    if (!g.value) unread.push(...g.unread.map((u) => u.replace(/^background/, 'border')));
+    else if ((b.align || 'inside') === 'inside' && b.inLayout && allRound && W.every((x) => x === W[0]) && square && !b.dash) { put('border', `${len(W[0], true)} solid transparent`); put('border-image', `${g.value} 1`); }
+    else unread.push('border (a gradient stroke off the layout, on some sides or round corners: border-image is the one CSS channel that paints a gradient edge, and it takes room and draws no rounded corner)');
+  }
+  else if (b && b.color !== undefined) {
     // a side's width by its token, else the weight the stroke records for that side (derive's `sides` where the stroke
     // says no one width: a 3 on the bottom is 3, never the 1 an unstated width would be)
     const widths = Array.isArray(b.width) ? b.width : SIDES.map((s) => b.width ?? (b.sides && typeof b.sides[s] === 'number' ? b.sides[s] : 1));

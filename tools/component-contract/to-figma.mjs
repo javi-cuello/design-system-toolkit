@@ -39,7 +39,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
-import { ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, bareGlyph, GLYPH_BOX, looksLikeValue, CLEARED, negative, sameAsRead } from './rules.mjs';
+import { radialOf, ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, bareGlyph, GLYPH_BOX, looksLikeValue, CLEARED, negative, sameAsRead } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 import { turnedParts } from './to-code.mjs';
 import { geometry } from './geometry.mjs';
@@ -213,12 +213,14 @@ function paint(x) {
     if (v && typeof v === 'object') {
       const o = Object.fromEntries(Object.entries(v).map(([k, w]) => [k, one(w)]));
       if (o.type === 'GRADIENT_LINEAR' && o.angle != null) delete o.transform;
+      // (a radial one, its ellipse in percentages of the box, as CSS says it and reads it back: rules.mjs radialOf)
+      if (o.type === 'GRADIENT_RADIAL' && radialOf(o.transform)) { o.ellipse = radialOf(o.transform); delete o.transform; }
       return o;
     }
     return v;
   };
   const out = { ...x };
-  for (const [id, e] of Object.entries(x)) if (e && e.background != null) out[id] = { ...e, background: one(e.background) };
+  for (const [id, e] of Object.entries(x)) if (e && (e.background != null || (e.border && typeof e.border === 'object' && e.border.color != null))) out[id] = { ...e, ...(e.background != null && { background: one(e.background) }), ...(e.border && typeof e.border === 'object' && e.border.color != null && { border: { ...e.border, color: one(e.border.color) } }) };
   return out;
 }
 
