@@ -420,6 +420,10 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     const heldLib = { Card: holder([], { State: 'Held' }), Link: held };
     ok('…named by the placed component\'s own settings: a value only its own name is drawn by this one\'s sheet, no gap',
       !/given props only a pointer state/.test(toElement(heldLib.Card, 'card', { naming: ELEMENT, library: heldLib, settingsOf: heldOwn })) && /given props only a pointer state/.test(toElement(heldLib.Card, 'card', { naming: ELEMENT, library: heldLib })));
+    // (last review of 2026-11-28: and in the files the command writes, each framework's: filesFor and the snippet too)
+    const fw = (framework, naming, settingsOf) => Object.values(filesFor(heldLib.Card, 'card', { framework, naming, library: heldLib, settingsOf, storybook: {} })).join('\n');
+    ok('…and in every framework\'s files the command writes, the snippet\'s too',
+      [['web-components', ELEMENT], ['react', { kind: 'class', prefix: 'ds-' }], ['kirby', ELEMENT]].every(([f, nm]) => !/given props only a pointer state/.test(fw(f, nm, heldOwn)) && /given props only a pointer state/.test(fw(f, nm))));
     // (2026-11-28: a prop another of this one's props gives it, held to the same combination at rest, is that prop's
     // attribute: a pointer state's variant restating it is no gap)
     const tight = { ...holder([{ when: { dense: true }, set: { 'link.with': { State: 'Rest', On: 'True' } } }, { when: { state: 'hover', dense: true }, set: { 'link.with': { State: 'Hover', On: 'True' } } }], { State: 'Rest', On: 'False' }) };

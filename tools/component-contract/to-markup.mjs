@@ -1331,8 +1331,8 @@ function phpOf(item, depth, base) {
   return `${pad}${open}\n${item.children.map((x) => phpOf(x, depth + 1, base)).join('\n')}\n${pad}</${item.tag}>`;
 }
 
-export function toSnippet(c, folder, { naming, library = {}, settings = HOUSE } = {}) {
-  const t = build(c, folder, { naming, library, jsx: false, lang: PHP, settings });
+export function toSnippet(c, folder, { naming, library = {}, settings = HOUSE, settingsOf = null } = {}) {
+  const t = build(c, folder, { naming, library, jsx: false, lang: PHP, settings, settingsOf });
   const base = snippetBase(naming), tag = t.n.root;
   // a slot is Kirby's ($slots), an event no server's: the rest are the snippet's variables
   const own = t.props.filter((x) => x.type !== 'event' && x.type !== 'node');
@@ -1551,14 +1551,14 @@ export function storybookOf(pkg = {}) {
   return STORYBOOK.find((x) => deps[x]) || '@storybook/react';
 }
 
-export function filesFor(c, folder, { framework, naming, library = {}, stylesheet = null, platform = null, storybook, settings = HOUSE }) {
+export function filesFor(c, folder, { framework, naming, library = {}, stylesheet = null, platform = null, storybook, settings = HOUSE, settingsOf = null }) {
   const fault = namingFault(framework, naming);
   if (fault) throw new Error(fault);
   const parity = `/* ${BANNER} */\nexport const parity = ${JSON.stringify(toParity(c, folder, { naming, library, platform, framework, settings }), null, 2)};\nexport default parity;\n`;
-  if (framework === 'kirby') return { [`${folder}.php`]: toSnippet(c, folder, { naming, library, settings }), 'parity.mjs': parity, [`${folder}.stories.php`]: toGallery(c, { library }) };
+  if (framework === 'kirby') return { [`${folder}.php`]: toSnippet(c, folder, { naming, library, settings, settingsOf }), 'parity.mjs': parity, [`${folder}.stories.php`]: toGallery(c, { library }) };
   const ext = framework === 'react' ? 'tsx' : 'js';
   return {
-    [`${folder}.${ext}`]: framework === 'react' ? toReact(c, folder, { naming, library, stylesheet, settings }) : toElement(c, folder, { naming, library, settings }),
+    [`${folder}.${ext}`]: framework === 'react' ? toReact(c, folder, { naming, library, stylesheet, settings, settingsOf }) : toElement(c, folder, { naming, library, settings, settingsOf }),
     'parity.mjs': parity,
     [`${folder}.stories.${ext}`]: toStories(c, folder, framework, { library, platform, storybook, settings }),
   };
@@ -1606,7 +1606,7 @@ if (process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); }
       if (!folder) fail(`${c.component}: its name makes no folder`);
       const into = path.join(dir, folder);
       const sheet = where.paths.componentStyles && path.relative(into, path.join(where.paths.componentStyles, `${folder}.css`));
-      const files = filesFor(c, folder, { framework, naming, library, platform: c.platform || platform, stylesheet: sheet && (sheet.startsWith('.') ? sheet : `./${sheet}`), storybook, settings: settingsOf(folder) });
+      const files = filesFor(c, folder, { framework, naming, library, platform: c.platform || platform, stylesheet: sheet && (sheet.startsWith('.') ? sheet : `./${sheet}`), storybook, settings: settingsOf(folder), settingsOf });
       fs.mkdirSync(into, { recursive: true });
       for (const [f, body] of Object.entries(files)) write(path.join(into, f), body);
     }
