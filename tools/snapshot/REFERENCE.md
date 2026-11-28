@@ -42,16 +42,19 @@ command and only the files it runs.
 An agent with the official Figma MCP can take a library snapshot with no Figma
 app open (snapshot-standard rule 26):
 
-    node tools/snapshot/mcp.mjs script            # the code to pass to use_figma as it is, on the library
+    node tools/snapshot/mcp.mjs script            # the two calls of a whole run, as JSON: pass each to use_figma in turn
     node tools/snapshot/mcp.mjs parts             # a large library: the read-only plan code, then
     node tools/snapshot/mcp.mjs parts <plan.json> #   the calls to make, as JSON, given what the plan returned
     node tools/snapshot/mcp.mjs collect <project> <holder id>…  # the id(s) the run returned; delivers through deliver.cjs
     node tools/snapshot/mcp.mjs cleanup           # the code that removes the temporary page; pass it to use_figma
 
-`script` is the plugin's own code.js, its whole-line comments dropped to fit
-use_figma's 50,000 characters. The run leaves the payload as shared plugin data
+`script` is the plugin's own code.js, its whole-line comments dropped, in two
+calls: the tokens call, then the components call (icons, graphics and previews
+included) on the tokens it read. One call held it all in 49,507 of use_figma's
+50,000 characters (2026-11-28), so the next change would not have fitted. Each
+call leaves its payload as shared plugin data
 on the plugin's temporary page, which `collect` reads back over the REST API
-with the machine's Figma token. A token is looked for in this order (`version.cjs`
+with the machine's Figma token; collect both holders, the tokens one first or not. A token is looked for in this order (`version.cjs`
 `tokenFor`, the one reader): `FIGMA_TOKEN` in the environment; for release
 pinning in a repo, the `figmaToken` command its `snapshot.config.json` names
 (`collect` does not run it); then `~/.config/figma/token` (`FIGMA_TOKEN_FILE`

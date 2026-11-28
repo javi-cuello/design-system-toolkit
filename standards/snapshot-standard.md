@@ -1,6 +1,6 @@
 # Snapshot standard — how a design file reaches a project's snapshot, and how readers find it
 
-**Version 2.29.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
+**Version 2.29.1** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
 
 Governs the chain from a Figma file to a project's stored snapshot: the
 **plugin** (`plugins/design-system-snapshot`), the **router**
@@ -508,7 +508,9 @@ so switching routes rewrites the image files once; and the cloud can list a
 collection's variables in another order, which moves a line in the stored
 tokens and nothing generated from them. A run outlasts the call's answer on a
 large library: the call can report the answer lost while the run completes,
-so the temporary page is looked for before a run is repeated. A library too
+so the temporary page is looked for before a run is repeated. A whole run is
+two calls, the tokens call and then the components call on the tokens it read,
+so neither sits at `use_figma`'s 50,000 characters. A library too
 large for one call's time limit is taken in parts (`mcp.mjs parts`): a
 read-only plan, a tokens call, then parts of about 1,500 variant walks, the
 walk stored once on the temporary page and run by each part; `collect` joins

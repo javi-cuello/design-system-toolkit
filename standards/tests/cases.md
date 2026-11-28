@@ -4,6 +4,8 @@ Cases for the standards themselves, not for any one skill (toolkit-standard §C 
 
 Three scripts live in this directory, all run from the repo root: `check-frontmatter.sh` (clause F), `check.sh` (skills, plugins, markdown shape and each standard's scope line, delegating clause F), and `scan-clause-d.py` (advisory: clause D needs a read). Rules, citations, histories and settings are `tools/toolkit-check/check-standards.mjs`'s, run by `bin/check`.
 
+**Walked: 2026-11-28, for code-standard 1.38.0 and snapshot-standard 2.29.1** — rule 52's same-named style and its two rulings: `node tools/tokens/test-check.mjs` 16 pass (a style bound to its variable written once; one name in several collections one token in the same modes at the same values, else one per collection; swapped and unequal modes; another library's copy; two names of one property in one collection refused; the ruling dropping only the style a variable is written as). Rule 26's two calls: `node tools/snapshot/test-mcp.mjs` 51 pass, both calls under the cap and joined into what one whole walk gives on a stand-in file.
+
 **Walked: 2026-11-27, for toolkit-standard 2.54.0** — §D 25 names `/checkout --prune` as the pruner; the memory-check case asserts `--prune` deleting the stale one, not who calls it, so it holds; test-sessions 3 of 3.
 
 **Walked: 2026-11-27, for toolkit-standard 2.53.0** — §D 25: `/checkout` covers its own session; stale side sessions are pruned by `sessions.mjs --prune` when the user asks. The §D 25 memory-check case asserts the check and `--prune`, not who runs it, so it holds; test-check 11 of 11, test-sessions 3 of 3.

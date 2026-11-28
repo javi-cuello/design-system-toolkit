@@ -2,7 +2,7 @@
 /*
  * A library snapshot taken through the official Figma MCP (`use_figma`), with no Figma app open.
  *
- *   node mcp.mjs script                          # the code an agent passes to use_figma, on stdout
+ *   node mcp.mjs script                          # a whole run's two calls (tokens, then components), as JSON
  *   node mcp.mjs parts                           # a large library: the read-only code that plans its parts
  *   node mcp.mjs parts <plan.json>               #   the calls to make, given what the plan returned, as JSON
  *   node mcp.mjs collect <project> <holder id>…  # read what the run (or every call of the parts) left, and deliver it
@@ -76,10 +76,6 @@ ${after}
 return { holder: __holder.id, chunks: __n, bytes: __text.length${extra}, seconds: Math.round((Date.now() - __t0) / 1000) };
 `;
 
-/* After the plugin's file: collect as its own run does, then leave the payload. */
-const EPILOGUE = `
-figma.skipInvisibleInstanceChildren = true;
-const __t0 = Date.now();${written('await collectLibrary(true)', ', components: __payload.components.length')}`;
 
 /* Where the plugin's window and headless entry begin: dead code here (HEADLESS is true and the epilogue calls
    collectLibrary), cut so the run stays under the cap. The plugin's own comment marks it. */
@@ -109,7 +105,6 @@ const capped = (code, what) => {
   if (code.length > CAP) throw new Error(`the ${what} is ${code.length} characters, over use_figma's ${CAP}`);
   return code;
 };
-export function script() { return capped(headless(plugin()) + '\n' + EPILOGUE, 'snapshot code'); }
 
 // The plugin's own name for its temporary page, read from it, so a rename reaches the cleanup too.
 const SCRATCH = /^const SCRATCH = '([^']+)';$/m.exec(fs.readFileSync(PLUGIN, 'utf8'))[1];
@@ -169,6 +164,8 @@ const KEPT = ['isIconPage', 'isScratchPage', 'componentSets'];
 export const DEAD = {
   tokens: () => ['anatomyOf', ...declared(plugin(), 'slotPaths', 'collectComponents').filter((n) => !KEPT.includes(n))],
   parts: () => [...UNUSED, 'collectTokens'],
+  // the second call of a whole run: everything but the tokens, which the first call read
+  components: () => ['collectTokens'],
 };
 
 /* The sets the walk takes, page by page in the file's order, each page by its index: collectComponents' own pages
@@ -239,6 +236,26 @@ export function tokensCode() {
   return capped(headless(cut(source, DEAD.tokens())) + '\n' + TOKENS.replace('%ICONS%', icons.join('\n')), 'tokens call');
 }
 
+/* The second call of a whole run: the plugin's collectLibrary, icons, graphics and previews included, on the tokens the
+   first call read (its shared names and the lookups it gave up on taken up from the temporary page, as a part takes
+   them), leaving the components, the sets it walked and what it left unrecorded, as one part's holder does. */
+const COMPONENTS = `
+figma.skipInvisibleInstanceChildren = true;
+const __t0 = Date.now();
+const __shared = scratch().getSharedPluginData('${NS}', 'shared'); if (__shared) sharedNames = new Set(JSON.parse(__shared));
+const __from = unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0; timedOut = Number(scratch().getSharedPluginData('${NS}', 'timedOut')) || 0;
+const __groups = [];
+unrecordedSeen.push = function (...xs) { if (xs.length) __groups.push(xs); return Array.prototype.push.apply(this, xs); };
+const __r = await collectLibrary(true, { _meta: {} });
+${written(`{ components: __r.components, sets: ${PLANNED}.flatMap((pg) => pg.sets.map((s) => s.id)), unrecorded: __groups, unreadable, unanswered: unanswered - __from, icons: __r.icons, graphics: __r.graphics, previews: __r.previews }`, ', components: __payload.components.length')}`;
+export function componentsCode() { return capped(headless(cut(plugin(), DEAD.components())) + '\n' + COMPONENTS, 'components call'); }
+
+/* A whole run, as two calls (one held the plugin and its run in 49 507 of use_figma's 50 000 characters, 2026-11-28,
+   so the next change would not have fitted): the tokens call, then the components call; collect both holders. */
+export function scriptCalls() {
+  return [{ call: 'tokens', code: tokensCode() }, { call: 'components, icons, graphics and previews', code: componentsCode() }];
+}
+
 const args = (part) => `${JSON.stringify(part.pages)}, ${JSON.stringify(part.scope)}`;
 /* The store call: the walk as one function, kept as shared plugin data on the temporary page, and its first part. */
 export function storeCode(first) {
@@ -295,7 +312,9 @@ export function join(found) {
   // as the walk lists them: a set's entry, which says its page, each time; a variant's only when no entry before it has its name
   const unreadable = [];
   for (const x of parts.flatMap((p) => p.unreadable)) if (x.page !== undefined || !unreadable.some((y) => y.name === x.name)) unreadable.push(x);
-  return { tokens, components: parts.flatMap((p) => p.components), icons: [], iconSets: head.iconSets, iconPage: head.iconPage, ...(head.iconGroups && { iconGroups: head.iconGroups }), ...(head.iconDescriptions && { iconDescriptions: head.iconDescriptions }), graphics: [], previews: [], ...(unreadable.length && { unreadable }) };
+  // (a whole run's components call brings the icons, graphics and previews; parts bring none)
+  const all = (k) => parts.flatMap((p) => p[k] || []);
+  return { tokens, components: all('components'), icons: all('icons'), iconSets: head.iconSets, iconPage: head.iconPage, ...(head.iconGroups && { iconGroups: head.iconGroups }), ...(head.iconDescriptions && { iconDescriptions: head.iconDescriptions }), graphics: all('graphics'), previews: all('previews'), ...(unreadable.length && { unreadable }) };
 }
 
 /* One whole run's holder as it is; a run in parts' holders (one alone too) joined, which refuses what is missing. */
@@ -352,10 +371,10 @@ export async function read(fileKey, ids, token) {
 async function main(argv) {
   const flag = (f) => { const i = argv.indexOf(f); return i > 0 ? argv[i + 1] : null; };
   const [cmd, name, ...ids] = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--')));
-  if (cmd === 'script') return process.stdout.write(script());
+  if (cmd === 'script') return process.stdout.write(JSON.stringify(scriptCalls(), null, 1) + '\n');
   if (cmd === 'cleanup') return process.stdout.write(CLEANUP + '\n');
   if (cmd === 'parts') return process.stdout.write(name ? JSON.stringify(calls(JSON.parse(fs.readFileSync(name, 'utf8'))), null, 1) + '\n' : planCode() + '\n');
-  if (cmd !== 'collect' || !name || !ids.length) { console.error('usage: mcp.mjs script | parts [<plan.json>] | collect <project> <holder id>… [--file <key>] [--repo <dir>] [--save <file>] | cleanup'); process.exit(2); }
+  if (cmd !== 'collect' || !name || !ids.length) { console.error('usage: mcp.mjs script (two calls, as JSON) | parts [<plan.json>] | collect <project> <holder id>… [--file <key>] [--repo <dir>] [--save <file>] | cleanup'); process.exit(2); }
   const contract = require('./projects.cjs');
   const { deliver } = require('./deliver.cjs');
   const { tokenFor } = require('./version.cjs');

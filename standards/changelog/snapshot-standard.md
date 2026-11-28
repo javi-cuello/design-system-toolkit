@@ -1,5 +1,6 @@
 # History — snapshot-standard
 
+- 2.29.1 (2026-11-28): rule 26 says a whole run is two calls, tokens then components: one call held the plugin in 49,507 of `use_figma`'s 50,000 characters. No requirement changed.
 - 2.29.0 (2026-11-26): rule 11: the audit service holds both loopback stacks too, and says on `/status` what holds `::1` on its port. A figma-console MCP on `[::1]` of a project's port took the Desktop Bridge, and every audit stage timed out; three projects' ports were held so that day.
 - 2.28.0 (2026-11-25): rule 26: a library too large for one `use_figma` call is taken in parts (plan, tokens, parts of about 1,500 walks) and joined at collect, refused unless every planned set was walked once, in order. One whole run of a 64-page library failed on Figma's time limit.
 - 2.27.0 (2026-11-20): rule 18: an optional `design`, `"none"` for a code-only project; its snapshot and Figma gates say not applicable, no docs site is built for it, its phase is build or maintenance. A code-only project could not register without every snapshot gate going red.

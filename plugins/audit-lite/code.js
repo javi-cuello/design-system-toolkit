@@ -2746,11 +2746,12 @@ const componentSets = (scope) => /** @type {(ComponentSetNode | ComponentNode)[]
   n.type === 'COMPONENT_SET' || (n.type === 'COMPONENT' && n.parent !== null && n.parent.type !== 'COMPONENT_SET')));
 
 /** @param {boolean} withIcons */
-async function collectLibrary(withIcons) {
+// (`given`: tokens a call before this one read, the bridge's two-call snapshot, tools/snapshot/mcp.mjs scriptCalls)
+async function collectLibrary(withIcons, given = null) {
   walkWhole = false;
   await loadPages(true);
   say('reading the variables and styles');
-  const tokens = await collectTokens();
+  const tokens = given || await collectTokens();
 
   // Filled after the closures below exist: the loop is `collectComponents`.
   /** @type {{ name: string, w: number, h: number, png: string, dark?: string }[]} */

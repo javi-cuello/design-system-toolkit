@@ -3,19 +3,21 @@
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
-import { script, stripped, tightened, joined, named, libraryKey, PLUGIN, CAP, CHUNK, PER_NODE, NS, planCode, sized, calls, join, payloadOf, storeCode, tokensCode, partCode, DEAD, LIMIT } from './mcp.mjs';
+import { scriptCalls, componentsCode, stripped, tightened, joined, named, libraryKey, PLUGIN, CAP, CHUNK, PER_NODE, NS, planCode, sized, calls, join, payloadOf, storeCode, tokensCode, partCode, DEAD, LIMIT } from './mcp.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
 
-const code = script();
-ok(`the code fits use_figma's ${CAP} characters`, code.length <= CAP);
-let parses = true; try { new vm.Script(`(async () => {\n${code}\n})`); } catch { parses = false; }
-ok('and parses as the body use_figma runs', parses);
-ok('the window and the headless entry, dead code there, are cut where the plugin marks them', !/figma\.ui\.onmessage|function __headless|function collectFacts/.test(code) && /function collectLibrary/.test(code));
-ok('it runs headless, and collects as the plugin does', /^const HEADLESS = true;$/m.test(code) && /await collectLibrary\(true\)/.test(code));
+// a whole run is two calls, the tokens call and the components call, so neither sits at the cap (one call held it in
+// 49 507 characters, 2026-11-28)
+const whole = scriptCalls(), code = componentsCode();
+ok(`a whole run is the tokens call then the components call, each within use_figma's ${CAP} characters (${whole.map((c) => c.code.length).join(' and ')})`, whole.length === 2 && whole[0].call === 'tokens' && whole[1].code === code && whole.every((c) => c.code.length <= CAP));
+let parses = true; for (const c of whole) { try { new vm.Script(`(async () => {\n${c.code}\n})`); } catch { parses = false; } }
+ok('and each parses as the body use_figma runs', parses);
+ok('the window and the headless entry, dead code there, are cut where the plugin marks them, and the components call carries no token reading', !/figma\.ui\.onmessage|function __headless|function collectFacts|function collectTokens/.test(code) && /function collectLibrary/.test(code));
+ok('it runs headless, and collects as the plugin does, on the tokens the first call read', /^const HEADLESS = true;$/m.test(code) && /await collectLibrary\(true, \{ _meta: \{\} \}\)/.test(code));
 ok('every page is loaded through the fallback, never loadAllPagesAsync alone', (code.match(/loadAllPagesAsync/g) || []).length === 1 && /const loadPages/.test(code));
-ok('no \\u or \\\\ escape in it, since the tool call that carries it decodes them (probed 2026-10-30: a \\u2028 in a regex arrived as a line break)', !/\\u|\\\\/.test(code));
+ok('no \\u or \\\\ escape in it, since the tool call that carries it decodes them (probed 2026-10-30: a \\u2028 in a regex arrived as a line break)', whole.every((c) => !/\\u|\\\\/.test(c.code)));
 ok('the epilogue escapes as the payload reader expects', code.includes("replace(/[^ -~]/g, (c) => String.fromCharCode(92) + 'u'"));
 ok('the plugin holds no multi-line string, whose lines the stripping would trim', stripped(readFileSync(PLUGIN, 'utf8')).split('\n').every((l) => (l.replace(/\\./g, '').match(/`/g) || []).length % 2 === 0));
 ok('a trailing comment is dropped where nothing before it can hold a //', stripped('a(b); // why') === 'a(b);');
@@ -71,14 +73,14 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
 {
   let ids = 100;
   const shared = () => { const d = {}; return { sharedPluginData: { [NS]: d }, setSharedPluginData: (ns, k, v) => { d[k] = v; }, getSharedPluginData: (ns, k) => d[k] || '' }; };
-  const frame = (type, name) => ({ id: `9:${ids++}`, type, name, children: [], ...shared(), appendChild(c) { c.parent = this; this.children.push(c); }, findAll(f) { const out = []; const v = (n) => { for (const c of n.children || []) { if (f(c)) out.push(c); v(c); } }; v(this); return out; }, findAllWithCriteria({ types }) { return this.findAll((c) => types.includes(c.type)); }, loadAsync: async () => {} });
+  const frame = (type, name) => ({ id: `9:${ids++}`, type, name, children: [], ...shared(), exportAsync: async (o) => (o && o.format === 'SVG_STRING' ? '<svg/>' : new Uint8Array([1])), appendChild(c) { c.parent = this; this.children.push(c); }, findAll(f) { const out = []; const v = (n) => { for (const c of n.children || []) { if (f(c)) out.push(c); v(c); } }; v(this); return out; }, findAllWithCriteria({ types }) { return this.findAll((c) => types.includes(c.type)); }, loadAsync: async () => {} });
   const page = (name, comps) => { const p = frame('PAGE', name); for (const [nm, id, variants = 0] of comps) { const c = Object.assign(frame(variants ? 'COMPONENT_SET' : 'COMPONENT', nm), { id, width: 40, height: 20, componentPropertyDefinitions: {}, boundVariables: {} }); p.appendChild(c); } return p; };
   const pages = [page('Cover', []), page('Button', [['Button', '1:1'], ['Link', '1:2']]), page('Table', [['Table', '2:1']]), page('Icons', [['Arrow', '3:1']]), page('Chip', [['Chip', '4:1'], ['Tag', '4:2'], ['Badge', '4:3']]), page('Button', [['Card', '5:1']])];
   pages[3].children[0].description = 'arrow, direction';
   Object.assign(pages[4].children[1], { paragraphSpacing: 5, listSpacing: 3 });
   globalThis.figma = { root: { name: 'Document', children: pages }, fileKey: 'K', skipInvisibleInstanceChildren: false, variables: { getVariableByIdAsync: async () => null, getLocalVariablesAsync: async () => [], getLocalVariableCollectionsAsync: async () => [] },
     getLocalTextStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getStyleByIdAsync: async () => null,
-    loadAllPagesAsync: async () => {}, createFrame: () => frame('FRAME', ''), createPage() { const p = frame('PAGE', ''); pages.push(p); return p; } };
+    loadAllPagesAsync: async () => {}, base64Encode: () => 'AQ==', createFrame: () => frame('FRAME', ''), createPage() { const p = frame('PAGE', ''); pages.push(p); return p; } };
   const run = (code) => new (Object.getPrototypeOf(async () => {}).constructor)(code)();
   const planned = await run(planCode());
   ok('the plan names each set by page, the icon page left out', JSON.stringify(planned.map((pg) => [pg.index, pg.sets.map((s) => s.id)])) === '[[1,["1:1","1:2"]],[2,["2:1"]],[4,["4:1","4:2","4:3"]],[5,["5:1"]]]' && planned[0].sets[0].walks === 1);
@@ -109,6 +111,12 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   assert.throws(() => join([head, ...found, found[1]]), /walked more than once/); n++; console.log('ok a part collected twice is refused');
   assert.throws(() => join([{ ...head, sets: head.sets.slice(1) }, ...found]), /not in the file the tokens call read/); n++; console.log('ok a set the tokens call did not find is refused');
   assert.throws(() => join(found), /0 of the holders hold the tokens/); n++; console.log('ok parts with no tokens holder are refused');
+  { // a whole run's two calls on the same file join into what one whole walk gives, with its icon names
+    const [first, second] = scriptCalls(), t = (await run(first.code)).holder, c = (await run(second.code)).holder;
+    const at = (id) => joined(asRest(tmp.children.find((h) => h.id === id)));
+    const both = join([at(t), at(c)]);
+    ok('a whole run\'s tokens call and components call join into what one whole walk gives, the icons named', JSON.stringify(both.components) === JSON.stringify(ref) && both.iconSets.join() === 'Arrow' && both.icons.length === 1 && both.icons[0].svg === '<svg/>' && both.tokens._meta, JSON.stringify(both.icons));
+  }
   delete globalThis.figma;
 }
 {

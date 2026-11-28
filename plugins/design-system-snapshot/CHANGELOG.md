@@ -4,6 +4,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 ## [0.96.0] - 2026-11-28
 ### Added
 - **A binding to a variable name another of the file's collections also holds records its collection** under the layer's `collections` (`{ "pill-edge": "Shades 1" }`). A binding was recorded by name alone, and the token build names such a variable by its collection where the collections disagree, so the code could not tell which one a layer meant. A name is shared as the build keys it (a case or punctuation split too), across every collection the tokens hold, another library's included; a bridge snapshot's tokens call hands the names to its parts.
+- **A bridge snapshot's whole run is two calls** (tools/snapshot/mcp.mjs `scriptCalls`): the tokens call, then the components call, which hands `collectLibrary` the tokens already read (its new `given`). One call held it in 49 507 of use_figma's 50 000 characters; now 23 104 and 40 186.
 - **The bridge snapshot's code tightens between plain quoted strings** (tools/snapshot/mcp.mjs `tightened`): the spaces beside an operator go on a line whose literals are single- or double-quoted strings, each string kept as written. Without it this release's snapshot code was 51 373 characters, 1 373 over use_figma's 50 000.
 
 ## [0.95.0] - 2026-11-28
