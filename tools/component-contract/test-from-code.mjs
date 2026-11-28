@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
+import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1458,9 +1458,9 @@ ok('codeFigma: the design component a generated module names, read from its text
     try {
       const tab = await attach(await newPage(browser.endpoint));
       const k = '<i style="display: block; width: 10px; height: 10px"></i>';
-      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html><div id="a" style="display: flex">${k}${k}</div><div id="b" style="display: flex; position: relative">${k}<i style="position: absolute; width: 4px; height: 4px"></i></div><div id="c" style="display: flex">${k}<i style="display: block; width: 10px; height: 10px; margin-left: -5px"></i></div><div id="d" style="display: flex">${k}</div><div id="e" style="display: flex">${k}<i style="display: none"></i></div>` });
-      const got = await call(tab, (src) => { const f = new Function(`return ${src}`)(); return ['a', 'b', 'c', 'd', 'e'].map((q) => f(document.getElementById(q), getComputedStyle)); }, childrenMeet.toString());
-      ok('children drawn apart do not meet; one out of the flow or pulled over another does; one alone, or beside one not drawn, does not', JSON.stringify(got) === '[false,true,true,false,false]', JSON.stringify(got));
+      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html><div id="a" style="display: flex">${k}${k}</div><div id="b" style="display: flex; position: relative">${k}<i style="position: absolute; width: 4px; height: 4px"></i></div><div id="c" style="display: flex">${k}<i style="display: block; width: 10px; height: 10px; margin-left: -5px"></i></div><div id="d" style="display: flex">${k}</div><div id="e" style="display: flex">${k}<i style="display: none"></i></div><div id="f" style="display: flex"><i style="display: block; width: 10px; height: 10px"><b style="display: block; width: 20px; height: 4px"></b></i>${k}</div>` });
+      const got = await call(tab, (src) => { const f = new Function(`return ${src}`)(); return ['a', 'b', 'c', 'd', 'e', 'f'].map((q) => f(document.getElementById(q), getComputedStyle)); }, childrenMeet.toString());
+      ok('children drawn apart do not meet; one out of the flow, pulled over another, or spilling over it by a part of its own does; one alone, or beside one not drawn, does not', JSON.stringify(got) === '[false,true,true,false,false,true]', JSON.stringify(got));
     } finally { await browser.close(); }
   }
 }
@@ -1481,6 +1481,11 @@ ok('codeFigma: the design component a generated module names, read from its text
       const four = JSON.stringify({ top: 0, end: 0, bottom: 0, start: 0 });
       const [a, b, c] = [await at('#a'), await at('#b'), await at('#c')];
       ok('a 0 padding a shorthand writes with a var() is written, as one written plainly is; none written is none', JSON.stringify(a) === four && JSON.stringify(b) === four && c === null, JSON.stringify([a, b, c]));
+      // and as the reader settles it, each side's token by the vars its side is written with (a variant's
+      // `var(--space-0) 0 0 0`: the top that token, the rest the 0 written, never the token the base binds)
+      const { authoredSideVars } = await import('../parity/external.mjs');
+      const lay = await paddingRead({ direction: 'row' }, false, (p) => authoredSide(tab, '#a', p, false), async (v, p) => ((await authoredSideVars(tab, '#a', p, false)).includes('--z') ? 'space/0' : v));
+      ok('the reader settles that padding side by side: the side the token writes is the token, the rest the 0 written', JSON.stringify(lay.padding) === JSON.stringify({ top: 'space/0', end: 0, bottom: 0, start: 0 }), JSON.stringify(lay));
     } finally { await browser.close(); }
   }
 }

@@ -356,20 +356,22 @@ export const inheritsColour = (v) => typeof v === 'string' && /^\s*currentcolor\
    (`designBg`) and the box's computed `color` is that very colour, measured, never the rule as written. Tested by
    test-from-code.mjs. */
 export const keywordFill = (bg, colour, designBg) => inheritsColour(designBg) && colour != null && sameColour(bg, colour);
-/* Whether the walk marks a box (its kind, whether it is a mark, the fill read so far, its computed style `cs`) as painted
-   clear inside a placed component (`inside`), for readCleared: a container or a mark with no fill and no layer over it.
-   Passed into the page as source. Tested by test-from-code.mjs. */
-/* Whether a placed instance's own children can be drawn over one another, as the page lays them out: two or more drawn,
-   one placed out of the flow, or two whose boxes meet. Where they cannot, the order they paint in shows nowhere
-   (stackLikeDesign). `box` the instance's own box (ownBoxOf), `style` getComputedStyle. Runs in the page (passed as
-   source); tested by test-from-code.mjs, in Chrome. */
+/* Whether a placed instance's own children can be drawn over one another, as the page lays them out: with two or more
+   drawn, one placed out of the flow, or two whose boxes meet, a box of either's own descendants included (a part that
+   spills out of its parent). Where they cannot, the order they paint in shows nowhere (stackLikeDesign). Not counted: a
+   pseudo-element's box and what a shadow root draws, which no element box here reports. `box` the instance's own box
+   (ownBoxOf), `style` getComputedStyle. Runs in the page (passed as source); tested by test-from-code.mjs, in Chrome. */
 export function childrenMeet(box, style) {
   const kids = [...box.children].filter((c) => c.getClientRects().length && style(c).display !== 'none');
   if (kids.length < 2) return false;
   if (kids.some((c) => /^(absolute|fixed)$/.test(style(c).position))) return true;
-  const rs = kids.map((c) => c.getBoundingClientRect());
-  return rs.some((a, i) => rs.slice(i + 1).some((b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5));
+  const boxes = kids.map((c) => [c, ...c.querySelectorAll('*')].filter((n) => n.getClientRects().length).map((n) => n.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0));
+  const meet = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
+  return boxes.some((as, i) => boxes.slice(i + 1).some((bs) => as.some((a) => bs.some((b) => meet(a, b)))));
 }
+/* Whether the walk marks a box (its kind, whether it is a mark, the fill read so far, its computed style `cs`) as painted
+   clear inside a placed component (`inside`), for readCleared: a container or a mark with no fill and no layer over it.
+   Passed into the page as source. Tested by test-from-code.mjs. */
 export function paintedClear(inside, kind, mark, background, cs, clear) { return !!inside && (kind === 'container' || (kind === 'graphic' && !!mark)) && background === undefined && clear(cs.backgroundColor) && cs.backgroundImage === 'none'; }
 export const iconColour = async (v, tokOf) => (!v || clearValue(v) ? undefined : tokOf(v));
 // a colour value that paints nothing (a transparent token: a ghost button's fill)
@@ -1144,6 +1146,15 @@ export async function paddingWritten(read, rtl, sideOf) {
   const sides = {};
   for (const [k, p] of Object.entries(paddingCss(rtl))) sides[k] = await sideOf(p);
   return paddingSaid(read, sides);
+}
+
+/* A box's padding as the reading settles it, on `layout` in place: a 0 padding the code writes said as four sides of 0
+   (paddingWritten, each side as written, `sideOf(longhand)`), then each side's token (`tokOf(value, longhand)`, the
+   reader's tok). Tested by test-from-code.mjs, in Chrome, with the reader's own authoredSide. */
+export async function paddingRead(layout, rtl, sideOf, tokOf) {
+  if (!layout.padding) { const said = await paddingWritten(layout.padding, rtl, sideOf); if (said) layout.padding = said; }
+  if (layout.padding) for (const k of Object.keys(layout.padding)) layout.padding[k] = await tokOf(layout.padding[k], paddingCss(rtl)[k]);
+  return layout;
 }
 
 /* Each placed component's key from what the code places (`others`: the code's name for it, the module's folder, to the
@@ -3155,12 +3166,12 @@ async function main() {
         delete x.box;
         if (x.layout) {
           // a 0 padding the code writes is said, as it writes it (paddingSaid)
-          if (!x.layout.padding) { const said = await paddingWritten(x.layout.padding, x.rtl, (p) => authoredSide(L.tab, styledAt(id), p, !!x.rtl, styles)); if (said) x.layout.padding = said; }
+          // (its padding as written, each side's token: paddingRead)
+          await paddingRead(x.layout, x.rtl, (p) => authoredSide(L.tab, styledAt(id), p, !!x.rtl, styles), (v, p) => tok('space', v, `${id}.padding`, [p]));
           // a gap below 0 was written as the second child's pull back: its token is there
           const pulled = pulledBy[id];
           if ('gap' in x.layout) x.layout.gap = pulled ? await tok('space', x.layout.gap, `${id}.gap`, pulled.props, pulled.from) : await tok('space', x.layout.gap, `${id}.gap`, [x.layout.direction === 'column' ? 'row-gap' : 'column-gap', 'gap']);
           if ('crossGap' in x.layout) x.layout.crossGap = await tok('space', x.layout.crossGap, `${id}.crossGap`, [x.layout.direction === 'column' ? 'column-gap' : 'row-gap', 'gap']);
-          if (x.layout.padding) for (const k of Object.keys(x.layout.padding)) x.layout.padding[k] = await tok('space', x.layout.padding[k], `${id}.padding`, [paddingCss(x.rtl)[k]]);
         }
         delete x.rtl;
         // its fills bottom up (rules.mjs fillsFromCss): the colour, then each layer over it, every colour named by its token
