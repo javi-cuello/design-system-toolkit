@@ -63,7 +63,7 @@ export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
 
   const { writeDtcg } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/from-snapshot.mjs')).href);
   const { buildTokens } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/build-tokens.mjs')).href);
-  const { collisionNames } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/names.mjs')).href);
+  const { collisionNames, stylesUnderVariables } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/names.mjs')).href);
 
   // built beside first, then compared (--check) or written in place: a refused build writes nothing, where it once
   // left new DTCG files over the stylesheets they no longer built
@@ -76,7 +76,11 @@ export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
     if (existsSync(root)) walk(root);
     return found;
   };
-  const snapshot = JSON.parse(readFileSync(P.tokens, 'utf8'));
+  // the project's ruling that a variable wins over a colour style of its name (audit-settings tokens
+  // variableOverStyle): each such style dropped before the build and listed with both values; without it, refused
+  const ruled = require_('../snapshot/projects.cjs').tokenSettings(cfg.config.project);
+  const read = JSON.parse(readFileSync(P.tokens, 'utf8'));
+  const { snapshot, dropped } = ruled.variableOverStyle ? stylesUnderVariables(read) : { snapshot: read, dropped: [] };
   let built, files, dtcgBad = [], refused = false;
   const warn = console.warn;
   if (quiet) console.warn = () => {};
@@ -96,7 +100,7 @@ export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
     // writeDtcg's refusal (a reference no build resolves, a folder that is not an export) is one line, as
     // from-snapshot.mjs prints it; buildTokens' collision names the Figma names that meet, read from the snapshot
     if (!e?.refused) throw e;
-    err.push(e.collisions ? collisionLine(e.collisions, snapshot, collisionNames) : e.message); refused = true;
+    err.push(e.collisions ? collisionLine(e.collisions, snapshot, collisionNames, ruled) : e.message); refused = true;
   } finally {
     console.warn = warn;
     rmSync(dtcg, { recursive: true, force: true });
@@ -126,6 +130,9 @@ export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
     const list = built.report[k] || [];
     if (list.length) out.push(`  tokens: ${list.length} ${k}: ${list.slice(0, 4).map((x) => `${x.name} (${x.reason})`).join('; ')}${list.length > 4 ? ' …' : ''}`);
   }
+  // a finding each, whole: what the ruling settled is the library's to fix, so none is folded away
+  if (dropped.length) out.push(`  tokens: ${dropped.length} colour style(s) dropped, the variable of their name kept (the project's ruling, variableOverStyle in ${relative(repo, ruled.doc)}):`);
+  for (const d of dropped) out.push(`    "${d.name}" = ${d.style}; the variable ${d.variable} = ${d.values}`);
   return done(0);
 }
 
@@ -133,12 +140,14 @@ export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
    would share a name fail the build rather than letting one win (code-standard rule 52), so one is renamed in Figma.
    No escape keeps them apart: a slug drops punctuation (kebab-case, the same rule), and a `$` cannot reach the DTCG files,
    whose token and group names must not begin with one (Design Tokens Format Module §5.1.1, Character restrictions). */
-function collisionLine(props, snapshot, collisionNames) {
+function collisionLine(props, snapshot, collisionNames, ruled = {}) {
   const [first, ...rest] = props;
   const who = collisionNames(snapshot, first);
   const named = who.length > 1 ? `${who.map((w) => `"${w.name}" (${w.kind})`).join(' and ')} both become ${first}` : `two tokens become ${first} in one block`;
+  // a colour style against a variable has a second answer, the project's ruling, said where it is not made
+  const ruling = !ruled.variableOverStyle && who.some((w) => w.kind === 'colour style') && who.some((w) => w.kind.startsWith('variable')) ? ', or rule that the variable wins (audit-settings tokens variableOverStyle)' : '';
   const more = rest.length ? `; ${rest.length} more collide (${rest.slice(0, 3).join(', ')}${rest.length > 3 ? ', …' : ''})` : '';
-  return `tokens: ${named}: rename one in Figma (code-standard rule 52)${more}`;
+  return `tokens: ${named}: rename one in Figma${ruling} (code-standard rule 52)${more}`;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {

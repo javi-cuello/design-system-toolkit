@@ -1066,6 +1066,23 @@ function librarySettingsFor(componentsDir, projectsDir) {
   return (folder) => withModes((of && (((of.ctx.libraries || {})[of.fileOf(folder)] || {}).tokens || only)) || house);
 }
 
+/**
+ * The token build's settings for the project a repo's snapshot.config.json names: its tokens library's entry in the
+ * context document's audit-settings, merged over the house's (flatSettings), as { variableOverStyle, doc }; {} with no
+ * context document or no tokens library. variableOverStyle is the project's ruling that a variable wins over a colour
+ * style of its name whose value disagrees (tools/tokens/build.mjs drops the style and lists it).
+ */
+function tokenSettings(label, projectsDir) {
+  const w = label ? layout(projectsDir || null, label) : null;
+  if (!w || w.error || !w.doc || !fs.existsSync(w.doc)) return {};
+  const key = libraryRoles(w.doc).tokens;
+  if (!key) return {};
+  let own = {}, house = {};
+  try { own = ((JSON.parse(fenced(fs.readFileSync(w.doc, 'utf8'), 'audit-settings') || '{}').libraries) || {})[key] || {}; } catch { /* a block that is not JSON is auditContext's to say */ }
+  try { house = JSON.parse(fs.readFileSync(SETTINGS, 'utf8'))['audit-defaults'] || {}; } catch { /* no house file: the project's own */ }
+  return { variableOverStyle: flatSettings(house, own).variableOverStyle === true, doc: w.doc };
+}
+
 /** The rulings log of a context document, newest last. */
 function rulings(contextDoc) {
   try { return rulingsOf(fs.readFileSync(contextDoc, 'utf8')); } catch { return []; }
@@ -1168,7 +1185,7 @@ function auditRecords(where) {
   return list.map((l, i) => ({ ...l, path: single && i === 0 ? legacy : path.join(where.audit, `${l.key}.json`) }));
 }
 
-module.exports = { DASHBOARD_WHY, textKey, siblings, repoDirOf, storeLibraries, tokensOf, mainsIn, appendRuling, removeRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, assetOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
+module.exports = { tokenSettings, DASHBOARD_WHY, textKey, siblings, repoDirOf, storeLibraries, tokensOf, mainsIn, appendRuling, removeRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, assetOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
 
 // Every project and its home, one per line, for the shell scripts:
 //   node tools/snapshot/projects.cjs homes    → <label><TAB><home>

@@ -134,7 +134,7 @@ test('a colour style and a variable that slug to one property are refused in one
   const r = buildCli(root);
   assert.equal(r.status, 1, r.stderr);
   assert.doesNotMatch(r.stderr, /\n\s+at /, 'no stack trace');
-  assert.match(r.stderr, /^tokens: "Colour\/Text\/strong" \(variable in Semantic\) and "Colour\/Text\/\$strong" \(colour style\) both become --colour-text-strong: rename one in Figma \(code-standard rule 52\)$/m);
+  assert.match(r.stderr, /^tokens: "Colour\/Text\/strong" \(variable in Semantic\) and "Colour\/Text\/\$strong" \(colour style\) both become --colour-text-strong: rename one in Figma, or rule that the variable wins \(audit-settings tokens variableOverStyle\) \(code-standard rule 52\)$/m);
   assert.ok(!existsSync(join(root, 'design/dtcg/color-style')), 'a refused build writes no DTCG file over the stylesheets it did not build');
 });
 
@@ -182,4 +182,66 @@ test('a colour style sharing a variable\'s name is refused when bound to another
     assert.equal(r.status, 1, `${what}: ${r.stdout}${r.stderr}`);
     assert.match(r.stderr, /"Colour\/Text\/strong" \(variable in Semantic\) and "Colour\/Text\/\$strong" \(colour style\) both become --colour-text-strong/, what);
   }
+});
+
+// one variable name in several collections: different values are different tokens, the same values one token
+const withCollections = (root, extra) => {
+  const f = join(root, 'design/figma.json'), t = JSON.parse(readFileSync(f, 'utf8'));
+  Object.assign(t.collections, extra(t));
+  writeFileSync(f, JSON.stringify(t));
+};
+const tokensCss = (root) => readFileSync(join(root, 'styles/generated/_tokens.scss'), 'utf8');
+
+test('one name in two collections at different values is two tokens, each named with its collection; no other name moves', () => {
+  const root = repo();
+  withCollections(root, () => ({ Brand: { modes: ['Value'], values: { Value: { 'Colour/Text/strong': '#ff0000', 'Colour/Text/accent': '#00ff00' } }, alias: {} } }));
+  const r = buildCli(root);
+  assert.equal(r.status, 0, r.stderr);
+  const css = tokensCss(root);
+  assert.match(css, /--semantic-colour-text-strong: #161616;/);
+  assert.match(css, /--brand-colour-text-strong: #ff0000;/);
+  assert.match(css, /--colour-text-accent: #00ff00;/, 'a name only one collection holds keeps its name');
+  assert.doesNotMatch(css, /--colour-text-strong:/, 'neither copy takes the bare name');
+});
+
+test('one name in two collections at the same values is one token, written once under its own name', () => {
+  const root = repo();
+  withCollections(root, (t) => {
+    for (const m of ['Light', 'Dark']) t.collections.Semantic.values[m]['Size/gap'] = 8;
+    return { Brand: { modes: ['Value'], values: { Value: { 'Size/gap': 8 } }, alias: {} } };
+  });
+  const r = buildCli(root);
+  assert.equal(r.status, 0, r.stderr);
+  const css = tokensCss(root);
+  assert.equal(css.split('\n\n')[1].match(/--size-gap:/g).length, 1, 'once in :root');
+  assert.doesNotMatch(css, /--(semantic|brand)-size-gap/);
+});
+
+test('a name its collection prefixes that still meets another is refused as before', () => {
+  const root = repo();
+  withCollections(root, () => ({
+    Brand: { modes: ['Value'], values: { Value: { 'Colour/Text/strong': '#ff0000' } }, alias: {} },
+    Other: { modes: ['Value'], values: { Value: { 'Brand/Colour/Text/strong': '#0000ff' } }, alias: {} },
+  }));
+  const r = buildCli(root);
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.match(r.stderr, /"Colour\/Text\/strong" \(variable in Brand\) and "Brand\/Colour\/Text\/strong" \(variable in Other\) both become --brand-colour-text-strong/);
+});
+
+test('under the project\'s ruling a colour style that disagrees with its variable is dropped and listed with both values', () => {
+  const root = repo(), projects = mkdtempSync(join(tmpdir(), 'projects-'));
+  withStyle(root, { type: 'SOLID', color: '#000000' });
+  const home = join(projects, 'fixture', 'figma-design-system');
+  mkdirSync(home, { recursive: true });
+  const doc = (settings) => writeFileSync(join(home, 'design-system-context.md'), `# Fixture\n\n\`\`\`json audit-settings\n${JSON.stringify({ libraries: { K: settings } })}\n\`\`\`\n\n\`\`\`json snapshot-routing\n${JSON.stringify({ repo: root, files: { library: [{ key: 'K', roles: ['tokens', 'components'] }] } })}\n\`\`\`\n`);
+  const run = (...a) => spawnSync(process.execPath, [join(TOOLKIT, 'tools/tokens/build.mjs'), '--repo', root, ...a], { encoding: 'utf8', env: { ...process.env, TOOLKIT_PROJECTS_ROOT: projects } });
+  doc({});
+  assert.equal(run().status, 1, 'no ruling: refused');
+  doc({ tokens: { variableOverStyle: true } });
+  const r = run();
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /1 colour style\(s\) dropped, the variable of their name kept/);
+  assert.match(r.stdout, /"Colour\/Text\/\$strong" = #000000; the variable Colour\/Text\/strong \(Semantic\) = #161616 \| #f5f5f5/);
+  assert.match(tokensCss(root), /--colour-text-strong: #161616;/);
+  assert.equal(run('--check').status, 0, 'the check builds as the write did');
 });

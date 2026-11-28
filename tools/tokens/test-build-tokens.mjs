@@ -151,9 +151,17 @@ test('a text style is its fields, a bound field stays a reference, and the mixin
   assert.match(css, /--display-letter-spacing: -0\.02em;\s*--display-paragraph-spacing: 1rem;\s*--display-list-spacing: 0rem;/);
 });
 
-test('two paths that become one property fail the build', { skip }, async () => {
-  const clash = { ...LIBRARY, spacing: { value: { space: { 2: dim(12) } } } };
-  await assert.rejects(build(clash), /--space-2/);
+test('one path two collections hold at different values is two properties, each with its collection; one that still meets another fails the build', { skip }, async () => {
+  const two = await build({ ...LIBRARY, spacing: { value: { space: { 2: dim(12) } } } });
+  assert.match(two['_tokens.scss'], /--primitive-space-2: 0\.5rem;/);
+  assert.match(two['_tokens.scss'], /--spacing-space-2: 0\.75rem;/);
+  assert.match(two['_tokens.scss'], /--radius-md: 8px;/, 'a path one collection holds keeps its name');
+  // the same values: one property, under its own name
+  const one = await build({ ...LIBRARY, spacing: { value: { space: { 2: dim(8) } } } });
+  assert.match(one['_tokens.scss'], /--space-2: 0\.5rem;/);
+  assert.doesNotMatch(one['_tokens.scss'], /--(primitive|spacing)-space-2/);
+  const clash = { ...LIBRARY, spacing: { value: { space: { 2: dim(12) } } }, other: { value: { spacing: { space: { 2: dim(16) } } } } };
+  await assert.rejects(build(clash), /--spacing-space-2/);
 });
 
 test('an alias to nothing fails the build rather than writing var() to nothing', { skip }, async () => {

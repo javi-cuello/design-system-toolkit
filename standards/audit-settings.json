@@ -318,7 +318,8 @@
       "brandGroup": "path group in the source library whose child names the brand, `<brandGroup>/<brand>/...`; the extension check reads it (project)",
       "textRole": "the token path segment a text layer's fill binds to (figma-standard rule 28)",
       "ratiosGrid": "the documentation component a contrast matrix is drawn in, matched by name on the Foundations pages (figma-contrast-matrix)",
-      "local": "variable collections the file keeps for itself (layout values one file needs), outside the system: no Foundations page, no findings (project)"
+      "local": "variable collections the file keeps for itself (layout values one file needs), outside the system: no Foundations page, no findings (project)",
+      "variableOverStyle": "true where the project ruled that a variable wins over a colour style of the same name whose value disagrees: the token build drops the style and lists it with both values; absent, it refuses the pair, code-standard rule 52 (project)"
     },
     "components": {
       "descriptionPlaceholder": "regular expression for a description that is a placeholder (figma-standard rule 25)",

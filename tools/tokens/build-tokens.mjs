@@ -69,7 +69,40 @@ const kebab = (s) => String(s).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCas
 // (a group's own token, `$root`, is named as the group: color.text.warning.$root is --color-text-warning; ROOT_SD is
 // the segment Style Dictionary is handed for it, house/root-segment)
 const ROOT_SD = '@root';
-export const nameOf = (path) => path.slice(1).filter((x) => x !== '$root' && x !== ROOT_SD).map(kebab).join('-');
+// (a name kept with its collection, `KEPT`: one variable name two collections hold at different values, each a token
+// of its own, named with its collection's slug as a prefix, code-standard rule 52; set by buildTokens for its build)
+let KEPT = new Set();
+const restOf = (path) => path.slice(1).filter((x) => x !== '$root' && x !== ROOT_SD).join('.');
+export const nameOf = (path) => (KEPT.has(`${path[0]}\0${restOf(path)}`) ? path : path.slice(1)).filter((x) => x !== '$root' && x !== ROOT_SD).map(kebab).join('-');
+// the style groups the export writes beside the collections (dtcg.js: text, colour and effect styles' roots): a style
+// meeting a variable's name is no collection's name met twice
+const STYLE_ROOTS = new Set(['text-style', 'color-style', 'effect-style']);
+/* One variable name in several collections: { kept, dropped }, keys `<collection>\0<path>`. Where every collection
+   holds it at the same values (the set of its modes' values, compared as written), it is one token, written once, from
+   the first collection: the others are dropped. Where they differ, each is its own token, and each is kept with its
+   collection, so only those names move (code-standard rule 52). */
+export function sharedNames(collections) {
+  const by = new Map();
+  for (const [col, c] of collections) {
+    if (STYLE_ROOTS.has(col)) continue;
+    for (const f of c.modes.values()) for (const [path, t] of tokensOf(read(f))) {
+      const rest = restOf([col, ...path.slice(1)]);
+      if (!by.has(rest)) by.set(rest, new Map());
+      const cols = by.get(rest);
+      if (!cols.has(col)) cols.set(col, new Set());
+      cols.get(col).add(JSON.stringify(t.$value));
+    }
+  }
+  const kept = new Set(), dropped = new Set();
+  for (const [rest, cols] of by) {
+    if (cols.size < 2) continue;
+    const sets = [...cols.values()].map((v) => [...v].sort().join('\n'));
+    const [first, ...others] = [...cols.keys()];
+    if (sets.every((x) => x === sets[0])) for (const col of others) dropped.add(`${col}\0${rest}`);
+    else for (const col of [first, ...others]) kept.add(`${col}\0${rest}`);
+  }
+  return { kept, dropped };
+}
 const refName = (ref) => nameOf(String(ref).replace(/^\{|\}$/g, '').split('.'));
 // A breakpoint is named for one, a `Breakpoint/<name>` variable or any variable
 // in a collection named for breakpoints; its Sass name is what follows either.
@@ -322,6 +355,12 @@ const TRANSFORMS = (SD) => [
 export async function buildTokens(SD, { tokens, out, write = true, banner = 'Generated from the Figma snapshot by the toolkit token build. Do not edit: change Figma, snapshot, and this regenerates.' }) {
   register(SD);
   const collections = discover(tokens);
+  const shared = sharedNames(collections);
+  KEPT = shared.kept;
+  try { return await build(SD, collections, shared.dropped, { tokens, out, write, banner }); } finally { KEPT = new Set(); }
+}
+
+async function build(SD, collections, dropped, { tokens, out, write, banner }) {
   const { single, axes } = axesOf(collections);
   // An axis's base (:root) is its collection's default mode in Figma, which the export's resolver records as the
   // modifier's default (dtcg.js buildResolver). The files are read in name order, so their first is no base: one
@@ -380,7 +419,8 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
     return existsSync(join(tmp, file)) ? readFileSync(join(tmp, file), 'utf8').trim() : '';
   };
 
-  const notBreakpoint = (t) => !isBreakpoint(t.path);
+  // (a name another collection already writes at the same values is written once: the copy is not)
+  const notBreakpoint = (t) => !isBreakpoint(t.path) && !dropped.has(`${t.path[0]}\0${restOf(t.path)}`);
   // every reference a value makes (`{type.body.size}` → 'type.body.size'), and, per axis, the single-mode tokens a
   // chain of them leads to its tokens from: re-declared beside the axis's own wherever a mode is set on an element
   const refsIn = (v) => [...JSON.stringify(v ?? '').matchAll(/\{([^{}]+)\}/g)].map((x) => x[1]);
