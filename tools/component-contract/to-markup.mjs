@@ -343,7 +343,9 @@ function addedOf(a, id, mainOf, { library, lang, settings }) {
   if (open) Object.assign(attrs, { 'data-component': e.component, ...(typeof e.key === 'string' && { 'data-key': e.key }), ...(e.with && Object.keys(e.with).length && { 'data-with': JSON.stringify(e.with) }) });
   // (its box, for a share of it a scaled layer in it is placed by: css.mjs)
   const box = { width: up.width, height: up.height, border: borderBox(up) };
-  const { decls } = declarations(open ? { ...e, kind: 'container' } : e, { holds: open || e.kind === 'container', row: !up.layout || up.layout.direction !== 'column', box, words: e.kind === 'text' ? e.content : null }, tokenNames);
+  // (a layer of its own out of the flow makes it the box that layer is placed in, as the sheet's css.mjs `anchors` does)
+  const anchors = Object.keys(a).some((k) => a[k].parent === id && (a[k].position === 'absolute' || !!a[k].absolute));
+  const { decls } = declarations(open ? { ...e, kind: 'container' } : e, { holds: open || e.kind === 'container', row: !up.layout || up.layout.direction !== 'column', box, anchors, words: e.kind === 'text' ? e.content : null }, tokenNames);
   const style = decls.map(([k, v]) => `${k}: ${v}`).join('; ');
   const kids = Object.keys(a).filter((k) => a[k].parent === id).sort((x, y) => (a[x].order ?? 0) - (a[y].order ?? 0)).map((k) => addedOf(a, k, mainOf, { library, lang, settings })).filter(Boolean);
   return { tag: e.kind === 'container' || open ? 'div' : 'span', attrs: { ...attrs, ...(style && { style }), ...(e.kind === 'graphic' && { 'aria-hidden': 'true' }) }, text: e.kind === 'text' && typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) ? e.content : undefined, kids };

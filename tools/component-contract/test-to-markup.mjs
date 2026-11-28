@@ -969,6 +969,23 @@ else {
     ok('words given it are text, never markup: nothing they say is parsed or run', await tab.evaluate(`!document.querySelector('#stage img') && !window.__xss && document.querySelector('ds-button [data-part="label"]').textContent === ${JSON.stringify(EVIL)}`));
     await tab.evaluate(`document.getElementById('stage').replaceChildren(window.R['contact-card']({ nameOption: ${JSON.stringify(EVIL)} }))`);
     ok('and so in a component that places others', await tab.evaluate(`!document.querySelector('#stage img') && document.querySelector('#stage').textContent.includes(${JSON.stringify(EVIL)})`));
+
+    { // a layer drawn into a placed component's part (another library's tile swapped into its slot), its glyph pinned
+      // out of the flow and scaled with its frame: the frame is the box it is placed in, so it is the frame's size where
+      // the frame is, never the page's (an icon tile's glyph read 756 by 469 at -20, -50, 2026-11-28)
+      const cell = { component: 'Cell', folder: 'cell', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 200, height: 40 }, slot: { kind: 'instance', parent: 'root', component: 'Tile', width: 'hug', height: 'hug', order: 0 } }, variants: [] };
+      const holder = { component: 'Holder', folder: 'holder', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, cell: { kind: 'instance', parent: 'root', component: 'Cell', width: 200, height: 40 },
+        'cell/slot': { kind: 'instance', parent: 'cell', component: 'Other tile', layout: { direction: 'row', padding: { top: 5, end: 5, bottom: 5, start: 5 } }, width: 'hug', height: 'hug' },
+        'cell/slot/icon': { kind: 'container', parent: 'cell/slot', width: 14, height: 14, order: 0 },
+        'cell/slot/icon/glyph': { kind: 'graphic', parent: 'cell/slot/icon', width: 14, height: 14, absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' }, background: '#000', order: 0 } }, variants: [] };
+      const s2 = await serveSite(siteFiles({ Cell: cell, Holder: holder }, { tokensCss: '' }));
+      try {
+        await navigate(tab, `${s2.url}index.html`);
+        for (let i = 0; i < 50 && !(await tab.evaluate('!!window.ready')); i++) await new Promise((r) => setTimeout(r, 100));
+        const got = JSON.parse(await tab.evaluate(`(() => { document.getElementById('stage').replaceChildren(window.R.holder({})); const g = document.querySelector('[data-part="glyph"]'), r = g.getBoundingClientRect(), p = g.parentElement.getBoundingClientRect(); return JSON.stringify([r.x - p.x, r.y - p.y, r.width, r.height]); })()`));
+        ok('a glyph pinned and scaled inside a frame drawn into a placed component\'s part is placed in that frame, its size', JSON.stringify(got) === '[0,0,14,14]', JSON.stringify(got));
+      } finally { await s2.close(); }
+    }
   } finally { await browser.close(); await site.close(); }
 }
 
