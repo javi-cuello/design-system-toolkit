@@ -2404,14 +2404,15 @@ export function unturn(root) {
     if (spun) n.style.setProperty('transform', `translate(${tx}px, ${ty}px)`, 'important');
     if (flips) {
       // (set aside where it showed: a mirror about an origin off the box's middle moves the box, so the box stays where
-      // the mirror drew it, as the design measures a flipped layer by what shows)
-      const o = String(s.transformOrigin || '').split(/\s+/).map(parseFloat), w = n.offsetWidth ?? 0, h = n.offsetHeight ?? 0;
-      const kx = Math.abs(sx * ma), ky = Math.abs(sy * md);
-      const t = String(s.translate || 'none') === 'none' ? [0, 0] : String(s.translate).split(/\s+/).map(parseFloat);
-      const dx = fx && !isNaN(o[0]) ? kx * (2 * o[0] - w) : 0, dy = fy && !isNaN(o[1]) ? ky * (2 * o[1] - h) : 0;
+      // the mirror drew it, as the design measures a flipped layer by what shows: the shift measured, on a box not turned)
+      const was = !r && !spun && (fx || fy) ? n.getBoundingClientRect() : null;
       if (sx < 0 || sy < 0) n.style.setProperty('scale', `${Math.abs(sx)} ${Math.abs(sy)}`, 'important');
       if (flat && (ma < 0 || md < 0)) n.style.setProperty('transform', `translate(${tx}px, ${ty}px) scale(${Math.abs(a)}, ${Math.abs(d)})`, 'important');
-      if (dx || dy) n.style.setProperty('translate', `${(t[0] || 0) + dx}px ${(t[1] || 0) + dy}px`, 'important');
+      if (was) {
+        const now = n.getBoundingClientRect(), dx = was.left - now.left, dy = was.top - now.top;
+        const t = String(s.translate || 'none') === 'none' ? [0, 0] : String(s.translate).split(/\s+/).map(parseFloat);
+        if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) n.style.setProperty('translate', `${(t[0] || 0) + dx}px ${(t[1] || 0) + dy}px`, 'important');
+      }
       if (fx !== fy) mirrors.set(n, fx ? 'x' : 'y');
     }
     if (!r && !spun && !half) continue;
