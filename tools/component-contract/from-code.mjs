@@ -2306,7 +2306,12 @@ export function unplacedIn(raw, e, layoutOf = (u) => u.layout, mainOf = null) {
     if (!m) return true;
     const { placedAs, placedMatch } = req('./derive.cjs'), anatomy = Object.fromEntries(raw.map((r) => [r.id, r]));
     const inner = Object.fromEntries(raw.filter((r) => r.id.startsWith(`${q.id}/`)).map((r) => [r.id.slice(q.id.length + 1), r]));
-    return !!placedMatch(placedAs(anatomy, q.id, m, mainOf).M, inner)[e.id.slice(q.id.length + 1)];
+    const rel = e.id.slice(q.id.length + 1);
+    if (placedMatch(placedAs(anatomy, q.id, m, mainOf).M, inner)[rel]) return true;
+    // (or one it has at other props than these, a variant's: by its name, so a status icon another status shows stays
+    // its component's)
+    const last = rel.slice(rel.lastIndexOf('/') + 1).replace(/_\d+$/, '');
+    return [m.anatomy || {}, ...(m.variants || []).map((v) => v.add || {})].some((a) => Object.entries(a).some(([mk, x]) => mk !== 'root' && (mk.slice(mk.lastIndexOf('/') + 1).replace(/_\d+$/, '') === last || (x && x.name && camel(x.name) === last))));
   }
   return false;
 }
