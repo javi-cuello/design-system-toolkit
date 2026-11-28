@@ -6,11 +6,12 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const src = readFileSync(fileURLToPath(new URL("../code.js", import.meta.url)), "utf8");
 const figma = { variables: { getVariableByIdAsync: async () => null, getLocalVariablesAsync: async () => [], getLocalVariableCollectionsAsync: async () => [], getVariableCollectionByIdAsync: async () => null }, getStyleByIdAsync: async () => null };
 const ctx = vm.createContext({ figma, console, setTimeout, clearTimeout });
-const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION, freshLookups } = vm.runInContext(src + "\n;({ freshLookups, walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION })", ctx);
+const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION, freshLookups, nameKey, sharedOf } = vm.runInContext(src + "\n;({ nameKey, sharedOf, freshLookups, walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION })", ctx);
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log("ok", name); };
@@ -592,24 +593,31 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
 
 // 0.96.0: a binding is recorded by its variable's name, and a name two collections hold does not say which one the
 // layer binds; the token build names such a variable by its collection where the two disagree. The walk records the
-// collection beside the name, only for a name another of the file's collections holds.
+// collection beside the name, only for a name another collection holds, keyed as the build keys it.
 {
-  const vars = { "v:a": { id: "v:a", name: "tag-border", variableCollectionId: "c:1", valuesByMode: { m: { r: 0, g: 0, b: 0, a: 1 } } },
-    "v:b": { id: "v:b", name: "tag-border", variableCollectionId: "c:2", valuesByMode: { m: { r: 1, g: 1, b: 1, a: 1 } } },
+  const vars = { "v:a": { id: "v:a", name: "pill-edge", variableCollectionId: "c:1", valuesByMode: { m: { r: 0, g: 0, b: 0, a: 1 } } },
+    "v:b": { id: "v:b", name: "Pill Edge", variableCollectionId: "c:2", valuesByMode: { m: { r: 1, g: 1, b: 1, a: 1 } } },
     "v:c": { id: "v:c", name: "Spacing/8", variableCollectionId: "c:1", valuesByMode: { m: 8 } } };
-  const colls = { "c:1": { id: "c:1", name: "Color palette 1", variableIds: ["v:a", "v:c"], modes: [] }, "c:2": { id: "c:2", name: "Color palette 2", variableIds: ["v:b"], modes: [] } };
+  const colls = { "c:1": { id: "c:1", name: "Shades 1", variableIds: ["v:a", "v:c"], modes: [] }, "c:2": { id: "c:2", name: "Shades 2", variableIds: ["v:b"], modes: [] } };
   const was = { ...figma.variables };
   Object.assign(figma.variables, { getVariableByIdAsync: async (id) => vars[id] || null, getLocalVariablesAsync: async () => Object.values(vars), getVariableCollectionByIdAsync: async (id) => colls[id] || null });
   freshLookups();
   const alias = (id) => ({ type: "VARIABLE_ALIAS", id });
-  const layer = { ...box("Tag", "FRAME"), itemSpacing: 8, layoutMode: "HORIZONTAL", paddingTop: 0, paddingRight: 0, paddingBottom: 0, paddingLeft: 0, primaryAxisAlignItems: "MIN", counterAxisAlignItems: "MIN",
+  const layer = { ...box("Pill", "FRAME"), itemSpacing: 8, layoutMode: "HORIZONTAL", paddingTop: 0, paddingRight: 0, paddingBottom: 0, paddingLeft: 0, primaryAxisAlignItems: "MIN", counterAxisAlignItems: "MIN",
     boundVariables: { itemSpacing: alias("v:c") }, strokes: [{ type: "SOLID", visible: true, opacity: 1, color: { r: 0, g: 0, b: 0 }, boundVariables: { color: alias("v:b") } }], strokeWeight: 1 };
   const w = await walk(layer, 0);
-  ok("a binding to a name two collections hold records its collection beside the name; one only a single collection holds records none",
-    w.strokes[0] === "tag-border" && JSON.stringify(w.collections) === JSON.stringify({ "tag-border": "Color palette 2" }) && w.bindings.gap === "Spacing/8");
+  ok("a binding to a name two collections hold, as the build keys it (a case or punctuation split too), records its collection beside the name; one a single collection holds records none",
+    w.strokes[0] === "Pill Edge" && JSON.stringify(w.collections) === JSON.stringify({ "Pill Edge": "Shades 2" }) && w.bindings.gap === "Spacing/8");
   ok("…and a layer binding no such name carries no collections", !("collections" in await walk({ ...layer, strokes: [] }, 0)));
   Object.assign(figma.variables, was);
   freshLookups();
+}
+{ // the names keyed as the build keys them, and shared across every collection the tokens read, another library's too
+  const DTCG = createRequire(import.meta.url)("../../../tools/tokens/dtcg.js");
+  const names = ["Pill Edge", "pill-edge", "Colour/textStrong", "Spacing/-1", "a - b/c", "🌮 Weight/Bold", "x.y/Z_2"];
+  ok("a name's key is the build's (dtcg.js pathFor, less the collection)", names.every((x) => nameKey(x) === DTCG.pathFor("", x).slice(1).join(".")));
+  const shared = sharedOf({ Theme: { values: { Light: { "pill-edge": "#000" }, Dark: { "pill-edge": "#fff", Only: 1 } } }, Lib: { remote: true, values: { Value: { "Pill Edge": "#f00", Other: 2 } } } });
+  ok("…and a name two collections the tokens hold share, a remote one's too, is shared; one only one holds is not", JSON.stringify([...shared]) === JSON.stringify(["pill-edge"]));
 }
 
 console.log(n + "/" + n + " passed");

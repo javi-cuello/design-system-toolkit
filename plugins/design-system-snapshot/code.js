@@ -170,24 +170,41 @@ async function modesOf(n) {
 }
 /** @type {Record<string, Variable | null>} */
 const varCache = {};
-/* The variable names more than one of the file's own collections holds, read once a run (freshLookups, and each
-   components run, which a bridge snapshot makes in parts with no tokens read first): a binding to one records its
-   collection (bindingCollections). @type {Set<string> | null} */
+/* A variable name as the token build keys it (tools/tokens dtcg.js slug per segment, build-tokens sharedNames): a case or
+   punctuation split is one name there (`Pill Edge` and `pill-edge`). Kept equal to dtcg.js slug by tests/test-walk.mjs.
+   @param {string} n */
+const nameKey = (n) => String(n).split('/').map((x) => {
+  let s = String(x).trim();
+  const neg = /^-\s*(?=[0-9])/.test(s);
+  if (neg) s = s.replace(/^-\s*/, '');
+  s = s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return neg ? 'minus-' + s : s;
+}).filter(Boolean).join('.');
+/* The names (nameKey) more than one collection the snapshot holds: from the tokens it read (sharedOf, the collections
+   another library's included, as the build reads them), or, in a run that read none (a bridge part with no tokens call
+   handed over), the file's own collections. A binding to one records its collection (bindingCollections).
+   @type {Set<string> | null} */
 let sharedNames = null;
-/** The collection of each variable a layer binds (on itself, its fills, strokes and effects) whose name another of the
- *  file's collections also holds, by the variable's name: `{ "tag-border": "Color palette 1" }`; null where none does.
- *  A binding is otherwise recorded by name alone, which such a name does not settle (0.96.0). A name bound from two
- *  collections on one layer keeps both, sorted.
+/** @param {Record<string, { values: Record<string, Record<string, unknown>> }>} cols */
+const sharedOf = (cols) => {
+  /** @type {Record<string, number>} */ const at = {};
+  for (const c of Object.values(cols)) for (const k of new Set(Object.values(c.values || {}).flatMap((m) => Object.keys(m || {})).map(nameKey))) at[k] = (at[k] || 0) + 1;
+  return new Set(Object.keys(at).filter((k) => at[k] > 1));
+};
+/** The collection of each variable a layer binds (on itself, its fills, strokes and effects) whose name another
+ *  collection also holds, by the variable's name: `{ "pill-edge": "Shades 1" }`; null where none does. A binding is
+ *  otherwise recorded by name alone, which such a name does not settle (0.96.0). A name bound from two collections on
+ *  one layer keeps both, sorted.
  *  @param {SceneNode} n */
 async function bindingCollections(n) {
   if (!sharedNames) {
     /** @type {Record<string, Set<string>>} */ const at = {};
-    for (const v of await figma.variables.getLocalVariablesAsync()) (at[v.name] ||= new Set()).add(v.variableCollectionId);
+    for (const v of await figma.variables.getLocalVariablesAsync()) (at[nameKey(v.name)] ||= new Set()).add(v.variableCollectionId);
     sharedNames = new Set(Object.keys(at).filter((k) => at[k].size > 1));
   }
   /** @type {Record<string, any>} */ const o = {};
   for (const id of aliasesOn(n, new Set())) {
-    const v = await variable(id), c = v && sharedNames.has(v.name) && await collectionOf(v.variableCollectionId);
+    const v = await variable(id), c = v && sharedNames.has(nameKey(v.name)) && await collectionOf(v.variableCollectionId);
     if (c) o[v.name] = o[v.name] && o[v.name] !== c.name ? [...new Set([].concat(o[v.name], c.name))].sort() : c.name;
   }
   return Object.keys(o).length ? o : null;
@@ -895,6 +912,8 @@ async function collectTokens() {
     effects.push({ name: e.name, key: e.key, ...(e.remote && { remote: true }), layers });
   }
 
+  // (the names a binding records its collection for, from what was read: collectComponents reads them next)
+  sharedNames = sharedOf(byName);
   return {
     _meta: {
       file: figma.root.name, fileKey: figma.fileKey, fileId: fileId(), snapshot: new Date().toISOString().slice(0, 10), plugin: VERSION,
@@ -1719,7 +1738,7 @@ async function preferredName(/** @type {any} */ x) {
 
 async function collectComponents({ withIcons, previews, darkModes, scope = null, pages = null, section = null, exclude = null }) {
   // a run names from the file as it is now: a component renamed since the last run is read again
-  localKeys = null; prefNames.clear(); unreadable = []; sharedNames = null;
+  localKeys = null; prefNames.clear(); unreadable = [];
   const components = [];
   // An asset library (illustrations, photos, graphics), as its project lists it: each variant of its sets is an
   // asset of its own, so each gets a preview, not only the default. Guessed from an icon page until 0.92.0, which

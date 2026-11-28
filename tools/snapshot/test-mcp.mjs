@@ -102,6 +102,7 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   ok('a part returns what each node left unrecorded as that node\'s group, which the join keeps as the whole walk does', found.some((f) => JSON.stringify(f.unrecorded) === '[["Tag.paragraphSpacing","Tag.listSpacing"]]') && whole.tokens._meta.unrecorded.join() === 'Tag.paragraphSpacing,Tag.listSpacing' && ref.length === 7);
   ok('each part starts from the count of variables left unanswered so far, leaves its own for the next, and says what it added', found.every((f) => f.unanswered === 0) && tmp.getSharedPluginData(NS, 'unanswered') === '2');
   // (and the lookups given up on, so the cap of three holds across parts: each part leaves it and the next takes it up)
+  ok('the tokens call hands each part the names more than one collection holds, which a part takes up before it walks', tmp.getSharedPluginData(NS, 'shared') === '[]' && storeCode(steps[0]).includes("sharedNames = new Set(JSON.parse("));
   ok('…the lookups given up on likewise', [storeCode(steps[0])].every((c) => c.includes("timedOut = Number(scratch().getSharedPluginData(") && c.includes("'timedOut', String(timedOut))")));
   const head = top;
   assert.throws(() => join([head, ...found.slice(1)]), /no part walked 2 planned sets \(1:1, 1:2\)/); n++; console.log('ok a part not collected is refused, its sets named');

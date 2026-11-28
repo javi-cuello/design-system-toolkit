@@ -207,6 +207,7 @@ figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
 const tokens = await collectTokens();
+scratch().setSharedPluginData('${NS}', 'shared', JSON.stringify([...sharedNames]));
 scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered)); scratch().setSharedPluginData('${NS}', 'timedOut', String(timedOut));
 %ICONS%
 ${written(`{ tokens, unanswered, sets: ${PLANNED}.flatMap((pg) => pg.sets.map((s) => s.id)), iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, ...(Object.keys(iconGroups).length && { iconGroups }), ...(Object.keys(iconDescriptions).length && { iconDescriptions }) }`, ', sets: __payload.sets.length')}}`;
@@ -215,6 +216,7 @@ figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
 const __from = unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0; timedOut = Number(scratch().getSharedPluginData('${NS}', 'timedOut')) || 0;
+const __shared = scratch().getSharedPluginData('${NS}', 'shared'); if (__shared) sharedNames = new Set(JSON.parse(__shared));
 const __groups = [];
 unrecordedSeen.push = function (...xs) { if (xs.length) __groups.push(xs); return Array.prototype.push.apply(this, xs); };
 const __names = new Set(__PAGES.map((i) => figma.root.children[i].name));
