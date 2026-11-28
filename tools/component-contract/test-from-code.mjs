@@ -138,9 +138,11 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
   { const a = Object.fromEntries(held.map((r) => [r.id, r]));
     const layer = { kind: 'graphic', parent: 'knob', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' } };
     const c = { component: 'Holder', props: {}, variants: [], anatomy: { root: { kind: 'container' }, knob: { kind: 'instance', parent: 'root', component: 'Knob' }, 'knob/layer': layer } };
+    c.props = { size: { type: 'enum', values: ['lg', 'sm'], default: 'lg' } }; c.variants = [{ when: { size: 'sm' }, set: { 'knob/layer.absolute': { x: 0, y: -4, end: 0, bottom: 0 } } }];
+    const keptSet = (shapedOf(c, { added: new Set(['knob/layer']) }).contract.variants[0] || {}).set || {};
     const kept = shapedOf(c, { added: new Set(['knob/layer']) }).contract.anatomy['knob/layer'], dropped = shapedOf(c).contract.anatomy['knob/layer'];
-    ok('a layer a placed component does not have keeps its place in the reading\'s shape, as derive keeps it; one it has keeps none',
-      !statedIn(a, 'knob', 'knob/layer', knob, mainOf) && statedIn(a, 'knob', 'knob/grip', knob, mainOf) && !!kept.absolute && !!kept.constraints && !dropped.absolute && !dropped.constraints, JSON.stringify([kept, dropped])); }
+    ok('a layer a placed component does not have keeps its place, and a variant\'s of it, in the reading\'s shape, as derive keeps them; one it has keeps none',
+      !statedIn(a, 'knob', 'knob/layer', knob, mainOf) && statedIn(a, 'knob', 'knob/grip', knob, mainOf) && !!kept.absolute && !!kept.constraints && !dropped.absolute && !dropped.constraints && !!keptSet['knob/layer.absolute'], JSON.stringify([kept, dropped, keptSet])); }
   const layoutOfMain = (u) => (u.kind === 'instance' ? (mainOf(u.component) || {}).anatomy.root.layout : u.layout);
   ok('a part out of the flow says position only where its parent lays out: a placed component whose main has no auto layout is a frame, one the library does not hold is taken to lay out',
     !outOfFlowIn(held[1], layoutOfMain, (u) => mainOf(u.component)) && outOfFlowIn({ kind: 'instance', component: 'Other' }, layoutOfMain, () => null)

@@ -1717,7 +1717,7 @@ export function asFigma(contract, { axisOrder = [], foreign = new Set(), added =
   };
   const asIn = (v, id) => { const e = { ...(drawnAt(v, id) || {}), ...((v.add || {})[id] || {}) }; for (const f of ['parent', 'position', 'absolute', 'constraints']) if (`${id}.${f}` in (v.set || {})) e[f] = v.set[`${id}.${f}`]; return e; };
   const nearestIn = (v, id) => { for (let up = asIn(v, id).parent; up; up = asIn(v, up).parent) if (asIn(v, up).kind === 'instance') return up; return null; };
-  const gone = (v, k) => { const m = /^(.+)\.(constraints|absolute|content)(\.|$)/.exec(k), near = m && nearestIn(v, m[1]); if (!near) return false; const e = asIn(v, m[1]); return m[2] === 'content' ? e.kind === 'slot' : m[2] === 'absolute' ? framed(e) && !(scales(e) && foreign.has(near)) : loose(e); };
+  const gone = (v, k) => { const m = /^(.+)\.(constraints|absolute|content)(\.|$)/.exec(k), near = m && !added.has(m[1]) && nearestIn(v, m[1]); if (!near) return false; const e = asIn(v, m[1]); return m[2] === 'content' ? e.kind === 'slot' : m[2] === 'absolute' ? framed(e) && !(scales(e) && foreign.has(near)) : loose(e); };
   const kept = variants.map((v) => ({ ...v, ...(v.add && { add: strip(v.add) }), ...(v.set && { set: Object.fromEntries(Object.entries(v.set).filter(([k]) => !gone(v, k))) }) }));
   return { contract: { ...contract, anatomy: strip(contract.anatomy), props: ordered, variants: kept }, renamed };
 }
