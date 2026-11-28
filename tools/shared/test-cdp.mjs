@@ -130,6 +130,10 @@ try {
   await within(5000, forceState(tab, [{ selector: '#fh', pseudo: 'hover' }, { selector: '#fh:not(:hover) > i.r, #fh:hover > i.h', pseudo: 'focus' }]), 'forceState chained');
   ok('forceState looks each target up after the ones before it are forced', await tab.evaluate(`document.querySelector('#fh:hover > i.h:focus-visible') !== null && document.querySelector('i.r:focus-visible') === null`));
 
+  // a target that matches nothing lets go of the ones forced before it, before it throws
+  await within(5000, forceState(tab, [{ selector: '#fh', pseudo: 'active' }, { selector: '#no-such', pseudo: 'hover' }]).catch(() => {}), 'forceState thrown');
+  ok('forceState lets go of what it forced when a later target throws', await tab.evaluate(`document.querySelector('#fh:active') === null`));
+
   await within(10_000, navigate(tab, `${SITE}/late`), 'navigate load, late fetch');
   const atLoad = await tab.evaluate('window.done === true');
   await within(10_000, navigate(tab, `${SITE}/late`, { until: 'networkIdle' }), 'navigate networkIdle');

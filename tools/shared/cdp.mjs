@@ -361,7 +361,8 @@ export async function forceState(tab, targets) {
   // (a node whose set grew is forced again before the next target is looked up)
   const grew = new Set();
   const hold = (nodeId, classes) => { const was = held.get(nodeId) || [], now = [...new Set([...was, ...classes])]; if (now.length !== was.length) { held.set(nodeId, now); grew.add(nodeId); } };
-  for (const { selector, pseudo, within = null, optional = false } of targets) {
+  // (a throw lets go of what it forced first: fetching the document again drops every one)
+  try { for (const { selector, pseudo, within = null, optional = false } of targets) {
     const focus = /^focus/.test(pseudo);
     const { result } = await tab.send('Runtime.evaluate', {
       expression: `(() => {
@@ -382,7 +383,7 @@ export async function forceState(tab, targets) {
     await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {});
     for (const n of grew) await tab.send('CSS.forcePseudoState', { nodeId: n, forcedPseudoClasses: held.get(n) });
     grew.clear();
-  }
+  } } catch (e) { await tab.send('DOM.getDocument', { depth: 0 }).catch(() => {}); throw e; }
   return { missed };
 }
 
