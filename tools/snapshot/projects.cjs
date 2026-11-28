@@ -1044,7 +1044,7 @@ function storeLibraries(componentsDir, projectsDir) {
     const ctx = auditContext(w.doc);
     let index = {};
     try { index = JSON.parse(fs.readFileSync(w.paths.index, 'utf8')).components || {}; } catch { /* no index: every folder under the defaults */ }
-    return { ctx, tokens: tokensOf(w.paths), fileOf: (folder) => (index[folder] || {}).file, styles: w.paths.styles, dtcg: w.paths.tokens ? path.join(path.dirname(w.paths.tokens), 'dtcg') : null };
+    return { ctx, tokens: tokensOf(w.paths), fileOf: (folder) => (index[folder] || {}).file, styles: w.paths.styles, dtcg: w.paths.tokens ? path.join(path.dirname(w.paths.tokens), 'dtcg') : null, snapshotTokens: w.paths.tokens || null };
   }
   return null;
 }
@@ -1066,7 +1066,11 @@ function librarySettingsFor(componentsDir, projectsDir) {
   // a binding to one is named by the collection its contract records; only where there are any, so no other
   // project's settings move)
   const prefixedTokens = of && of.dtcg ? [...require('../tokens/names.mjs').prefixedIn(of.dtcg)].sort() : [];
-  const extra = { ...(Object.keys(modeTokens).length && { modeTokens }), ...(prefixedTokens.length && { prefixedTokens }) };
+  // (with each collection the build numbered, `collectionSlugs` (names.mjs slugsOf), so a binding's recorded collection
+  // is named as the build named it)
+  let collectionSlugs = {};
+  if (prefixedTokens.length) try { collectionSlugs = require('../tokens/names.mjs').slugsOf(JSON.parse(fs.readFileSync(of.snapshotTokens, 'utf8')), true); } catch { /* no snapshot: none numbered */ }
+  const extra = { ...(Object.keys(modeTokens).length && { modeTokens }), ...(prefixedTokens.length && { prefixedTokens }), ...(Object.keys(collectionSlugs).length && { collectionSlugs }) };
   const withModes = (x) => (!Object.keys(extra).length ? x : memo.get(x) || memo.set(x, { ...x, ...extra }).get(x));
   return (folder) => withModes((of && (((of.ctx.libraries || {})[of.fileOf(folder)] || {}).tokens || only)) || house);
 }

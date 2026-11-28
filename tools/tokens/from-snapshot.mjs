@@ -113,7 +113,7 @@ export function toDtcgSnapshot(t) {
 
   // each collection under the name its slug is built from (dtcg.js collectionSlugs: another library's that slugs like
   // one already taken is numbered), its Figma name kept for the export's extensions
-  const S = DTCG.collectionSlugs(collections.map(([name, c]) => ({ name, remote: !!c.remote })));
+  const S = DTCG.slugsOf(collections);
   const built = (n) => (S[n] && S[n] !== DTCG.slug(n) ? S[n] : n);
   const out = collections.map(([cname, c]) => {
     const names = [...new Set(c.modes.flatMap((m) => Object.keys((c.values || {})[m] || {})))].filter((n) => !shadowed(cname, c, n));

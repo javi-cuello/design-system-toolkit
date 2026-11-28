@@ -104,7 +104,7 @@ export const tokenNames = {
   textStyle: (name) => textStyleFields(cssName('', name).slice(2)),
 };
 /* `fn` run with the token names of component `c` under `settings` (its `prefixedTokens`, the token build's names
-   written with their collection: projects.cjs librarySettingsFor), and what it could not name: { out, missing }, each
+   written with their collection, and `collectionSlugs`, the collections it numbered: projects.cjs librarySettingsFor), and what it could not name: { out, missing }, each
    missing token with why. A missing one is written by its bare name, which the build does not write, so the value is
    invalid and the run says so; never a guessed collection. Synchronous, so one component's names never reach
    another's. */
@@ -112,7 +112,8 @@ export function withTokenNames(c, settings, fn) {
   const kept = new Set((settings && settings.prefixedTokens) || []), from = (c && c.collections) || {}, missing = new Map();
   if (!kept.size) return { out: fn(), missing };
   const was = writing;
-  writing = (name) => { const r = tokenProperty(name, from[name], kept); if (r.missing) { missing.set(name, r.missing); return cssName('', name); } return r.css; };
+  const slugs = (settings && settings.collectionSlugs) || null;
+  writing = (name) => { const r = tokenProperty(name, from[name], kept, slugs); if (r.missing) { missing.set(name, r.missing); return cssName('', name); } return r.css; };
   try { return { out: fn(), missing }; } finally { writing = was; }
 }
 /* What a component's sheet says of the tokens it could not name, and the fix. */

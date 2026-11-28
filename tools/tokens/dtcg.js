@@ -64,6 +64,12 @@
     return out;
   }
 
+  /* collectionSlugs over a snapshot's collections, as `[name, collection]` entries in the store's order: the one
+   * call the build (from-snapshot.mjs) and every reader naming a token by its collection (names.mjs slugsOf) make. */
+  function slugsOf(entries) {
+    return collectionSlugs(entries.map(function (e) { return { name: e[0], remote: !!(e[1] && e[1].remote) }; }));
+  }
+
   function refFor(path) { return '{' + path.join('.') + '}'; }
 
   /* Naming parity: which renames are lossy, and therefore worth reporting.
@@ -841,7 +847,7 @@
   }
 
   var DTCG = {
-    slug: slug, pathFor: pathFor, refFor: refFor, collectionSlugs: collectionSlugs,
+    slug: slug, pathFor: pathFor, refFor: refFor, collectionSlugs: collectionSlugs, slugsOf: slugsOf,
     colorValue: colorValue, hexOf: hexOf, dimension: dimension,
     fontWeight: fontWeight, WEIGHTS: WEIGHTS, classify: classify, opacityScale: opacityScale,
     buildCollection: buildCollection, typographyToken: typographyToken,

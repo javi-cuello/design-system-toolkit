@@ -49,7 +49,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 import * as gates from './gates.mjs';
 import { samePath } from '../shared/real-path.mjs';
 import { variantValues } from '../shared/names.js';
-import { prefixedIn } from '../tokens/names.mjs';
+import { prefixedIn, slugsOf } from '../tokens/names.mjs';
 
 /* The command line, closed: a flag nobody reads is refused, because
    `--acept` ran an unscoped full run and accepted nothing, in silence. */
@@ -161,6 +161,7 @@ const mapped = new Set(), drawn = new Set();
 const propTypes = new Map([...project.library].map(([name, spec]) => [name, spec.props || {}]));
 // the names the token build writes with their collection, from the DTCG files it stores beside the snapshot
 const prefixed = project.paths && project.paths.tokens ? prefixedIn(path.join(path.dirname(project.paths.tokens), 'dtcg')) : null;
+const slugs = slugsOf(project.snapshot);
 for (const t of targets) {
   const m = t.mapping;
   // `$root` included: a root a sibling variant draws an edge on owes a none too
@@ -178,7 +179,7 @@ for (const t of targets) {
       const docs = adapt(tree, { root: m.root, layers }, {
         snapshot: project.snapshot, tier, typeTier: typeTierFor(win), parity: P, carried, state: r.pseudo || null,
         children: m.children !== undefined ? m.children : t.kind === 'component' ? P.children : undefined,
-        copy: m.copy, runtime: m.runtime, propTypes, attrNaming: ATTR_NAMING, prefixed,
+        copy: m.copy, runtime: m.runtime, propTypes, attrNaming: ATTR_NAMING, prefixed, slugs,
       });
       jobs.push({ t, name, r, tier, tree, docs, win, frame: frameFor(t, tree), on: r.on || m.state, host, key: `${t.name}/${jobs.length}` });
     }

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { cssName, cssFamily, prefixedIn, tokenProperty } from './names.mjs';
+import { readdirSync } from 'node:fs';
+import { cssName, cssFamily, prefixedIn, tokenProperty, slugsOf } from './names.mjs';
 import { writeDtcg } from './from-snapshot.mjs';
 
 let n = 0;
@@ -28,6 +29,21 @@ ok('a family is its first segment as the build writes it', cssFamily('Corner rad
   ok('…one with none recorded, or two, is missing, never the bare name nor a guess', tokenProperty('tag-border', undefined, kept).missing === 'no collection recorded' && /Palette 1 and Palette 2/.test(tokenProperty('tag-border', ['Palette 1', 'Palette 2'], kept).missing));
   ok('…and a name written once keeps its bare name, whatever is recorded', tokenProperty('Spacing/8', undefined, kept).css === '--spacing-8' && tokenProperty('Spacing/8', 'Palette 1', kept).css === '--spacing-8');
   ok('no stored files: nothing is prefixed', prefixedIn(join(dir, 'none')).size === 0);
+  rmSync(dir, { recursive: true, force: true });
+}
+// another library's collection that slugs like a local one is numbered by the build; a reader names a binding recorded
+// in it by the same numbering (slugsOf, the build's own dtcg.js slugsOf), never by its plain slug
+{
+  const dir = mkdtempSync(join(tmpdir(), 'names-'));
+  const snap = { _meta: { file: 'x', fileId: 'x' }, collections: {
+    '🌮 Palette': { remote: true, modes: ['Value'], values: { Value: { 'Accent/strong': '#ff0000' } }, alias: {} },
+    Palette: { modes: ['Value'], values: { Value: { 'tag-border': '#000000' } }, alias: {} },
+  }, textStyles: [], paintStyles: [], effects: [] };
+  writeDtcg(snap, dir);
+  const slugs = slugsOf(snap);
+  ok('the build writes a numbered collection under the slug slugsOf gives the readers', slugs['🌮 Palette'] === 'palette-2' && readdirSync(dir).includes('palette-2') && JSON.stringify(slugsOf(snap, true)) === JSON.stringify({ '🌮 Palette': 'palette-2' }));
+  const kept = new Set(['palette\0tag-border', 'palette-2\0tag-border']);
+  ok('…and a binding recorded in it is named by that slug, not the plain one', tokenProperty('tag-border', '🌮 Palette', kept, slugs).css === '--palette-2-tag-border' && tokenProperty('tag-border', 'Palette', kept, slugs).css === '--palette-tag-border');
   rmSync(dir, { recursive: true, force: true });
 }
 console.log(`\n${n} passed`);

@@ -24,15 +24,24 @@ export const cssName = (collection, name, kept) => '--' + (kept ? nameIn(DTCG.pa
  *  snapshot) by the build's own sharedNames: a Set of `<collection slug>\0<path>` keys, empty with no files. */
 export const prefixedIn = (dtcgDir) => new Set(dtcgDir && existsSync(dtcgDir) ? sharedNames(discover(dtcgDir)).kept : []);
 
+/** Each collection's slug as the build writes it, from the snapshot (tokens.json): another library's collection that
+ *  slugs like one already taken is numbered (`🌮 Palette` beside a local `Palette` is `palette-2`, dtcg.js
+ *  collectionSlugs). `renamed` keeps only those, for a library's settings. */
+export const slugsOf = (snapshot, renamed = false) => {
+  const all = DTCG.slugsOf(Object.entries((snapshot && snapshot.collections) || {}));
+  return renamed ? Object.fromEntries(Object.entries(all).filter(([n, s]) => s !== DTCG.slug(n))) : all;
+};
+
 /** A binding's custom property, from its name and the collection its spec recorded (contract `collections`), under
  *  what the build prefixed: { css } or { missing }. A name the build writes per collection with no single collection
- *  recorded is missing, never its bare name, which the build no longer writes, nor a guessed collection. */
-export function tokenProperty(name, collection, kept) {
+ *  recorded is missing, never its bare name, which the build no longer writes, nor a guessed collection. The
+ *  collection is named by its slug as the build numbered it (`slugs`, slugsOf); one absent there slugs as written. */
+export function tokenProperty(name, collection, kept, slugs = null) {
   const rest = DTCG.pathFor('', name).slice(1).join('.');
   const split = kept && [...kept].some((k) => k.slice(k.indexOf('\0') + 1) === rest);
   if (!split) return { css: cssName('', name) };
   if (typeof collection !== 'string') return { missing: Array.isArray(collection) ? `bound from ${collection.join(' and ')}` : 'no collection recorded' };
-  return { css: cssName(collection, name, kept) };
+  return { css: cssName((slugs && slugs[collection]) || collection, name, kept) };
 }
 /** The prefix every custom property of a variable's family shares: `Spacing/16` → `--spacing-`. */
 export const cssFamily = (name) => cssName('', String(name).split('/')[0]) + '-';

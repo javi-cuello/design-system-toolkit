@@ -1392,5 +1392,10 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const old = sheetAndGaps(tag(null), 'tag', { settings });
   ok('…one whose stored spec records no collection is said, naming the component and the token, with the re-snapshot as the fix, never named by a guess',
     old.missing.get('tag-border') === 'no collection recorded' && /Not named: Tag binds tag-border, which the token build writes per collection, and its stored spec says no collection: take the snapshot again/.test(old.css) && !/palette-\d-tag-border/.test(old.css));
+  ok('…a collection the build numbered is named by its number (settings collectionSlugs)', /var\(--palette-2-tag-border\)/.test(sheetAndGaps(tag({ 'tag-border': 'Remote Palette' }), 'tag', { settings: { ...settings, collectionSlugs: { 'Remote Palette': 'palette-2' } } }).css));
+  { const { selfDrawn } = await import('./site.mjs');
+    const said = [], was = console.error; console.error = (x) => said.push(String(x));
+    try { const c = { ...tag(null), folder: 'tag' }; selfDrawn(c, { library: { Tag: c }, settings }); selfDrawn(c, { library: { Tag: c }, settings }); } finally { console.error = was; }
+    ok('…the self leg says it on stderr too, as to-code does, once however often it draws the component', said.length === 1 && /^site: Tag binds tag-border, which the token build writes per collection/.test(said[0])); }
   ok('…and without prefixed names a sheet is what it always was', toCss(tag(null), 'tag') === toCss(tag({ 'tag-border': 'Palette 2' }), 'tag')); }
 console.log(`${n} passed`);

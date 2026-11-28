@@ -557,5 +557,6 @@ ok('a vector\'s outline, paths and each path\'s fill rule and data are declared,
   const prefixed = new Set(['primitives\0spacing.12', 'brand\0spacing.12']);
   ok('a gap bound to a name written per collection is hinted with the collection the layer records; none recorded is said, never the bare name',
     hintOf(node({ 'Spacing/12': 'Brand' }), { prefixed }) === 'gap: var(--brand-spacing-12)' && /Spacing\/12 \(written per collection, and the stored spec says no collection recorded: take the snapshot again\)/.test(hintOf(node(null), { prefixed }))
-    && hintOf(node(null), {}) === 'gap: var(--spacing-12)'); }
+    && hintOf(node(null), {}) === 'gap: var(--spacing-12)');
+  ok('…a collection the build numbered by its number', hintOf(node({ 'Spacing/12': 'Remote brand' }), { prefixed, slugs: { 'Remote brand': 'brand' } }) === 'gap: var(--brand-spacing-12)'); }
 console.log(`\n${n} passed`);
