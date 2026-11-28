@@ -670,6 +670,11 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
     ok('a renamed prop\'s arg is read by the attribute its host carries it as', axisValueOf(axes.Type, { type: 'square' }) === 'Square' && axisValueOf(axes.Type, {}) === 'Round'); }
   ok('an inner control\'s disabled counts only where the host says none: a busy loading button stays loading', axisValueOf(state, { loading: '' }, true) === 'loading' && axisValueOf(state, {}, true) === 'disabled');
   ok('no args carried is the value that asks for none', axisValueOf(state, {}) === 'default');
+  // a placed component its holder's pointer state forwards one to (forwardedAt): the value the mapping takes at the
+  // pseudo-class the reader forced on it, never one it did not force, and an attribute's value first
+  { const st = { Rest: {}, Hover: { pseudo: 'hover' }, Focus: { pseudo: 'focus-visible' }, Disabled: { disabled: true } };
+    ok('a placed component forced to a pointer state reads as that state', axisValueOf(st, {}, false, 'hover') === 'Hover' && axisValueOf(st, {}, false, 'focus-visible') === 'Focus'
+      && axisValueOf(st, {}) === 'Rest' && axisValueOf(st, {}, false, 'active') === 'Rest' && axisValueOf(st, { disabled: '' }, false, 'hover') === 'Disabled'); }
   const design = { icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon'] }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon'] }, label: { type: 'text', figma: 'Label' }, label2: { type: 'instance', figma: 'Label 2' } };
   const got = asDesignSwaps({ icon: { type: 'string', code: 'icon' }, label: { type: 'string', code: 'label' } }, design);
   ok('a string icon the writer merged reads back as each size\'s swap', got.icon16?.type === 'instance' && got.icon20?.code === 'icon' && !got.icon);
@@ -1331,6 +1336,38 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       const pressed = await read();
       ok('at rest, the attribute\'s mode and the rest\'s words; every other state\'s span hidden in the markup', rest.ink === 'rgb(0, 0, 255)' && rest.words === 'Open' && rest.hidden.join() === 'press' && JSON.stringify(rest.modes) === '{"ink":"a"}', JSON.stringify(rest));
       ok('forced :active, the mode\'s tokens re-declared over the attribute\'s, and its words shown: read back as that mode and those words', pressed.ink === 'rgb(0, 128, 0)' && pressed.words === 'Opening' && JSON.stringify(pressed.modes) === '{"ink":"p"}', JSON.stringify(pressed));
+    } finally { await browser.close(); await site.close(); }
+  }
+}
+// 2026-11-28: props a pointer state gives a placed component (a card's link On at hover), on a real page: the markup
+// holds a copy per state (data-pointer), the sheet shows the one the forced state draws at the placed root's own display,
+// and the mapping's selector finds that one, its attributes the props the reading takes (axisValueOf); a placed
+// component's own pointer state at the holder's is read as the pseudo-class the reader forces on it
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, waitFor, call, forceState } = await import('../shared/cdp.mjs');
+  const { selfSiteFiles, serveSite, selfMapping } = await import('./site.mjs');
+  const { HOUSE } = await import('./to-code.mjs');
+  const link = { contract: 1, component: 'Link', folder: 'link', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } } }, variants: [] };
+  const card = { contract: 1, component: 'Card', folder: 'card', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, link: { kind: 'instance', parent: 'root', component: 'Link', with: { On: 'False' } } },
+    variants: [{ when: { state: 'hover' }, set: { 'link.with': { On: 'True', State: 'Hover' } } }] };
+  const library = { Card: card, Link: link }, files = selfSiteFiles(library, 'card', { settingsOf: () => HOUSE });
+  const sel = selfMapping(card, { library, settings: HOUSE }).byId.link;
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to force a pointer state in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({}), site = await serveSite(files);
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
+      await call(tab, () => { const s = document.createElement('section'); s.append(window.R.card({})); document.getElementById('stage').replaceChildren(s); });
+      const read = () => call(tab, (q) => { const n = document.querySelector(q); return { pointer: n.getAttribute('data-pointer'), on: n.getAttribute('on'), display: getComputedStyle(n).display, shown: [...document.querySelectorAll('[data-part="link"]')].filter((x) => getComputedStyle(x).display !== 'none').map((x) => x.getAttribute('data-pointer')) }; }, sel);
+      const rest = await read();
+      await forceState(tab, [{ selector: '#stage section > *', pseudo: 'hover' }]);
+      const hovered = await read();
+      ok('a placed component\'s copy per pointer state: at rest the rest\'s shown and found, forced :hover the hover one\'s, each at the placed root\'s own display, its props on its attributes',
+        rest.pointer === 'rest' && rest.on === 'false' && rest.shown.join() === 'rest' && hovered.pointer === 'hover' && hovered.on === 'true' && hovered.shown.join() === 'hover' && hovered.display === rest.display && rest.display !== 'inline', JSON.stringify([rest, hovered]));
+      ok('…and the placed component\'s own pointer state there is the reader\'s forced pseudo-class, read as that state', axisValueOf({ Rest: {}, Hover: { pseudo: 'hover' } }, { on: hovered.on }, false, 'hover') === 'Hover');
     } finally { await browser.close(); await site.close(); }
   }
 }

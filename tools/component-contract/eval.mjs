@@ -59,7 +59,7 @@ import { parseColour } from '../parity/values.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, swapKeysOf } from './to-markup.mjs';
 import { expand, variantDefaults, foreignOpened, openForeign, placedOf } from './layers.mjs';
-import { sharesNeverWritten, tokenNames, pointerWordsOf, pointerModesOf } from './to-code.mjs';
+import { sharesNeverWritten, tokenNames, pointerWordsOf, pointerModesOf, pointerWithOf } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { closureOf } from './site.mjs';
@@ -443,7 +443,8 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     const rest = ((contract.anatomy || {})[el] || {}).with || {};
     const elsewhere = (k, v) => same(rest[k], v) || vs.some((x) => !pointerWords(contract, x.when) && (((x.add || {})[el] || {}).with || {})[k] !== undefined && same(((x.add || {})[el] || {}).with[k], v));
-    const byMine = atRest(row) && Object.entries(lib).every(([k, v]) => !elsewhere(k, v))
+    // (only where the markup draws no copy of it for that state, to-code's pointerWithOf: one it does is read there)
+    const byMine = atRest(row) && ![...copied.keys()].some((id) => el === id || el.startsWith(`${id}/`)) && Object.entries(lib).every(([k, v]) => !elsewhere(k, v))
       && (words.get(`${el}.with`) || []).some((w) => w && typeof w === 'object' && Object.entries(lib).every(([k, v]) => same(w[k], v)));
     // (an instance's own pointer state: code places it at its rest, so the reading draws those props at their default or
     // leaves them out; anything else it draws there is a difference)
@@ -452,8 +453,12 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     const drawnRest = (k, v) => v == null || low(v) === low(restOf(k));
     const drawn = field === 'with' ? row.drawn : row.drawn == null ? null : { [field.slice(5)]: row.drawn };
     const ownAtRest = drawn == null || (typeof drawn === 'object' && Object.entries(drawn).every(([k, v]) => k in lib && drawnRest(k, v)));
-    return byMine || (ownAtRest && Object.entries(lib).every(([k, v]) => ownPointer(el, k, v)));
+    // (its own pointer state is the browser's where this one is at one of its own: the reader forces it there, from-code
+    // forwardedAt, and reads it back; left to code only where another of this one's props gives it)
+    return byMine || (ownAtRest && Object.entries(lib).every(([k, v]) => ownPointer(el, k, v)) && rowWhens(row).some((w) => !pointerWords(contract, w)));
   };
+  const copied = pointerWithOf(contract, settings, mainOf || (() => null));
+  const rowWhens = (row) => (Array.isArray(row.whens) && row.whens.length ? row.whens : [{}]);
   // modes a pointer state's variant sets on that layer at the design's value, or drops by adding the layer again, at every
   // combination the row was found in (roundTrip's `pointer`, read per combination from the variants that apply there): one
   // no pointer state sets there stays a difference, and so does one where the reading drew other modes than the rest's

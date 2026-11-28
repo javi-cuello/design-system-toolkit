@@ -351,6 +351,72 @@ export function pointerWordsOf(c, t = HOUSE) {
   return out;
 }
 
+/* The placed components (the library's own, `mains`) whose props a pointer state changes (a checkbox's icon given
+   Focused at focus, a slider's item Active at hover): a prop the markup passes is an attribute, which no pseudo-class
+   sets, so the markup draws one copy of the placed component per such state beside the rest's (`data-pointer`, each
+   given the props its state draws), and the sheet shows the one the state drawn here gives, under its pseudo-class,
+   and hides the rest (the copies share the part's own rules). Each with the pointer prop and the values of it whose
+   variants give it other props than the same combination at rest. Only a part of the component's own (outside a placed
+   component or a slot), placed whole (no variant swaps its component), at states that each have a pseudo-class, and
+   never one the markup holds for one state alone (partsOf `pointerHeld` at one state: its props are that state's
+   already). A placed component's own pointer state (a radio's icon at State Hover) is no copy's: the reader forces its
+   pseudo-class beside the holder's (from-code forwardedAt). Tested by test-to-code.mjs. */
+/* The display a component's own sheet gives its root at its defaults (`inline-flex` for one that hugs, drawn): what a
+   holder shows a copy of it at (pointerWithOf), `revert-layer` where it draws none. */
+const ROOT_DISPLAY = new WeakMap();
+function rootDisplay(m, mains, t) {
+  if (!m) return 'revert-layer';
+  if (!ROOT_DISPLAY.has(m)) ROOT_DISPLAY.set(m, ((drawn(m, variantDefaults(m), mains, t).root || { decls: new Map() }).decls.get('display') || {}).v || 'revert-layer');
+  return ROOT_DISPLAY.get(m);
+}
+const POINTER_WITH = new WeakMap();
+export function pointerWithOf(c, t = HOUSE, mains = () => null) {
+  const memo = POINTER_WITH.get(c) || new Map(); POINTER_WITH.set(c, memo);
+  const by = mains.library || mains;
+  if (memo.has(t) && memo.get(t).has(by)) return memo.get(t).get(by);
+  const out = new Map(), ps = pseudoClasses(t), pointer = (k, v) => pointerAt(c, k, v), dflt = variantDefaults(c), parts = partsOf(c, t);
+  const key = (w) => JSON.stringify(w ?? null, (_, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, x[k]])) : x));
+  const bad = new Set(), at = new Map();
+  // (its props less its own state where the state gives it a pointer value of its own, which is the browser's: from-code
+  // forwardedAt)
+  const low = (x) => String(x).toLowerCase();
+  const ownPointer = (e) => {
+    const m = e.kind === 'instance' && mains(e.component, e.key ?? null), q = m && Object.values(m.props || {}).find((y) => y.role === 'interaction');
+    if (!q || !e.with || e.with[q.figma] === undefined) return null;
+    const i = (q.figmaValues || []).map(low).indexOf(low(e.with[q.figma]));
+    return (q.pointer || []).includes(i >= 0 ? q.values[i] : e.with[q.figma]) ? q.figma : null;
+  };
+  const without = (w, k) => (!k || !w ? w : Object.fromEntries(Object.entries(w).filter(([x]) => x !== k)));
+  for (const v of c.variants || []) {
+    const when = v.when || {}, ks = Object.keys(when).filter((k) => pointer(k, when[k]));
+    if (!ks.length) continue;
+    // (one inside a placed component, its props an override there, is that component's copy's: the outermost)
+    const named = [...Object.keys(v.set || {}).map((k) => (/^(.+)\.with$/.exec(k) || [])[1]).filter(Boolean), ...Object.keys(v.add || {}).filter((id) => v.add[id] && v.add[id].with)];
+    const ids = [...new Set(named.map((id) => (parts.get(id) || {}).inside || id))];
+    for (const id of ids) {
+      if (ks.length !== 1 || !ps[when[ks[0]]] || ((at.get(id) || {}).key && at.get(id).key !== ks[0])) { bad.add(id); continue; }
+      const A = expand(c, { ...dflt, ...when }), R = expand(c, { ...dflt, ...when, [ks[0]]: dflt[ks[0]] }), here = A[id];
+      // (its props and those of each instance inside it, less its own pointer state)
+      const props = (a) => [id, ...Object.keys(a).filter((k) => k.startsWith(`${id}/`)).sort()].map((k) => [k, a[k] && (a[k].kind === 'instance' || a[k].foreign) ? (k === id ? without(a[k].with, ownPointer(here)) : a[k].with) : null]);
+      if (!here || (R[id] && key(Object.fromEntries(props(A))) === key(Object.fromEntries(props(R))))) continue;
+      const x = at.get(id) || at.set(id, { key: ks[0], at: new Set() }).get(id);
+      x.at.add(when[ks[0]]);
+    }
+  }
+  for (const [id, x] of at) {
+    const part = parts.get(id), e = part && part.e;
+    // (placed whole, or another library's drawn open, layers.mjs openForeign: its props on its frame, to-markup's data-with)
+    if (bad.has(id) || !e || !(e.foreign === true || (e.kind === 'instance' && mains(e.component, e.key ?? null))) || part.inside || part.slotted || part.ring) continue;
+    if ((c.variants || []).some((v) => typeof (v.set || {})[`${id}.component`] === 'string')) continue;
+    // (held for one state alone: that state's props are its own already, to-markup's heldAt)
+    const heldAt = new Set((part.pointerHeld && part.pointerAdds || []).flatMap((w) => Object.entries(w).filter(([k, v]) => pointer(k, v)).map(([k, v]) => `${k}=${v}`)));
+    if (part.pointerHeld && heldAt.size === 1) continue;
+    out.set(id, x);
+  }
+  (memo.get(t) || memo.set(t, new Map()).get(t)).set(by, out);
+  return out;
+}
+
 /* The parts whose variable modes a pointer state's variant sets (a card's at focus, a link's at press), where the sheet
    can set them as the mode's attribute would: the token build's declarations under each mode (settings `modeTokens`,
    tokens/sheet.cjs blocksOf), re-declared under the state's pseudo-class, and `inherit` where the state takes a mode
@@ -1318,6 +1384,16 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     const shown = at.has(when[key]) ? when[key] : 'rest';
     for (const u of ['rest', ...at.keys()]) out[`${id}::words=${u}`] = { decls: new Map([['display', { v: u === shown ? 'inline' : 'none' }]]), unread: [] };
   }
+  // a placed component whose props a pointer state changes: the copy the state drawn here gives shown, the others
+  // hidden; all of them where the part is not drawn here (pointerWithOf; the markup draws each)
+  // (the one shown at the display its component's own sheet gives its root, as the placed component draws itself: a
+  // display this sheet left unset would be an element's initial, inline)
+  for (const [id, { key, at }] of pointerWithOf(c, t, mains)) {
+    const shown = !a[id] ? null : at.has(when[key]) ? when[key] : 'rest';
+    // (one drawn open, the frame's own display here, `revert` to the element's where this sheet writes it none)
+    const display = !a[id] ? null : a[id].foreign ? ((out[id] && out[id].decls.get('display')) || {}).v || 'revert' : rootDisplay(mains(a[id].component, a[id].key ?? null), mains, t);
+    for (const u of ['rest', ...at]) out[`${id}::pointer=${u}`] = { decls: new Map([['display', { v: u === shown ? display : 'none' }]]), unread: [] };
+  }
   // a part whose variable modes a pointer state sets: at that state, the mode's declarations the attribute would give
   // (pointerModesOf), each key the part holds a mode under here or at rest; `inherit` where the state takes one away
   for (const [id, { key, at, values }] of pointerModesOf(c, t)) {
@@ -1594,7 +1670,9 @@ export function selfCheck(c, rules, mains, t = HOUSE, draw = null, { each = fals
 // a part's state written after its id (`::after`); `::empty`, the part while it holds no element (Figma's empty frame,
 // which keeps its size there: a text alone in it does not count, a limit named in the README)
 // (`words=<value>`, a text's span of words that pointer value draws, `rest` the one drawn otherwise: pointerWordsOf)
-const pseudoSel = (p) => (!p || p === 'turn' ? '' : p === 'empty' ? ':not(:has(*))' : p.startsWith('words=') ? ` > [data-words="${p.slice(6)}"]` : `::${p}`);
+// (`pointer=<value>`, a placed component's copy that pointer value gives its props, `rest` the one drawn otherwise:
+// pointerWithOf)
+const pseudoSel = (p) => (!p || p === 'turn' ? '' : p === 'empty' ? ':not(:has(*))' : p.startsWith('words=') ? ` > [data-words="${p.slice(6)}"]` : p.startsWith('pointer=') ? `[data-pointer="${p.slice(8)}"]` : `::${p}`);
 /* A part's selector: the root, then each part on its way down, by child combinators (code-standard rule 5). */
 // (copyOf once per placed component and part: chain names every nested part through it, and a contract does not change)
 const COPIES = new WeakMap();

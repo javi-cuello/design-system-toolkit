@@ -405,10 +405,17 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   { const link = { component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
     const holder = (variants, w) => ({ component: 'Card', folder: 'card', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, link: { kind: 'instance', parent: 'root', component: 'Link', with: w } }, variants });
     const out = (h) => toElement(h, 'card', { naming: ELEMENT, library: { Card: h, Link: link } });
-    ok('a placed instance drawn at its own pointer state, or given props only this one\'s pointer state sets, is named as a gap; one at rest is not',
+    ok('a placed instance drawn at its own pointer state where this one is at rest is named as a gap; one at rest is not, nor one at its own pointer state at this one\'s (the browser\'s: hovering this one lands inside it)',
       /Link is given props only a pointer state draws/.test(out(holder([], { State: 'Hover' })))
-      && /Link is given props only a pointer state draws/.test(out(holder([{ when: { state: 'hover' }, set: { 'link.with': { On: 'True' } } }], { On: 'False' })))
-      && !/given props only a pointer state/.test(out(holder([], { State: 'Rest', On: 'True' })))); }
+      && !/given props only a pointer state/.test(out(holder([], { State: 'Rest', On: 'True' })))
+      && !/given props only a pointer state/.test(out(holder([{ when: { state: 'hover' }, set: { 'link.with': { State: 'Hover' } } }], { State: 'Rest' }))));
+    // props this one's pointer state gives it: a copy per such state beside the rest's, each with its state's props, the
+    // sheet showing the one its state draws (to-code's pointerWithOf)
+    const byHover = holder([{ when: { state: 'hover' }, set: { 'link.with': { On: 'True' } } }], { On: 'False' }), o = out(byHover), css = toCss(byHover, 'card', { naming: ELEMENT, library: { Card: byHover, Link: link } });
+    ok('props only this one\'s pointer state gives a placed instance are a copy of it for that state, shown by the sheet there and the rest\'s hidden; no gap',
+      /renderLink, \{ on: false \}, \{[^}]*"data-pointer": "rest" \}/.test(o) && /renderLink, \{ on: true \}, \{[^}]*"data-pointer": "hover" \}/.test(o) && !/given props only a pointer state/.test(o)
+      && /ds-card > \[data-part="link"\]\[data-pointer="hover"\] \{\s*display: none;/.test(css) && /ds-card:where\(:hover\) > \[data-part="link"\]\[data-pointer="rest"\] \{\s*display: none;/.test(css)
+      && /ds-card:where\(:hover\) > \[data-part="link"\]\[data-pointer="hover"\] \{\s*display: inline-block;/.test(css), o + css); }
   { const item = { component: 'Item', folder: 'item', props: {}, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'A' } }, variants: [] };
     const menu = { component: 'Menu', folder: 'menu', props: {}, anatomy: { root: { kind: 'container' }, items: { kind: 'slot', parent: 'root' } }, variants: [] };
     const bar = { component: 'Bar', folder: 'bar', props: {}, variants: [], anatomy: { root: { kind: 'container' }, menu: { kind: 'instance', parent: 'root', component: 'Menu' }, 'menu/items': { kind: 'slot', parent: 'menu' }, 'menu/items/item': { kind: 'instance', parent: 'menu/items', component: 'Item' }, 'menu/items/item/badge': { kind: 'instance', parent: 'menu/items/item', component: 'Badge' } } };
@@ -1274,15 +1281,16 @@ else {
   ok('a has-value flag is keyed as the design spells it; options that spell no true and false are refused by name', JSON.stringify(Object.keys(m.axes.hasValue).sort()) === '["false","true"]' && m.axes.hasValue.true.value === 'Text'
     && /on's options \["Off","On"\] spell no true and false/.test(refused), JSON.stringify(m.axes) + refused); }
 
-{ // an instance held at two pointer states, a variant at one of them giving it a prop: one element shows at both, so the
-  // prop is not passed as if that state alone drew it; the markup names the gap instead
+{ // an instance held at two pointer states, a variant at one of them giving it a prop: a copy per state, each with its
+  // own state's props (to-code's pointerWithOf), never one element showing at both
   const icon = { component: 'Dot', props: { on: { type: 'boolean', default: false, axis: true, figma: 'on' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
   const state = { type: 'enum', values: ['default', 'hover', 'focus'], default: 'default', role: 'interaction', pointer: ['hover', 'focus'], figma: 'state' };
   const dot = { kind: 'instance', parent: 'root', component: 'Dot', with: { on: 'false' } };
   const r = { component: 'Pick', props: { state, on: { type: 'boolean', default: false, axis: true, figma: 'on' } }, anatomy: { root: { kind: 'container' } },
     variants: [{ when: { state: 'hover' }, add: { dot } }, { when: { state: 'focus' }, add: { dot } }, { when: { state: 'focus', on: true }, set: { 'dot.with': { on: 'true' } } }] };
   const out = toElement(r, 'pick', { naming: ELEMENT, library: { Dot: { ...icon, folder: 'dot' } } });
-  ok('an instance two pointer states draw keeps a prop one of them gives untestable, and says so', /renderDot, \{ on: false \}/.test(out) && /Dot is given props only a pointer state draws/.test(out), out); }
+  ok('an instance two pointer states draw is a copy for each, a prop one of them gives passed on its copy alone; no gap',
+    /renderDot, \{ on: false \}, \{[^}]*"data-pointer": "rest"/.test(out) && /renderDot, \{ on: false \}, \{[^}]*"data-pointer": "hover"/.test(out) && /renderDot, \{ on: on \}, \{[^}]*"data-pointer": "focus"/.test(out) && !/given props only a pointer state/.test(out), out); }
 
 { // a placeholder swap a holder fills with a component of the library's (a picker's options slot holding a grid): the
   // placed one takes it as content, drawn where its placeholder was, the placeholder only where none is passed; the holder

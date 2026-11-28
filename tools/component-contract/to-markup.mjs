@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations, borderBox } from './css.mjs';
-import { combinations, condition, tokenNames, withTokenNames, missingSaid, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
+import { combinations, condition, tokenNames, withTokenNames, missingSaid, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerWithOf, heldOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign, foreignOpened } from './layers.mjs';
 // (another library's instance whose insides the contract records is drawn open, its layers this component's own:
@@ -549,7 +549,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   c = opened(c, library);
   const n = namer(folder, naming);
   const props = propsOf(c, library, lang, settings), ref = lang.ref;
-  const parts = partsOf(c, settings), spoken = pointerWordsOf(c, settings);
+  const parts = partsOf(c, settings), spoken = pointerWordsOf(c, settings), copied = pointerWithOf(c, settings, heldOf(library || {}));
   const entry = entryOf(c);
   const control = controlOf(c.component, placedIn(c));
   const inline = phrasing(c);
@@ -584,13 +584,16 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     if (!m) gaps.push(`${partName(id)}: inside ${partName(detachedHost(c, id))}, which a variant detaches, the sheet reaches it by ${last}, no hook the markup can draw: drawn by its own name, which nothing styles or reads`);
     return m && [n.element ? 'data-part' : 'className', { lit: m[1] }];
   };
-  const hook = (id) => [detachedHook(id) || (n.element ? ['data-part', { lit: seg(id) }] : ['className', { lit: n.part(seg(id)).slice(1) }]), ...nameAttr(id), ...modeAttrs(id), ...foreignAttrs(id)];
+  const hook = (id, copy = null) => [detachedHook(id) || (n.element ? ['data-part', { lit: seg(id) }] : ['className', { lit: n.part(seg(id)).slice(1) }]), ...nameAttr(id), ...modeAttrs(id), ...foreignAttrs(id, copy), ...(copy ? [['data-pointer', { lit: copy }]] : [])];
   // another library's instance drawn open (openForeign): the component it is, its key and the props it is given, as the
   // design places it, so a reading gives the instance back (from-code foreignAsInstance); each as the variants change them, in
   // the order expand applies them, a combination last
-  const foreignAttrs = (id) => {
-    const e = ((parts.get(id) || {}).e) || {};
-    const vs = c.variants || [], order = [...vs.filter((v) => !v.combination), ...vs.filter((v) => v.combination)].filter((v) => !pointerWords(c, v.when));
+  // (`copy`: a pointer state's copy of it, to-code's pointerWithOf: the variants at that state said by their other props,
+  // those at any other value of it never holding there)
+  const foreignAttrs = (id, copy = null) => {
+    const e = ((parts.get(id) || {}).e) || {}, ck = copy && copy !== 'rest' && copied.get(id).key;
+    const atCopy = (v) => (!ck || !(ck in (v.when || {})) ? (pointerWords(c, v.when) ? null : v) : v.when[ck] === copy ? { ...v, when: Object.fromEntries(Object.entries(v.when).filter(([k]) => k !== ck)) } : null);
+    const vs = c.variants || [], order = [...vs.filter((v) => !v.combination), ...vs.filter((v) => v.combination)].map(atCopy).filter(Boolean);
     const at = (v, f) => (v.set && `${id}.${f}` in v.set ? { x: v.set[`${id}.${f}`] } : v.add && v.add[id] ? { x: v.add[id][f] } : null);
     if (!e.foreign) return [];
     const attr = (f, name, say) => {
@@ -696,7 +699,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const carried = new Set(), mainOf = (name, key) => placedOf(library, { component: name, key });
   const D = variantDefaults(c), vs0 = c.variants || [];
   const expanded = new Map(), expandAt = (w) => { const k = JSON.stringify(w); if (!expanded.has(k)) expanded.set(k, expand(c, w)); return expanded.get(k); };
-  const insideAt = (id, e, when) => {
+  const insideOfAt = (id, e, when) => {
     const a = expandAt({ ...D, ...when });
     if (!a[id] || a[id].kind !== 'instance' || placedOf(library, a[id]) !== placedOf(library, e)) return {};
     // (a numbered copy's look too: no sheet rule reaches inside one, to-code's copySelector)
@@ -736,7 +739,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     for (const k of keys) { combos = combos.flatMap((x) => vals(k).map((v) => ({ ...x, [k]: v }))); if (combos.length > 1024) return null; }
     return { keys, combos };
   })();
-  const partsCode = (id, e) => {
+  // (`copy`: a pointer state's copy of it, to-code's pointerWithOf, whose insides are drawn at that state)
+  const partsCode = (id, e, copy = null) => {
+    const ck = copy && copy !== 'rest' && copied.get(id).key, insideAt = (i, x, w) => insideOfAt(i, x, ck ? { ...w, [ck]: copy } : w);
     const base = insideAt(id, e, {});
     // (a placed render compared by its component, an icon's mark by all it carries: its look and modes)
     const keyOf = (x) => JSON.stringify(x, (k, v) => (k === 'render' && v.component ? v.component : v)), same = (x, y) => keyOf(x) === keyOf(y);
@@ -882,6 +887,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // (another library's instance drawn open: its glyphs boxes of their size and colour, no path data being recorded)
       if (e.foreign) { const gap = `${partName(id)}: ${e.component}, another library's, drawn from the layers the design records (a glyph as a box of its size and colour): draw it as the project draws that library's`; if (!gaps.includes(gap)) gaps.push(gap); }
       out = { tag, attrs: hook(id), children: (kids.get(id) || []).flatMap((k) => node(k, known, fill)).filter(Boolean) };
+      // (props a pointer state gives it: a frame per such state beside the rest's, each saying its state's, the sheet
+      // showing the one its state draws, to-code's pointerWithOf)
+      if (e.foreign && copied.has(id)) { const kidsOut = out.children; const all = ['rest', ...copied.get(id).at].map((u) => ({ tag, attrs: hook(id, u), children: kidsOut })); return when ? all.map((x) => ({ when, node: x })) : all; }
     }
     return when ? { when, node: out } : out;
     // a placed instance under the condition `w`: each component a variant swaps in where it holds, the base's elsewhere
@@ -905,8 +913,11 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
         const alts = [{ t: all(layers.map((x) => not(x.t))), e }, ...layers.map((x, i) => ({ t: all([x.t, ...layers.slice(i + 1).filter((y) => !apart(x.t, y.t)).map((y) => not(y.t))]), e: x.e }))].filter((x) => x.t !== 'false');
         return alts.map((x) => { const t = all([...(w ? [w] : []), x.t]); const item = placedOf(library, x.e) ? placedItem(x.e) : foreignMark(x.e); return t === 'true' ? item : { when: t, node: item }; });
       }
-      const item = placedItem(e);
-      return [w ? { when: w, node: item } : item];
+      // (props a pointer state gives it: a copy per such state beside the rest's, each with its state's props, the sheet
+      // showing the one its state draws, to-code's pointerWithOf)
+      const copies = copied.get(id);
+      const items = copies ? ['rest', ...copies.at].map((s) => placedItem(e, s)) : [placedItem(e)];
+      return items.map((item) => (w ? { when: w, node: item } : item));
     }
     // a component the library does not hold that a variant swaps in (a status icon set of its own at the error state):
     // marked where it goes, as any such instance is, its drawing the project's; never the base's component drawn on
@@ -916,7 +927,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       return { tag: 'span', attrs: [...hook(id), ['data-icon', { lit: x.component }], ['aria-hidden', { lit: 'true' }]], children: [] };
     }
     // a placed instance of the library's: the component, the props it is given and what this one puts in its slots
-    function placedItem(e) {
+    function placedItem(e, copy = null) {
       const placed = placedOf(library, e), theirs = propsOf(placed, library, lang, settings);
       const valueOf = (fig, v, w = e.with || {}) => {
         const x = theirs.find((y) => (y.figmas || [y.p.figma]).includes(fig));
@@ -954,7 +965,11 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // would be drawn at the other too; there it stays untestable, and the gap below names props only a pointer state gives
       const heldAt = new Set(((parts.get(id) || {}).pointerHeld && (parts.get(id).pointerAdds || []).flatMap((w) => Object.entries(w).filter(([k, x]) => ((c.props || {})[k] || {}).role === 'interaction' && (c.props[k].pointer || []).includes(x)).map(([k, x]) => `${k}=${x}`))) || []);
       const unheld = (s) => (heldAt.size === 1 ? { ...s, when: Object.fromEntries(Object.entries(s.when).filter(([k, x]) => !heldAt.has(`${k}=${x}`))) } : s);
-      const combos = vs.filter((v) => v.combination).map(stated).map(unheld), varied = vs.filter((v) => !v.combination).reverse().map(stated).map(unheld).filter(({ sets }) => sets.size);
+      // (a copy for one pointer state (`copy`, pointerWithOf): the variants at that state said by their other props, those
+      // at any other value of it never holding there; the rest's copy, as any instance, tests none of them)
+      const ck = copy && copy !== 'rest' && copied.get(id).key;
+      const atCopy = (s) => (!ck || !(ck in s.when) ? s : s.when[ck] === copy ? { ...s, when: Object.fromEntries(Object.entries(s.when).filter(([k]) => k !== ck)) } : null);
+      const combos = vs.filter((v) => v.combination).map(stated).map(unheld).map(atCopy).filter(Boolean), varied = vs.filter((v) => !v.combination).reverse().map(stated).map(unheld).map(atCopy).filter((s) => s && s.sets.size);
       const litCode = (l) => (l === undefined ? (lang.php ? 'null' : 'undefined') : typeof l === 'boolean' || typeof l === 'number' ? String(l) : lang.str(String(l)));
       const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       const figs = [...new Set([...Object.keys(e.with || {}), ...[...combos, ...varied].flatMap(({ sets }) => [...sets])])];
@@ -1023,11 +1038,14 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // component's pointer state alone sets on it (a slider's item active at hover): no markup holds them, so a gap
       const own = Object.values(placed.props || {}).find((q) => q.role === 'interaction'), low = (v) => String(v).toLowerCase();
       const ownAt = (w) => !!own && w && w[own.figma] !== undefined && (own.pointer || []).includes(own.values[(own.figmaValues || []).map(low).indexOf(low(w[own.figma]))] ?? w[own.figma]);
-      const byMine = vs.some((v) => pointerWords(c, v.when) && Object.entries(stated(v).w).some(([k, w]) => !same(w, (e.with || {})[k])));
-      if (ownAt(e.with) || [...combos, ...varied].some(({ w }) => ownAt(w)) || byMine) gaps.push(`${partName(id)} is given props only a pointer state draws: the stylesheet's, or frontend-build's to add`);
+      // (its own pointer state at one of this component's is the browser's: hovering or focusing this one lands inside it
+      // too; one this component's other props give it, or props its pointer state gives that no copy draws, are not)
+      const byMine = !copied.has(id) && vs.some((v) => pointerWords(c, v.when) && Object.entries(stated(v).w).some(([k, w]) => !same(w, (e.with || {})[k]) && !(own && k === own.figma && ownAt({ [k]: w }))));
+      const gap = `${partName(id)} is given props only a pointer state draws: the stylesheet's, or frontend-build's to add`;
+      if ((ownAt(e.with) || vs.map(stated).some(({ w, when }) => ownAt(w) && !pointerWords(c, when)) || byMine) && !gaps.includes(gap)) gaps.push(gap);
       for (const x of props.filter((y) => y.pass && y.pass.part === id && y.type !== 'value')) { const i = given.findIndex(([k]) => k === x.pass.to); if (i >= 0) given.splice(i, 1); given.push([x.pass.to, { code: ref(x.name) }]); }
       used.add(placed.component);
-      return { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id), own: theirs.map((x) => x.name), ...(withParts && { parts: partsCode(id, e), key: partSeg(c, id) }) };
+      return { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id, copy), own: theirs.map((x) => x.name), ...(withParts && { parts: partsCode(id, e, copy), key: partSeg(c, id) }) };
     }
   };
   // a text entry: one input, its own value the Value text and its ::placeholder the Placeholder (to-code's entryOf)
@@ -1461,6 +1479,18 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
       // (one with no hook to read it by keeps none of the placed component's part's either: said as a skip)
       else if (redrawn.has(x.id)) layers[pathOf(x.id)] = { skip: 'drawn open by this component in a placed component\'s part, with no hook of its own to read it by' };
     }
+  }
+  // a placed component the markup draws a copy of per pointer state (to-code's pointerWithOf): read as the copy the
+  // sheet shows, the one whose state the root is at (the rest's where it is at none), it and every part inside it
+  // (each state by the selector the sheet chooses it by, to-code's condition)
+  for (const [cp, { key, at: states }] of pointerWithOf(c, settings, mains)) {
+    const sel = byId[cp];
+    if (typeof sel !== 'string' || !sel.startsWith(`${root} > `)) continue;
+    const tail = sel.slice(root.length), all = [...states], at = (v) => condition(c, n, key, v, settings, mains, library);
+    const shown = (x) => (typeof x !== 'string' || (x !== sel && !x.startsWith(`${sel} `)) ? x
+      : ['rest', ...all].map((u) => `${root}${u === 'rest' ? all.map((v) => `:not(${at(v)})`).join('') : at(u)}${tail}[data-pointer="${u}"]${x.slice(sel.length)}`).join(', '));
+    for (const k of Object.keys(layers)) layers[k] = shown(layers[k]);
+    for (const k of Object.keys(byId)) byId[k] = shown(byId[k]);
   }
   return Object.defineProperty({ storyId: storyIdOf(titleOf(c, platform), 'Default'), root, state: root, axes, layers, waivers: {} }, 'byId', { value: byId });
 }

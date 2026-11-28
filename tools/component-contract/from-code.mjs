@@ -937,10 +937,13 @@ export function attrsByArg(axes, props) {
 
 /* An axis's value from the attributes an element carries: the value whose args it all carries, else the one that asks
    for none. The host's own attributes first; only where they say none, an inner control's disabled (a loading button
-   whose <button> is disabled because it is busy stays loading). Tested by test-from-code.mjs. */
-export function axisValueOf(vals, attrs, innerDisabled = false) {
+   whose <button> is disabled because it is busy stays loading), then the pointer state the reader forced on the element
+   itself (`pseudo`, the class without its colon: a placed component its holder's state forwards one to, forwardedAt),
+   the value the mapping takes at that pseudo-class. Tested by test-from-code.mjs. */
+export function axisValueOf(vals, attrs, innerDisabled = false, pseudo = null) {
   const fits = (h) => Object.entries(vals).find(([, a]) => a && Object.keys(a).length && !('pseudo' in a) && Object.entries(a).every(([k, v]) => h(k, v)));
-  const hit = fits((k, v) => carries(attrs, k, v)) || (innerDisabled ? fits((k, v) => carries({ ...attrs, disabled: '' }, k, v)) : undefined);
+  const forced = pseudo ? Object.entries(vals).find(([, a]) => a && a.pseudo === pseudo) : undefined;
+  const hit = fits((k, v) => carries(attrs, k, v)) || (innerDisabled ? fits((k, v) => carries({ ...attrs, disabled: '' }, k, v)) : undefined) || forced;
   const rest = Object.entries(vals).find(([, a]) => a && !Object.keys(a).length);
   return (hit || rest || [])[0];
 }
@@ -2320,6 +2323,22 @@ async function selfSource(project, name, { second = false } = {}) {
     combosOf: () => null,
     // each read on a clean page (render, below): a forced pointer state never outlives the args it was forced for
     statesAsArg: true,
+    // the placed components a render at these args forces a pointer state of their own on (forwardedAt), each part id
+    // with its pseudo-class: what render forces (its own copy of these lines, as its source keys the read cache), and
+    // what the reading takes as that component's state (axisValueOf)
+    forwardedOf(all) {
+      const { __state, ...args } = all;
+      if (!src.pseudoOf[__state]) return [];
+      // (a string the reading leaves unsaid, at its story's words, its stand-in: the markup's own default is the design's)
+      for (const x of own) if (x.type === 'string' && args[x.name] === undefined) args[x.name] = standIn(x.default);
+      // (the design's combination this render draws: each of the markup's props by its contract key, the has-value flag
+      // by its own, the state by the design's value; what forwardedAt reads)
+      const combo = Object.fromEntries(own.filter((x) => x.key && args[x.name] !== undefined).map((x) => [x.key, args[x.name]]));
+      if (flag && flag.name in args && entry) combo[entry.flag] = args[flag.name];
+      const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
+      if (pk && __state !== undefined && __state !== restOf(c)) combo[pk] = __state;
+      return forwardedAt(c, combo, forwardMain, forwardPseudo).filter((x) => forwardSel[x.id]);
+    },
     async render(all) {
       const { __state, ...args } = all;
       // (a string the reading leaves unsaid, at its story's words, its stand-in: the markup's own default is the design's)
@@ -2664,13 +2683,17 @@ async function main() {
   try {
     // a contract's values are words: an option the story lists as null (no icon) is "null" in it, and null to the story
     let nullable = new Set();
+    let forwarded = new Map();
     // a slot's stand-in: a Storybook will not take a word for content through its address (an object control), so
     // it is set through the preview's own channel once the story has drawn, and waited for on screen
     const slotArgs = {};
     const show = async (all) => {
       const fill = Object.fromEntries(Object.entries(all).filter(([k]) => k in slotArgs));
       const viaChannel = Object.keys(fill).length && await call(L.tab, () => !!window.__STORYBOOK_PREVIEW__);
-      await L.render(Object.fromEntries(Object.entries(all).filter(([k]) => !(viaChannel && k in fill)).map(([k, v]) => [k, v === 'null' && nullable.has(k) ? null : v])), { reload: !!viaChannel });
+      const given = Object.fromEntries(Object.entries(all).filter(([k]) => !(viaChannel && k in fill)).map(([k, v]) => [k, v === 'null' && nullable.has(k) ? null : v]));
+      // (the placed components this render forces a pointer state of their own on, by part id: their state, read below)
+      forwarded = new Map((L.forwardedOf ? L.forwardedOf(given) : []).map((x) => [x.id, x.pseudo]));
+      await L.render(given, { reload: !!viaChannel });
       if (!viaChannel) return;
       const missing = await call(L.tab, async ([args, wait]) => {
         const p = window.__STORYBOOK_PREVIEW__;
@@ -3409,7 +3432,7 @@ async function main() {
           // variant); a flag by its presence. Never class, style or the walk's own marks
           const has = (k, v) => carries(x.attrs, k, v);
           if (axes) for (const [ax, vals] of Object.entries(axes)) {
-            const got = axisValueOf(vals, x.attrs, x.innerDisabled);
+            const got = axisValueOf(vals, x.attrs, x.innerDisabled, forwarded.get(id));
             if (got != null) w[ax] = got;
           }
           // a mapping that names whole combinations: the one whose args the markup carries, the most of them, by its name
