@@ -388,18 +388,18 @@ export function ownPointerOf(m, w) {
    it back as that value. Each with its part id, the placed contract, its props at that value and at rest, and the
    value's pseudo-class without its colon; one inside another placed component is that one's to draw. Tested by
    test-to-code.mjs. */
-export function drawnAsOf(c, when, mains = NO_MAINS, t = HOUSE, a = expand(c, when)) {
-  const ps = pseudoClasses(t), pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
-  if (pk && (c.props[pk].pointer || []).includes(when[pk]) && ps[when[pk]]) return [];
+export function drawnAsOf(c, when, mains = NO_MAINS, t = HOUSE, a = expand(c, when), pseudoFor = (m, v) => pseudoClasses(t)[v]) {
+  const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
+  if (pk && (c.props[pk].pointer || []).includes(when[pk]) && pseudoClasses(t)[when[pk]]) return [];
   const out = [];
   for (const [id, e] of Object.entries(a)) {
     if (!e || e.kind !== 'instance' || !e.with) continue;
     let up = e.parent;
     while (up && !(a[up] && a[up].kind === 'instance')) up = a[up] && a[up].parent;
     if (up) continue;
-    const m = mains(e.component, e.key ?? null), { q, v } = ownPointerOf(m, e.with) || {};
-    if (!q || !ps[v]) continue;
-    out.push({ id, m, w: e.with, rest: { ...e.with, [q.figma]: (q.figmaValues || [])[(q.values || []).indexOf(q.default)] ?? q.default }, pseudo: ps[v].replace(/^:/, '') });
+    const m = mains(e.component, e.key ?? null), { q, v } = ownPointerOf(m, e.with) || {}, ps = q && pseudoFor(m, v);
+    if (!ps) continue;
+    out.push({ id, m, w: e.with, rest: { ...e.with, [q.figma]: (q.figmaValues || [])[(q.values || []).indexOf(q.default)] ?? q.default }, pseudo: ps.replace(/^:/, '') });
   }
   return out;
 }

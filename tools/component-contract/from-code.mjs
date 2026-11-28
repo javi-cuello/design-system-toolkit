@@ -45,7 +45,7 @@ import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { shadowOrder, parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop, shorthandOf, sidePiece } from '../parity/values.mjs';
 export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
-import { ringOf, pseudoClasses, isDrawing, drawnAsOf } from './to-code.mjs';
+import { ringOf, pseudoClasses, isDrawing, drawnAsOf, ownPointerOf } from './to-code.mjs';
 import { swapKeysOf } from './to-markup.mjs';
 import { inWordsOf } from './to-figma.mjs';
 import { sameAsRead, layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, stackedFirst, childOrder, liftsAlone, autoResizeOf, growsDown, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, glyphOnly, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
@@ -1896,12 +1896,8 @@ export function forwardedAt(c, combo, mainOf, pseudoFor) {
   const out = [];
   for (const [id, e] of Object.entries(expand(c, { ...variantDefaults(c), ...combo }))) {
     if (!e || e.kind !== 'instance' || !e.with || typeof e.with !== 'object') continue;
-    const main = mainOf(e.component, e.key ?? null);
-    const q = main && Object.values(main.props || {}).find((x) => x.role === 'interaction');
-    if (!q || e.with[q.figma] === undefined) continue;
-    const low = (x) => String(x).toLowerCase(), i = (q.figmaValues || []).map(low).indexOf(low(e.with[q.figma]));
-    const value = i >= 0 ? q.values[i] : e.with[q.figma];
-    const ps = (q.pointer || []).includes(value) && pseudoFor(main, value);
+    const main = mainOf(e.component, e.key ?? null), own = ownPointerOf(main, e.with);
+    const ps = own && pseudoFor(main, own.v);
     if (ps) out.push({ id, pseudo: ps.replace(/^:/, '') });
   }
   return out;
@@ -2364,7 +2360,7 @@ async function selfSource(project, name, { second = false } = {}) {
     // to-code's drawnAsOf, each with its selector: taken at that state only where the page shows it so, seenAs)
     forwardedOf(all) {
       const { combo, __state } = comboOf(all);
-      if (!src.pseudoOf[__state]) return drawnAsOf(c, { ...variantDefaults(c), ...combo }, forwardMain, settingsOf(c.folder)).filter((x) => forwardSel[x.id]).map(({ id, pseudo }) => ({ id, pseudo, selector: forwardSel[id] }));
+      if (!src.pseudoOf[__state]) return drawnAsOf(c, { ...variantDefaults(c), ...combo }, forwardMain, settingsOf(c.folder), undefined, forwardPseudo).filter((x) => forwardSel[x.id]).map(({ id, pseudo }) => ({ id, pseudo, selector: forwardSel[id] }));
       return forwardedAt(c, combo, forwardMain, forwardPseudo).filter((x) => forwardSel[x.id]);
     },
     // (those of them the page draws as their pseudo-class does, drawnAsSeen: one question of the rendered page's, kept by

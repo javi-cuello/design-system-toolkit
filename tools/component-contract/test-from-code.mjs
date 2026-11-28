@@ -1546,6 +1546,17 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); await site.close(); }
   }
 }
+// (second review of 2026-11-28: the reader names a placed component's pointer value by one pseudo-class whether forced
+// beside the holder's (forwardedAt) or drawn by the holder's sheet (drawnAsOf): the one its own settings give)
+{ const { drawnAsOf, heldOf } = await import('./to-code.mjs');
+  const { forwardedAt } = await import('./from-code.mjs');
+  const link = { component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const card = { component: 'Card', folder: 'card', props: { shown: { type: 'boolean', default: false, axis: true, figma: 'Shown' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } },
+    anatomy: { root: { kind: 'container' }, link: { kind: 'instance', parent: 'root', component: 'Link', with: { State: 'Rest' } } }, variants: [{ when: { shown: true }, set: { 'link.with': { State: 'Hover' } } }, { when: { state: 'hover' }, set: { 'link.with': { State: 'Hover' } } }] };
+  const mains = heldOf({ Card: card, Link: link }), own = (m, v) => (v === 'hover' ? ':focus-visible' : null);
+  ok('a placed component\'s pointer value is named by the same pseudo-class forced or drawn by the holder',
+    JSON.stringify(forwardedAt(card, { state: 'hover' }, mains, own)) === '[{"id":"link","pseudo":"focus-visible"}]'
+    && JSON.stringify(drawnAsOf(card, { shown: true, state: 'rest' }, mains, undefined, undefined, own).map((x) => x.pseudo)) === '["focus-visible"]'); }
 // (second review of 2026-11-28: and while the placed one is at none of its own pointer states, whatever the holder's: a
 // holder with no pointer state of its own, the placed component's sheet loaded first, its own :active stands)
 { const fs = await import('node:fs');
