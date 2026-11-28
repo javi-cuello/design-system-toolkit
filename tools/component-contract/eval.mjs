@@ -516,16 +516,17 @@ const tagsOf = (r) => (r && r.assisted && typeof r.assisted === 'object' ? { ass
    assisted: identity the code states, never measured. Tested by test-eval.mjs. */
 export const identifiedNote = (m) => { const k = m.filter(([, x]) => x.declared && x.declared.length).length; return k ? `; ${k} identified by the code's own label` : ''; };
 
-/* The components whose stored contract.json is missing, or not what derive.cjs makes of their spec today (check-specs' own test). */
+/* The components whose stored contract.json is missing, or not what derive.cjs makes of their spec today (check-specs' own test),
+   of `only` (folder names) when given: derive runs on those alone, not the whole store. */
 /* The command that rewrites a stale store: under the projects root this run read (TOOLKIT_PROJECTS_ROOT), since what
    derive writes depends on the project it resolves, and one rewritten without it stays stale to this run (2026-11-27). */
 export const rewriteHint = (dir, root = process.env.TOOLKIT_PROJECTS_ROOT) =>
   `${root ? `TOOLKIT_PROJECTS_ROOT=${root} ` : ''}node tools/component-contract/write.cjs ${dir}`;
 
-export function staleContracts(dir) {
+export function staleContracts(dir, only = null) {
   if (!dir || !fs.existsSync(dir)) return [];
   const { checkSpecs } = req('../snapshot/check-specs.cjs');
-  return (checkSpecs(dir).bad || []).filter((b) => /contract\.json is not what the spec derives|no contract\.json beside the spec|no contract can be derived/.test(b)).map((b) => b.split(':')[0].trim());
+  return (checkSpecs(dir, { only, contracts: true }).bad || []).filter((b) => /contract\.json is not what the spec derives|no contract\.json beside the spec|no contract can be derived/.test(b)).map((b) => b.split(':')[0].trim());
 }
 
 /* A project's built tokens (its paths.styles, the DTCG files beside the snapshot) against what the token build writes
@@ -1126,7 +1127,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       if (!panel) { console.error(`no panel at ${panelFile(w.projectDir)}: make one with --make-panel 30`); process.exit(2); }
       // an official contract derive would write otherwise is said; whether a reading's inputs moved since is not asked here
       // (todayOf hashes every drawing: minutes, too slow for a ranking), so the run says so
-      const old = staleContracts(w.paths.components).filter((f) => panel.includes(f));
+      const old = staleContracts(w.paths.components, panel);
       if (old.length) console.log(`warning: ${p}: ${old.length} official contract(s) are not what their specs derive now: run ${rewriteHint(w.paths.components)}`);
       const m = measure(w, panel);
       for (const l of legs) for (const [c, x] of Object.entries(m.legs[l] || {})) if (x.rows) { by[`${p}:${c}${legs.length > 1 ? ` (${l})` : ''}`] = x.rows; if (x.stale) stale.push(`${p}:${c}`); if (isSame(x)) same.push(`${p}:${c}`); if (isSameApartFromForeign(x)) apart.push(`${p}:${c}`); if (isSameApartFromLibrary(x)) held.push(`${p}:${c}`); }
@@ -1193,7 +1194,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // the official contracts as today's derive.cjs writes them: one written by an older derive (a change to it since, the
   // store not rewritten) holds the design side to yesterday's rules while the reading takes today's, so the long legs
   // refuse, and the short ones say so
-  { const old = staleContracts(where.paths.components).filter((f) => !argv.length || argv.includes(f));
+  { const old = staleContracts(where.paths.components, argv.length ? argv : null);
     if (old.length) { const say = `${old.length} official contract(s) are not what their specs derive now (${old.slice(0, 3).join(', ')}${old.length > 3 ? ', …' : ''}): derive.cjs changed since the store was written; run ${rewriteHint(where.paths.components)}`;
       if (into || self || second) { console.error(say); process.exit(2); } console.log(`warning: ${say}`); } }
   // the tokens the code is read with, as the snapshot builds them today: refused as a stale store is, for the same reason

@@ -26,7 +26,10 @@ const canon = (o) => (Array.isArray(o) ? o.map(canon)
   : o && typeof o === 'object' ? Object.fromEntries(Object.keys(o).sort().map((k) => [k, canon(o[k])])) : o);
 const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 
-function checkSpecs(dir) {
+/* `only` (folder names) checks those folders alone, each held to every name the store holds as in a full run; `contracts`
+   asks only whether each contract.json is what its spec derives today (no round trip, no rebuild of every variant):
+   eval.mjs's staleContracts, which read the whole check for one of its findings, a third of a measure's run (2026-11-28). */
+function checkSpecs(dir, { only = null, contracts = false } = {}) {
   const bad = [];
   let specs = 0, variants = 0, full = 0;
   const dirs = fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name) : [];
@@ -34,7 +37,7 @@ function checkSpecs(dir) {
   const known = dirs.map((d) => { try { return JSON.parse(fs.readFileSync(path.join(dir, d, 'figma.json'), 'utf8')).name; } catch { return null; } }).filter(Boolean);
   // the project's state axis and pointer states, as the snapshot router derives under them (deliver.cjs)
   const optionsOf = deriveOptionsFor(dir);
-  for (const d of dirs) {
+  for (const d of only ? dirs.filter((x) => only.includes(x)) : dirs) {
     const file = path.join(dir, d, 'figma.json');
     if (!fs.existsSync(file)) continue;
     const onDisk = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -46,15 +49,15 @@ function checkSpecs(dir) {
     try { resolved = resolve(onDisk); } catch (e) { bad.push(`${d}: ${e.message}`); continue; }
     variants += resolved.variants.length;
     full += 1 + (onDisk.variants || []).filter((v) => !('delta' in v)).length;
-    if (!same(compact(resolved), onDisk)) bad.push(`${d}: resolve → compact does not reproduce the file`);
-    else if (!same(resolve(compact(resolved)), resolved)) bad.push(`${d}: the resolved trees do not survive a second round trip`);
+    if (!contracts && !same(compact(resolved), onDisk)) bad.push(`${d}: resolve → compact does not reproduce the file`);
+    else if (!contracts && !same(resolve(compact(resolved)), resolved)) bad.push(`${d}: the resolved trees do not survive a second round trip`);
     // the contract beside it is what tools/component-contract derives from it, and rebuilds every variant
     const cf = path.join(dir, d, 'contract.json');
     let derived;
     try { derived = contract.derive(onDisk, known, optionsOf(d)); } catch (e) { bad.push(`${d}: no contract can be derived — ${e.message}`); continue; }
     if (!fs.existsSync(cf)) bad.push(`${d}: no contract.json beside the spec — snapshot again, or node tools/component-contract/write.cjs`);
     else if (!same(JSON.parse(fs.readFileSync(cf, 'utf8')), derived)) bad.push(`${d}: contract.json is not what the spec derives — snapshot again, or node tools/component-contract/write.cjs`);
-    else { const off = contract.selfCheck(onDisk, derived, known, optionsOf(d)); if (off.length) bad.push(`${d}: the contract does not rebuild ${off.length} variant(s), first ${off[0]}`); }
+    else if (!contracts) { const off = contract.selfCheck(onDisk, derived, known, optionsOf(d)); if (off.length) bad.push(`${d}: the contract does not rebuild ${off.length} variant(s), first ${off[0]}`); }
   }
   return { specs, variants, full, bad };
 }

@@ -390,6 +390,16 @@ ok('a component measured since the accept is held until accepted; one that came 
     fs.rmSync(other, { recursive: true, force: true });
   }
   ok('an official contract an older derive.cjs wrote is named, so a measure is never taken against yesterday\'s rules', JSON.stringify(staleContracts(d)) === '["gone","old"]' && staleContracts(path.join(d, 'none')).length === 0);
+  { // the components asked for alone: derive runs on those, and each is refused as the whole store's check refuses it
+    const { checkSpecs } = r('../snapshot/check-specs.cjs');
+    const moved = compact({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'HORIZONTAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi' }] }] });
+    fs.mkdirSync(path.join(d, 'moved')); fs.writeFileSync(path.join(d, 'moved', 'contract.json'), JSON.stringify(derive(spec, ['T'], {})));
+    fs.writeFileSync(path.join(d, 'moved', 'figma.json'), JSON.stringify(moved)); // a re-snapshot that moved the spec, the contract not rewritten
+    const whole = checkSpecs(d).bad.filter((b) => /contract\.json|no contract can be derived/.test(b)).map((b) => b.split(':')[0]);
+    ok('a spec changed since its contract was written, and a contract an older derive wrote, are named when asked for alone; one not asked for is not derived',
+      JSON.stringify(staleContracts(d, ['moved'])) === '["moved"]' && JSON.stringify(staleContracts(d, ['old', 'fresh'])) === '["old"]' && staleContracts(d, ['fresh']).length === 0
+      && JSON.stringify(staleContracts(d)) === JSON.stringify(whole) && JSON.stringify(whole) === '["gone","moved","old"]');
+  }
   fs.rmSync(d, { recursive: true, force: true }); }
 { // the project's built tokens against what its snapshot builds today, by the token build itself (Style Dictionary from tools/tokens)
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'tokens-')), snap = path.join(repo, 'design', 'figma.json');
