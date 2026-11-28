@@ -3,8 +3,8 @@
   "private": true,
   "description": "The Style Dictionary the token suites run through, and the schema validator the conformance suite uses, so they run on a machine with no project (CI). Test-only: no project or runtime installs these.",
   "devDependencies": {
-    "ajv": "8.17.1",
+    "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
-    "style-dictionary": "5.5.3"
+    "style-dictionary": "5.8.0"
   }
 }
