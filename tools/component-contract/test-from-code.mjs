@@ -1451,6 +1451,15 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       ok('…and read at that value only where the page draws it as that pseudo-class draws it, never where it does not',
         onSeen.length === 1 && axisValueOf({ Rest: {}, Hover: { pseudo: 'hover' } }, {}, false, onSeen[0].pseudo) === 'Hover' && offSeen.length === 0
         && await call(tab, (q) => !document.querySelector(`${q}:hover`), sel), JSON.stringify([onSeen, offSeen]));
+      // (asked of the rendered page as one question the read cache keeps, never worked out inside a render a kept reading
+      // never runs: a second reading from the cache takes it at that value too, the page never asked)
+      const { recorder } = await import('./read-cache.mjs'), os = await import('node:os'), path = await import('node:path');
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'seen-')), drawIt = (t) => call(t, () => { const s = document.createElement('section'); s.append(window.R.card({ shown: true })); document.getElementById('stage').replaceChildren(s); });
+      let launched = 0;
+      const ask = async () => { const rec = recorder({ key: 'seen', dir, live: async () => { launched++; return tab; } }); await rec.reset('shown', drawIt); const r = await rec.step('drawn-as', JSON.stringify(asked), (t) => drawnAsSeen(t, asked)); await rec.close(); return r; };
+      const first = await ask(), kept = await ask();
+      fs.rmSync(dir, { recursive: true, force: true });
+      ok('…asked as one question the read cache keeps: a reading from the cache takes it at that value, the page never asked', first.length === 1 && JSON.stringify(kept) === JSON.stringify(first) && launched === 1, JSON.stringify([first, kept, launched]));
     } finally { await browser.close(); await site.close(); }
   }
 }

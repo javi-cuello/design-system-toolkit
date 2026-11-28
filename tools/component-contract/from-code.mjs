@@ -2358,12 +2358,15 @@ async function selfSource(project, name, { second = false } = {}) {
     // the placed components a render at these args forces a pointer state of their own on (forwardedAt), each part id
     // with its pseudo-class: what render forced, and what the reading takes as that component's state (axisValueOf)
     // (and, where this one is at no pointer state, those the design gives one of their own that this one's sheet draws,
-    // to-code's drawnAsOf, which the page showed so at the last render, drawnAsSeen: asked after it)
+    // to-code's drawnAsOf, each with its selector: taken at that state only where the page shows it so, seenAs)
     forwardedOf(all) {
       const { combo, __state } = comboOf(all);
-      if (!src.pseudoOf[__state]) return src.seenAs || [];
+      if (!src.pseudoOf[__state]) return drawnAsOf(c, { ...variantDefaults(c), ...combo }, forwardMain, settingsOf(c.folder)).filter((x) => forwardSel[x.id]).map(({ id, pseudo }) => ({ id, pseudo, selector: forwardSel[id] }));
       return forwardedAt(c, combo, forwardMain, forwardPseudo).filter((x) => forwardSel[x.id]);
     },
+    // (those of them the page draws as their pseudo-class does, drawnAsSeen: one question of the rendered page's, kept by
+    // the read cache as any other)
+    seenAs: (targets) => (src.cache ? src.cache.step('drawn-as', `${drawnAsSeen}\0${JSON.stringify(targets)}`, (t) => drawnAsSeen(t, targets)) : drawnAsSeen(src.tab, targets)),
     async render(all) {
       const { __state, args, combo } = comboOf(all);
       const also = src.pseudoOf[__state] ? forwardedAt(c, combo, forwardMain, forwardPseudo).filter((x) => forwardSel[x.id]).map((x) => ({ selector: forwardSel[x.id], pseudo: x.pseudo })) : [];
@@ -2395,7 +2398,6 @@ async function selfSource(project, name, { second = false } = {}) {
         return document.fonts.ready.then(() => true);
       }, [name, args, String(tier).toLowerCase()]);
       const { missed } = await forceAt(tab, src.pseudoOf[__state], also);
-      src.seenAs = src.pseudoOf[__state] ? [] : (await drawnAsSeen(tab, drawnAsOf(c, { ...variantDefaults(c), ...combo }, forwardMain, settingsOf(c.folder)).filter((x) => forwardSel[x.id]).map(({ id, pseudo }) => ({ id, pseudo, selector: forwardSel[id] })))).map(({ id, pseudo }) => ({ id, pseudo }));
       for (const { selector } of also) { const t = forwardTried.get(selector) || { tried: 0, hit: 0 }; t.tried++; if (!missed.includes(selector)) t.hit++; forwardTried.set(selector, t); }
     },
     api: async () => api,
@@ -2413,7 +2415,7 @@ async function selfSource(project, name, { second = false } = {}) {
   // page through a tab that answers from it
   const { chromeVersion } = await import('../shared/cdp.mjs');
   const key = pageKey({ files, chrome: chromeVersion(), fonts: fontsInstalled({ stat: true }), env: localeHere(), system: `${process.platform} ${(await import('node:os')).release()}`,
-    code: [pageCode(), serveSite.toString(), forceAt.toString(), pageReusable.toString(), src.render.toString(), comboOf.toString(), drawnAsSeen.toString(), live.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
+    code: [pageCode(), serveSite.toString(), forceAt.toString(), pageReusable.toString(), src.render.toString(), comboOf.toString(), live.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
   // (an element's matched styles kept once by their content: every element inherits the tokens' :root rule)
   const rec = recorder({ key, live, pool: (o) => Array.isArray(o.cssProperties) });
   const render = src.render, close = src.close;
@@ -2712,7 +2714,8 @@ async function main() {
       await L.render(given, { reload: !!viaChannel });
       // (the placed components this render forced a pointer state of their own on, or found drawn at one, by part id: their
       // state, read below)
-      forwarded = new Map((L.forwardedOf ? L.forwardedOf(given) : []).map((x) => [x.id, x.pseudo]));
+      const fw = L.forwardedOf ? L.forwardedOf(given) : [], asked = fw.filter((x) => x.selector);
+      forwarded = new Map([...fw.filter((x) => !x.selector), ...(asked.length ? await L.seenAs(asked) : [])].map((x) => [x.id, x.pseudo]));
       if (!viaChannel) return;
       const missing = await call(L.tab, async ([args, wait]) => {
         const p = window.__STORYBOOK_PREVIEW__;
