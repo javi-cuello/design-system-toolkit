@@ -1057,11 +1057,11 @@ function librarySettingsFor(componentsDir, projectsDir) {
   const of = storeLibraries(componentsDir, projectsDir);
   // a folder the index does not hold yet (a draft) takes the project's library where it has only one
   const only = of && Object.keys(of.ctx.libraries || {}).length === 1 ? Object.values(of.ctx.libraries)[0].tokens : null;
-  // (and what the project's token build declares under each mode's attribute, `modeTokens` (tokens/modes.cjs blocksOf):
+  // (and what the project's token build declares under each mode's attribute, `modeTokens` (tokens/sheet.cjs blocksOf):
   // what a sheet re-declares where a pointer state sets a mode, which no attribute can; one object per settings)
   let css = '';
   try { css = of && of.styles ? fs.readFileSync(path.join(of.styles, '_tokens.scss'), 'utf8') : ''; } catch { /* no token build: no modes to re-declare */ }
-  const modeTokens = require('../tokens/modes.cjs').blocksOf(css), memo = new Map();
+  const modeTokens = require('../tokens/sheet.cjs').blocksOf(css), memo = new Map();
   const withModes = (x) => (!Object.keys(modeTokens).length ? x : memo.get(x) || memo.set(x, { ...x, modeTokens }).get(x));
   return (folder) => withModes((of && (((of.ctx.libraries || {})[of.fileOf(folder)] || {}).tokens || only)) || house);
 }

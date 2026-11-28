@@ -34,6 +34,7 @@ It reads the snapshot's `tokens.json`, wherever `snapshot.config.json` puts it. 
 | `discover.mjs` | reads a tokens folder's shape |
 | `build-tokens.mjs` | DTCG to CSS and Sass |
 | `modes.cjs` | how a collection's modes are named in code |
+| `sheet.cjs` | a built token sheet read back as declarations |
 | `names.mjs` | a token's CSS custom property name |
 | `generate-ts.mjs` | mirrors the DTCG files as TypeScript |
 | `verify-ts.mjs` | checks that TypeScript mirror |

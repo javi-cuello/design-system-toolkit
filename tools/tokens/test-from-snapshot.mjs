@@ -423,13 +423,14 @@ test("another library's variable joined into a collection of the same name resol
   assert.throws(() => writeDtcg(lone, mkdtempSync(join(tmpdir(), 'dtcg-lone-'))), /do not resolve inside their resolution/);
 });
 
-test('the declarations under each mode\'s attribute are read from the built sheet, at any nesting, comments aside', () => {
-  const MODES = createRequire(import.meta.url)('./modes.cjs');
+test('the declarations under each mode\'s attribute are read from the built sheet, at any nesting, comments aside, each with the at-rule it sits in', () => {
+  const MODES = createRequire(import.meta.url)('./sheet.cjs');
   const css = ':root {\n  --ink: red;\n}\n[data-tone="link"] {\n  --ink: var(--blue); /* a link */\n  --edge: 1px;\n}\n@media screen {\n  [data-theme="dark"] {\n    --ink: white;\n  }\n}\n.x [data-tone="no"] {\n  --ink: 0;\n}\n';
   const b = MODES.blocksOf(css);
-  assert.deepEqual(b.tone.link, [['--ink', 'var(--blue)'], ['--edge', '1px']]);
-  assert.deepEqual(b.theme.dark, [['--ink', 'white']]);
-  assert.deepEqual(MODES.blocksOf('[data-a="x"] {\n  --p: 1;\n}\n[data-a="y"] {\n  --p: 2;\n}\n').a, { x: [['--p', '1']], y: [['--p', '2']] }, 'one block after another');
+  assert.deepEqual(b.tone.link, [['--ink', 'var(--blue)', null], ['--edge', '1px', null]]);
+  assert.deepEqual(b.theme.dark, [['--ink', 'white', '@media screen']], 'a block under a media query keeps it');
+  assert.deepEqual(MODES.blocksOf('[data-a="x"] {\n  --p: 1;\n}\n[data-a="y"] {\n  --p: 2;\n}\n').a, { x: [['--p', '1', null]], y: [['--p', '2', null]] }, 'one block after another');
+  assert.deepEqual(MODES.blocksOf('[data-a="x"] { --p: "}" ; --q: 2 }').a.x.map((d) => d[0]), ['--p', '--q'], 'a brace in a string closes nothing');
   assert.equal(b.tone.no, undefined, 'a rule naming more than the attribute is no mode block');
   assert.deepEqual(MODES.blocksOf(''), {});
 });

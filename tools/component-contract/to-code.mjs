@@ -68,9 +68,9 @@ const PLACED = /^(flex|align-self|order|(min-|max-)?(inline|block)-size|position
 // a custom element's prefix: lower case, ending in the hyphen its name needs (ds-, my-ds-)
 /* What every sheet here assumes and none says: Figma's box is the border box, and a pressable component is a bare frame
    (its root draws no fill, padding, border or face of its own) around what the contract paints, where the browser gives a
-   <button> all of them, and a text field its border, padding and background. Layered below the components' sheets, so any value a contract states wins. A project includes it
+   <button> all of them, and a text field its border, padding and background. Layered below the components' sheets, so any value a contract states wins, and above the tokens (code-standard rule 4's order), so a mode a pointer state re-declares in a component's sheet wins over the token build's (pointerModesOf). A project includes it
    once, before the sheets (the toolkit's own rendering of a library does: site.mjs). */
-export const BASE = `@layer base, components;
+export const BASE = `@layer tokens, base, components;
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
   button { appearance: none; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
@@ -167,13 +167,17 @@ function copyOfNow(c, id) {
   return touched(id) || touched(m[1]) ? null : m[1];
 }
 
+/* Whether a prop's value is a pointer state (a hover, a press): an interaction prop's value its `pointer` list names. The
+   one test every reader of pointer states asks (to-markup's pointerWords too). */
+export const pointerAt = (c, k, v) => ((c.props || {})[k] || {}).role === 'interaction' && (((c.props || {})[k] || {}).pointer || []).includes(v);
+
 /* Each part, base and added, with its parent and the conditions it is drawn under: the variants that add it and those
    that take it away, a pointer state's left to the stylesheet. A part only a pointer state draws is a gap; a focus ring
    drawn as a layer of its own is the ringed element's outline; a part inside a placed component is that component's;
    one inside a slot is its sample, drawn while the caller passes nothing (`slotted`). */
 export function partsOf(c, t = HOUSE) {
   const props = c.props || {};
-  const pointer = (k, v) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v);
+  const pointer = (k, v) => pointerAt(c, k, v);
   const parts = new Map();
   const swapsIn = (w, id) => { const k = (/^\{(.+)\}$/.exec(w) || [])[1]; return !!k && (props[k] || {}).type === 'string' && (props[k].sets || []).includes(id); };
   for (const [id, e] of Object.entries(c.anatomy || {})) parts.set(id, { id, e, base: true, adds: [], removes: [], pointerOnly: false, rings: [], words: [] });
@@ -287,8 +291,7 @@ const POINTER_WORDS = new WeakMap();
 export function pointerWordsOf(c, t = HOUSE) {
   const memo = POINTER_WORDS.get(c) || new Map(); POINTER_WORDS.set(c, memo);
   if (memo.has(t)) return memo.get(t);
-  const out = new Map(), ps = pseudoClasses(t), props = c.props || {}, entry = entryOf(c);
-  const pointer = (k, v) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v);
+  const out = new Map(), ps = pseudoClasses(t), entry = entryOf(c), pointer = (k, v) => pointerAt(c, k, v);
   for (const part of partsOf(c, t).values()) {
     if (!part.pointerSays || part.inside || part.slotted || part.e.kind !== 'text' || (entry && [entry.value, entry.placeholder].includes(part.id))) continue;
     const at = new Map();
@@ -308,7 +311,7 @@ export function pointerWordsOf(c, t = HOUSE) {
 
 /* The parts whose variable modes a pointer state's variant sets (a card's at focus, a link's at press), where the sheet
    can set them as the mode's attribute would: the token build's declarations under each mode (settings `modeTokens`,
-   tokens/modes.cjs blocksOf), re-declared under the state's pseudo-class, and `inherit` where the state takes a mode
+   tokens/sheet.cjs blocksOf), re-declared under the state's pseudo-class, and `inherit` where the state takes a mode
    away. Each with the pointer prop, the values of it that set modes there, and every mode value the part takes under
    each key (for the names a mode taken away gives back). A part whose every such mode the build declares, at states that
    each have a pseudo-class; any other stays to-markup's gap. Tested by test-to-code.mjs. */
@@ -316,8 +319,7 @@ const POINTER_MODES = new WeakMap();
 export function pointerModesOf(c, t = HOUSE) {
   const memo = POINTER_MODES.get(c) || new Map(); POINTER_MODES.set(c, memo);
   if (memo.has(t)) return memo.get(t);
-  const out = new Map(), ps = pseudoClasses(t), props = c.props || {}, blocks = t.modeTokens || {};
-  const pointer = (k, v) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v);
+  const out = new Map(), ps = pseudoClasses(t), blocks = t.modeTokens || {}, pointer = (k, v) => pointerAt(c, k, v);
   const seen = new Map(), note = (id, m) => { const x = seen.get(id) || seen.set(id, {}).get(id); for (const [k, v] of Object.entries(m || {})) (x[k] ||= new Set()).add(v); };
   for (const [id, e] of Object.entries(c.anatomy || {})) note(id, e.modes);
   for (const v of c.variants || []) {
@@ -335,7 +337,8 @@ export function pointerModesOf(c, t = HOUSE) {
       if (ks.length !== 1 || ks[0] !== at.key || !ps[v.when[ks[0]]]) bad.add(id);
       at.at.add(v.when[ks[0]]);
       // (each mode it sets declared by the build; one it takes away, null, needs its names: some mode of that key declared)
-      for (const [mk, mv] of Object.entries(m || {})) if (!(blocks[mk] || {})[mv]) bad.add(id);
+      // (and only one declared outside any at-rule: one under a media query, a theme's, would be re-declared without it)
+      for (const [mk, mv] of Object.entries(m || {})) if (!(blocks[mk] || {})[mv] || blocks[mk][mv].some((d) => d[2])) bad.add(id);
       if (m == null || !Object.keys(m).length) for (const mk of Object.keys(seen.get(id) || {})) if (!blocks[mk]) bad.add(id);
     }
   }
@@ -621,7 +624,7 @@ export function ringOf(c, when, id, e, a, t = HOUSE) {
 // there (to-markup's partsOf `ring`, read the same way)
 function boxedSomewhere(c, id, t) {
   if (c.anatomy[id]) return true;
-  const pointer = ([k, v]) => (c.props[k] || {}).role === 'interaction' && (c.props[k].pointer || []).includes(v);
+  const pointer = ([k, v]) => pointerAt(c, k, v);
   return (c.variants || []).some((v) => v.add && v.add[id] && (!Object.entries(v.when || {}).some(pointer) || !ringOf(c, v.when || {}, id, v.add[id], { ...c.anatomy, ...v.add }, t)));
 }
 

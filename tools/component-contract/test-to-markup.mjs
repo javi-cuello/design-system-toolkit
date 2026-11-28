@@ -385,8 +385,11 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   { const f = { component: 'F', folder: 'f', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, t: { kind: 'text', parent: 'root', content: 'Select' } }, variants: [{ when: { state: 'focus' }, set: { 't.content': 'Search' } }] };
     // (ruled 2026-11-28: built where CSS can show them, a span of words per state; a gap only where it cannot)
     const fo = toElement(f, 'f', { naming: ELEMENT, library: { F: f } });
-    ok('words a pointer state draws are a span of their own beside the rest\'s, shown by the sheet at that state, and no gap',
-      /h\("span", \{ "data-words": "rest" \},\s*"Select"\)/.test(fo) && /h\("span", \{ "data-words": "focus" \},\s*"Search"\)/.test(fo) && !/words change at a pointer state/.test(fo), fo);
+    ok('words a pointer state draws are a span of their own beside the rest\'s, hidden in the markup, shown by the sheet at that state, and no gap',
+      /h\("span", \{ "data-words": "rest" \},\s*"Select"\)/.test(fo) && /h\("span", \{ "data-words": "focus", hidden: true \},\s*"Search"\)/.test(fo) && !/words change at a pointer state/.test(fo), fo);
+    ok('…and words that change at a focus or a hover are said to change the accessible name there; at a press, not',
+      /T's words change at focus, and its accessible name with them/.test(fo) && !/accessible name/.test(toElement({ ...f, props: { state: { ...f.props.state, values: ['rest', 'press'], pointer: ['press'] } }, variants: [{ when: { state: 'press' }, set: { 't.content': 'Search' } }] }, 'f', { naming: ELEMENT, library: { F: f } })));
+    ok('…the hidden span is a bare attribute in JSX', /<span data-words="focus" hidden>/.test(toReact(f, 'f', { naming: CLASS, library: { F: f } })));
     const css = toCss(f, 'f', { naming: ELEMENT });
     ok('…the sheet shows the rest\'s words and hides the state\'s, and the other way round under the state\'s pseudo-class',
       /> \[data-part="t"\] > \[data-words="focus"\] \{\s*display: none;/.test(css) && /:focus-visible[^{]*> \[data-part="t"\] > \[data-words="rest"\] \{\s*display: none;/.test(css), css);
@@ -394,6 +397,11 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     ok('…and words a pointer state with no pseudo-class draws are named as a gap, never dropped without a word', /words change at a pointer state/.test(toElement(np, 'f', { naming: ELEMENT, library: { F: np } })));
     const m = { ...f, variants: [{ when: { state: 'focus' }, set: { 'root.modes': { theme: 'a' } } }] };
     ok('variable modes a pointer state sets are named as a gap, never dropped without a word', /variable modes change at a pointer state/.test(toElement(m, 'f', { naming: ELEMENT, library: { F: m } })) && !/variable modes change/.test(toElement(f, 'f', { naming: ELEMENT, library: { F: f } }))); }
+  // (a placed component's part whose modes the design takes away: no attribute takes a mode off, so said)
+  { const chip = { component: 'Chip', folder: 'chip', props: {}, anatomy: { root: { kind: 'container' }, a: { kind: 'container', parent: 'root', name: 'a', modes: { ink: 'x' } } }, variants: [] };
+    const row = { component: 'Row', folder: 'row', props: { p: { type: 'boolean', default: false, figma: 'P', axis: true } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Chip' }, 'i/a': { kind: 'container', parent: 'i', name: 'a', modes: { ink: 'x' } } }, variants: [{ when: { p: true }, set: { 'i/a.modes': null } }] };
+    const at = (r) => toElement(r, 'row', { naming: ELEMENT, library: { Chip: chip, Row: r } });
+    ok('a placed component\'s part whose modes the design takes away is named as a gap; one it keeps them on, not', /takes away the variable modes Chip's part has there/.test(at(row)) && !/takes away the variable modes/.test(at({ ...row, variants: [] }))); }
   { const link = { component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
     const holder = (variants, w) => ({ component: 'Card', folder: 'card', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, link: { kind: 'instance', parent: 'root', component: 'Link', with: w } }, variants });
     const out = (h) => toElement(h, 'card', { naming: ELEMENT, library: { Card: h, Link: link } });

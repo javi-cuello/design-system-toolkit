@@ -143,6 +143,14 @@ export function turnOf(n, style) {
   return { wrap: w, up: w ? w.parentElement : n.parentElement, flow: turned ? w : n, turned };
 }
 
+/* The nodes an element's own words are in: its children, but for a span of words its state shows (to-markup's
+   data-words, one per pointer state whose words differ), whose children stand in its place, and one hidden (by the sheet
+   at the state the page is in, else by its hidden attribute), which draws nothing. Shared by wordsRect and wordsAsDrawn; runs in the page (passed as source), where they are handed it. */
+export function wordNodes(n) {
+  const shown = (x) => x.nodeType === 1 && x.hasAttribute && x.hasAttribute('data-words') && (typeof getComputedStyle === 'function' ? getComputedStyle(x).display !== 'none' : !x.hidden);
+  return [...n.childNodes].flatMap((x) => (shown(x) ? [...x.childNodes] : x.nodeType === 1 && x.hasAttribute && x.hasAttribute('data-words') ? [] : [x]));
+}
+
 /* What decides where a part paints among its siblings, as the browser stacks them (CSS 2 Appendix E): `out` where it is
    out of the flow (absolute or fixed: CSS order moves it nowhere, CSS Flexbox 4.1), `lifted` where it paints with
    the positioned in the flow (rules.mjs liftsAlone, passed in: positioned, or a stacking context of its own), and `z`, its z-index where one applies (a positioned box, or a flex or grid item: CSS
@@ -152,11 +160,9 @@ export function turnOf(n, style) {
    blank or empty one left out; null where none draws. Each its own, so an element between two runs is not taken as
    covered, and a sibling a margin pulls over one is seen to overlap (the page's overlap, stackLikeDesign). Runs in the
    page (passed as source); tested by test-from-code.mjs. */
-export function wordsRect(n, range) {
+export function wordsRect(n, range, nodes = wordNodes) {
   const out = [];
-  // (and those of the span of words its state shows, to-markup's data-words: wordsAsDrawn)
-  const shown = (x) => x.nodeType === 1 && x.hasAttribute && x.hasAttribute('data-words') && (typeof getComputedStyle !== 'function' || getComputedStyle(x).display !== 'none');
-  for (const c of [...n.childNodes].flatMap((x) => (shown(x) ? [...x.childNodes] : [x]))) {
+  for (const c of nodes(n)) {
     if (c.nodeType !== 3 || !c.textContent.trim()) continue;
     range.selectNodeContents(c);
     const b = range.getBoundingClientRect();
@@ -182,11 +188,8 @@ export function stackOf(n, style, liftsAlone) {
    spaces kept, as Figma keeps a text's; preserve-breaks keeps its newlines alone. The ends are trimmed either way (a template's line breaks around a label are not its words).
    white-space-collapse where computed, else white-space (an older browser). Runs in the page (passed as source);
    tested by test-from-code.mjs. */
-export function wordsAsDrawn(n, s) {
-  // (a text whose words a pointer state changes holds a span of words for each, to-markup's data-words: the words are
-  // the one its state shows, the rest hidden)
-  const shown = (x) => x.nodeType === 1 && x.hasAttribute && x.hasAttribute('data-words') && (typeof getComputedStyle !== 'function' || getComputedStyle(x).display !== 'none');
-  const texts = [...n.childNodes].flatMap((x) => (shown(x) ? [...x.childNodes] : [x])).filter((x) => x.nodeType === 3).map((x) => x.textContent);
+export function wordsAsDrawn(n, s, nodes = wordNodes) {
+  const texts = nodes(n).filter((x) => x.nodeType === 3).map((x) => x.textContent);
   const collapse = s.whiteSpaceCollapse || ({ pre: 'preserve', 'pre-wrap': 'preserve', 'break-spaces': 'break-spaces', 'pre-line': 'preserve-breaks' })[s.whiteSpace] || 'collapse';
   const kept = collapse === 'preserve' || collapse === 'break-spaces';
   // (the nodes joined first, as the browser collapses across them: a node of white space alone between words is a space)
@@ -1038,14 +1041,17 @@ export function onlyInCode(props, design, joins = {}) {
 /* A slot control in the toolkit's own story (the self leg): to-markup's swap of a library component (`placed`) says so,
    with the component it draws where the caller passes nothing. Only this story sets `placed`: a docgen default (a real
    Storybook's `icon = <ChevronDown />`) is no such mark. Tested by test-from-code.mjs. */
-/* The words the self story gives a string prop: its default with each letter turned thirteen places and each digit five,
-   as long and as wide in a sans face, so a text the markup binds to the prop reads back as the prop and a literal the
-   design unbinds it to, its default's own words, reads back as that literal. Empty stays empty (a text that shows
-   only when given words); words with no letter or digit are said twice. Tested by test-from-code.mjs. */
+/* The words the self story gives a string prop: its default's own characters in another order, reversed, else turned
+   by one (a palindrome), so they take the same advance widths and lay out as wide as the default (a font's kerning
+   pairs aside), and a text the markup binds to the prop reads back as the prop while a literal the design unbinds it
+   to, its default's own words, reads back as that literal. Empty stays empty (a text that shows only when given
+   words); one character, or one repeated, has no other order and is said twice. Tested by test-from-code.mjs. */
 export function standIn(w) {
   if (typeof w !== 'string' || !w) return w;
-  const out = w.replace(/[a-z]/gi, (ch) => { const b = ch <= 'Z' ? 65 : 97; return String.fromCharCode(((ch.charCodeAt(0) - b + 13) % 26) + b); }).replace(/[0-9]/g, (d) => String((+d + 5) % 10));
-  return out === w ? `${w}${w}` : out;
+  const cs = [...w], back = cs.slice().reverse().join('');
+  if (back !== w) return back;
+  const turned = [...cs.slice(1), cs[0]].join('');
+  return turned !== w ? turned : `${w}${w}`;
 }
 export const selfSlotControl = (x) => ({ control: 'slot', ...(x.placed && { placed: x.placed.component }), ...(x.sample && { sample: x.key }) });
 /* A code prop that takes content: a slot, found where a stand-in for it lands; one the self story marks `placed` is read
@@ -1142,42 +1148,25 @@ export function modeKeysOf(axes, contract) {
 }
 
 export const keepsName = (name, id) => partName(id) !== name;
-/* The mode keys a pointer state's variant sets a part's modes under (a card's at focus, a link's at press), or takes
-   away (the keys the part holds anywhere), each with the modes the design names under it: the keys a reading at that
-   state works out from computed values (stateModes), as no attribute changes there. Tested by test-from-code.mjs. */
-export function pointerModeKeys(c) {
-  const props = (c && c.props) || {}, out = new Map(), held = new Map();
-  const pointer = (when) => Object.entries(when || {}).some(([k, v]) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v));
-  const note = (id, m) => { for (const k of Object.keys(m || {})) (held.get(id) || held.set(id, new Set()).get(id)).add(k); };
-  for (const [id, e] of Object.entries((c && c.anatomy) || {})) note(id, e.modes);
-  for (const v of (c && c.variants) || []) { for (const [k, m] of Object.entries(v.set || {})) if (/\.modes$/.test(k)) note(k.slice(0, -6), m); for (const [id, e] of Object.entries(v.add || {})) note(id, e.modes); }
-  for (const v of (c && c.variants) || []) if (pointer(v.when)) for (const [k, m] of Object.entries(v.set || {})) if (/\.modes$/.test(k)) for (const mk of m && Object.keys(m).length ? Object.keys(m) : held.get(k.slice(0, -6)) || []) out.set(mk, new Set());
-  // (each with the modes the design names under it anywhere, the ones a reading tries first)
-  const named = (m) => { for (const [k, v] of Object.entries(m || {})) if (out.has(k) && v != null) out.get(k).add(v); };
-  for (const e of Object.values((c && c.anatomy) || {})) named(e.modes);
-  for (const v of (c && c.variants) || []) { for (const [k, m] of Object.entries(v.set || {})) if (/\.modes$/.test(k)) named(m); for (const e of Object.values(v.add || {})) named(e.modes); }
-  return Object.fromEntries([...out].map(([k, vs]) => [k, [...vs]]));
-}
-
 /* At a pointer state, an element's variable modes under `keys` as its computed values say them, where they differ from
    what its attributes give (`modes`): a sheet sets a mode there by re-declaring the custom properties the page's rules
-   declare under that mode's attribute (`[data-<key>="<value>"]`), so the mode is the one whose declarations, resolved
-   where the element stands (a probe beside it carrying that attribute), are what the element computes; none where it
-   computes what it inherits. `keys` lists them, or names for each the modes to try first (the design's own): of modes
-   whose declarations compute alike (two tokens of one colour), the first so named. Runs in the page (passed as source);
-   tested by test-from-code.mjs. */
+   declare under that mode's attribute (`[data-<key>="<value>"]`, to-code pointerModesOf), so the mode is the one whose
+   declarations, resolved where the element stands (a probe beside it carrying that attribute), are what the element
+   computes; none where it computes what it inherits. `keys` names under each key the modes the design gives it
+   anywhere; `expected` the design's own answer for this element at this combination (null where the state takes the
+   mode away), tried first, so of modes whose declarations compute alike (two tokens of one colour) the design's is
+   read, then the attribute's, the design's others, the page's and none. Runs in the page (passed as source); tested by
+   test-from-code.mjs. */
 export function stateModes(keys, doc = document, style = getComputedStyle) {
-  const prefer = Array.isArray(keys) ? {} : keys;
-  keys = Array.isArray(keys) ? keys : Object.keys(keys);
   const by = {}, re = /^\[data-([\w-]+)="([^"]*)"\]$/;
   const visit = (rules) => { for (const r of rules || []) {
     const m = r.selectorText && re.exec(r.selectorText.trim());
-    if (m && keys.includes(m[1])) for (let i = 0; i < r.style.length; i++) if (r.style[i].startsWith('--')) ((by[m[1]] ||= {})[m[2]] ||= new Set()).add(r.style[i]);
+    if (m && m[1] in keys) for (let i = 0; i < r.style.length; i++) if (r.style[i].startsWith('--')) ((by[m[1]] ||= {})[m[2]] ||= new Set()).add(r.style[i]);
     if (r.cssRules && r.cssRules.length) visit(r.cssRules);
   } };
   for (const sh of doc.styleSheets) { try { visit(sh.cssRules); } catch { /* another origin's */ } }
   const same = (a, b) => !!a && !!b && a.length === b.length && a.every((x, i) => x === b[i]);
-  return (n, modes) => {
+  return (n, modes, expected = {}) => {
     const out = { ...modes }, up = n.parentElement;
     if (!up) return out;
     for (const [k, vs] of Object.entries(by)) {
@@ -1185,14 +1174,15 @@ export function stateModes(keys, doc = document, style = getComputedStyle) {
       const read = (el) => { const cs = style(el); return names.map((nm) => cs.getPropertyValue(nm).trim()); };
       const probe = (v) => { const p = doc.createElement('span'); if (v != null) p.setAttribute(`data-${k}`, v); p.style.display = 'none'; up.appendChild(p); try { return read(p); } finally { p.remove(); } };
       const cur = read(n);
-      if (same(probe(modes[k] ?? null), cur)) continue;
-      const hit = [...new Set([...(prefer[k] || []).filter((v) => v in vs), ...Object.keys(vs)])].find((v) => same(probe(v), cur));
-      if (hit !== undefined) out[k] = hit; else if (same(probe(null), cur)) delete out[k];
+      // (each answer once, in that order: undefined is none to try, null the mode taken away)
+      const tries = [...new Set([...(k in expected ? [expected[k]] : []), modes[k] ?? null, ...(keys[k] || []).filter((v) => v in vs), ...Object.keys(vs), null])];
+      const hit = tries.find((v) => (v == null || v in vs) && same(probe(v), cur));
+      if (hit === undefined) continue;
+      if (hit == null) delete out[k]; else out[k] = hit;
     }
     return out;
   };
 }
-
 
 /* The CSS each field of a placed instance's own styling is read from (from-code's walk, boxStyling), for asking whose
    rule wrote it. */
@@ -2838,13 +2828,16 @@ async function main() {
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
       // (and at a forced pointer state, the keys its variants set modes under, worked out from computed values there)
-      const stateKeys = figmaContract && (L.pseudoOf || {})[args.__state] ? pointerModeKeys(figmaContract) : null, stateKeyed = stateKeys && Object.keys(stateKeys).length ? stateKeys : null;
+      // (each part to-code re-declares a mode of at that state, with the modes the design gives it under each key, and
+      // its own answer here, null where the state takes the mode away: what a reading tries first, stateModes)
+      const setByState = figmaContract && (L.pseudoOf || {})[args.__state] ? (await import('./to-code.mjs')).pointerModesOf(figmaContract, settings) : new Map();
+      const stateKeyed = setByState.size ? { keys: [...setByState.values()].reduce((o, x) => { for (const [k, vs] of Object.entries(x.values)) o[k] = [...new Set([...(o[k] || []), ...vs])]; return o; }, {}), expect: Object.fromEntries([...setByState.keys()].map((id) => [id, Object.fromEntries(Object.keys(setByState.get(id).values).map((k) => [k, ((drawnHere()[id] || {}).modes || {})[k] ?? null]))])) } : null;
       // each element two layers of the design share, by what it draws (namedAt): its icon's name, else the first inside it
       const twice = [...new Set(named.map((x) => x[0]).filter((sl, i, a) => a.indexOf(sl) !== i))];
       const glyphs = twice.length ? await call(L.tab, (sels) => Object.fromEntries(sels.map((sl) => { const n = document.querySelector(sl), g = n && (n.getAttribute('data-icon') || (n.querySelector('[data-icon]') || { getAttribute: () => null }).getAttribute('data-icon')); return [sl, g || null]; })), twice) : {};
       const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS, paintedClearSrc, childrenMeetSrc, strokeShapesSrc, mapped, stateModesSrc, stateKeys]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
-        const atState = stateKeys ? new Function(`return ${stateModesSrc}`)()(stateKeys) : null;
+        const atState = stateKeys ? new Function(`return ${stateModesSrc}`)()(stateKeys.keys) : null;
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)(), childrenMeet = new Function(`return ${childrenMeetSrc}`)(), [lineCap, centreRing] = new Function(`return ${strokeShapesSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)(), flowOf = new Function(`return ${flowSrc}`)();
@@ -2861,7 +2854,7 @@ async function main() {
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
-        const wordsAsDrawn = new Function(`return ${wordsSrc}`)(), textType = new Function(`return ${textTypeSrc}`)(), typeOf = (n, s) => textType(n, s, WEIGHT);
+        const [wordsOf, wordNodes] = new Function(`return ${wordsSrc}`)(), wordsAsDrawn = (n, s) => wordsOf(n, s, wordNodes), textType = new Function(`return ${textTypeSrc}`)(), typeOf = (n, s) => textType(n, s, WEIGHT);
         const slot = (n) => { if (partRe) for (const c of n.classList) { const x = c.match(new RegExp(partRe)); if (x && !(modRe && new RegExp(modRe).test(x[1]))) return x[1]; } return n.tagName.toLowerCase() === 'svg' ? 'icon' : n.tagName.toLowerCase(); };
         // where code placed a box over its parent, and, where it sits at its parent's centre on an axis (inset 50% and a
         // translate back, a spinner over a button), that it is centred there, as Figma's constraint says it
@@ -2927,8 +2920,9 @@ async function main() {
           const hostSel = /^(.*\S)\s*>\s*[^>]+$/.exec(sel || '');
           const host = parent == null && hostSel && n.parentElement && n.parentElement.tagName.includes('-') && (() => { try { return n.parentElement.matches(hostSel[1]); } catch { return false; } })() ? n.parentElement : null;
           const attrModes = Object.fromEntries(modeKeys.map((k) => [k, n.getAttribute(`data-${k}`) || (host && host.getAttribute(`data-${k}`))]).filter(([, v]) => v));
-          // (at a pointer state that sets modes, as its computed values say them: stateModes)
-          const modes = atState ? atState(host || n, attrModes) : attrModes;
+          // (at a pointer state that sets modes, as its computed values say them, read on the element the sheet writes
+          // them on, its attributes' modes, the host's included, the ones it starts from: stateModes)
+          const modes = atState && id in stateKeys.expect ? atState(n, attrModes, stateKeys.expect[id]) : attrModes;
           const e = { id, kind, ...(parent != null && { parent, order }), ...placedBy(n, parent), ...(figmaName && { name: figmaName }), ...(nameBorrowed && { nameBorrowed }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...((mirrors.get(n) || mirrored(s)) && { flip: mirrors.get(n) || mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // another library's instance the markup drew open (to-markup's data-component, data-key, data-with): its component,
           // its key and the props it is given, read back as the instance it is (foreignAsInstance)
@@ -3116,7 +3110,7 @@ async function main() {
                 // drawn over this box's own fill where it paints one, else over what this box is drawn over
                 const over = clear(s.backgroundColor) ? under : s.backgroundColor;
                 // (its boxes, its words' own run by run, so a sibling drawn over them is seen to overlap: wordsRect)
-                const rects = new Function(`return ${wordsRectSrc}`)()(n, document.createRange());
+                const rects = new Function(`return ${wordsRectSrc}`)()(n, document.createRange(), wordNodes);
                 out.push({ id: tid, kind: 'text', parent: id, order: i++, color: s.color, type: typeOf(n, s),
                   textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign, content: text, under: over, ...(rects && { rects }) });
               }
@@ -3148,7 +3142,7 @@ async function main() {
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; delete e.rects; });
         }
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), `[${layerShown.toString()}, ${shownState.toString()}, ${aroundGone.toString()}]`, markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString(), `[${lineCap.toString()}, ${centreRing.toString()}]`, Object.fromEntries(named.map(([q, id]) => [id, q])), stateModes.toString(), stateKeyed]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), `[${wordsAsDrawn.toString()}, ${wordNodes.toString()}]`, paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), `[${layerShown.toString()}, ${shownState.toString()}, ${aroundGone.toString()}]`, markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString(), `[${lineCap.toString()}, ${centreRing.toString()}]`, Object.fromEntries(named.map(([q, id]) => [id, q])), stateModes.toString(), stateKeyed]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a box whose children say by z-index how they stack but not the design's order of them (one in the flow, no CSS
       // order: rules.mjs stackedFirst): its children read as painted, and said so; the box keeps the mark (stackUnknown),

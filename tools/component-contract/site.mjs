@@ -100,7 +100,7 @@ export function siteFiles(library, { tokensCss = '', stylesheets = [], naming = 
   // the base the sheets assume first (to-code's BASE), then the tokens and each component's sheet; the tokens in a layer
   // of their own under the rest (code-standard rule 4), so a component's rule that re-declares a mode's tokens (a
   // pointer state's, to-code's pointerModesOf) wins over the mode's attribute, as it does in a layered project
-  let css = `@layer tokens;\n${BASE}${tokensCss ? `@layer tokens {\n${tokensCss}\n}\n` : ''}\n`;
+  let css = `${BASE}${tokensCss ? `@layer tokens {\n${tokensCss}\n}\n` : ''}\n`;
   // each component's render function, by the name its file exports (to-markup's to say, not this file's to guess)
   const fn = {};
   // each drawn with the components it places as the project's build gives them (to-code's main), so a rule reaching inside one is written
@@ -120,48 +120,8 @@ export function siteFiles(library, { tokensCss = '', stylesheets = [], naming = 
   return files;
 }
 
-/* The custom property declarations in a sheet, in order: { name, start, end, value }, `start`..`end` the whole
-   declaration (its `;` included where it has one). Read by a scanner, never by line: a token build may put several on
-   one line, and a value may hold a string, a comment, a `;` or a block inside brackets. Tested by test-from-code.mjs. */
-export function customProperties(css) {
-  const out = [], n = css.length;
-  // past a comment or a string starting at j
-  const past = (j) => {
-    if (css[j] === '/' && css[j + 1] === '*') { const e = css.indexOf('*/', j + 2); return e < 0 ? n : e + 2; }
-    const q = css[j];
-    // (a string ends at its quote, or unclosed at the line's end, as CSS ends a bad string)
-    for (j++; j < n; j++) { if (css[j] === '\\') j++; else if (css[j] === q) return j + 1; else if (css[j] === '\n') return j; }
-    return n;
-  };
-  const opens = (ch) => ch === '"' || ch === "'";
-  let fresh = true;
-  for (let i = 0; i < n;) {
-    const ch = css[i];
-    if (opens(ch) || (ch === '/' && css[i + 1] === '*')) { const comment = ch === '/'; i = past(i); if (!comment) fresh = false; continue; }
-    if (ch === '{' || ch === '}' || ch === ';') { fresh = true; i++; continue; }
-    if (/\s/.test(ch)) { i++; continue; }
-    // (a name of any characters CSS takes in one: escaped, or past ASCII)
-    const name = fresh && ch === '-' && css[i + 1] === '-' && /^--(?:[\w-]|\\[\s\S]|[^\x00-\x7f])*/.exec(css.slice(i, i + 256))[0];
-    fresh = false;
-    if (!name) { i++; continue; }
-    let j = i + name.length;
-    while (j < n && (/\s/.test(css[j]) || (css[j] === '/' && css[j + 1] === '*'))) j = /\s/.test(css[j]) ? j + 1 : past(j);
-    if (css[j] !== ':') { i = j; continue; }
-    // the value: up to a `;` or the block's `}`, outside strings, comments and brackets
-    const from = ++j;
-    for (let depth = 0; j < n;) {
-      const c = css[j];
-      if (opens(c) || (c === '/' && css[j + 1] === '*')) { j = past(j); continue; }
-      if (c === '(' || c === '[' || c === '{') depth++;
-      else if (c === ')' || c === ']' || (c === '}' && depth > 0)) depth--;
-      else if (depth === 0 && (c === ';' || c === '}')) break;
-      j++;
-    }
-    out.push({ name, start: i, end: css[j] === ';' ? j + 1 : j, value: css.slice(from, j).trim() });
-    i = j;
-  }
-  return out;
-}
+/* The custom property declarations in a sheet (tools/tokens/sheet.cjs, its owner): re-exported for the readers here. */
+export const { customProperties } = createRequire(import.meta.url)('../tokens/sheet.cjs');
 
 /* `tokensCss` keeping only the custom properties `from` (the sheets and markup served beside it) reaches through
    var(), and those their own values reach, at any depth; every other statement is kept as written. A name met in a

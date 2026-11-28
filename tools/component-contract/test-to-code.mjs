@@ -1366,5 +1366,16 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const two = { ...c, anatomy: { root: { kind: 'container', modes: { ink: 'link', flag: 'on' } } }, variants: [c.variants[0]] };
   ok('…a key of the part\'s the build declares nothing under is left to its attribute, and one the state takes away stays the gap',
     /--ink: var\(--navy\);/.test(toCss(two, 'lnk', { naming: ELEMENT, settings: t })) && pointerModesOf(two, t).has('root') && !pointerModesOf({ ...two, variants: c.variants }, t).has('root'));
-  ok('…and the markup names no gap there, but does where the build declares none', !/variable modes change/.test(toElement(c, 'lnk', { naming: ELEMENT, settings: t })) && /variable modes change/.test(toElement(c, 'lnk', { naming: ELEMENT }))); }
+  ok('…and the markup names no gap there, but does where the build declares none', !/variable modes change/.test(toElement(c, 'lnk', { naming: ELEMENT, settings: t })) && /variable modes change/.test(toElement(c, 'lnk', { naming: ELEMENT })));
+  // (a mode the build declares only under a media query, a theme's, would lose it re-declared: left the gap)
+  const media = { ...HOUSE, modeTokens: { ink: { link: [['--ink', 'var(--blue)', null]], pressed: [['--ink', 'var(--navy)', '@media screen']] } } };
+  ok('…never a mode the build declares under an at-rule, which a re-declaration would drop', !pointerModesOf(c, media).has('root') && !/--ink:/.test(toCss(c, 'lnk', { naming: ELEMENT, settings: media })));
+  // (the sheet re-declares the build's own values, so a token rebuild that changes them changes the sheet: to-code
+  // --check, project-check's componentStyles gate after its tokens gate, fails until the sheets are written again)
+  const moved = { ...HOUSE, modeTokens: { ink: { link: [['--ink', 'var(--blue)']], pressed: [['--ink', 'var(--teal)']] } } };
+  ok('…and a mode the token build declares otherwise is a sheet that differs, which the generated-sheet check sees', toCss(c, 'lnk', { naming: ELEMENT, settings: moved }) !== css);
+}
+// the layers in the order code-standard rule 4 gives them, declared before any rule, so the tokens lose to a component
+{ const { BASE } = await import('./to-code.mjs');
+  ok('the base every sheet assumes declares the tokens layer first, then base, then components', /^@layer tokens, base, components;/.test(BASE)); }
 console.log(`${n} passed`);

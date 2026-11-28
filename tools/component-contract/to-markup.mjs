@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations, borderBox } from './css.mjs';
-import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, pointerWordsOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
+import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign, foreignOpened } from './layers.mjs';
 // (another library's instance whose insides the contract records is drawn open, its layers this component's own:
@@ -149,7 +149,7 @@ export function swapKeysOf(c, el) {
 }
 
 /* A combination that is a pointer state (a hover, a focus; partsOf's own test): what is drawn there no markup holds. */
-export const pointerWords = (c, when) => Object.entries(when || {}).some(([k, v]) => ((c.props || {})[k] || {}).role === 'interaction' && (((c.props || {})[k] || {}).pointer || []).includes(v));
+export const pointerWords = (c, when) => Object.entries(when || {}).some(([k, v]) => pointerAt(c, k, v));
 
 /* A part inside a placed component that no prop of that component carries (an avatar's icon shown in a switcher
    that has no prop for it): an override the markup cannot pass, so the generated code leaves it to the developer,
@@ -232,7 +232,7 @@ export function givenOf(placed, w, library = {}, lang = JS, settings = HOUSE) {
    only where the design keeps the instance whole, so a part it does not list is not drawn). `a` is one combination's
    anatomy (expand), `hid` the instance there, `whole` the instances it keeps whole (derive's wholeIn); `seen` collects
    each layer so carried. Tested by test-to-markup.mjs. */
-export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), added = null, redrawn = null, library = {}, lang = JS, settings = HOUSE, sheet = true, opened = new Set() } = {}) {
+export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), added = null, redrawn = null, library = {}, lang = JS, settings = HOUSE, sheet = true, opened = new Set(), modesTaken = new Set(), gaps = null } = {}) {
   const e = a[hid], m = e && e.kind === 'instance' && mainOf(e.component, e.key);
   if (!m) return {};
   const { M, back } = placedAs(a, hid, m, mainOf);
@@ -250,7 +250,7 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     const L = inner[rel], X = M[mk], at = `${hid}/${rel}`, entry = {};
     const Lm = L.kind === 'instance' && mainOf(L.component, L.key), Xm = X.kind === 'instance' && mainOf(X.component, X.key);
     if (Lm) {
-      const nested = insideOf(a, at, mainOf, { whole, seen, added, redrawn, library, lang, settings, sheet: false, opened });
+      const nested = insideOf(a, at, mainOf, { whole, seen, added, redrawn, library, lang, settings, sheet: false, opened, modesTaken, gaps });
       // (another of the library's drawn in its place: given its props, and the modes the design sets on it, as placed gives a part's)
       if (Lm !== Xm) Object.assign(entry, { render: Lm, props: givenOf(Lm, L.with, library, lang, settings), ...(L.modes && Object.keys(L.modes).length && { host: MODES.attributesOf(L.modes) }) });
       else {
@@ -301,6 +301,9 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     // the group puts in another mode): each as the attribute the token build writes it as, over the part's own; one
     // drawn in its place takes them from `host` or its mark's look, above (derive leaves out modes the part's own)
     if (!entry.render && L.modes && Object.keys(L.modes).length && !MODES.sameModes(L.modes, X.modes)) entry.attrs = { ...entry.attrs, ...MODES.attributesOf(L.modes) };
+    // (one the design takes them away from, where the placed component's part has its own: no attribute takes a mode
+    // off, so the part keeps the component's; said, for the design or frontend-build to settle)
+    else if (gaps && modesTaken.has(at) && X.modes && Object.keys(X.modes).length) { const g = `${partName(at)}: the design takes away the variable modes ${m.component}'s part has there, which no attribute can: frontend-build's to undo, or the design's to keep`; if (!gaps.includes(g)) gaps.push(g); }
     if (Object.keys(entry).length) seen.add(at);
     put(mk, entry);
   }
@@ -621,6 +624,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const textOf = (id, e, words = []) => {
     // words a pointer state draws (a field's "Search" at focus) where the markup cannot hold them beside the rest's
     // (pointerWordsOf: a placed component's text, an input, a state with no pseudo-class): a gap, never a silent drop
+    // (and words that change at a hover or a focus change what the control is called there: said, for frontend-build)
+    if (spoken.has(id)) { const at = [...spoken.get(id).at.keys()].filter((v) => /hover|focus/.test(pseudoClasses(settings)[v] || '')); const g = `${partName(id)}'s words change at ${at.join(' and ')}, and its accessible name with them: frontend-build's to judge`; if (at.length && !gaps.includes(g)) gaps.push(g); }
     if ((parts.get(id) || {}).pointerWords && !spoken.has(id)) gaps.push(`${partName(id)}'s words change at a pointer state: frontend-build's to add, or the design's to drop`);
     // one text two string props set (a placeholder, and the value a variant shows instead): the one no variant swaps in,
     // and each variant's own where it is drawn
@@ -696,7 +701,10 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     if (!a[id] || a[id].kind !== 'instance' || placedOf(library, a[id]) !== placedOf(library, e)) return {};
     // (a numbered copy's look too: no sheet rule reaches inside one, to-code's copySelector)
     const copied = !!copyOf(c, id) || Object.keys(a).some((k) => k !== id && copyOf(c, k) === id);
-    return insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), seen: carried, library, lang, settings, sheet: !copied, opened: foreignOpened(c, library) });
+    // (the layers inside it whose modes a variant drawn here takes away: set to none)
+    const w = { ...D, ...when }, modesTaken = new Set((c.variants || []).filter((v) => Object.entries(v.when || {}).every(([k, x]) => w[k] === x))
+      .flatMap((v) => Object.entries(v.set || {}).filter(([k, m]) => /\.modes$/.test(k) && (m == null || !Object.keys(m).length)).map(([k]) => k.slice(0, -'.modes'.length))));
+    return insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), seen: carried, library, lang, settings, sheet: !copied, opened: foreignOpened(c, library), modesTaken, gaps });
   };
   // (`host`: the attributes of the part it takes the place of, its hook, said first so the node's own name stays)
   const nodeLit = (x, host = null) => {
@@ -868,7 +876,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // (words a pointer state changes: a span of the rest's words and one of each such state's, the sheet showing the one
       // its state draws, to-code's pointerWordsOf; each state's over the rest's where its variants say nothing)
       const ws = spoken.get(id);
-      out = { tag, attrs: hook(id), children: !ws ? [textOf(id, e, part.words)] : [['rest', part.words], ...[...ws.at].map(([v, w]) => [v, [...part.words, ...w]])].map(([v, w]) => ({ tag: 'span', attrs: [['data-words', { lit: v }]], children: [textOf(id, e, w)] })) };
+      out = { tag, attrs: hook(id), children: !ws ? [textOf(id, e, part.words)] : [['rest', part.words], ...[...ws.at].map(([v, w]) => [v, [...part.words, ...w]])].map(([v, w]) => ({ tag: 'span', attrs: [['data-words', { lit: v }], ...(v !== 'rest' ? [['hidden', { lit: true }]] : [])], children: [textOf(id, e, w)] })) };
+      // (each state's but the rest's hidden, which the sheet shows at its state: without the sheet, the rest's words alone)
     } else {
       // (another library's instance drawn open: its glyphs boxes of their size and colour, no path data being recorded)
       if (e.foreign) { const gap = `${partName(id)}: ${e.component}, another library's, drawn from the layers the design records (a glyph as a box of its size and colour): draw it as the project draws that library's`; if (!gaps.includes(gap)) gaps.push(gap); }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, shownState, aroundGone, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, lineCap, centreRing, shadowLayers, borderGradient, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance, standIn, pointerModeKeys, stateModes } from './from-code.mjs';
+import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, shownState, aroundGone, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, lineCap, centreRing, shadowLayers, borderGradient, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance, standIn, stateModes } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1297,6 +1297,43 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     && at({ design: { w: { kind: 'text', typography: 'Body/sm' } }, id: 'w' }) === 'typography,letterSpacing,textCase,textDecoration');
 }
 
+// 2026-11-28: a pointer state that sets a part's mode and changes its words, on a real page: the sheet re-declares the
+// mode's tokens under :active over the attribute's (the tokens layered first), the span of words the state draws
+// shows and the rest's hides, and the reader works out both back from what the page computes
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, waitFor, call, forceState } = await import('../shared/cdp.mjs');
+  const { selfSiteFiles, serveSite } = await import('./site.mjs');
+  const { HOUSE } = await import('./to-code.mjs');
+  const { wordsAsDrawn, wordNodes, stateModes } = await import('./from-code.mjs');
+  const { createRequire } = await import('node:module');
+  const sheet = createRequire(import.meta.url)('../tokens/sheet.cjs');
+  const tokensCss = ':root {\n  --ink: rgb(255, 0, 0);\n}\n[data-ink="a"] {\n  --ink: rgb(0, 0, 255);\n}\n[data-ink="p"] {\n  --ink: rgb(0, 128, 0);\n}\n#stage { color: var(--ink) }\n';
+  const settings = { ...HOUSE, modeTokens: sheet.blocksOf(tokensCss) };
+  const lnk = { contract: 1, component: 'Lnk', folder: 'lnk', props: { state: { type: 'enum', values: ['rest', 'press'], default: 'rest', role: 'interaction', pointer: ['press'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' }, modes: { ink: 'a' } }, label: { kind: 'text', parent: 'root', content: 'Open' } },
+    variants: [{ when: { state: 'press' }, set: { 'root.modes': { ink: 'p' }, 'label.content': 'Opening' } }] };
+  const files = selfSiteFiles({ Lnk: lnk }, 'lnk', { tokensCss, settingsOf: () => settings });
+  ok('the self page declares its layers tokens, base, components, in that order, before any rule', /^@layer tokens, base, components;/.test(files['all.css'].replace(/^\/\*[\s\S]*?\*\/\s*/, '')), files['all.css'].slice(0, 80));
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to force a pointer state in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({}), site = await serveSite(files);
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
+      await call(tab, () => { const s = document.createElement('section'); s.append(window.R.lnk({})); document.getElementById('stage').replaceChildren(s); });
+      const read = () => call(tab, ([wSrc, nSrc, mSrc]) => {
+        const n = document.querySelector('#stage section > *'), label = n.querySelector('[data-part="label"]') || n.querySelector('[data-words]').parentElement;
+        const words = new Function(`return ${wSrc}`)(), nodes = new Function(`return ${nSrc}`)(), at = new Function(`return ${mSrc}`)()({ ink: ['a', 'p'] });
+        return { ink: getComputedStyle(n).getPropertyValue('--ink').trim(), words: words(label, getComputedStyle(label), nodes), hidden: [...n.querySelectorAll('[data-words][hidden]')].map((x) => x.getAttribute('data-words')), modes: at(n, { ink: n.getAttribute('data-ink') }, { ink: 'p' }) };
+      }, [wordsAsDrawn.toString(), wordNodes.toString(), stateModes.toString()]);
+      const rest = await read();
+      await forceState(tab, [{ selector: '#stage section > *', pseudo: 'active' }]);
+      const pressed = await read();
+      ok('at rest, the attribute\'s mode and the rest\'s words; every other state\'s span hidden in the markup', rest.ink === 'rgb(0, 0, 255)' && rest.words === 'Open' && rest.hidden.join() === 'press' && JSON.stringify(rest.modes) === '{"ink":"a"}', JSON.stringify(rest));
+      ok('forced :active, the mode\'s tokens re-declared over the attribute\'s, and its words shown: read back as that mode and those words', pressed.ink === 'rgb(0, 128, 0)' && pressed.words === 'Opening' && JSON.stringify(pressed.modes) === '{"ink":"p"}', JSON.stringify(pressed));
+    } finally { await browser.close(); await site.close(); }
+  }
+}
 // 2026-11-26: a stroke across the edge goes round at 1px: Chrome computes its outline offset snapped as a border width
 // (calc(1px / -2) reads -1px, as an inside one would), so the reader takes the offset as written, resolved where it is
 { const fs = await import('node:fs');
@@ -1866,20 +1903,19 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
       wordsAsDrawn({ childNodes: [span('Search', 'inline'), span('Typing', 'none')] }, { whiteSpaceCollapse: 'collapse' }) === 'Search'
       && wordsAsDrawn({ childNodes: [span('Search', 'none'), span('Typing', 'inline')] }, { whiteSpaceCollapse: 'collapse' }) === 'Typing'
       && wordsAsDrawn(el('a', {}), { whiteSpaceCollapse: 'collapse' }) === 'a');
-  } finally { globalThis.getComputedStyle = had; } }
-// a pointer state that sets a part's modes: the keys it sets them under, or those the part holds where it takes them away
-{ const c = { props: { state: { type: 'enum', values: ['rest', 'press'], role: 'interaction', pointer: ['press'] }, tone: { type: 'enum', values: ['a', 'b'] } },
-    anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', modes: { glyph: 'g' } } },
-    variants: [{ when: { tone: 'b' }, set: { 'root.modes': { ink: 'b' } } }, { when: { state: 'press' }, set: { 'root.modes': { ink: 'p' } } }, { when: { state: 'press', tone: 'b' }, set: { 'icon.modes': null } }] };
-  ok('pointerModeKeys: the keys a pointer state\'s variants set modes under, and the part\'s own where one takes them away; none another state alone sets',
-    JSON.stringify(pointerModeKeys(c)) === '{"ink":["b","p"],"glyph":["g"]}' && JSON.stringify(pointerModeKeys({ ...c, variants: [c.variants[0]] })) === '{}', JSON.stringify(pointerModeKeys(c))); }
+  } finally { globalThis.getComputedStyle = had; }
+  // (with no sheet to say, the spans its hidden attribute hides draw nothing: the rest's words alone)
+  const bare = (words, hidden) => ({ nodeType: 1, hasAttribute: (k) => k === 'data-words', hidden, childNodes: [{ nodeType: 3, textContent: words }] });
+  const g = globalThis.getComputedStyle; delete globalThis.getComputedStyle;
+  try { ok('…and with no computed style, the one not hidden', wordsAsDrawn({ childNodes: [bare('Search', false), bare('Typing', true)] }, { whiteSpaceCollapse: 'collapse' }) === 'Search'); }
+  finally { if (g) globalThis.getComputedStyle = g; } }
 // the mode an element computes at a pointer state, from the page's own rules under each mode's attribute (a probe)
 { const blocks = { a: { '--ink': 'A' }, p: { '--ink': 'P' } };
   const el = (attrs = {}, own = {}) => ({ attrs, own, kids: [], parentElement: null, style: {}, getAttribute(k) { return this.attrs[k] ?? null; }, setAttribute(k, v) { this.attrs[k] = v; }, appendChild(x) { x.parentElement = this; this.kids.push(x); }, remove() { const u = this.parentElement; u.kids = u.kids.filter((x) => x !== this); this.parentElement = null; } });
   const value = (n, nm) => (nm in n.own ? n.own[nm] : n.attrs['data-ink'] ? blocks[n.attrs['data-ink']][nm] : n.parentElement ? value(n.parentElement, nm) : 'root');
   const style = (n) => ({ getPropertyValue: (nm) => value(n, nm) });
   const doc = { styleSheets: [{ cssRules: [{ cssRules: [{ selectorText: '[data-ink="a"]', style: ['--ink'] }, { selectorText: '[data-ink="p"]', style: ['--ink'] }, { selectorText: '[data-other="x"]', style: ['--o'] }] }] }], createElement: () => el() };
-  const at = stateModes(['ink'], doc, style), page = el(), n = el({ 'data-ink': 'a' });
+  const at = stateModes({ ink: [] }, doc, style), page = el(), n = el({ 'data-ink': 'a' });
   page.appendChild(n);
   const was = JSON.stringify(at(n, { ink: 'a' }));
   n.own['--ink'] = 'P'; const now = JSON.stringify(at(n, { ink: 'a' }));
@@ -1889,12 +1925,17 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
   // (two modes that compute alike: the one the design names first)
   blocks.q = { '--ink': 'P' }; doc.styleSheets[0].cssRules[0].cssRules.unshift({ selectorText: '[data-ink="q"]', style: ['--ink'] });
   n.own['--ink'] = 'P';
-  ok('stateModes: of modes that compute alike, the one the design names; else the first the page declares',
-    JSON.stringify(stateModes({ ink: ['p'] }, doc, style)(n, { ink: 'a' })) === '{"ink":"p"}' && JSON.stringify(stateModes(['ink'], doc, style)(n, { ink: 'a' })) === '{"ink":"q"}'); }
+  ok('stateModes: of modes that compute alike, the design\'s answer here first, then the ones it names, else the first the page declares',
+    JSON.stringify(stateModes({ ink: ['p'] }, doc, style)(n, { ink: 'a' })) === '{"ink":"p"}' && JSON.stringify(stateModes({ ink: [] }, doc, style)(n, { ink: 'a' })) === '{"ink":"q"}'
+    && JSON.stringify(stateModes({ ink: ['p'] }, doc, style)(n, { ink: 'a' }, { ink: 'q' })) === '{"ink":"q"}');
+  // (and where the design takes the mode away, none, though another mode computes alike)
+  n.own['--ink'] = 'root'; blocks.r = { '--ink': 'root' }; doc.styleSheets[0].cssRules[0].cssRules.push({ selectorText: '[data-ink="r"]', style: ['--ink'] });
+  ok('stateModes: none where the design takes the mode away and the element computes what it inherits', JSON.stringify(stateModes({ ink: ['r'] }, doc, style)(n, { ink: 'a' }, { ink: null })) === '{}' && JSON.stringify(stateModes({ ink: ['r'] }, doc, style)(n, { ink: 'a' })) === '{"ink":"r"}'); }
 // the self story's words for a string prop: as long as its default and never equal to it, so a literal equal to the
 // default reads back as that literal and a bound text as the prop (boundText)
-ok('standIn: a default\'s letters and digits turned, as long as it, never the same; empty stays empty',
-  standIn('Label') === 'Ynory' && standIn('0/100') === '5/655' && standIn('Tag') === 'Gnt' && standIn('') === '' && standIn(undefined) === undefined && standIn('*') === '**'
+ok('standIn: a default\'s own characters in another order, so as wide, never the same; empty stays empty',
+  standIn('Label') === 'lebaL' && standIn('0/100') === '001/0' && standIn('Tag') === 'gaT' && standIn('abba') === 'bbaa' && standIn('') === '' && standIn(undefined) === undefined && standIn('*') === '**'
+  && [...standIn('Label')].sort().join('') === [...'Label'].sort().join('')
   && boundText('Label', 't', { labelText: { type: 'string', code: 'labelText', sample: standIn('Label') } }, {}, null) === undefined
   && boundText(standIn('Label'), 't', { labelText: { type: 'string', code: 'labelText', sample: standIn('Label') } }, {}, null) === 'labelText');
 console.log(`${n}/${n} passed`);
