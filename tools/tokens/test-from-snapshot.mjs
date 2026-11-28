@@ -414,4 +414,11 @@ test("another library's variable joined into a collection of the same name resol
   assert.deepEqual(size.values, { Other: 14 }, 'a variable its own default mode does not hold is never given one');
   // (a local collection's gap is no join: still refused, the test above)
   writeDtcg(t, mkdtempSync(join(tmpdir(), 'dtcg-joined-')));
+  // a lone remote collection's gap, in a mode of its own that holds the default's other variables, is no join: still refused
+  const lone = { collections: {
+    Palette: { remote: true, modes: ['Light', 'Dark'], defaultMode: 'Light', values: { Light: { 'Accent/9': '#0055ff', 'Grey/12': '#111111' }, Dark: { 'Grey/12': '#eeeeee' } }, alias: {} },
+    Brand: { modes: ['Value'], values: { Value: { 'Accent/base': '#0055ff' } }, alias: { Value: { 'Accent/base': 'Accent/9' } } },
+  } };
+  assert.deepEqual(toDtcgSnapshot(lone).collections.find((c) => c.name === 'Palette').variables.find((x) => x.name === 'Accent/9').values, { Light: { r: 0, g: 1 / 3, b: 1, a: 1 } }, 'no value given in a mode of its own');
+  assert.throws(() => writeDtcg(lone, mkdtempSync(join(tmpdir(), 'dtcg-lone-'))), /do not resolve inside their resolution/);
 });

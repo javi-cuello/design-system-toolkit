@@ -109,4 +109,18 @@ const cg = run('generate-ts.mjs', cycle), cv = run('verify-ts.mjs', cycle);
 const semTs = cg.status === 0 ? fs.readFileSync(path.join(cycle, 'dist', 'ts', 'semantic.ts'), 'utf8') : '';
 ok('collections that reference each other import neither and verify; a reference outside the cycle stays an import', cg.status === 0 && cv.status === 0 && !/from '\.\/brand'/.test(semTs) && /from '\.\/base'/.test(semTs), cg.stderr + cv.stdout + cv.stderr.slice(0, 600) + semTs.slice(0, 400));
 fs.rmSync(cycle, { recursive: true, force: true });
+// two tokens whose names differ only by a hyphen before a digit (`DarkNeutral-100A` and `DarkNeutral100A`, one library's
+// alpha scale, 2026-11-28): two paths in the JSON that camel alike in TypeScript. Each is kept under its own name, and a
+// reference to either reaches it; neither is lost to the other
+const clash = fs.mkdtempSync(path.join(os.tmpdir(), 'tokens-ts-clash-'));
+writeDtcg({ collections: {
+  Base: { modes: ['Value'], values: { Value: { 'Alpha/DarkNeutral-100A': 'rgb(1 4 4 / 0.46)', 'Alpha/DarkNeutral100A': 'rgb(189 189 189 / 0.04)', 'Alpha/Grey-12': '#161616' } }, alias: {} },
+  Theme: { modes: ['Light', 'Dark'], values: { Light: { scrim: 'rgb(1 4 4 / 0.46)', disabled: 'rgb(189 189 189 / 0.04)', text: '#161616' }, Dark: { scrim: 'rgb(189 189 189 / 0.04)', disabled: 'rgb(1 4 4 / 0.46)', text: '#161616' } },
+    alias: { Light: { scrim: 'Alpha/DarkNeutral-100A', disabled: 'Alpha/DarkNeutral100A', text: 'Alpha/Grey-12' }, Dark: { scrim: 'Alpha/DarkNeutral100A', disabled: 'Alpha/DarkNeutral-100A', text: 'Alpha/Grey-12' } } },
+}, textStyles: [], effects: [], paintStyles: [] }, clash);
+const xg = run('generate-ts.mjs', clash), xv = run('verify-ts.mjs', clash);
+const baseTs = xg.status === 0 ? fs.readFileSync(path.join(clash, 'dist', 'ts', 'base.ts'), 'utf8') : xg.stderr;
+ok('two tokens whose names camel alike are both generated under names of their own, referred to and verified; one that clashes with none keeps its camel name',
+  xg.status === 0 && xv.status === 0 && /rgb\(1 4 4|0\.46/.test(baseTs) && /0\.04/.test(baseTs) && /grey12/.test(baseTs), baseTs.slice(0, 700) + xv.stdout.slice(-300) + xv.stderr.slice(0, 600));
+fs.rmSync(clash, { recursive: true, force: true });
 console.log(`${n}/${n} passed`);

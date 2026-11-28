@@ -60,6 +60,20 @@ export function figmaRgba(s) {
 }
 const isColour = (v) => typeof v === 'string' && figmaRgba(v) !== null;
 
+/* Whether a variable's gap in a mode of its collection is another library's mode, joined by the snapshot under the
+   collection's name (the plugin joins two remote collections of one name: a mode both have holds both sides' variables,
+   a mode only one side has only that side's). Figma gives every variable of a collection a value in every mode of it,
+   so where some variable of the collection has a value in the mode and in every mode this one has a value in, the mode
+   is this variable's own collection's and the gap a gap; where none does, the mode is the other side's. */
+export function otherSide(c, name, mode) {
+  if (!c.remote) return false;
+  const values = c.values || {}, has = (n, m) => (values[m] || {})[n] !== undefined;
+  const own = c.modes.filter((m) => has(name, m));
+  if (!own.length || own.includes(mode)) return false;
+  const names = new Set(c.modes.flatMap((m) => Object.keys(values[m] || {})));
+  return ![...names].some((n) => n !== name && has(n, mode) && own.every((m) => has(n, m)));
+}
+
 /** The snapshot's tokens → the shape dtcg.js's buildFiles takes. */
 export function toDtcgSnapshot(t) {
   const collections = Object.entries(t.collections || {});
@@ -113,11 +127,11 @@ export function toDtcgSnapshot(t) {
         const values = {};
         let type = null;
         for (const mode of c.modes) {
-          // (another library's collection the snapshot joined under one name, remote: a mode only one side has holds only
-          // that side's variables, and Figma resolves a variable in its own collection, whose mode a layer set for the other
-          // side's does not select: its own default's value there, where it holds one; never one it does not hold. A local
-          // collection has every variable in every mode, so its gap stays a gap, refused below)
-          const own = ((c.values || {})[mode] || {})[name] !== undefined ? mode : c.remote && c.defaultMode && ((c.values || {})[c.defaultMode] || {})[name] !== undefined ? c.defaultMode : mode;
+          // (another library's collection the snapshot joined under one name: a mode only one side has holds only that
+          // side's variables, and Figma resolves a variable in its own collection, whose mode a layer set for the other
+          // side's does not select: its own default's value there, where it holds one; never one it does not hold. Known
+          // as joined by what the modes hold (otherSide): a gap in a collection's own mode stays a gap, refused below)
+          const own = ((c.values || {})[mode] || {})[name] !== undefined ? mode : c.defaultMode && otherSide(c, name, mode) && ((c.values || {})[c.defaultMode] || {})[name] !== undefined ? c.defaultMode : mode;
           const raw = ((c.values || {})[own] || {})[name];
           if (raw === undefined) continue;
           type = type || typeOf(raw);

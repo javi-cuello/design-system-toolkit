@@ -23,7 +23,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { discover, camel, moduleName } from './discover.mjs';
+import { discover, camel, keyIn, moduleName } from './discover.mjs';
 
 const [, , TOKENS_DIR, OUT_ARG] = process.argv;
 if (!TOKENS_DIR) {
@@ -92,7 +92,9 @@ function refExpr(target, mode) {
   const [slug, ...rest] = target.split('.');
   const collection = collections.get(slug);
   if (!collection) throw new Error(`reference into an unknown collection: ${target}`);
-  const tail = rest.map(seg => access(camel(seg))).join('');
+  // (each segment named as the target's own module names it among its siblings: keyIn)
+  let node = rootOf(docOf(slug, collection.modes.has(mode) ? mode : [...collection.modes.keys()][0]), slug);
+  const tail = rest.map(seg => { const k = node && typeof node === 'object' ? keyIn(Object.keys(node), seg) : camel(seg); node = node && node[seg]; return access(k); }).join('');
   const name = moduleName(slug);
   if (collection.single) return raw(`${name}${tail}`);
   if (collection.modes.has(mode)) return raw(`${name}.${camel(mode)}${tail}`);
@@ -174,7 +176,7 @@ function tree(doc, slug, mode) {
     const out = {};
     for (const [k, v] of Object.entries(node)) {
       if ((k.startsWith('$') && k !== '$root') || !v || typeof v !== 'object') continue;
-      out[camel(k)] = v.$value === undefined ? walk(v) : leaf(v);
+      out[keyIn(Object.keys(node), k)] = v.$value === undefined ? walk(v) : leaf(v);
     }
     return out;
   };

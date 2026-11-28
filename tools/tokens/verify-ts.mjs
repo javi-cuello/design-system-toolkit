@@ -17,7 +17,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { discover, camel, moduleName } from './discover.mjs';
+import { discover, camel, keyIn, moduleName } from './discover.mjs';
 
 const [, , TOKENS_DIR, TS_ARG] = process.argv;
 if (!TOKENS_DIR) {
@@ -73,7 +73,7 @@ const at = (obj, segs) => segs.reduce((o, k) => (o === undefined || o === null ?
 const tokenPaths = (node, pre, into) => {
   for (const [k, v] of Object.entries(node)) {
     if ((k.startsWith('$') && k !== '$root') || !v || typeof v !== 'object') continue;
-    const here = [...pre, camel(k)];
+    const here = [...pre, keyIn(Object.keys(node), k)];
     if (v.$value !== undefined) into.push([here, v]); else tokenPaths(v, here, into);
   }
   return into;
@@ -173,7 +173,7 @@ for (const [slug, { modes, single }] of collections) {
     const walk = (node, at) => {
       for (const [k, v] of Object.entries(node)) {
         if ((k.startsWith('$') && k !== '$root') || !v || typeof v !== 'object') continue;
-        const here = [...at, camel(k)];
+        const here = [...at, keyIn(Object.keys(node), k)];
         if (v.$value === undefined) { walk(v, here); continue; }
         // Every scalar the JSON resolves to is compared, not just colours.
         // Limiting this to `color` meant 1.5.0 could cite this verifier as proof

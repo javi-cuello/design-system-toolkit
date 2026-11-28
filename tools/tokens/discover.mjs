@@ -31,6 +31,10 @@ export function discover(dir) {
 }
 
 export const camel = s => s.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+// a key as TypeScript names it among its siblings (`keys`, the JSON object's): camel, unless another sibling camels
+// alike (`dark-neutral-100-a` and `dark-neutral100-a` are both darkNeutral100A), where each keeps its own name as
+// written, quoted, so neither overwrites the other. One rule for the generator and the verifier
+export const keyIn = (keys, k) => { const c = camel(k); return keys.some(o => o !== k && !(o.startsWith('$') && o !== '$root') && camel(o) === c) ? k : c; };
 // a collection's module name: camel, and an identifier even where the collection's name starts with a number
 // ("1. Primitives colour" → _1PrimitivesColour), which TypeScript refuses as `export const 1PrimitivesColour`
 export const moduleName = slug => { const n = camel(slug); return /^[A-Za-z_$]/.test(n) ? n : `_${n}`; };
