@@ -34,7 +34,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
 import { expand, drawLayers, variantDefaults, kebab, camel, placedOf as heldBy, openForeign, foreignOpened } from './layers.mjs';
-import { declarations, holds, rem, borderBox } from './css.mjs';
+import { declarations, holds, rem, borderBox, fractional } from './css.mjs';
 import { negative, heldOpacity, heldGlyph, bareGlyph, siblingOrder, liftsAlone, CLEARED, UNCLIPPED } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
@@ -567,6 +567,8 @@ function strokeOutline(P) {
   // (a dashed one is an outline whatever its alignment)
   if (b.dash && (!Array.isArray(b.dash) || b.dash.length) && !(align === 'inside' && b.inLayout)) return true;
   if (align === 'inside') return false;
+  // (centred at a width not whole, css.mjs draws two rings: an outline would snap it)
+  if (align === 'center' && fractional(W[0])) return false;
   return !(align === 'outside' && typeof P.shadow === 'string' && P.shadow !== 'literal');
 }
 function overBorder(P) {

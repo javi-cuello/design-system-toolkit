@@ -31,6 +31,9 @@ const TEXT_NOTE = 'no text style in the design';
 const UNSAID = [['font-style', 'normal'], ['letter-spacing', 'normal'], ['text-transform', 'none'], ['font-variant-caps', 'normal']];
 
 export const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
+/* Whether a stroke's width is a number Chrome draws otherwise as an outline or a border, which it snaps to whole px (a
+   1.4933 outline painted and computed 1px, measured 2026-11-28), than as a shadow's spread, which it paints as written. */
+export const fractional = (v) => typeof v === 'number' && v > 0 && v % 1 !== 0;
 /* Whether a part that scales with its parent can be written as a share of it: the parent's size on that axis, its own
    offset and its own size, each a number (the parent's above 0). Where not (a parent that hugs or fills, a part with no
    size or point of its own there), the sheet says it unread and declarations() returns the axis as unshared; what code
@@ -176,12 +179,23 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
     // (a line dashes that one edge: a border dashes as it is)
     if (dash && !dashed && !line && !(align === 'inside' && b.inLayout)) unread.push('border.dash (on some sides: CSS dashes a whole outline only)');
     if (dashed) { put('outline', `${w(0)} dashed ${c}`, raw(b.color) ? NOTE : undefined); put('outline-offset', align === 'inside' ? `calc(-1 * ${w(0)})` : align === 'center' ? `calc(${w(0)} / -2)` : '0'); }
-    else if (line) put(e.width === 0 ? 'border-left' : 'border-top', `${w(on.findIndex(Boolean) < 0 ? 0 : on.findIndex(Boolean))} ${dash ? 'dashed' : 'solid'} ${c}`);
+    else if (line) {
+      const lw = w(on.findIndex(Boolean) < 0 ? 0 : on.findIndex(Boolean));
+      put(e.width === 0 ? 'border-left' : 'border-top', `${lw} ${dash ? 'dashed' : 'solid'} ${c}`);
+      // a square cap runs the stroke half its weight past each end: the edge's box shadowed that far along the line each
+      // way (from-code reads the pair back as the cap); a round end no border draws (a dashed line's cap shapes its
+      // dashes, the browser's pattern)
+      if (b.cap === 'square' && !dash) rings.push(...['-2', '2'].map((d) => (e.width === 0 ? `0 calc(${lw} / ${d}) 0 0 ${c}` : `calc(${lw} / ${d}) 0 0 0 ${c}`)));
+      else if (b.cap === 'round' && !dash) unread.push('border.cap (round: no border draws a round end)');
+    }
     else if (align === 'inside' && b.inLayout) {
       SIDES.forEach((s, i) => { if (on[i]) put(`border-${{ top: 'top', end: 'right', bottom: 'bottom', start: 'left' }[s]}`, `${w(i)} ${dash ? 'dashed' : 'solid'} ${c}`, raw(b.color) ? NOTE : undefined); });
     } else if (on.every(Boolean) && widths.every((x) => x === widths[0])) {
       // all round, one width: one ring, inward, outward or across the edge
       if (align === 'inside') rings.push(`inset 0 0 0 ${w(0)} ${c}`);
+      // centred at a width not whole: an inset ring and an outer one, half each, as an outline's width Chrome snaps to
+      // whole px (1.49 drawn 1) while a shadow's spread it paints as written (from-code centreRing reads the pair back)
+      else if (align === 'center' && fractional(widths[0])) rings.push(`inset 0 0 0 calc(${w(0)} / 2) ${c}`, `0 0 0 calc(${w(0)} / 2) ${c}`);
       // beside an effect style, an outside ring is one of box-shadow's layers, first, as parity reads it
       else if (align === 'outside' && typeof e.shadow === 'string' && e.shadow !== 'literal') rings.push(`0 0 0 ${w(0)} ${c}`);
       else { put('outline', `${w(0)} solid ${c}`, raw(b.color) ? NOTE : undefined); put('outline-offset', align === 'center' ? `calc(${w(0)} / -2)` : '0'); }

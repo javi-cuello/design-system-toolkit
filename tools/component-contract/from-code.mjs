@@ -652,12 +652,50 @@ export function elementOfLayer(q, id, kind, rootRe, others) {
    Runs in the page. Tested by test-from-code.mjs. */
 export const lengthAt = ([sel, val]) => { const n = document.querySelector(sel); if (!n || /^(inherit|initial|unset|revert|revert-layer)$/i.test(String(val).trim())) return null; const t = document.createElement('x-length'); t.style.cssText = 'position:absolute;visibility:hidden;font:inherit'; t.style.textIndent = val; if (!t.style.textIndent) return null; n.appendChild(t); const m = parseFloat(getComputedStyle(t).textIndent); t.remove(); return Number.isFinite(m) ? m : null; };
 export const snappedOffset = (v) => (v === 0 ? 0 : Math.sign(v) * (Math.abs(v) < 1 ? 1 : Math.floor(Math.abs(v))));
+/* A line's square cap as css.mjs draws it: a box with a border on one side only (`bw`, top, right, bottom, left, px)
+   shadowed in that border's colour by half its width along the line each way, no blur or spread, not inset (a border
+   on the left or right runs down, so its shadows shift in y). `layers`: box-shadow's layers as computed. → { cap:
+   'square', used: [layer index] }, or null. Self-contained: it runs in the page. Tested by test-from-code.mjs. */
+export function lineCap(bw, colour, layers) {
+  const on = bw.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
+  if (on.length !== 1 || !colour) return null;
+  const half = bw[on[0]] / 2, down = on[0] % 2 === 1, used = [], at = {};
+  layers.forEach((layer, i) => {
+    const c = (layer.match(/(?:rgba?|hsla?|oklch|oklab|lch|lab|color)\([^)]*\)|#[0-9a-f]{3,8}/i) || [''])[0];
+    if (/\binset\b/.test(layer) || c.replace(/\s/g, '') !== String(colour).replace(/\s/g, '')) return;
+    const len = (layer.replace(c, '').match(/-?[\d.]+px|(?<![\w.-])0(?![\w.])/g) || []).map((v) => parseFloat(v));
+    if (len.length < 2 || len.slice(2).some((v) => v !== 0)) return;
+    const [along, across] = down ? [len[1], len[0]] : [len[0], len[1]];
+    if (across !== 0 || Math.abs(Math.abs(along) - half) > 0.01) return;
+    const k = along < 0 ? 'near' : 'far';
+    if (at[k] === undefined) { at[k] = i; used.push(i); }
+  });
+  return at.near !== undefined && at.far !== undefined ? { cap: 'square', used } : null;
+}
+/* A stroke all round across the box's edge as css.mjs draws one of a width Chrome would snap as an outline's: an inset
+   ring and an outer one, no offset or blur, of one colour and one spread, each half the stroke. `layers`: box-shadow's
+   layers as computed. → { colour, width (px, to 4 places), used: [layer index] }, or null. Self-contained: it runs in
+   the page. Tested by test-from-code.mjs. */
+export function centreRing(layers) {
+  const read = (layer) => {
+    const c = (layer.match(/(?:rgba?|hsla?|oklch|oklab|lch|lab|color)\([^)]*\)|#[0-9a-f]{3,8}/i) || [''])[0];
+    const len = (layer.replace(c, '').match(/-?[\d.]+px|(?<![\w.-])0(?![\w.])/g) || []).map((v) => parseFloat(v));
+    return len.length === 4 && len.slice(0, 3).every((v) => v === 0) && len[3] > 0 ? { c, spread: len[3], inset: /\binset\b/.test(layer) } : null;
+  };
+  const all = layers.map(read);
+  for (let i = 0; i < all.length; i++) {
+    if (!all[i] || !all[i].inset) continue;
+    const j = all.findIndex((o) => o && !o.inset && o.c === all[i].c && Math.abs(o.spread - all[i].spread) < 1e-4);
+    if (j >= 0) return { colour: all[i].c, width: +(all[i].spread * 2).toFixed(4), used: [i, j] };
+  }
+  return null;
+}
 export function lineEdge(x, width, raw0) {
   if (!x || !x.border) return x;
   const raw = Array.isArray(raw0) ? raw0 : [], thin = (n, i) => n === 0 || (typeof n === 'number' && n === raw[i]);
   const lead = thin(x.width, 3) ? 3 : thin(x.height, 0) ? 0 : -1;
   if (!(x.kind === 'graphic' && lead >= 0 && Array.isArray(width) && width.every((v, i) => (i === lead) === !!v))) return x;
-  x.border = { color: x.border.color, width: width[lead], ...(x.border.dash && { dash: x.border.dash }) };
+  x.border = { color: x.border.color, width: width[lead], ...(x.border.dash && { dash: x.border.dash }), ...(x.border.cap && { cap: x.border.cap }) };
   const across = lead === 3 ? 'width' : 'height';
   if (x[across] !== 0 && thin(x[across], lead)) x[across] = 0;
   return x;
@@ -2571,9 +2609,9 @@ async function main() {
       // each element two layers of the design share, by what it draws (namedAt): its icon's name, else the first inside it
       const twice = [...new Set(named.map((x) => x[0]).filter((sl, i, a) => a.indexOf(sl) !== i))];
       const glyphs = twice.length ? await call(L.tab, (sels) => Object.fromEntries(sels.map((sl) => { const n = document.querySelector(sl), g = n && (n.getAttribute('data-icon') || (n.querySelector('[data-icon]') || { getAttribute: () => null }).getAttribute('data-icon')); return [sl, g || null]; })), twice) : {};
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS, paintedClearSrc, childrenMeetSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS, paintedClearSrc, childrenMeetSrc, strokeShapesSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
-        const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)(), childrenMeet = new Function(`return ${childrenMeetSrc}`)();
+        const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)(), childrenMeet = new Function(`return ${childrenMeetSrc}`)(), [lineCap, centreRing] = new Function(`return ${strokeShapesSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)(), flowOf = new Function(`return ${flowSrc}`)();
         // a colour that paints nothing: fully transparent, whatever its channels
@@ -2794,19 +2832,26 @@ async function main() {
             const layers = String(s.boxShadow) === 'none' ? [] : String(s.boxShadow).split(/,(?![^(]*\))/);
             // a stroke on some sides drawn as offset rings (css.mjs writes them so: values.mjs sideStrokes reads them back)
             const ss = !bw.some(Boolean) && !layers.some((p) => insetStroke(p) && insetStroke(p).width > 0) ? sideStrokes(layers) : null;
+            let capped = null;
+            // a centred stroke drawn as an inset and an outer ring, half its width each (css.mjs, where an outline would snap it)
+            const centred = bw.some(Boolean) ? null : centreRing(layers);
             if (bw.some(Boolean)) {
               const color = s[`border${EDGES[bw.findIndex(Boolean)]}Color`];
               e.border = bw.every((v) => v === bw[0]) ? { color, width: bw[0], inLayout: true } : { color, width: bw, sides: { top: bw[0], end: bw[1], bottom: bw[2], start: bw[3] }, inLayout: true };
               // (dashed, as css.mjs writes a dashed stroke that takes room)
               if (EDGES.some((k, i) => bw[i] && s[`border${k}Style`] === 'dashed')) e.border.dash = 'dashed';
+              // a line's square cap, its edge shadowed half its width along it each way (css.mjs; lineCap)
+              capped = e.border.dash ? null : lineCap(bw, color, layers);
+              if (capped) e.border.cap = capped.cap;
             }
             // a stroke drawn as an inset shadow with no offset and no blur is a border (values.mjs insetStroke, as the code audit reads it)
+            else if (centred) e.border = { color: centred.colour, width: centred.width, align: 'center' };
             else if (ss) e.border = { color: ss.colour, width: ['top', 'end', 'bottom', 'start'].map((k) => px(ss.sides[k])), sides: ss.sides, ...(ss.align === 'outside' && { align: 'outside' }), ...(clear(ss.colour) && { clearRing: true }) };
             else { const st = layers.map(insetStroke).find((x) => x && x.width > 0); if (st) e.border = { color: st.colour, width: px(st.width) }; }
             if (s.overflow === 'hidden') e.overflow = 'hidden';
             // its shadow: drop shadows and inner ones
             // every shadow but the border read above: an inset one with no offset or blur, or a side's ring
-            const isBorder = (p, i) => !!insetStroke(p) || !!(ss && ss.used.includes(i));
+            const isBorder = (p, i) => !!insetStroke(p) || !!(ss && ss.used.includes(i)) || !!(capped && capped.used.includes(i)) || !!(centred && centred.used.includes(i));
             const drops = layers.filter((p, i) => !isBorder(p, i));
             if (drops.length) e.shadow = drops.join(',');
             // the side rings taken as a border, with the shadow they came from: a style that draws them itself takes them back (below)
@@ -2864,7 +2909,7 @@ async function main() {
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; delete e.rects; });
         }
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString(), `[${lineCap.toString()}, ${centreRing.toString()}]`]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a box whose children say by z-index how they stack but not the design's order of them (one in the flow, no CSS
       // order: rules.mjs stackedFirst): its children read as painted, and said so; the box keeps the mark (stackUnknown),
@@ -3241,7 +3286,7 @@ async function main() {
           // wrote, in a border or in the inset shadow to-code draws a stroke inside the box with (Figma's inside stroke); a
           // side's from whichever of its longhands and border shorthands wins the cascade (sideWinner), never one that lost
           const width = Array.isArray(x.border.width) ? await Promise.all(x.border.width.map((v, i) => (v ? tok('width', v, `${id}.border-width`, [`border-${['top', 'right', 'bottom', 'left'][i]}-width`, ...(x.border.align === 'outside' ? ['box-shadow:width-out'] : ['box-shadow:width'])]) : 0))) : await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', ...(x.border.align === 'outside' ? ['box-shadow:width-out'] : ['box-shadow:width'])]);
-          x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border', 'border-top', 'border-right', 'border-bottom', 'border-left', ...(x.border.align === 'outside' ? ['box-shadow:colour-out'] : ['box-shadow:colour'])]), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }), ...(x.border.dash && { dash: x.border.dash }) };
+          x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border', 'border-top', 'border-right', 'border-bottom', 'border-left', ...(x.border.align === 'outside' ? ['box-shadow:colour-out'] : ['box-shadow:colour'])]), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }), ...(x.border.dash && { dash: x.border.dash }), ...(x.border.cap && { cap: x.border.cap }) };
           // (a clear side ring is a stroke only where the code names its colour, a Transparent token as to-code writes
           // one; a raw transparent ring is a placeholder a transition starts from, drawing nothing: no border)
           if (clearRing && typeof x.border.color === 'string' && /^(rgba?\(|transparent$)/.test(x.border.color)) delete x.border;

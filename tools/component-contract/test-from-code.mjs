@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
+import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, lineCap, centreRing, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -11,6 +11,24 @@ import { judge, shadowKey } from '../parity/external.mjs';
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
 
+// a centred stroke read back as css.mjs draws one of a width not whole: an inset and an outer ring of one colour and one
+// spread, the stroke twice that spread (a spinner's 1.4933 arc read 1 off a snapped outline, 2026-11-28)
+{ const C = 'rgb(23, 43, 77)';
+  const r = centreRing(['rgb(0, 0, 0) 0px 2px 4px 0px', `${C} 0px 0px 0px 0.74665px inset`, `${C} 0px 0px 0px 0.74665px`]);
+  ok('an inset and an outer ring of one colour and spread are a centred stroke of twice the spread', JSON.stringify(r) === `{"colour":"${C}","width":1.4933,"used":[1,2]}`, JSON.stringify(r));
+  ok('…and an inset ring alone, two spreads or two colours are none', !centreRing([`${C} 0px 0px 0px 1px inset`]) && !centreRing([`${C} 0px 0px 0px 1px inset`, `${C} 0px 0px 0px 2px`]) && !centreRing([`${C} 0px 0px 0px 1px inset`, 'rgb(0, 0, 0) 0px 0px 0px 1px'])); }
+// a line's square cap read back as css.mjs draws it: its edge's box shadowed half the edge's width along the line each
+// way in the edge's colour (a caret 16 tall inked 17, 2026-11-28); a lone shadow, one across the line, another colour's
+// or an inset one is no cap
+{ const C = 'rgb(103, 80, 164)';
+  const v = lineCap([0, 0, 0, 1], C, [`${C} 0px -0.5px 0px 0px`, ` ${C} 0px 0.5px 0px 0px`]);
+  const h = lineCap([2, 0, 0, 0], C, ['rgb(0, 0, 0) 0px 2px 4px 0px', `${C} -1px 0px 0px 0px`, `${C} 1px 0px 0px 0px`]);
+  ok('a line\'s edge shadowed half its width along it each way is its square cap, those layers taken', JSON.stringify(v) === '{"cap":"square","used":[0,1]}' && JSON.stringify(h) === '{"cap":"square","used":[1,2]}', JSON.stringify([v, h]));
+  ok('…and one shadow, one across the line, another colour or an inset pair is none', !lineCap([0, 0, 0, 1], C, [`${C} 0px -0.5px 0px 0px`])
+    && !lineCap([0, 0, 0, 1], C, [`${C} -0.5px 0px 0px 0px`, `${C} 0.5px 0px 0px 0px`]) && !lineCap([0, 0, 0, 1], C, ['rgb(1, 2, 3) 0px -0.5px 0px 0px', 'rgb(1, 2, 3) 0px 0.5px 0px 0px'])
+    && !lineCap([0, 0, 0, 1], C, [`${C} 0px -0.5px 0px 0px inset`, `${C} 0px 0.5px 0px 0px inset`]) && !lineCap([1, 0, 0, 1], C, [`${C} 0px -0.5px 0px 0px`, `${C} 0px 0.5px 0px 0px`]));
+  const kept = lineEdge({ kind: 'graphic', width: 0, height: 16, border: { color: 'c', width: [0, 0, 0, 1], cap: 'square' } }, [0, 0, 0, 1], [0, 0, 0, 1]);
+  ok('…and a line keeps the cap read', JSON.stringify(kept.border) === '{"color":"c","width":1,"cap":"square"}', JSON.stringify(kept.border)); }
 // a line's stroke is its one leading edge, and its size across that edge 0 even where the box counts the edge in (a
 // line scaled with its parent, sized 0%, read off a box one edge tall)
 { const scaled = lineEdge({ kind: 'graphic', width: 80, height: 1, border: { color: 'c', width: [1, 0, 0, 0], dash: 'dashed' } }, [1, 0, 0, 0], [1, 0, 0, 0]);

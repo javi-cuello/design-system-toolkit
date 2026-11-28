@@ -1284,4 +1284,20 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const host = { contract: 1, component: 'Split', props: {}, anatomy: { root: { kind: 'container', layout: pad(0) }, btn: { kind: 'instance', parent: 'root', component: 'Btn' }, 'btn/icon': { kind: 'instance', parent: 'btn', component: 'Mark', layout: pad(6), width: 'hug', height: 'hug' } }, variants: [] };
   const d = drawn(host, {}, byComponentName([btn, host]))['btn/icon'], v = d && (d.decls.get('padding') || {}).v;
   ok('an unheld icon\'s room changed inside a held component is written on it', v === '0.375rem', JSON.stringify(d && [...d.decls])); }
+// a line's square cap: its stroke runs half its weight past each end, drawn as the edge's box shadowed that far along
+// the line each way (a text field's caret, 16 tall in the box and 17 inked, 2026-11-28); a round one no CSS draws, said
+{ const v = decl({ kind: 'graphic', width: 0, height: 16, border: { color: 'C/caret', width: 1, align: 'center', cap: 'square' } }, {});
+  const h = decl({ kind: 'graphic', width: 16, height: 0, border: { color: 'C/caret', width: 2, cap: 'square' } }, {});
+  ok('a line\'s square cap is its edge shadowed half its weight along the line each way',
+    v['border-left'] === '1px solid var(--c-caret)' && v['box-shadow'] === '0 calc(1px / -2) 0 0 var(--c-caret), 0 calc(1px / 2) 0 0 var(--c-caret)'
+    && h['box-shadow'] === 'calc(2px / -2) 0 0 0 var(--c-caret), calc(2px / 2) 0 0 0 var(--c-caret)');
+  const r = declarations({ kind: 'graphic', width: 0, height: 16, border: { color: 'C/caret', width: 1, cap: 'round' } }, {}, names);
+  ok('…and a round one is said unread, no shadow drawn for it', r.unread.some((u) => /cap/.test(u)) && !r.decls.some(([p]) => p === 'box-shadow')); }
+// a centred stroke all round at a width not whole: two rings, half each, never an outline Chrome snaps to whole px (a
+// spinner's 1.4933 arc drawn 1, 2026-11-28); a whole one stays the outline
+{ const f = decl({ kind: 'graphic', width: 20, height: 20, border: { color: 'C/arc', width: 1.4933, align: 'center' } }, {});
+  const whole = decl({ kind: 'graphic', width: 20, height: 20, border: { color: 'C/arc', width: 2, align: 'center' } }, {});
+  ok('a centred stroke of a width not whole is an inset and an outer ring of half its width; a whole one an outline',
+    f['box-shadow'] === 'inset 0 0 0 calc(1.4933px / 2) var(--c-arc), 0 0 0 calc(1.4933px / 2) var(--c-arc)' && !('outline' in f)
+    && whole.outline === '2px solid var(--c-arc)' && !('box-shadow' in whole), JSON.stringify(f)); }
 console.log(`${n} passed`);
