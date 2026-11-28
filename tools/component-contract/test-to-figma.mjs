@@ -731,6 +731,13 @@ delete globalThis.figma;
       roundTrip(within({ Icon: 'x' }, { kind: 'graphic' }), within(null, { kind: 'graphic' }), m(inert)).rows.length === 0
       && roundTrip(holder({ Icon: 'x' }), holder(null), m(driven)).rows.length === 1
       && roundTrip(within({ Icon: 'x' }, { kind: 'instance', component: 'Icon/x' }), within(null, { kind: 'instance', component: 'Icon/x' }), m(inert)).rows.length === 1); }
+  { // (an instance drawn inside at a layer another swap of the placed component drives, a shortcut's first icon its Icon 1's,
+    // says nothing of a second swap that drives no layer: that one stays unstated)
+    const two = { component: 'Button', props: { first: { type: 'instance', figma: 'Icon 1', swaps: ['in'] }, second: { type: 'instance', figma: 'Icon 2' } }, anatomy: { root: { kind: 'container' }, in: { kind: 'instance', parent: 'root', component: 'Icon/x', swappedBy: 'first' } }, variants: [] };
+    const within = (w) => { const h = holder(w); h.anatomy['action/in'] = { parent: 'action', kind: 'instance', component: 'Icon/x' }; return h; };
+    const m = { mains: (n) => (n === 'Button' ? two : null) };
+    ok('a swap that drives no layer is unstated where the instance drawn inside is at a layer another swap drives; that other swap stays stated',
+      roundTrip(within({ 'Icon 2': 'y' }), within({ 'Icon 2': 'x' }), m).rows.length === 0 && roundTrip(within({ 'Icon 1': 'y' }), within(null), m).rows.length === 1); }
   { const pair = { component: 'Button', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' }, icon: { type: 'instance', figma: 'Icon', swaps: ['a', 'b'] }, iconOn: { type: 'instance', figma: 'Icon (on)', swaps: ['a', 'b'] } },
       anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Icon/full' }, b: { kind: 'instance', parent: 'root', component: 'Icon/line' } }, variants: [] };
     const m = { mains: (n) => (n === 'Button' ? pair : null) };

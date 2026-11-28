@@ -395,12 +395,15 @@ function atDefault(x, mains) {
     if (!main) continue;
     const byFigma = Object.fromEntries(Object.values(main.props || {}).map((q) => [low(q.figma || ''), q]));
     // (a swap with no layer it swaps, none swapped by it, at any props; and none drawn inside this instance here, where the
-    // design would say what it swapped in, compared as such)
-    const layers = [main.anatomy || {}, ...(main.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a)).filter(Boolean);
+    // design would say what it swapped in, compared as such: one at a layer another of its props swaps is that prop's, a
+    // shortcut's first icon its Icon 1's, and says nothing of this swap)
+    const byId = Object.assign({}, ...[main.anatomy || {}, ...(main.variants || []).map((v) => v.add || {})]);
+    const layers = Object.values(byId).filter(Boolean);
+    const another = (rel, key) => Object.entries(main.props || {}).some(([k2, q2]) => k2 !== key && (q2.swaps || []).includes(rel)) || (!!byId[rel] && !!byId[rel].swappedBy && byId[rel].swappedBy !== key);
     // (only where the library's snapshot records what its props drive, `mains.linked`: an older one records it for none)
     const swapsNothing = (q, key) => mains.linked !== false && !(q.swaps || []).length && !layers.some((y) => y.swappedBy === key)
       && !(main.variants || []).some((v) => Object.entries(v.set || {}).some(([sk, y]) => sk.endsWith('.swappedBy') && y === key))
-      && !Object.entries(x).some(([k, y]) => k.startsWith(`${id}/`) && y && y.kind === 'instance');
+      && !Object.entries(x).some(([k, y]) => k.startsWith(`${id}/`) && y && y.kind === 'instance' && !another(k.slice(id.length + 1), key));
     const rest = Object.fromEntries(Object.entries(e.with).filter(([k, v]) => {
       const q = byFigma[low(k)];
       // a swap at the icon its component draws there (Icon (16): house where the part is Icon/house) is its default too
