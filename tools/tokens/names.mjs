@@ -13,11 +13,12 @@
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 import { nameOf, nameIn, FIELD, sharedNames, discover } from './build-tokens.mjs';
+import { toDtcgSnapshot } from './from-snapshot.mjs';
 
 const DTCG = createRequire(import.meta.url)('./dtcg.js');
 
 /** The custom property a variable becomes: `--colour-background-ghost`; with its collection in front where `kept`
- *  (prefixedIn) says the build writes it so (`--color-palette-1-tag-border`, code-standard rule 52). */
+ *  (prefixedIn) says the build writes it so (`--shades-1-pill-edge`, code-standard rule 52). */
 export const cssName = (collection, name, kept) => '--' + (kept ? nameIn(DTCG.pathFor(collection || '', name), kept) : nameOf(DTCG.pathFor(collection || '', name)));
 
 /** What the build writes with its collection, read from a project's stored DTCG files (the `dtcg/` beside its
@@ -41,7 +42,10 @@ export function tokenProperty(name, collection, kept, slugs = null) {
   const split = kept && [...kept].some((k) => k.slice(k.indexOf('\0') + 1) === rest);
   if (!split) return { css: cssName('', name) };
   if (typeof collection !== 'string') return { missing: Array.isArray(collection) ? `bound from ${collection.join(' and ')}` : 'no collection recorded' };
-  return { css: cssName((slugs && slugs[collection]) || collection, name, kept) };
+  // (only a collection the build writes it from: one it does not is said, never given the bare name)
+  const slug = (slugs && slugs[collection]) || DTCG.slug(collection);
+  if (!kept.has(`${slug}\0${rest}`)) return { missing: `${collection}, which the build does not write it from` };
+  return { css: cssName(slug, name, kept) };
 }
 /** The prefix every custom property of a variable's family shares: `Spacing/16` → `--spacing-`. */
 export const cssFamily = (name) => cssName('', String(name).split('/')[0]) + '-';
@@ -65,24 +69,26 @@ export function collisionNames(snapshot, prop) {
 }
 
 /* Under the project's ruling that a variable wins over a colour style of its name (audit-settings `tokens`
-   `variableOverStyle`): the snapshot with every colour style that shares a variable's CSS name taken out, and each
-   one taken as a finding, { name, style, variable, values }, the style's paint and the variable's values per mode as
-   the snapshot holds them, so the disagreement is read. A style bound to that very variable is no clash (dtcg.js
-   writes it as the variable) and stays. */
-export function stylesUnderVariables(snapshot) {
-  const t = snapshot || {}, vars = new Map();
+   `variableOverStyle`): the snapshot with every colour style that meets a property a variable is written as taken
+   out, and each one taken as a finding, { name, style, variable, values }, the style's paint and the variable's values
+   per mode as the snapshot holds them, so the disagreement is read. A variable is met as the build writes it: under
+   `kept` (build-tokens sharedNames) with its collection, which meets no style, and another library's copy left out
+   (from-snapshot `deduped`) not at all. A style bound to that very variable is no clash (dtcg.js sameNamedVariable,
+   the one test the export makes) and stays. */
+export function stylesUnderVariables(snapshot, kept = null) {
+  const t = snapshot || {}, d = toDtcgSnapshot(t), slugs = slugsOf(t), copies = new Set(d.deduped.map((x) => x.name)), vars = new Map();
   for (const [collection, c] of Object.entries(t.collections || {})) for (const [mode, m] of Object.entries((c && c.values) || {})) for (const [n, v] of Object.entries(m || {})) {
-    const k = cssName(collection, n);
+    if (copies.has(`${collection}/${n}`)) continue;
+    const k = cssName(slugs[collection] || collection, n, kept);
     if (!vars.has(k)) vars.set(k, { name: n, collection, values: {} });
-    if (vars.get(k).name === n) vars.get(k).values[mode] = v;
+    if (vars.get(k).name === n && vars.get(k).collection === collection) vars.get(k).values[mode] = v;
   }
   const paint = (p) => (p.type === 'SOLID' ? String(p.color) : p.type);
-  const kept = [], dropped = [];
-  for (const s of t.paintStyles || []) {
+  const stays = [], dropped = [];
+  (t.paintStyles || []).forEach((s, i) => {
     const v = vars.get(cssName('', s.name)), paints = s.paints || [];
-    const alias = v && paints.length === 1 && paints[0].type === 'SOLID' && paints[0].color === v.name;
-    if (!v || alias) { kept.push(s); continue; }
+    if (!v || DTCG.sameNamedVariable(d.paintStyles[i])) { stays.push(s); return; }
     dropped.push({ name: s.name, style: paints.map(paint).join(' + ') || 'no paint', variable: `${v.name} (${v.collection})`, values: [...new Set(Object.values(v.values).map(String))].join(' | ') });
-  }
-  return { snapshot: { ...t, paintStyles: kept }, dropped };
+  });
+  return { snapshot: { ...t, paintStyles: stays }, dropped };
 }

@@ -20,30 +20,33 @@ ok('a family is its first segment as the build writes it', cssFamily('Corner rad
 {
   const dir = mkdtempSync(join(tmpdir(), 'names-'));
   writeDtcg({ _meta: { file: 'x', fileId: 'x' }, collections: {
-    'Palette 1': { modes: ['Value'], values: { Value: { 'tag-border': '#000000', 'Spacing/8': 8 } }, alias: {} },
-    'Palette 2': { modes: ['Value'], values: { Value: { 'tag-border': '#ffffff', 'Spacing/8': 8 } }, alias: {} },
+    'Shades 1': { modes: ['Value'], values: { Value: { 'pill-edge': '#000000', 'Spacing/8': 8 } }, alias: {} },
+    'Shades 2': { modes: ['Value'], values: { Value: { 'pill-edge': '#ffffff', 'Spacing/8': 8 } }, alias: {} },
+    Other: { modes: ['Value'], values: { Value: { 'Spacing/4': 4 } }, alias: {} },
   }, textStyles: [], paintStyles: [], effects: [] }, dir);
   const kept = prefixedIn(dir);
-  ok('the names the build writes with their collection are read from its stored files: only those whose values differ', [...kept].sort().join(',') === 'palette-1\0tag-border,palette-2\0tag-border');
-  ok('a binding with its collection recorded is named with it', tokenProperty('tag-border', 'Palette 2', kept).css === '--palette-2-tag-border' && cssName('Palette 2', 'tag-border', kept) === '--palette-2-tag-border');
-  ok('…one with none recorded, or two, is missing, never the bare name nor a guess', tokenProperty('tag-border', undefined, kept).missing === 'no collection recorded' && /Palette 1 and Palette 2/.test(tokenProperty('tag-border', ['Palette 1', 'Palette 2'], kept).missing));
-  ok('…and a name written once keeps its bare name, whatever is recorded', tokenProperty('Spacing/8', undefined, kept).css === '--spacing-8' && tokenProperty('Spacing/8', 'Palette 1', kept).css === '--spacing-8');
+  ok('the names the build writes with their collection are read from its stored files: only those whose values differ', [...kept].sort().join(',') === 'shades-1\0pill-edge,shades-2\0pill-edge');
+  ok('a binding with its collection recorded is named with it', tokenProperty('pill-edge', 'Shades 2', kept).css === '--shades-2-pill-edge' && cssName('Shades 2', 'pill-edge', kept) === '--shades-2-pill-edge');
+  ok('…one with none recorded, or two, is missing, never the bare name nor a guess', tokenProperty('pill-edge', undefined, kept).missing === 'no collection recorded' && /Shades 1 and Shades 2/.test(tokenProperty('pill-edge', ['Shades 1', 'Shades 2'], kept).missing));
+  ok('…one recorded from a collection the build does not write it from is missing too, never the bare name', /^Other, which the build does not write it from$/.test(tokenProperty('pill-edge', 'Other', kept).missing));
+  ok('…and a name written once keeps its bare name, whatever is recorded', tokenProperty('Spacing/8', undefined, kept).css === '--spacing-8' && tokenProperty('Spacing/8', 'Shades 1', kept).css === '--spacing-8');
   ok('no stored files: nothing is prefixed', prefixedIn(join(dir, 'none')).size === 0);
   rmSync(dir, { recursive: true, force: true });
 }
-// another library's collection that slugs like a local one is numbered by the build; a reader names a binding recorded
-// in it by the same numbering (slugsOf, the build's own dtcg.js slugsOf), never by its plain slug
+// another library's collection that slugs like a local one is numbered by the build; holding a name the local one holds
+// at another value, each is written with its collection, and a reader names a binding recorded in it by the same
+// numbering (slugsOf, the build's own dtcg.js slugsOf), never by its plain slug
 {
   const dir = mkdtempSync(join(tmpdir(), 'names-'));
   const snap = { _meta: { file: 'x', fileId: 'x' }, collections: {
-    '🌮 Palette': { remote: true, modes: ['Value'], values: { Value: { 'Accent/strong': '#ff0000' } }, alias: {} },
-    Palette: { modes: ['Value'], values: { Value: { 'tag-border': '#000000' } }, alias: {} },
+    '🌮 Shades': { remote: true, modes: ['Value'], values: { Value: { 'pill-edge': '#ff0000', 'Accent/strong': '#ff0000' } }, alias: {} },
+    Shades: { modes: ['Value'], values: { Value: { 'pill-edge': '#000000' } }, alias: {} },
   }, textStyles: [], paintStyles: [], effects: [] };
   writeDtcg(snap, dir);
-  const slugs = slugsOf(snap);
-  ok('the build writes a numbered collection under the slug slugsOf gives the readers', slugs['🌮 Palette'] === 'palette-2' && readdirSync(dir).includes('palette-2') && JSON.stringify(slugsOf(snap, true)) === JSON.stringify({ '🌮 Palette': 'palette-2' }));
-  const kept = new Set(['palette\0tag-border', 'palette-2\0tag-border']);
-  ok('…and a binding recorded in it is named by that slug, not the plain one', tokenProperty('tag-border', '🌮 Palette', kept, slugs).css === '--palette-2-tag-border' && tokenProperty('tag-border', 'Palette', kept, slugs).css === '--palette-tag-border');
+  const slugs = slugsOf(snap), kept = prefixedIn(dir);
+  ok('the build writes a numbered collection under the slug slugsOf gives the readers', slugs['🌮 Shades'] === 'shades-2' && readdirSync(dir).includes('shades-2') && JSON.stringify(slugsOf(snap, true)) === JSON.stringify({ '🌮 Shades': 'shades-2' }));
+  ok('…keeps another library\'s copy at another value, with its collection', [...kept].sort().join(',') === 'shades\0pill-edge,shades-2\0pill-edge');
+  ok('…and a binding recorded in it is named by that slug, not the plain one', tokenProperty('pill-edge', '🌮 Shades', kept, slugs).css === '--shades-2-pill-edge' && tokenProperty('pill-edge', 'Shades', kept, slugs).css === '--shades-pill-edge');
   rmSync(dir, { recursive: true, force: true });
 }
 console.log(`\n${n} passed`);

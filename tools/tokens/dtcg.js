@@ -847,7 +847,7 @@
   }
 
   var DTCG = {
-    slug: slug, pathFor: pathFor, refFor: refFor, collectionSlugs: collectionSlugs, slugsOf: slugsOf,
+    slug: slug, pathFor: pathFor, refFor: refFor, collectionSlugs: collectionSlugs, slugsOf: slugsOf, sameNamedVariable: sameNamedVariable,
     colorValue: colorValue, hexOf: hexOf, dimension: dimension,
     fontWeight: fontWeight, WEIGHTS: WEIGHTS, classify: classify, opacityScale: opacityScale,
     buildCollection: buildCollection, typographyToken: typographyToken,

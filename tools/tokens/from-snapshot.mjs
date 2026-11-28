@@ -81,9 +81,10 @@ export function toDtcgSnapshot(t) {
   // A name can live in two collections (a semantic `Colour/Primary` over a
   // primitive of the same name); an alias never points at itself, so prefer a
   // collection other than the aliasing variable's own.
-  // Another library's variable (a collection sent `remote`) whose name a local variable holds is that one, as a remote
-  // collection or text style is: CSS drops the collection from a name and a contract names a token without it, so
-  // two of one name could not be told apart (Carbon's theme Transparent and its foundations' Transparent).
+  // Another library's variable (a collection sent `remote`) whose name a local variable holds, in the same modes at the
+  // same values, is that one, as a remote collection or text style is: a copy, left out and reported (`deduped`). One
+  // that differs is a token of its own, which the build writes with its collection (build-tokens sharedNames,
+  // code-standard rule 52), and the snapshot records which a layer binds (plugin 0.96.0, `collections`).
   // (and between two other libraries' collections, an older copy of a foundations library beside its new one, the
   // first in the store's order holds the name)
   const namesOf = (c) => new Set(c.modes.flatMap((m) => Object.keys((c.values || {})[m] || {})));
@@ -93,7 +94,21 @@ export function toDtcgSnapshot(t) {
   const holder = new Map();
   for (const [cname, c] of [...collections.filter(([, x]) => !x.remote), ...collections.filter(([, x]) => x.remote)])
     for (const n of namesOf(c)) if (!holder.has(css(n))) holder.set(css(n), `${cname}\u0000${n}`);
-  const shadowed = (cname, c, name) => !!c.remote && holder.get(css(name)) !== `${cname}\u0000${name}`;
+  // (a variable's values mode by mode, an alias as written: what two copies must share)
+  const valuesOf = (c, name) => JSON.stringify(c.modes.filter((m) => ((c.values || {})[m] || {})[name] !== undefined).sort()
+    .map((m) => [m, c.values[m][name], ((c.alias || {})[m] || {})[name] ?? null]));
+  const byCollection = new Map(collections);
+  const copyOf = (cname, c, name) => {
+    const h = holder.get(css(name));
+    if (!c.remote || !h || h === `${cname}\u0000${name}`) return null;
+    const [hc, hn] = h.split('\u0000');
+    // (two of one property in one collection have no collection to tell them apart: the first holds it, whatever the
+    // other's values, and the other is said)
+    return hc === cname || valuesOf(byCollection.get(hc), hn) === valuesOf(c, name) ? hc : null;
+  };
+  const shadowed = (cname, c, name) => copyOf(cname, c, name) !== null;
+  const deduped = [];
+  for (const [cname, c] of collections) for (const n of namesOf(c)) { const hc = copyOf(cname, c, n); if (hc !== null) deduped.push({ name: `${cname}/${n}`, reason: hc === cname ? `the same property as ${holder.get(css(n)).split('\u0000')[1]} in its own collection, which holds it` : `a copy of ${hc}'s, the same in every mode` }); }
   const homes = new Map();
   for (const [cname, c] of collections) {
     for (const mode of c.modes) for (const name of Object.keys((c.values || {})[mode] || {})) {
@@ -105,8 +120,12 @@ export function toDtcgSnapshot(t) {
   // a reference to a variable left out for its name is to the one that holds the name (`🌮 Font Weight/Bold` → the local
   // `Font Weight/Bold`): an alias, a text style's or an effect's binding
   const held = (n) => (n == null || homes.has(n) ? n : (holder.get(css(n)) || '').split('\u0000')[1] || n);
+  // (another library's variable aliases one of its own library, never this file's: a remote collection first, its own
+  // where it holds the name)
+  const remoteCol = (n) => !!(byCollection.get(n) || {}).remote;
   const homeOf = (alias, from, name) => {
     const list = homes.get(alias) || [];
+    if (remoteCol(from)) { const own = list.filter(remoteCol); if (alias !== name && own.includes(from)) return from; if (own.find((c) => c !== from)) return own.find((c) => c !== from); }
     return list.find((c) => c !== from) || (alias !== name ? list[0] : undefined);
   };
   const typeOf = (v) => (isColour(v) ? 'COLOR' : typeof v === 'number' ? 'FLOAT' : typeof v === 'boolean' ? 'BOOLEAN' : 'STRING');
@@ -270,13 +289,15 @@ export function toDtcgSnapshot(t) {
         : { type: p.type, visible: true })),
   }));
 
-  return { collections: out, textStyles, effectStyles, paintStyles };
+  return { collections: out, textStyles, effectStyles, paintStyles, deduped };
 }
 
 /** Write DTCG files for a snapshot tokens file into `dir`, replacing what is there. */
 export function writeDtcg(tokens, dir, opts = {}) {
   const snap = toDtcgSnapshot(tokens);
   const built = DTCG.buildFiles(snap, { colorFormat: 'object', unit: 'px', rootSize: 16, ...opts });
+  // (another library's copies left out, each said: build.mjs lists them whole)
+  built.report.deduped = snap.deduped;
   /* Paragraph and list spacing belong to a text style and DTCG's typography
      type has no member for them (Format 2025.10 §9.8 lists exactly five). They
      go in the token's $extensions, merged beside any tracking fraction already

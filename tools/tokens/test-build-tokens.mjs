@@ -164,6 +164,13 @@ test('one path two collections hold at different values is two properties, each 
   await assert.rejects(build(clash), /--spacing-space-2/);
 });
 
+test('two builds at once each name their tokens by their own shared names, none by the other\'s', { skip }, async () => {
+  const [two, plain] = await Promise.all([build({ ...LIBRARY, spacing: { value: { space: { 2: dim(12) } } } }), build({ ...LIBRARY, spacing: { value: { gap: dim(12) } } })]);
+  assert.match(two['_tokens.scss'], /--primitive-space-2: 0\.5rem;/);
+  assert.match(plain['_tokens.scss'], /--space-2: 0\.5rem;/);
+  assert.doesNotMatch(plain['_tokens.scss'], /--primitive-space-2/);
+});
+
 test('an alias to nothing fails the build rather than writing var() to nothing', { skip }, async () => {
   const broken = { ...LIBRARY, semantic: { light: { text: { strong: { $type: 'color', $value: '{primitive.palette.grey.99}' } } }, dark: { text: { strong: { $type: 'color', $value: '{primitive.palette.grey.1}' } } } } };
   await assert.rejects(build(broken));

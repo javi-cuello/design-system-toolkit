@@ -1,6 +1,6 @@
 # History — code-standard
 
-- 1.38.0 (2026-11-28): rule 52's exceptions by ruling: a colour style bound to its variable is that variable; one name in several collections is one token or one per collection, prefixed; `variableOverStyle` drops a disagreeing style.
+- 1.38.0 (2026-11-28): rule 52: a colour style bound only to its variable is that variable, no collision; two rulings: one name in several collections is one token where its modes and values match, else one per collection, prefixed by the collection; `variableOverStyle` drops a disagreeing style.
 - 1.37.0 (2026-11-23): rule 9 renames a `Role` axis to `appearance`, the name figma-standard 2.33.0 rule 1 gives the look axis in Figma and code alike; to-markup follows.
 - 1.36.0 (2026-11-17): rule 52 holds a variable's web code syntax to the name the build writes (Dev Mode prints it); unset is allowed. Checked by `tools/tokens/check.mjs`, from the snapshot's `codeSyntax` (plugin 0.74.0).
 - 1.35.1 (2026-11-17): rule 58's evidence names what the token export now owns, its DTCG resolver and the older exports' manifest; no rule changed.

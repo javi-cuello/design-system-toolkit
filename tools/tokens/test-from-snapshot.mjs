@@ -307,20 +307,31 @@ test('a reference that resolves only in another resolution is refused, nothing w
   assert.deepEqual(readdirSync(dir), [], 'a refused export writes nothing');
 });
 
-test("another library's variable a local one names is that one: left out, and an alias to it lands on the local one", () => {
+test("another library's variable a local one names at the same values is that one: left out, said, and an alias to it lands on the local one", () => {
   const t = { collections: {
-    Theme: { modes: ['Light'], values: { Light: { Transparent: '#ffffff00', Ink: '#000000' } }, alias: {} },
+    Theme: { modes: ['Value'], values: { Value: { Transparent: '#00000000', Ink: '#000000' } }, alias: {} },
     Colors: { modes: ['Value'], values: { Value: { Transparent: '#00000000', 'Gray/100': '#111111', Shade: '#ffffff00' } }, alias: { Value: { Shade: 'Transparent' } }, remote: true },
   } };
-  const cols = Object.fromEntries(toDtcgSnapshot(t).collections.map((c) => [c.name, c.variables]));
+  const snap = toDtcgSnapshot(t), cols = Object.fromEntries(snap.collections.map((c) => [c.name, c.variables]));
   assert.deepEqual(cols.Colors.map((v) => v.name), ['Gray/100', 'Shade']);
   assert.deepEqual(cols.Colors[1].values.Value, { alias: { collection: 'Theme', name: 'Transparent' } });
+  assert.deepEqual(snap.deduped, [{ name: 'Colors/Transparent', reason: "a copy of Theme's, the same in every mode" }]);
+  // one at other values, or in other modes, is a token of its own, which the build writes with its collection; an alias
+  // in its library lands on it, never on this file's
+  for (const theme of [{ modes: ['Value'], values: { Value: { Transparent: '#ffffff00' } } }, { modes: ['Light', 'Dark'], values: { Light: { Transparent: '#00000000' }, Dark: { Transparent: '#00000000' } } }]) {
+    const own = toDtcgSnapshot({ collections: { ...t.collections, Theme: { ...theme, alias: {} } } });
+    const v = Object.fromEntries(own.collections.map((c) => [c.name, c.variables]));
+    assert.deepEqual(v.Colors.map((x) => x.name), ['Transparent', 'Gray/100', 'Shade']);
+    assert.deepEqual(v.Colors[2].values.Value, { alias: { collection: 'Colors', name: 'Transparent' } });
+    assert.deepEqual(own.deduped, []);
+  }
   // and between two other libraries' collections (an old copy of a foundations library beside its new one), the first holds it
   const two = { collections: { Old: { modes: ['V'], values: { V: { Space0: 0, Space1: 1 } }, alias: {}, remote: true }, New: { modes: ['V'], values: { V: { Space0: 0, Space2: 2 } }, alias: {}, remote: true } } };
   assert.deepEqual(toDtcgSnapshot(two).collections.map((c) => c.variables.map((v) => v.name)), [['Space0', 'Space1'], ['Space2']]);
   // compared as CSS writes them: an emoji or a separator CSS drops makes no second property, within one collection too
   const css = { collections: { Lib: { modes: ['V'], values: { V: { 'logo/text': 1, 'logo - text': 2, '🌮 Weight/Bold': 700, 'Weight/Bold': 700 } }, alias: {}, remote: true } } };
   assert.deepEqual(toDtcgSnapshot(css).collections[0].variables.map((v) => v.name), ['logo/text', '🌮 Weight/Bold']);
+  assert.deepEqual(toDtcgSnapshot(css).deduped.map((d) => d.name), ['Lib/logo - text', 'Lib/Weight/Bold'], 'each one left out is said');
   // a reference to one left out goes to the one holding its name, an alias and a text style's binding alike
   const ref = { collections: {
     Type: { modes: ['V'], values: { V: { 'Font Weight/Bold': 700, 'Font/Sans': 'Inter' } }, alias: {} },

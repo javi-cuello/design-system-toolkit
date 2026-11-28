@@ -931,7 +931,10 @@ function auditContext(contextDoc, settingsPath = SETTINGS) {
     return [key, { name: lib.name || routed.names[key] || null, roles: routed.rolesOf[key],
                    optionOrder: Object.assign({}, house.optionOrder || {}, lib.optionOrder || {}), tokens: flatSettings(house, lib, naming) }];
   }));
-  return { ok: errors.length === 0, file: contextDoc, errors, libraries, files, icons, rulings: rulingsOf(md), language };
+  // (and the tokens library's own settings over the house's, routed with that role whether or not it holds components:
+  // what the token build reads, tokenSettings)
+  const tokenLibrary = routed.tokens ? flatSettings(house, own[routed.tokens] || {}, naming) : null;
+  return { ok: errors.length === 0, file: contextDoc, errors, libraries, files, icons, rulings: rulingsOf(md), language, tokenLibrary };
 }
 
 /*
@@ -1084,12 +1087,9 @@ function librarySettingsFor(componentsDir, projectsDir) {
 function tokenSettings(label, projectsDir) {
   const w = label ? layout(projectsDir || null, label) : null;
   if (!w || w.error || !w.doc || !fs.existsSync(w.doc)) return {};
-  const key = libraryRoles(w.doc).tokens;
-  if (!key) return {};
-  let own = {}, house = {};
-  try { own = ((JSON.parse(fenced(fs.readFileSync(w.doc, 'utf8'), 'audit-settings') || '{}').libraries) || {})[key] || {}; } catch { /* a block that is not JSON is auditContext's to say */ }
-  try { house = JSON.parse(fs.readFileSync(SETTINGS, 'utf8'))['audit-defaults'] || {}; } catch { /* no house file: the project's own */ }
-  return { variableOverStyle: flatSettings(house, own).variableOverStyle === true, doc: w.doc };
+  // (read as every audit reads the document, auditContext: one parse of the settings, the house's under them)
+  const lib = auditContext(w.doc).tokenLibrary;
+  return lib ? { variableOverStyle: lib.variableOverStyle === true, doc: w.doc } : {};
 }
 
 /** The rulings log of a context document, newest last. */

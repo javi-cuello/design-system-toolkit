@@ -204,17 +204,74 @@ test('one name in two collections at different values is two tokens, each named 
   assert.doesNotMatch(css, /--colour-text-strong:/, 'neither copy takes the bare name');
 });
 
-test('one name in two collections at the same values is one token, written once under its own name', () => {
+test('one name in two collections in the same modes at the same values is one token, written once under its own name, the copy listed', () => {
   const root = repo();
   withCollections(root, (t) => {
     for (const m of ['Light', 'Dark']) t.collections.Semantic.values[m]['Size/gap'] = 8;
-    return { Brand: { modes: ['Value'], values: { Value: { 'Size/gap': 8 } }, alias: {} } };
+    return { Brand: { modes: ['Light', 'Dark'], values: { Light: { 'Size/gap': 8 }, Dark: { 'Size/gap': 8 } }, alias: {} } };
   });
   const r = buildCli(root);
   assert.equal(r.status, 0, r.stderr);
   const css = tokensCss(root);
   assert.equal(css.split('\n\n')[1].match(/--size-gap:/g).length, 1, 'once in :root');
   assert.doesNotMatch(css, /--(semantic|brand)-size-gap/);
+  assert.match(r.stdout, /1 deduped:\n\s+(brand\/size\.gap \(written once, from semantic|semantic\/size\.gap \(written once, from brand): the same in every mode\)/);
+});
+
+test('swapped modes, or another set of modes, are not the same values: each copy is its own token, with its collection', () => {
+  for (const brand of [
+    { modes: ['Light', 'Dark'], values: { Light: { 'Size/gap': 12 }, Dark: { 'Size/gap': 8 } }, alias: {} },
+    { modes: ['Value'], values: { Value: { 'Size/gap': 8 } }, alias: {} },
+  ]) {
+    const root = repo();
+    withCollections(root, (t) => {
+      t.collections.Semantic.values.Light['Size/gap'] = 8; t.collections.Semantic.values.Dark['Size/gap'] = 12;
+      return { Brand: brand };
+    });
+    const r = buildCli(root);
+    assert.equal(r.status, 0, r.stderr);
+    const css = tokensCss(root);
+    assert.match(css, /--semantic-size-gap:/); assert.match(css, /--brand-size-gap:/);
+    assert.doesNotMatch(css, /--size-gap:/);
+  }
+});
+
+test('another library\'s collection numbered beside a local one, holding a name of it at another value: each written with its collection, and a reader names a binding the same way', async () => {
+  const root = repo();
+  withCollections(root, () => ({
+    Shades: { modes: ['Value'], values: { Value: { 'pill-edge': '#000000' } }, alias: {} },
+    '🌮 Shades': { remote: true, modes: ['Value'], values: { Value: { 'pill-edge': '#ff0000', 'Accent/strong': '#00ff00' } }, alias: {} },
+  }));
+  const r = buildCli(root);
+  assert.equal(r.status, 0, r.stderr);
+  const css = tokensCss(root);
+  assert.match(css, /--shades-pill-edge: #000000;/);
+  assert.match(css, /--shades-2-pill-edge: #ff0000;/);
+  assert.match(css, /--accent-strong: #00ff00;/, 'a name only it holds keeps its name');
+  const { prefixedIn, tokenProperty, slugsOf } = await import('./names.mjs');
+  const snap = JSON.parse(readFileSync(join(root, 'design/figma.json'), 'utf8')), kept = prefixedIn(join(root, 'design/dtcg')), slugs = slugsOf(snap);
+  for (const [col, want] of [['🌮 Shades', '--shades-2-pill-edge'], ['Shades', '--shades-pill-edge']]) {
+    const got = tokenProperty('pill-edge', col, kept, slugs).css;
+    assert.equal(got, want);
+    assert.match(css, new RegExp(`${got}:`), `${col}: the property the reader names is one the build wrote`);
+  }
+});
+
+test('under the ruling (read for a tokens-only library too), a colour style is met by a variable as the build writes it: one written with its collection meets none', () => {
+  const root = repo(), projects = mkdtempSync(join(tmpdir(), 'projects-'));
+  withCollections(root, (t) => {
+    t.paintStyles = [{ name: 'Pill edge', paints: [{ type: 'SOLID', color: '#123456' }] }, { name: 'Colour/Text/$strong', paints: [{ type: 'SOLID', color: '#000000' }] }];
+    return { 'Shades 1': { modes: ['Value'], values: { Value: { 'pill-edge': '#000000' } }, alias: {} }, 'Shades 2': { modes: ['Value'], values: { Value: { 'pill-edge': '#ffffff' } }, alias: {} } };
+  });
+  const home = join(projects, 'fixture', 'figma-design-system');
+  mkdirSync(home, { recursive: true });
+  writeFileSync(join(home, 'design-system-context.md'), `# Fixture\n\n\`\`\`json audit-settings\n${JSON.stringify({ libraries: { K: { tokens: { variableOverStyle: true } } } })}\n\`\`\`\n\n\`\`\`json snapshot-routing\n${JSON.stringify({ repo: root, files: { library: [{ key: 'K', roles: ['tokens'] }] } })}\n\`\`\`\n`);
+  const r = spawnSync(process.execPath, [join(TOOLKIT, 'tools/tokens/build.mjs'), '--repo', root], { encoding: 'utf8', env: { ...process.env, TOOLKIT_PROJECTS_ROOT: projects } });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /1 colour style\(s\) dropped[^\n]*\n\s+"Colour\/Text\/\$strong"/, 'the ruling is read, and drops the one style a variable is written as');
+  assert.doesNotMatch(r.stdout, /"Pill edge"/);
+  assert.match(tokensCss(root), /--pill-edge: #123456;/);
+  assert.match(tokensCss(root), /--shades-1-pill-edge: #000000;/);
 });
 
 test('a name its collection prefixes that still meets another is refused as before', () => {

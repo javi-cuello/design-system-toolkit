@@ -69,44 +69,47 @@ const kebab = (s) => String(s).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCas
 // (a group's own token, `$root`, is named as the group: color.text.warning.$root is --color-text-warning; ROOT_SD is
 // the segment Style Dictionary is handed for it, house/root-segment)
 const ROOT_SD = '@root';
-// (a name kept with its collection, `KEPT`: one variable name two collections hold at different values, each a token
-// of its own, named with its collection's slug as a prefix, code-standard rule 52; set by buildTokens for its build)
-let KEPT = new Set();
+// (a name kept with its collection, `kept`: one variable name two collections hold at different values, each a token
+// of its own, named with its collection's slug as a prefix, code-standard rule 52; a build hands its own set to Style
+// Dictionary in the platform's config (`houseKept`), so no state outlives a build or reaches another)
 const restOf = (path) => path.slice(1).filter((x) => x !== '$root' && x !== ROOT_SD).join('.');
 /** A token path's house name where `kept` (sharedNames' keys) names the paths written with their collection: one name
  *  for the build and every reader (names.mjs cssName). */
 export const nameIn = (path, kept) => (kept && kept.has(`${path[0]}\0${restOf(path)}`) ? path : path.slice(1)).filter((x) => x !== '$root' && x !== ROOT_SD).map(kebab).join('-');
-export const nameOf = (path) => nameIn(path, KEPT);
+export const nameOf = (path) => nameIn(path, null);
 // the style groups the export writes beside the collections (dtcg.js: text, colour and effect styles' roots): a style
 // meeting a variable's name is no collection's name met twice
 const STYLE_ROOTS = new Set(['text-style', 'color-style', 'effect-style']);
-/* One variable name in several collections: { kept, dropped }, keys `<collection>\0<path>`. Where every collection
-   holds it at the same values (the set of its modes' values, compared as written), it is one token, written once, from
-   the first collection: the others are dropped. Where they differ, each is its own token, and each is kept with its
-   collection, so only those names move (code-standard rule 52). */
+/* One variable name in several collections: { kept, dropped }, keys `<collection>\0<path>` (dropped: a Map to the
+   collection it is written from). Where every collection
+   holds it in the same modes at the same value in each (mode → value, compared as written: light #000 / dark #fff is
+   not light #fff / dark #000, and two modes are not three), it is one token, written once, from the first collection:
+   the others are dropped. Where they differ, each is its own token, kept with its collection, so only those names move
+   (code-standard rule 52). */
 export function sharedNames(collections) {
   const by = new Map();
   for (const [col, c] of collections) {
     if (STYLE_ROOTS.has(col)) continue;
-    for (const f of c.modes.values()) for (const [path, t] of tokensOf(read(f))) {
+    for (const [mode, f] of c.modes) for (const [path, t] of tokensOf(read(f))) {
       const rest = restOf([col, ...path.slice(1)]);
       if (!by.has(rest)) by.set(rest, new Map());
       const cols = by.get(rest);
-      if (!cols.has(col)) cols.set(col, new Set());
-      cols.get(col).add(JSON.stringify(t.$value));
+      if (!cols.has(col)) cols.set(col, {});
+      cols.get(col)[mode] = t.$value;
     }
   }
-  const kept = new Set(), dropped = new Set();
+  const kept = new Set(), dropped = new Map();
+  const asWritten = (m) => JSON.stringify(Object.keys(m).sort().map((k) => [k, m[k]]));
   for (const [rest, cols] of by) {
     if (cols.size < 2) continue;
-    const sets = [...cols.values()].map((v) => [...v].sort().join('\n'));
+    const maps = [...cols.values()].map(asWritten);
     const [first, ...others] = [...cols.keys()];
-    if (sets.every((x) => x === sets[0])) for (const col of others) dropped.add(`${col}\0${rest}`);
+    if (maps.every((x) => x === maps[0])) for (const col of others) dropped.set(`${col}\0${rest}`, first);
     else for (const col of [first, ...others]) kept.add(`${col}\0${rest}`);
   }
   return { kept, dropped };
 }
-const refName = (ref) => nameOf(String(ref).replace(/^\{|\}$/g, '').split('.'));
+const refName = (ref, kept) => nameIn(String(ref).replace(/^\{|\}$/g, '').split('.'), kept);
 // A breakpoint is named for one, a `Breakpoint/<name>` variable or any variable
 // in a collection named for breakpoints; its Sass name is what follows either.
 const bpAt = (path) => (path[1] === 'breakpoint' ? 2 : /(^|-)breakpoints?$/.test(path[0]) ? 1 : 0);
@@ -196,16 +199,16 @@ export const FIELD = { fontFamily: ['font-family', 'fontFamily'], fontWeight: ['
 function register(SD) {
   SD.registerTransform({
     name: 'name/house', type: 'name',
-    transform: (t) => nameOf(t.path),
+    transform: (t, config) => nameIn(t.path, config && config.houseKept),
   });
   SD.registerTransform({
     name: 'size/house', type: 'value', transitive: true,
     filter: (t) => (t.$type ?? t.type) === 'dimension',
-    transform: (t) => {
+    transform: (t, config) => {
       const v = t.$value ?? t.value;
       const n = px(v);
       if (!Number.isFinite(n)) return v;
-      return FIXED.test(nameOf(t.path)) ? `${+n.toFixed(4)}px` : rem(n);
+      return FIXED.test(nameIn(t.path, config && config.houseKept)) ? `${+n.toFixed(4)}px` : rem(n);
     },
   });
   SD.registerTransform({
@@ -223,14 +226,14 @@ function register(SD) {
   SD.registerTransform({
     name: 'gradient/house', type: 'value', transitive: true,
     filter: (t) => (t.$type ?? t.type) === 'gradient',
-    transform: (t) => {
+    transform: (t, config) => {
       const ext = Object.values(t.$extensions || {}).find((e) => e && e.angle !== undefined);
       const angle = ext ? ext.angle : 180;
       const original = (t.original && (t.original.$value ?? t.original.value)) || [];
       const resolved = t.$value ?? t.value;
       const stops = resolved.map((s, i) => {
         const o = original[i] && original[i].color;
-        const colour = typeof o === 'string' && o.startsWith('{') ? `var(--${refName(o)})` : cssColour(s.color);
+        const colour = typeof o === 'string' && o.startsWith('{') ? `var(--${refName(o, config && config.houseKept)})` : cssColour(s.color);
         return `${colour} ${+(s.position * 100).toFixed(1)}%`;
       });
       return `linear-gradient(${gradientAngle(angle)}, ${stops.join(', ')})`;
@@ -246,7 +249,7 @@ function register(SD) {
   SD.registerTransform({
     name: 'shadow/house', type: 'value', transitive: true,
     filter: (t) => (t.$type ?? t.type) === 'shadow',
-    transform: (t) => shadowCss(t.$value ?? t.value, t.original && (t.original.$value ?? t.original.value)),
+    transform: (t, config) => shadowCss(t.$value ?? t.value, t.original && (t.original.$value ?? t.original.value), config && config.houseKept),
   });
   /* A text style becomes its fields BEFORE references resolve, so a field
      bound to a variable stays `var(--that-variable)`. Style Dictionary's own
@@ -324,13 +327,13 @@ export const textStyleFields = (name) => [
 
 /** A DTCG shadow value (one layer or several) as a CSS `box-shadow`. Exported
     so a reader showing a shadow (the docs site) draws the one this writes. */
-export function shadowCss(v, original) {
+export function shadowCss(v, original, kept = null) {
   // A member the source wrote as a reference is written as that variable,
   // by position, the way gradient stops are. Style Dictionary's own reference
   // pass finds a resolved value in the string and swaps in a name, so two
   // members holding 0px could each get the other's variable.
   const orig = original ? (Array.isArray(original) ? original : [original]) : [];
-  const ref = (o) => (typeof o === 'string' && o.startsWith('{') ? `var(--${refName(o)})` : null);
+  const ref = (o) => (typeof o === 'string' && o.startsWith('{') ? `var(--${refName(o, kept)})` : null);
   const one = (l, i) => {
     const o = orig[i] || {};
     return [l.inset ? 'inset' : null, ...['offsetX', 'offsetY', 'blur', 'spread'].map((k) => ref(o[k]) || `${+px(l[k] ?? 0).toFixed(4)}px`), ref(o.color) || cssColour(l.color)].filter(Boolean).join(' ');
@@ -359,11 +362,10 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
   register(SD);
   const collections = discover(tokens);
   const shared = sharedNames(collections);
-  KEPT = shared.kept;
-  try { return await build(SD, collections, shared.dropped, { tokens, out, write, banner }); } finally { KEPT = new Set(); }
+  return build(SD, collections, shared, { tokens, out, write, banner });
 }
 
-async function build(SD, collections, dropped, { tokens, out, write, banner }) {
+async function build(SD, collections, { kept, dropped }, { tokens, out, write, banner }) {
   const { single, axes } = axesOf(collections);
   // An axis's base (:root) is its collection's default mode in Figma, which the export's resolver records as the
   // modifier's default (dtcg.js buildResolver). The files are read in name order, so their first is no base: one
@@ -408,7 +410,7 @@ async function build(SD, collections, dropped, { tokens, out, write, banner }) {
   const tmp = mkdtempSync(join(tmpdir(), 'tokens-'));
   const platform = (file, selector, filter) => ({
     css: {
-      transforms: TRANSFORMS(SD), buildPath: `${tmp}/`,
+      transforms: TRANSFORMS(SD), buildPath: `${tmp}/`, houseKept: kept,
       // Composites write their own references, member by member (shadowCss,
       // the gradient transform); Style Dictionary's pass would re-place them.
       files: [{ destination: file, format: 'css/variables', filter, options: { outputReferences: (t) => !COMPOSITE.has(t.$type ?? t.type), selector, showFileHeader: false } }],

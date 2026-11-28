@@ -43,14 +43,15 @@ export const rebuildCommand = (repo, root = process.env.TOOLKIT_PROJECTS_ROOT) =
    style-dictionary). A repo with no snapshot is code 1, as the command always said it. */
 export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
   const out = [], err = [];
-  const done = (code) => ({ code, out, err });
+  // (`refused`: the snapshot builds nothing, a collision or no snapshot, which a rebuild would not change)
+  const done = (code, refused = false) => ({ code, out, err, refused });
   const { readRepoConfig } = require_('../shared/repo-config.cjs');
   const cfg = readRepoConfig(repo);
   if (cfg.error) { err.push(`tokens build: ${cfg.error}`); return done(2); }
   const { paths } = await import(pathToFileURL(join(TOOLKIT, 'tools/snapshot/store.cjs')).href).then((m) => m.default || m);
   const P = paths(repo, cfg.config.paths);
   if (!P.styles) { err.push(`  ${repo}/snapshot.config.json names no paths.styles — where the token stylesheets go`); return done(2); }
-  if (!existsSync(P.tokens)) { err.push(`  no snapshot at ${relative(repo, P.tokens)} — take one in Figma first`); return done(1); }
+  if (!existsSync(P.tokens)) { err.push(`  no snapshot at ${relative(repo, P.tokens)} — take one in Figma first`); return done(1, true); }
 
   let SD;
   try {
@@ -62,7 +63,7 @@ export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
   }
 
   const { writeDtcg } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/from-snapshot.mjs')).href);
-  const { buildTokens } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/build-tokens.mjs')).href);
+  const { buildTokens, sharedNames, discover } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/build-tokens.mjs')).href);
   const { collisionNames, stylesUnderVariables } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/names.mjs')).href);
 
   // built beside first, then compared (--check) or written in place: a refused build writes nothing, where it once
@@ -80,13 +81,21 @@ export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
   // variableOverStyle): each such style dropped before the build and listed with both values; without it, refused
   const ruled = require_('../snapshot/projects.cjs').tokenSettings(cfg.config.project);
   const read = JSON.parse(readFileSync(P.tokens, 'utf8'));
-  const { snapshot, dropped } = ruled.variableOverStyle ? stylesUnderVariables(read) : { snapshot: read, dropped: [] };
-  let built, files, dtcgBad = [], refused = false;
+  let snapshot = read, dropped = [];
+  let built, files, shared, dtcgBad = [], refused = false;
   const warn = console.warn;
   if (quiet) console.warn = () => {};
   try {
     built = writeDtcg(snapshot, dtcg);
+    // (the styles the ruling drops are those meeting a property a variable is written as, so read once the build's own
+    // shared names are known: a variable written with its collection meets no style)
+    if (ruled.variableOverStyle) {
+      ({ snapshot, dropped } = stylesUnderVariables(read, sharedNames(discover(dtcg)).kept));
+      if (dropped.length) built = writeDtcg(snapshot, dtcg);
+    }
     files = await buildTokens(SD, { tokens: dtcg, out: P.styles, write: false });
+    // (the copies the build wrote once, by the build's own reading of the files: listed whole below)
+    shared = sharedNames(discover(dtcg));
     if (!check) {
       built = writeDtcg(snapshot, STORED);
       mkdirSync(P.styles, { recursive: true });
@@ -105,7 +114,7 @@ export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
     console.warn = warn;
     rmSync(dtcg, { recursive: true, force: true });
   }
-  if (refused) return done(1);
+  if (refused) return done(1, true);
 
   // A generated stylesheet the build no longer writes is stale; one it never
   // wrote (another generator's, a hand-written partial) is left alone.
@@ -130,6 +139,11 @@ export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
     const list = built.report[k] || [];
     if (list.length) out.push(`  tokens: ${list.length} ${k}: ${list.slice(0, 4).map((x) => `${x.name} (${x.reason})`).join('; ')}${list.length > 4 ? ' …' : ''}`);
   }
+  // every copy written once, each said: another library's left out of the export (from-snapshot), and one name two
+  // collections hold in the same modes at the same values (build-tokens sharedNames)
+  const deduped = [...(built.report.deduped || []), ...[...shared.dropped].map(([k, from]) => ({ name: k.replace('\0', '/'), reason: `written once, from ${from}: the same in every mode` }))];
+  if (deduped.length) out.push(`  tokens: ${deduped.length} deduped:`);
+  for (const d of deduped) out.push(`    ${d.name} (${d.reason})`);
   // a finding each, whole: what the ruling settled is the library's to fix, so none is folded away
   if (dropped.length) out.push(`  tokens: ${dropped.length} colour style(s) dropped, the variable of their name kept (the project's ruling, variableOverStyle in ${relative(repo, ruled.doc)}):`);
   for (const d of dropped) out.push(`    "${d.name}" = ${d.style}; the variable ${d.variable} = ${d.values}`);
