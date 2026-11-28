@@ -333,6 +333,10 @@ ok('mui · and a square one is not', !t1('MU8').some((f) => f.component === 'Chi
     { name: 'Glow', type: 'RECTANGLE', w: 100, h: 100, fills: ['GRADIENT_DIAMOND'], blendMode: 'PLUS_LIGHTER', effect: 'style' }] }] }];
   const w11 = validate(two, 'web').filter((f) => f.class === 'W11' && f.layer === 'Glow');
   ok('W11 \u00b7 a gradient and a blend on one layer are two decisions, not one', w11.length === 2);
+  // snapshot 0.94.0 writes a diamond gradient as an object with its stops, not the bare word: W11 still fires (2026-11-28)
+  const obj = [{ name: 'Card', props: {}, variants: [{ name: 'Card', type: 'COMPONENT', w: 100, h: 100, children: [
+    { name: 'Glow', type: 'RECTANGLE', w: 100, h: 100, fills: [{ type: 'GRADIENT_DIAMOND', transform: [[1, 0, 0], [0, 1, 0]], stops: [{ position: 0, color: '#ffffff' }, { position: 1, color: '#000000' }] }], effect: 'style' }] }] }];
+  ok('W11 \u00b7 a diamond gradient stored as an object (snapshot 0.94.0) is reported as the word was', validate(obj, 'web').some((f) => f.class === 'W11' && f.layer === 'Glow' && f.detail.includes('diamond')));
 }
 
 // ---- a finding names things the way a person says them ------------------

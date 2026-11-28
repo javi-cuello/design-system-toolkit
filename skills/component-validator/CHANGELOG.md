@@ -1,5 +1,6 @@
 # Changelog — component-validator
 
+- 2.33.2 (2026-11-28): W11's diamond check reads a gradient stored as an object (snapshot 0.94.0 writes its stops) as well as the bare word older snapshots hold; it stopped firing on the object. Test in tools/component-validator/test-validate.mjs.
 - 2.33.1 (2026-11-23): WT3 renames a `Role` axis to `appearance`, as code-standard 1.37.0 rule 9 does; no rule changed.
 - 2.33.0 (2026-11-21): SKILL.md and references meet skill-standard §A clause I; detail moves to new references engine.md and record.md. Rule ids, Detect lines and sources unchanged.
 - 2.32.4 (2026-11-19): WT1 cites figma-standard rule 58 for Loading on the State axis, split from rule 4.
