@@ -288,6 +288,11 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
       const style = [...[...mine].filter(([k, v]) => theirs.get(k) !== v && !placing.test(k)).map(([k, v]) => `${k}: ${v}`), ...gone].join('; ');
       if (style) entry.attrs = { ...entry.attrs, style };
     }
+    // its variable modes, where the design sets others than the placed component's part has there (a checkbox's row
+    // the group puts in another mode): each as the attribute the token build writes it as, over the part's own; one
+    // drawn in its place takes them from `host` or its mark's look, above (derive leaves out modes the part's own)
+    const modesKey = (m) => JSON.stringify(Object.entries(m || {}).sort());
+    if (!entry.render && L.modes && Object.keys(L.modes).length && modesKey(L.modes) !== modesKey(X.modes)) entry.attrs = { ...entry.attrs, ...Object.fromEntries(Object.entries(L.modes).map(([k, v]) => [MODES.attribute(k), v])) };
     if (Object.keys(entry).length) seen.add(at);
     put(mk, entry);
   }
@@ -332,7 +337,8 @@ function swappedLook(L, inner, rel, host) {
 function addedOf(a, id, mainOf, { library, lang, settings }) {
   const e = a[id], up = a[e.parent] || {};
   const name = camel(id.split('/').pop()).replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`);
-  const attrs = { 'data-part': name, ...(e.name && { 'data-figma-name': e.name }) };
+  // (and the variable modes the design sets on it, as a part's are said (modeAttrs))
+  const attrs = { 'data-part': name, ...(e.name && { 'data-figma-name': e.name }), ...Object.fromEntries(Object.entries(e.modes || {}).map(([k, v]) => [MODES.attribute(k), v])) };
   const open = e.kind === 'instance' && !mainOf(e.component, e.key) && Object.keys(a).some((k) => a[k].parent === id);
   if (e.kind === 'instance' && !open) {
     const m = mainOf(e.component, e.key);
@@ -635,7 +641,14 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const modeAttrs = (id) => {
     const e = id === 'root' ? (c.anatomy || {}).root || {} : ((parts.get(id) || {}).e || {});
     // (as expand() layers them: a combination last, over the rest)
-    const sets = (c.variants || []).filter((v) => v.set && `${id}.modes` in v.set).sort((x, y) => !!x.combination - !!y.combination);
+    // (and a part only variants draw, where they draw it with different modes, a flag's close button toned only at one
+    // appearance: each variant's own, the modes its add gives, none where it gives none)
+    const own = (v) => id !== 'root' && !((parts.get(id) || {}).base) && (v.add || {})[id] && !pointerWords(c, v.when);
+    const key = (m) => JSON.stringify(Object.entries(m || {}).sort());
+    const apart = (c.variants || []).some((v) => own(v) && key(v.add[id].modes) !== key(e.modes));
+    const sets = (c.variants || []).filter((v) => (v.set && `${id}.modes` in v.set) || (apart && own(v)))
+      .map((v) => (v.set && `${id}.modes` in v.set ? v : { ...v, set: { [`${id}.modes`]: v.add[id].modes || {} } }))
+      .sort((x, y) => !!x.combination - !!y.combination);
     // (modes a pointer state sets, a card's at focus: the markup's attributes, which no pointer state changes, so a gap)
     if (sets.some((v) => pointerWords(c, v.when))) gaps.push(`${partName(id)}'s variable modes change at a pointer state: frontend-build's to add, or the design's to drop`);
     // (and a pointer state's variant that adds the part again where no other state draws it, a link's icon at press where

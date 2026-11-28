@@ -51,6 +51,13 @@ const CLASS = { kind: 'class', prefix: 'ds-', part: '__' }, ELEMENT = { kind: 'e
   ok('…but not where a state the product sets draws the part there too', !/data-theme=\{\(blank && tone === "inverse"\) \? ""/.test(rd), rd.split('\n').filter((l) => /data-theme/.test(l)));
   // (but where the rest draws the part there too, the markup keeps the rest's: the pointer state's are the gap)
   const kept = { ...link, variants: link.variants.filter((v) => !v.remove) };
+  // (2026-11-28, a flag's close button: a part only variants draw, toned at one appearance alone, carries each one's modes)
+  const flag = { contract: 1, component: 'Mode flag', props: { tone: { type: 'enum', values: ['info', 'warning'], default: 'info', figma: 'Tone' } },
+    anatomy: { root: { kind: 'container' } },
+    variants: [{ when: { tone: 'info' }, add: { close: { kind: 'container', parent: 'root', order: 0 } } }, { when: { tone: 'warning' }, add: { close: { kind: 'container', parent: 'root', order: 0, modes: { theme: 'inverse' } } } }] };
+  const rf = toReact(flag, 'mode-flag', { naming: CLASS, library: {}, stylesheet: '../styles/mode-flag.css' });
+  ok('React: a part only variants draw carries the modes each one draws it with', /data-theme=\{\(tone === "warning"\) \? "inverse" : \(\(tone === "info"\) \? "" : ""\)\}/.test(rf), rf.split('\n').filter((l) => /data-theme/.test(l)));
+  ok('…and where they all draw it alike, writes it as it stands', /data-theme="inverse"/.test(toReact({ ...flag, variants: flag.variants.map((v) => ({ ...v, add: { close: { ...v.add.close, modes: { theme: 'inverse' } } } })) }, 'mode-flag', { naming: CLASS, library: {}, stylesheet: '../styles/mode-flag.css' })));
   ok('…and where the rest draws the part there too, the rest\'s modes stay', /data-theme="link"/.test(toReact(kept, 'mode-link', { naming: CLASS, library: {}, stylesheet: '../styles/mode-link.css' })));
 }
 
@@ -264,6 +271,17 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
   ok('…one whose layers the design records is drawn open in its place: a frame of its layout, its glyph a box, its component, key and props said',
     [...opened].join() === 'cell/slot' && openForeign(host, hostLib).anatomy['cell/slot'].kind === 'instance' && !kept.size && !!node && node.tag === 'div' && node.attrs['data-component'] === 'Foreign' && node.attrs['data-key'] === 'k9' && node.attrs['data-with'] === '{"Size":"24"}' && /display: flex/.test(node.attrs.style) && /padding: 0\.25rem/.test(node.attrs.style)
       && node.kids.length === 1 && /background: var\(--c-icon\)/.test(node.kids[0].attrs.style) && seen.has('cell/slot/glyph'), JSON.stringify(node));
+  // (2026-11-28, a table cell's icon tile: the modes the design sets on the one drawn open are on it, as a part's are)
+  const tinted = { ...b, 'cell/slot': { ...b['cell/slot'], modes: { 'tile-tone': 'blue-bold' } } };
+  const tn = ((insideOf(tinted, 'cell', mainOf, { opened }).slot || {}).render || {}).node;
+  ok('…and carries the variable modes the design sets on it, each as the token build\'s attribute', !!tn && tn.attrs['data-tile-tone'] === 'blue-bold', JSON.stringify(tn && tn.attrs));
+  // (2026-11-28, a checkbox group's row: a part of the placed component the design puts in another mode carries it over
+  // the part's own; one at the part's own modes carries nothing)
+  const box = { component: 'Box', props: {}, anatomy: { root: { kind: 'container' }, row: { kind: 'container', parent: 'root', order: 0, modes: { ai: 'no-ai' } } }, variants: [] };
+  const boxOf = (n) => ({ Box: box })[n] || null;
+  const group = (modes) => ({ root: { kind: 'container' }, box: { kind: 'instance', parent: 'root', component: 'Box' }, 'box/row': { kind: 'container', parent: 'box', order: 0, ...(modes && { modes }) } });
+  ok('a part of a placed component the design puts in another mode carries that mode over its own', ((insideOf(group({ ai: 'layer-only' }), 'box', boxOf).row || {}).attrs || {})['data-ai'] === 'layer-only');
+  ok('…and one at its own modes, or none said, carries nothing', !insideOf(group({ ai: 'no-ai' }), 'box', boxOf).row && !insideOf(group(null), 'box', boxOf).row);
   // (second review: its layers are read by their own hooks under the part's, toParity's `added`)
   const pm = toParity(host, 'host', { naming: ELEMENT, library: hostLib, framework: 'web-components' }).layers, gk = Object.keys(pm).find((k) => /Glyph$/.test(k));
   ok('…and its layers are mapped, read by their own hooks under the part it stands in', !!gk && typeof pm[gk] === 'string' && /\[data-part="glyph"\]$/.test(pm[gk]), JSON.stringify(pm));

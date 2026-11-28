@@ -1257,6 +1257,15 @@ delete globalThis.figma;
   const lib2 = { ...lib, 'bar/lead': { ...lib['bar/lead'], with: { Icon: 'star', Size: 'l' } }, 'bar/lead/icon': { ...lib['bar/lead/icon'], component: 'Icons/star' } };
   const out2 = ownInPlaced(lib2, { root: lib.root, bar: lib.bar, 'bar/lead': lib2['bar/lead'] }, mains2);
   ok('…but only the prop that swaps it: another prop restated leaves a different part missing', !('bar/lead/icon' in out2), JSON.stringify(out2)); }
+{ // (2026-11-28, a checkbox group's rows: a layer inside a placed instance at its component's own modes is the same
+  // whether a side says them or leaves them unsaid, as the walk does; another mode stays a row)
+  const { roundTrip: rt, ownModes } = await import('./to-figma.mjs');
+  const box = { contract: 1, component: 'Box', props: {}, anatomy: { root: { kind: 'container' }, row: { kind: 'container', parent: 'root', order: 0, width: 'hug', modes: { ai: 'no-ai' } } }, variants: [] };
+  const mains = (n) => ({ Box: box })[n] || null;
+  const side = (row) => ({ contract: 1, component: 'Group', props: {}, anatomy: { root: { kind: 'container' }, box: { kind: 'instance', parent: 'root', order: 0, component: 'Box' }, 'box/row': { kind: 'container', parent: 'box', order: 0, width: 'fill', ...row } }, variants: [] });
+  ok('a layer inside a placed instance at its component\'s own modes, said on one side and unsaid on the other, raises no row', !rt(side({}), side({ modes: { ai: 'no-ai' } }), { mains }).rows.length, JSON.stringify(rt(side({}), side({ modes: { ai: 'no-ai' } }), { mains }).rows));
+  ok('…one in another mode than its component\'s raises the row', rt(side({ modes: { ai: 'layer-only' } }), side({ modes: { ai: 'no-ai' } }), { mains }).rows.some((r) => /box\/row\.modes/.test(r.at)));
+  ok('…and a placed instance\'s own modes are kept', !!ownModes({ root: { kind: 'container' }, box: { kind: 'instance', parent: 'root', component: 'Box', modes: { ai: 'no-ai' } } }, mains).box.modes); }
 // an effect with no style, its layers compared field by field: a colour in any spelling and a px to its read are the same,
 // another blur a row at that layer's field (2026-11-28)
 { const { roundTrip: rt } = await import('./to-figma.mjs');

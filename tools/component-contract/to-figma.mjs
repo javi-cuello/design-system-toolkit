@@ -272,6 +272,31 @@ function iconSize(x) {
 /* The instances a contract keeps whole: derive's wholeHosts, the one source from-code's reading keeps them by. */
 export const wholeHosts = (contract, mains) => req('./derive.cjs').wholeHosts(contract, mains);
 
+/* A layer inside a placed instance whose variable modes are its component's part's there, said without them: the walk
+   records a placed layer's modes only where overridden, and derive leaves a reading's equal ones out alike, so a side that
+   says the component's own (a layer filled from its component, ownInPlaced) and one that leaves them unsaid are the same.
+   Its nearest placed instance the library holds decides; an instance's own modes stay, as derive keeps them. Tested by
+   test-to-figma.mjs. */
+export function ownModes(side, mains) {
+  if (!mains || !side) return side;
+  const { placedAs } = req('./derive.cjs');
+  const key = (m) => JSON.stringify(Object.entries(m || {}).sort());
+  const out = { ...side }, seen = new Map();
+  for (const [id, e] of Object.entries(side)) {
+    if (!e || e.kind === 'instance' || !e.modes || !id.includes('/')) continue;
+    const segs = id.split('/');
+    for (let i = segs.length - 1; i > 0; i--) {
+      const h = segs.slice(0, i).join('/'), he = side[h], m = he && he.kind === 'instance' && he.component && mains(he.component, he.key);
+      if (!m) continue;
+      if (!seen.has(h)) seen.set(h, placedAs(side, h, m, mains).M);
+      const x = seen.get(h)[id.slice(h.length + 1)];
+      if (x && key(x.modes) === key(e.modes)) { const { modes: _, ...rest } = e; out[id] = rest; }
+      break;
+    }
+  }
+  return out;
+}
+
 export function ownInPlaced(library, drawn, mains, whole = new Set()) {
   if (!mains || !library || !drawn) return drawn;
   const { placedAs, atProps } = req('./derive.cjs');
@@ -622,7 +647,8 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
       const theirsIn = Object.fromEntries(Object.entries(B).filter(([k]) => loose.some((h) => k.startsWith(`${h}/`) && !hidden(h, k)) || open.some((h) => k.startsWith(`${h}/`))));
       // (the drawn side held to the library as filled, so a part filled there is the library's to compare a field of too)
       const A2 = loose.length || open.length ? ownInPlaced(theirsIn, A, mains, here) : A;
-      const a = same(A2), b = unaligned(same(ownInPlaced(A2, B, mains, whole)), a, layoutUnit);
+      // (each side's layers inside a placed instance at their component's own modes, said as the walk says them: none)
+      const a = same(ownModes(A2, mains)), b = unaligned(same(ownModes(ownInPlaced(A2, B, mains, whole), mains)), a, layoutUnit);
       if (layoutUnit) lone(a, b);
       return [unswapped(pinned(ranked(a, b), b, design), b), unswapped(pinned(ranked(b, a), a), a)];
     };
