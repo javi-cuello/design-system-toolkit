@@ -720,7 +720,17 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   { const ca = { ...c, anatomy: { ...c.anatomy, icon: { kind: 'instance', parent: 'root', component: 'Icon', modes: { theme: 'link' } } }, variants: [...c.variants, { when: { state: 'focus' }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon' } } }] };
     ok('modes a pointer state\'s variant drops by adding the part again are left to code; modes it adds with are, at that value',
       gapOf(ca)('icon.modes', { library: null, drawn: { theme: 'link' }, pointer: true, rest: { theme: 'link' } }) === 'pointer-modes' && ((cb) => gapOf(cb)('icon.modes.theme', { library: null, drawn: 'link', pointer: true, rest: 'link' }) === 'pointer-modes')({ ...ca, variants: [...c.variants, { when: { state: 'focus' }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon', modes: { d: 'a' } } } }] }) && gapOf(ca)('icon.modes', { library: null, drawn: { theme: 'link' } }) === null); }
-  ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'exposed-unforwarded', 'pointer-words', 'pointer-with', 'pointer-modes', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
+  // (modes of a collection the token build declares nothing under, at any mode (a boolean collection's): the mode changes
+  // nothing code draws, said as such; one of a collection the build declares stays pointer-modes, and with no build to
+  // ask, so does every one)
+  { const built = { modeTokens: { density: { b: [['--gap', '4px', null]] } } };
+    const gb = gapOf(cm, null, built), gd = gapOf({ ...c, variants: [{ when: { state: 'focus' }, set: { 'root.modes': { theme: 'a', density: 'b' } } }] }, null, built);
+    ok('variable modes a pointer state sets, of a collection the token build writes nothing for, are named for that',
+      gb('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true, rest: null }) === 'pointer-modes-no-css' && leftToCode(cm, null, built)('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true, rest: null }) && gb('root.modes.theme', { library: 'a', drawn: null, pointer: true, rest: null }) === 'pointer-modes-no-css'
+      && gd('root.modes', { library: { theme: 'a', density: 'b' }, drawn: null, pointer: true, rest: null }) === 'pointer-modes'
+      && gm('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true, rest: null }) === 'pointer-modes'
+      && gb('root.modes', { library: { theme: 'a' }, drawn: { theme: 'z' }, pointer: true, rest: null }) === null); }
+  ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'exposed-unforwarded', 'pointer-words', 'pointer-with', 'pointer-modes', 'pointer-modes-no-css', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
   ok('leftToCode is gapOf said as yes or no', leftToCode(c)('picker/hint') === true && leftToCode(c)('root.width') === false); }
 
 // a count derived from an accepted leg (`self strict`) that accepted.json does not hold yet is said, never failed on: it

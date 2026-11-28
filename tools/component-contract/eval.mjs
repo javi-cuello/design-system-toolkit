@@ -144,6 +144,7 @@ export const GAPS = {
   'pointer-words': 'words only a pointer state changes (a field\'s "Search" at focus)',
   'pointer-with': 'a placed instance\'s props only a pointer state gives',
   'pointer-modes': 'variable modes only a pointer state sets, or drops by drawing the part again (a card\'s at focus, a link\'s icon at press): the markup holds modes as attributes, which no pointer state changes',
+  'pointer-modes-no-css': 'variable modes only a pointer state sets, of collections the token build declares no custom property under (one holding booleans alone, which no CSS value carries): the mode changes nothing code draws, so there is nothing to re-declare at that state',
   'unwritten-scale': 'a scale constraint the sheet never writes (to-code sharesNeverWritten)',
   'path-radius': 'a radius the design holds only as mixed on a path, which no box\'s corners say',
   'unrecorded-effect': 'an effect with no style, whose values the snapshot does not record: no sheet can draw it',
@@ -450,6 +451,15 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     const key = (v) => JSON.stringify(v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : w));
     return vs.some((x) => pointerWords(contract, x.when) && at(x) !== undefined && key(at(x)) === key(row.library));
   };
+  // (of those, modes of collections the token build declares nothing under, at any mode: no custom property changes with
+  // them, so code draws the same whichever is set; a boolean collection's, which no CSS carries. Only where there is a
+  // token build to ask: with none, every collection would read so)
+  const built = (settings || {}).modeTokens || {};
+  const noCss = (field, row) => {
+    if (!Object.keys(built).length) return false;
+    const keys = field === 'modes' ? (row.library && typeof row.library === 'object' ? Object.keys(row.library) : []) : [field.slice('modes.'.length)];
+    return keys.length > 0 && keys.every((k) => !Object.hasOwn(built, k));
+  };
   return (at, row) => {
     const el = at.split('.')[0], field = at.slice(el.length + 1);
     const id = ids.find((x) => (el === x || el.startsWith(`${x}/`)) && !(over.has(x) && !((el !== x && /^(exposed-)?part$/.test(String(over.get(x)))) || passed.has(field) || (field.startsWith('with.') && el === x) || (el === x && over.get(x) === 'exposed-part' && SWAPPED.test(field)))));
@@ -458,7 +468,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     // (a part only a pointer state draws inside a placed component is left to code only where the reading lacks it: one
     // it reads, its placed component forced to that state too (from-code forwardedAt), differs as any part does, and so
     // does a field of it the reading leaves out)
-    return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? 'pointer-modes' : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) && (!row || row.drawn == null) ? 'inside-foreign'
+    return said(at, row) ? 'pointer-words' : pointerWith(el, field, row) ? 'pointer-with' : pointerModes(el, field, row) ? (noCss(field, row) ? 'pointer-modes-no-css' : 'pointer-modes') : unwritten(at, row) || (ownColour(el, field, row) ? 'icon-own-colour' : ownLook(el, field, row) ? 'placed-own-look' : inForeign(el) && (!row || row.drawn == null) ? 'inside-foreign'
       : foreignOwn(el, field, row) ? 'foreign-own' : swappedOwn(el, field, row) ? 'swapped-own' : field === '' && carries(el) && (row || {}).drawn == null ? 'carries-override' : id ? (reasons.get(id) === 'pointer-only-part' ? ((row && row.drawn != null) || (readIds && readIds.has(el)) ? null : reasons.get(id))
         // (an override the markup cannot pass is left to code only where the reading drew the placed main's own there)
         // (a swap into an exposed instance, its key, modes and look: held to the swapped-in component's own, as swapped-own's)
