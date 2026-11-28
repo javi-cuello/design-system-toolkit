@@ -1067,7 +1067,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     ...fillNames.map(async (t) => { const key = K.fillStyles && K.fillStyles[t]; if (key) fillStyles[key] = await tried(t, () => own(key, () => figma.importStyleByKeyAsync(key))); }),
   ]);
   await Promise.all(Object.values(styles).filter(Boolean).map(async (st) => { const f = fontOf(st); fonts[JSON.stringify(f)] = !!f && await tried(`font of ${st.name}`, () => figma.loadFontAsync(f)) !== null; }));
-  // a text no style names, by its values (rules.mjs typeValue: `literal 14/20 semibold italic IBM Plex Sans`): its
+  // a text no style names, by its values (rules.mjs typeValue: `literal 14/20 semibold italic Glyphic Sans`): its
   // family's face for that weight, the first of the face names fonts use for it that loads (a font names its own faces:
   // SemiBold, Semibold, Semi Bold); none that loads is the text's typography not drawn
   const FACES = { thin: ['Thin', 'Hairline'], extralight: ['ExtraLight', 'Extra Light', 'UltraLight'], light: ['Light'], regular: ['Regular', 'Normal', 'Book', 'Roman'], medium: ['Medium'], semibold: ['SemiBold', 'Semibold', 'Semi Bold', 'DemiBold'], bold: ['Bold'], extrabold: ['ExtraBold', 'Extra Bold', 'UltraBold'], black: ['Black', 'Heavy'], extrablack: ['ExtraBlack', 'Extra Black', 'UltraBlack'] };

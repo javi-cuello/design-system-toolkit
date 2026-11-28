@@ -95,10 +95,10 @@ ok('a literal carries its reason (code-standard rule 22)', lit[2] === 'no token 
     && declarations({ kind: 'text', color: 'Text/strong' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls.find((x) => x[0] === 'color')[1] === 'var(--Text/strong)'); }
 // 2026-11-22: a text with no style, its values known (snapshot 0.82.0 on), is written as values, never a var() no token
 // defines; its spacing, case and decoration too, which css.mjs left unread
-{ const r = declarations({ kind: 'text', typography: 'literal 12/18 semibold italic IBM Plex Sans', letterSpacing: 0.16, textCase: 'upper', textDecoration: 'underline' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] });
+{ const r = declarations({ kind: 'text', typography: 'literal 12/18 semibold italic Glyphic Sans', letterSpacing: 0.16, textCase: 'upper', textDecoration: 'underline' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] });
   const d = Object.fromEntries(r.decls.map((x) => [x[0], x[1]]));
   ok('a text with no style writes its own size, line height and weight, spacing, case and decoration, as values with their reason',
-    d['font-family'] === '"IBM Plex Sans"' && d['font-style'] === 'italic' && d['font-size'] === '0.75rem' && d['line-height'] === '1.125rem' && d['font-weight'] === '600' && d['letter-spacing'] === '0.16px' && d['text-transform'] === 'uppercase' && d['text-decoration-line'] === 'underline'
+    d['font-family'] === '"Glyphic Sans"' && d['font-style'] === 'italic' && d['font-size'] === '0.75rem' && d['line-height'] === '1.125rem' && d['font-weight'] === '600' && d['letter-spacing'] === '0.16px' && d['text-transform'] === 'uppercase' && d['text-decoration-line'] === 'underline'
     && !r.decls.some((x) => /var\(/.test(x[1])) && r.decls.find((x) => x[0] === 'font-size')[2] === 'no text style in the design' && !r.unread.length);
   ok('…their reason is the true one: the snapshot records no binding of theirs, so none says there is no token', !r.decls.some((x) => x[2] === 'no token in the design'));
   const a = Object.fromEntries(declarations({ kind: 'text', typography: 'literal 14/0 regular', letterSpacing: '2%', textCase: 'small_caps' }, {}, { token: (n) => `var(--${n})`, textStyle: () => [] }).decls.map((x) => [x[0], x[1]]));
