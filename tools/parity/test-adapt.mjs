@@ -554,9 +554,20 @@ ok('a vector\'s outline, paths and each path\'s fill rule and data are declared,
 { // a builder's hint names a token the build writes per collection by the collection the layer records (snapshot 0.96.0)
   const hintOf = (node, ctx) => (doc(node, '$root', {}, ctx).assertions.find((a) => /gap/.test(a.prop)) || {}).hint;
   const node = (collections) => F({ layout: 'HORIZONTAL', gap: 12, bindings: { gap: 'Spacing/12' }, children: two, ...(collections && { collections }) });
-  const prefixed = new Set(['primitives\0spacing.12', 'brand\0spacing.12']);
+  // (the prefixed names and the slugs from a real build of a snapshot: writeDtcg, then names.mjs prefixedIn and slugsOf)
+  const { mkdtempSync, rmSync } = await import('node:fs'), { tmpdir } = await import('node:os'), { join } = await import('node:path');
+  const { writeDtcg } = await import('../tokens/from-snapshot.mjs'), { prefixedIn, slugsOf } = await import('../tokens/names.mjs');
+  const snap = { _meta: { file: 'x', fileId: 'x' }, collections: {
+    Primitives: { modes: ['Value'], values: { Value: { 'Spacing/12': 12 } }, alias: {} },
+    Brand: { modes: ['Value'], values: { Value: { 'Spacing/12': 14 } }, alias: {} },
+    '🌮 Brand': { remote: true, modes: ['Value'], values: { Value: { 'Spacing/12': 16 } }, alias: {} },
+  }, textStyles: [], paintStyles: [], effects: [] };
+  const dir = mkdtempSync(join(tmpdir(), 'adapt-dtcg-'));
+  writeDtcg(snap, dir);
+  const prefixed = prefixedIn(dir), slugs = slugsOf(snap);
+  rmSync(dir, { recursive: true, force: true });
   ok('a gap bound to a name written per collection is hinted with the collection the layer records; none recorded is said, never the bare name',
-    hintOf(node({ 'Spacing/12': 'Brand' }), { prefixed }) === 'gap: var(--brand-spacing-12)' && /Spacing\/12 \(written per collection, and the stored spec says no collection recorded: take the snapshot again\)/.test(hintOf(node(null), { prefixed }))
+    hintOf(node({ 'Spacing/12': 'Brand' }), { prefixed, slugs }) === 'gap: var(--brand-spacing-12)' && /Spacing\/12 \(written per collection, and the stored spec says no collection recorded: take the snapshot again\)/.test(hintOf(node(null), { prefixed, slugs }))
     && hintOf(node(null), {}) === 'gap: var(--spacing-12)');
-  ok('…a collection the build numbered by its number', hintOf(node({ 'Spacing/12': 'Remote brand' }), { prefixed, slugs: { 'Remote brand': 'brand' } }) === 'gap: var(--brand-spacing-12)'); }
+  ok('…a collection the build numbered by its number', slugs['🌮 Brand'] === 'brand-2' && hintOf(node({ 'Spacing/12': '🌮 Brand' }), { prefixed, slugs }) === 'gap: var(--brand-2-spacing-12)'); }
 console.log(`\n${n} passed`);

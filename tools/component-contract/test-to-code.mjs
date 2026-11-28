@@ -11,7 +11,7 @@ import { ELEMENT } from './site.mjs';
 import { fillCss, fillsFromCss, smoothingToCss } from './rules.mjs';
 
 let n = 0;
-const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
+const ok = (name, cond, why) => { n++; assert.ok(cond, why ? `${name}\n${why}` : name); console.log('ok', name); };
 
 /* A button by its name, however written; never a radio, a group of buttons, or one that holds a button. */
 const buttons = ['Button', 'Icon button', 'IconButton', 'Button_Primary', 'Close button', 'Compact button'];
@@ -1410,7 +1410,22 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('…a value written with no layer to hand takes the one collection the component binds the name from, and says two as two',
     withTokenNames(pill(true), settings, () => [tokenNames.token('pill-edge'), tokenNames.token('pill-fill')]).out.join() === 'var(--shades-2-pill-edge),var(--pill-fill)'
     && /Shades 1 and Shades 2/.test(withTokenNames(pill(true), settings, () => tokenNames.token('pill-fill')).missing.get('pill-fill')));
-  ok('…a collection the build numbered is named by its number (settings collectionSlugs)', /var\(--shades-2-pill-edge\)/.test(sheetAndGaps({ ...pill(true), anatomy: { ...pill(true).anatomy, dot: { ...pill(true).anatomy.dot, collections: { 'pill-edge': 'Remote shades' } } } }, 'pill', { settings: { ...settings, collectionSlugs: { 'Remote shades': 'shades-2' } } }).css));
+  { // a collection the build numbered, and another library's copy it left out, named as the build writes them: the
+    // slugs and prefixed names both from a real build (writeDtcg, then names.mjs slugsOf and prefixedIn)
+    const { slugsOf } = await import('../tokens/names.mjs');
+    const snap = { _meta: { file: 'x', fileId: 'x' }, collections: {
+      Shades: { modes: ['Value'], values: { Value: { 'pill-edge': '#000000', 'pill-fill': '#000000' } }, alias: {} },
+      'Shades 1': { modes: ['Value'], values: { Value: { 'pill-fill': '#ffffff' } }, alias: {} },
+      '🌮 Shades': { remote: true, modes: ['Value'], values: { Value: { 'pill-edge': '#ff0000', 'pill-fill': '#000000' } }, alias: {} },
+    }, textStyles: [], paintStyles: [], effects: [] };
+    const d2 = fs.mkdtempSync(path.join(os.tmpdir(), 'dtcg-'));
+    writeDtcg(snap, d2);
+    const built = { ...HOUSE, prefixedTokens: [...prefixedIn(d2)].sort(), collectionSlugs: slugsOf(snap, true) };
+    fs.rmSync(d2, { recursive: true, force: true });
+    const rv = (tone) => ({ ...v(tone, '🌮 Shades'), children: [{ ...v(tone, '🌮 Shades').children[0], collections: { 'pill-edge': '🌮 Shades' } }] });
+    const remote = { ...derive({ name: 'Pill', id: '3:1', props: { Tone: ['Warm', 'Cool'] }, variants: [rv('Warm'), rv('Cool')] }), folder: 'pill' };
+    const got = sheetAndGaps(remote, 'pill', { settings: built });
+    ok('…a collection the build numbered is named by its number, and a copy it left out by the collection holding it (settings collectionSlugs)', built.collectionSlugs['🌮 Shades'] === 'shades-2' && /var\(--shades-2-pill-edge\)/.test(got.css) && /var\(--shades-pill-fill\)/.test(got.css) && !got.missing.size, got.css + JSON.stringify(built)); }
   { // the markup writes a token inline for a layer added inside a placed instance: by its layer's collection, and one it
     // could not name is a gap
     const badge = { component: 'Badge', folder: 'badge', props: {}, variants: [], anatomy: { root: { kind: 'container' } } };
@@ -1420,7 +1435,15 @@ ok('a placed component stretched by its insets takes no size from its main', dec
       /background: var\(--shades-1-pill-fill\)/.test(good) && !/Pill binds/.test(good) && /frontend-build: Pill binds pill-fill, which the token build writes per collection/.test(bad), bad); }
   { const { selfDrawn } = await import('./site.mjs');
     const said = [], was = console.error; console.error = (x) => said.push(String(x));
-    try { const c = pill(false); selfDrawn(c, { library: { Pill: c }, settings }); selfDrawn(c, { library: { Pill: c }, settings }); } finally { console.error = was; }
-    ok('…the self leg says it on stderr too, as to-code does, once however often it draws the component', said.length >= 1 && said.every((l) => /^site: Pill binds pill-(fill|edge), which the token build writes per collection/.test(l)) && new Set(said).size === said.length, said.join('\n')); }
+    let second = [];
+    try {
+      const c = pill(false), once = new Set();
+      selfDrawn(c, { library: { Pill: c }, settings, said: once }); selfDrawn(c, { library: { Pill: c }, settings, said: once });
+      const first = said.length;
+      // (a second build in the same process says it again: one set per build, never one for the module)
+      const { drawnAll } = await import('./site.mjs');
+      drawnAll({ Pill: c }, { settingsOf: () => settings, dir: null }); second = said.slice(first);
+    } finally { console.error = was; }
+    ok('…the self leg says it on stderr too, as to-code does, once a build however often it draws the component, and again in the next build', said.length >= 2 && said.every((l) => /^site: Pill binds pill-(fill|edge), which the token build writes per collection/.test(l)) && second.length >= 1 && new Set(second).size === second.length, said.join('\n')); }
   ok('…and without prefixed names a sheet is what it always was', toCss(pill(false), 'pill') === toCss(pill(true), 'pill')); }
 console.log(`${n} passed`);
