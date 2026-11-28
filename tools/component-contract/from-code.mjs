@@ -2301,6 +2301,21 @@ export function unplacedIn(raw, e, layoutOf = (u) => u.layout) {
   return false;
 }
 
+/* Where each part sits in its parent, all four edges measured from the parent's box, as Figma measures x and y, each turn
+   and mirror set aside (unturn): by part id. A host that draws no box (display: contents, a placed button's custom
+   element around its <button>) is measured by the box it shows, its first child, as the parent is. Runs in the page
+   (passed as source, `unturnSrc` and `turnSrc` unturn's and turnOf's); tested by test-from-code.mjs. */
+export function insetsIn(doc, unturnSrc, turnSrc) {
+  const { restore } = new Function(`return ${unturnSrc}`)()(doc.documentElement), turnOf = new Function(`return ${turnSrc}`)();
+  const boxOf = (n) => (getComputedStyle(n).display === 'contents' && n.firstElementChild ? n.firstElementChild : n);
+  try {
+    return Object.fromEntries([...doc.querySelectorAll('[data-contract-id]')].map((n) => {
+      const r = boxOf(n).getBoundingClientRect(), p = boxOf(turnOf(n, getComputedStyle).up).getBoundingClientRect(), q = (v) => +v.toFixed(2);
+      return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }];
+    }));
+  } finally { restore(); }
+}
+
 /* ---- the run ---- */
 
 /* A part turned (CSS rotate, or a transform that only turns and moves it) is measured as laid out, in its parent's axes as
@@ -3025,7 +3040,7 @@ async function main() {
       const shown = await call(L.tab, (src) => { const turnOf = new Function(`return ${src}`)(); return Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const P = turnOf(n, getComputedStyle).up; return [n.getAttribute('data-contract-id'), [getComputedStyle(n).display, P ? getComputedStyle(P).display : 'block']]; })); }, turnOf.toString());
       // where each part sits in its parent, all four edges measured from the parent's box (as Figma measures x and y),
       // for an offset written as a token and for a point placed() never measured
-      const insets = await call(L.tab, ([src, tsrc]) => { const { restore } = new Function(`return ${src}`)()(document.documentElement), turnOf = new Function(`return ${tsrc}`)(); try { return Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const r = n.getBoundingClientRect(), p = turnOf(n, getComputedStyle).up.getBoundingClientRect(), q = (v) => +v.toFixed(2); return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }]; })); } finally { restore(); } }, [unturn.toString(), turnOf.toString()]);
+      const insets = await call(L.tab, ([src, usrc, tsrc]) => new Function(`return ${src}`)()(document, usrc, tsrc), [insetsIn.toString(), unturn.toString(), turnOf.toString()]);
       // (a part with no place of its own inside a placed component, unplacedIn: the walk's place for it is left out too)
       const layoutOf = (u) => (u.kind === 'instance' ? (((mainOf(u.component, u.key) || {}).anatomy || {}).root || {}).layout : u.layout);
       for (const e of raw) if (e.parent != null && unplacedIn(raw, e, layoutOf)) { delete e.absolute; if (e.position === 'absolute') delete e.position; }
@@ -3036,7 +3051,8 @@ async function main() {
         // (the root is placed by whatever shows it, never by Figma: its size is read below)
         if (e.id in shown && e.parent != null && !turnedIds.has(e.id)) {
           const pos = {};
-          for (const p of PLACE_CSS) pos[p] = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, p, { raw: true, cache: styles });
+          // (a host that draws no box, display: contents, is placed on its control, as to-code writes it: boxSelector)
+          for (const p of PLACE_CSS) pos[p] = await authoredWidth(L.tab, boxSelector(e.id, shown[e.id][0]), p, { raw: true, cache: styles });
           const place = placeFromCss(pos);
           // (fixed is placed against the viewport, not the parent Figma measures from: left to the walk)
           if (place && !/fixed/.test(String(pos.position || ''))) {

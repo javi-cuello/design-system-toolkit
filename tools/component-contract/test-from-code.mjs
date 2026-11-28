@@ -1282,6 +1282,12 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       const got = await call(tab, (src) => { const { mirrors, restore } = new Function(`return ${src}`)()(document.documentElement); try { return [...document.querySelectorAll('.f')].map((f) => { const r = f.firstChild.getBoundingClientRect(), p = f.getBoundingClientRect(); return [+(r.left - p.left).toFixed(2), +(r.top - p.top).toFixed(2), mirrors.get(f) || null]; }); } finally { restore(); } }, unturn.toString());
       const after = await call(tab, () => getComputedStyle(document.querySelector('.f')).scale);
       ok('a layer in a mirrored frame is measured from the frame\'s own left, its mirror\'s way kept, and the mirror put back', JSON.stringify(got) === '[[11,10,"x"],[11,10,"x"],[11,10,"y"]]' && after === '-1 1', `${JSON.stringify(got)} ${after}`);
+      // a placed button whose host draws no box (display: contents) sits where its <button> does, pinned to its parent's
+      // end: measured by that box, never the host's, which has none (a notification's close button read unplaced)
+      const { insetsIn, turnOf } = await import('./from-code.mjs');
+      await navigate(tab, 'http://round-trip.test/', { html: '<!doctype html><div data-contract-id="box" style="position: relative; width: 120px; height: 48px; display: flex"><x-b data-contract-id="b" style="display: contents"><button style="position: absolute; right: 0; top: 0; width: 48px; height: 48px; padding: 0; border: 0"></button></x-b></div>' });
+      const at = await call(tab, ([src, usrc, tsrc]) => new Function(`return ${src}`)()(document, usrc, tsrc), [insetsIn.toString(), unturn.toString(), turnOf.toString()]);
+      ok('a host that draws no box is measured where its control sits in the parent', JSON.stringify(at.b) === '{"x":72,"y":0,"end":0,"bottom":0}', JSON.stringify(at));
     } finally { await browser.close(); }
   }
 }
