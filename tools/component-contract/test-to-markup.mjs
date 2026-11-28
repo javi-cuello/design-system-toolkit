@@ -229,6 +229,14 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
     /\[data-part="icon"\] \{[^}]*padding: 0\.125rem/.test(css) && /\[data-part="icon-inner-vector"\] \{[^}]*block-size: 1rem;[^}]*background: var\(--fill-info\)/.test(css) && /\[tone="error"\]\) > [^{]*\[data-part="icon-inner-vector"\] \{\s*background: var\(--fill-error\)/.test(css) && !/key on|foreign on/.test(css), css);
   const m = toParity(chip, 'chip', { naming: ELEMENT, library: lib, framework: 'web-components' });
   ok('…read by its own hooks', m.layers['Icon > Inner > Vector'] === 'ds-chip > [data-part="icon"] > [data-part="inner"] > [data-part="icon-inner-vector"]' && typeof m.layers['Swapped > Vector'] === 'object');
+  { // (a part a variant adds under the name a part of the base already has, a shortcut's second icon: the path is the
+    // first one's, as the store spells it plainly, never taken over by the later one)
+    const sc = { contract: 1, component: 'Shortcut', props: { two: { type: 'boolean', default: false, figma: 'Show Icon 2', shows: ['showIcon2Icon'] } },
+      anatomy: { root: { kind: 'container' }, icon: { kind: 'graphic', parent: 'root', name: 'Icon', width: 16, height: 16, background: 'C/a' } },
+      variants: [{ when: { two: true }, add: { showIcon2Icon: { kind: 'graphic', parent: 'root', name: 'Icon', width: 16, height: 16, background: 'C/a' } } }] };
+    const L = toParity(sc, 'shortcut', { naming: ELEMENT, library: { Shortcut: sc }, framework: 'web-components' }).layers;
+    ok('a part a variant adds under a base part\'s name leaves that name\'s path to the base part', L.Icon === 'ds-shortcut > [data-part="icon"]', JSON.stringify(L));
+  }
   ok('…without a library the markup opens nothing, though none would be held (every instance with insides opens)', !toElement(chip, 'chip', { naming: ELEMENT, library: {} }).includes('data-component') && [...foreignOpened(chip, {})].sort().join() === 'icon,icon/inner,plain,tag,tag/mark');
   // (2026-11-27, review: a held one a variant swaps for another library's, its layers recorded there (a status icon of its
   // own at the error state), is opened in that variant alone, a frame where it holds, the held one elsewhere)

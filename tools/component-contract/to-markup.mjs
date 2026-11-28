@@ -1411,7 +1411,9 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
       : x.slotted && (parts.get(x.slotted) || {}).inside ? { skip: 'a sample of what a caller puts in the slot' }
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
       : partSelector(c, n, x.id, x, library);
-    layers[pathOf(x.id)] = at;
+    // (a path another part already holds keeps that one, the first in the tree as the store spells it plainly: parts a
+    // variant adds under the same name, a shortcut's second icon beside its first, never take the first one's path)
+    if (!(pathOf(x.id) in layers)) layers[pathOf(x.id)] = at;
     // each part's selector by its id too (not in the mapping written): a stored path may be two parts never drawn
     // together, where the self leg needs each one's own (from-code swapPartsOf)
     if (typeof at === 'string') byId[x.id] = at;
