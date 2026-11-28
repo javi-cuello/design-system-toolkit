@@ -76,6 +76,10 @@ ok('a vertical alignment is written only where the text has a height of its own,
     return [u('height'), u('width_and_height'), u('none'), u(undefined)].every((x) => x === 0) && !w('height') && !w('width_and_height') && w('none') && w(undefined); })());
 ok('a text with no style writes no style\'s fields (no token defines --literal-*): it is said as unread, as an unstyled effect is',
   (() => { const r = declarations({ kind: 'text', typography: 'literal' }, {}, { token: (n) => `var(--${n})`, textStyle: (n) => [['font-size', `var(--${n}-font-size)`]] }); return !r.decls.length && r.unread.some((u) => /^typography \(a text with no style/.test(u)); })());
+// 2026-11-28: a layer a boolean variable shows per mode (contract visible): no token build writes a boolean, so the sheet
+// writes nothing for it and says it unread, never dropped quietly
+ok('a visibility a boolean variable binds is said unread, with no declaration for it',
+  (() => { const r = declarations({ kind: 'container', visible: 'Show/Badge' }, {}, { token: (n) => `var(--${n})` }); return r.unread.includes('visible') && !r.decls.some(([p]) => p === 'display' || p === 'visibility'); })());
 // 2026-11-22: a library names a style by its size (`14/20 Regular`): read as a text's own values it lost its var()
 { const style = (n) => [['font-size', `var(--${n})`]];
   for (const name of ['14/20 Regular', '14/20 regular', '14/20 medium Inter', '12/16 450'])

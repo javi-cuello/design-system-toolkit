@@ -148,6 +148,7 @@ export const GAPS = {
   'unwritten-scale': 'a scale constraint the sheet never writes (to-code sharesNeverWritten)',
   'path-radius': 'a radius the design holds only as mixed on a path, which no box\'s corners say',
   'unrecorded-effect': 'an effect with no style, whose values the snapshot does not record: no sheet can draw it',
+  'unwritten-visibility': 'a layer a boolean variable shows or hides per mode (contract `visible`): no token build writes a boolean, so no sheet draws it',
   'one-css-name': 'a token the design names that code spells as the same custom property as another (a name marked with an emoji beside the plain one): no sheet can tell the two apart',
   'icon-own-colour': 'a placed icon\'s colour where the design leaves it the icon set\'s own',
   'placed-own-look': 'a placed component\'s own look the design overrides on the instance',
@@ -420,6 +421,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // `min`, or no constraints at all, as from-code drops them where both axes are min; a path's corners as none, null or 0; anything else drawn there is code's, a difference)
   const unwritten = (at, row) => (!row ? null : row.library === 'scale' && unscaled.has(at) && (row.drawn == null || row.drawn === 'min') ? 'unwritten-scale' : row.library === 'mixed' && /\.radius$/.test(at) && onPath(at.slice(0, -'.radius'.length)) && (row.drawn == null || row.drawn === 0) ? 'path-radius'
     : row.library === 'literal' && row.drawn == null && /\.shadow$/.test(at) ? 'unrecorded-effect'
+    : typeof row.library === 'string' && row.drawn == null && /\.visible$/.test(at) ? 'unwritten-visibility'
     : typeof row.library === 'string' && typeof row.drawn === 'string' && row.library !== row.drawn && /\.(background|color|radius|border|shadow|type|typography|width|height|min\w*|max\w*|opacity|layout)(\.|$)/.test(at) && !/^(#|rgba?\(|literal$|mixed$|scale$)/.test(row.library) && tokenNames.token(row.library) === tokenNames.token(row.drawn) ? 'one-css-name' : null);
   // a placed instance's props only a pointer state gives: one of its own (a definition drawn hovered, its State Hover), or
   // the props this component's pointer state alone sets on it (a slider's item Active at hover): no markup holds either,

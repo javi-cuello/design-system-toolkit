@@ -148,6 +148,8 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
   else if (n.effect) e.shadow = n.effect;
   else if (n.effects && n.effects.length) e.shadow = n.effects;
   if (n.opacity != null && n.opacity !== 1) e.opacity = b.opacity ?? n.opacity;
+  // shown or hidden by a boolean variable, per mode (snapshot 0.95.0 on): the variable's name, as a bound number is said
+  if (b.visible) e.visible = b.visible;
   if (n.blendMode) e.blend = n.blendMode.toLowerCase();
   if (n.mask) e.mask = true;
   if (n.smoothing) e.smoothing = n.smoothing;

@@ -699,6 +699,8 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   ok('gapOf names the branch that excuses a row, and none for a difference (a slot\'s sample among them: the markup draws it)', g('picker/hint') === 'pointer-only-part' && g('menu') === null && g('slot/sample.content') === null && g('tip.radius', { library: 'mixed', drawn: null }) === 'path-radius' && g('tip.radius', { library: 'mixed', drawn: 0 }) === 'path-radius' && g('tip.radius', { library: 'mixed', drawn: 4 }) === null && g('root.width') === null
     // (an effect with no style, its values never recorded: none drawn is the gap, one drawn stays a difference)
     && g('tip.shadow', { library: 'literal', drawn: null }) === 'unrecorded-effect' && leftToCode(c)('tip.shadow', { library: 'literal', drawn: null }) && g('tip.shadow', { library: 'literal', drawn: 'Shadow/1' }) === null
+    // (a visibility a boolean variable binds, which no sheet writes: none read back is the gap, anything read stays a difference)
+    && g('tip.visible', { library: 'Show/Tip', drawn: null }) === 'unwritten-visibility' && leftToCode(c)('tip.visible', { library: 'Show/Tip', drawn: null }) && g('tip.visible', { library: 'Show/Tip', drawn: 'Show/Other' }) === null
     // (a token spelt as the same custom property as the one read back: the gap; another token, or words told apart by case, stay a difference)
     && g('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) === 'one-css-name' && leftToCode(c)('tip.layout.padding.start', { library: '⚠️ Space025', drawn: 'Space025' }) && g('tip.layout.padding.start', { library: 'Space050', drawn: 'Space025' }) === null && g('slot/sample.content', { library: 'Label', drawn: 'label' }) === null && g('tip.content', { library: 'Label', drawn: 'label' }) === null);
   // (modes only pointer states set where the row was found, roundTrip's `pointer`: the gap; modes found apart from them stay a difference)
@@ -730,7 +732,7 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
       && gd('root.modes', { library: { theme: 'a', density: 'b' }, drawn: null, pointer: true, rest: null }) === 'pointer-modes'
       && gm('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true, rest: null }) === 'pointer-modes'
       && gb('root.modes', { library: { theme: 'a' }, drawn: { theme: 'z' }, pointer: true, rest: null }) === null); }
-  ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'exposed-unforwarded', 'pointer-words', 'pointer-with', 'pointer-modes', 'pointer-modes-no-css', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override', 'unbound-prop'].every((id) => typeof GAPS[id] === 'string'));
+  ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'exposed-unforwarded', 'pointer-words', 'pointer-with', 'pointer-modes', 'pointer-modes-no-css', 'unwritten-scale', 'unwritten-visibility', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override', 'unbound-prop'].every((id) => typeof GAPS[id] === 'string'));
   ok('leftToCode is gapOf said as yes or no', leftToCode(c)('picker/hint') === true && leftToCode(c)('root.width') === false); }
 
 // a count derived from an accepted leg (`self strict`) that accepted.json does not hold yet is said, never failed on: it

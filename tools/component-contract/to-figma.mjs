@@ -888,7 +888,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // here hung for a minute at a time)
   const els = P.variants.flatMap((v) => Object.values(v.anatomy));
   const names = new Set();
-  for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (typeof t === 'string' && (t.includes('/') || (K.vars && t in K.vars))) names.add(t);
+  for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.visible, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (typeof t === 'string' && (t.includes('/') || (K.vars && t in K.vars))) names.add(t);
   // in the library's own file, each variable its own component binds, by name: the one to draw with, over the snapshot's
   // key, which can name another variable of that name (two collections of one name, from two copies of a library)
   // and, where it is hidden from publishing, one no import reaches
@@ -1391,6 +1391,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       else { n = figma.createFrame(); n.fills = []; }
       if (n.type === 'INSTANCE') await fontsOf(n);
       if (id !== 'root') n.name = e.name;
+      // shown per mode by a boolean variable (contract `visible`): bound to it, as the library's layer is
+      if (e.visible) await num(n, 'visible', e.visible);
       if (e.opacity != null) await num(n, 'opacity', e.opacity);
       blendLook(n, e);
       if (e.mask) n.isMask = true;
@@ -1778,7 +1780,7 @@ export function styleColours(tokenFile, names) {
 export function needs(p, isVar = varNamer()) {
   const els = p.variants.flatMap((v) => Object.values(v.anatomy));
   const vars = new Set();
-  for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (isVar(t)) vars.add(t);
+  for (const e of els) for (const t of [...[e.background, e.color, e.border && e.border.color].flat().flatMap((p) => (p && p.stops ? p.stops.map((st) => st.color) : [p])), ...[].concat((e.border && e.border.width) || []), ...[].concat(e.radius ?? []), e.opacity, e.visible, e.layout && e.layout.gap, e.layout && e.layout.crossGap, ...Object.values((e.layout && e.layout.padding) || {}), e.width, e.height, e.minWidth, e.maxWidth, e.minHeight, e.maxHeight].flat()) if (isVar(t)) vars.add(t);
   return { styles: [...new Set(els.map((e) => e.typography).filter(Boolean))], icons: [...new Set(els.map((e) => e.asset).filter(Boolean))], vars: [...vars], components: [...new Set(els.filter((e) => e.kind === 'instance' && e.component).map((e) => e.component))], swaps: [...new Set(els.flatMap((e) => Object.values(e.with || {})).filter((v) => typeof v === 'string'))], effects: [...new Set(els.map((e) => e.shadow).filter((x) => x && x !== CLEARED && !/\(/.test(x)))], fillStyles: [...new Set(els.map((e) => e.fillStyle).filter((x) => x && x !== CLEARED))] };
 }
 

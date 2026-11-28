@@ -1234,4 +1234,17 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('…mirrored, a group\'s glyph its visible point in the group, never less the group\'s origin', !!flipped[fv].absolute && flipped[fv].absolute.x === 0 && flipped[fv].absolute.y === 0, JSON.stringify(flipped[fv]));
   ok('…and an unmirrored layer in a mirrored group its point less the group\'s visible left', !!flipped[fd].absolute && flipped[fd].absolute.x === 1.12 && flipped[fd].absolute.y === 1, JSON.stringify(flipped[fd]));
 }
+// a layer a boolean variable shows or hides per mode (snapshot 0.95.0, bindings.visible): the contract says the variable
+// by name, as a bound number is; a variant binding another says it as a change, and every variant rebuilds (2026-11-28)
+{
+  const row = (size, show) => ({ name: `Size=${size}`, type: 'COMPONENT', sizing: 'FIXED/FIXED', w: 40, h: 20, layout: 'HORIZONTAL', align: 'MIN/MIN', pad: [0, 0, 0, 0], gap: 0,
+    children: [{ name: 'Badge', type: 'FRAME', sizing: 'FIXED/FIXED', w: 8, h: 8, ...(show && { bindings: { visible: show } }) }] });
+  const spec = { name: 'Row', id: '9:2', props: { Size: ['md', 'sm'] }, variants: [row('md', 'Show/Badge'), row('sm', 'Show/Compact badge')] };
+  const c = derive(spec);
+  ok('a layer whose visibility a boolean variable binds says the variable as visible', c.anatomy.badge.visible === 'Show/Badge');
+  ok('…a variant binding another says it as a change', c.variants.some((v) => v.when.size === 'sm' && v.set && v.set['badge.visible'] === 'Show/Compact badge'), JSON.stringify(c.variants));
+  ok('…and every variant rebuilds from the contract', selfCheck(spec).length === 0);
+  ok('…and a layer with none bound says no visible', derive({ ...spec, variants: [row('md'), row('sm')] }).anatomy.badge.visible === undefined);
+}
+
 console.log(`${n}/${n} passed`);

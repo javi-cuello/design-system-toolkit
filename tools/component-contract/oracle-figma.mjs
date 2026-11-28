@@ -102,7 +102,8 @@ export const FIELDS = [
   { spec: 'minWidth, maxWidth, minHeight, maxHeight', contract: 'minWidth, maxWidth, minHeight, maxHeight', rest: 'minWidth…', how: 'value' },
   { spec: 'radius, smoothing', contract: 'radius, smoothing', rest: 'cornerRadius, rectangleCornerRadii, cornerSmoothing', how: 'value' },
   { spec: 'mask, opacity, clips, blendMode', contract: 'mask, opacity, overflow, blend', rest: 'isMask, opacity, clipsContent, blendMode', how: 'value' },
-  { spec: 'bindings', rest: 'boundVariables (padding, gap, radius, stroke weight, opacity, sizes)', how: 'bound' },
+  { spec: 'bindings', rest: 'boundVariables (padding, gap, radius, stroke weight, opacity, sizes, visible)', how: 'bound' },
+  { contract: 'visible', rest: 'boundVariables.visible', how: 'bound' },
   { spec: 'modes', rest: 'explicitVariableModes', how: 'bound' },
   { spec: 'fills, fillStyle', contract: 'background, color, fillStyle', rest: 'fills (solid, linear gradient, image), styles.fill', how: 'value' },
   { spec: 'strokes, strokeSides, strokeAlign, dashed, strokeCap', contract: 'border.*', rest: 'strokes, strokeWeight, individualStrokeWeights, strokeAlign, strokeDashes, strokeCap', how: 'value' },
@@ -258,6 +259,8 @@ function bindingsOf(n) {
   if (stroke || bv.strokeWeight) out.strokeWeight = stroke ? stroke.map((w) => w || (bv.strokeWeight ? BOUND : null)) : [BOUND, BOUND, BOUND, BOUND];
   if (bv.opacity) out.opacity = BOUND;
   for (const k of ['minWidth', 'minHeight', 'maxWidth', 'maxHeight', 'width', 'height']) if (bv[k]) out[k === 'width' ? 'w' : k === 'height' ? 'h' : k] = BOUND;
+  // a boolean variable showing or hiding the layer (REST boundVariables.visible; the walk's since 0.95.0)
+  if (bv.visible) out.visible = BOUND;
   return Object.keys(out).length ? out : null;
 }
 // the stored bindings with each name as BOUND, a radius said once as its four corners
@@ -632,6 +635,7 @@ export function restPart(n, parent, ctx, propIds, frame = parent, { turned = fal
   if (radius && radius.some((x) => x !== 0)) e.radius = radius;
   if (n.cornerSmoothing) e.smoothing = r2(n.cornerSmoothing);
   if (bv.opacity) e.opacity = BOUND; else if (typeof n.opacity === 'number' && n.opacity !== 1) e.opacity = r2(n.opacity);
+  if (bv.visible) e.visible = BOUND;
   if (n.clipsContent) e.overflow = 'hidden';
   if (n.isMask) e.mask = true;
   if (n.blendMode && !['PASS_THROUGH', 'NORMAL'].includes(n.blendMode)) e.blend = n.blendMode.toLowerCase();
@@ -719,6 +723,7 @@ export function partOurs(e) {
       delete o.border.sides;
     } else if (k === 'radius') o.radius = radiusList(v);
     else if (k === 'opacity' || /^(min|max)(Width|Height)$/.test(k)) o[k] = num(v);
+    else if (k === 'visible') o.visible = BOUND;
     else if (k === 'typography') o.typography = typeOurs(v);
     else o[k] = v;
   }

@@ -90,6 +90,12 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   // a placed layer's constraints in the walk's words
   const placed = restWalk({ ...frame, layoutPositioning: 'ABSOLUTE', constraints: { horizontal: 'LEFT_RIGHT', vertical: 'BOTTOM' } }, ctx, 1, { ...parent, layoutMode: 'VERTICAL' }, 0);
   assert.equal(placed.constraints, 'STRETCH/MAX'); assert.equal(placed.absolute, true);
+  // a boolean variable showing the layer per mode (snapshot 0.95.0, bindings.visible; contract visible): held bound on both sides
+  const shown = { ...frame, boundVariables: { visible: { id: 'vb' } } };
+  assert.deepEqual(restWalk(shown, ctx, 1, parent, 0).bindings, { visible: BOUND }, 'the walk side: a visibility binding is bound');
+  assert.equal(restPart(shown, parent, ctx, {}).visible, BOUND, 'the contract side: visible is bound');
+  assert.equal(partOurs({ kind: 'container', visible: 'Show/Badge' }).visible, BOUND, 'the contract\'s variable name reads as bound');
+  assert.equal(restPart(frame, parent, ctx, {}).visible, undefined, 'none bound, none said');
 }
 {
   const text = { name: 'Label', type: 'TEXT', size: { x: 30, y: 20 }, relativeTransform: T(0, 0), characters: 'Hi', styles: { text: 'S:1' }, style: { fontFamily: 'Inter', fontStyle: 'Medium', fontWeight: 500, fontSize: 14, textAlignHorizontal: 'CENTER', textAlignVertical: 'TOP', textAutoResize: 'WIDTH_AND_HEIGHT', letterSpacing: 0.28, lineHeightUnit: 'FONT_SIZE_%', lineHeightPx: 21, textCase: 'UPPER' }, componentPropertyReferences: { characters: 'Label text#1:2' }, fills: [{ type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 1 } }] };
@@ -151,7 +157,7 @@ const T = (x, y) => [[1, 0, x], [0, 1, y]];
   const words = new Set(said.split(/[^A-Za-z.]+/).filter(Boolean));
   const walkKeys = ['name', 'type', 'w', 'h', 'x', 'y', 'index', 'visual', 'layout', 'pad', 'gap', 'wrap', 'crossGap', 'firstOnTop', 'align', 'sizing', 'absolute', 'constraints', 'minWidth', 'radius', 'smoothing', 'mask', 'opacity', 'bindings', 'modes', 'clips', 'blendMode', 'dashed', 'strokeCap', 'arc', 'flip', 'rotation', 'fills', 'fillStyle', 'strokes', 'strokeSides', 'strokeAlign', 'strokesInLayout', 'effect', 'effects', 'text', 'textStyle', 'fontSize', 'textAlign', 'textAutoResize', 'truncate', 'maxLines', 'textCase', 'textDecoration', 'textAlignVertical', 'letterSpacing', 'lineHeight', 'instanceOf', 'instanceOfKey', 'props', 'overrides'];
   for (const k of walkKeys.filter((x) => x !== 'name')) assert.ok(words.has(k), `FIELDS lists the walk's ${k}`);
-  for (const k of ['kind', 'width', 'height', 'background', 'color', 'border', 'radius', 'overflow', 'position', 'content', 'typography', 'autoResize', 'verticalAlign', 'component', 'key', 'with', 'swappedBy', 'shadow', 'blend']) assert.ok(words.has(k) || said.includes(k), `FIELDS lists the contract's ${k}`);
+  for (const k of ['kind', 'width', 'height', 'background', 'color', 'border', 'radius', 'overflow', 'position', 'content', 'typography', 'autoResize', 'verticalAlign', 'component', 'key', 'with', 'swappedBy', 'shadow', 'blend', 'visible']) assert.ok(words.has(k) || said.includes(k), `FIELDS lists the contract's ${k}`);
   const nc = NOT_CHECKABLE.map((x) => x.field).join(' ');
   for (const k of ['variable names', 'paths', 'notes', 'flipped-boolean', 'modes']) assert.ok(nc.includes(k), `${k} is listed as not checkable`);
   assert.ok(NOT_CHECKABLE.every((x) => x.why && REASONS.includes(x.reason)), 'each says why, for a reason from the closed list');

@@ -522,6 +522,10 @@ delete globalThis.figma;
   ok('a boolean shows the topmost of what it shows, not each layer inside it', a.showSearchSearchInput.shownBy === 'Show search' && !a['showSearchSearchInput/field'].shownBy);
   const want = needs({ variants: [{ anatomy: { root: { kind: 'container', width: 'Size/panel', opacity: 'O/half', radius: ['R/4', 0, 'R/4', 0], border: { color: 'C/line', width: ['S/1', 0, 'S/1', 0] }, layout: { wrap: true, crossGap: 'S/8' } } } }] }).vars;
   ok('every token a part is drawn with is looked up: a size, an opacity, a corner, a side, the gap between wrapped rows', ['Size/panel', 'O/half', 'R/4', 'S/1', 'S/8', 'C/line'].every((t) => want.includes(t)));
+  // a layer a boolean variable shows per mode (contract visible, snapshot 0.95.0): its variable looked up and bound to the layer
+  ok('a visibility a boolean variable binds is looked up, and the drawing binds the layer\'s visible to it',
+    needs({ variants: [{ anatomy: { root: { kind: 'container' }, badge: { kind: 'container', parent: 'root', visible: 'Show/Badge' } } }] }).vars.includes('Show/Badge')
+    && pluginCode({ component: 'Row', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] }, {}).includes("if (e.visible) await num(n, 'visible', e.visible);"));
 }
 
 {
