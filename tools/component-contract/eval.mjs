@@ -59,7 +59,7 @@ import { parseColour } from '../parity/values.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, swapKeysOf } from './to-markup.mjs';
 import { expand, variantDefaults, foreignOpened, openForeign, placedOf } from './layers.mjs';
-import { sharesNeverWritten, tokenNames, pointerWordsOf, pointerModesOf, pointerWithOf, pseudoClasses, ownPointerOf } from './to-code.mjs';
+import { sharesNeverWritten, tokenNames, pointerWordsOf, pointerModesOf, pointerWithOf, ownPointerOf, placedPseudo } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { closureOf } from './site.mjs';
@@ -180,7 +180,7 @@ export function openedIn(reading, library = {}) {
   for (const A of parts) for (const [id, e] of Object.entries(A)) if (e && e.kind === 'instance' && !placedOf(library, e) && Object.values(all).some((x) => x && x.parent === id)) out.add(id);
   return out;
 }
-export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true, read = null, library = null, specOf = null } = {}) {
+export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true, read = null, library = null, specOf = null, settingsOf = null } = {}) {
   // (`library`: the one the markup was drawn with, { component: contract }; another library's instance it draws open,
   // its insides, props and layout this component's own, is held to the design as any part: layers.mjs openForeign)
   const opened = library && Object.keys(library).length ? foreignOpened(contract, library) : new Set();
@@ -432,7 +432,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     const q = m && Object.values(m.props || {}).find((y) => y.role === 'interaction' && low(y.figma || '') === low(k)), o = q && ownPointerOf(m, { [q.figma]: v });
     // (one with a pseudo-class is drawn by this component's sheet where nothing forwards it, to-code's drawnAsOf, and read
     // back so where the page shows it so, from-code's drawnAsSeen: no gap; one it does not stays a difference)
-    return !!o && !pseudoClasses(settings)[o.v];
+    return !!o && !placedPseudo(m, o.v, settingsOf, settings);
   };
   const pointerWith = (el, field, row) => {
     if (!row || !/^with(\.|$)/.test(field)) return false;
@@ -614,7 +614,7 @@ export function measure(where, only = [], now = {}) {
     else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true, opened: openedIn(code.asFigma, library) }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, ...tagsOf(code), combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true, opened: foreignOpened(contract, library) }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma, library, specOf: specOfMain })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true, opened: foreignOpened(contract, library) }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma, library, specOf: specOfMain, settingsOf })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
@@ -624,7 +624,7 @@ export function measure(where, only = [], now = {}) {
       const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract, whens: true, opened: foreignOpened(contract, library) }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
-      legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false, read: again.asFigma, library, specOf: specOfMain })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
+      legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false, read: again.asFigma, library, specOf: specOfMain, settingsOf })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     // a reading whose geometry was not compared (taken before it was kept, or with no stored figma.json) is stale, as one

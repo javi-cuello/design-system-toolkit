@@ -41,7 +41,7 @@ function drawing(c, { library, settings, naming, settingsOf = null }) {
   const mapping = selfMapping(c, { library, settings, naming });
   // (and each part's selector by id, which the mapping does not write: what a holder's reading finds it by, so in the hash)
   const { css: sheet, missing } = sheetAndGaps(c, c.folder, { naming, settings, library, settingsOf });
-  return { drawn: { markup: toElement(c, c.folder, { naming, library, settings }), sheet, mapping, parts: mapping.byId }, lines: missingSaid(c.component, missing) };
+  return { drawn: { markup: toElement(c, c.folder, { naming, library, settings, settingsOf }), sheet, mapping, parts: mapping.byId }, lines: missingSaid(c.component, missing) };
 }
 
 /* Its parity mapping alone, for a reader that needs no more (from-code's self source): selfDrawn's. */

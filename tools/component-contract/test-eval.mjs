@@ -252,7 +252,14 @@ ok('a component measured since the accept is held until accepted; one that came 
     ok('…one a pointer state with a pseudo-class gives is a copy read there, and its own state at this one\'s is forced and read there: rows at those are differences',
       !L(card([], 'focus'))('link.with.On', P('True', 'False')) && !L(card())('link.with.State', { library: 'Hover', drawn: null, whens: [{ state: 'focus' }] })
       && L(card())('link.with.State', { library: 'Held', drawn: null, whens: [{ state: 'rest' }, { state: 'focus' }] })
-      && !L(card())('link.with.State', { library: 'Hover', drawn: null, whens: [{ state: 'rest' }, { state: 'focus' }] })); }
+      && !L(card())('link.with.State', { library: 'Hover', drawn: null, whens: [{ state: 'rest' }, { state: 'focus' }] }));
+    // (third review of 2026-11-28: named by the placed component's own settings, never the holder's: Held at :hover in
+    // Link's, which the holder's lack, is drawn by the holder's sheet, a difference)
+    const { HOUSE } = await import('./to-code.mjs');
+    const own = (f) => (f === 'link' ? { ...HOUSE, pseudoClasses: { ...(HOUSE.pseudoClasses || {}), held: ':hover' } } : HOUSE);
+    const linkF = { ...link, folder: 'link' }, LO = (k, settingsOf) => leftToCode(k, (n) => (n === 'Link' ? linkF : null), HOUSE, { settingsOf });
+    ok('…its own state is named by its own settings: a value the holder\'s lack and its own name is no gap',
+      !LO(card(), own)('link.with.State', { library: 'Held', drawn: null }) && LO(card())('link.with.State', { library: 'Held', drawn: null })); }
   { // (review of 2026-11-27: at a pointer combination the code is entitled to the rest's props alone; a wrong prop drawn
     // there, or the instance's own state drawn other than at its rest, is code's, a difference)
     const link = { component: 'Link', props: { state: { type: 'enum', values: ['rest', 'hover', 'held'], default: 'rest', figmaValues: ['Rest', 'Hover', 'Held'], role: 'interaction', pointer: ['hover', 'held'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };

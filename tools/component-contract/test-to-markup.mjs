@@ -413,6 +413,13 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
       !/given props only a pointer state/.test(out(holder([], { State: 'Hover' }))) && /Link is given props only a pointer state draws/.test(heldOut)
       && !/given props only a pointer state/.test(out(holder([], { State: 'Rest', On: 'True' })))
       && !/given props only a pointer state/.test(out(holder([{ when: { state: 'hover' }, set: { 'link.with': { State: 'Hover' } } }], { State: 'Rest' }))));
+    // (third review of 2026-11-28: named by the placed component's own settings: Held at :hover in Link's, which this
+    // one's lack, is drawn by this one's sheet, no gap)
+    const { HOUSE } = await import('./to-code.mjs');
+    const heldOwn = (f) => (f === 'link' ? { ...HOUSE, pseudoClasses: { ...(HOUSE.pseudoClasses || {}), held: ':hover' } } : HOUSE);
+    const heldLib = { Card: holder([], { State: 'Held' }), Link: held };
+    ok('…named by the placed component\'s own settings: a value only its own name is drawn by this one\'s sheet, no gap',
+      !/given props only a pointer state/.test(toElement(heldLib.Card, 'card', { naming: ELEMENT, library: heldLib, settingsOf: heldOwn })) && /given props only a pointer state/.test(toElement(heldLib.Card, 'card', { naming: ELEMENT, library: heldLib })));
     // (2026-11-28: a prop another of this one's props gives it, held to the same combination at rest, is that prop's
     // attribute: a pointer state's variant restating it is no gap)
     const tight = { ...holder([{ when: { dense: true }, set: { 'link.with': { State: 'Rest', On: 'True' } } }, { when: { state: 'hover', dense: true }, set: { 'link.with': { State: 'Hover', On: 'True' } } }], { State: 'Rest', On: 'False' }) };

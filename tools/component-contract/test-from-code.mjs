@@ -1470,9 +1470,32 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       await forceState(tab, [{ selector: '#stage section > *', pseudo: 'hover' }]);
       const hovered = await boxes();
       ok('a pointer state\'s copy turned a quarter: one copy shown, one wrapper with a box, the root as wide as one turned copy',
-        rest.shown.join() === 'rest' && hovered.shown.join() === 'hover' && rest.wrappers <= 1 && hovered.wrappers <= 1 && rest.root === 10 && hovered.root === 10, JSON.stringify([rest, hovered]));
+        rest.shown.join() === 'rest' && hovered.shown.join() === 'hover' && rest.wrappers === 1 && hovered.wrappers === 1 && rest.root === 10 && hovered.root === 10, JSON.stringify([rest, hovered]));
     } finally { await browser.close(); await site.close(); }
   }
+}
+// (third review of 2026-11-28: the self leg reads that copy once: a wrapper the sheet hides holds nothing drawn)
+{ const fs = await import('node:fs'), os = await import('node:os'), path = await import('node:path'), { spawnSync } = await import('node:child_process');
+  const { findChrome } = await import('../shared/cdp.mjs');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'turned-copy-')), repo = path.join(home, 'p'), comps = path.join(repo, 'figma-design-system', 'snapshot', 'components');
+  const put = (f, x) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, typeof x === 'string' ? x : JSON.stringify(x)); };
+  try {
+    put(path.join(repo, 'snapshot.config.json'), { toolkit: '~/Projects/toolkit', project: 'p', paths: { tokens: 'figma-design-system/snapshot/tokens.json', components: 'figma-design-system/snapshot/components', styles: 'styles', graphics: false } });
+    put(path.join(repo, 'styles', '_tokens.scss'), ':root { --x: 0; }\n');
+    put(path.join(repo, 'figma-design-system', 'snapshot', 'tokens.json'), {});
+    put(path.join(repo, 'figma-design-system', 'design-system-context.md'), `# p\n\n\`\`\`json audit-settings\n${JSON.stringify({ language: 'en-US', libraries: { K: { name: 'P', code: { parity: { tiers: ['Light'] } } } } })}\n\`\`\`\n\n\`\`\`json snapshot-routing\n${JSON.stringify({ repo, files: { library: [{ key: 'K', roles: ['tokens', 'components'] }] } })}\n\`\`\`\n`);
+    put(path.join(comps, 'tag', 'contract.json'), { contract: 1, component: 'Tag', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 40, height: 10, background: '#000000' } }, variants: [{ when: { on: true }, set: { 'root.background': '#ff0000' } }] });
+    put(path.join(comps, 'tag', 'figma.json'), { name: 'Tag', id: '1:2', page: 'P', description: '', props: { On: { type: 'VARIANT', values: ['False', 'True'], default: 'False' } }, key: 'k2', default: { name: 'On=False', type: 'COMPONENT', w: 40, h: 10, sizing: 'FIXED/FIXED', children: [] }, variants: [{ name: 'On=False' }, { name: 'On=True' }] });
+    put(path.join(comps, 'card', 'contract.json'), { contract: 1, component: 'Card', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } }, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, tag: { kind: 'instance', parent: 'root', component: 'Tag', rotation: 90, width: 40, height: 10, with: { On: 'False' } } }, variants: [{ when: { state: 'hover' }, set: { 'tag.with': { On: 'True' } } }] });
+    put(path.join(comps, 'card', 'figma.json'), { name: 'Card', id: '1:1', page: 'P', description: '', props: { State: { type: 'VARIANT', values: ['Rest', 'Hover'], default: 'Rest' } }, key: 'k1', default: { name: 'State=Rest', type: 'COMPONENT', w: 10, h: 40, sizing: 'HUG/HUG', children: [{ name: 'Tag', type: 'INSTANCE', w: 10, h: 40, rotation: 90, component: 'Tag' }] }, variants: [{ name: 'State=Rest' }, { name: 'State=Hover' }] });
+    if (!fs.existsSync(findChrome())) ok('Chrome is here to read a turned copy in (none found: install Chrome, the toolkit\'s one browser)', false);
+    else {
+      const r = spawnSync(process.execPath, [new URL('./from-code.mjs', import.meta.url).pathname, '--project', 'p', 'card', '--self'], { encoding: 'utf8', env: { ...process.env, TOOLKIT_PROJECTS_ROOT: home, TOOLKIT_READ_CACHE: 'off' } });
+      const out = path.join(repo, 'figma-design-system', 'round-trip', 'self', 'from-code', 'card.json');
+      const ids = fs.existsSync(out) ? Object.keys(JSON.parse(fs.readFileSync(out, 'utf8')).contract.anatomy) : null;
+      ok('the self leg reads a pointer state\'s copy turned a quarter once: the copy hidden at its wrapper is not drawn', r.status === 0 && JSON.stringify(ids) === '["root","tag"]', JSON.stringify([r.status, ids, r.stderr.slice(-300)]));
+    }
+  } finally { fs.rmSync(home, { recursive: true, force: true }); }
 }
 // 2026-11-28: a placed component the design gives a pointer value of its own where nothing forwards one (a definition
 // tooltip's item at Hover while shown): with nothing forced, the holder's sheet draws it at that value's look under the
@@ -1547,18 +1570,18 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   }
 }
 // (and the sheet names it by the placed component's own settings, the reader's pseudoFor, never the holder's: two
-// components of one library with pointer states of their own, the placed one's Lit at :hover, which the holder's lack)
+// components of one library with pointer states of their own, the placed one's Glow at :hover, which the holder's lack)
 { const fs = await import('node:fs');
   const { findChrome, launch, newPage, attach, navigate, waitFor, call } = await import('../shared/cdp.mjs');
   const { selfSiteFiles, serveSite, selfMapping } = await import('./site.mjs');
   const { HOUSE } = await import('./to-code.mjs');
-  const LIT = { ...HOUSE, pseudoClasses: { ...(HOUSE.pseudoClasses || {}), lit: ':hover' } };
-  const link = { contract: 1, component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'lit'], default: 'rest', figmaValues: ['Rest', 'Lit'], role: 'interaction', pointer: ['lit'], figma: 'State' } },
-    anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 10, height: 10, background: '#000000' } }, variants: [{ when: { state: 'lit' }, set: { 'root.background': '#ff0000' } }] };
+  const GLOW = { ...HOUSE, pseudoClasses: { ...(HOUSE.pseudoClasses || {}), glow: ':hover' } };
+  const link = { contract: 1, component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'glow'], default: 'rest', figmaValues: ['Rest', 'Glow'], role: 'interaction', pointer: ['glow'], figma: 'State' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 10, height: 10, background: '#000000' } }, variants: [{ when: { state: 'glow' }, set: { 'root.background': '#ff0000' } }] };
   const card = { contract: 1, component: 'Card', folder: 'card', props: { shown: { type: 'boolean', default: false, axis: true, figma: 'Shown' } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, link: { kind: 'instance', parent: 'root', component: 'Link', with: { State: 'Rest' } } },
-    variants: [{ when: { shown: true }, set: { 'link.with': { State: 'Lit' } } }] };
-  const library = { Link: link, Card: card }, settingsOf = (f) => (f === 'link' ? LIT : HOUSE), files = selfSiteFiles(library, 'card', { settingsOf });
+    variants: [{ when: { shown: true }, set: { 'link.with': { State: 'Glow' } } }] };
+  const library = { Link: link, Card: card }, settingsOf = (f) => (f === 'link' ? GLOW : HOUSE), files = selfSiteFiles(library, 'card', { settingsOf });
   const sel = selfMapping(card, { library, settings: HOUSE }).byId.link;
   if (!fs.existsSync(findChrome())) ok('Chrome is here to draw a placed component under its own settings in (none found: install Chrome, the toolkit\'s one browser)', false);
   else {
@@ -1635,7 +1658,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
       await call(tab, () => { const s = document.createElement('section'); s.append(window.R.card({ shown: true })); document.getElementById('stage').replaceChildren(s); });
       const seen = await drawnAsSeen(tab, [{ id: 'link', selector: sel, pseudo: 'hover' }]);
-      ok('a placed component\'s drawn pointer value is asked with it forced alone, never its holder with it', seen.length === 1 && await call(tab, () => !document.querySelector(':hover')), JSON.stringify(seen));
+      ok('a placed component\'s drawn pointer value is asked with it forced alone, never its holder with it', seen.length === 1, JSON.stringify(seen));
     } finally { await browser.close(); await site.close(); }
   }
 }

@@ -367,6 +367,9 @@ export function pointerWordsOf(c, t = HOUSE) {
 /* The settings a placed component `m` is drawn under: its own, where the library's lookup carries them (heldOf's
    `settingsOf`), so its pointer states are named by its own pseudo-classes as its own sheet names them; else `t`. */
 const placedSettings = (m, mains, t) => (m && mains && mains.settingsOf ? mains.settingsOf(m.folder || folderOf(m.component)) ?? HOUSE : t);
+/* The pseudo-class a placed component `m` draws its pointer value `v` by: its own settings', by folder (`settingsOf`),
+   the holder's `t` where none is given. One answer for the sheet, the markup, the reader and the gaps. */
+export const placedPseudo = (m, v, settingsOf, t = HOUSE) => pseudoClasses(placedSettings(m, { settingsOf }, t))[v];
 const ROOT_DISPLAY = new WeakMap();
 function rootDisplay(m, mains, t) {
   if (!m) return 'revert-layer';
@@ -391,7 +394,7 @@ export function ownPointerOf(m, w) {
    it back as that value. Each with its part id, the placed contract, its props at that value and at rest, and the
    value's pseudo-class without its colon; one inside another placed component is that one's to draw. Tested by
    test-to-code.mjs. */
-export function drawnAsOf(c, when, mains = NO_MAINS, t = HOUSE, a = expand(c, when), pseudoFor = (m, v) => pseudoClasses(placedSettings(m, mains, t))[v]) {
+export function drawnAsOf(c, when, mains = NO_MAINS, t = HOUSE, a = expand(c, when), pseudoFor = (m, v) => placedPseudo(m, v, mains.settingsOf, t)) {
   const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
   if (pk && (c.props[pk].pointer || []).includes(when[pk]) && pseudoClasses(t)[when[pk]]) return [];
   const out = [];

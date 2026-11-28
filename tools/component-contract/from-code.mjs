@@ -45,7 +45,7 @@ import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { shadowOrder, parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop, shorthandOf, sidePiece } from '../parity/values.mjs';
 export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
-import { ringOf, pseudoClasses, isDrawing, drawnAsOf, ownPointerOf } from './to-code.mjs';
+import { ringOf, pseudoClasses, isDrawing, drawnAsOf, ownPointerOf, placedPseudo } from './to-code.mjs';
 import { swapKeysOf } from './to-markup.mjs';
 import { inWordsOf } from './to-figma.mjs';
 import { sameAsRead, layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, stackedFirst, childOrder, liftsAlone, autoResizeOf, growsDown, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, glyphOnly, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
@@ -2278,7 +2278,7 @@ async function selfSource(project, name, { second = false } = {}) {
   // (forwardedAt), found by the markup's own selector for that part; one forced at live renders that matched at none is
   // refused at close, never skipped in silence (a stale selector)
   const forwardMain = req('./derive.cjs').byComponentName(Object.values(library)), forwardSel = partsById(() => drawnMapping(c), container) || {};
-  const forwardPseudo = (main, v) => pseudoClasses(settingsOf(main.folder))[v];
+  const forwardPseudo = (main, v) => placedPseudo(main, v, settingsOf);
   const forwardTried = new Map();
   let elements;
   try { elements = G.elements(); } catch (e) { throw Object.assign(new Error(`${name}'s mapping from to-markup: ${e.message}`), { usage: true }); }
@@ -2922,7 +2922,8 @@ async function main() {
         const cssOrderOf = new Function(`return ${cssOrderSrc}`)(), stackOf = new Function(`return ${stackSrc}`)(), liftsAlone = new Function(`return ${liftsSrc}`)(), placedBy = (n, parent) => { const o = cssOrderOf(n, parent, getComputedStyle), st = parent != null ? stackOf(n, getComputedStyle, liftsAlone) : {}, r = parent != null && n.getBoundingClientRect(); return { ...(o != null && { cssOrder: o }), ...(Object.keys(st).length && { stack: st }), ...(r && { rect: [r.left, r.top, r.right, r.bottom] }) }; };
         const walk = (n, parent, order, inside = false) => {
           // a turn's wrapper is no part: what it holds is the part, in its place among its siblings
-          if (n.hasAttribute('data-turn')) { if (n.firstElementChild) walk(n.firstElementChild, parent, order, inside); return; }
+          // (one hidden, a pointer state's copy's the sheet hides at its wrapper, holds nothing drawn)
+          if (n.hasAttribute('data-turn')) { if (n.firstElementChild && getComputedStyle(n).display !== 'none') walk(n.firstElementChild, parent, order, inside); return; }
           const s = getComputedStyle(n), node = n, style = s;
           // not drawn: hidden, or a native control MUI keeps for its behaviour at no opacity (a switch's input); a layer
           // the mapping names at no opacity is drawn and see-through (a loading button's label keeps its width)

@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations, borderBox } from './css.mjs';
-import { combinations, condition, tokenNames, withTokenNames, missingSaid, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerWithOf, ownPointerOf, heldOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
+import { combinations, condition, tokenNames, withTokenNames, missingSaid, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerWithOf, ownPointerOf, placedPseudo, heldOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign, foreignOpened } from './layers.mjs';
 // (another library's instance whose insides the contract records is drawn open, its layers this component's own:
@@ -545,7 +545,7 @@ function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, 
 
 /* The tree, built once for both frameworks: each element as a tag, its attributes (a literal, or code) and its
    children, printed as JSX or as `h()` calls. */
-function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOUSE }) {
+function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOUSE, settingsOf = null }) {
   c = opened(c, library);
   const n = namer(folder, naming);
   const props = propsOf(c, library, lang, settings), ref = lang.ref;
@@ -1040,7 +1040,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // component's pointer state alone sets on it (a slider's item active at hover): no markup holds them, so a gap
       const ownAt = (w) => !!ownPointerOf(placed, w);
       // (one with a pseudo-class this component's sheet draws where nothing forwards it, to-code's drawnAsOf: no gap)
-      const ownUndrawn = (w) => { const o = ownPointerOf(placed, w); return !!o && !pseudoClasses(settings)[o.v]; };
+      const ownUndrawn = (w) => { const o = ownPointerOf(placed, w); return !!o && !placedPseudo(placed, o.v, settingsOf, settings); };
       // (its own pointer state at one of this component's is the browser's: hovering or focusing this one lands inside it
       // too; one this component's other props give it, or props its pointer state gives that no copy draws, are not)
       // (held to the same combination with its pointer state at rest, as pointerWithOf holds it: a prop another of this
@@ -1120,10 +1120,10 @@ function jsxOf(item, depth) {
 
 /* The React component: its own props typed and documented, the root element's other props, its ref and its events
    passed through, the root's hooks, the parts, the generated sheet imported. */
-export function toReact(c, folder, { naming, library = {}, stylesheet = null, settings = HOUSE } = {}) {
+export function toReact(c, folder, { naming, library = {}, stylesheet = null, settings = HOUSE, settingsOf = null } = {}) {
   const name = pascal(c.component);
   // (a token the build writes per collection, by the collection the contract records: to-code withTokenNames)
-  const { out: t, missing } = withTokenNames(c, settings, () => build(c, folder, { naming, library, jsx: true, settings }));
+  const { out: t, missing } = withTokenNames(c, settings, () => build(c, folder, { naming, library, jsx: true, settings, settingsOf }));
   // (and a token it could not name, a gap the markup's header says, as the sheet's does)
   t.gaps.push(...missingSaid(c.component, missing));
   const own = t.props.filter((x) => x.type !== 'value');
@@ -1197,9 +1197,9 @@ function hOf(item, depth) {
    it the behaviour (code-standard rule 8), the rest of the props given it reach the control, and every value is an
    attribute's text or a text node (dom.js `h`), never parsed as HTML. No class is registered: a visual or native
    interactive component is markup and its stylesheet (knowledge/code/web-components.md). */
-export function toElement(c, folder, { naming, library = {}, settings = HOUSE } = {}) {
+export function toElement(c, folder, { naming, library = {}, settings = HOUSE, settingsOf = null } = {}) {
   // (a token the build writes per collection, by the collection the contract records: to-code withTokenNames)
-  const { out: t, missing } = withTokenNames(c, settings, () => build(c, folder, { naming, library, jsx: false, settings }));
+  const { out: t, missing } = withTokenNames(c, settings, () => build(c, folder, { naming, library, jsx: false, settings, settingsOf }));
   // (and a token it could not name, a gap the markup's header says, as the sheet's does)
   t.gaps.push(...missingSaid(c.component, missing));
   const tag = t.n.root;
