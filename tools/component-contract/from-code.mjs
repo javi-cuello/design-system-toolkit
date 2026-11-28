@@ -350,8 +350,16 @@ export function roomTaken(e, room) {
 /* An icon's colour as read: the token `tokOf` finds for the colour it is drawn in; none (undefined) for one coloured
    with nothing (transparent: to-code's icon whose glyph Figma paints with nothing, its fills emptied) or none read.
    Tested by test-from-code.mjs. */
-/* A fill written as CSS's currentColor keyword (the colour the box inherits), alone. Tested by test-from-code.mjs. */
+/* A colour named as CSS's currentColor keyword (the colour a box inherits), alone. */
 export const inheritsColour = (v) => typeof v === 'string' && /^\s*currentcolor\s*$/i.test(v);
+/* Whether a fill the page painted (`bg`, computed) reads as currentColor: only where the design names that part's fill so
+   (`designBg`) and the box's computed `color` is that very colour, measured, never the rule as written. Tested by
+   test-from-code.mjs. */
+export const keywordFill = (bg, colour, designBg) => inheritsColour(designBg) && colour != null && sameColour(bg, colour);
+/* Whether the walk marks a box (its kind, whether it is a mark, the fill read so far, its computed style `cs`) as painted
+   clear inside a placed component (`inside`), for readCleared: a container or a mark with no fill and no layer over it.
+   Passed into the page as source. Tested by test-from-code.mjs. */
+export function paintedClear(inside, kind, mark, background, cs, clear) { return !!inside && (kind === 'container' || (kind === 'graphic' && !!mark)) && background === undefined && clear(cs.backgroundColor) && cs.backgroundImage === 'none'; }
 export const iconColour = async (v, tokOf) => (!v || clearValue(v) ? undefined : tokOf(v));
 // a colour value that paints nothing (a transparent token: a ghost button's fill)
 export const clearValue = (v) => {
@@ -1231,6 +1239,9 @@ export function unstatedHere(here, id, mainOf = () => null) {
   const e = here && here[id];
   return !!e && e.kind === 'instance' && !mainOf(e.component, e.key) && !designSetsColour({ anatomy: here, variants: [] }, id, mainOf);
 }
+/* Whether the walk keeps the colour around a placed icon at one combination as its colour: where the code sets one on it
+   (`own`), where there is no design to hold it to (`here` null), or where the design states one there. */
+export const iconHere = (own, here, id, mainOf = () => null) => !!own || !here || !unstatedHere(here, id, mainOf);
 
 /* Another library's instance the markup drew open (layers.mjs openForeign; to-markup's data-component, data-key and
    data-with, the walk's `foreign`, `foreignKey` and `foreignWith`), read back as the instance it is: its kind, its
@@ -2510,7 +2521,7 @@ async function main() {
       // each element two layers of the design share, by what it draws (namedAt): its icon's name, else the first inside it
       const twice = [...new Set(named.map((x) => x[0]).filter((sl, i, a) => a.indexOf(sl) !== i))];
       const glyphs = twice.length ? await call(L.tab, (sels) => Object.fromEntries(sels.map((sl) => { const n = document.querySelector(sl), g = n && (n.getAttribute('data-icon') || (n.querySelector('[data-icon]') || { getAttribute: () => null }).getAttribute('data-icon')); return [sl, g || null]; })), twice) : {};
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS, paintedClearSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
@@ -2524,7 +2535,7 @@ async function main() {
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
         const elementOfLayer = new Function(`return ${elementOfLayerSrc}`)();
         const opensPlaced = new Function(`return ${opensPlacedSrc}`)();
-        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), layerShown = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)(); const seeThrough = new Function(`return ${seeThroughSrc}`)(), glyphless = new Function(`return ${glyphlessSrc}`)(), alignedOf = new Function(`return ${alignedSrc}`)();
+        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), layerShown = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)(), paintedClear = new Function(`return ${paintedClearSrc}`)(); const seeThrough = new Function(`return ${seeThroughSrc}`)(), glyphless = new Function(`return ${glyphlessSrc}`)(), alignedOf = new Function(`return ${alignedSrc}`)();
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -2679,7 +2690,7 @@ async function main() {
             const fill = markFill(s, seeThrough); if (fill) { e.background = fill; if (glyphless(n.children.length, n.textContent, ['::before', '::after'].map((p) => getComputedStyle(n, p).content))) delete e.icon; } }
           // a box inside a placed component the page paints clear: marked, so readCleared reads it cleared where that
           // component's part has a fill (to-code's background none there), never a fill merely unread
-          if (inside && (kind === 'container' || (kind === 'graphic' && e.mark)) && e.background === undefined && clear(s.backgroundColor) && s.backgroundImage === 'none') e.fillless = true;
+          if (paintedClear(inside, kind, e.mark, e.background, s, clear)) e.fillless = true;
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             boxStyling(e);
             // a box no flex lays out, or one with nothing to hug, has a size of its own (a switch's thumb, an avatar's image)
@@ -2801,7 +2812,7 @@ async function main() {
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; delete e.rects; });
         }
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a box whose children say by z-index how they stack but not the design's order of them (one in the flow, no CSS
       // order: rules.mjs stackedFirst): its children read as painted, and said so; the box keeps the mark (stackUnknown),
@@ -3135,10 +3146,11 @@ async function main() {
           delete x.paint;
           if (named.length) x.background = named.length === 1 ? named[0] : named;
         } else if (x.background) {
-          // (a fill the code writes as currentColor, the keyword, is that, as the design names it (to-code's tokenNames):
-          // never the token its inherited colour happens to match at this combination)
-          let kw = false; for (const p of ['background-color', 'background']) if (inheritsColour(await authoredValue(L.tab, styledAt(id), p, styles))) kw = true;
-          x.background = kw ? 'currentColor' : await tok('background', x.background, `${id}.background`, ['background-color', 'background']);
+          // (a fill the design names currentColor, which the page paints in the very colour the box inherits, measured: that,
+          // as the design names it (to-code writes the keyword); never the token its colour happens to match here)
+          const named = figmaContract ? (drawnHere()[id] || {}).background : null;
+          const colour = inheritsColour(named) ? await call(L.tab, (sel) => { const n = document.querySelector(sel); return n ? getComputedStyle(n).color : null; }, styledAt(id)) : null;
+          x.background = keywordFill(x.background, colour, named) ? 'currentColor' : await tok('background', x.background, `${id}.background`, ['background-color', 'background']);
         }
         const icon = await iconColour(x.icon, (v) => tok('icon', v, `${id}.icon`, ['fill', 'color']));
         delete x.icon;
@@ -3151,7 +3163,7 @@ async function main() {
           if (own) ownIcon.add(id);
           // (and at a combination where the design leaves a placed icon of another library its own colour, one the code
           // sets none on there either has none read there: the colour around it is no override, unstatedHere)
-          if (own || !figmaContract || !unstatedHere(drawnHere(), id, mainOf)) x.background = icon;
+          if (iconHere(own, figmaContract ? drawnHere() : null, id, mainOf)) x.background = icon;
         }
         if (x.color) x.color = await tok('text', x.color, `${id}.color`, ['color']);
         // a corner rounder than the element's longest side asks for a full round: the library's fullest radius
