@@ -1677,6 +1677,10 @@ const pseudoSel = (p) => (!p || p === 'turn' ? '' : p === 'empty' ? ':not(:has(*
 // (copyOf once per placed component and part: chain names every nested part through it, and a contract does not change)
 const COPIES = new WeakMap();
 const copyOfOnce = (m, k) => { if (!COPIES.has(m)) COPIES.set(m, new Map()); const got = COPIES.get(m); if (!got.has(k)) got.set(k, copyOf(m, k)); return got.get(k); };
+// (the first of a placed component's numbered copies, which shares its hook with them: a rule for it alone counts it the
+// first among those, or it holds for every copy, a calendar's first week's disabled day drawn so in every week)
+const FIRSTS = new WeakMap();
+const hasCopies = (m, k) => { if (!FIRSTS.has(m)) FIRSTS.set(m, new Set(Object.keys(m.anatomy || {}).map((x) => /_\d+$/.test(x) && copyOfOnce(m, x)).filter(Boolean))); return FIRSTS.get(m).has(k); };
 function chain(c, n, id, rootCond, given = null, library = {}) {
   const mains = given || (() => null);
   const [own, pseudo = ''] = id.split('::');
@@ -1725,7 +1729,7 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
       // (a numbered copy of the placed component's, which shares its first's hook, counted among those: partSelector's)
       // (and one the placed component draws in its turn's wrapper, turnedParts, reached through that wrapper, as its own
       // sheet reaches it)
-      const hmTurned = turnedParts(hm), ownSeg = (k) => { const first = /_\d+$/.test(k) && copyOfOnce(hm, k), p = n2.part(partSeg(hm, first || k)), w = hmTurned.has(first || k) ? `[data-turn="${partSeg(hm, first || k)}"] > ` : ''; return w + (first ? `${p}:nth-child(${Number(/_(\d+)$/.exec(k)[1])} of ${p})` : p); };
+      const hmTurned = turnedParts(hm), ownSeg = (k) => { const first = /_\d+$/.test(k) && copyOfOnce(hm, k), p = n2.part(partSeg(hm, first || k)), w = hmTurned.has(first || k) ? `[data-turn="${partSeg(hm, first || k)}"] > ` : ''; return w + (first ? `${p}:nth-child(${Number(/_(\d+)$/.exec(k)[1])} of ${p})` : hasCopies(hm, k) ? `${p}:nth-child(1 of ${p})` : p); };
       // (a component of the library's this one puts where the placed one draws a placeholder drawing, a picker's options
       // slot holding a grid, is passed to it as content: drawn under this one's own hook for it, to-markup's placedItem)
       const passed = (s) => { const X = hm.anatomy[own(s)] || findAdded(hm, own(s)), mx = X && X.kind === 'instance' && heldBy(library || {}, X), ms = all[s] && heldBy(library || {}, all[s]); return !!(X && X.kind === 'instance' && Object.values(hm.props || {}).some((q) => q.type === 'instance' && (q.swaps || []).includes(own(s))) && X.component !== all[s].component && (!mx || isDrawing(mx)) && ms && !isDrawing(ms)); };

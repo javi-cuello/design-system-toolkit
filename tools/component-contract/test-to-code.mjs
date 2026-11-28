@@ -728,6 +728,11 @@ else console.log('skip: no stored contracts on this machine');
   const mains = (n) => ({ Day: { ...day, folder: 'day' }, Week: { ...week, folder: 'week' } })[n] || null;
   ok('a part inside a placed component\'s numbered copy is named by the hook the copies share, counted among them',
     nestedSelector(cal, namer('cal'), 'week/day_2', mains) === '.cal > .cal__week > .week__day:nth-child(2 of .week__day)', nestedSelector(cal, namer('cal'), 'week/day_2', mains));
+  // (and the first of them counted the first, or a rule for it alone holds for every copy: 2026-11-28, a picker's
+  // calendar drew its first week's disabled day disabled in every week)
+  const cal1 = { ...cal, anatomy: { ...cal.anatomy, 'week/day': { kind: 'instance', parent: 'week', order: 0, component: 'Day' } }, variants: [{ when: {}, set: {} }] };
+  ok('the first of a placed component\'s numbered copies is counted the first among them',
+    nestedSelector(cal1, namer('cal'), 'week/day', mains) === '.cal > .cal__week > .week__day:nth-child(1 of .week__day)', nestedSelector(cal1, namer('cal'), 'week/day', mains));
 }
 
 // a placed icon whose lone glyph a variant fades (a library's disabled chip: 0.38 on the glyph, the instance faded too where
