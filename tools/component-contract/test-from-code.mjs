@@ -1521,6 +1521,32 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); await site.close(); }
   }
 }
+// (second review of 2026-11-28: the page asked with the placed element forced alone: a holder forced along with it would
+// draw it at the holder's own state, here a fade its hover gives it, and the look the page shows go unclaimed)
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, waitFor, call } = await import('../shared/cdp.mjs');
+  const { selfSiteFiles, serveSite, selfMapping } = await import('./site.mjs');
+  const { HOUSE } = await import('./to-code.mjs');
+  const { drawnAsSeen } = await import('./from-code.mjs');
+  const link = { contract: 1, component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'hover', 'press'], default: 'rest', figmaValues: ['Rest', 'Hover', 'Press'], role: 'interaction', pointer: ['hover', 'press'], figma: 'State' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 10, height: 10, background: '#000000' } }, variants: [{ when: { state: 'hover' }, set: { 'root.background': '#ff0000' } }, { when: { state: 'press' }, set: { 'root.background': '#0000ff' } }] };
+  const card = { contract: 1, component: 'Card', folder: 'card', props: { shown: { type: 'boolean', default: false, axis: true, figma: 'Shown' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, link: { kind: 'instance', parent: 'root', component: 'Link', with: { State: 'Rest' } } },
+    variants: [{ when: { shown: true }, set: { 'link.with': { State: 'Hover' } } }, { when: { state: 'hover' }, set: { 'link.opacity': 0.5 } }] };
+  const library = { Link: link, Card: card }, files = selfSiteFiles(library, 'card', { settingsOf: () => HOUSE });
+  const sel = selfMapping(card, { library, settings: HOUSE }).byId.link;
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to ask a drawn pointer value of (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({}), site = await serveSite(files);
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
+      await call(tab, () => { const s = document.createElement('section'); s.append(window.R.card({ shown: true })); document.getElementById('stage').replaceChildren(s); });
+      const seen = await drawnAsSeen(tab, [{ id: 'link', selector: sel, pseudo: 'hover' }]);
+      ok('a placed component\'s drawn pointer value is asked with it forced alone, never its holder with it', seen.length === 1 && await call(tab, () => !document.querySelector(':hover')), JSON.stringify(seen));
+    } finally { await browser.close(); await site.close(); }
+  }
+}
 // 2026-11-26: a stroke across the edge goes round at 1px: Chrome computes its outline offset snapped as a border width
 // (calc(1px / -2) reads -1px, as an inside one would), so the reader takes the offset as written, resolved where it is
 { const fs = await import('node:fs');

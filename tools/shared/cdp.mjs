@@ -362,7 +362,7 @@ export async function forceState(tab, targets) {
   const grew = new Set();
   const hold = (nodeId, classes) => { const was = held.get(nodeId) || [], now = [...new Set([...was, ...classes])]; if (now.length !== was.length) { held.set(nodeId, now); grew.add(nodeId); } };
   // (a throw lets go of what it forced first: fetching the document again drops every one)
-  try { for (const { selector, pseudo, within = null, optional = false } of targets) {
+  try { for (const { selector, pseudo, within = null, optional = false, alone = false } of targets) {
     const focus = /^focus/.test(pseudo);
     const { result } = await tab.send('Runtime.evaluate', {
       expression: `(() => {
@@ -378,7 +378,8 @@ export async function forceState(tab, targets) {
     const [hit, above] = await Promise.all(['0', '1'].map((i) => nodes(pair.find((x) => x.name === i).value.objectId)));
     if (!hit.length && optional) { missed.push(selector); await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {}); continue; }
     if (!hit.length) throw new Error(`state selector matched no element: ${selector}${within ? ` in ${within}` : ''}`);
-    for (const n of above) hold(n, [focus ? 'focus-within' : pseudo]);
+    // (`alone`: the element by itself, none of the states real hover or focus would give the ones around it)
+    if (!alone) for (const n of above) hold(n, [focus ? 'focus-within' : pseudo]);
     for (const n of hit) hold(n, focus ? ['focus', 'focus-visible'] : [pseudo]);
     await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {});
     for (const n of grew) await tab.send('CSS.forcePseudoState', { nodeId: n, forcedPseudoClasses: held.get(n) });

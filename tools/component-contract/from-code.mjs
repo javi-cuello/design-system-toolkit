@@ -1870,10 +1870,13 @@ export async function drawnAsSeen(tab, targets) {
   for (const x of targets) {
     const before = await look(x.selector);
     if (!before) continue;
-    await forceState(tab, [{ selector: x.selector, pseudo: x.pseudo }]);
-    await waitFor(tab, 'document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)', { timeout: 3000 }).catch(() => {});
-    const after = await look(x.selector);
-    await tab.send('DOM.getDocument', { depth: 0 });
+    // (the placed element alone: a holder forced along with it would take its own state's rules into what is compared)
+    let after;
+    try {
+      await forceState(tab, [{ selector: x.selector, pseudo: x.pseudo, alone: true }]);
+      await waitFor(tab, 'document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)', { timeout: 3000 }).catch(() => {});
+      after = await look(x.selector);
+    } finally { await tab.send('DOM.getDocument', { depth: 0 }); }
     if (after === before) out.push(x);
   }
   return out;
