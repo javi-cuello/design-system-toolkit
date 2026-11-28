@@ -1446,6 +1446,33 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); await site.close(); }
   }
 }
+// (third review of 2026-11-28: and through a variant's swap: a placed row whose wrap a variant swaps a dot for a button)
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, waitFor, call } = await import('../shared/cdp.mjs');
+  const { selfSiteFiles, serveSite } = await import('./site.mjs');
+  const { HOUSE } = await import('./to-code.mjs');
+  const btn = { contract: 1, component: 'Button', folder: 'button', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 10, height: 10 } }, variants: [] };
+  const dot = { contract: 1, component: 'Dot', folder: 'dot', props: {}, anatomy: { root: { kind: 'container', width: 4, height: 4 } }, variants: [] };
+  const wrap = { contract: 1, component: 'Wrap', folder: 'wrap', props: { full: { type: 'boolean', default: true, axis: true, figma: 'Full' } }, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, b: { kind: 'instance', parent: 'root', component: 'Dot' } },
+    variants: [{ when: { full: true }, set: { 'b.component': 'Button' } }] };
+  const row = { contract: 1, component: 'Row', folder: 'row', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, w: { kind: 'instance', parent: 'root', component: 'Wrap' } },
+    variants: [{ when: { on: true }, set: { 'root.opacity': 0.5 } }] };
+  const card = { contract: 1, component: 'Card', folder: 'card', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, row: { kind: 'instance', parent: 'root', component: 'Row', with: { On: 'False' } } },
+    variants: [{ when: { state: 'focus' }, set: { 'row.with': { On: 'True' } } }] };
+  const library = { Card: card, Row: row, Wrap: wrap, Button: btn, Dot: dot }, files = selfSiteFiles(library, 'card', { settingsOf: () => HOUSE });
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to focus a swapped-in button deep in a placed row in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({}), site = await serveSite(files);
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
+      const got = await call(tab, () => { const s = document.createElement('section'); s.append(window.R.card({})); document.getElementById('stage').replaceChildren(s);
+        const b = s.querySelectorAll('button'); if (b[0]) b[0].focus(); return { buttons: b.length, kept: !!b[0] && document.activeElement === b[0] && b[0].checkVisibility() }; });
+      ok('a placed component holding a button a variant swaps in, at any depth, is one element, never a copy per state: focused, the button stays drawn', got.buttons === 1 && got.kept, JSON.stringify(got));
+    } finally { await browser.close(); await site.close(); }
+  }
+}
 // (second review of 2026-11-28: a pointer state's copy turned a quarter: the copies hidden take no room, their turn's
 // wrapper with them, and the one shown keeps its wrapper's box)
 { const fs = await import('node:fs');

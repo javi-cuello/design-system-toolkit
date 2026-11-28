@@ -428,7 +428,9 @@ const holdsTarget = (c, id, mains) => {
     if (!x || seen.has(x)) return false;
     seen.add(x);
     if (entryOf(x) || controlOf(x.component, placedIn(x))) return true;
-    const placed = [x.anatomy || {}, ...(x.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a)).filter((y) => y && y.kind === 'instance');
+    // (and each component a variant swaps in for a part, with its key: `<part>.component`)
+    const swapped = (x.variants || []).flatMap((v) => Object.entries(v.set || {}).filter(([k, y]) => k.endsWith('.component') && typeof y === 'string').map(([k, y]) => ({ kind: 'instance', component: y, key: (v.set || {})[`${k.slice(0, -'.component'.length)}.key`] ?? null })));
+    const placed = [...[x.anatomy || {}, ...(x.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a)).filter((y) => y && y.kind === 'instance'), ...swapped];
     return placed.some((y) => { const ym = mains(y.component, y.key ?? null); return ym ? isControl(ym, seen) : !!controlOf(y.component); });
   };
   return (entry && (id === entry.input || id === entry.box)) || controlsOf(c).includes(id) || isControl(m) || (!m && e.kind === 'instance' && !!controlOf(e.component));
