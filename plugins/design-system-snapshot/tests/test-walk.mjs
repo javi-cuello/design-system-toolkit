@@ -14,7 +14,7 @@ const ctx = vm.createContext({ figma, console, setTimeout, clearTimeout });
 const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION, freshLookups, nameKey, sharedOf } = vm.runInContext(src + "\n;({ nameKey, sharedOf, freshLookups, walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION })", ctx);
 
 let n = 0;
-const ok = (name, cond) => { n++; assert.ok(cond, name); console.log("ok", name); };
+const ok = (name, cond, why) => { n++; assert.ok(cond, why ? name + "\n" + why : name); console.log("ok", name); };
 const row = (counterAxisSpacing, layoutWrap = "WRAP") => ({
   name: "Row", type: "FRAME", width: 200, height: 40, x: 0, y: 0, layoutMode: "HORIZONTAL",
   paddingTop: 0, paddingRight: 0, paddingBottom: 0, paddingLeft: 0, itemSpacing: 8, layoutWrap, counterAxisSpacing,
@@ -618,6 +618,33 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("a name's key is the build's (dtcg.js pathFor, less the collection)", names.every((x) => nameKey(x) === DTCG.pathFor("", x).slice(1).join(".")));
   const shared = sharedOf({ Theme: { values: { Light: { "pill-edge": "#000" }, Dark: { "pill-edge": "#fff", Only: 1 } } }, Lib: { remote: true, values: { Value: { "Pill Edge": "#f00", Other: 2 } } } });
   ok("…and a name two collections the tokens hold share, a remote one's too, is shared; one only one holds is not", JSON.stringify([...shared]) === JSON.stringify(["pill-edge"]));
+}
+
+// a scoped headless run (another plugin's, SCOPE set) records a binding's collection as a whole run does: the names
+// shared are those every collection the tokens hold shares, another library's too, never the file's own alone
+{
+  const alias = (id) => ({ type: "VARIABLE_ALIAS", id });
+  const vars = { "v:l": { id: "v:l", key: "kl", name: "pill-edge", variableCollectionId: "c:l", remote: false, scopes: [], valuesByMode: { m: { r: 0, g: 0, b: 0, a: 1 } } },
+    "Lib/v:r": { id: "Lib/v:r", key: "kr", name: "Pill Edge", variableCollectionId: "c:r", remote: true, scopes: [], valuesByMode: { mr: { r: 1, g: 0, b: 0, a: 1 } } } };
+  const colls = { "c:l": { id: "c:l", name: "Shades", modes: [{ modeId: "m", name: "Value" }], defaultModeId: "m", variableIds: ["v:l"] },
+    "c:r": { id: "c:r", name: "Lib", remote: true, modes: [{ modeId: "mr", name: "Value" }], defaultModeId: "mr", variableIds: ["Lib/v:r"] } };
+  const run = async (head) => {
+    const button = { ...box("Button", "COMPONENT"), id: "1:1", parent: null, fills: [], effects: [], strokeWeight: 1,
+      strokes: [{ type: "SOLID", visible: true, opacity: 1, color: { r: 1, g: 0, b: 0 }, boundVariables: { color: alias("Lib/v:r") } }],
+      componentPropertyDefinitions: {}, findAll: () => [], findAllWithCriteria: () => [] };
+    const page = { type: "PAGE", name: "❖ Button", children: [button], loadAsync: async () => {}, findAll: (f) => [button].filter(f), findAllWithCriteria: ({ types }) => (types.includes("COMPONENT") ? [button] : []) };
+    button.parent = page;
+    const root = { name: "Lib file", children: [page], getPluginData: () => "", findAllWithCriteria: ({ types }) => (types.includes("COMPONENT") ? [button] : []) };
+    const ff = { root, fileKey: "K", currentPage: page, loadAllPagesAsync: async () => {}, skipInvisibleInstanceChildren: false,
+      variables: { getLocalVariablesAsync: async () => [vars["v:l"]], getLocalVariableCollectionsAsync: async () => [colls["c:l"]], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async (id) => colls[id] || null },
+      getLocalTextStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async () => null };
+    return vm.runInContext("(async () => { const __html__ = undefined; " + head + "\n" + src + "\nreturn __headless(); })()", vm.createContext({ figma: ff, __html__: "<ui/>", console, setTimeout, clearTimeout }));
+  };
+  const recorded = (r) => JSON.stringify(r.components).match(/"collections":\{[^}]*\}/g);
+  const scoped = await run('const SCOPE = ["1:1"];');
+  ok("a scoped headless run records the collection of a name another library's collection shares with the file's", JSON.stringify(recorded(scoped)) === JSON.stringify(['"collections":{"Pill Edge":"Lib"}']), JSON.stringify(scoped.components));
+  const whole = await run('const FULL = true;');
+  ok("…the same as a whole run records", JSON.stringify(recorded(whole)) === JSON.stringify(recorded(scoped)), JSON.stringify(whole.components));
 }
 
 console.log(n + "/" + n + " passed");

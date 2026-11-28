@@ -136,11 +136,12 @@ function span(lines, name) {
 }
 export const picked = (source, names) => { const lines = source.split('\n'); return names.map((n) => { const [a, b] = span(lines, n); return lines.slice(a, b + 1).join('\n'); }).join('\n'); };
 /* The plugin without what a run with no icons never reaches: the declarations named, and every `if (withIcons) {`
-   block (the previews and their dark renders), cut to its closing brace at the same indent. */
-export function cut(source, names) {
+   block (the previews and their dark renders), cut to its closing brace at the same indent; `icons`, a run that sends
+   them (a whole run's components call), keeps those blocks. */
+export function cut(source, names, icons = false) {
   let lines = source.split('\n');
   for (const n of names) { const [a, b] = span(lines, n); lines.splice(a, b - a + 1); }
-  for (let a; (a = lines.findIndex((l) => /^\s+if \(withIcons\) \{$/.test(l))) >= 0;) {
+  for (let a; !icons && (a = lines.findIndex((l) => /^\s+if \(withIcons\) \{$/.test(l))) >= 0;) {
     const indent = lines[a].match(/^\s+/)[0];
     const b = lines.findIndex((l, i) => i > a && l === `${indent}}`);
     if (b < 0) throw new Error('an `if (withIcons) {` block of the snapshot plugin does not close at its own indent');
@@ -198,6 +199,13 @@ export function sized(plan, limit = LIMIT) {
   });
 }
 
+/* What one call leaves the next on the temporary page, and the next takes up: the names more than one collection holds,
+   the count of lookups given up on, how many timed out, and which variables missed, so a miss is counted once a run
+   and never asked again, as one whole run counts it (each call starts with an empty variable cache). */
+const LEAVE = `scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered)); scratch().setSharedPluginData('${NS}', 'timedOut', String(timedOut)); scratch().setSharedPluginData('${NS}', 'missed', JSON.stringify([...missed]));`;
+const TAKE = `const __from = unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0; timedOut = Number(scratch().getSharedPluginData('${NS}', 'timedOut')) || 0;
+for (const id of JSON.parse(scratch().getSharedPluginData('${NS}', 'missed') || '[]')) { missed.add(id); varCache[id] = null; }
+const __shared = scratch().getSharedPluginData('${NS}', 'shared'); if (__shared) sharedNames = new Set(JSON.parse(__shared));`;
 const TOKENS = `
 {
 figma.skipInvisibleInstanceChildren = true;
@@ -205,21 +213,20 @@ const __t0 = Date.now();
 await loadPages(true);
 const tokens = await collectTokens();
 scratch().setSharedPluginData('${NS}', 'shared', JSON.stringify([...sharedNames]));
-scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered)); scratch().setSharedPluginData('${NS}', 'timedOut', String(timedOut));
+${LEAVE}
 %ICONS%
 ${written(`{ tokens, unanswered, sets: ${PLANNED}.flatMap((pg) => pg.sets.map((s) => s.id)), iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, ...(Object.keys(iconGroups).length && { iconGroups }), ...(Object.keys(iconDescriptions).length && { iconDescriptions }) }`, ', sets: __payload.sets.length')}}`;
 const PART = `
 figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
-const __from = unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0; timedOut = Number(scratch().getSharedPluginData('${NS}', 'timedOut')) || 0;
-const __shared = scratch().getSharedPluginData('${NS}', 'shared'); if (__shared) sharedNames = new Set(JSON.parse(__shared));
+${TAKE}
 const __groups = [];
 unrecordedSeen.push = function (...xs) { if (xs.length) __groups.push(xs); return Array.prototype.push.apply(this, xs); };
 const __names = new Set(__PAGES.map((i) => figma.root.children[i].name));
 const __sets = ${PLANNED}.filter((pg) => __PAGES.includes(pg.index)).flatMap((pg) => pg.sets.filter((s) => !__SCOPE || __SCOPE.includes(s.id)).map((s) => s.id));
 const __components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], pages: { test: (n) => __names.has(n) }, scope: new Set(__sets) });
-${written('{ components: __components, sets: __sets, unrecorded: __groups, unreadable, unanswered: unanswered - __from }', ', components: __components.length', `scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered)); scratch().setSharedPluginData('${NS}', 'timedOut', String(timedOut));`)}`;
+${written('{ components: __components, sets: __sets, unrecorded: __groups, unreadable, unanswered: unanswered - __from }', ', components: __components.length', LEAVE)}`;
 
 /* The tokens call: the plugin's collectTokens, the icon names by collectLibrary's own expressions, and the sets the
    parts must cover. */
@@ -242,13 +249,12 @@ export function tokensCode() {
 const COMPONENTS = `
 figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
-const __shared = scratch().getSharedPluginData('${NS}', 'shared'); if (__shared) sharedNames = new Set(JSON.parse(__shared));
-const __from = unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0; timedOut = Number(scratch().getSharedPluginData('${NS}', 'timedOut')) || 0;
+${TAKE}
 const __groups = [];
 unrecordedSeen.push = function (...xs) { if (xs.length) __groups.push(xs); return Array.prototype.push.apply(this, xs); };
 const __r = await collectLibrary(true, { _meta: {} });
 ${written(`{ components: __r.components, sets: ${PLANNED}.flatMap((pg) => pg.sets.map((s) => s.id)), unrecorded: __groups, unreadable, unanswered: unanswered - __from, icons: __r.icons, graphics: __r.graphics, previews: __r.previews }`, ', components: __payload.components.length')}`;
-export function componentsCode() { return capped(headless(cut(plugin(), DEAD.components())) + '\n' + COMPONENTS, 'components call'); }
+export function componentsCode() { return capped(headless(cut(plugin(), DEAD.components(), true)) + '\n' + COMPONENTS, 'components call'); }
 
 /* A whole run, as two calls (one held the plugin and its run in 49 507 of use_figma's 50 000 characters, 2026-11-28,
    so the next change would not have fitted): the tokens call, then the components call; collect both holders. */

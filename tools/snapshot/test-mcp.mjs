@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { scriptCalls, componentsCode, stripped, tightened, joined, named, libraryKey, PLUGIN, CAP, CHUNK, PER_NODE, NS, planCode, sized, calls, join, payloadOf, storeCode, tokensCode, partCode, DEAD, LIMIT } from './mcp.mjs';
 
 let n = 0;
-const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
+const ok = (name, cond, why) => { n++; assert.ok(cond, why ? `${name}\n${why}` : name); console.log('ok', name); };
 
 // a whole run is two calls, the tokens call and the components call, so neither sits at the cap (one call held it in
 // 49 507 characters, 2026-11-28)
@@ -15,7 +15,6 @@ ok(`a whole run is the tokens call then the components call, each within use_fig
 let parses = true; for (const c of whole) { try { new vm.Script(`(async () => {\n${c.code}\n})`); } catch { parses = false; } }
 ok('and each parses as the body use_figma runs', parses);
 ok('the window and the headless entry, dead code there, are cut where the plugin marks them, and the components call carries no token reading', !/figma\.ui\.onmessage|function __headless|function collectFacts|function collectTokens/.test(code) && /function collectLibrary/.test(code));
-ok('it runs headless, and collects as the plugin does, on the tokens the first call read', /^const HEADLESS = true;$/m.test(code) && /await collectLibrary\(true, \{ _meta: \{\} \}\)/.test(code));
 ok('every page is loaded through the fallback, never loadAllPagesAsync alone', (code.match(/loadAllPagesAsync/g) || []).length === 1 && /const loadPages/.test(code));
 ok('no \\u or \\\\ escape in it, since the tool call that carries it decodes them (probed 2026-10-30: a \\u2028 in a regex arrived as a line break)', whole.every((c) => !/\\u|\\\\/.test(c.code)));
 ok('the epilogue escapes as the payload reader expects', code.includes("replace(/[^ -~]/g, (c) => String.fromCharCode(92) + 'u'"));
@@ -78,7 +77,21 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   const pages = [page('Cover', []), page('Button', [['Button', '1:1'], ['Link', '1:2']]), page('Table', [['Table', '2:1']]), page('Icons', [['Arrow', '3:1']]), page('Chip', [['Chip', '4:1'], ['Tag', '4:2'], ['Badge', '4:3']]), page('Button', [['Card', '5:1']])];
   pages[3].children[0].description = 'arrow, direction';
   Object.assign(pages[4].children[1], { paragraphSpacing: 5, listSpacing: 3 });
-  globalThis.figma = { root: { name: 'Document', children: pages }, fileKey: 'K', skipInvisibleInstanceChildren: false, variables: { getVariableByIdAsync: async () => null, getLocalVariablesAsync: async () => [], getLocalVariableCollectionsAsync: async () => [] },
+  // two collections sharing a name, the file's and another library's: a layer bound to the library's records it; and a
+  // variable Figma never answers, which every call meets
+  const alias = (id) => ({ type: 'VARIABLE_ALIAS', id });
+  const vars = { 'v:l': { id: 'v:l', key: 'kl', name: 'pill-edge', variableCollectionId: 'c:l', remote: false, scopes: [], valuesByMode: { m: { r: 0, g: 0, b: 0, a: 1 } } },
+    'Lib/v:r': { id: 'Lib/v:r', key: 'kr', name: 'Pill Edge', variableCollectionId: 'c:r', remote: true, scopes: [], valuesByMode: { mr: { r: 1, g: 0, b: 0, a: 1 } } } };
+  const colls = { 'c:l': { id: 'c:l', name: 'Shades', modes: [{ modeId: 'm', name: 'Value' }], defaultModeId: 'm', variableIds: ['v:l'] },
+    'c:r': { id: 'c:r', name: 'Lib', remote: true, modes: [{ modeId: 'mr', name: 'Value' }], defaultModeId: 'mr', variableIds: ['Lib/v:r'] } };
+  Object.assign(pages[4].children[2], { strokeWeight: 1, strokes: [{ type: 'SOLID', visible: true, opacity: 1, color: { r: 1, g: 0, b: 0 }, boundVariables: { color: alias('Lib/v:r') } }] });
+  pages[5].children[0].boundVariables = { itemSpacing: alias('Lib/v:gone') };
+  let asked = 0;
+  // (a lookup given up on waits five seconds in the plugin; here every timer fires at once)
+  const realTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (f) => realTimeout(f, 0);
+  globalThis.figma = { root: { name: 'Document', children: pages }, fileKey: 'K', skipInvisibleInstanceChildren: false,
+    variables: { getVariableByIdAsync: (id) => (id === 'Lib/v:gone' ? (asked++, new Promise(() => {})) : Promise.resolve(vars[id] || null)), getLocalVariablesAsync: async () => [vars['v:l']], getLocalVariableCollectionsAsync: async () => [colls['c:l']], getVariableCollectionByIdAsync: async (id) => colls[id] || null },
     getLocalTextStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getStyleByIdAsync: async () => null,
     loadAllPagesAsync: async () => {}, base64Encode: () => 'AQ==', createFrame: () => frame('FRAME', ''), createPage() { const p = frame('PAGE', ''); pages.push(p); return p; } };
   const run = (code) => new (Object.getPrototypeOf(async () => {}).constructor)(code)();
@@ -89,8 +102,6 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   const holders = [];
   // the parts run out of order: collect puts them back
   const tokensAt = (await run(made[0].code)).holder;
-  const tmpPage = () => pages.find((p) => p.name === 'Snapshot (temporary)');
-  tmpPage().setSharedPluginData(NS, 'unanswered', '2');
   holders.push((await run(storeCode(steps[0]))).holder);
   for (const c of rest.reverse()) holders.push((await run(c)).holder);
   const asRest = (n) => ({ id: n.id, sharedPluginData: n.sharedPluginData, children: n.children.map(asRest) });
@@ -98,25 +109,35 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   const found = holders.map((id) => joined(asRest(tmp.children.find((h) => h.id === id))));
   const top = joined(asRest(tmp.children.find((h) => h.id === tokensAt)));
   ok('the tokens call leaves the tokens, the sets the parts must walk, and the icon names by collectLibrary\'s own expressions', top.tokens && top.sets.join() === '1:1,1:2,2:1,4:1,4:2,4:3,5:1' && top.iconPage === 'Icons' && top.iconSets.join() === 'Arrow' && top.iconDescriptions.Arrow === 'arrow, direction');
+  const askedRun = asked;
   const whole = join([top, ...found]);
-  const ref = await vm.runInContext(readFileSync(PLUGIN, 'utf8') + '\n;collectComponents({ withIcons: false, previews: [], darkModes: async () => [] })', vm.createContext({ figma: globalThis.figma, console, setTimeout, clearTimeout }));
+  const ref = await vm.runInContext(readFileSync(PLUGIN, 'utf8') + '\n;collectTokens().then(() => collectComponents({ withIcons: false, previews: [], darkModes: async () => [] }))', vm.createContext({ figma: globalThis.figma, console, setTimeout: globalThis.setTimeout, clearTimeout }));
   ok('the parts, run in any order, join into what one whole walk gives, in its order, the icons named; two pages of one name each walked once', JSON.stringify(whole.components) === JSON.stringify(ref) && whole.components.length === 7 && steps[0].scope === null && whole.iconSets.join() === 'Arrow' && whole.icons.length === 0);
   ok('a part returns what each node left unrecorded as that node\'s group, which the join keeps as the whole walk does', found.some((f) => JSON.stringify(f.unrecorded) === '[["Tag.paragraphSpacing","Tag.listSpacing"]]') && whole.tokens._meta.unrecorded.join() === 'Tag.paragraphSpacing,Tag.listSpacing' && ref.length === 7);
-  ok('each part starts from the count of variables left unanswered so far, leaves its own for the next, and says what it added', found.every((f) => f.unanswered === 0) && tmp.getSharedPluginData(NS, 'unanswered') === '2');
   // (and the lookups given up on, so the cap of three holds across parts: each part leaves it and the next takes it up)
-  ok('the tokens call hands each part the names more than one collection holds, which a part takes up before it walks', tmp.getSharedPluginData(NS, 'shared') === '[]' && storeCode(steps[0]).includes("sharedNames = new Set(JSON.parse("));
-  ok('…the lookups given up on likewise', [storeCode(steps[0])].every((c) => c.includes("timedOut = Number(scratch().getSharedPluginData(") && c.includes("'timedOut', String(timedOut))")));
+  ok('a variable Figma never answers is asked once a run and counted once, however many parts meet it', askedRun === 1 && top.unanswered === 1 && found.every((f) => f.unanswered === 0) && whole.tokens._meta.variablesUnanswered === 1 && tmp.getSharedPluginData(NS, 'unanswered') === '1', `asked ${askedRun}, ${JSON.stringify(found.map((f) => f.unanswered))}`);
+  const pillOf = (cs) => JSON.stringify(cs).match(/"collections":\{[^}]*\}/g);
+  ok('the tokens call hands each part the names more than one collection holds, another library\'s too, so a part records which a layer binds', tmp.getSharedPluginData(NS, 'shared') === '["pill-edge"]' && JSON.stringify(pillOf(whole.components)) === '["\\"collections\\":{\\"Pill Edge\\":\\"Lib\\"}"]', JSON.stringify(pillOf(whole.components)));
   const head = top;
   assert.throws(() => join([head, ...found.slice(1)]), /no part walked 2 planned sets \(1:1, 1:2\)/); n++; console.log('ok a part not collected is refused, its sets named');
   assert.throws(() => join([head, ...found, found[1]]), /walked more than once/); n++; console.log('ok a part collected twice is refused');
   assert.throws(() => join([{ ...head, sets: head.sets.slice(1) }, ...found]), /not in the file the tokens call read/); n++; console.log('ok a set the tokens call did not find is refused');
   assert.throws(() => join(found), /0 of the holders hold the tokens/); n++; console.log('ok parts with no tokens holder are refused');
-  { // a whole run's two calls on the same file join into what one whole walk gives, with its icon names
+  { // a whole run's two calls on the same file join into what one call of the plugin's collectLibrary(true) gives: its
+    // components, icons, graphics, previews and counts
+    pages.push(page('Graphics', [['Hero', '6:1']]));
+    asked = 0;
     const [first, second] = scriptCalls(), t = (await run(first.code)).holder, c = (await run(second.code)).holder;
     const at = (id) => joined(asRest(tmp.children.find((h) => h.id === id)));
     const both = join([at(t), at(c)]);
-    ok('a whole run\'s tokens call and components call join into what one whole walk gives, the icons named', JSON.stringify(both.components) === JSON.stringify(ref) && both.iconSets.join() === 'Arrow' && both.icons.length === 1 && both.icons[0].svg === '<svg/>' && both.tokens._meta, JSON.stringify(both.icons));
+    const one = await vm.runInContext(readFileSync(PLUGIN, 'utf8') + '\n;collectLibrary(true)', vm.createContext({ figma: globalThis.figma, console, setTimeout: globalThis.setTimeout, clearTimeout }));
+    const same = (k) => JSON.stringify(both[k]) === JSON.stringify(one[k]);
+    const differ = ['components', 'icons', 'graphics', 'previews', 'iconSets', 'iconPage', 'iconDescriptions', 'unreadable'].filter((k) => !same(k));
+    ok('a whole run\'s tokens call and components call join into what one call of collectLibrary(true) gives: components, icons, graphics, previews, the unanswered count and the collections recorded',
+      !differ.length && both.graphics.length === 1 && both.previews.length === 8 && both.icons.length === 1 && both.tokens._meta.variablesUnanswered === 1 && one.tokens._meta.variablesUnanswered === 1 && JSON.stringify(both.tokens.collections) === JSON.stringify(one.tokens.collections) && JSON.stringify(pillOf(both.components)) === JSON.stringify(pillOf(whole.components)),
+      `differ: ${differ.join(', ')}; graphics ${both.graphics.length}, previews ${both.previews.length}, unanswered ${both.tokens._meta.variablesUnanswered}/${one.tokens._meta.variablesUnanswered}`);
   }
+  globalThis.setTimeout = realTimeout;
   delete globalThis.figma;
 }
 {

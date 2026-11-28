@@ -3484,6 +3484,10 @@ async function __headless() {
   try {
     if (typeof FULL !== 'undefined' && FULL) return Object.assign(await collectLibrary(true), { fileKey: figma.fileKey || null, fileName: figma.root.name });
     if (typeof FACTS !== 'undefined' && FACTS) return Object.assign(await collectFacts(), { fileKey: figma.fileKey || null, fileName: figma.root.name, at: new Date().toISOString() });
+    // (the tokens read first, as a whole run reads them: the names a binding records its collection for are those every
+    // collection the tokens hold shares, another library's too, never the file's own alone, so a scoped run records
+    // what a whole one does)
+    await collectTokens();
     const components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], scope, pages, section, exclude });
     return { components, ...(unreadable.length && { unreadable }), fileKey: figma.fileKey || null, fileName: figma.root.name, at: new Date().toISOString() };
   } finally { figma.skipInvisibleInstanceChildren = skip; if (scratchPage) { scratchPage.remove(); scratchPage = null; } }
