@@ -2306,27 +2306,38 @@ export function unplacedIn(raw, e, layoutOf = (u) => u.layout) {
 /* A part turned (CSS rotate, or a transform that only turns and moves it) is measured as laid out, in its parent's axes as
    Figma measures a rotated layer, never the page's, where a quarter turn swaps x and y: each turn set aside while the
    boxes are measured, then put back. Its degrees are Figma's, counter-clockwise from -180 to 180 (css.mjs writes rotation as rotate: -<n>deg; a
-   transform's turn read the same way). Runs in the page (passed as source). */
-function unturn(root) {
+   transform's turn read the same way). A mirror is set aside with it, as Figma measures a flipped layer's children in its
+   own axes (a glyph 11.14 from the left of a flipped frame is 11.14 from its left, never from its right): which way each
+   was mirrored kept (`mirrors`, 'x' or 'y'), since its style says none while it is set aside. Runs in the page (passed as
+   source); tested by test-from-code.mjs. */
+export function unturn(root) {
   const deg = (v) => { const m = /^(?:z\s+|0\s+0\s+1\s+)?(-?[\d.]+(?:e-?\d+)?)(deg|turn|rad|grad)$/.exec(String(v || '').trim()); return m ? +m[1] * { deg: 1, turn: 360, rad: 180 / Math.PI, grad: 0.9 }[m[2]] : 0; };
-  const turned = new Map(), back = [];
+  const turned = new Map(), mirrors = new Map(), back = [];
   for (const n of [root, ...root.querySelectorAll('*')]) {
     const s = getComputedStyle(n), r = deg(s.rotate);
     const m = /^matrix\(([^)]+)\)$/.exec(s.transform || ''), [a, b, c, d, tx, ty] = m ? m[1].split(',').map(Number) : [];
-    // (a turn and a move only: a mirror or a scale is mirrored()'s, and left as it is)
+    // (a turn and a move only: a scale is left as it is)
     const spun = !!m && Math.abs(a - d) < 1e-6 && Math.abs(b + c) < 1e-6 && Math.abs(a * a + b * b - 1) < 1e-4 && (Math.abs(b) > 1e-6 || a < 0);
-    if (!r && !spun) continue;
+    // (a mirror: `scale` with one side below 0, or a transform's matrix that flips one axis and turns none)
+    const sc = String(s.scale || 'none').trim().split(/\s+/).map(Number), [sx, sy = sx] = isNaN(sc[0]) ? [1, 1] : sc;
+    const byScale = sx < 0 !== sy < 0 ? (sx < 0 ? 'x' : 'y') : null;
+    const byMatrix = !!m && a * d < 0 && Math.abs(b) < 1e-6 && Math.abs(c) < 1e-6 ? (a < 0 ? 'x' : 'y') : null;
+    if (!r && !spun && !byScale && !byMatrix) continue;
     back.push([n, n.style.cssText]);
     // (no transition either, or a turn set aside would still be easing out when the boxes are measured)
     n.style.setProperty('transition', 'none', 'important');
     if (r) n.style.setProperty('rotate', 'none', 'important');
     if (spun) n.style.setProperty('transform', `translate(${tx}px, ${ty}px)`, 'important');
+    if (byScale) n.style.setProperty('scale', `${Math.abs(sx)} ${Math.abs(sy)}`, 'important');
+    if (byMatrix) n.style.setProperty('transform', `translate(${tx}px, ${ty}px) scale(${Math.abs(a)}, ${Math.abs(d)})`, 'important');
+    if (byScale || byMatrix) mirrors.set(n, byScale || byMatrix);
+    if (!r && !spun) continue;
     // (clockwise as CSS turns; Figma's turn is the other way, its negative, from -180 to 180)
     const cw = r + (spun ? Math.atan2(b, a) * 180 / Math.PI : 0), fig = ((-cw % 360) + 540) % 360 - 180;
     const all = +(Math.abs(fig + 180) < 1e-9 ? 180 : fig).toFixed(2);
     if (all) turned.set(n, all);
   }
-  return { turned, restore: () => { for (const [n, css] of back) n.style.cssText = css; } };
+  return { turned, mirrors, restore: () => { for (const [n, css] of back) n.style.cssText = css; } };
 }
 
 /** The states the code forces (pseudo classes) and those it sets as a prop, read back as one interaction prop, named as
@@ -2712,7 +2723,7 @@ async function main() {
           const hostSel = /^(.*\S)\s*>\s*[^>]+$/.exec(sel || '');
           const host = parent == null && hostSel && n.parentElement && n.parentElement.tagName.includes('-') && (() => { try { return n.parentElement.matches(hostSel[1]); } catch { return false; } })() ? n.parentElement : null;
           const modes = Object.fromEntries(modeKeys.map((k) => [k, n.getAttribute(`data-${k}`) || (host && host.getAttribute(`data-${k}`))]).filter(([, v]) => v));
-          const e = { id, kind, ...(parent != null && { parent, order }), ...placedBy(n, parent), ...(figmaName && { name: figmaName }), ...(nameBorrowed && { nameBorrowed }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
+          const e = { id, kind, ...(parent != null && { parent, order }), ...placedBy(n, parent), ...(figmaName && { name: figmaName }), ...(nameBorrowed && { nameBorrowed }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...((mirrors.get(n) || mirrored(s)) && { flip: mirrors.get(n) || mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // another library's instance the markup drew open (to-markup's data-component, data-key, data-with): its component,
           // its key and the props it is given, read back as the instance it is (foreignAsInstance)
           if (n.getAttribute('data-component')) { e.foreign = n.getAttribute('data-component'); if (n.getAttribute('data-key')) e.foreignKey = n.getAttribute('data-key'); try { const w = JSON.parse(n.getAttribute('data-with') || 'null'); if (w && typeof w === 'object' && !Array.isArray(w)) e.foreignWith = w; } catch { /* none said */ } }
@@ -2739,7 +2750,7 @@ async function main() {
           if (other) {
             n.setAttribute('data-contract-id', id); up(id);
             // (its opacity as a box's: kept below only where this component's own rule writes it, INSTANCE_CSS)
-            out.push({ id, kind: 'instance', parent, order, ...placedBy(n, parent), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(figmaName && { name: figmaName }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
+            out.push({ id, kind: 'instance', parent, order, ...placedBy(n, parent), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...((mirrors.get(n) || mirrored(s)) && { flip: mirrors.get(n) || mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(figmaName && { name: figmaName }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
               // (whether its own children can be drawn over one another as laid out: stackLikeDesign reads it)
               ...(childrenMeet(ownBox(n, getComputedStyle), getComputedStyle) && { overlap: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
@@ -2906,7 +2917,7 @@ async function main() {
           }
         };
         // (measured as laid out, each turn kept: unturn)
-        const { turned, restore } = new Function(`return ${unturnSrc}`)()(root);
+        const { turned, mirrors, restore } = new Function(`return ${unturnSrc}`)()(root);
         try { walk(root, null, 0); } finally { restore(); }
         // an order counts only the siblings drawn
         const byParent = {}; for (const e of out) if (e.parent != null) (byParent[e.parent] = byParent[e.parent] || []).push(e);

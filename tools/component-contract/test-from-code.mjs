@@ -1266,6 +1266,25 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); }
   }
 }
+// 2026-11-28: a layer inside a mirrored frame (turned too, or not) is measured in the frame's own axes, as Figma states
+// its x: from the frame's left, never the mirror's (a glyph 11.14 in read 0.03, its far gap); which way each part was
+// mirrored is kept while the mirror is set aside
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
+  const { unturn } = await import('./from-code.mjs');
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to measure a mirrored frame in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({});
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      const frame = (css) => `<div class="f" style="position: absolute; left: 40px; top: 40px; width: 20px; height: 26px; ${css}"><i style="position: absolute; left: 55%; top: 10px; width: 45%; height: 8px"></i></div>`;
+      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html>${frame('scale: -1 1; rotate: -75deg')}${frame('transform: scaleX(-1)')}${frame('scale: 1 -1')}` });
+      const got = await call(tab, (src) => { const { mirrors, restore } = new Function(`return ${src}`)()(document.documentElement); try { return [...document.querySelectorAll('.f')].map((f) => { const r = f.firstChild.getBoundingClientRect(), p = f.getBoundingClientRect(); return [+(r.left - p.left).toFixed(2), +(r.top - p.top).toFixed(2), mirrors.get(f) || null]; }); } finally { restore(); } }, unturn.toString());
+      const after = await call(tab, () => getComputedStyle(document.querySelector('.f')).scale);
+      ok('a layer in a mirrored frame is measured from the frame\'s own left, its mirror\'s way kept, and the mirror put back', JSON.stringify(got) === '[[11,10,"x"],[11,10,"x"],[11,10,"y"]]' && after === '-1 1', `${JSON.stringify(got)} ${after}`);
+    } finally { await browser.close(); }
+  }
+}
 // 2026-11-22: a text with no style goes round as itself: css.mjs writes its values, spacing, case and decoration, and
 // the reader's own two halves (textTypeOf in the page, typedText after it) read them back as the contract said them
 { const fs = await import('node:fs');
