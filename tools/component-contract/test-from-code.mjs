@@ -1446,6 +1446,34 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); await site.close(); }
   }
 }
+// (second review of 2026-11-28: a pointer state's copy turned a quarter: the copies hidden take no room, their turn's
+// wrapper with them, and the one shown keeps its wrapper's box)
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, waitFor, call, forceState } = await import('../shared/cdp.mjs');
+  const { selfSiteFiles, serveSite } = await import('./site.mjs');
+  const { HOUSE } = await import('./to-code.mjs');
+  const tag = { contract: 1, component: 'Tag', folder: 'tag', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 40, height: 10, background: '#000000' } }, variants: [{ when: { on: true }, set: { 'root.background': '#ff0000' } }] };
+  const card = { contract: 1, component: 'Card', folder: 'card', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, tag: { kind: 'instance', parent: 'root', component: 'Tag', rotation: 90, width: 40, height: 10, with: { On: 'False' } } },
+    variants: [{ when: { state: 'hover' }, set: { 'tag.with': { On: 'True' } } }] };
+  const library = { Tag: tag, Card: card }, files = selfSiteFiles(library, 'card', { settingsOf: () => HOUSE });
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to turn a copied placed component in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({}), site = await serveSite(files);
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
+      await call(tab, () => { const s = document.createElement('section'); s.append(window.R.card({})); document.getElementById('stage').replaceChildren(s); });
+      const boxes = () => call(tab, () => { const r = document.querySelector('#stage section > *'); return { root: Math.round(r.getBoundingClientRect().width), shown: [...r.querySelectorAll('[data-part="tag"]')].filter((x) => x.checkVisibility()).map((x) => x.getAttribute('data-pointer')), wrappers: [...r.querySelectorAll('[data-turn]')].filter((x) => x.getBoundingClientRect().width > 0).length }; });
+      const rest = await boxes();
+      await forceState(tab, [{ selector: '#stage section > *', pseudo: 'hover' }]);
+      const hovered = await boxes();
+      ok('a pointer state\'s copy turned a quarter: one copy shown, one wrapper with a box, the root as wide as one turned copy',
+        rest.shown.join() === 'rest' && hovered.shown.join() === 'hover' && rest.wrappers <= 1 && hovered.wrappers <= 1 && rest.root === 10 && hovered.root === 10, JSON.stringify([rest, hovered]));
+    } finally { await browser.close(); await site.close(); }
+  }
+}
 // 2026-11-28: a placed component the design gives a pointer value of its own where nothing forwards one (a definition
 // tooltip's item at Hover while shown): with nothing forced, the holder's sheet draws it at that value's look under the
 // holder's attribute, its rest's elsewhere (to-code's drawnAsOf), and the reading takes it at that value

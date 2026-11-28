@@ -772,7 +772,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const node = (part, holds, fill = false) => {
     const got = drawnNode(part, holds, fill);
     if (!got || fill || !turned.has(part.id)) return got;
-    const wrap = (x) => (!x || x.comment ? x : x.node && 'when' in x ? { ...x, node: wrap(x.node) } : { tag: control || inline ? 'span' : 'div', attrs: [['data-turn', { lit: partSeg(c, part.id) }]], children: [x] });
+    // (a pointer state's copy's wrapper marked with its state too, the sheet showing and hiding it there: to-code's chain)
+    const mark = (x) => (x.hook || x.attrs || []).filter(([k]) => k === 'data-pointer');
+    const wrap = (x) => (!x || x.comment ? x : x.node && 'when' in x ? { ...x, node: wrap(x.node) } : { tag: control || inline ? 'span' : 'div', attrs: [['data-turn', { lit: partSeg(c, part.id) }], ...mark(x)], children: [x] });
     return Array.isArray(got) ? got.map(wrap) : wrap(got);
   };
   const drawnNode = (part, holds, fill = false) => {

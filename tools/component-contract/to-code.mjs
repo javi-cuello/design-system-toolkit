@@ -1446,7 +1446,8 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   for (const [id, { key, at }] of pointerWithOf(c, t, mains)) {
     const shown = !a[id] ? null : at.has(when[key]) ? when[key] : 'rest';
     // (one drawn open, the frame's own display here, `revert` to the element's where this sheet writes it none)
-    const display = !a[id] ? null : a[id].foreign ? ((out[id] && out[id].decls.get('display')) || {}).v || 'revert' : rootDisplay(mains(a[id].component, a[id].key ?? null), mains, t);
+    // (one turned a quarter, its wrapper's display here: turnedParts)
+    const display = !a[id] ? null : turned.has(id) ? ((out[`${id}::turn`] || { decls: new Map() }).decls.get('display') || {}).v || 'revert' : a[id].foreign ? ((out[id] && out[id].decls.get('display')) || {}).v || 'revert' : rootDisplay(mains(a[id].component, a[id].key ?? null), mains, t);
     for (const u of ['rest', ...at]) out[`${id}::pointer=${u}`] = { decls: new Map([['display', { v: u === shown ? display : 'none' }]]), unread: [] };
   }
   // a placed component the design gives a pointer value of its own where nothing forwards one: what its own sheet draws
@@ -1789,6 +1790,9 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
     if (pseudo === 'turn' && i === segs.length - 1) return wrapper(s);
     // (a copy's own `[data-pointer]` on its hook, the host the markup puts it on, before the control inside: a placed
     // button's native <button>)
+    // (one turned a quarter is shown and hidden at its turn's wrapper, which the markup marks too: a hidden copy's
+    // wrapper would keep its box)
+    if (copyMark && i === segs.length - 1 && turned.has(s)) return `${wrapper(s)}${pseudoSel(pseudo)}`;
     const mark = copyMark && i === segs.length - 1 ? pseudoSel(pseudo) : '';
     return (turned.has(s) ? `${wrapper(s)} > ` : '') + (s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + mark + (markOnly(e) ? '' : through(n, e.kind === 'instance' && e.component, heldIn(c, s, mains)))); };
   // a part inside a placed component is that component's own: named as its own sheet names it, under the instance
