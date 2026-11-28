@@ -197,6 +197,11 @@ async function step(main, me, state) {
     const ff = tryGit(main, 'merge', '-q', '--ff-only', 'origin/main');
     if (!ff.ok) say(`the main checkout stays where it was (${ff.out.split('\n')[0]}); main itself is landed`);
   }
+  // the files the dashboards run from have just moved: restarted now, under the lock, so the next queued land's check
+  // never meets services this landing left stale (2026-11-28: a land queued before another landed was failed by the
+  // dashboards that landing changed, healed only before queuing)
+  const healed = await healServices(main);
+  if (healed) say(healed);
   return null;
 }
 

@@ -256,7 +256,8 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.equal(remoteHas('n11.txt'), 'n11');
   assert.equal(fs.readdirSync(path.join(main, '.claude', 'worktrees')).filter((f) => f.startsWith('.at-')).length, 0, 'no temporary worktree left'); }
 
-// (s) stale dashboards are restarted before queuing, outside the lock, by the main checkout's check-services --heal;
+// (s) stale dashboards are restarted before queuing, outside the lock, by the main checkout's check-services --heal,
+// and again after landing, the main checkout moved;
 // the full check under the lock only judges them (2026-11-24: stale dashboards failed a land that had nothing to do with them)
 { const fake = path.join(main, 'tools', 'figma-audit', 'check-services.mjs'), said = path.join(tmp, 'healed');
   fs.mkdirSync(path.dirname(fake), { recursive: true });
@@ -265,7 +266,7 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   r = await quiet(() => land(S));
   fs.rmSync(path.join(main, 'tools'), { recursive: true, force: true });
   assert.equal(r.code, 0, r.out);
-  assert.equal(fs.readFileSync(said, 'utf8').trim(), '--heal', 'asked once, to heal');
+  assert.equal(fs.readFileSync(said, 'utf8').trim(), '--heal\n--heal', 'asked to heal before queuing, and again once main moved, so the next land meets none stale');
   assert.match(r.out, /1 stale service\(s\) restarted/, r.out); }
 
 // (t) the quick check reads the branch with main merged in: a step red when it branched and fixed on main since
