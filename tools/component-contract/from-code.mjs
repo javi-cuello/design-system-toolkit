@@ -686,7 +686,10 @@ export function centreRing(layers) {
   for (let i = 0; i < all.length; i++) {
     if (!all[i] || !all[i].inset) continue;
     const j = all.findIndex((o) => o && !o.inset && o.c === all[i].c && Math.abs(o.spread - all[i].spread) < 1e-4);
-    if (j >= 0) return { colour: all[i].c, width: +(all[i].spread * 2).toFixed(4), used: [i, j] };
+    // (only at a width not whole, as css.mjs writes the pair only then: a whole inside stroke beside an effect of the same
+    // colour and spread is that stroke and that effect)
+    const width = +(all[i].spread * 2).toFixed(4);
+    if (j >= 0 && width % 1 !== 0) return { colour: all[i].c, width, used: [i, j] };
   }
   return null;
 }
@@ -2845,8 +2848,8 @@ async function main() {
               if (capped) e.border.cap = capped.cap;
             }
             // a stroke drawn as an inset shadow with no offset and no blur is a border (values.mjs insetStroke, as the code audit reads it)
-            else if (centred) e.border = { color: centred.colour, width: centred.width, align: 'center' };
             else if (ss) e.border = { color: ss.colour, width: ['top', 'end', 'bottom', 'start'].map((k) => px(ss.sides[k])), sides: ss.sides, ...(ss.align === 'outside' && { align: 'outside' }), ...(clear(ss.colour) && { clearRing: true }) };
+            else if (centred) e.border = { color: centred.colour, width: centred.width, align: 'center' };
             else { const st = layers.map(insetStroke).find((x) => x && x.width > 0); if (st) e.border = { color: st.colour, width: px(st.width) }; }
             if (s.overflow === 'hidden') e.overflow = 'hidden';
             // its shadow: drop shadows and inner ones

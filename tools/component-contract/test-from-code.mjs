@@ -16,7 +16,8 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
 { const C = 'rgb(23, 43, 77)';
   const r = centreRing(['rgb(0, 0, 0) 0px 2px 4px 0px', `${C} 0px 0px 0px 0.74665px inset`, `${C} 0px 0px 0px 0.74665px`]);
   ok('an inset and an outer ring of one colour and spread are a centred stroke of twice the spread', JSON.stringify(r) === `{"colour":"${C}","width":1.4933,"used":[1,2]}`, JSON.stringify(r));
-  ok('…and an inset ring alone, two spreads or two colours are none', !centreRing([`${C} 0px 0px 0px 1px inset`]) && !centreRing([`${C} 0px 0px 0px 1px inset`, `${C} 0px 0px 0px 2px`]) && !centreRing([`${C} 0px 0px 0px 1px inset`, 'rgb(0, 0, 0) 0px 0px 0px 1px'])); }
+  ok('…and an inset ring alone, two spreads or two colours are none', !centreRing([`${C} 0px 0px 0px 1px inset`]) && !centreRing([`${C} 0px 0px 0px 1px inset`, `${C} 0px 0px 0px 2px`]) && !centreRing([`${C} 0px 0px 0px 1px inset`, 'rgb(0, 0, 0) 0px 0px 0px 1px']));
+  ok('…and a whole inside stroke beside an effect of its colour and spread is none: that stroke and that effect', !centreRing([`${C} 0px 0px 0px 1px inset`, `${C} 0px 0px 0px 1px`]) && !centreRing([`${C} 0px 0px 0px 2px inset`, `${C} 0px 0px 0px 2px`])); }
 // a line's square cap read back as css.mjs draws it: its edge's box shadowed half the edge's width along the line each
 // way in the edge's colour (a caret 16 tall inked 17, 2026-11-28); a lone shadow, one across the line, another colour's
 // or an inset one is no cap
