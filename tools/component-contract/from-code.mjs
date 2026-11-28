@@ -359,6 +359,17 @@ export const keywordFill = (bg, colour, designBg) => inheritsColour(designBg) &&
 /* Whether the walk marks a box (its kind, whether it is a mark, the fill read so far, its computed style `cs`) as painted
    clear inside a placed component (`inside`), for readCleared: a container or a mark with no fill and no layer over it.
    Passed into the page as source. Tested by test-from-code.mjs. */
+/* Whether a placed instance's own children can be drawn over one another, as the page lays them out: two or more drawn,
+   one placed out of the flow, or two whose boxes meet. Where they cannot, the order they paint in shows nowhere
+   (stackLikeDesign). `box` the instance's own box (ownBoxOf), `style` getComputedStyle. Runs in the page (passed as
+   source); tested by test-from-code.mjs, in Chrome. */
+export function childrenMeet(box, style) {
+  const kids = [...box.children].filter((c) => c.getClientRects().length && style(c).display !== 'none');
+  if (kids.length < 2) return false;
+  if (kids.some((c) => /^(absolute|fixed)$/.test(style(c).position))) return true;
+  const rs = kids.map((c) => c.getBoundingClientRect());
+  return rs.some((a, i) => rs.slice(i + 1).some((b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5));
+}
 export function paintedClear(inside, kind, mark, background, cs, clear) { return !!inside && (kind === 'container' || (kind === 'graphic' && !!mark)) && background === undefined && clear(cs.backgroundColor) && cs.backgroundImage === 'none'; }
 export const iconColour = async (v, tokOf) => (!v || clearValue(v) ? undefined : tokOf(v));
 // a colour value that paints nothing (a transparent token: a ghost button's fill)
@@ -1421,7 +1432,7 @@ export function zeroTokens(e, fe, value, { fill = false } = {}) {
    so a part a variant adds, a layout a variant sets whole and one the design stacks at some props only all take the
    design's there and no other: each layout the contract writes takes what its combinations want, and a combination
    that wants otherwise than the rest of its layout's gets a layer of its own. `code` is changed in place. */
-export function stackLikeDesign(code, design, value) {
+export function stackLikeDesign(code, design, value, mains = null) {
   const val = (t) => (isToken(t, value) ? value(t) : t);
   // (no more combinations than derive draws, 4096: past that the layouts are left as written, said by the rows)
   const axes = Object.entries(design.props || {}).filter(([, q]) => q.type === 'enum' || q.type === 'boolean').map(([k, q]) => [k, q.type === 'enum' ? q.values : [true, false]]);
@@ -1446,6 +1457,7 @@ export function stackLikeDesign(code, design, value) {
   for (const l of sources) delete l.__src;
   const ids = [...new Set(C.flatMap((x) => Object.keys(x)))];
   const wants = new Map(); // source → [[combo index, id, want]]
+  const own = new Map(); // combo index → its own layer
   for (const id of ids) {
     if (C.some((x) => x[id] && x[id].layout && x[id].layout.gap != null && !(parseFloat(val(x[id].layout.gap)) >= 0))) continue;
     C.forEach((x, i) => {
@@ -1454,8 +1466,24 @@ export function stackLikeDesign(code, design, value) {
       wants.set(l.__src, [...(wants.get(l.__src) || []), [i, id, !!dl.firstOnTop]]);
     });
   }
+  // a placed instance the design stacks first on top where its component, at the instance's props, lays its children out
+  // the same but stacks none (an override of the stacking alone): the reading has no layout of its own for it (the
+  // component's, ownStyling), and where the page draws its children so they cannot meet (childrenMeet, `overlap`), how
+  // they stack shows nowhere, so it is the design's there
+  const plain = (l) => JSON.stringify(Object.fromEntries(Object.entries({ padding: { top: 0, end: 0, bottom: 0, start: 0 }, ...l }).filter(([k]) => k !== 'firstOnTop' && k !== '__src').sort(([a], [b]) => (a < b ? -1 : 1))));
+  const inst = new Map(); // combo index → [[id, layout]]
+  if (mains) for (const id of ids) C.forEach((x, i) => {
+    const e = x[id], d = D[i][id], dl = d && d.layout;
+    if (!e || e.kind !== 'instance' || e.layout || e.overlap || !dl || !dl.firstOnTop || !d.component) return;
+    const m = mains(d.component, d.key), R = m && atProps(m, d.with || {}).root;
+    if (!R || !R.layout || R.layout.firstOnTop || plain(R.layout) !== plain(dl)) return;
+    inst.set(i, [...(inst.get(i) || []), [id, dl]]);
+  });
+  for (const [i, list] of inst) {
+    if (!own.has(i)) { const layer = { when: Object.fromEntries(Object.entries(theirs[i]).filter(([k]) => k in (code.props || {}))), set: {} }; vars.push(layer); own.set(i, layer); }
+    for (const [id, dl] of list) { const { __src: _, ...l } = dl; own.get(i).set[`${id}.layout`] = l; }
+  }
   const set = (l, w) => { if (w) l.firstOnTop = true; else delete l.firstOnTop; };
-  const own = new Map(); // combo index → its own layer
   for (const [s, list] of wants) {
     const yes = list.filter((x) => x[2]).length, w = yes * 2 >= list.length;
     set(sources[s], w);
@@ -2531,9 +2559,9 @@ async function main() {
       // each element two layers of the design share, by what it draws (namedAt): its icon's name, else the first inside it
       const twice = [...new Set(named.map((x) => x[0]).filter((sl, i, a) => a.indexOf(sl) !== i))];
       const glyphs = twice.length ? await call(L.tab, (sels) => Object.fromEntries(sels.map((sl) => { const n = document.querySelector(sl), g = n && (n.getAttribute('data-icon') || (n.querySelector('[data-icon]') || { getAttribute: () => null }).getAttribute('data-icon')); return [sl, g || null]; })), twice) : {};
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS, paintedClearSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS, paintedClearSrc, childrenMeetSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
-        const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)();
+        const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)(), childrenMeet = new Function(`return ${childrenMeetSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)(), flowOf = new Function(`return ${flowSrc}`)();
         // a colour that paints nothing: fully transparent, whatever its channels
@@ -2643,6 +2671,8 @@ async function main() {
             n.setAttribute('data-contract-id', id); up(id);
             // (its opacity as a box's: kept below only where this component's own rule writes it, INSTANCE_CSS)
             out.push({ id, kind: 'instance', parent, order, ...placedBy(n, parent), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(figmaName && { name: figmaName }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
+              // (whether its own children can be drawn over one another as laid out: stackLikeDesign reads it)
+              ...(childrenMeet(ownBox(n, getComputedStyle), getComputedStyle) && { overlap: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
               ...(s.position === 'absolute' && !tn.turned && placed(n)),
               // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
@@ -2822,7 +2852,7 @@ async function main() {
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; delete e.rects; });
         }
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a box whose children say by z-index how they stack but not the design's order of them (one in the flow, no CSS
       // order: rules.mjs stackedFirst): its children read as painted, and said so; the box keeps the mark (stackUnknown),
@@ -3846,7 +3876,7 @@ async function main() {
       });
       // stacking first on top, as the design does, at each combination, where the children cannot overlap
       A.take('stack-like-design', fromCode, () => {
-      stackLikeDesign(fromCode, figmaContract, L.value);
+      stackLikeDesign(fromCode, figmaContract, L.value, mainOf);
       });
       // an opacity the code writes raw (0.5 when disabled) takes the design's opacity token that holds it, where exactly
       // one the design uses does (its tokens hold percentages: 50 is 0.5, never 0.5%)

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
+import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -833,6 +833,24 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     combos.every((w) => ['root', 'bar', 'tip', 'pop'].every((id) => fot(code, w, id) === undefined || fot(code, w, id) === fot(design, w, id)))
     && fot(code, { size: 'sm', open: false }, 'root') === true && fot(code, { size: 'md', open: true }, 'tip') === true && fot(code, { size: 'sm', open: true }, 'pop') === false
     && combos.every((w) => fot(code, w, 'free') === false)); }
+{ // 2026-11-28: a placed instance the design stacks first on top where its component, at its props, stacks none (a
+  // checkbox's toggletip): the reading keeps no layout for it (its component's), and where the page draws its children
+  // apart, how they stack shows nowhere, so it is the design's; where they meet, or the override changes more, it is not
+  // (byComponentName from derive.cjs, imported above)
+  const lay = { direction: 'column', gap: 0, align: 'end', crossAlign: 'center', padding: { top: 0, end: 0, bottom: 0, start: 0 } };
+  const tip = { contract: 1, component: 'Tip', props: {}, anatomy: { root: { kind: 'container', layout: lay }, a: { kind: 'container', parent: 'root' }, b: { kind: 'container', parent: 'root' } }, variants: [] };
+  const design = { props: { on: { type: 'boolean', default: false } }, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0 } } },
+    variants: [{ when: { on: true }, add: { tip: { kind: 'instance', parent: 'root', component: 'Tip', layout: { ...lay, firstOnTop: true } } } }] };
+  const read = (overlap) => ({ props: { on: { type: 'boolean', default: false } }, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0 } } },
+    variants: [{ when: { on: true }, add: { tip: { kind: 'instance', parent: 'root', component: 'Tip', ...(overlap && { overlap: true }) } } }] });
+  const at = (c) => (expand(c, { on: true }).tip || {}).layout;
+  const apart = read(false), met = read(true), more = read(false);
+  stackLikeDesign(apart, design, (t) => t, byComponentName([tip]));
+  stackLikeDesign(met, design, (t) => t, byComponentName([tip]));
+  stackLikeDesign(more, { ...design, variants: [{ when: { on: true }, add: { tip: { kind: 'instance', parent: 'root', component: 'Tip', layout: { ...lay, align: 'start', firstOnTop: true } } } }] }, (t) => t, byComponentName([tip]));
+  ok('a placed instance stacked first on top by the design alone takes it where its children are drawn apart; not where they meet, nor where the override changes more',
+    JSON.stringify(at(apart)) === JSON.stringify({ ...lay, firstOnTop: true }) && at(met) === undefined && at(more) === undefined, JSON.stringify([at(apart), at(met), at(more)]));
+}
 { // a child placed absolutely can overlap the rest, though the design places it so too: its stacking is the code's as
   // read (by z-index or paint), never the design's copied, so a background painted over its text is a row
   const design = { props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, firstOnTop: true } }, text: { kind: 'text', parent: 'root', order: 0 }, bg: { kind: 'graphic', parent: 'root', order: 1, position: 'absolute' } }, variants: [] };
@@ -1430,6 +1448,22 @@ ok('codeFigma: the design component a generated module names, read from its text
     props.appearance.figma === 'appearance' && props.state.figma === 'State' && props.size.figma === undefined && props.kept.figma === 'Own'); }
 // a padding the code writes as 0 (to-code's `padding: 0`, or a zero token) is said, as the code says it; one it leaves
 // unset is not, and a padding read already is kept
+// 2026-11-28: whether a placed instance's own children can be drawn over one another, measured on the page: two in the
+// flow side by side cannot; one placed out of the flow, or one a margin pulls over the other, can; one alone cannot
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to measure children in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({});
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      const k = '<i style="display: block; width: 10px; height: 10px"></i>';
+      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html><div id="a" style="display: flex">${k}${k}</div><div id="b" style="display: flex; position: relative">${k}<i style="position: absolute; width: 4px; height: 4px"></i></div><div id="c" style="display: flex">${k}<i style="display: block; width: 10px; height: 10px; margin-left: -5px"></i></div><div id="d" style="display: flex">${k}</div><div id="e" style="display: flex">${k}<i style="display: none"></i></div>` });
+      const got = await call(tab, (src) => { const f = new Function(`return ${src}`)(); return ['a', 'b', 'c', 'd', 'e'].map((q) => f(document.getElementById(q), getComputedStyle)); }, childrenMeet.toString());
+      ok('children drawn apart do not meet; one out of the flow or pulled over another does; one alone, or beside one not drawn, does not', JSON.stringify(got) === '[false,true,true,false,false]', JSON.stringify(got));
+    } finally { await browser.close(); }
+  }
+}
 // 2026-11-28: a 0 padding written by a shorthand with a var() in it (`padding: var(--space-0) 0 0 0`, a variant's) is
 // written all the same: Chrome lists its longhands empty, and read so the variant's padding went unread, its sides
 // taking the base's token
