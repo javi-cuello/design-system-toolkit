@@ -1684,8 +1684,12 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       const tab = await attach(await newPage(browser.endpoint));
       await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
       await call(tab, () => { const s = document.createElement('section'); s.append(window.R.card({ shown: true })); document.getElementById('stage').replaceChildren(s); });
+      // (each node the page is asked to force, recorded: the placed element's alone)
+      const forced = new Set(), send = tab.send.bind(tab);
+      tab.send = (method, params) => { if (method === 'CSS.forcePseudoState' && (params.forcedPseudoClasses || []).length) forced.add(params.nodeId); return send(method, params); };
       const seen = await drawnAsSeen(tab, [{ id: 'link', selector: sel, pseudo: 'hover' }]);
-      ok('a placed component\'s drawn pointer value is asked with it forced alone, never its holder with it', seen.length === 1, JSON.stringify(seen));
+      tab.send = send;
+      ok('a placed component\'s drawn pointer value is asked with it forced alone, never its holder with it', seen.length === 1 && forced.size === 1, JSON.stringify([seen, forced.size]));
     } finally { await browser.close(); await site.close(); }
   }
 }
