@@ -1397,6 +1397,29 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); await site.close(); }
   }
 }
+// (review of 2026-11-28: the first of a placed component's numbered copies, turned a quarter: copies are never drawn in a
+// turn's wrapper (to-code turnedParts), so each is counted among its siblings, the first alone found by the first's selector)
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, waitFor, call } = await import('../shared/cdp.mjs');
+  const { selfSiteFiles, serveSite, selfMapping } = await import('./site.mjs');
+  const { HOUSE } = await import('./to-code.mjs');
+  const day = { contract: 1, component: 'Day', folder: 'day', props: {}, anatomy: { root: { kind: 'container', width: 10, height: 4 } }, variants: [] };
+  const week = { contract: 1, component: 'Week', folder: 'week', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, day: { kind: 'instance', parent: 'root', order: 0, component: 'Day', rotation: 90 }, day_2: { kind: 'instance', parent: 'root', order: 1, component: 'Day', rotation: 90 } }, variants: [] };
+  const cal = { contract: 1, component: 'Cal', folder: 'cal', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, week: { kind: 'instance', parent: 'root', component: 'Week' }, 'week/day': { kind: 'instance', parent: 'week', order: 0, component: 'Day', rotation: 90 }, 'week/day_2': { kind: 'instance', parent: 'week', order: 1, component: 'Day', rotation: 90 } }, variants: [] };
+  const library = { Cal: cal, Week: week, Day: day }, files = selfSiteFiles(library, 'cal', { settingsOf: () => HOUSE });
+  const sel = selfMapping(cal, { library, settings: HOUSE }).byId['week/day'];
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to count turned copies in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({}), site = await serveSite(files);
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
+      const got = await call(tab, (q) => { const s = document.createElement('section'); s.append(window.R.cal({})); document.getElementById('stage').replaceChildren(s);
+        const all = [...s.querySelectorAll('[data-part="day"]')], hit = [...s.querySelectorAll(q)]; return { days: all.length, hit: hit.length, first: hit[0] === all[0], turns: s.querySelectorAll('[data-turn]').length }; }, sel || 'none');
+      ok('the first of a placed component\'s numbered copies turned a quarter: drawn unwrapped and found alone by the first\'s selector', got.days === 2 && got.hit === 1 && got.first && got.turns === 0, JSON.stringify([sel, got]));
+    } finally { await browser.close(); await site.close(); }
+  }
+}
 // 2026-11-28: a placed component the design gives a pointer value of its own where nothing forwards one (a definition
 // tooltip's item at Hover while shown): with nothing forced, the holder's sheet draws it at that value's look under the
 // holder's attribute, its rest's elsewhere (to-code's drawnAsOf), and the reading takes it at that value
