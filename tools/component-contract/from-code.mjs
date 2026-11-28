@@ -191,6 +191,16 @@ export function wordsAsDrawn(n, s) {
    that layer at 0 too (`atZero`: a tooltip until hovered, as Figma's boolean shows a layer by its visibility alone);
    one code draws at 0 for good, where the design paints it, is not drawn. `rects` its client rects' count, `cs` its
    computed style. Tested by test-from-code.mjs. */
+/* What a placed instance's boolean is read as from the layer it shows: on where a copy of the layer found in it is drawn
+   (`found`, per copy [drawn, unseen only as a box around it is not drawn]); unknown (null) where every copy is unseen
+   only so, or where none is found and a layer around it in its main is missing too (`aroundGone`: this component took
+   that layer away whole, as a design hides a checkbox's box and value, and the markup leaves it out, dom.js dressed), so
+   it says nothing of the boolean; else off. Runs in the page (passed as source); tested by test-from-code.mjs. */
+export function shownState(found, aroundGone) {
+  if (found.some(([drawn]) => drawn)) return true;
+  return (found.length ? found.every(([, boxed]) => boxed) : aroundGone) ? null : false;
+}
+
 export function layerShown(rects, cs, atZero = false) { return rects > 0 && cs.visibility !== 'hidden' && (atZero || +cs.opacity > 0); }
 
 /* Whether a contract draws its layer `id` at opacity 0 at some combination: in its anatomy, as a variant sets it or as a
@@ -2632,7 +2642,10 @@ async function main() {
     const shownSel = Object.fromEntries(Object.keys(others).map((slug) => {
       const fc = official.get(slug), parts = L.partsOf ? L.partsOf(slug) : null;
       if (!fc || !parts) return [slug, {}];
-      return [slug, Object.fromEntries(Object.values(fc.props).filter((q) => q.type === 'boolean' && q.shows && parts[q.shows[0]]).map((q) => [q.figma, parts[q.shows[0]]]))];
+      // (with the selectors of the layers around it in its main, each its own part: one this component takes away whole
+      // takes the layer with it, which then says nothing of the boolean, shownState)
+      const around = (id) => { const out = []; for (let up = (fc.anatomy[id] || {}).parent; up && up !== 'root' && fc.anatomy[up]; up = fc.anatomy[up].parent) if (parts[up]) out.push(parts[up]); return out; };
+      return [slug, Object.fromEntries(Object.values(fc.props).filter((q) => q.type === 'boolean' && q.shows && parts[q.shows[0]]).map((q) => [q.figma, [parts[q.shows[0]], around(q.shows[0])]]))];
     }));
     // (and those its own design draws at opacity 0, a tooltip until hovered: shown there at 0, layerShown)
     const zeroShown = Object.fromEntries(Object.keys(others).map((slug) => {
@@ -2740,7 +2753,7 @@ async function main() {
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
         const elementOfLayer = new Function(`return ${elementOfLayerSrc}`)();
         const opensPlaced = new Function(`return ${opensPlacedSrc}`)();
-        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), layerShown = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)(), paintedClear = new Function(`return ${paintedClearSrc}`)(); const seeThrough = new Function(`return ${seeThroughSrc}`)(), glyphless = new Function(`return ${glyphlessSrc}`)(), alignedOf = new Function(`return ${alignedSrc}`)();
+        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), [layerShown, shownState] = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)(), paintedClear = new Function(`return ${paintedClearSrc}`)(); const seeThrough = new Function(`return ${seeThroughSrc}`)(), glyphless = new Function(`return ${glyphlessSrc}`)(), alignedOf = new Function(`return ${alignedSrc}`)();
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -2852,13 +2865,14 @@ async function main() {
               // (not one of another instance nested in it, and drawn: layerShown, at 0 too where its design draws it at 0)
               // (unknown, null, where each such layer is unseen only as a box around it is not drawn: one this component
               // hides inside the instance, a checkbox's box and value taken away whole, says nothing of the boolean)
-              shown: Object.fromEntries(Object.entries(shownSel[other] || {}).map(([p, q]) => {
+              shown: Object.fromEntries(Object.entries(shownSel[other] || {}).map(([p, [q, around]]) => {
                 const seen = (m) => layerShown(m.getClientRects().length, getComputedStyle(m), (zeroShown[other] || []).includes(p));
-                const ms = [...n.querySelectorAll(q)].filter((m) => ownLayer(m, n, q, isRoot));
+                const mine = (sel) => [...n.querySelectorAll(sel)].filter((m) => ownLayer(m, n, sel, isRoot));
+                const ms = mine(q);
                 // (a box not drawn: computed display none, the hidden attribute's too unless CSS draws it again; a display: contents
                 // wrapper has no box of its own and hides nothing)
                 const boxedOut = (m) => { for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (getComputedStyle(up).display === 'none') return true; return false; };
-                return [p, ms.some(seen) ? true : ms.length && ms.every(boxedOut) ? null : false];
+                return [p, shownState(ms.map((m) => [seen(m), boxedOut(m)]), around.some((u) => !mine(u).length))];
               })),
               // (its own root's included; none hidden, read to screen readers only, or of another instance nested in it)
               texts: [n, ...n.querySelectorAll('*')].filter((t) => {
@@ -3028,7 +3042,7 @@ async function main() {
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; delete e.rects; });
         }
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), layerShown.toString(), markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString(), `[${lineCap.toString()}, ${centreRing.toString()}]`]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), `[${layerShown.toString()}, ${shownState.toString()}]`, markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString(), `[${lineCap.toString()}, ${centreRing.toString()}]`]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a box whose children say by z-index how they stack but not the design's order of them (one in the flow, no CSS
       // order: rules.mjs stackedFirst): its children read as painted, and said so; the box keeps the mark (stackUnknown),
