@@ -424,8 +424,9 @@ export function readCleared(anatomy, mains, valueOf = () => undefined) {
     // (and a fill the page paints clear, `fillless`, where its root has one: cleared too, as to-code writes a contract's
     // background none; never a fill merely left unread)
     if (fill && R && typeof R.background === 'string' && R.background !== CLEARED && !clearValue(valueOf(R.background)) && e.background === undefined) e.background = CLEARED;
-    // (and a shadow the page draws none of, `shadowless`, where its root has one)
-    if (shade && R && typeof R.shadow === 'string' && R.shadow !== CLEARED && e.shadow === undefined) e.shadow = CLEARED;
+    // (and a shadow the page draws none of, `shadowless`, where its root has one; never one with no style, whose values the
+    // snapshot never records and no sheet draws: drawing none of it there clears nothing)
+    if (shade && R && typeof R.shadow === 'string' && R.shadow !== CLEARED && R.shadow !== 'literal' && e.shadow === undefined) e.shadow = CLEARED;
     // (and a clip the page draws none of, `clipless` (its computed overflow visible), where its root clips: stopped, UNCLIPPED)
     if (clip && R && R.overflow === 'hidden' && e.overflow === undefined) e.overflow = UNCLIPPED;
     // (and a blend the page draws none of, `blendless` (its computed mix-blend-mode normal), where its root has one: set

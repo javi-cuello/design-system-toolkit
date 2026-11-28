@@ -1023,6 +1023,10 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const f = readCleared({ root: { kind: 'container' }, c: { kind: 'instance', component: 'Card', fillless: true }, u: { kind: 'instance', component: 'Card', strokeless: true }, k: { kind: 'instance', component: 'Card', fillless: true, background: 'Bg/other' } }, (n) => (n === 'Card' ? F : null));
   const S = { component: 'Pop', props: {}, anatomy: { root: { kind: 'container', shadow: 'Shadows/Menu' } }, variants: [] };
   const sh = readCleared({ root: { kind: 'container' }, a: { kind: 'instance', component: 'Pop', shadowless: true }, b: { kind: 'instance', component: 'Pop' } }, (n) => (n === 'Pop' ? S : null));
+  // (an effect with no style, its values never recorded, no sheet draws: the page drawing none of it clears nothing, a
+  // menu's chrome read `none` where its component's own shadow is unrecorded, 2026-11-28)
+  const L = { component: 'Chrome', props: {}, anatomy: { root: { kind: 'container', shadow: 'literal' } }, variants: [] };
+  ok('a placed component whose own shadow is unrecorded, drawn with none, is not read cleared', readCleared({ root: { kind: 'container' }, a: { kind: 'instance', component: 'Chrome', shadowless: true } }, (n) => (n === 'Chrome' ? L : null)).a.shadow === undefined);
   { const { shadowOnlyRings, clearValue } = await import('./from-code.mjs');
     ok('a box-shadow of stroke rings alone is no shadow; a blurred one is',
       shadowOnlyRings('none') && shadowOnlyRings('rgb(0, 0, 0) 0px 0px 0px 1px inset') && shadowOnlyRings('rgb(1, 2, 3) 0px -1px 0px 0px inset, rgb(1, 2, 3) 0px 1px 0px 0px inset')
