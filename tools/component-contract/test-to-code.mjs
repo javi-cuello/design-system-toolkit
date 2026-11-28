@@ -835,6 +835,18 @@ else console.log('skip: no stored contracts on this machine');
   const ad = toCss(added, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
   ok('a combination that sets an added override back to the component\'s value writes that value, never unset',
     /data-big[^{]*> \.ds-tag__text \{\s*color: var\(--c-strong\);\s*\}/.test(ad) && !/color: unset/.test(ad) && selfCheck(added, rulesOf(added, mains).rules, mains).length === 0);
+  // a size a variant takes from a part (a fixed height, its fill's flex unset) that a further combination fills again:
+  // the fill's flex is written there, never left to the earlier unset (a library's vertical slider, disabled, its
+  // track 0 tall, 2026-11-28)
+  { const Bar = { component: 'Bar', props: {}, variants: [], anatomy: { root: { kind: 'container', layout: { direction: 'column' }, height: 40 }, fillbar: { kind: 'container', parent: 'root', width: 'fill', height: 'fill', background: 'C/x' } } };
+    const host = { component: 'Holder', props: { thin: { type: 'boolean', default: false, axis: true, figma: 'Thin' }, off: { type: 'boolean', default: false, axis: true, figma: 'Off' } },
+      anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, bar: { kind: 'instance', parent: 'root', component: 'Bar', width: 40, height: 40 } },
+      variants: [{ when: { off: true }, add: { 'bar/fillbar': { kind: 'container', parent: 'bar', width: 'fill', height: 'fill', background: 'C/y' } } },
+        { when: { thin: true }, add: { 'bar/fillbar': { kind: 'container', parent: 'bar', width: 'fill', height: 16, background: 'C/x' } } },
+        { when: { thin: true, off: true }, set: { 'bar/fillbar.height': 'fill', 'bar/fillbar.background': 'C/y' } }] };
+    const ms = (n) => (n === 'Bar' ? Bar : null);
+    const d = drawn(host, { thin: true, off: true }, ms)['bar/fillbar'], decls = d ? Object.fromEntries([...d.decls].map(([p, x]) => [p, x.v])) : {};
+    ok('a fill a combination gives back after a variant\'s fixed size says its flex there, as the component draws it', decls.flex === '1 1 0', JSON.stringify(decls)); }
   // the component's own value is given only where some combination overrides that property otherwise: a part that
   // matches its component at the defaults, which a variant recolours, says its colour there as given and nothing else
   const plain = { ...loud, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/strong', typography: 'Label/sm' } },

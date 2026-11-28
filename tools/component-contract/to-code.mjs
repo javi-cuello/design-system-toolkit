@@ -785,6 +785,8 @@ function everInside(c, id, mains) {
     const a = expand(c, when), host = a[id] && hostThrough(a, id, mains), m = host && a[host].component && mains(a[host].component, a[host].key);
     const over = m && overrideOf(a, host, id.slice(host.length + 1), m, mains, B, c);
     if (over) for (const [p, v] of over.mine) if (over.theirs.get(p) !== v) ps.add(p);
+    // (and what it takes away, unset there: a fixed size unsets the fill's flex, which a later fill says again)
+    if (over) for (const p of over.removed) ps.add(p);
   }
   memo.set(id, ps);
   return ps;
