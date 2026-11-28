@@ -1032,6 +1032,15 @@ export function onlyInCode(props, design, joins = {}) {
 /* A slot control in the toolkit's own story (the self leg): to-markup's swap of a library component (`placed`) says so,
    with the component it draws where the caller passes nothing. Only this story sets `placed`: a docgen default (a real
    Storybook's `icon = <ChevronDown />`) is no such mark. Tested by test-from-code.mjs. */
+/* The words the self story gives a string prop: its default with each letter turned thirteen places and each digit five,
+   as long and as wide in a sans face, so a text the markup binds to the prop reads back as the prop and a literal the
+   design unbinds it to, its default's own words, reads back as that literal. Empty stays empty (a text that shows
+   only when given words); words with no letter or digit are said twice. Tested by test-from-code.mjs. */
+export function standIn(w) {
+  if (typeof w !== 'string' || !w) return w;
+  const out = w.replace(/[a-z]/gi, (ch) => { const b = ch <= 'Z' ? 65 : 97; return String.fromCharCode(((ch.charCodeAt(0) - b + 13) % 26) + b); }).replace(/[0-9]/g, (d) => String((+d + 5) % 10));
+  return out === w ? `${w}${w}` : out;
+}
 export const selfSlotControl = (x) => ({ control: 'slot', ...(x.placed && { placed: x.placed.component }), ...(x.sample && { sample: x.key }) });
 /* A code prop that takes content: a slot, found where a stand-in for it lands; one the self story marks `placed` is read
    at the component it draws by default, with no stand-in (asDesignSwaps then takes the design's swap). Tested by
@@ -2229,13 +2238,14 @@ async function selfSource(project, name, { second = false } = {}) {
     if (!(await call(tab, (s) => matchMedia(`(prefers-color-scheme: ${s})`).matches, scheme))) throw new Error(`the toolkit's own page did not take the ${scheme} colour scheme`);
     return tab;
   };
-  // the code's props as a story's controls say them: to-markup's own, at their defaults
+  // the code's props as a story's controls say them: to-markup's own, at their defaults, a string's at its stand-in
+  // (standIn), so a reading tells the words a prop gives from a literal equal to them
   const own = propsOf(c, library).filter((x) => x.type !== 'event');
   // a text entry's has-value is its input's, no prop of the markup's (to-markup folds it): the story says it as a
   // boolean that fills the value when on, so the reading has it under the design's name
   const entry = (await import('./to-code.mjs')).entryOf(c), valueProp = entry && own.find((x) => x.type === 'value');
   const flag = valueProp && !own.some((x) => x.name === camel(entry.flag)) && { name: camel(entry.flag), on: entry.on, value: valueProp.name, sample: (c.props[Object.keys(c.props).find((k) => (c.props[k].sets || []).includes(entry.value))] || {}).default || 'Value' };
-  const api = { args: { ...Object.fromEntries(own.map((x) => [x.name, x.default])), ...(flag && { [flag.name]: !flag.on, [flag.value]: '' }) }, argTypes: { ...(flag && { [flag.name]: { control: 'boolean', type: 'boolean', default: !flag.on } }), ...Object.fromEntries(own.map((x) => [x.name,
+  const api = { args: { ...Object.fromEntries(own.map((x) => [x.name, x.type === 'string' ? standIn(x.default) : x.default])), ...(flag && { [flag.name]: !flag.on, [flag.value]: '' }) }, argTypes: { ...(flag && { [flag.name]: { control: 'boolean', type: 'boolean', default: !flag.on } }), ...Object.fromEntries(own.map((x) => [x.name,
     x.type === 'enum' && (x.values || []).length ? { options: x.values, control: 'select', default: x.default }
     : x.type === 'boolean' ? { control: 'boolean', type: 'boolean', default: x.default === true }
     : x.type === 'number' ? { control: 'number', type: 'number', default: x.default }
@@ -2265,6 +2275,8 @@ async function selfSource(project, name, { second = false } = {}) {
     statesAsArg: true,
     async render(all) {
       const { __state, ...args } = all;
+      // (a string the reading leaves unsaid, at its story's words, its stand-in: the markup's own default is the design's)
+      for (const x of own) if (x.type === 'string' && args[x.name] === undefined) args[x.name] = standIn(x.default);
       // (the design's combination this render draws: each of the markup's props by its contract key, the has-value flag
       // by its own, the state by the design's value; what forwardedAt reads)
       const combo = Object.fromEntries(own.filter((x) => x.key && args[x.name] !== undefined).map((x) => [x.key, args[x.name]]));

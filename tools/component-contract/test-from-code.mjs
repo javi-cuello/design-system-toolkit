@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, shownState, aroundGone, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, lineCap, centreRing, shadowLayers, borderGradient, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
+import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, shownState, aroundGone, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, lineCap, centreRing, shadowLayers, borderGradient, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance, standIn } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1857,4 +1857,10 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
   // (and the point a variant sets it at, the icon drawn larger there: the status icon at 20px read 1 for 1.25)
   ok('…and the point a variant sets it at, likewise', JSON.stringify(O.variants[0].set) === '{"i/v.absolute":{"x":3.13,"y":3.13}}' && JSON.stringify(H.variants[0].set) === '{}', JSON.stringify([O.variants[0].set, H.variants[0].set]));
 }
+// the self story's words for a string prop: as long as its default and never equal to it, so a literal equal to the
+// default reads back as that literal and a bound text as the prop (boundText)
+ok('standIn: a default\'s letters and digits turned, as long as it, never the same; empty stays empty',
+  standIn('Label') === 'Ynory' && standIn('0/100') === '5/655' && standIn('Tag') === 'Gnt' && standIn('') === '' && standIn(undefined) === undefined && standIn('*') === '**'
+  && boundText('Label', 't', { labelText: { type: 'string', code: 'labelText', sample: standIn('Label') } }, {}, null) === undefined
+  && boundText(standIn('Label'), 't', { labelText: { type: 'string', code: 'labelText', sample: standIn('Label') } }, {}, null) === 'labelText');
 console.log(`${n}/${n} passed`);

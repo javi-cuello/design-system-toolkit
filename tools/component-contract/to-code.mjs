@@ -214,12 +214,13 @@ export function partsOf(c, t = HOUSE) {
     for (const id of [...(v.remove || []), ...swept]) if (parts.has(id)) { if (byPointer) parts.get(id).pointerGone = true; else parts.get(id).removes.push(when); }
     // words a pointer state sets on a base text (a field's "Search" at focus): marked, for textOf's gap
     if (byPointer) for (const k of Object.keys(v.set || {})) { const m = /^(.+)\.content$/.exec(k); if (m && parts.has(m[1])) parts.get(m[1]).pointerWords = true; }
-    // words a variant sets on a base text (a label's * that reads Optional where it is not required)
+    // words a variant sets on a text (a label's * that reads Optional where it is not required; a read-only label that
+    // says its own words until filled, where only variants draw it)
     if (!byPointer) for (const [k, w] of Object.entries(v.set || {})) {
       const m = /^(.+)\.content$/.exec(k), at = m && parts.get(m[1]);
       // (or another string prop that sets this text, put in its place: a value text where a placeholder was)
       const swap = typeof w === 'string' && (/^\{(.+)\}$/.exec(w) || [])[1], swaps = swap && ((c.props || {})[swap] || {}).type === 'string' && ((c.props[swap].sets || []).includes(m && m[1]));
-      if (at && at.base && typeof w === 'string' && (swaps || !/^\{.*\}$/.test(w)) && (w !== at.e.content || at.words.length)) at.words.push([when, w]);
+      if (at && typeof w === 'string' && (swaps || !/^\{.*\}$/.test(w)) && (w !== at.e.content || at.words.length)) at.words.push([when, w]);
     }
   }
   // (pruned exactly where no later add of its own covers it: each such add taken out of the prune, the rest said by the

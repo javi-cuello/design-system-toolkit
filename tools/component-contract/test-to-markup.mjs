@@ -1141,14 +1141,21 @@ else {
     ok('which words a part only variants draw shows is the same whatever order the variants come in', r === label({ ...msg, variants: [...msg.variants].reverse() }), `${r}\n${label({ ...msg, variants: [...msg.variants].reverse() })}`);
     const lit = { ...msg, props: { state: msg.props.state }, variants: [{ when: { state: 'error' }, add: { label: { kind: 'text', parent: 'root', content: 'Error' } } }, { when: { state: 'warning' }, add: { label: { kind: 'text', parent: 'root', content: 'Warning' } } }] };
     ok('a part only variants draw, with words of its own in each, says each one\'s', /"Warning"/.test(label(lit)) && /"Error"/.test(label(lit)) && /state === "(warning|error)"/.test(label(lit)), label(lit)); }
-  // a variant's words that a prop setting the text gives anyway stay that prop: never written in where the prop was
+  // a variant's words that equal a prop's default stay the literal the design unbinds the text to there: the caller's
+  // words never reach it (ruled 2026-11-28, reversing the collapse into the prop)
   { const f = { contract: 1, component: 'Fld', props: { filled: { type: 'boolean', default: false, figma: 'Filled' }, placeholderText: { type: 'string', default: 'Search', figma: 'Placeholder', sets: ['t'] }, valueText: { type: 'string', default: 'Search', figma: 'Value', sets: ['t'] } },
       anatomy: { root: { kind: 'container' }, t: { kind: 'text', parent: 'root', content: '{placeholderText}' } }, variants: [{ when: { filled: true }, set: { 't.content': 'Search' } }] };
     const r = toReact(f, 'fld', { naming: CLASS, library: { Fld: { ...f, folder: 'fld' } } }).split('\n').find((l) => l.includes('ds-fld__t')) || '';
-    ok('a variant\'s words that another prop setting the text gives are that prop there, never a literal in its place', r.includes('{filled ? valueText : placeholderText}'), r);
+    ok('a variant\'s words equal to another prop\'s default stay a literal there, never that prop', r.includes('{filled ? "Search" : placeholderText}'), r);
     const one = { ...f, props: { filled: f.props.filled, placeholderText: f.props.placeholderText } };
     const r1 = toReact(one, 'fld', { naming: CLASS, library: { Fld: { ...one, folder: 'fld' } } }).split('\n').find((l) => l.includes('ds-fld__t')) || '';
-    ok('a variant\'s words its own prop gives anyway leave the text that prop, with no choice between equals', r1.includes('>{placeholderText}<'), r1);
+    ok('a variant\'s words equal to its own prop\'s default stay a literal there, beside the prop elsewhere', r1.includes('{filled ? "Search" : placeholderText}'), r1);
+    // a part only variants draw, added with words of its own that another variant binds back to the prop (a read-only
+    // label that says "Label" until filled): its own words where it is added, the prop's where it is bound
+    const ro = { contract: 1, component: 'Ro', props: { ro: { type: 'boolean', default: false, figma: 'Read only' }, filled: { type: 'boolean', default: false, figma: 'Filled' }, labelText: { type: 'string', default: 'Label', figma: 'Label', sets: ['t'] } },
+      anatomy: { root: { kind: 'container' } }, variants: [{ when: { ro: true }, add: { t: { kind: 'text', parent: 'root', content: 'Label' } } }, { when: { ro: true, filled: true }, set: { 't.content': '{labelText}' } }] };
+    const rr = toReact(ro, 'ro', { naming: CLASS, library: { Ro: { ...ro, folder: 'ro' } } }).split('\n').find((l) => l.includes('ds-ro__t')) || '';
+    ok('a part only variants draw keeps its own words where it is added, and the prop where a variant binds it back', /\? labelText : "Label"/.test(rr), rr);
     // overlapping variants of as many props come in one order whatever order their props are written in
     const ov = { contract: 1, component: 'Ov', props: { a: { type: 'boolean', default: false, figma: 'A' }, b: { type: 'boolean', default: false, figma: 'B' }, z: { type: 'boolean', default: false, figma: 'Z' } }, anatomy: { root: { kind: 'container' } },
       variants: [{ when: { z: true, a: true }, add: { m: { kind: 'text', parent: 'root', content: 'ZA' } } }, { when: { b: true, z: true }, add: { m: { kind: 'text', parent: 'root', content: 'BZ' } } }] };

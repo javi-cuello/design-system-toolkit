@@ -632,13 +632,10 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       const literal = e.content && !/^\{[^}]*\}$/.test(e.content) && xs.every((y) => words.some(([, w]) => swapped(w) === y));
       let code = literal ? lang.str(e.content) : ref(first.name);
       let nested = false;
-      // (and words of its own a variant gives it, a status label's "Incomplete" beside the props' words)
-      // (words a prop setting the text gives anyway are that prop's, never written in where the prop was: another prop's
-      // first, a variant that gives the text other words being that prop's place, else the one shown otherwise; a
-      // choice between the same words is none)
-      const holds = (y, w) => ((y.p || {}).default ?? y.default) === w;
-      const gives = (w) => (/^\{.*\}$/.test(w) ? undefined : xs.find((y) => y !== first && holds(y, w)) || (holds(first, w) ? first : undefined));
-      for (const [when, w0] of words) { const g = gives(w0), w = g ? `{${g.key}}` : w0; const y = swapped(w), t = (y || !/^\{.*\}$/.test(w)) && testOf(when); if (!t) continue; const say = y ? ref(y.name) : lang.str(w); if (say === code) continue; code = t === 'true' ? say : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${say} : ${nested ? `(${code})` : code}`; nested = true; }
+      // (and words of its own a variant gives it, a status label's "Incomplete" beside the props' words: a literal stays
+      // one where it equals a prop's default too, as the design unbound the text there, so the caller's words do not
+      // reach it; a choice between the same words is none)
+      for (const [when, w] of words) { const y = swapped(w), t = (y || !/^\{.*\}$/.test(w)) && testOf(when); if (!t) continue; const say = y ? ref(y.name) : lang.str(w); if (say === code) continue; code = t === 'true' ? say : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${say} : ${nested ? `(${code})` : code}`; nested = true; }
       return { code };
     }
     let code = lang.str(e.content || ''), any = false;
