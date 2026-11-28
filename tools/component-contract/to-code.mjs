@@ -569,7 +569,7 @@ function strokeOutline(P) {
   if (align === 'inside') return false;
   // (centred at a width not whole, css.mjs draws two rings: an outline would snap it)
   if (align === 'center' && fractional(W[0])) return false;
-  return !(align === 'outside' && typeof P.shadow === 'string' && P.shadow !== 'literal');
+  return !(align === 'outside' && ((typeof P.shadow === 'string' && P.shadow !== 'literal') || (P.shadow && Array.isArray(P.shadow.layers))));
 }
 function overBorder(P) {
   const b = P.border;

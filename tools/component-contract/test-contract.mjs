@@ -460,6 +460,15 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('and with no contract for its component, nothing is said', derive(row({}), ['Box']).anatomy.box.fillStyle === undefined);
   ok('an instance that draws no fill where its component has one says its fill none too; one that keeps it says nothing',
     cleared.background === 'none' && kept.background === undefined);
+  // an effect with no style whose values the snapshot records (0.94.0, effectLayers): its layers, a bound colour by its
+  // variable; an older snapshot's word alone stays literal (2026-11-28)
+  { const glow = { type: 'INNER_SHADOW', x: 0, y: 1, blur: 3, spread: 2, color: 'rgb(0 0 0 / 0.25)', bound: { color: { collection: 'Colour', name: 'Shadow/inner' }, x: { collection: 'Space', name: 'Space/1' } } };
+    const lit = { name: 'Glow', id: '9:1', props: {}, variants: [{ name: 'Glow', type: 'COMPONENT', sizing: 'FIXED/FIXED', w: 20, h: 20, effect: 'literal', effects: ['INNER_SHADOW:spread', 'LAYER_BLUR'], effectLayers: [glow, { type: 'LAYER_BLUR', blur: 4 }] }] };
+    const s = derive(lit).anatomy.root.shadow;
+    ok('an effect with no style, its values recorded, is its layers: a bound colour by its variable, the other bindings dropped, a blur its radius',
+      JSON.stringify(s) === JSON.stringify({ layers: [{ type: 'INNER_SHADOW', x: 0, y: 1, blur: 3, spread: 2, color: 'Shadow/inner' }, { type: 'LAYER_BLUR', blur: 4 }] }), JSON.stringify(s));
+    const old = { ...lit, variants: [{ ...lit.variants[0], effectLayers: undefined }] };
+    ok('…and an older snapshot\'s, the word alone, stays literal', derive(old).anatomy.root.shadow === 'literal'); }
   // corners likewise: the walk records a radius wherever it is not 0, so an instance with none where its component rounds is 0
   const round = { ...box, variants: [{ ...box.variants[0], radius: [16, 2, 2, 16] }] }, rm = mainsFrom({ Box: round });
   const shaded = { ...box, variants: [{ ...box.variants[0], effect: 'Shadows/Menu', effects: ['DROP_SHADOW'] }] }, sm = mainsFrom({ Box: shaded });

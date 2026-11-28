@@ -197,7 +197,7 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
       // whole px (1.49 drawn 1) while a shadow's spread it paints as written (from-code centreRing reads the pair back)
       else if (align === 'center' && fractional(widths[0])) rings.push(`inset 0 0 0 calc(${w(0)} / 2) ${c}`, `0 0 0 calc(${w(0)} / 2) ${c}`);
       // beside an effect style, an outside ring is one of box-shadow's layers, first, as parity reads it
-      else if (align === 'outside' && typeof e.shadow === 'string' && e.shadow !== 'literal') rings.push(`0 0 0 ${w(0)} ${c}`);
+      else if (align === 'outside' && ((typeof e.shadow === 'string' && e.shadow !== 'literal') || (e.shadow && Array.isArray(e.shadow.layers)))) rings.push(`0 0 0 ${w(0)} ${c}`);
       else { put('outline', `${w(0)} solid ${c}`, raw(b.color) ? NOTE : undefined); put('outline-offset', align === 'center' ? `calc(${w(0)} / -2)` : '0'); }
     } else {
       // some sides: one offset shadow per side, inset for an inside stroke, outside the box otherwise
@@ -215,6 +215,18 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
   if (shadow === CLEARED && !rings.length) put('box-shadow', 'none');
   if (shadow === 'literal') unread.push('shadow (an effect with no style)');
   else if (typeof shadow === 'string' && shadow !== CLEARED) rings.push(names.token(shadow));
+  // an effect with no style whose values the snapshot records (derive's `{ layers }`): each shadow a box-shadow layer in
+  // the order Figma lists them, inset for an inner one, its offset, blur and spread in px (code-standard rule 54), its
+  // colour a token where a variable binds it; a blur or any other layer no box-shadow draws, said
+  else if (shadow && typeof shadow === 'object' && Array.isArray(shadow.layers)) {
+    const n = (v) => (v ? `${+(+v).toFixed(2)}px` : '0');
+    for (const l of shadow.layers) {
+      if (l.type !== 'DROP_SHADOW' && l.type !== 'INNER_SHADOW') { unread.push(`shadow (a ${String(l.type).toLowerCase().replace(/_/g, ' ')} layer, which no box-shadow draws)`); continue; }
+      const c = raw(l.color) ? l.color : names.token(l.color);
+      if (c === undefined) { unread.push(`shadow (its colour ${l.color}, no token named)`); continue; }
+      rings.push(`${l.type === 'INNER_SHADOW' ? 'inset ' : ''}${n(l.x)} ${n(l.y)} ${n(l.blur)} ${n(l.spread)} ${c}`);
+    }
+  }
   if (rings.length) put('box-shadow', rings.join(', '));
 
   const opacity = take('opacity');

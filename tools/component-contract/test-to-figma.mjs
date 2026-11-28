@@ -1257,4 +1257,13 @@ delete globalThis.figma;
   const lib2 = { ...lib, 'bar/lead': { ...lib['bar/lead'], with: { Icon: 'star', Size: 'l' } }, 'bar/lead/icon': { ...lib['bar/lead/icon'], component: 'Icons/star' } };
   const out2 = ownInPlaced(lib2, { root: lib.root, bar: lib.bar, 'bar/lead': lib2['bar/lead'] }, mains2);
   ok('…but only the prop that swaps it: another prop restated leaves a different part missing', !('bar/lead/icon' in out2), JSON.stringify(out2)); }
+// an effect with no style, its layers compared field by field: a colour in any spelling and a px to its read are the same,
+// another blur a row at that layer's field (2026-11-28)
+{ const { roundTrip: rt } = await import('./to-figma.mjs');
+  const one = (shadow) => ({ contract: 1, component: 'G', props: {}, anatomy: { root: { kind: 'container', shadow } }, variants: [] });
+  const lib = one({ layers: [{ type: 'DROP_SHADOW', x: 0, y: 2.5, blur: 6, spread: 0, color: 'rgb(0 0 0 / 0.25)' }] });
+  const same = rt(lib, one({ layers: [{ type: 'DROP_SHADOW', x: 0, y: 2.5, blur: 6, spread: 0, color: 'rgba(0, 0, 0, 0.25)' }] }), { layoutUnit: true });
+  const other = rt(lib, one({ layers: [{ type: 'DROP_SHADOW', x: 0, y: 2.5, blur: 8, spread: 0, color: 'rgba(0, 0, 0, 0.25)' }] }), { layoutUnit: true });
+  ok('an effect with no style read back in another colour spelling is the same; another blur is a row at that field',
+    same.rows.length === 0 && other.rows.length === 1 && other.rows[0].at === 'root.shadow.layers.0.blur', JSON.stringify([same.rows, other.rows])); }
 console.log(`${n}/${n} passed`);

@@ -141,7 +141,11 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
     if (n.dashed) e.border.dash = n.dashed;
     if (n.strokeCap) e.border.cap = n.strokeCap.toLowerCase();
   }
-  if (n.effect) e.shadow = n.effect;
+  // an effect with no style, its values recorded (snapshot 0.94.0, effectLayers): its layers, each a shadow's type, offset,
+  // blur, spread and colour (the colour's variable where one binds it) as an effect style's are, or a blur's radius; only
+  // an older snapshot's, which recorded the word alone, stays `literal`
+  if (n.effect === 'literal' && Array.isArray(n.effectLayers) && n.effectLayers.length) e.shadow = { layers: n.effectLayers.map(effectOf) };
+  else if (n.effect) e.shadow = n.effect;
   else if (n.effects && n.effects.length) e.shadow = n.effects;
   if (n.opacity != null && n.opacity !== 1) e.opacity = b.opacity ?? n.opacity;
   if (n.blendMode) e.blend = n.blendMode.toLowerCase();
@@ -618,6 +622,12 @@ const OWN = ['layout', 'radius', 'background', 'fillStyle', 'border', 'shadow', 
    of one weight on all four sides is that weight (no sides). (An instance's prop at its component's default stays
    stated: to-figma picks the variant by it, and a nested instance's default is its holder's, not its component's; the
    comparison takes it as unstated, roundTrip's atDefault.) */
+/* One effect layer as the snapshot records it (the plugin's effectLayer), in the contract's words: a shadow's colour its
+   variable's name where one binds it, the other bindings left out (the values stand); a blur its radius. */
+function effectOf(l) {
+  const { bound, ...rest } = l;
+  return bound && bound.color ? { ...rest, color: bound.color.name } : rest;
+}
 function normalForm(anatomy) {
   for (const [id, e] of Object.entries(anatomy)) {
     const b = e && e.border;
@@ -668,7 +678,7 @@ function cleared(anatomy, mains) {
     // (and corners: the walk records a radius wherever it is not 0, so none where its root has one is 0, squared off)
     if (cornered(root.radius) && e.radius === undefined) e.radius = 0;
     // (and a shadow: the walk records an instance's effect wherever it has one, so none where its root has one cleared it)
-    if (typeof root.shadow === 'string' && root.shadow !== CLEARED && e.shadow === undefined) e.shadow = CLEARED;
+    if (((typeof root.shadow === 'string' && root.shadow !== CLEARED) || (root.shadow && Array.isArray(root.shadow.layers))) && e.shadow === undefined) e.shadow = CLEARED;
     // (and clipping: the walk records a clip wherever a frame has one, so none where its root clips stopped it, said
     // `visible` (UNCLIPPED, rules.mjs): unsaid, it would be its component's clip)
     if (root.overflow === 'hidden' && e.overflow === undefined) e.overflow = UNCLIPPED;

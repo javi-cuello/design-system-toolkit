@@ -1313,4 +1313,10 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const mains = byComponentName([item, list, m]);
   const css = toCss(m, 'm', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
   ok('an override inside a placed component a later combination drops is said back there', /\[data-size="xs"\]\) > \.ds-m__list > \.ds-list__item \{\s*box-shadow: unset;/.test(css) && selfCheck(m, rulesOf(m, mains).rules, mains).length === 0, css); }
+// an effect with no style, its layers recorded: each shadow a box-shadow layer, inset for an inner one, in px, its colour a
+// token where it names one; a blur no box-shadow draws, said (2026-11-28)
+{ const d = declarations({ kind: 'container', shadow: { layers: [{ type: 'INNER_SHADOW', x: 0, y: 1, blur: 3, spread: 2, color: 'Shadow/inner' }, { type: 'DROP_SHADOW', x: 0, y: 2.5, blur: 6, spread: 0, color: 'rgb(0 0 0 / 0.25)' }, { type: 'LAYER_BLUR', blur: 4 }] } }, {}, names);
+  const v = Object.fromEntries(d.decls.map(([p, x]) => [p, x]));
+  ok('an effect with no style is drawn layer by layer as box-shadow, a blur said unread',
+    v['box-shadow'] === 'inset 0 1px 3px 2px var(--shadow-inner), 0 2.5px 6px 0 rgb(0 0 0 / 0.25)' && d.unread.some((u) => /layer blur/.test(u)) && !d.unread.some((u) => /no style/.test(u)), JSON.stringify(d)); }
 console.log(`${n} passed`);

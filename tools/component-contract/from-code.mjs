@@ -426,7 +426,7 @@ export function readCleared(anatomy, mains, valueOf = () => undefined) {
     if (fill && R && typeof R.background === 'string' && R.background !== CLEARED && !clearValue(valueOf(R.background)) && e.background === undefined) e.background = CLEARED;
     // (and a shadow the page draws none of, `shadowless`, where its root has one; never one with no style, whose values the
     // snapshot never records and no sheet draws: drawing none of it there clears nothing)
-    if (shade && R && typeof R.shadow === 'string' && R.shadow !== CLEARED && R.shadow !== 'literal' && e.shadow === undefined) e.shadow = CLEARED;
+    if (shade && R && ((typeof R.shadow === 'string' && R.shadow !== CLEARED && R.shadow !== 'literal') || (R.shadow && Array.isArray(R.shadow.layers))) && e.shadow === undefined) e.shadow = CLEARED;
     // (and a clip the page draws none of, `clipless` (its computed overflow visible), where its root clips: stopped, UNCLIPPED)
     if (clip && R && R.overflow === 'hidden' && e.overflow === undefined) e.overflow = UNCLIPPED;
     // (and a blend the page draws none of, `blendless` (its computed mix-blend-mode normal), where its root has one: set
@@ -692,6 +692,12 @@ export function centreRing(layers) {
     if (j >= 0 && width % 1 !== 0) return { colour: all[i].c, width, used: [i, j] };
   }
   return null;
+}
+/* A box-shadow no style draws, as the contract says an effect with no style (derive's `{ layers }`, css.mjs's reverse):
+   each layer as cssShadows parses it (parity/external.mjs) a shadow's type, offset, blur and spread, its colour as
+   `colourOf` names it (the token the code wrote, else the value). Tested by test-from-code.mjs. */
+export async function shadowLayers(parsed, colourOf) {
+  return { layers: await Promise.all(parsed.map(async (l) => ({ type: l.inset ? 'INNER_SHADOW' : 'DROP_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: await colourOf(l.color) }))) };
 }
 export function lineEdge(x, width, raw0) {
   if (!x || !x.border) return x;
@@ -3342,7 +3348,9 @@ async function main() {
           if (whole || (x.shadowAll && named && (x.ringsUsed || []).length && x.ringsUsed.every(theirs))) { x.shadow = (whole || named).name; if (!x.ownStroke) delete x.border; }
           else if (x.shadow) {
             const hit = named || effects.find((fx) => keyOf(fx) === shadowKey(cssShadows(x.shadow)));
-            x.shadow = hit ? hit.name : x.shadow;
+            // (no style draws it: its layers as css.mjs writes an effect with no style, each a shadow's type, offset, blur,
+            // spread and colour, the colour the token the code names in its box-shadow, else its value)
+            x.shadow = hit ? hit.name : await shadowLayers(cssShadows(x.shadow), (c) => tok('background', c, `${id}.shadow`, ['box-shadow'], null, false));
             // a ring all round inside the effect style the code names (an elevation that draws its own stroke) is the
             // style's, not a border, where the code writes no ring of its own beside it: no inset layer of its own, and no
             // other custom property that could hold one

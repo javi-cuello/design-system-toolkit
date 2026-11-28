@@ -468,6 +468,8 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // and any size in px a browser's reading gives, which it reads to two decimals (from-code's px): within half its last
     // digit, the same (a corner Figma stores as 7.800317, read 7.8); never an opacity or a turn, read as they are
     if (layoutUnit && PX_FIELD.test(at) && sameAsRead(a, b)) return;
+    // an effect with no style, its layers in order: each compared field by field (a colour in any spelling, a px to its read)
+    if (/(^|\.)shadow\.layers$/.test(at) && Array.isArray(a) && Array.isArray(b) && a.length === b.length) { a.forEach((x, i) => diff(x, b[i], `${at}.${i}`)); return; }
     // a size the library holds at 0 is drawn at 0.01, the least the plugin API resizes to (@figma/plugin-typings
     // plugin-api.d.ts, LayoutMixin.resize: "Must be >= 0.01"): the same, on Figma's side only (a browser lays out a 0)
     if (!layoutUnit && /^[^.]+\.(width|height)$/.test(at) && a === 0 && b === 0.01) return;
@@ -953,6 +955,18 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // read as the parity engine reads a colour (its parseColour, written into the plugin code beside this, as the
   // shared variant-name reader is)
   const colourOf = (c) => { const x = parseColour(c); return x ? { rgb: x.slice(0, 3).map((v) => v / 255), a: x[3] } : null; };
+  // an effect with no style as Figma's effects: each shadow at its offset, blur, spread and colour (a raw colour, or the
+  // token's own value from the snapshot, K.values, as an unbound fill is drawn); null where a layer cannot be painted
+  const effectsOf = (layers) => {
+    const out = [];
+    for (const l of layers || []) {
+      if (l.type !== 'DROP_SHADOW' && l.type !== 'INNER_SHADOW') return null;
+      const c = colourOf(/^(#|rgba?\()/i.test(String(l.color)) ? l.color : (K.values || {})[l.color]);
+      if (!c) return null;
+      out.push({ type: l.type, visible: true, blendMode: 'NORMAL', offset: { x: l.x || 0, y: l.y || 0 }, radius: l.blur || 0, spread: l.spread || 0, color: { r: c.rgb[0], g: c.rgb[1], b: c.rgb[2], a: c.a }, ...(l.type === 'DROP_SHADOW' && { showShadowBehindNode: false }) });
+    }
+    return out;
+  };
   // a fill or stroke as the contract says it: a token, a gradient whose stops are tokens, or a list of either
   // an image is not in the contract (its picture is the library's asset): said, not painted grey
   // the library's image paints by layer name (its root as 'root'), from its own component imported by key: an image is
@@ -1167,6 +1181,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     clipOver(n, e);
     // (a shadow an instance clears, `none` (P.cleared): its effects emptied, the style with them)
     if (e.shadow === P.cleared) { if ('effects' in n && n.effects.length) n.effects = []; }
+    else if (e.shadow && typeof e.shadow === 'object' && 'effects' in n) { const fx = effectsOf(e.shadow.layers); if (fx) n.effects = fx; else missing.add('shadow (an effect with no style, a layer of which this drawing cannot paint)'); }
     else if (e.shadow && 'effectStyleId' in n) { if (!effects[e.shadow]) missing.add(`shadow ${e.shadow}`); else if (n.effectStyleId !== effects[e.shadow].id) toEffect.push([n, effects[e.shadow], e.shadow]); }
   };
   const override = async (n, e) => {
@@ -1406,6 +1421,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         if ('clipsContent' in n) n.clipsContent = e.overflow === 'hidden';
         // its shadow: the library's effect style, bound at the end with the text styles; an unmatched one, said
         if (e.shadow === P.cleared) n.effects = [];
+        else if (e.shadow && typeof e.shadow === 'object') { const fx = effectsOf(e.shadow.layers); if (fx) n.effects = fx; else missing.add('shadow (an effect with no style, a layer of which this drawing cannot paint)'); }
         else if (e.shadow) { if (effects[e.shadow]) toEffect.push([n, effects[e.shadow], e.shadow]); else missing.add(`shadow ${e.shadow}`); }
       }
       if (id !== 'root' && n.parent !== nodes[e.parent]) nodes[e.parent].appendChild(n);
