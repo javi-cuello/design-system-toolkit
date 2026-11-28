@@ -1507,7 +1507,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'turned-copy-')), repo = path.join(home, 'p'), comps = path.join(repo, 'figma-design-system', 'snapshot', 'components');
   const put = (f, x) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, typeof x === 'string' ? x : JSON.stringify(x)); };
   try {
-    put(path.join(repo, 'snapshot.config.json'), { toolkit: '~/Projects/toolkit', project: 'p', paths: { tokens: 'figma-design-system/snapshot/tokens.json', components: 'figma-design-system/snapshot/components', styles: 'styles', graphics: false } });
+    put(path.join(repo, 'snapshot.config.json'), { toolkit: path.resolve(import.meta.dirname, '..', '..'), project: 'p', paths: { tokens: 'figma-design-system/snapshot/tokens.json', components: 'figma-design-system/snapshot/components', styles: 'styles', graphics: false } });
     put(path.join(repo, 'styles', '_tokens.scss'), ':root { --x: 0; }\n');
     put(path.join(repo, 'figma-design-system', 'snapshot', 'tokens.json'), {});
     put(path.join(repo, 'figma-design-system', 'design-system-context.md'), `# p\n\n\`\`\`json audit-settings\n${JSON.stringify({ language: 'en-US', libraries: { K: { name: 'P', code: { parity: { tiers: ['Light'] } } } } })}\n\`\`\`\n\n\`\`\`json snapshot-routing\n${JSON.stringify({ repo, files: { library: [{ key: 'K', roles: ['tokens', 'components'] }] } })}\n\`\`\`\n`);
