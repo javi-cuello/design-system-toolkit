@@ -874,6 +874,10 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
     && boundText('Other', 'field/suffix', props, {}, design, joined) === undefined
     && boundText('Label', 'message/label', { label: { type: 'string', code: 'label', sample: 'Label' } }, {}, { props: { label: { sets: ['texts/label'] } } }) === undefined
     && boundText('Label', 'message/label', { label: { type: 'string', code: 'label', sample: 'Label' } }, {}, null) === 'label'); }
+// (2026-11-28, a text area's body: a value ending in a space is the text a browser lays out without it)
+ok('a text binds to the prop whose value it holds as a browser lays it out, white space collapsed and none at its ends',
+  boundText('Lorem ipsum. Dolor', 'area/text', { body: { type: 'string', code: 'body', sample: 'Lorem  ipsum.\nDolor ' } }, {}, null) === 'body'
+  && boundText('Lorem ipsum', 'area/text', { body: { type: 'string', code: 'body', sample: 'Lorem ipsum.' } }, {}, null) === undefined);
 ok('a name its id spells back is no name of its own; one it does not (a slash, other words) is kept',
   !keepsName('Action footer', 'footer/menu/actionFooter') && !keepsName('Action footer', 'x/actionFooter_2') && keepsName('Context menu item / Default', 'a/contextMenuItemDefault') && keepsName('Footer', 'x/actionFooter') && keepsName('Item 2', 'list/item2') && keepsName('Icon 24', 'a/icon24'));
 { const c = { anatomy: { root: { modes: { 'color-palette': 'color-palette-1', 'color-palette-1': 'blue' } }, label: {} }, variants: [{ when: {}, set: { 'root.modes': { 'color-palette-2': 'red' } } }] };

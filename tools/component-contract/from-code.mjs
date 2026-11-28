@@ -1078,7 +1078,10 @@ export function glyphSwaps(fc, w, glyphs = [], inLayers = []) {
    "Label"), the one the design sets this layer with: the design prop the mapping joins to it (`joined`, design key to
    its code prop), else of the same name. Tested by test-from-code.mjs. */
 export function boundText(content, id, props, args, design, joined = {}) {
-  const hits = Object.entries(props).filter(([, q]) => q.type === 'string' && (args[q.code] ?? q.sample) === content);
+  // (its words as a browser lays them out: white space collapsed, none at a line's ends (CSS Text 3, 4.1.1 and 4.1.2), so a
+  // value ending in a space, a body text's "… aliqua. ", is the text that reads "… aliqua.")
+  const laid = (w) => (typeof w === 'string' ? w.replace(/\s+/g, ' ').trim() : w);
+  const hits = Object.entries(props).filter(([, q]) => q.type === 'string' && laid(args[q.code] ?? q.sample) === laid(content));
   // (effectiveProps' shapes: a drivable prop's code name; a text's { code, fixed }; one no code prop joins, { missing })
   const codeOf = (k) => { const j = joined[k]; return typeof j === 'string' ? j : j && typeof j === 'object' && (j.code || j.arg) ? j.code || j.arg : j && j.missing ? null : k; };
   const sets = (q) => Object.entries((design || {}).props || {}).some(([k, d]) => codeOf(k) === q.code && (d.sets || []).includes(id));
