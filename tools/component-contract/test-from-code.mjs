@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
+import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, codeKeys, codeName, keyInstances, readCleared, lineEdge, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1430,6 +1430,26 @@ ok('codeFigma: the design component a generated module names, read from its text
     props.appearance.figma === 'appearance' && props.state.figma === 'State' && props.size.figma === undefined && props.kept.figma === 'Own'); }
 // a padding the code writes as 0 (to-code's `padding: 0`, or a zero token) is said, as the code says it; one it leaves
 // unset is not, and a padding read already is kept
+// 2026-11-28: a 0 padding written by a shorthand with a var() in it (`padding: var(--space-0) 0 0 0`, a variant's) is
+// written all the same: Chrome lists its longhands empty, and read so the variant's padding went unread, its sides
+// taking the base's token
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate } = await import('../shared/cdp.mjs');
+  const { authoredSide } = await import('../parity/external.mjs');
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a written padding in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({});
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await tab.send('DOM.enable'); await tab.send('CSS.enable');
+      await navigate(tab, 'http://round-trip.test/', { html: '<!doctype html><style>:root { --z: 0px } #a { padding: var(--z) 0 0 0 } #b { padding: 0 } #c { margin: 0 }</style><div id="a"></div><div id="b"></div><div id="c"></div>' });
+      const at = (q) => paddingWritten(undefined, false, (p) => authoredSide(tab, q, p, false));
+      const four = JSON.stringify({ top: 0, end: 0, bottom: 0, start: 0 });
+      const [a, b, c] = [await at('#a'), await at('#b'), await at('#c')];
+      ok('a 0 padding a shorthand writes with a var() is written, as one written plainly is; none written is none', JSON.stringify(a) === four && JSON.stringify(b) === four && c === null, JSON.stringify([a, b, c]));
+    } finally { await browser.close(); }
+  }
+}
 ok('paddingSaid: a 0 padding the code writes is four sides of 0; one it leaves unset, or one already read, is none',
   JSON.stringify(paddingSaid(undefined, { top: '0', end: null, bottom: null, start: null })) === JSON.stringify({ top: 0, end: 0, bottom: 0, start: 0 })
   && paddingSaid(undefined, { top: null, end: null, bottom: null, start: null }) === null

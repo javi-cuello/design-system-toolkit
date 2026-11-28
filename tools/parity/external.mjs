@@ -966,6 +966,15 @@ export async function authoredSideVars(tab, selector, longhand, rtl = false, cac
   return piece ? varChain(levels, null, { value: piece }) : [];
 }
 
+/* One side of an element's box as written (padding-left, a corner's radius): its piece of whichever of its longhands and
+   shorthands wins (values.mjs sideWinner, by the element's direction `rtl`), var()s unresolved; null where none is
+   written. A longhand Chrome lists empty beside a shorthand that writes a var() (`padding: var(--x) 0 0 0`) is read
+   there, never taken for unwritten. */
+export async function authoredSide(tab, selector, longhand, rtl = false, cache = null) {
+  const levels = await matchedLevels(tab, selector, cache);
+  return levels ? sideWinner(levels[0] || [], longhand, rtl, (name) => firstSet(levels, name)) : null;
+}
+
 /* The custom properties a value lists as whole layers of its own (a box-shadow that adds a ring to an effect token:
    `inset 0 0 0 1px var(--stroke), var(--elevation-raised)` lists the elevation), each followed to where it is set. */
 export async function layerVars(tab, selector, property, cache = null) {

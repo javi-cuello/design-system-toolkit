@@ -1125,6 +1125,16 @@ export function paddingSaid(read, authored) {
   return Object.values(authored || {}).some((v) => v != null && String(v).trim() !== '') ? { top: 0, end: 0, bottom: 0, start: 0 } : null;
 }
 
+/* paddingSaid of an element's sides as the page writes them: `sideOf(longhand)` the side's written value (external.mjs
+   authoredSide, which reads a side a shorthand writes with a var(), `padding: var(--x) 0 0 0`, whose longhands Chrome
+   lists empty). Tested by test-from-code.mjs, in Chrome. */
+export async function paddingWritten(read, rtl, sideOf) {
+  if (read) return null;
+  const sides = {};
+  for (const [k, p] of Object.entries(paddingCss(rtl))) sides[k] = await sideOf(p);
+  return paddingSaid(read, sides);
+}
+
 /* Each placed component's key from what the code places (`others`: the code's name for it, the module's folder, to the
    name the reading gives the instance), as that module says it draws it (`figmaOf`, codeFigma); none where it says no
    key. Tested by test-from-code.mjs. */
@@ -2297,7 +2307,7 @@ async function main() {
   if (!label || !name) { console.error('usage: from-code.mjs --project <label> <component> [--rebuild] [--code-only | --self | --second]'); process.exit(2); }
   // a run by hand, or a loop of them, holds the measuring lock; one eval.mjs started already holds it (tools/shared/lock.mjs)
   await (await import('../shared/lock.mjs')).hold(`from-code.mjs ${process.argv.slice(2).join(' ')}`);
-  const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, authoredSideVars, authoredSelector, compareProps, invisibleBorder, cssShadows, shadowKey, fetchLevels } = await import('../parity/external.mjs');
+  const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, authoredSideVars, authoredSide, authoredSelector, compareProps, invisibleBorder, cssShadows, shadowKey, fetchLevels } = await import('../parity/external.mjs');
   const { call } = await import('../shared/cdp.mjs');
   let L;
   try { L = await openSource(label, name, { rebuild, codeOnly, self, second }); } catch (e) { if (!e.usage) throw e; console.error(e.message); process.exit(2); }
@@ -3115,7 +3125,7 @@ async function main() {
         delete x.box;
         if (x.layout) {
           // a 0 padding the code writes is said, as it writes it (paddingSaid)
-          if (!x.layout.padding) { const sides = {}; for (const [k, p] of Object.entries(paddingCss(x.rtl))) sides[k] = await authoredValue(L.tab, styledAt(id), p, styles); const said = paddingSaid(x.layout.padding, sides); if (said) x.layout.padding = said; }
+          if (!x.layout.padding) { const said = await paddingWritten(x.layout.padding, x.rtl, (p) => authoredSide(L.tab, styledAt(id), p, !!x.rtl, styles)); if (said) x.layout.padding = said; }
           // a gap below 0 was written as the second child's pull back: its token is there
           const pulled = pulledBy[id];
           if ('gap' in x.layout) x.layout.gap = pulled ? await tok('space', x.layout.gap, `${id}.gap`, pulled.props, pulled.from) : await tok('space', x.layout.gap, `${id}.gap`, [x.layout.direction === 'column' ? 'row-gap' : 'column-gap', 'gap']);
