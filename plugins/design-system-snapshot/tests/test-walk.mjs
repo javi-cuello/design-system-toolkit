@@ -444,11 +444,11 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("a text with no style records its size and face", bare.textStyle === "literal" && bare.fontSize === 12 && bare.fontFamily === "Inter" && bare.fontStyle === "Semi Bold");
   const several = await walk({ ...text(Symbol("mixed")), fontSize: Symbol("mixed"), fontName: Symbol("mixed") }, 1);
   ok("…a text of several styles records none", several.textStyle === "mixed" && !("fontSize" in several) && !("fontFamily" in several));
-  // 2026-11-24, measured in Carbon's file: a variable font's text (IBM Plex Sans, `variationSettings`) reads its
+  // 2026-11-24, measured in a project's file: a variable font's text (Glyphic Sans, `variationSettings`) reads its
   // fontName as mixed with one segment, so 776 texts with no style in three libraries said a size and no face
   const seg = (family, style, start, end) => ({ start, end, fontName: { family, style, variationSettings: { wght: 400 } } });
-  const variable = await walk({ ...text(""), fontName: Symbol("mixed"), getStyledTextSegments: () => [seg("IBM Plex Sans", "Regular", 0, 5)] }, 1);
-  ok("…a variable font's text, read as mixed in one face, records that face", variable.fontFamily === "IBM Plex Sans" && variable.fontStyle === "Regular");
+  const variable = await walk({ ...text(""), fontName: Symbol("mixed"), getStyledTextSegments: () => [seg("Glyphic Sans", "Regular", 0, 5)] }, 1);
+  ok("…a variable font's text, read as mixed in one face, records that face", variable.fontFamily === "Glyphic Sans" && variable.fontStyle === "Regular");
   const two = await walk({ ...text(""), fontName: Symbol("mixed"), getStyledTextSegments: () => [seg("Inter", "Regular", 0, 2), seg("Inter", "Bold", 2, 5)] }, 1);
   ok("…one truly in two faces still records none", !("fontFamily" in two) && !("fontStyle" in two));
   const axes = (wght, start, end) => ({ start, end, fontName: { family: "Inter", style: "Regular", variationSettings: { wght } } });
@@ -456,11 +456,11 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("…one face at two weights of its axes is two faces, and records none", !("fontFamily" in weights) && !("fontStyle" in weights));
 }
 
-// 2026-11-24, the Figma oracle: a text past 400 characters (Carbon's multi-line code snippet, 648) was cut there, and
+// 2026-11-24, the Figma oracle: a text past 400 characters (a project's multi-line code snippet, 648) was cut there, and
 // the contract kept the cut copy as the layer's content
 {
   const long = "x".repeat(1520);
-  const walked = await walk({ name: "Code", type: "TEXT", width: 300, height: 400, x: 0, y: 0, characters: long, textStyleId: "", textAlignHorizontal: "LEFT", fontSize: 14, fontName: { family: "IBM Plex Mono", style: "Regular" }, lineHeight: { unit: "AUTO" }, letterSpacing: { unit: "PIXELS", value: 0 }, boundVariables: {} }, 1);
+  const walked = await walk({ name: "Code", type: "TEXT", width: 300, height: 400, x: 0, y: 0, characters: long, textStyleId: "", textAlignHorizontal: "LEFT", fontSize: 14, fontName: { family: "Glyphic Mono", style: "Regular" }, lineHeight: { unit: "AUTO" }, letterSpacing: { unit: "PIXELS", value: 0 }, boundVariables: {} }, 1);
   ok("a text is recorded whole, however long", walked.text === long);
 }
 
@@ -664,6 +664,19 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("the walk's fallback counts two collections of one name as one, as sharedOf does: no collection recorded", !("collections" in w), JSON.stringify(w));
   Object.assign(figma.variables, was);
   freshLookups();
+}
+
+// a collection lookup Figma never answers is given up, as a variable's is, and counted: the walk never hangs on it
+{
+  const fast = (f) => setTimeout(f, 0);
+  const vars = { "v:h": { id: "v:h", name: "pill-edge", variableCollectionId: "c:hang" } };
+  const fh = { variables: { getVariableByIdAsync: async (id) => vars[id] || null, getLocalVariablesAsync: async () => [], getVariableCollectionByIdAsync: () => new Promise(() => {}) }, getStyleByIdAsync: async () => null };
+  const c = vm.createContext({ figma: fh, console, setTimeout: fast, clearTimeout });
+  const { walk: w, freshLookups: fresh } = vm.runInContext(src + "\n;({ walk, freshLookups })", c);
+  fresh(); vm.runInContext('sharedNames = new Set(["pill-edge"])', c);
+  const layer = { ...box("Pill", "FRAME"), strokes: [{ type: "SOLID", visible: true, opacity: 1, color: { r: 0, g: 0, b: 0 }, boundVariables: { color: { type: "VARIABLE_ALIAS", id: "v:h" } } }], strokeWeight: 1 };
+  const got = await Promise.race([w(layer, 0), new Promise((r) => setTimeout(() => r("hung"), 2000))]);
+  ok("a collection lookup Figma never answers is given up and counted, the layer recorded without it", got !== "hung" && !("collections" in got) && vm.runInContext("unanswered", c) === 1 && vm.runInContext('missed.has("c:hang")', c), JSON.stringify(got));
 }
 
 console.log(n + "/" + n + " passed");

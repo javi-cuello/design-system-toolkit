@@ -4,7 +4,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 ## [0.96.0] - 2026-11-28
 ### Added
 - **A binding to a variable name another of the file's collections also holds records its collection** under the layer's `collections` (`{ "pill-edge": "Shades 1" }`). A binding was recorded by name alone, and the token build names such a variable by its collection where the collections disagree, so the code could not tell which one a layer meant. A name is shared as the build keys it (a case or punctuation split too), across every collection the tokens hold, another library's included; a bridge snapshot's tokens call hands the names to its parts.
-- **A bridge snapshot's whole run is two calls** (tools/snapshot/mcp.mjs `scriptCalls`): the tokens call, then the components call, which hands `collectLibrary` the tokens already read (its new `given`). One call held it in 49 507 of use_figma's 50 000 characters; now 23 944 and 43 033. Each call hands the next the variables Figma never answered, so one is asked and counted once a run, and the tokens call hands the components call the variables it read, so its dark previews find every collection; a list goes in entries under 100 kB.
+- **A bridge snapshot's whole run is two calls** (tools/snapshot/mcp.mjs `scriptCalls`): the tokens call, then the components call, which hands `collectLibrary` the tokens already read (its new `given`). One call held it in 49 507 of use_figma's 50 000 characters; now 24 180 and 43 047. Each call hands the next the variables Figma never answered, so one is asked and counted once a run, and the tokens call hands the components call the variables it read (name, collection and values), so its dark previews find every collection without asking again; a collection lookup Figma never answers is given up and counted, as a variable's is; a list goes in entries under 100 kB.
 - **A scoped headless run records `collections` as a whole run does** (`__headless` with `SCOPE`): the names a binding records its collection for are those every collection the tokens hold shares, another library's too, handed in as `SHARED` (tools/tokens names.mjs `sharedOf` over the stored snapshot's collections; to-figma passes it) or, without it, read by names alone (`namesShared`: no value, style or font). It took the file's own collections alone. The scoped run returns `unanswered`, and the walk's own fallback counts collections by name, as `sharedOf` does.
 - **The bridge snapshot's code tightens between plain quoted strings** (tools/snapshot/mcp.mjs `tightened`): the spaces beside an operator go on a line whose literals are single- or double-quoted strings, each string kept as written. Without it this release's snapshot code was 51 373 characters, 1 373 over use_figma's 50 000.
 
@@ -113,11 +113,11 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
 ## [0.89.0] - 2026-11-24
 ### Changed
-- **A text is recorded whole.** It was cut at 400 characters, and the contract kept the cut copy as the layer's content (Carbon's multi-line code snippet runs to 648). The three libraries measured hold eight texts past 400, the longest 1520, so a snapshot grows by a few kilobytes. Stored snapshots gain it when retaken.
+- **A text is recorded whole.** It was cut at 400 characters, and the contract kept the cut copy as the layer's content (one library's multi-line code snippet runs to 648). The three libraries measured hold eight texts past 400, the longest 1520, so a snapshot grows by a few kilobytes. Stored snapshots gain it when retaken.
 
 ## [0.88.1] - 2026-11-24
 ### Fixed
-- **A text with no style in a variable font records its face.** Figma reads such a text's font as mixed though it is in one face (its segment carries the font's axes), so 0.82.0's `fontFamily` and `fontStyle` were left out for 776 texts across three libraries (Carbon's IBM Plex Sans, measured) and the contract said a bare `literal`. The text's segments now say the face where they all agree; a text truly in two faces still records none. Stored snapshots gain it when retaken.
+- **A text with no style in a variable font records its face.** Figma reads such a text's font as mixed though it is in one face (its segment carries the font's axes), so 0.82.0's `fontFamily` and `fontStyle` were left out for 776 texts across three libraries (one library's variable sans, measured) and the contract said a bare `literal`. The text's segments now say the face where they all agree; a text truly in two faces still records none. Stored snapshots gain it when retaken.
 
 ## [0.88.0] - 2026-11-24
 ### Added
@@ -183,11 +183,11 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
 ## [0.80.0] - 2026-11-18
 ### Added
-- **Variables from another library.** Each collection of another library whose variables the components bind is sent, read as this file reads it and marked `remote`; a local collection of the same name is that one. A component file whose colours, spaces and radii live in a foundations file (Atlassian's) had none of its tokens in the store, and code drew every one empty.
+- **Variables from another library.** Each collection of another library whose variables the components bind is sent, read as this file reads it and marked `remote`; a local collection of the same name is that one. A component file whose colours, spaces and radii live in a foundations file had none of its tokens in the store, and code drew every one empty.
 
 ## [0.79.0] - 2026-11-18
 ### Changed
-- **A fill that paints nothing is no fill.** A fill at no opacity, or bound to a colour variable clear in every mode (under half an 8-bit step: Figma stores Carbon's Transparent at 0.00001), is left out. Carbon puts one on every icon's frame; the contract kept it as the instance's fill, and code drew the glyph's colour there. A style's own paints are kept whatever they paint, and so is a stroke's, which takes its room in the layout whatever it paints.
+- **A fill that paints nothing is no fill.** A fill at no opacity, or bound to a colour variable clear in every mode (under half an 8-bit step: Figma stores one library's Transparent at 0.00001), is left out. One library puts one on every icon's frame; the contract kept it as the instance's fill, and code drew the glyph's colour there. A style's own paints are kept whatever they paint, and so is a stroke's, which takes its room in the layout whatever it paints.
 ### Fixed
 - **Another library's text style whose font nothing in the file can tell is left out**, rather than sent without a family, which the router refuses.
 
@@ -197,7 +197,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
 ## [0.78.0] - 2026-11-18
 ### Added
-- **The text styles another library publishes, where this file's components use them.** A component file whose type lives in a foundations file (IBM's Carbon kit has no local text style) sent none, so every typography its contracts name was missing from the tokens; each such style now comes beside the local ones, marked `remote`, with its key. A local style of the same name is that one.
+- **The text styles another library publishes, where this file's components use them.** A component file whose type lives in a foundations file (one project's kit has no local text style) sent none, so every typography its contracts name was missing from the tokens; each such style now comes beside the local ones, marked `remote`, with its key. A local style of the same name is that one.
 
 ## [0.77.0] - 2026-11-18
 ### Fixed
@@ -489,7 +489,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
 ## [0.28.0] - 2026-09-19
 ### Added
-- **A component's anatomy**, on each preview as `anatomy: { w, h, png, parts }`: the default variant rendered with every boolean property on, so optional parts (icons, helper text) are in the picture, and each part measured on that same render (x, y, w, h from the image's edge), with the boolean that shows it (`optional`), the component a nested instance comes from, and a count for repeated siblings. The docs number these parts on the render, as Material, Carbon and Atlassian draw anatomy.
+- **A component's anatomy**, on each preview as `anatomy: { w, h, png, parts }`: the default variant rendered with every boolean property on, so optional parts (icons, helper text) are in the picture, and each part measured on that same render (x, y, w, h from the image's edge), with the boolean that shows it (`optional`), the component a nested instance comes from, and a count for repeated siblings. The docs number these parts on the render, as published design systems draw anatomy.
 
 ## [0.27.0] - 2026-09-19
 ### Added

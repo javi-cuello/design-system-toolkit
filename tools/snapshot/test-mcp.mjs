@@ -15,7 +15,8 @@ ok(`a whole run is the tokens call then the components call, each within use_fig
 let parses = true; for (const c of whole) { try { new vm.Script(`(async () => {\n${c.code}\n})`); } catch { parses = false; } }
 ok('and each parses as the body use_figma runs', parses);
 ok('no \\u or \\\\ escape in it, since the tool call that carries it decodes them (probed 2026-10-30: a \\u2028 in a regex arrived as a line break)', whole.every((c) => !/\\u|\\\\/.test(c.code)));
-ok('the plugin holds no multi-line string, whose lines the stripping would trim', stripped(readFileSync(PLUGIN, 'utf8')).split('\n').every((l) => (l.replace(/\\./g, '').match(/`/g) || []).length % 2 === 0));
+// (a guard on stripped(), which trims every line: a template string over several lines would lose its indentation)
+ok('stripped() can serve the plugin: it holds no multi-line string, whose lines the stripping would trim', stripped(readFileSync(PLUGIN, 'utf8')).split('\n').every((l) => (l.replace(/\\./g, '').match(/`/g) || []).length % 2 === 0));
 ok('a trailing comment is dropped where nothing before it can hold a //', stripped('a(b); // why') === 'a(b);');
 ok('…and kept where a string or a regex comes first', stripped("x = 'p'; // why") === "x = 'p'; // why" && stripped('r = /a/; // why') === 'r = /a/; // why');
 ok('an inline /* */ is dropped on the same guard', stripped('} catch (e) { /* why */ }') === '} catch (e) { }' && stripped("s = '/* k */';") === "s = '/* k */';");
@@ -80,12 +81,12 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
     'c:r': { id: 'c:r', name: 'Lib', remote: true, modes: [{ modeId: 'mr', name: 'Value' }], defaultModeId: 'mr', variableIds: ['Lib/v:r'] } };
   Object.assign(pages[4].children[2], { strokeWeight: 1, strokes: [{ type: 'SOLID', visible: true, opacity: 1, color: { r: 1, g: 0, b: 0 }, boundVariables: { color: alias('Lib/v:r') } }] });
   pages[5].children[0].boundVariables = { itemSpacing: alias('Lib/v:gone') };
-  let asked = 0;
+  let asked = 0, lookups = 0;
   // (a lookup given up on waits five seconds in the plugin; here every timer fires at once)
   const realTimeout = globalThis.setTimeout;
   globalThis.setTimeout = (f) => realTimeout(f, 0);
   globalThis.figma = { root: { name: 'Document', children: pages }, fileKey: 'K', skipInvisibleInstanceChildren: false,
-    variables: { getVariableByIdAsync: (id) => (id === 'Lib/v:gone' ? (asked++, new Promise(() => {})) : Promise.resolve(vars[id] || null)), getLocalVariablesAsync: async () => [vars['v:l']], getLocalVariableCollectionsAsync: async () => [colls['c:l']], getVariableCollectionByIdAsync: async (id) => colls[id] || null },
+    variables: { getVariableByIdAsync: (id) => (lookups++, id === 'Lib/v:gone' ? (asked++, new Promise(() => {})) : Promise.resolve(vars[id] || null)), getLocalVariablesAsync: async () => [vars['v:l']], getLocalVariableCollectionsAsync: async () => [colls['c:l']], getVariableCollectionByIdAsync: async (id) => colls[id] || null },
     getLocalTextStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getStyleByIdAsync: async () => null,
     loadAllPagesAsync: async () => { throw new Error('loadAllPagesAsync is refused here, as in the cloud'); }, base64Encode: () => 'AQ==', createFrame: () => frame('FRAME', ''), createPage() { const p = frame('PAGE', ''); pages.push(p); return p; } };
   const run = (code) => new (Object.getPrototypeOf(async () => {}).constructor)(code)();
@@ -131,10 +132,12 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
     // components, icons, graphics, previews and counts
     pages.push(page('Graphics', [['Hero', '6:1']]));
     asked = 0;
-    const [first, second] = scriptCalls(), t = (await run(first.code)).holder, c = (await run(second.code)).holder;
+    const [first, second] = scriptCalls(), t = (await run(first.code)).holder;
+    lookups = 0;
+    const c = (await run(second.code)).holder, again = lookups;
     const at = (id) => joined(asRest(tmp.children.find((h) => h.id === id)));
     const both = join([at(t), at(c)]);
-    ok('…in which the variable Figma never answers is asked once', asked === 1, `asked ${asked}`);
+    ok('…in which the variable Figma never answers is asked once, and the components call asks for no variable the tokens call read', asked === 1 && again === 0, `asked ${asked}, the components call looked up ${again}`);
     const one = await vm.runInContext(readFileSync(PLUGIN, 'utf8') + '\n;collectLibrary(true)', vm.createContext({ figma: globalThis.figma, console, setTimeout: globalThis.setTimeout, clearTimeout }));
     const same = (k) => JSON.stringify(both[k]) === JSON.stringify(one[k]);
     const differ = ['components', 'icons', 'graphics', 'previews', 'iconSets', 'iconPage', 'iconDescriptions', 'unreadable'].filter((k) => !same(k));

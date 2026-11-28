@@ -150,7 +150,12 @@ const digest = (s) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h
 const colCache = {};
 /** @param {string} cid */
 async function collectionOf(cid) {
-  if (!(cid in colCache)) { try { colCache[cid] = await figma.variables.getVariableCollectionByIdAsync(cid); } catch { colCache[cid] = null; } }
+  // (a lookup Figma never answers is given up, as a variable's is (`answered`), counted and never asked again this run:
+  // one waited for with no limit could hang the walk)
+  if (!(cid in colCache)) {
+    const got = await answered(() => figma.variables.getVariableCollectionByIdAsync(cid)).catch(() => null);
+    if (got === MISSED) { unanswered++; missed.add(cid); colCache[cid] = null; } else colCache[cid] = got;
+  }
   return colCache[cid];
 }
 /** A layer set to another mode of a collection than it inherits (a small variant's Mobile type), by the names a
@@ -222,7 +227,7 @@ let unanswered = 0, timedOut = 0;
 // Each run (the window stays open between them) asks again what the last gave up on: its three tries are its own.
 function freshLookups() {
   unanswered = 0; timedOut = 0;
-  for (const id of missed) delete varCache[id];
+  for (const id of missed) { delete varCache[id]; delete colCache[id]; }
   missed.clear(); cols.clear(); sharedNames = null;
 }
 const MISSED = Symbol('missed');
@@ -570,7 +575,7 @@ async function paintNames(paints, all = false) {
   for (const p of paints) {
     // a paint that paints nothing is none: at no opacity, or bound to a colour clear in every mode (a Transparent token
     // on an icon's frame, which a reader took for a fill to draw). Clear: under half an 8-bit step, which a screen draws
-    // as 0 (Figma stores Carbon's Transparent at 0.00001)
+    // as 0 (Figma stores one library's Transparent at 0.00001)
     const clear = (a) => a < 0.5 / 255;
     if (p.visible === false || (!all && clear(p.opacity))) continue;
     const bound = p.boundVariables && p.boundVariables.color;
@@ -1481,7 +1486,7 @@ async function collectLibrary(withIcons, given = null) {
   const darkModes = async () => {
     const out = [];
     for (const id of await dependsOn()) {
-      if (!(id in collections)) collections[id] = await figma.variables.getVariableCollectionByIdAsync(id);
+      if (!(id in collections)) collections[id] = await collectionOf(id);
       const c = collections[id];
       const m = c && c.modes.find((x) => /dark/i.test(x.name));
       if (c && m && m.modeId !== c.defaultModeId) out.push({ c, m });

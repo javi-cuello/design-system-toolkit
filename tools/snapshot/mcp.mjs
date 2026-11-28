@@ -200,16 +200,17 @@ export function sized(plan, limit = LIMIT) {
 }
 
 /* What one call leaves the next on the temporary page, and the next takes up: the names more than one collection holds,
-   the count of lookups given up on, how many timed out, which variables missed (so a miss is counted once a run and
-   never asked again, as one whole run counts it: each call starts with empty caches; a collection lookup that can be
-   given up on is made only by collectTokens, which no later call runs), and which variables the tokens call read (so the components call's dark previews find every collection a whole run finds).
-   A list goes on a frame of its own in entries under Figma's 100 kB, as the payload does (`written`). */
+   the count of lookups given up on, how many timed out, which variables and collections missed (so a miss is counted
+   once a run and never asked again, as one whole run counts it: each call starts with empty caches), and the variables
+   the tokens call read, their name, collection and values (so the components call's dark previews find every
+   collection a whole run finds, without asking for any of them again). A list goes on a frame of its own in entries
+   under Figma's 100 kB, as the payload does (`written`). */
 const HANDOVER = `
 const __put = (k, v) => { const s = scratch(); for (const f of s.children.filter((x) => x.name === 'handover ' + k)) f.remove(); const t = JSON.stringify(v), f = figma.createFrame(); f.name = 'handover ' + k; s.appendChild(f); let i = 0; do { f.setSharedPluginData('${NS}', 'c' + i, t.slice(i * ${CHUNK}, (i + 1) * ${CHUNK})); i++; } while (i * ${CHUNK} < t.length); f.setSharedPluginData('${NS}', 'n', String(i)); };
 const __get = (k, d) => { const f = scratch().children.find((x) => x.name === 'handover ' + k), n = f ? Number(f.getSharedPluginData('${NS}', 'n')) || 0 : 0; if (!n) return d; let t = ''; for (let i = 0; i < n; i++) t += f.getSharedPluginData('${NS}', 'c' + i); return JSON.parse(t); };`;
 const LEAVE = `scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered)); scratch().setSharedPluginData('${NS}', 'timedOut', String(timedOut)); __put('missed', [...missed]);`;
 const TAKE = `const __from = unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0; timedOut = Number(scratch().getSharedPluginData('${NS}', 'timedOut')) || 0;
-for (const id of __get('missed', [])) { missed.add(id); varCache[id] = null; }
+for (const id of __get('missed', [])) { missed.add(id); varCache[id] = null; colCache[id] = null; }
 const __shared = __get('shared', null); if (__shared) sharedNames = new Set(__shared);`;
 const TOKENS = `
 {
@@ -218,7 +219,7 @@ figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
 const tokens = await collectTokens();
-__put('shared', [...sharedNames]); __put('read', Object.keys(varCache).filter((id) => varCache[id]));
+__put('shared', [...sharedNames]); __put('read', Object.values(varCache).filter(Boolean).map((v) => ({ id: v.id, name: v.name, remote: v.remote, variableCollectionId: v.variableCollectionId, valuesByMode: v.valuesByMode })));
 ${LEAVE}
 %ICONS%
 ${written(`{ tokens, unanswered, sets: ${PLANNED}.flatMap((pg) => pg.sets.map((s) => s.id)), iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, ...(Object.keys(iconGroups).length && { iconGroups }), ...(Object.keys(iconDescriptions).length && { iconDescriptions }) }`, ', sets: __payload.sets.length')}}`;
@@ -258,8 +259,7 @@ ${HANDOVER}
 figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 ${TAKE}
-for (const v of await figma.variables.getLocalVariablesAsync()) varCache[v.id] = v;
-for (const id of __get('read', [])) await variable(id);
+for (const v of __get('read', [])) varCache[v.id] = v;
 const __groups = [];
 unrecordedSeen.push = function (...xs) { if (xs.length) __groups.push(xs); return Array.prototype.push.apply(this, xs); };
 const __r = await collectLibrary(true, { _meta: {} });
