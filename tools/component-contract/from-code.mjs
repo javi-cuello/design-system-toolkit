@@ -2372,24 +2372,36 @@ export function unturn(root) {
   for (const n of [root, ...root.querySelectorAll('*')]) {
     const s = getComputedStyle(n), r = deg(s.rotate);
     const m = /^matrix\(([^)]+)\)$/.exec(s.transform || ''), [a, b, c, d, tx, ty] = m ? m[1].split(',').map(Number) : [];
-    // (a turn and a move only: a scale is left as it is)
-    const spun = !!m && Math.abs(a - d) < 1e-6 && Math.abs(b + c) < 1e-6 && Math.abs(a * a + b * b - 1) < 1e-4 && (Math.abs(b) > 1e-6 || a < 0);
-    // (a mirror: `scale` with one side below 0, or a transform's matrix that flips one axis and turns none)
+    // (a turn and a move only: a scale is left as it is; a matrix that turns by no angle is read as mirrors, below)
+    const flat = !!m && Math.abs(b) < 1e-6 && Math.abs(c) < 1e-6;
+    const spun = !!m && !flat && Math.abs(a - d) < 1e-6 && Math.abs(b + c) < 1e-6 && Math.abs(a * a + b * b - 1) < 1e-4;
+    // (mirrors: `scale` with a side below 0, a matrix that flips an axis; composed per axis, so two on one axis are none
+    // and one on each is a half turn)
     const sc = String(s.scale || 'none').trim().split(/\s+/).map(Number), [sx, sy = sx] = isNaN(sc[0]) ? [1, 1] : sc;
-    const byScale = sx < 0 !== sy < 0 ? (sx < 0 ? 'x' : 'y') : null;
-    const byMatrix = !!m && a * d < 0 && Math.abs(b) < 1e-6 && Math.abs(c) < 1e-6 ? (a < 0 ? 'x' : 'y') : null;
-    if (!r && !spun && !byScale && !byMatrix) continue;
+    const ma = flat ? a : 1, md = flat ? d : 1;
+    const fx = (sx < 0) !== (ma < 0), fy = (sy < 0) !== (md < 0), half = fx && fy;
+    const flips = sx < 0 || sy < 0 || ma < 0 || md < 0;
+    if (!r && !spun && !flips) continue;
     back.push([n, n.style.cssText]);
     // (no transition either, or a turn set aside would still be easing out when the boxes are measured)
     n.style.setProperty('transition', 'none', 'important');
     if (r) n.style.setProperty('rotate', 'none', 'important');
     if (spun) n.style.setProperty('transform', `translate(${tx}px, ${ty}px)`, 'important');
-    if (byScale) n.style.setProperty('scale', `${Math.abs(sx)} ${Math.abs(sy)}`, 'important');
-    if (byMatrix) n.style.setProperty('transform', `translate(${tx}px, ${ty}px) scale(${Math.abs(a)}, ${Math.abs(d)})`, 'important');
-    if (byScale || byMatrix) mirrors.set(n, byScale || byMatrix);
-    if (!r && !spun) continue;
+    if (flips) {
+      // (set aside where it showed: a mirror about an origin off the box's middle moves the box, so the box stays where
+      // the mirror drew it, as the design measures a flipped layer by what shows)
+      const o = String(s.transformOrigin || '').split(/\s+/).map(parseFloat), w = n.offsetWidth ?? 0, h = n.offsetHeight ?? 0;
+      const kx = Math.abs(sx * ma), ky = Math.abs(sy * md);
+      const t = String(s.translate || 'none') === 'none' ? [0, 0] : String(s.translate).split(/\s+/).map(parseFloat);
+      const dx = fx && !isNaN(o[0]) ? kx * (2 * o[0] - w) : 0, dy = fy && !isNaN(o[1]) ? ky * (2 * o[1] - h) : 0;
+      if (sx < 0 || sy < 0) n.style.setProperty('scale', `${Math.abs(sx)} ${Math.abs(sy)}`, 'important');
+      if (flat && (ma < 0 || md < 0)) n.style.setProperty('transform', `translate(${tx}px, ${ty}px) scale(${Math.abs(a)}, ${Math.abs(d)})`, 'important');
+      if (dx || dy) n.style.setProperty('translate', `${(t[0] || 0) + dx}px ${(t[1] || 0) + dy}px`, 'important');
+      if (fx !== fy) mirrors.set(n, fx ? 'x' : 'y');
+    }
+    if (!r && !spun && !half) continue;
     // (clockwise as CSS turns; Figma's turn is the other way, its negative, from -180 to 180)
-    const cw = r + (spun ? Math.atan2(b, a) * 180 / Math.PI : 0), fig = ((-cw % 360) + 540) % 360 - 180;
+    const cw = r + (spun ? Math.atan2(b, a) * 180 / Math.PI : 0) + (half ? 180 : 0), fig = ((-cw % 360) + 540) % 360 - 180;
     const all = +(Math.abs(fig + 180) < 1e-9 ? 180 : fig).toFixed(2);
     if (all) turned.set(n, all);
   }

@@ -1308,6 +1308,11 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       const got = await call(tab, (src) => { const { mirrors, restore } = new Function(`return ${src}`)()(document.documentElement); try { return [...document.querySelectorAll('.f')].map((f) => { const r = f.firstChild.getBoundingClientRect(), p = f.getBoundingClientRect(); return [+(r.left - p.left).toFixed(2), +(r.top - p.top).toFixed(2), mirrors.get(f) || null]; }); } finally { restore(); } }, unturn.toString());
       const after = await call(tab, () => getComputedStyle(document.querySelector('.f')).scale);
       ok('a layer in a mirrored frame is measured from the frame\'s own left, its mirror\'s way kept, and the mirror put back', JSON.stringify(got) === '[[11,10,"x"],[11,10,"x"],[11,10,"y"]]' && after === '-1 1', `${JSON.stringify(got)} ${after}`);
+      // (mirrors composed per axis: two on one axis are none, one on each a half turn; one about an origin off the box's
+      // middle set aside where it drew the box, at its left of 20, never back at 40)
+      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html>${frame('scale: -1 1; transform: scaleX(-1)')}${frame('scale: -1 -1')}${frame('scale: -1 1; transform-origin: 0 0')}` });
+      const composed = await call(tab, (src) => { const { mirrors, turned, restore } = new Function(`return ${src}`)()(document.documentElement); try { return [...document.querySelectorAll('.f')].map((f) => [mirrors.get(f) || null, turned.get(f) || 0, Math.round(f.getBoundingClientRect().left)]); } finally { restore(); } }, unturn.toString());
+      ok('mirrors compose per axis (two on one axis none, one on each a half turn), and one about an off-middle origin is set aside where it drew the box', JSON.stringify(composed) === '[[null,0,40],[null,180,40],["x",0,20]]', JSON.stringify(composed));
       // a placed button whose host draws no box (display: contents) sits where its <button> does, pinned to its parent's
       // end: measured by that box, never the host's, which has none (a notification's close button read unplaced)
       const { insetsIn, turnOf } = await import('./from-code.mjs');
