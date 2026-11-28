@@ -43,6 +43,7 @@ import { radialOf, ALIGN_DATA, SIZE_ROWS, centreOffset, heldOpacity, heldGlyph, 
 import { variantValues } from '../shared/names.js';
 import { turnedParts } from './to-code.mjs';
 import { geometry } from './geometry.mjs';
+import { sharedOf } from '../tokens/names.mjs';
 
 import { realpathSync } from 'node:fs';
 const req = createRequire(import.meta.url);
@@ -2393,7 +2394,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       tr = Date.now();
       const setId = await exec(`await figma.loadAllPagesAsync(); const pg = figma.root.children.find((x) => x.name === ${JSON.stringify(pageName)}); const s = pg && pg.children.find((x) => (x.type === 'COMPONENT_SET' || x.type === 'COMPONENT') && x.name === ${JSON.stringify(p.name)}); return s ? s.id : null;`, into, 60000);
       const walk = fs.readFileSync(path.join(TOOLKIT, 'plugins/design-system-snapshot/code.js'), 'utf8');
-      const live = setId && await exec(`const SCOPE = ${JSON.stringify([setId])};\n${walk}\nreturn __headless();`, into, 120000);
+      // (with the names the stored tokens share, so the walk reads no tokens of its own: names.mjs sharedOf)
+      const live = setId && await exec(`const SCOPE = ${JSON.stringify([setId])}; const SHARED = ${JSON.stringify(sharedOf(tokenFile.collections))};\n${walk}\nreturn __headless();`, into, 120000);
       const comp = live && (live.components || []).find((x) => x.id === setId);
       readMs += Date.now() - tr; tr = Date.now();
       // the snapshot walk names a set after its page where the two differ (Page/Set); in the library's own file the page
@@ -2470,7 +2472,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     // contract derived as the snapshot derives it: a draft made before someone changed the component would undo
     // their change. The last snapshot is not enough, being only as new as whoever last took one
     const walk = fs.readFileSync(path.join(TOOLKIT, 'plugins/design-system-snapshot/code.js'), 'utf8');
-    const live = await exec(`const SCOPE = ${JSON.stringify([target])};\n${walk}\nreturn __headless();`, into, 120000);
+    const live = await exec(`const SCOPE = ${JSON.stringify([target])}; const SHARED = ${JSON.stringify(sharedOf(tokenFile.collections))};\n${walk}\nreturn __headless();`, into, 120000);
     const comp = live && (live.components || []).find((x) => x.id === target);
     if (!comp) { console.error(`refused: ${target} could not be read from the library; nothing was changed`); process.exit(1); }
     const { compact } = req('../snapshot/spec.cjs');

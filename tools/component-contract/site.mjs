@@ -29,13 +29,19 @@ export const ELEMENT = { kind: 'element', prefix: 'ds-' };
    source maps from it (from-code), and the inputs hash is taken of it (eval.mjs selfInputs), so a reading's hash moves
    with what is written. Tested by test-eval.mjs. */
 export function selfDrawn(c, { library, settings, naming = ELEMENT, said = new Set() }) {
+  const { drawn, lines } = drawing(c, { library, settings, naming });
+  say(lines, said);
+  return drawn;
+}
+// (a token it could not name, said on stderr as to-code says it, once a build however often it draws it (`said`, one
+// per drawnAll: a module-wide set kept a second build in one process silent), a drawing from the cache too, and in the
+// sheet's header)
+const say = (lines, said) => { for (const line of lines) if (!said.has(line)) { said.add(line); console.error(`site: ${line}`); } };
+function drawing(c, { library, settings, naming }) {
   const mapping = selfMapping(c, { library, settings, naming });
   // (and each part's selector by id, which the mapping does not write: what a holder's reading finds it by, so in the hash)
   const { css: sheet, missing } = sheetAndGaps(c, c.folder, { naming, settings, library });
-  // (a token it could not name, said on stderr as to-code says it, once a build however often it draws it (`said`, one
-  // per drawnAll: a module-wide set kept a second build in one process silent), and in the sheet's header)
-  for (const line of missingSaid(c.component, missing)) if (!said.has(line)) { said.add(line); console.error(`site: ${line}`); }
-  return { markup: toElement(c, c.folder, { naming, library, settings }), sheet, mapping, parts: mapping.byId };
+  return { drawn: { markup: toElement(c, c.folder, { naming, library, settings }), sheet, mapping, parts: mapping.byId }, lines: missingSaid(c.component, missing) };
 }
 
 /* Its parity mapping alone, for a reader that needs no more (from-code's self source): selfDrawn's. */
@@ -90,9 +96,12 @@ export function drawnAll(library, { settingsOf = () => undefined, naming = ELEME
     const settings = settingsOf(c.folder);
     const key = () => createHash('sha1').update([GENERATOR, JSON.stringify(settings ?? null), JSON.stringify(naming), ...[...closureOf(library, [c.folder])].sort().map((f) => `${f}\0${JSON.stringify(byFolder[f])}`)].join('\0')).digest('hex');
     const file = dir && GENERATOR && path.join(dir, `${key()}.json`);
-    if (file) { try { out[c.folder] = JSON.parse(fs.readFileSync(file, 'utf8')); continue; } catch { /* not kept yet */ } }
-    out[c.folder] = selfDrawn(c, { library, settings, naming, said });
-    if (file) { try { fs.mkdirSync(dir, { recursive: true }); const tmp = `${file}.${process.pid}`; fs.writeFileSync(tmp, JSON.stringify(out[c.folder])); fs.renameSync(tmp, file); } catch { /* drawn again next time */ } }
+    // (kept with the lines it says, so a drawing from the cache says them as a fresh one does; a file without them, kept
+    // before, is drawn again)
+    if (file) { try { const kept = JSON.parse(fs.readFileSync(file, 'utf8')); if (kept.drawn && Array.isArray(kept.lines)) { out[c.folder] = kept.drawn; say(kept.lines, said); continue; } } catch { /* not kept yet */ } }
+    const { drawn, lines } = drawing(c, { library, settings, naming });
+    out[c.folder] = drawn; say(lines, said);
+    if (file) { try { fs.mkdirSync(dir, { recursive: true }); const tmp = `${file}.${process.pid}`; fs.writeFileSync(tmp, JSON.stringify({ drawn, lines })); fs.renameSync(tmp, file); } catch { /* drawn again next time */ } }
   }
   return out;
 }

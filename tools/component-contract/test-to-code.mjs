@@ -1435,7 +1435,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
       /background: var\(--shades-1-pill-fill\)/.test(good) && !/Pill binds/.test(good) && /frontend-build: Pill binds pill-fill, which the token build writes per collection/.test(bad), bad); }
   { const { selfDrawn } = await import('./site.mjs');
     const said = [], was = console.error; console.error = (x) => said.push(String(x));
-    let second = [];
+    let second = [], cached = null;
     try {
       const c = pill(false), once = new Set();
       selfDrawn(c, { library: { Pill: c }, settings, said: once }); selfDrawn(c, { library: { Pill: c }, settings, said: once });
@@ -1443,7 +1443,14 @@ ok('a placed component stretched by its insets takes no size from its main', dec
       // (a second build in the same process says it again: one set per build, never one for the module)
       const { drawnAll } = await import('./site.mjs');
       drawnAll({ Pill: c }, { settingsOf: () => settings, dir: null }); second = said.slice(first);
+      // (and a drawing taken from the cache says it too: drawn once into a cache, then taken from it)
+      const cache = fs.mkdtempSync(path.join(os.tmpdir(), 'drawn-'));
+      drawnAll({ Pill: c }, { settingsOf: () => settings, dir: cache });
+      const before = said.length, again = drawnAll({ Pill: c }, { settingsOf: () => settings, dir: cache });
+      cached = { lines: said.slice(before), files: fs.readdirSync(cache).length, sheet: again.pill.sheet };
+      fs.rmSync(cache, { recursive: true, force: true });
     } finally { console.error = was; }
+    ok('…a drawing taken from the cache says it as a fresh one does', cached.files === 1 && cached.lines.length >= 1 && cached.lines.every((l) => /^site: Pill binds/.test(l)) && /Not named/.test(cached.sheet), JSON.stringify(cached));
     ok('…the self leg says it on stderr too, as to-code does, once a build however often it draws the component, and again in the next build', said.length >= 2 && said.every((l) => /^site: Pill binds pill-(fill|edge), which the token build writes per collection/.test(l)) && second.length >= 1 && new Set(second).size === second.length, said.join('\n')); }
   ok('…and without prefixed names a sheet is what it always was', toCss(pill(false), 'pill') === toCss(pill(true), 'pill')); }
 console.log(`${n} passed`);
