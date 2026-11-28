@@ -1155,7 +1155,12 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, atOrAf
   // kept and named when code sits beside it (pruneSpecs). Another file's
   // specs are never this file's to judge.
   const others = Object.entries(index.components).filter(([s, e]) => !thisFile.has(e.file) && !mine.has(s) && !orphan(e.file)).map(([s]) => s);
-  const pruned = pruneSpecs(P.components, new Set([...mine, ...others]));
+  // A set Figma could not read this time (payload.unreadable) is still the library's: its stored spec, contract and
+  // index entry are kept as the last snapshot left them, never pruned and never graded component-removed. Matched by
+  // the index entry's name, and its page where both record one, whatever folder the store files it under.
+  const unread = p.unreadable || [];
+  const held = Object.entries(index.components).filter(([s, e]) => !mine.has(s) && unread.some((x) => x.name === e.name && (!x.page || !e.page || x.page === e.page))).map(([s]) => s);
+  const pruned = pruneSpecs(P.components, new Set([...mine, ...others, ...held]));
   // a drawing an older store took in (its stored page or index entry the round trip's) goes as no library change
   const wasDrawn = (s) => payload.drawnPage((pruned.before[s] || {}).page) || payload.drawnPage((index.components[s] || {}).page);
   const drawnHeld = [...pruned.removed, ...pruned.kept].filter(wasDrawn);
@@ -1166,6 +1171,7 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, atOrAf
   for (const s of [...pruned.removed, ...pruned.kept, ...drawnHeld]) delete index.components[s];
   if (drawnHeld.length) say('passed over', `${drawnHeld.length} round trip drawing(s) an earlier snapshot stored, no longer kept`, drawnHeld);
   say('components', changed.length ? `${changed.length} changed — ${changed.join(', ')}` : 'none changed', [
+    ...held.map((d) => `${d} kept from the last snapshot — Figma could not read it this time`),
     ...pruned.removed.map((d) => `${d} is no longer in the library — its spec removed (nothing was built on it)`),
     ...pruned.kept.map((d) => `the library no longer has "${d}", and there is code beside its spec — left alone. A renamed component? Move the code to the new folder; a dropped one? Delete it.`),
     ...noContract.map((m) => `no contract derived — ${m}`),

@@ -2008,6 +2008,37 @@ test('a round trip\'s drawing page is never the library\'s: its components and f
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('a stored component Figma could not read this time is kept as the last snapshot left it: spec, contract, index entry, no removal', async () => {
+  const { createRequire } = await import('node:module');
+  const store = createRequire(import.meta.url)('./store.cjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'unreadable-kept-'));
+  try {
+    const P = store.paths(dir);
+    const v = { name: 'Size=sm', type: 'COMPONENT', w: 10, h: 10 };
+    const comp = (name, id, page) => ({ name, id, page, props: { Size: ['sm'] }, variants: [v] });
+    store.writeLibrary(lib('L', { components: [comp('Checkbox', '1:1', 'Checkbox'), comp('Card', '2:2', 'Cards'), comp('Badge', '3:3', 'Badge')] }), P);
+    const folder = Object.entries(JSON.parse(fs.readFileSync(P.index, 'utf8')).components).find(([, e]) => e.name === 'Card')[0];
+    const spec = fs.readFileSync(path.join(P.components, folder, 'figma.json'), 'utf8');
+    const contract = fs.readFileSync(path.join(P.components, folder, 'contract.json'), 'utf8');
+    // Card's set in error (named with its page), Badge's variants unreadable (named without one)
+    const r = store.writeLibrary({ ...lib('L', { components: [comp('Checkbox', '1:1', 'Checkbox')] }), unreadable: [{ name: 'Card', page: 'Cards', reason: 'in get_componentPropertyDefinitions: Component set has existing errors' }, { name: 'Badge', reason: 'x' }, { name: 'Gone', page: 'Cards', reason: 'x' }] }, P);
+    assert.equal(fs.readFileSync(path.join(P.components, folder, 'figma.json'), 'utf8'), spec, 'its spec stays as it was');
+    assert.equal(fs.readFileSync(path.join(P.components, folder, 'contract.json'), 'utf8'), contract, 'and its contract');
+    const names = Object.values(JSON.parse(fs.readFileSync(P.index, 'utf8')).components).map((e) => e.name).sort();
+    assert.deepEqual(names, ['Badge', 'Card', 'Checkbox'], 'the index keeps both');
+    const log = fs.existsSync(P.changes) ? fs.readFileSync(P.changes, 'utf8') : '';
+    assert.ok(!/component-removed/.test(log), `the change log holds no component-removed: ${log.slice(-400)}`);
+    const grade = r.lines.find((l) => l.label === 'grade');
+    assert.ok(!grade.detail.some((d) => /removed from the library/.test(d)), `nor does the grade: ${grade.text} ${grade.detail.join(' | ')}`);
+    const said = r.lines.find((l) => l.label === 'components').detail;
+    assert.ok(said.some((d) => d.startsWith(folder) && /kept from the last snapshot — Figma could not read it/.test(d)), `the keep is said: ${said.join(' | ')}`);
+    // the same name on another page is another set: not held by this one's error
+    const r2 = store.writeLibrary({ ...lib('L', { components: [comp('Checkbox', '1:1', 'Checkbox')] }), unreadable: [{ name: 'Card', page: 'Elsewhere', reason: 'x' }] }, P);
+    assert.ok(!fs.existsSync(path.join(P.components, folder)), 'a set unreadable on another page holds nothing here');
+    assert.ok(r2.lines.find((l) => l.label === 'grade').detail.some((d) => /removed from the library/.test(d)), 'and its removal is graded as one');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('a drawing a store already holds is pruned as no library change, and a drawing\'s preview and unreadable set are passed over too', async () => {
   const { createRequire } = await import('node:module');
   const store = createRequire(import.meta.url)('./store.cjs');
