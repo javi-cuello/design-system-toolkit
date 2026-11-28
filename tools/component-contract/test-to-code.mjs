@@ -1259,4 +1259,16 @@ ok('a placed component stretched by its insets takes no size from its main', dec
 // a fill the design names `currentColor` is CSS's own keyword, the colour the box inherits, never a token's custom property
 { const { tokenNames } = await import('./to-code.mjs');
   ok('a colour named currentColor is written as the keyword; a token as its custom property', tokenNames.token('currentColor') === 'currentColor' && tokenNames.token('color/currentcolor') === 'var(--color-currentcolor)'); }
+// a placeholder a slot swaps, a drawing alone the library holds (a Slot), is drawn as the mark to-markup leaves for it:
+// no sheet of the drawing's own lays that mark out, so the layout the instance states is written on it whole, its
+// direction and alignment beside its padding (a banner's slot read back with no direction, 2026-11-28)
+{ const { byComponentName } = require('./derive.cjs');
+  const slot = { contract: 1, component: 'Slot', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, align: 'start', crossAlign: 'center', padding: { top: 0, end: 0, bottom: 0, start: 0 } }, width: 204, height: 40 }, background: { kind: 'graphic', parent: 'root', background: 'C/slot' } }, variants: [] };
+  const lay = { direction: 'row', gap: 0, align: 'start', crossAlign: 'center', padding: { top: 6, end: 12, bottom: 6, start: 12 } };
+  const host = { contract: 1, component: 'Banner', props: { slot: { type: 'instance', swaps: ['slot'] } }, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 4 } }, slot: { kind: 'instance', parent: 'root', component: 'Slot', layout: lay, width: 'fill', height: 20 } }, variants: [] };
+  const d = drawn(host, {}, byComponentName([slot, host])).slot.decls, v = (p) => (d.get(p) || {}).v;
+  ok('a slot\'s placeholder drawing, drawn as a mark, is laid out as its instance states', v('display') === 'flex' && v('flex-direction') === 'row' && v('justify-content') === 'flex-start' && v('align-items') === 'center', JSON.stringify([...d]));
+  const placed = { ...host, props: {} };
+  const d2 = drawn(placed, {}, byComponentName([slot, placed])).slot.decls;
+  ok('a drawing placed by no swap is its own component, laid out by its own sheet: no layout written on the instance', !d2.has('display'), JSON.stringify([...d2])); }
 console.log(`${n} passed`);

@@ -1073,6 +1073,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
       // (the component's own value said only where a rule before this one sets it otherwise, `given`: elsewhere nothing,
       // so the component's own sheet, its pointer states included, holds there)
       kept.push(...over.changed, ...[...everOverrides(c, id, mains, ictx)].filter((p) => !said.has(p)).map((p) => [p, over.theirs.get(p) ?? 'unset', undefined, true]));
+      // (a placeholder a swap takes, a drawing alone the library holds (a Slot), is the mark to-markup leaves for it
+      // (swapOf): no sheet of the drawing's own lays that mark out, so the layout the instance states goes on it whole)
+      if (e.layout && isDrawing(mains(e.component, e.key)) && Object.values(c.props || {}).some((q) => q.type === 'instance' && (q.swaps || []).includes(id))) kept.push(...declarations({ layout: e.layout }, { ...ictx, holds: true }, tokenNames).decls);
     }
     if (sample) kept.push(['inline-size', '100%']);
     // (a mark padded so, the room its frame keeps about the glyph: the glyph code paints on it (a mask, a background) is
