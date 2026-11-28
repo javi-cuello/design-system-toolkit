@@ -1371,6 +1371,34 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); await site.close(); }
   }
 }
+// 2026-11-28: a placed component the design gives a pointer value of its own where nothing forwards one (a definition
+// tooltip's item at Hover while shown): with nothing forced, the holder's sheet draws it at that value's look under the
+// holder's attribute, its rest's elsewhere (to-code's drawnAsOf), and the reading takes it at that value
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, waitFor, call } = await import('../shared/cdp.mjs');
+  const { selfSiteFiles, serveSite, selfMapping } = await import('./site.mjs');
+  const { HOUSE, drawnAsOf, heldOf } = await import('./to-code.mjs');
+  const link = { contract: 1, component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 10, height: 10, background: '#000000' } }, variants: [{ when: { state: 'hover' }, set: { 'root.background': '#ff0000' } }] };
+  const card = { contract: 1, component: 'Card', folder: 'card', props: { shown: { type: 'boolean', default: false, axis: true, figma: 'Shown' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, link: { kind: 'instance', parent: 'root', component: 'Link', with: { State: 'Rest' } } },
+    variants: [{ when: { shown: true }, set: { 'link.with': { State: 'Hover' } } }] };
+  const library = { Card: card, Link: link }, files = selfSiteFiles(library, 'card', { settingsOf: () => HOUSE });
+  const sel = selfMapping(card, { library, settings: HOUSE }).byId.link;
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to draw a placed component\'s pointer look in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({}), site = await serveSite(files);
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
+      const at = (shown) => call(tab, ([q, v]) => { const s = document.createElement('section'); s.append(window.R.card({ shown: v })); document.getElementById('stage').replaceChildren(s); return getComputedStyle(document.querySelector(q)).backgroundColor; }, [sel, shown]);
+      const [off, on] = [await at(false), await at(true)];
+      const hint = drawnAsOf(card, { shown: true }, heldOf(library)).find((x) => x.id === 'link');
+      ok('a placed component\'s own pointer value nothing forwards: its look drawn by the holder\'s sheet under the holder\'s attribute, nothing forced, its rest\'s elsewhere; read as that value',
+        off === 'rgb(0, 0, 0)' && on === 'rgb(255, 0, 0)' && hint && axisValueOf({ Rest: {}, Hover: { pseudo: 'hover' } }, {}, false, hint.pseudo) === 'Hover', JSON.stringify([off, on, hint && hint.pseudo]));
+    } finally { await browser.close(); await site.close(); }
+  }
+}
 // 2026-11-26: a stroke across the edge goes round at 1px: Chrome computes its outline offset snapped as a border width
 // (calc(1px / -2) reads -1px, as an inside one would), so the reader takes the offset as written, resolved where it is
 { const fs = await import('node:fs');

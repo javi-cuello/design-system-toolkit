@@ -235,29 +235,34 @@ ok('a component measured since the accept is held until accepted; one that came 
   // beside them, or one another state sets too, stays a difference. One a state with a pseudo-class sets is a copy the
   // markup holds and the sheet shows (to-code's pointerWithOf), and its own state at this one's pointer state is the
   // reader's forced pseudo-class (from-code forwardedAt): both read there, so a row is a difference
-  { const link = { component: 'Link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  // (2026-11-28: its own state at a value with a pseudo-class is drawn by this one's sheet where nothing forwards it,
+  // to-code's drawnAsOf, and read back so: a row there is a difference; one with none, `Held`, stays left to code)
+  { const link = { component: 'Link', props: { state: { type: 'enum', values: ['rest', 'hover', 'held'], default: 'rest', figmaValues: ['Rest', 'Hover', 'Held'], role: 'interaction', pointer: ['hover', 'held'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
     const held = { ...c, props: { state: { ...c.props.state, values: ['rest', 'focus', 'held'], pointer: ['focus', 'held'] } } };
     const card = (extra = [], at = 'held') => ({ ...held, anatomy: { ...c.anatomy, link: { kind: 'instance', parent: 'root', component: 'Link', with: { On: 'False' } } }, variants: [{ when: { state: at }, set: { 'link.with': { On: 'True' } } }, ...extra] });
     const L = (k) => leftToCode(k, (n) => (n === 'Link' ? link : null));
     ok('a placed instance\'s props only a pointer state the markup cannot copy gives are left to code; a prop at rest beside them, or one another state sets too, stays a difference',
-      L(card())('link.with', { library: { State: 'Hover' }, drawn: null }) && L(card())('link.with.State', { library: 'Hover', drawn: null })
-      && !L(card())('link.with', { library: { State: 'Hover', On: 'True' }, drawn: null })
+      L(card())('link.with', { library: { State: 'Held' }, drawn: null }) && L(card())('link.with.State', { library: 'Held', drawn: null })
+      && !L(card())('link.with.State', { library: 'Hover', drawn: null })
+      && !L(card())('link.with', { library: { State: 'Held', On: 'True' }, drawn: null })
       && L(card())('link.with.On', P('True', 'False')) && !L(card())('link.with.On', P('False', 'True'))
       && !L({ ...card(), anatomy: { ...card().anatomy, link: { ...card().anatomy.link, with: { On: 'True' } } } })('link.with.On', P('True', 'False'))
       && !L(card([{ when: { state: 'rest' }, set: { 'link.with': { On: 'True' } } }]))('link.with.On', { library: 'True', drawn: 'False' })
       && L(card([{ when: { state: 'rest' }, set: { 'link.with': { On: 'True' } } }]))('link.with', P({ On: 'True' }, null)));
     ok('…one a pointer state with a pseudo-class gives is a copy read there, and its own state at this one\'s is forced and read there: rows at those are differences',
       !L(card([], 'focus'))('link.with.On', P('True', 'False')) && !L(card())('link.with.State', { library: 'Hover', drawn: null, whens: [{ state: 'focus' }] })
-      && L(card())('link.with.State', { library: 'Hover', drawn: null, whens: [{ state: 'rest' }, { state: 'focus' }] })); }
+      && L(card())('link.with.State', { library: 'Held', drawn: null, whens: [{ state: 'rest' }, { state: 'focus' }] })
+      && !L(card())('link.with.State', { library: 'Hover', drawn: null, whens: [{ state: 'rest' }, { state: 'focus' }] })); }
   { // (review of 2026-11-27: at a pointer combination the code is entitled to the rest's props alone; a wrong prop drawn
     // there, or the instance's own state drawn other than at its rest, is code's, a difference)
-    const link = { component: 'Link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+    const link = { component: 'Link', props: { state: { type: 'enum', values: ['rest', 'hover', 'held'], default: 'rest', figmaValues: ['Rest', 'Hover', 'Held'], role: 'interaction', pointer: ['hover', 'held'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
     const card = { ...c, props: { state: { ...c.props.state, values: ['rest', 'focus', 'held'], pointer: ['focus', 'held'] } }, anatomy: { ...c.anatomy, link: { kind: 'instance', parent: 'root', component: 'Link', with: { On: 'False' } } }, variants: [{ when: { state: 'held' }, set: { 'link.with': { On: 'True' } } }] };
     const G = gapOf(card, (n) => (n === 'Link' ? link : null));
     ok('pointer props are left to code only where the reading drew the rest\'s props there; a wrong prop drawn stays a difference',
       G('link.with.On', P('True', 'False')) === 'pointer-with' && G('link.with.On', P('True', 'Maybe', 'False')) === null && G('link.with', P({ On: 'True' }, { On: 'Maybe' }, { On: 'False' })) === null
-      && G('link.with.State', { library: 'Hover', drawn: null }) === 'pointer-with' && G('link.with.State', { library: 'Hover', drawn: 'Rest' }) === 'pointer-with'
-      && G('link.with.State', { library: 'Hover', drawn: 'Pressed' }) === null && G('link.with', { library: { State: 'Hover' }, drawn: { State: 'Pressed' } }) === null && G('link.with', { library: { State: 'Hover' }, drawn: { On: 'True' } }) === null); }
+      && G('link.with.State', { library: 'Held', drawn: null }) === 'pointer-with' && G('link.with.State', { library: 'Held', drawn: 'Rest' }) === 'pointer-with'
+      && G('link.with.State', { library: 'Held', drawn: 'Pressed' }) === null && G('link.with', { library: { State: 'Held' }, drawn: { State: 'Pressed' } }) === null && G('link.with', { library: { State: 'Held' }, drawn: { On: 'True' } }) === null
+      && G('link.with.State', { library: 'Hover', drawn: null }) === null); }
   { // (review: a variant at another state that adds the instance with the same props makes them no pointer state's alone)
     const link = { component: 'Link', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
     const card = { ...c, props: { ...c.props, size: { type: 'enum', values: ['sm', 'lg'], default: 'sm', figma: 'Size' } }, anatomy: { ...c.anatomy, link: { kind: 'instance', parent: 'root', component: 'Link', with: { On: 'False' } } },

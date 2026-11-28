@@ -405,10 +405,19 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   { const link = { component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
     const holder = (variants, w) => ({ component: 'Card', folder: 'card', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, link: { kind: 'instance', parent: 'root', component: 'Link', with: w } }, variants });
     const out = (h) => toElement(h, 'card', { naming: ELEMENT, library: { Card: h, Link: link } });
-    ok('a placed instance drawn at its own pointer state where this one is at rest is named as a gap; one at rest is not, nor one at its own pointer state at this one\'s (the browser\'s: hovering this one lands inside it)',
-      /Link is given props only a pointer state draws/.test(out(holder([], { State: 'Hover' })))
+    // (2026-11-28: one at its own pointer state where this one is at rest is drawn so by this one's sheet, to-code's
+    // drawnAsOf; one at a pointer state with no pseudo-class stays a gap)
+    const held = { ...link, props: { ...link.props, state: { ...link.props.state, values: ['rest', 'hover', 'held'], figmaValues: ['Rest', 'Hover', 'Held'], pointer: ['hover', 'held'] } } };
+    const heldOut = toElement(holder([], { State: 'Held' }), 'card', { naming: ELEMENT, library: { Card: holder([], { State: 'Held' }), Link: held } });
+    ok('a placed instance drawn at its own pointer state where this one is at rest is drawn by the sheet, no gap; one with no pseudo-class for it is named as a gap; one at rest is not, nor one at its own pointer state at this one\'s (the browser\'s: hovering this one lands inside it)',
+      !/given props only a pointer state/.test(out(holder([], { State: 'Hover' }))) && /Link is given props only a pointer state draws/.test(heldOut)
       && !/given props only a pointer state/.test(out(holder([], { State: 'Rest', On: 'True' })))
       && !/given props only a pointer state/.test(out(holder([{ when: { state: 'hover' }, set: { 'link.with': { State: 'Hover' } } }], { State: 'Rest' }))));
+    // (2026-11-28: a prop another of this one's props gives it, held to the same combination at rest, is that prop's
+    // attribute: a pointer state's variant restating it is no gap)
+    const tight = { ...holder([{ when: { dense: true }, set: { 'link.with': { State: 'Rest', On: 'True' } } }, { when: { state: 'hover', dense: true }, set: { 'link.with': { State: 'Hover', On: 'True' } } }], { State: 'Rest', On: 'False' }) };
+    tight.props = { ...tight.props, dense: { type: 'boolean', default: false, axis: true, figma: 'Dense' } };
+    ok('a prop another of this one\'s props gives a placed instance, restated by a pointer state\'s variant, is no gap', !/given props only a pointer state/.test(out(tight)), out(tight).match(/frontend-build:[^*]*/g));
     // props this one's pointer state gives it: a copy per such state beside the rest's, each with its state's props, the
     // sheet showing the one its state draws (to-code's pointerWithOf)
     const byHover = holder([{ when: { state: 'hover' }, set: { 'link.with': { On: 'True' } } }], { On: 'False' }), o = out(byHover), css = toCss(byHover, 'card', { naming: ELEMENT, library: { Card: byHover, Link: link } });

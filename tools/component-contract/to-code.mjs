@@ -36,7 +36,7 @@ import { officials, homeIn } from './official.mjs';
 import { expand, drawLayers, variantDefaults, kebab, camel, placedOf as heldBy, openForeign, foreignOpened } from './layers.mjs';
 import { declarations, holds, rem, borderBox, fractional } from './css.mjs';
 import { negative, heldOpacity, heldGlyph, bareGlyph, siblingOrder, liftsAlone, CLEARED, UNCLIPPED } from './rules.mjs';
-const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
+const { atProps, propsAt, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
 import { cssName, tokenProperty } from '../tokens/names.mjs';
 import { attrWords, propAttr } from '../shared/prop-attr.mjs';
@@ -368,6 +368,40 @@ function rootDisplay(m, mains, t) {
   if (!m) return 'revert-layer';
   if (!ROOT_DISPLAY.has(m)) ROOT_DISPLAY.set(m, ((drawn(m, variantDefaults(m), mains, t).root || { decls: new Map() }).decls.get('display') || {}).v || 'revert-layer');
   return ROOT_DISPLAY.get(m);
+}
+/* The placed components (the library's own, `mains`) the design gives a pointer value of their own at this combination
+   `when` where nothing forwards one, this component not at a pointer state there (a definition tooltip's item at Hover
+   while it is shown, a selected split button's menu button at Press): real hover or focus never lands in them, so this
+   sheet draws that value's look over theirs at rest (drawn), under this combination's own condition, and from-code reads
+   it back as that value. Each with its part id, the placed contract, its props at that value and at rest, and the
+   value's pseudo-class without its colon; one inside another placed component is that one's to draw. Tested by
+   test-to-code.mjs. */
+export function drawnAsOf(c, when, mains = NO_MAINS, t = HOUSE, a = expand(c, when)) {
+  const ps = pseudoClasses(t), pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
+  if (pk && (c.props[pk].pointer || []).includes(when[pk]) && ps[when[pk]]) return [];
+  const low = (x) => String(x).toLowerCase(), out = [];
+  for (const [id, e] of Object.entries(a)) {
+    if (!e || e.kind !== 'instance' || !e.with) continue;
+    let up = e.parent;
+    while (up && !(a[up] && a[up].kind === 'instance')) up = a[up] && a[up].parent;
+    if (up) continue;
+    const m = mains(e.component, e.key ?? null), q = m && Object.values(m.props || {}).find((y) => y.role === 'interaction');
+    if (!q || e.with[q.figma] === undefined) continue;
+    const i = (q.figmaValues || []).map(low).indexOf(low(e.with[q.figma])), v = i >= 0 ? q.values[i] : e.with[q.figma];
+    if (!(q.pointer || []).includes(v) || !ps[v]) continue;
+    out.push({ id, m, w: e.with, rest: { ...e.with, [q.figma]: (q.figmaValues || [])[(q.values || []).indexOf(q.default)] ?? q.default }, pseudo: ps[v].replace(/^:/, '') });
+  }
+  return out;
+}
+// (a placed component drawn at one set of props once per library and settings: drawnAsOf's looks, asked at every
+// combination that places it so)
+const DRAWN_AT = new WeakMap();
+function drawnAt(m, w, mains, t) {
+  const byLib = DRAWN_AT.get(m) || new WeakMap(); DRAWN_AT.set(m, byLib);
+  const memo = byLib.get(mains) || new Map(); byLib.set(mains, memo);
+  const k = JSON.stringify([w, t === HOUSE ? null : t]);
+  if (!memo.has(k)) memo.set(k, drawn(m, propsAt(m, w), mains, t));
+  return memo.get(k);
 }
 const POINTER_WITH = new WeakMap();
 export function pointerWithOf(c, t = HOUSE, mains = NO_MAINS) {
@@ -1394,6 +1428,18 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     const display = !a[id] ? null : a[id].foreign ? ((out[id] && out[id].decls.get('display')) || {}).v || 'revert' : rootDisplay(mains(a[id].component, a[id].key ?? null), mains, t);
     for (const u of ['rest', ...at]) out[`${id}::pointer=${u}`] = { decls: new Map([['display', { v: u === shown ? display : 'none' }]]), unread: [] };
   }
+  // a placed component the design gives a pointer value of its own where nothing forwards one: what its own sheet draws
+  // at that value and not at its rest, over its own (drawnAsOf), each property its rest writes and that value does not
+  // unset
+  for (const { id, m, w, rest } of drawnAsOf(c, when, mains, t, a)) {
+    const P = drawnAt(m, w, mains, t), R = drawnAt(m, rest, mains, t);
+    for (const k of new Set([...Object.keys(P), ...Object.keys(R)])) {
+      if (k.includes('::')) continue;
+      const p = (P[k] || {}).decls || new Map(), r = (R[k] || {}).decls || new Map();
+      const decls = new Map([...[...p].filter(([q, x]) => !r.has(q) || r.get(q).v !== x.v), ...[...r.keys()].filter((q) => !p.has(q)).map((q) => [q, { v: 'unset' }])]);
+      if (decls.size) out[`${id}::as>${k}`] = { decls, unread: [] };
+    }
+  }
   // a part whose variable modes a pointer state sets: at that state, the mode's declarations the attribute would give
   // (pointerModesOf), each key the part holds a mode under here or at rest; `inherit` where the state takes one away
   for (const [id, { key, at, values }] of pointerModesOf(c, t)) {
@@ -1684,6 +1730,14 @@ const hasCopies = (m, k) => { if (!FIRSTS.has(m)) FIRSTS.set(m, new Set(Object.k
 function chain(c, n, id, rootCond, given = null, library = {}) {
   const mains = given || (() => null);
   const [own, pseudo = ''] = id.split('::');
+  // (a part of a placed component's own, drawnAsOf's look on it: the instance's selector, then the part's own names
+  // under that component's root)
+  if (pseudo.startsWith('as>')) {
+    const e = allOf(c)[own], m = e && e.component && mains(e.component, e.key ?? null), k = pseudo.slice(3), base = chain(c, n, own, rootCond, given, library);
+    if (!m || k === 'root') return base;
+    const n2 = namer(m.folder || folderOf(m.component), n.naming), pre = n2.root + through(n2, m.component, placedIn(m));
+    return base + chain(m, n2, k, '', given, library).slice(pre.length);
+  }
   const entry = entryOf(c);
   const segs = [];
   let at = own;

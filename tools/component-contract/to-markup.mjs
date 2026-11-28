@@ -1038,11 +1038,16 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // component's pointer state alone sets on it (a slider's item active at hover): no markup holds them, so a gap
       const own = Object.values(placed.props || {}).find((q) => q.role === 'interaction'), low = (v) => String(v).toLowerCase();
       const ownAt = (w) => !!own && w && w[own.figma] !== undefined && (own.pointer || []).includes(own.values[(own.figmaValues || []).map(low).indexOf(low(w[own.figma]))] ?? w[own.figma]);
+      // (one with a pseudo-class this component's sheet draws where nothing forwards it, to-code's drawnAsOf: no gap)
+      const ownUndrawn = (w) => ownAt(w) && !pseudoClasses(settings)[own.values[(own.figmaValues || []).map(low).indexOf(low(w[own.figma]))] ?? w[own.figma]];
       // (its own pointer state at one of this component's is the browser's: hovering or focusing this one lands inside it
       // too; one this component's other props give it, or props its pointer state gives that no copy draws, are not)
-      const byMine = !copied.has(id) && vs.some((v) => pointerWords(c, v.when) && Object.entries(stated(v).w).some(([k, w]) => !same(w, (e.with || {})[k]) && !(own && k === own.figma && ownAt({ [k]: w }))));
+      // (held to the same combination with its pointer state at rest, as pointerWithOf holds it: a prop another of this
+      // one's props gives there, a compact spacing, is that prop's attribute)
+      const restWith = (when) => { const d = variantDefaults(c), w = { ...d, ...when }; for (const k of Object.keys(when)) if (pointerAt(c, k, when[k])) w[k] = d[k]; return (expand(c, w)[id] || {}).with || {}; };
+      const byMine = !copied.has(id) && vs.some((v) => pointerWords(c, v.when) && ((r) => Object.entries(stated(v).w).some(([k, w]) => !same(w, r[k]) && !(own && k === own.figma && ownAt({ [k]: w }))))(restWith(v.when)));
       const gap = `${partName(id)} is given props only a pointer state draws: the stylesheet's, or frontend-build's to add`;
-      if ((ownAt(e.with) || vs.map(stated).some(({ w, when }) => ownAt(w) && !pointerWords(c, when)) || byMine) && !gaps.includes(gap)) gaps.push(gap);
+      if ((ownUndrawn(e.with) || vs.map(stated).some(({ w, when }) => ownUndrawn(w) && !pointerWords(c, when)) || byMine) && !gaps.includes(gap)) gaps.push(gap);
       for (const x of props.filter((y) => y.pass && y.pass.part === id && y.type !== 'value')) { const i = given.findIndex(([k]) => k === x.pass.to); if (i >= 0) given.splice(i, 1); given.push([x.pass.to, { code: ref(x.name) }]); }
       used.add(placed.component);
       return { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id, copy), own: theirs.map((x) => x.name), ...(withParts && { parts: partsCode(id, e, copy), key: partSeg(c, id) }) };

@@ -59,7 +59,7 @@ import { parseColour } from '../parity/values.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, swapKeysOf } from './to-markup.mjs';
 import { expand, variantDefaults, foreignOpened, openForeign, placedOf } from './layers.mjs';
-import { sharesNeverWritten, tokenNames, pointerWordsOf, pointerModesOf, pointerWithOf } from './to-code.mjs';
+import { sharesNeverWritten, tokenNames, pointerWordsOf, pointerModesOf, pointerWithOf, pseudoClasses } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { closureOf } from './site.mjs';
@@ -432,7 +432,10 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     const q = m && Object.values(m.props || {}).find((y) => y.role === 'interaction' && low(y.figma || '') === low(k));
     if (!q) return false;
     const i = (q.figmaValues || []).map(low).indexOf(low(v));
-    return (q.pointer || []).includes(i >= 0 ? q.values[i] : v);
+    // (one with a pseudo-class is drawn by this component's sheet where nothing forwards it, to-code's drawnAsOf, and read
+    // back so: no gap)
+    const at = i >= 0 ? q.values[i] : v;
+    return (q.pointer || []).includes(at) && !pseudoClasses(settings)[at];
   };
   const pointerWith = (el, field, row) => {
     if (!row || !/^with(\.|$)/.test(field)) return false;

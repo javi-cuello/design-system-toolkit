@@ -45,7 +45,7 @@ import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { shadowOrder, parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop, shorthandOf, sidePiece } from '../parity/values.mjs';
 export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
-import { ringOf, pseudoClasses, isDrawing } from './to-code.mjs';
+import { ringOf, pseudoClasses, isDrawing, drawnAsOf } from './to-code.mjs';
 import { swapKeysOf } from './to-markup.mjs';
 import { inWordsOf } from './to-figma.mjs';
 import { sameAsRead, layoutFromCss, sizeFromCss, placeFromCss, siblingOrder, stackedFirst, childOrder, liftsAlone, autoResizeOf, growsDown, writtenNowrap, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss, pathsOfBox, blendFromCss, typeValue, firstFamily, spacingFromCss, textFromCss, CASE_ROWS, DECORATION_ROWS, glyphOnly, CLEARED, UNCLIPPED, UNBLENDED } from './rules.mjs';
@@ -2326,9 +2326,10 @@ async function selfSource(project, name, { second = false } = {}) {
     // the placed components a render at these args forces a pointer state of their own on (forwardedAt), each part id
     // with its pseudo-class: what render forces (its own copy of these lines, as its source keys the read cache), and
     // what the reading takes as that component's state (axisValueOf)
+    // (and, where this one is at no pointer state, those the design gives one of their own that this one's sheet draws,
+    // to-code's drawnAsOf: nothing forced, the reading takes them at that state)
     forwardedOf(all) {
       const { __state, ...args } = all;
-      if (!src.pseudoOf[__state]) return [];
       // (a string the reading leaves unsaid, at its story's words, its stand-in: the markup's own default is the design's)
       for (const x of own) if (x.type === 'string' && args[x.name] === undefined) args[x.name] = standIn(x.default);
       // (the design's combination this render draws: each of the markup's props by its contract key, the has-value flag
@@ -2337,6 +2338,7 @@ async function selfSource(project, name, { second = false } = {}) {
       if (flag && flag.name in args && entry) combo[entry.flag] = args[flag.name];
       const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
       if (pk && __state !== undefined && __state !== restOf(c)) combo[pk] = __state;
+      if (!src.pseudoOf[__state]) return drawnAsOf(c, { ...variantDefaults(c), ...combo }, forwardMain, settingsOf(c.folder)).filter((x) => forwardSel[x.id]).map(({ id, pseudo }) => ({ id, pseudo }));
       return forwardedAt(c, combo, forwardMain, forwardPseudo).filter((x) => forwardSel[x.id]);
     },
     async render(all) {

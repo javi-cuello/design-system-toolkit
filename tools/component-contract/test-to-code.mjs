@@ -1474,4 +1474,16 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('an override a pointer state gives inside a placed component is the copy of the outermost one', of(card([{ when: { state: 'focus' }, set: { 'menu/item.with': { On: 'True' } } }])) === '[["menu","state",["focus"]]]');
   ok('one a variant swaps for another component is not copied', of(card([{ when: { state: 'hover' }, set: { 'link.with': { On: 'True' } } }, { when: { state: 'focus' }, set: { 'link.component': 'List' } }])) === '[]');
   ok('asked again of the same contract, with or without the library, it answers from its memo', pointerWithOf(a) === pointerWithOf(a) && pointerWithOf(a, HOUSE, lib(a)) !== pointerWithOf(a) && ((m) => pointerWithOf(a, HOUSE, m) === pointerWithOf(a, HOUSE, m))(lib(a))); }
+// 2026-11-28: a placed component the design gives a pointer value of its own where nothing forwards one (a definition
+// tooltip's item at Hover while shown): this sheet draws that value's look over its own at rest, under the combination
+// that gives it (drawnAsOf), never where this one is at a pointer state itself (the browser's there)
+{ const { drawnAsOf, heldOf } = await import('./to-code.mjs');
+  const link = { component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' } }, anatomy: { root: { kind: 'container', background: 'C/lo' }, label: { kind: 'text', parent: 'root', content: 'x', color: 'C/ink' } }, variants: [{ when: { state: 'hover' }, set: { 'root.background': 'C/hi', 'label.color': 'C/ink-hi' } }] };
+  const card = { component: 'Card', folder: 'card', props: { shown: { type: 'boolean', default: false, axis: true, figma: 'Shown' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, link: { kind: 'instance', parent: 'root', component: 'Link', with: { State: 'Rest' } } }, variants: [{ when: { shown: true }, set: { 'link.with': { State: 'Hover' } } }] };
+  const lib = { Card: card, Link: link }, css = toCss(card, 'card', { naming: { kind: 'element', prefix: 'ds-' }, library: lib });
+  ok('a placed component\'s own pointer value nothing forwards is drawn by this sheet under the combination that gives it',
+    /ds-card:where\(\[shown\]:not\(\[shown="false"\]\)\) > \[data-part="link"\] \{\s*background: var\(--c-hi\);/.test(css) && /> \[data-part="link"\] > \[data-part="label"\] \{\s*color: var\(--c-ink-hi\);/.test(css), css);
+  ok('…named with its pseudo-class there, and none at rest or where this one is at a pointer state (forwarded)',
+    JSON.stringify(drawnAsOf(card, { shown: true, state: 'rest' }, heldOf(lib)).map((x) => [x.id, x.pseudo])) === '[["link","hover"]]'
+    && !drawnAsOf(card, { shown: false, state: 'rest' }, heldOf(lib)).length && !drawnAsOf(card, { shown: true, state: 'hover' }, heldOf(lib)).length); }
 console.log(`${n} passed`);
