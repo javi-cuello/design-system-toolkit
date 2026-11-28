@@ -186,7 +186,7 @@ export function partsOf(c, t = HOUSE) {
     for (const [id, e] of Object.entries(v.add || {})) {
       if (!parts.has(id)) parts.set(id, { id, e, base: false, adds: [], removes: [], pointerOnly: true, rings: [], words: [] });
       // (a pointer state's add drawn as a ring is the ringed element's outline there, never an element the markup holds)
-      if (byPointer) { const ring = !!ringOf(c, when, id, e, { ...c.anatomy, ...v.add }, t); parts.get(id).rings.push(ring); if (!ring) parts.get(id).pointerAdds = [...(parts.get(id).pointerAdds || []), when]; continue; }
+      if (byPointer) { const ring = !!ringOf(c, when, id, e, { ...c.anatomy, ...v.add }, t); parts.get(id).rings.push(ring); if (!ring) parts.get(id).pointerAdds = [...(parts.get(id).pointerAdds || []), when]; if (!ring && typeof e.content === 'string') (parts.get(id).pointerSays ||= []).push([when, e.content]); continue; }
       parts.get(id).pointerOnly = false;
       parts.get(id).adds.push(when);
       const at = parts.get(id);
@@ -213,7 +213,8 @@ export function partsOf(c, t = HOUSE) {
     const swept = gone.size ? [...parts.keys()].filter((id) => !gone.has(id) && !(v.add || {})[id] && under(id)) : [];
     for (const id of [...(v.remove || []), ...swept]) if (parts.has(id)) { if (byPointer) parts.get(id).pointerGone = true; else parts.get(id).removes.push(when); }
     // words a pointer state sets on a base text (a field's "Search" at focus): marked, for textOf's gap
-    if (byPointer) for (const k of Object.keys(v.set || {})) { const m = /^(.+)\.content$/.exec(k); if (m && parts.has(m[1])) parts.get(m[1]).pointerWords = true; }
+    // (and each one's words, by the state that draws them: pointerWordsOf)
+    if (byPointer) for (const [k, w] of Object.entries(v.set || {})) { const m = /^(.+)\.content$/.exec(k); if (m && parts.has(m[1])) { parts.get(m[1]).pointerWords = true; if (typeof w === 'string') (parts.get(m[1]).pointerSays ||= []).push([when, w]); } }
     // words a variant sets on a text (a label's * that reads Optional where it is not required; a read-only label that
     // says its own words until filled, where only variants draw it)
     if (!byPointer) for (const [k, w] of Object.entries(v.set || {})) {
@@ -274,6 +275,35 @@ export function partsOf(c, t = HOUSE) {
     }
   }
   return parts;
+}
+
+/* The texts whose words a pointer state changes (a search's query typed at focus, a field's "Search" there), each with
+   the pointer prop and, by each of its values that does, the words its variants give, the pointer value taken out of
+   their when: the markup draws one span of words per such value beside the rest's (data-words), and the sheet shows the
+   one the state draws, under its pseudo-class. Only a text of the component's own (outside a placed component or a
+   slot, and not an entry's input), whose every such state has a pseudo-class: any other stays to-markup's gap. Tested
+   by test-to-markup.mjs. */
+const POINTER_WORDS = new WeakMap();
+export function pointerWordsOf(c, t = HOUSE) {
+  const memo = POINTER_WORDS.get(c) || new Map(); POINTER_WORDS.set(c, memo);
+  if (memo.has(t)) return memo.get(t);
+  const out = new Map(), ps = pseudoClasses(t), props = c.props || {}, entry = entryOf(c);
+  const pointer = (k, v) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v);
+  for (const part of partsOf(c, t).values()) {
+    if (!part.pointerSays || part.inside || part.slotted || part.e.kind !== 'text' || (entry && [entry.value, entry.placeholder].includes(part.id))) continue;
+    const at = new Map();
+    let key = null, ok = true;
+    for (const [when, w] of part.pointerSays) {
+      const ks = Object.keys(when).filter((k) => pointer(k, when[k]));
+      if (ks.length !== 1 || (key && ks[0] !== key) || !ps[when[ks[0]]]) { ok = false; break; }
+      key = ks[0];
+      const v = when[key];
+      (at.get(v) || at.set(v, []).get(v)).push([Object.fromEntries(Object.entries(when).filter(([k]) => k !== key)), w]);
+    }
+    if (ok && at.size) out.set(part.id, { key, at });
+  }
+  memo.set(t, out);
+  return out;
 }
 
 /* partsOf's parts by the box they sit in (`root` for one with no parent), the root aside: the lists to-markup writes
@@ -1195,6 +1225,13 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     out[id].decls.set('color', mine != null && mine !== own ? { v: glyphCss(mine) } : { v: glyphCss(own), given: true });
   }
   for (const [id, notes] of Object.entries(ringNotes)) if (out[id]) out[id].unread.push(...notes);
+  // a text whose words a pointer state changes: the span of words the state drawn here gives shown, the rest hidden
+  // (pointerWordsOf; the markup draws each)
+  for (const [id, { key, at }] of pointerWordsOf(c, t)) {
+    if (!a[id]) continue;
+    const shown = at.has(when[key]) ? when[key] : 'rest';
+    for (const u of ['rest', ...at.keys()]) out[`${id}::words=${u}`] = { decls: new Map([['display', { v: u === shown ? 'inline' : 'none' }]]), unread: [] };
+  }
   const entry = entryOf(c);
   if (entry && out[entry.box]) {
     const at = (on) => expand(c, { ...when, [entry.flag]: on ? entry.on : !entry.on });
@@ -1454,7 +1491,8 @@ export function selfCheck(c, rules, mains, t = HOUSE, draw = null, { each = fals
 
 // a part's state written after its id (`::after`); `::empty`, the part while it holds no element (Figma's empty frame,
 // which keeps its size there: a text alone in it does not count, a limit named in the README)
-const pseudoSel = (p) => (!p || p === 'turn' ? '' : p === 'empty' ? ':not(:has(*))' : `::${p}`);
+// (`words=<value>`, a text's span of words that pointer value draws, `rest` the one drawn otherwise: pointerWordsOf)
+const pseudoSel = (p) => (!p || p === 'turn' ? '' : p === 'empty' ? ':not(:has(*))' : p.startsWith('words=') ? ` > [data-words="${p.slice(6)}"]` : `::${p}`);
 /* A part's selector: the root, then each part on its way down, by child combinators (code-standard rule 5). */
 // (copyOf once per placed component and part: chain names every nested part through it, and a contract does not change)
 const COPIES = new WeakMap();

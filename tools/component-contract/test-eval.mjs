@@ -197,7 +197,10 @@ ok('a component measured since the accept is held until accepted; one that came 
   // its key, look and modes stay rows; only its insides are left, inside-foreign's)
   ok('a swap no prop passes, to a component the library does not hold, keeps its key, look and modes rows; its size stays a difference',
     !over('org/icon.key', { library: 'K', drawn: 'J' }) && !over('org/icon.radius', { library: 4, drawn: null }) && !over('org/icon.background', { library: 'x', drawn: null }) && !over('org/icon.modes.tile-colour', { library: 'a', drawn: null }) && !over('org/icon.height') && !over('org/icon.minWidth') && !over('org/dot.background'));
-  const typed = { ...c, anatomy: { ...c.anatomy, 'field/text': { kind: 'text', parent: 'field', content: '{p}' } }, variants: [...c.variants, { when: { state: 'focus' }, set: { 'field/text.content': 'Search', 'field.width': 10 } }] };
+  // (at a pointer state with no pseudo-class, `held`, where the markup cannot hold the words: one with a pseudo-class is
+  // built, a span of words of its own, so a row there is a difference, below)
+  const typed = { ...c, props: { state: { ...c.props.state, values: ['rest', 'focus', 'held'], pointer: ['focus', 'held'] } }, anatomy: { ...c.anatomy, 'field/text': { kind: 'text', parent: 'field', content: '{p}' } }, variants: [...c.variants, { when: { state: 'held' }, set: { 'field/text.content': 'Search', 'field.width': 10 } }] };
+  const spoken = { ...typed, variants: [...c.variants, { when: { state: 'focus' }, set: { 'field/text.content': 'Search' } }] };
   const item = { component: 'Item', props: { label: { type: 'string', figma: 'Label', sets: ['label'] } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'A' } }, variants: [] };
   const menu = { component: 'Menu', props: {}, anatomy: { root: { kind: 'container' }, items: { kind: 'slot', parent: 'root' } }, variants: [] };
   const bar = { ...c, anatomy: { root: { kind: 'container' }, menu: { kind: 'instance', parent: 'root', component: 'Menu' }, 'menu/items': { kind: 'slot', parent: 'menu' }, 'menu/items/item': { kind: 'instance', parent: 'menu/items', component: 'Item' }, 'menu/items/item/label': { kind: 'text', parent: 'menu/items/item', content: 'B' }, 'menu/items/item/avatar': { kind: 'instance', parent: 'menu/items/item', component: 'Avatar' } } };
@@ -212,6 +215,8 @@ ok('a component measured since the accept is held until accepted; one that came 
   // (a pointer row as roundTrip gives it: found only where the pointer state decides it, `pointer`, with the design's
   // value at rest there, `rest`)
   const P = (library, drawn, rest = drawn) => ({ library, drawn, pointer: true, rest });
+  ok('words a pointer state with a pseudo-class changes on a text of the component\'s own are drawn, so a row there is a difference',
+    gapOf(spoken)('field/text.content', P('Search', '{p}')) === null);
   ok('words only a pointer state changes are left to code where the design holds them; a wrong rest text and another field stay differences',
     leftToCode(typed)('field/text.content', P('Search', '{p}')) && !leftToCode(typed)('field/text.content', P('{p}', 'Search')) && !leftToCode(typed)('field.width') && !leftToCode(c)('field/text.content', P('Search', '{p}'))
     // (review of 2026-11-27: one found apart from the pointer state, or with no rest to hold the reading to, stays a difference)
@@ -222,7 +227,7 @@ ok('a component measured since the accept is held until accepted; one that came 
     gapOf(typed)('field/text.content', P('Search', '{p}')) === 'pointer-words' && gapOf(typed)('field/text.content', P('Search', 'Wrong', '{p}')) === null && gapOf(typed)('field/text.content', P('Search', null, '{p}')) === null);
   // (words a pointer state and another state both set, a search's query at focus and when filled: a row found only where
   // a pointer state sets them (roundTrip's `pointer`) is still the markup's gap; one found at the other state too is a difference)
-  const shared = { ...typed, props: { state: { ...c.props.state, values: ['rest', 'focus', 'filled'] } }, variants: [...typed.variants, { when: { state: 'filled' }, set: { 'field/text.content': 'Search' } }] };
+  const shared = { ...typed, props: { state: { ...typed.props.state, values: ['rest', 'focus', 'held', 'filled'] } }, variants: [...typed.variants, { when: { state: 'filled' }, set: { 'field/text.content': 'Search' } }] };
   ok('words a pointer state sets, where another state sets them too, are left to code only in a row found where a pointer state sets them',
     leftToCode(shared)('field/text.content', P('Search', '{p}')) && !leftToCode(shared)('field/text.content', { library: 'Search', drawn: '{p}' }) && !leftToCode(shared)('field/text.content', P('{p}', 'Search')));
   // a placed instance's props only a pointer state gives: its own state at a pointer value, or what this one's pointer state

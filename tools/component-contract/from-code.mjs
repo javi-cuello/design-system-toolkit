@@ -154,7 +154,9 @@ export function turnOf(n, style) {
    page (passed as source); tested by test-from-code.mjs. */
 export function wordsRect(n, range) {
   const out = [];
-  for (const c of n.childNodes) {
+  // (and those of the span of words its state shows, to-markup's data-words: wordsAsDrawn)
+  const shown = (x) => x.nodeType === 1 && x.hasAttribute && x.hasAttribute('data-words') && (typeof getComputedStyle !== 'function' || getComputedStyle(x).display !== 'none');
+  for (const c of [...n.childNodes].flatMap((x) => (shown(x) ? [...x.childNodes] : [x]))) {
     if (c.nodeType !== 3 || !c.textContent.trim()) continue;
     range.selectNodeContents(c);
     const b = range.getBoundingClientRect();
@@ -173,14 +175,18 @@ export function stackOf(n, style, liftsAlone) {
   return { ...(out && { out: true }), ...(lifted && { lifted: true }), ...(Number.isFinite(z) && { z }) };
 }
 
-/* An element's own words as it draws them, from its text nodes (an element child's words are that child's) and its
+/* An element's own words as it draws them, from its text nodes (an element child's words are that child's, but for the
+   span of words its state shows, data-words) and its
    computed style `s`: collapsed, a run of white space is one space (a newline in the source is a space on screen) and a
    node of white space alone between words is one space; preserved (pre, pre-wrap, break-spaces), the text as written, newlines and runs of
    spaces kept, as Figma keeps a text's; preserve-breaks keeps its newlines alone. The ends are trimmed either way (a template's line breaks around a label are not its words).
    white-space-collapse where computed, else white-space (an older browser). Runs in the page (passed as source);
    tested by test-from-code.mjs. */
 export function wordsAsDrawn(n, s) {
-  const texts = [...n.childNodes].filter((x) => x.nodeType === 3).map((x) => x.textContent);
+  // (a text whose words a pointer state changes holds a span of words for each, to-markup's data-words: the words are
+  // the one its state shows, the rest hidden)
+  const shown = (x) => x.nodeType === 1 && x.hasAttribute && x.hasAttribute('data-words') && (typeof getComputedStyle !== 'function' || getComputedStyle(x).display !== 'none');
+  const texts = [...n.childNodes].flatMap((x) => (shown(x) ? [...x.childNodes] : [x])).filter((x) => x.nodeType === 3).map((x) => x.textContent);
   const collapse = s.whiteSpaceCollapse || ({ pre: 'preserve', 'pre-wrap': 'preserve', 'break-spaces': 'break-spaces', 'pre-line': 'preserve-breaks' })[s.whiteSpace] || 'collapse';
   const kept = collapse === 'preserve' || collapse === 'break-spaces';
   // (the nodes joined first, as the browser collapses across them: a node of white space alone between words is a space)
@@ -2853,7 +2859,7 @@ async function main() {
           // an icon is an svg, or the mark to-markup leaves for the project to draw one in (an empty element naming it, data-icon)
           // a placed component's slot this one fills (to-markup marks its slots, data-slot): a slot, what is put in it read
           const fills = inside && n.getAttribute('data-slot');
-          const kind = filled || fills ? 'slot' : tag === 'svg' || (n.hasAttribute('data-icon') && !n.children.length && !n.textContent.trim()) ? 'graphic' : text && !n.children.length && (entryEl || !n.hasAttribute('data-figma-text')) ? 'text' : 'container';
+          const kind = filled || fills ? 'slot' : tag === 'svg' || (n.hasAttribute('data-icon') && !n.children.length && !n.textContent.trim()) ? 'graphic' : text && [...n.children].every((x) => x.hasAttribute('data-words')) && (entryEl || !n.hasAttribute('data-figma-text')) ? 'text' : 'container';
           // the design's own name for a layer whose name its id does not give back, where the markup carries it (to-markup's data-figma-name)
           // (inside a placed component, the design's for the layer the mapping places there: nameInside)
           const figmaName = nameInside(inside, n.getAttribute('data-figma-id'), n.getAttribute('data-figma-name'), designNames);

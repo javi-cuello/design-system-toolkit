@@ -59,7 +59,7 @@ import { parseColour } from '../parity/values.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, swapKeysOf } from './to-markup.mjs';
 import { expand, variantDefaults, foreignOpened, openForeign, placedOf } from './layers.mjs';
-import { sharesNeverWritten, tokenNames } from './to-code.mjs';
+import { sharesNeverWritten, tokenNames, pointerWordsOf } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { closureOf } from './site.mjs';
@@ -187,8 +187,10 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // merge every combination under one place; and only where a pointer state's variant decides them at every combination
   // the row was found in (roundTrip's `pointer`: a search's query, typed at focus and when filled, read wrong only at
   // focus; a row found apart from a pointer state, words only pointer states set or not, stays a difference)
-  const words = new Map();
-  for (const v of contract.variants || []) for (const [k, w] of Object.entries(v.set || {})) if ((k.endsWith('.content') || k.endsWith('.with')) && pointerWords(contract, v.when)) words.set(k, [...(words.get(k) || []), w]);
+  // (only a text the markup cannot draw them in: words the markup holds in a span of their own, to-code's
+  // pointerWordsOf, are read at that state, so a row there is a difference)
+  const words = new Map(), spoken = pointerWordsOf(contract, settings);
+  for (const v of contract.variants || []) for (const [k, w] of Object.entries(v.set || {})) if ((k.endsWith('.content') || k.endsWith('.with')) && pointerWords(contract, v.when) && !(k.endsWith('.content') && spoken.has(k.slice(0, -'.content'.length)))) words.set(k, [...(words.get(k) || []), w]);
   // (and only where the reading drew what the design holds at rest there, roundTrip's `rest`: the markup holds no pointer
   // state, so the rest is all code is entitled to draw at a pointer combination; a wrong word there is code's, a
   // difference. A row with no `rest` (found apart from pointer states, or over combinations whose rests differ) stays one)

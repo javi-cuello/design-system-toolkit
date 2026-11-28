@@ -1857,6 +1857,16 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
   // (and the point a variant sets it at, the icon drawn larger there: the status icon at 20px read 1 for 1.25)
   ok('…and the point a variant sets it at, likewise', JSON.stringify(O.variants[0].set) === '{"i/v.absolute":{"x":3.13,"y":3.13}}' && JSON.stringify(H.variants[0].set) === '{}', JSON.stringify([O.variants[0].set, H.variants[0].set]));
 }
+// a text whose words a pointer state changes holds a span of words per state (to-markup's data-words): its words are the
+// shown span's, a hidden one's never; a plain element child's stay its own
+{ const span = (words, display) => ({ nodeType: 1, hasAttribute: (k) => k === 'data-words', display, childNodes: [{ nodeType: 3, textContent: words }] });
+  const had = globalThis.getComputedStyle; globalThis.getComputedStyle = (x) => ({ display: x.display });
+  try {
+    ok('words read as drawn: of the spans of words a pointer state shows, the shown one\'s alone',
+      wordsAsDrawn({ childNodes: [span('Search', 'inline'), span('Typing', 'none')] }, { whiteSpaceCollapse: 'collapse' }) === 'Search'
+      && wordsAsDrawn({ childNodes: [span('Search', 'none'), span('Typing', 'inline')] }, { whiteSpaceCollapse: 'collapse' }) === 'Typing'
+      && wordsAsDrawn(el('a', {}), { whiteSpaceCollapse: 'collapse' }) === 'a');
+  } finally { globalThis.getComputedStyle = had; } }
 // the self story's words for a string prop: as long as its default and never equal to it, so a literal equal to the
 // default reads back as that literal and a bound text as the prop (boundText)
 ok('standIn: a default\'s letters and digits turned, as long as it, never the same; empty stays empty',

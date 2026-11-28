@@ -383,7 +383,15 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     const out = toElement(date, 'date', { naming: ELEMENT, library: { Date: date } });
     ok('a text that holds a literal until a variant swaps a prop in draws the literal there, never the prop on both sides', /hasValue \? value : "Select a date"/.test(out) && !/hasValue \? value : value/.test(out)); }
   { const f = { component: 'F', folder: 'f', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, t: { kind: 'text', parent: 'root', content: 'Select' } }, variants: [{ when: { state: 'focus' }, set: { 't.content': 'Search' } }] };
-    ok('words a pointer state draws are named as a gap, never dropped without a word', /words change at a pointer state/.test(toElement(f, 'f', { naming: ELEMENT, library: { F: f } })));
+    // (ruled 2026-11-28: built where CSS can show them, a span of words per state; a gap only where it cannot)
+    const fo = toElement(f, 'f', { naming: ELEMENT, library: { F: f } });
+    ok('words a pointer state draws are a span of their own beside the rest\'s, shown by the sheet at that state, and no gap',
+      /h\("span", \{ "data-words": "rest" \},\s*"Select"\)/.test(fo) && /h\("span", \{ "data-words": "focus" \},\s*"Search"\)/.test(fo) && !/words change at a pointer state/.test(fo), fo);
+    const css = toCss(f, 'f', { naming: ELEMENT });
+    ok('…the sheet shows the rest\'s words and hides the state\'s, and the other way round under the state\'s pseudo-class',
+      /> \[data-part="t"\] > \[data-words="focus"\] \{\s*display: none;/.test(css) && /:focus-visible[^{]*> \[data-part="t"\] > \[data-words="rest"\] \{\s*display: none;/.test(css), css);
+    const np = { ...f, props: { state: { ...f.props.state, values: ['rest', 'held'], pointer: ['held'] } }, variants: [{ when: { state: 'held' }, set: { 't.content': 'Search' } }] };
+    ok('…and words a pointer state with no pseudo-class draws are named as a gap, never dropped without a word', /words change at a pointer state/.test(toElement(np, 'f', { naming: ELEMENT, library: { F: np } })));
     const m = { ...f, variants: [{ when: { state: 'focus' }, set: { 'root.modes': { theme: 'a' } } }] };
     ok('variable modes a pointer state sets are named as a gap, never dropped without a word', /variable modes change at a pointer state/.test(toElement(m, 'f', { naming: ELEMENT, library: { F: m } })) && !/variable modes change/.test(toElement(f, 'f', { naming: ELEMENT, library: { F: f } }))); }
   { const link = { component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' }, on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' } }, variants: [] };

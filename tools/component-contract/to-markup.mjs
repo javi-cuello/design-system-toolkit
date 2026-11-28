@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations, borderBox } from './css.mjs';
-import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
+import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, pointerWordsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign, foreignOpened } from './layers.mjs';
 // (another library's instance whose insides the contract records is drawn open, its layers this component's own:
@@ -546,7 +546,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   c = opened(c, library);
   const n = namer(folder, naming);
   const props = propsOf(c, library, lang, settings), ref = lang.ref;
-  const parts = partsOf(c, settings);
+  const parts = partsOf(c, settings), spoken = pointerWordsOf(c, settings);
   const entry = entryOf(c);
   const control = controlOf(c.component, placedIn(c));
   const inline = phrasing(c);
@@ -619,8 +619,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // a text's words: its property's, else its own, else, where a variant puts it back with other words (a label's * that
   // reads Optional when not required), those there, the later variant first
   const textOf = (id, e, words = []) => {
-    // words a pointer state draws (a field's "Search" at focus): no markup holds them, so a gap, never a silent drop
-    if ((parts.get(id) || {}).pointerWords) gaps.push(`${partName(id)}'s words change at a pointer state: frontend-build's to add, or the design's to drop`);
+    // words a pointer state draws (a field's "Search" at focus) where the markup cannot hold them beside the rest's
+    // (pointerWordsOf: a placed component's text, an input, a state with no pseudo-class): a gap, never a silent drop
+    if ((parts.get(id) || {}).pointerWords && !spoken.has(id)) gaps.push(`${partName(id)}'s words change at a pointer state: frontend-build's to add, or the design's to drop`);
     // one text two string props set (a placeholder, and the value a variant shows instead): the one no variant swaps in,
     // and each variant's own where it is drawn
     const xs = props.filter((y) => y.type === 'string' && !y.input && (y.p.sets || []).includes(id));
@@ -863,7 +864,10 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // (a shape a variant turns into a frame of shapes, a radio's circle that holds a dot once checked: those, inside it)
       out = { tag: 'span', attrs: [...hook(id), ['aria-hidden', { lit: 'true' }]], children: (kids.get(id) || []).flatMap((k) => node(k, known, fill)).filter(Boolean) };
     } else if (e.kind === 'text') {
-      out = { tag, attrs: hook(id), children: [textOf(id, e, part.words)] };
+      // (words a pointer state changes: a span of the rest's words and one of each such state's, the sheet showing the one
+      // its state draws, to-code's pointerWordsOf; each state's over the rest's where its variants say nothing)
+      const ws = spoken.get(id);
+      out = { tag, attrs: hook(id), children: !ws ? [textOf(id, e, part.words)] : [['rest', part.words], ...[...ws.at].map(([v, w]) => [v, [...part.words, ...w]])].map(([v, w]) => ({ tag: 'span', attrs: [['data-words', { lit: v }]], children: [textOf(id, e, w)] })) };
     } else {
       // (another library's instance drawn open: its glyphs boxes of their size and colour, no path data being recorded)
       if (e.foreign) { const gap = `${partName(id)}: ${e.component}, another library's, drawn from the layers the design records (a glyph as a box of its size and colour): draw it as the project draws that library's`; if (!gaps.includes(gap)) gaps.push(gap); }
