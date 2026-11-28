@@ -129,6 +129,20 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
     unplacedIn(raw, raw[2]) && !unplacedIn(raw, raw[4]) && !unplacedIn(raw, raw[5]) && !unplacedIn(raw, raw[0]));
   ok('a part placed absolutely in a placed component whose main has auto layout keeps its place (a button\'s focus ring)',
     !unplacedIn(raw, raw[2], (u) => (u.kind === 'instance' ? { direction: 'row' } : u.layout)));
+  // (2026-11-28: a layer the placed component does not have, the design's own added inside its instance, is placed by
+  // the design, as derive gives it its place: a state layer stretched over a slider's handle)
+  const knob = { component: 'Knob', props: {}, variants: [], anatomy: { root: { kind: 'container' }, grip: { kind: 'graphic', parent: 'root' } } };
+  const held = [{ id: 'root', kind: 'container' }, { id: 'knob', kind: 'instance', parent: 'root', component: 'Knob' }, { id: 'knob/grip', kind: 'graphic', parent: 'knob', order: 0 }, { id: 'knob/layer', kind: 'graphic', parent: 'knob', order: 1, name: 'Layer' }];
+  const mainOf = (n) => (n === 'Knob' ? knob : null);
+  const { autoSized, outOfFlowIn } = await import('./from-code.mjs');
+  const layoutOfMain = (u) => (u.kind === 'instance' ? (mainOf(u.component) || {}).anatomy.root.layout : u.layout);
+  ok('a part out of the flow says position only where its parent lays out: a placed component whose main has no auto layout is a frame, one the library does not hold is taken to lay out',
+    !outOfFlowIn(held[1], layoutOfMain, (u) => mainOf(u.component)) && outOfFlowIn({ kind: 'instance', component: 'Other' }, layoutOfMain, () => null)
+    && outOfFlowIn({ kind: 'container', layout: { direction: 'row' } }) && !outOfFlowIn({ kind: 'container' }) && outOfFlowIn(null));
+  ok('an absolutely placed box whose size a variant takes back (unset, initial, revert) shrinks to fit, as auto does; a length does not',
+    ['', 'auto', 'fit-content', 'unset', 'initial', 'revert', 'revert-layer', ' unset '].every(autoSized) && !['2.5rem', '40px', '100%'].some(autoSized));
+  ok('a layer a placed component does not have is placed by the design; one it has stays its component\'s',
+    !unplacedIn(held, held[3], undefined, mainOf) && unplacedIn(held, held[2], undefined, mainOf) && unplacedIn(held, held[3]));
   // (2026-11-27: one in another library's icon drawn open inside a placed component is placed by the design: a field's
   // open chevron's glyph at its point)
   const open = [...raw, { id: 'chev', kind: 'container', foreign: 'Chevron--up', parent: 'pin' }, { id: 'glyph', kind: 'graphic', parent: 'chev' }];

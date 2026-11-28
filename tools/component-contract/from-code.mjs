@@ -2290,14 +2290,24 @@ async function selfSource(project, name, { second = false } = {}) {
    no place for it (derive.cjs, inInstance) and an instance cannot move it (Figma's help, "Apply changes to
    instances"), so none is read. A box with auto layout places its children by flow, as the design says it, and one
    placed absolutely inside it keeps its place there (derive keeps it, whatever holds the box). A placed component's own
-   entry carries no layout: its main's root says it (`layoutOf`). */
-export function unplacedIn(raw, e, layoutOf = (u) => u.layout) {
+   entry carries no layout: its main's root says it (`layoutOf`). A layer the placed component does not have (`mainOf`
+   its contract: none of its parts matches it, derive's placedMatch) is the design's own, added in the instance, and
+   placed by the design, as derive gives it its place (a state layer stretched over a handle). */
+export function unplacedIn(raw, e, layoutOf = (u) => u.layout, mainOf = null) {
   const up = raw.find((r) => r.id === e.parent);
   const l = up && layoutOf(up);
   if (!up || (l && l.direction)) return false;
   // (another library's instance drawn open, the walk's `foreign`, is a frame of this component's: the design places
   // what is in it, an icon's glyph at its point, so the first such frame up ends the climb)
-  for (let q = up; q; q = raw.find((r) => r.id === q.parent)) { if (typeof q.foreign === 'string') return false; if (q.kind === 'instance') return true; }
+  for (let q = up; q; q = raw.find((r) => r.id === q.parent)) {
+    if (typeof q.foreign === 'string') return false;
+    if (q.kind !== 'instance') continue;
+    const m = mainOf && e.id.startsWith(`${q.id}/`) && mainOf(q.component, q.key);
+    if (!m) return true;
+    const { placedAs, placedMatch } = req('./derive.cjs'), anatomy = Object.fromEntries(raw.map((r) => [r.id, r]));
+    const inner = Object.fromEntries(raw.filter((r) => r.id.startsWith(`${q.id}/`)).map((r) => [r.id.slice(q.id.length + 1), r]));
+    return !!placedMatch(placedAs(anatomy, q.id, m, mainOf).M, inner)[e.id.slice(q.id.length + 1)];
+  }
   return false;
 }
 
@@ -2314,6 +2324,22 @@ export function insetsIn(doc, unturnSrc, turnSrc) {
       return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }];
     }));
   } finally { restore(); }
+}
+
+/* Whether an absolutely placed box's written size leaves it to shrink to fit (css2 §10.3.7): none written, auto or a
+   content keyword, or a CSS-wide keyword that takes the size back to auto (a variant's `unset` over the base's length,
+   a label that hugs once it floats). Tested by test-from-code.mjs. */
+export const autoSized = (v) => !String(v ?? '').trim() || /^(auto|fit-content|max-content|min-content|unset|initial|revert|revert-layer)$/.test(String(v).trim());
+
+/* Whether a part placed out of the flow says so (`position: absolute`), as derive says it: only where its parent lays out
+   its children (an auto layout), the part taken out of it; in a frame of no auto layout every part is at its point and
+   the design writes no position. A placed component's parent is laid out as its main's root says (`layoutOf`); one the
+   library does not hold (`mainOf` none) is taken to lay out, as before. Tested by test-from-code.mjs. */
+export function outOfFlowIn(up, layoutOf = (u) => u.layout, mainOf = () => null) {
+  if (!up) return true;
+  if (up.kind === 'instance' && !mainOf(up)) return true;
+  const l = layoutOf(up);
+  return !!(l && l.direction);
 }
 
 /* ---- the run ---- */
@@ -3043,7 +3069,7 @@ async function main() {
       const insets = await call(L.tab, ([src, usrc, tsrc]) => new Function(`return ${src}`)()(document, usrc, tsrc), [insetsIn.toString(), unturn.toString(), turnOf.toString()]);
       // (a part with no place of its own inside a placed component, unplacedIn: the walk's place for it is left out too)
       const layoutOf = (u) => (u.kind === 'instance' ? (((mainOf(u.component, u.key) || {}).anatomy || {}).root || {}).layout : u.layout);
-      for (const e of raw) if (e.parent != null && unplacedIn(raw, e, layoutOf)) { delete e.absolute; if (e.position === 'absolute') delete e.position; }
+      for (const e of raw) if (e.parent != null && unplacedIn(raw, e, layoutOf, mainOf)) { delete e.absolute; if (e.position === 'absolute') delete e.position; }
       for (const e of raw) {
         if (!['container', 'text', 'slot', 'instance', 'graphic'].includes(e.kind)) continue;
         // placed out of the flow: its constraints and far offsets as written, through the table; its point as Figma
@@ -3061,8 +3087,8 @@ async function main() {
             const up = raw.find((r) => r.id === e.parent);
             // (inside a placed component, a part in a box with no auto layout sits where its component puts it: the
             // design writes no place for it (derive.cjs, inInstance) and an instance cannot move it, so none is read)
-            const unplaced = unplacedIn(raw, e, layoutOf);
-            if (!unplaced && (!up || up.kind === 'instance' || (up.layout && up.layout.direction))) e.position = 'absolute';
+            const unplaced = unplacedIn(raw, e, layoutOf, mainOf);
+            if (!unplaced && outOfFlowIn(up, layoutOf, (u) => mainOf(u.component, u.key))) e.position = 'absolute';
             // where the declarations say an edge (or both) but the box sits centred and sized on its own (a transform
             // the table does not read, auto margins between two insets), the centre the walk measured is the truth
             const measured = (e.constraints || {});
@@ -3095,7 +3121,7 @@ async function main() {
               // (as text shrinks to fit its words, and a placed component its own main, which sizes it, where the design's
               // part hugs on that axis: else the size it renders at, so one drawn at the wrong size still shows)
               const designHugs = (e.kind === 'instance' || mark.has(e.id)) && figmaContract && [figmaContract.anatomy || {}, ...(figmaContract.variants || []).map((w) => w.add || {})].some((a) => a[e.id] && a[e.id][axis] === 'hug');
-              e[axis] = (!v || /^(auto|fit-content|max-content|min-content)$/.test(v)) && (e.layout || e.kind === 'text' || designHugs) ? 'hug' : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
+              e[axis] = autoSized(v) && (e.layout || e.kind === 'text' || designHugs) ? 'hug' : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
               if (designHugs && !e.layout && e.kind !== 'text' && e[axis] === 'hug') A.add('design-hug', `anatomy.${e.id}.${axis}`);
             }
             if (e.kind === 'text') await readCut(e, !(e.id in shown));
