@@ -150,3 +150,36 @@ test('an out-of-date build names the command that rebuilds it: bin/tokens where 
   r = buildCli(root, '--check');
   assert.ok(r.stderr.includes(`out of date — run node ${join(TOOLKIT, 'tools/tokens/build.mjs')} --repo ${root}\n`), r.stderr);
 });
+
+// A colour style sharing a variable's name: only a binding to that very variable is the variable again
+const withStyle = (root, paint, more = {}) => {
+  const f = join(root, 'design/figma.json'), t = JSON.parse(readFileSync(f, 'utf8'));
+  for (const m of ['Light', 'Dark']) Object.assign(t.collections.Semantic.values[m], more);
+  t.paintStyles = [{ name: 'Colour/Text/$strong', paints: [paint] }];
+  writeFileSync(f, JSON.stringify(t));
+};
+
+test('a colour style bound to the variable it shares a name with is that variable, written once and reported as its alias', () => {
+  const root = repo();
+  const plain = readFileSync(join(root, 'styles/generated/_tokens.scss'), 'utf8');
+  withStyle(root, { type: 'SOLID', color: 'Colour/Text/strong' });
+  const r = buildCli(root);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /tokens: 1 aliased: Colour\/Text\/\$strong \(the variable Colour\/Text\/strong \(Semantic\) again, written once as it\)/);
+  assert.equal(readFileSync(join(root, 'styles/generated/_tokens.scss'), 'utf8'), plain, 'the stylesheet the variable alone builds');
+  assert.ok(!existsSync(join(root, 'design/dtcg/color-style')), 'no token of its own');
+  assert.equal(check(root).status, 0);
+});
+
+test('a colour style sharing a variable\'s name is refused when bound to another variable, or a literal equal to the variable\'s value', () => {
+  for (const [what, paint] of [
+    ['bound to another variable', { type: 'SOLID', color: 'Colour/Text/weak' }],
+    ['a literal equal to the variable\'s value', { type: 'SOLID', color: '#161616' }],
+  ]) {
+    const root = repo();
+    withStyle(root, paint, { 'Colour/Text/weak': '#6f6f6f' });
+    const r = buildCli(root);
+    assert.equal(r.status, 1, `${what}: ${r.stdout}${r.stderr}`);
+    assert.match(r.stderr, /"Colour\/Text\/strong" \(variable in Semantic\) and "Colour\/Text\/\$strong" \(colour style\) both become --colour-text-strong/, what);
+  }
+});

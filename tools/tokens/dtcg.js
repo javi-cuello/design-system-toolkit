@@ -492,16 +492,31 @@
     return { token: token };
   }
 
+  /* The variable a colour style is no more than, or null: one visible solid paint bound to a variable whose path,
+   * collection aside, is the style's own (`Miscellaneous/$overlay` bound to `Miscellaneous/overlay`, the slug dropping
+   * the `$`). That style is the variable again, not a second token sharing its name (code-standard rule 52), so it
+   * is written once, as the variable, and reported as its alias. A literal, even one equal to the variable's value,
+   * or a binding to another variable, is no alias: it is written, and a name it shares is refused. */
+  function sameNamedVariable(style) {
+    var paints = (style.paints || []).filter(function (p) { return p.visible !== false; });
+    var b = paints.length === 1 && paints[0].type === 'SOLID' && paints[0].bound && paints[0].bound.color;
+    if (!b) return null;
+    var own = String(style.name).split('/').map(slug).filter(Boolean).join('.');
+    return pathFor(b.collection, b.name).slice(1).join('.') === own ? b : null;
+  }
+
   function buildPaintStyles(styles, opts) {
-    var o = opts || {}, root = o.paintRoot || 'color-style', tokens = {}, warnings = [], skipped = [];
+    var o = opts || {}, root = o.paintRoot || 'color-style', tokens = {}, warnings = [], skipped = [], aliased = [];
     for (var i = 0; i < styles.length; i++) {
+      var same = sameNamedVariable(styles[i]);
+      if (same) { aliased.push({ name: styles[i].name, reason: 'the variable ' + same.name + ' (' + same.collection + ') again, written once as it' }); continue; }
       var built = paintToken(styles[i], o);
       if (!built.token) { skipped.push({ name: styles[i].name, reason: built.reason }); continue; }
       var path = [slug(root)].concat(String(styles[i].name).split('/').map(slug).filter(Boolean));
       if (!setDeep(tokens, path, built.token))
         warnings.push({ name: styles[i].name, reason: 'name collides at ' + path.join('.') });
     }
-    return { tokens: tokens, warnings: warnings, skipped: skipped };
+    return { tokens: tokens, warnings: warnings, skipped: skipped, aliased: aliased };
   }
 
   /* ---------- files + resolver ---------- */
@@ -528,7 +543,7 @@
   function buildFiles(snapshot, opts) {
     var o = opts || {};
     var files = [];
-    var report = { skipped: [], warnings: [], notExported: [], renamed: [] };
+    var report = { skipped: [], warnings: [], notExported: [], renamed: [], aliased: [] };
     var axes = [];
 
     for (var i = 0; i < snapshot.collections.length; i++) {
@@ -575,10 +590,14 @@
     if (snapshot.paintStyles && snapshot.paintStyles.length) {
       var ps = buildPaintStyles(snapshot.paintStyles, o);
       var psName = slug(o.paintRoot || 'color-style') + '/value.json';
-      files.push({ name: psName, tokens: ps.tokens });
       report.warnings = report.warnings.concat(ps.warnings);
       report.skipped = report.skipped.concat(ps.skipped);
-      axes.push({ collection: o.paintRoot || 'color-style', single: true, variants: [{ mode: null, file: psName }] });
+      report.aliased = report.aliased.concat(ps.aliased);
+      // (every style its variable again: no file of none)
+      if (Object.keys(ps.tokens).length) {
+        files.push({ name: psName, tokens: ps.tokens });
+        axes.push({ collection: o.paintRoot || 'color-style', single: true, variants: [{ mode: null, file: psName }] });
+      }
     } else if (snapshot.paintStyles || snapshot.paintStyleCount) {
       report.notExported.push({ what: 'colour styles', count: snapshot.paintStyleCount || 0, reason: 'not exported — the caller passed paintStyles: false, or supplied no snapshot' });
     }

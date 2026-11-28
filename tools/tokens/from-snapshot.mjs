@@ -360,7 +360,7 @@ if ((process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } c
   try { built = writeDtcg(tokensOf(readJson(src)), dir); } catch (e) { if (!e?.refused) throw e; console.error(e.message); process.exit(1); }
   const r = built.report;
   console.log(`${built.files.length} files → ${dir}`);
-  for (const k of ['skipped', 'warnings', 'renamed']) if ((r[k] || []).length) console.log(`  ${k}: ${r[k].length} (${r[k].slice(0, 3).map((x) => x.name).join(', ')}${r[k].length > 3 ? ', …' : ''})`);
+  for (const k of ['skipped', 'warnings', 'renamed', 'aliased']) if ((r[k] || []).length) console.log(`  ${k}: ${r[k].length} (${r[k].slice(0, 3).map((x) => x.name).join(', ')}${r[k].length > 3 ? ', …' : ''})`);
   // The TypeScript mirror and its check, as every refresh has run them: a
   // failure here means the JSON is written and the modules are not to be trusted.
   for (const step of ['generate-ts.mjs', 'verify-ts.mjs']) {

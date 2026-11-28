@@ -122,7 +122,7 @@ export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
   }
   for (const f of stale) rmSync(join(P.styles, f));
   out.push(`  tokens: DTCG → ${relative(repo, STORED)}, ${files.size} file(s) → ${rel}${stale.length ? `, ${stale.length} stale removed` : ''}`);
-  for (const k of ['skipped', 'warnings']) {
+  for (const k of ['skipped', 'warnings', 'aliased']) {
     const list = built.report[k] || [];
     if (list.length) out.push(`  tokens: ${list.length} ${k}: ${list.slice(0, 4).map((x) => `${x.name} (${x.reason})`).join('; ')}${list.length > 4 ? ' …' : ''}`);
   }
