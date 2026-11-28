@@ -530,6 +530,11 @@ export function ringOf(c, when, id, e, a, t = HOUSE) {
   if (!e.constraints || e.constraints.horizontal !== 'stretch' || e.constraints.vertical !== 'stretch' || Object.values(a).some((k) => k.parent === id)) return null;
   const out = [x.x, x.y, x.end, x.bottom];
   if (!out.every((v) => typeof v === 'number' && v === out[0])) return null;
+  // (an outline draws all four sides at one width: a stroke on some sides, or of a width per side, is the layer's own,
+  // drawn by css.mjs as a ring per side)
+  const SIDES = ['top', 'end', 'bottom', 'start'];
+  if (b.sides && !SIDES.every((k) => b.sides[k] && b.sides[k] === b.sides.top)) return null;
+  if (Array.isArray(b.width) && !b.width.every((v) => v === b.width[0])) return null;
   const width = Array.isArray(b.width) ? b.width[0] : b.width ?? 1;
   const w = typeof width === 'string' ? tokenNames.token(width) : `${width}px`;
   // the layer's edge stands `edge` outside the box; its stroke inside that edge, across it or outside it: the outline

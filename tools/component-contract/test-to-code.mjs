@@ -1215,7 +1215,11 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const state = { type: 'enum', values: ['default', 'focus'], default: 'default', role: 'interaction', pointer: ['focus'], figma: 'State' };
   const ringed = (kind) => ({ kind, parent: 'root', position: 'absolute', absolute: { x: -2, y: -2, end: -2, bottom: -2 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus', width: 2 }, ...(kind === 'instance' && { component: 'Ring' }) });
   const c = (kind) => ({ component: 'B', props: { state }, anatomy: { root: { kind: 'container' } }, variants: [{ when: { state: 'focus' }, add: { ring: ringed(kind) } }] });
-  ok('a placed component is never drawn as a ring; a stroke-only frame is', !ringOf(c('instance'), { state: 'focus' }, 'ring', ringed('instance'), {}) && !!ringOf(c('container'), { state: 'focus' }, 'ring', ringed('container'), {})); }
+  ok('a placed component is never drawn as a ring; a stroke-only frame is', !ringOf(c('instance'), { state: 'focus' }, 'ring', ringed('instance'), {}) && !!ringOf(c('container'), { state: 'focus' }, 'ring', ringed('container'), {}));
+  // (a stroke on some sides only is no ring: an outline draws all four, a focus border open at its bottom read back closed, 2026-11-28)
+  const open = { ...ringed('container'), border: { color: 'Focus', sides: { top: 1, end: 1, bottom: 0, start: 1 } } };
+  const uneven = { ...ringed('container'), border: { color: 'Focus', width: [2, 2, 1, 2] } };
+  ok('a stroke on some sides, or of a width per side, is never drawn as a ring', !ringOf(c('container'), { state: 'focus' }, 'ring', open, {}) && !ringOf(c('container'), { state: 'focus' }, 'ring', uneven, {})); }
 { // a glyph inside another library's instance, drawn open: derive keeps its point (a share of its frame says it), so the
   // sheet writes it as one, its offset and its size each a percentage of the frame's (2026-11-27)
   const d = declarations({ kind: 'graphic', width: 14, height: 14, absolute: { x: 1, y: 1 }, constraints: { horizontal: 'scale', vertical: 'scale' } }, { box: { width: 16, height: 16 } }, { token: (t) => `var(--${t})` });
