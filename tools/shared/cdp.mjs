@@ -346,6 +346,10 @@ export async function navigate(tab, url, { until = 'load', timeout = 30_000, htm
  * A target marked `optional` that matches nothing is passed over (a placed
  * part a combination does not draw) and named in the answer's `missed`, so a
  * caller can tell one that matched at no render; any other throws.
+ * Each target's states are forced before the next target is looked up, so a
+ * later selector keyed on an earlier one's state (`.card:hover > .copy`)
+ * finds the element that state shows: looked up all first, it found the one
+ * shown at rest, and forced the state on an element the page hid.
  */
 export async function forceState(tab, targets) {
   await tab.send('DOM.getDocument', { depth: 0 });
@@ -354,7 +358,9 @@ export async function forceState(tab, targets) {
     return Promise.all(result.filter((x) => /^\d+$/.test(x.name)).map(async (x) => (await tab.send('DOM.requestNode', { objectId: x.value.objectId })).nodeId));
   };
   const held = new Map(), missed = [];
-  const hold = (nodeId, classes) => held.set(nodeId, [...new Set([...(held.get(nodeId) || []), ...classes])]);
+  // (a node whose set grew is forced again before the next target is looked up)
+  const grew = new Set();
+  const hold = (nodeId, classes) => { const was = held.get(nodeId) || [], now = [...new Set([...was, ...classes])]; if (now.length !== was.length) { held.set(nodeId, now); grew.add(nodeId); } };
   for (const { selector, pseudo, within = null, optional = false } of targets) {
     const focus = /^focus/.test(pseudo);
     const { result } = await tab.send('Runtime.evaluate', {
@@ -374,8 +380,9 @@ export async function forceState(tab, targets) {
     for (const n of above) hold(n, [focus ? 'focus-within' : pseudo]);
     for (const n of hit) hold(n, focus ? ['focus', 'focus-visible'] : [pseudo]);
     await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {});
+    for (const n of grew) await tab.send('CSS.forcePseudoState', { nodeId: n, forcedPseudoClasses: held.get(n) });
+    grew.clear();
   }
-  for (const [nodeId, forcedPseudoClasses] of held) await tab.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses });
   return { missed };
 }
 

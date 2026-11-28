@@ -124,6 +124,12 @@ try {
   ok('forceState passes over an optional target that matches nothing, naming it, and throws on any other', JSON.stringify(skipped.missed) === '["#no-such"]'
     && /matched no element: #no-such/.test(String(unforced && unforced.message)));
 
+  // a later target's selector sees the states the earlier ones forced: a copy shown only under its holder's hover is the
+  // one forced, never the one the page hides then
+  await tab.evaluate(`document.body.insertAdjacentHTML('beforeend', '<style>#fh > i { display: none } #fh:not(:hover) > i.r, #fh:hover > i.h { display: inline }</style><div id="fh"><i class="r">r</i><i class="h">h</i></div>')`);
+  await within(5000, forceState(tab, [{ selector: '#fh', pseudo: 'hover' }, { selector: '#fh:not(:hover) > i.r, #fh:hover > i.h', pseudo: 'focus' }]), 'forceState chained');
+  ok('forceState looks each target up after the ones before it are forced', await tab.evaluate(`document.querySelector('#fh:hover > i.h:focus-visible') !== null && document.querySelector('i.r:focus-visible') === null`));
+
   await within(10_000, navigate(tab, `${SITE}/late`), 'navigate load, late fetch');
   const atLoad = await tab.evaluate('window.done === true');
   await within(10_000, navigate(tab, `${SITE}/late`, { until: 'networkIdle' }), 'navigate networkIdle');
