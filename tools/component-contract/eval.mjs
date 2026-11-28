@@ -59,7 +59,7 @@ import { parseColour } from '../parity/values.mjs';
 import { libraryOf } from '../parity/project.mjs';
 import { partsOf, unexposed, pointerWords, swapKeysOf } from './to-markup.mjs';
 import { expand, variantDefaults, foreignOpened, openForeign, placedOf } from './layers.mjs';
-import { sharesNeverWritten, tokenNames, pointerWordsOf } from './to-code.mjs';
+import { sharesNeverWritten, tokenNames, pointerWordsOf, pointerModesOf } from './to-code.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { closureOf } from './site.mjs';
@@ -441,8 +441,11 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
   // combination the row was found in (roundTrip's `pointer`, read per combination from the variants that apply there): one
   // no pointer state sets there stays a difference, and so does one where the reading drew other modes than the rest's
   // (roundTrip's `rest`): code holds modes as attributes, so at a pointer combination it is entitled to the rest's alone
+  // (only where the sheet cannot set them: modes it re-declares under the state, to-code's pointerModesOf, are read
+  // there, so a row there is a difference)
+  const setByState = pointerModesOf(contract, settings);
   const pointerModes = (el, field, row) => {
-    if (!atRest(row) || !/^modes(\.|$)/.test(field)) return false;
+    if (!atRest(row) || !/^modes(\.|$)/.test(field) || setByState.has(el)) return false;
     const at = (x) => { const m = (x.set || {})[`${el}.modes`] !== undefined ? x.set[`${el}.modes`] : (x.add || {})[el] ? x.add[el].modes || null : undefined; return field === 'modes' || m === undefined ? m : m == null ? null : m[field.slice(6)] ?? null; };
     const key = (v) => JSON.stringify(v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : w));
     return vs.some((x) => pointerWords(contract, x.when) && at(x) !== undefined && key(at(x)) === key(row.library));

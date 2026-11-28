@@ -1044,7 +1044,7 @@ function storeLibraries(componentsDir, projectsDir) {
     const ctx = auditContext(w.doc);
     let index = {};
     try { index = JSON.parse(fs.readFileSync(w.paths.index, 'utf8')).components || {}; } catch { /* no index: every folder under the defaults */ }
-    return { ctx, tokens: tokensOf(w.paths), fileOf: (folder) => (index[folder] || {}).file };
+    return { ctx, tokens: tokensOf(w.paths), fileOf: (folder) => (index[folder] || {}).file, styles: w.paths.styles };
   }
   return null;
 }
@@ -1057,7 +1057,13 @@ function librarySettingsFor(componentsDir, projectsDir) {
   const of = storeLibraries(componentsDir, projectsDir);
   // a folder the index does not hold yet (a draft) takes the project's library where it has only one
   const only = of && Object.keys(of.ctx.libraries || {}).length === 1 ? Object.values(of.ctx.libraries)[0].tokens : null;
-  return (folder) => (of && (((of.ctx.libraries || {})[of.fileOf(folder)] || {}).tokens || only)) || house;
+  // (and what the project's token build declares under each mode's attribute, `modeTokens` (tokens/modes.cjs blocksOf):
+  // what a sheet re-declares where a pointer state sets a mode, which no attribute can; one object per settings)
+  let css = '';
+  try { css = of && of.styles ? fs.readFileSync(path.join(of.styles, '_tokens.scss'), 'utf8') : ''; } catch { /* no token build: no modes to re-declare */ }
+  const modeTokens = require('../tokens/modes.cjs').blocksOf(css), memo = new Map();
+  const withModes = (x) => (!Object.keys(modeTokens).length ? x : memo.get(x) || memo.set(x, { ...x, modeTokens }).get(x));
+  return (folder) => withModes((of && (((of.ctx.libraries || {})[of.fileOf(folder)] || {}).tokens || only)) || house);
 }
 
 /** The rulings log of a context document, newest last. */

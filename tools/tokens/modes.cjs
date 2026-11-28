@@ -77,4 +77,17 @@ const sameModes = (a, b) => JSON.stringify(Object.entries(a || {}).sort()) === J
 /** The axes of a snapshot's tokens file (`collections: { name: { modes } }`). */
 const axesOfTokens = (tokens) => axesOf(Object.entries((tokens && tokens.collections) || {}).map(([name, c]) => ({ name, modes: c.modes || [], ...(c.remote && { remote: true }) })));
 
-module.exports = { slug, THEME, RESPONSIVE, kindOf, axesOf, axesOfTokens, modeOf, keyed, attribute, attributesOf, sameModes };
+/** The custom properties the token build declares under each mode's attribute, from its stylesheet:
+ *  { key: { value: [[name, value]] } }, for a sheet that sets a mode where no attribute can (a pointer state: to-code
+ *  re-declares them under its pseudo-class). Only a rule whose selector is that attribute alone, at any nesting (a
+ *  theme's under `@media screen`); declarations one per `;`, as the build writes them. */
+function blocksOf(css) {
+  const out = {}, text = String(css || '').replace(/\/\*[\s\S]*?\*\//g, '');
+  for (const m of text.matchAll(/(?:^|(?<=[{};]))\s*\[data-([a-z0-9-]+)="([^"]*)"\]\s*\{([^{}]*)\}/g)) {
+    const decls = [...m[3].matchAll(/(--[\w-]+)\s*:\s*([^;]+?)\s*(?:;|$)/g)].map((d) => [d[1], d[2]]);
+    if (decls.length) ((out[m[1]] ||= {})[m[2]] ||= []).push(...decls);
+  }
+  return out;
+}
+
+module.exports = { slug, THEME, RESPONSIVE, kindOf, axesOf, axesOfTokens, modeOf, keyed, attribute, attributesOf, sameModes, blocksOf };

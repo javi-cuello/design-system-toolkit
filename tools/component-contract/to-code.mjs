@@ -306,6 +306,47 @@ export function pointerWordsOf(c, t = HOUSE) {
   return out;
 }
 
+/* The parts whose variable modes a pointer state's variant sets (a card's at focus, a link's at press), where the sheet
+   can set them as the mode's attribute would: the token build's declarations under each mode (settings `modeTokens`,
+   tokens/modes.cjs blocksOf), re-declared under the state's pseudo-class, and `inherit` where the state takes a mode
+   away. Each with the pointer prop, the values of it that set modes there, and every mode value the part takes under
+   each key (for the names a mode taken away gives back). A part whose every such mode the build declares, at states that
+   each have a pseudo-class; any other stays to-markup's gap. Tested by test-to-code.mjs. */
+const POINTER_MODES = new WeakMap();
+export function pointerModesOf(c, t = HOUSE) {
+  const memo = POINTER_MODES.get(c) || new Map(); POINTER_MODES.set(c, memo);
+  if (memo.has(t)) return memo.get(t);
+  const out = new Map(), ps = pseudoClasses(t), props = c.props || {}, blocks = t.modeTokens || {};
+  const pointer = (k, v) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v);
+  const seen = new Map(), note = (id, m) => { const x = seen.get(id) || seen.set(id, {}).get(id); for (const [k, v] of Object.entries(m || {})) (x[k] ||= new Set()).add(v); };
+  for (const [id, e] of Object.entries(c.anatomy || {})) note(id, e.modes);
+  for (const v of c.variants || []) {
+    for (const [k, m] of Object.entries(v.set || {})) { const x = /^(.+)\.modes$/.exec(k); if (x) note(x[1], m); }
+    for (const [id, e] of Object.entries(v.add || {})) note(id, e.modes);
+  }
+  const bad = new Set();
+  for (const v of c.variants || []) {
+    const ks = Object.keys(v.when || {}).filter((k) => pointer(k, v.when[k]));
+    if (!ks.length) continue;
+    for (const [k, m] of Object.entries(v.set || {})) {
+      const x = /^(.+)\.modes$/.exec(k);
+      if (!x) continue;
+      const id = x[1], at = out.get(id) || out.set(id, { key: ks[0], at: new Set(), values: {} }).get(id);
+      if (ks.length !== 1 || ks[0] !== at.key || !ps[v.when[ks[0]]]) bad.add(id);
+      at.at.add(v.when[ks[0]]);
+      // (each mode it sets declared by the build; one it takes away, null, needs its names: some mode of that key declared)
+      for (const [mk, mv] of Object.entries(m || {})) if (!(blocks[mk] || {})[mv]) bad.add(id);
+      if (m == null || !Object.keys(m).length) for (const mk of Object.keys(seen.get(id) || {})) if (!blocks[mk]) bad.add(id);
+    }
+  }
+  for (const [id, at] of out) {
+    if (bad.has(id)) { out.delete(id); continue; }
+    for (const [k, vs] of Object.entries(seen.get(id) || {})) at.values[k] = [...vs].filter((v) => v != null);
+  }
+  memo.set(t, out);
+  return out;
+}
+
 /* partsOf's parts by the box they sit in (`root` for one with no parent), the root aside: the lists to-markup writes
    in markupOrder, and reordered reads. */
 export function childrenOf(parts) {
@@ -1231,6 +1272,18 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     if (!a[id]) continue;
     const shown = at.has(when[key]) ? when[key] : 'rest';
     for (const u of ['rest', ...at.keys()]) out[`${id}::words=${u}`] = { decls: new Map([['display', { v: u === shown ? 'inline' : 'none' }]]), unread: [] };
+  }
+  // a part whose variable modes a pointer state sets: at that state, the mode's declarations the attribute would give
+  // (pointerModesOf), each key the part holds a mode under here or at rest; `inherit` where the state takes one away
+  for (const [id, { key, at, values }] of pointerModesOf(c, t)) {
+    if (!a[id] || !at.has(when[key])) continue;
+    const rest = (expand(c, { ...when, [key]: (c.props[key] || {}).default })[id] || {}).modes || {}, here = a[id].modes || {};
+    for (const k of Object.keys(values)) {
+      if (here[k] == null && rest[k] == null) continue;
+      const decls = here[k] != null ? t.modeTokens[k][here[k]] : [...new Set(values[k].flatMap((v) => (t.modeTokens[k][v] || []).map(([nm]) => nm)))].map((nm) => [nm, 'inherit']);
+      out[id] ||= { decls: new Map(), unread: [] };
+      for (const [nm, v] of decls) out[id].decls.set(nm, { v });
+    }
   }
   const entry = entryOf(c);
   if (entry && out[entry.box]) {

@@ -97,8 +97,10 @@ export function drawnAll(library, { settingsOf = () => undefined, naming = ELEME
    Each component written under its library's settings (`settingsOf`, by folder: its state names), the house's where none. */
 export function siteFiles(library, { tokensCss = '', stylesheets = [], naming = ELEMENT, settingsOf = () => undefined, only = null } = {}) {
   const files = { 'components/dom.js': DOM };
-  // the base the sheets assume first (to-code's BASE), then the tokens and each component's sheet
-  let css = `${BASE}${tokensCss}\n`;
+  // the base the sheets assume first (to-code's BASE), then the tokens and each component's sheet; the tokens in a layer
+  // of their own under the rest (code-standard rule 4), so a component's rule that re-declares a mode's tokens (a
+  // pointer state's, to-code's pointerModesOf) wins over the mode's attribute, as it does in a layered project
+  let css = `@layer tokens;\n${BASE}${tokensCss ? `@layer tokens {\n${tokensCss}\n}\n` : ''}\n`;
   // each component's render function, by the name its file exports (to-markup's to say, not this file's to guess)
   const fn = {};
   // each drawn with the components it places as the project's build gives them (to-code's main), so a rule reaching inside one is written

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { toCss, rulesOf, rulesAt, combinations, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn, paintsAny, partsOf, childrenOf, markupOrder } from './to-code.mjs';
+import { toCss, rulesOf, rulesAt, combinations, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn, paintsAny, partsOf, childrenOf, markupOrder, pointerModesOf } from './to-code.mjs';
 import { declarations } from './css.mjs';
 import { toElement } from './to-markup.mjs';
 import { ELEMENT } from './site.mjs';
@@ -1349,4 +1349,17 @@ ok('a placed component stretched by its insets takes no size from its main', dec
 // a gradient stroke a stop of which names no colour is said, never dropped silently (2026-11-28)
 { const d = declarations({ kind: 'container', width: 4, height: 4, border: { color: { type: 'GRADIENT_LINEAR', angle: 90, transform: [[1, 0, 0], [0, 1, 0]], stops: [{ position: 0, color: 'rgb(255 0 0)' }, { position: 1, color: undefined }] }, width: 1, inLayout: true } }, {}, names);
   ok('a gradient stroke whose stop names no colour is said unread', !d.decls.some(([p]) => /^border/.test(p)) && d.unread.some((u) => /names no colour/.test(u)), JSON.stringify(d)); }
+// variable modes a pointer state sets (ruled 2026-11-28): the token build's declarations of each mode re-declared under
+// the state's pseudo-class, `inherit` where the state takes the mode away; a mode the build declares nothing for stays
+// the markup's gap
+{ const c = { contract: 1, component: 'Lnk', props: { state: { type: 'enum', values: ['rest', 'press'], default: 'rest', role: 'interaction', pointer: ['press'], figma: 'State' }, tone: { type: 'enum', values: ['a', 'b'], default: 'a', figma: 'Tone' } },
+    anatomy: { root: { kind: 'container', modes: { ink: 'link' } } },
+    variants: [{ when: { state: 'press' }, set: { 'root.modes': { ink: 'pressed' } } }, { when: { state: 'press', tone: 'b' }, set: { 'root.modes': null } }] };
+  const t = { ...HOUSE, modeTokens: { ink: { link: [['--ink', 'var(--blue)']], pressed: [['--ink', 'var(--navy)']] } } };
+  const css = toCss(c, 'lnk', { naming: ELEMENT, settings: t });
+  ok('a mode a pointer state sets is the build\'s declarations under that state\'s pseudo-class; one it takes away, inherit',
+    /:where\(:active\)\s*\{\s*--ink: var\(--navy\);/.test(css) && /:where\(:active\):where\(\[tone="b"\]\)\s*\{\s*--ink: inherit;/.test(css) && !/--ink: var\(--blue\)/.test(css), css);
+  ok('…only where the build declares every mode the state sets', pointerModesOf(c, t).has('root') && !pointerModesOf(c, HOUSE).has('root')
+    && !pointerModesOf(c, { ...HOUSE, modeTokens: { ink: { link: [['--ink', 'x']] } } }).has('root'));
+  ok('…and the markup names no gap there, but does where the build declares none', !/variable modes change/.test(toElement(c, 'lnk', { naming: ELEMENT, settings: t })) && /variable modes change/.test(toElement(c, 'lnk', { naming: ELEMENT }))); }
 console.log(`${n} passed`);

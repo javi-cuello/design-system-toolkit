@@ -1142,6 +1142,57 @@ export function modeKeysOf(axes, contract) {
 }
 
 export const keepsName = (name, id) => partName(id) !== name;
+/* The mode keys a pointer state's variant sets a part's modes under (a card's at focus, a link's at press), or takes
+   away (the keys the part holds anywhere), each with the modes the design names under it: the keys a reading at that
+   state works out from computed values (stateModes), as no attribute changes there. Tested by test-from-code.mjs. */
+export function pointerModeKeys(c) {
+  const props = (c && c.props) || {}, out = new Map(), held = new Map();
+  const pointer = (when) => Object.entries(when || {}).some(([k, v]) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v));
+  const note = (id, m) => { for (const k of Object.keys(m || {})) (held.get(id) || held.set(id, new Set()).get(id)).add(k); };
+  for (const [id, e] of Object.entries((c && c.anatomy) || {})) note(id, e.modes);
+  for (const v of (c && c.variants) || []) { for (const [k, m] of Object.entries(v.set || {})) if (/\.modes$/.test(k)) note(k.slice(0, -6), m); for (const [id, e] of Object.entries(v.add || {})) note(id, e.modes); }
+  for (const v of (c && c.variants) || []) if (pointer(v.when)) for (const [k, m] of Object.entries(v.set || {})) if (/\.modes$/.test(k)) for (const mk of m && Object.keys(m).length ? Object.keys(m) : held.get(k.slice(0, -6)) || []) out.set(mk, new Set());
+  // (each with the modes the design names under it anywhere, the ones a reading tries first)
+  const named = (m) => { for (const [k, v] of Object.entries(m || {})) if (out.has(k) && v != null) out.get(k).add(v); };
+  for (const e of Object.values((c && c.anatomy) || {})) named(e.modes);
+  for (const v of (c && c.variants) || []) { for (const [k, m] of Object.entries(v.set || {})) if (/\.modes$/.test(k)) named(m); for (const e of Object.values(v.add || {})) named(e.modes); }
+  return Object.fromEntries([...out].map(([k, vs]) => [k, [...vs]]));
+}
+
+/* At a pointer state, an element's variable modes under `keys` as its computed values say them, where they differ from
+   what its attributes give (`modes`): a sheet sets a mode there by re-declaring the custom properties the page's rules
+   declare under that mode's attribute (`[data-<key>="<value>"]`), so the mode is the one whose declarations, resolved
+   where the element stands (a probe beside it carrying that attribute), are what the element computes; none where it
+   computes what it inherits. `keys` lists them, or names for each the modes to try first (the design's own): of modes
+   whose declarations compute alike (two tokens of one colour), the first so named. Runs in the page (passed as source);
+   tested by test-from-code.mjs. */
+export function stateModes(keys, doc = document, style = getComputedStyle) {
+  const prefer = Array.isArray(keys) ? {} : keys;
+  keys = Array.isArray(keys) ? keys : Object.keys(keys);
+  const by = {}, re = /^\[data-([\w-]+)="([^"]*)"\]$/;
+  const visit = (rules) => { for (const r of rules || []) {
+    const m = r.selectorText && re.exec(r.selectorText.trim());
+    if (m && keys.includes(m[1])) for (let i = 0; i < r.style.length; i++) if (r.style[i].startsWith('--')) ((by[m[1]] ||= {})[m[2]] ||= new Set()).add(r.style[i]);
+    if (r.cssRules && r.cssRules.length) visit(r.cssRules);
+  } };
+  for (const sh of doc.styleSheets) { try { visit(sh.cssRules); } catch { /* another origin's */ } }
+  const same = (a, b) => !!a && !!b && a.length === b.length && a.every((x, i) => x === b[i]);
+  return (n, modes) => {
+    const out = { ...modes }, up = n.parentElement;
+    if (!up) return out;
+    for (const [k, vs] of Object.entries(by)) {
+      const names = [...new Set(Object.values(vs).flatMap((x) => [...x]))];
+      const read = (el) => { const cs = style(el); return names.map((nm) => cs.getPropertyValue(nm).trim()); };
+      const probe = (v) => { const p = doc.createElement('span'); if (v != null) p.setAttribute(`data-${k}`, v); p.style.display = 'none'; up.appendChild(p); try { return read(p); } finally { p.remove(); } };
+      const cur = read(n);
+      if (same(probe(modes[k] ?? null), cur)) continue;
+      const hit = [...new Set([...(prefer[k] || []).filter((v) => v in vs), ...Object.keys(vs)])].find((v) => same(probe(v), cur));
+      if (hit !== undefined) out[k] = hit; else if (same(probe(null), cur)) delete out[k];
+    }
+    return out;
+  };
+}
+
 
 /* The CSS each field of a placed instance's own styling is read from (from-code's walk, boxStyling), for asking whose
    rule wrote it. */
@@ -2786,11 +2837,14 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
+      // (and at a forced pointer state, the keys its variants set modes under, worked out from computed values there)
+      const stateKeys = figmaContract && (L.pseudoOf || {})[args.__state] ? pointerModeKeys(figmaContract) : null, stateKeyed = stateKeys && Object.keys(stateKeys).length ? stateKeys : null;
       // each element two layers of the design share, by what it draws (namedAt): its icon's name, else the first inside it
       const twice = [...new Set(named.map((x) => x[0]).filter((sl, i, a) => a.indexOf(sl) !== i))];
       const glyphs = twice.length ? await call(L.tab, (sels) => Object.fromEntries(sels.map((sl) => { const n = document.querySelector(sl), g = n && (n.getAttribute('data-icon') || (n.querySelector('[data-icon]') || { getAttribute: () => null }).getAttribute('data-icon')); return [sl, g || null]; })), twice) : {};
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS, paintedClearSrc, childrenMeetSrc, strokeShapesSrc, mapped]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS, paintedClearSrc, childrenMeetSrc, strokeShapesSrc, mapped, stateModesSrc, stateKeys]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
+        const atState = stateKeys ? new Function(`return ${stateModesSrc}`)()(stateKeys) : null;
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)(), childrenMeet = new Function(`return ${childrenMeetSrc}`)(), [lineCap, centreRing] = new Function(`return ${strokeShapesSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)(), paddingOf = new Function(`return ${paddingSrc}`)(), flowOf = new Function(`return ${flowSrc}`)();
@@ -2872,7 +2926,9 @@ async function main() {
           // a component placing this one, nor further up, where a page's own theme attribute is no mode the component sets)
           const hostSel = /^(.*\S)\s*>\s*[^>]+$/.exec(sel || '');
           const host = parent == null && hostSel && n.parentElement && n.parentElement.tagName.includes('-') && (() => { try { return n.parentElement.matches(hostSel[1]); } catch { return false; } })() ? n.parentElement : null;
-          const modes = Object.fromEntries(modeKeys.map((k) => [k, n.getAttribute(`data-${k}`) || (host && host.getAttribute(`data-${k}`))]).filter(([, v]) => v));
+          const attrModes = Object.fromEntries(modeKeys.map((k) => [k, n.getAttribute(`data-${k}`) || (host && host.getAttribute(`data-${k}`))]).filter(([, v]) => v));
+          // (at a pointer state that sets modes, as its computed values say them: stateModes)
+          const modes = atState ? atState(host || n, attrModes) : attrModes;
           const e = { id, kind, ...(parent != null && { parent, order }), ...placedBy(n, parent), ...(figmaName && { name: figmaName }), ...(nameBorrowed && { nameBorrowed }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...((mirrors.get(n) || mirrored(s)) && { flip: mirrors.get(n) || mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // another library's instance the markup drew open (to-markup's data-component, data-key, data-with): its component,
           // its key and the props it is given, read back as the instance it is (foreignAsInstance)
@@ -3092,7 +3148,7 @@ async function main() {
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; delete e.rects; });
         }
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), `[${layerShown.toString()}, ${shownState.toString()}, ${aroundGone.toString()}]`, markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString(), `[${lineCap.toString()}, ${centreRing.toString()}]`, Object.fromEntries(named.map(([q, id]) => [id, q]))]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), `[${layerShown.toString()}, ${shownState.toString()}, ${aroundGone.toString()}]`, markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString(), `[${lineCap.toString()}, ${centreRing.toString()}]`, Object.fromEntries(named.map(([q, id]) => [id, q])), stateModes.toString(), stateKeyed]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a box whose children say by z-index how they stack but not the design's order of them (one in the flow, no CSS
       // order: rules.mjs stackedFirst): its children read as painted, and said so; the box keeps the mark (stackUnknown),

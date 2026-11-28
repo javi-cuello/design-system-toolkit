@@ -422,3 +422,14 @@ test("another library's variable joined into a collection of the same name resol
   assert.deepEqual(toDtcgSnapshot(lone).collections.find((c) => c.name === 'Palette').variables.find((x) => x.name === 'Accent/9').values, { Light: { r: 0, g: 1 / 3, b: 1, a: 1 } }, 'no value given in a mode of its own');
   assert.throws(() => writeDtcg(lone, mkdtempSync(join(tmpdir(), 'dtcg-lone-'))), /do not resolve inside their resolution/);
 });
+
+test('the declarations under each mode\'s attribute are read from the built sheet, at any nesting, comments aside', () => {
+  const MODES = createRequire(import.meta.url)('./modes.cjs');
+  const css = ':root {\n  --ink: red;\n}\n[data-tone="link"] {\n  --ink: var(--blue); /* a link */\n  --edge: 1px;\n}\n@media screen {\n  [data-theme="dark"] {\n    --ink: white;\n  }\n}\n.x [data-tone="no"] {\n  --ink: 0;\n}\n';
+  const b = MODES.blocksOf(css);
+  assert.deepEqual(b.tone.link, [['--ink', 'var(--blue)'], ['--edge', '1px']]);
+  assert.deepEqual(b.theme.dark, [['--ink', 'white']]);
+  assert.deepEqual(MODES.blocksOf('[data-a="x"] {\n  --p: 1;\n}\n[data-a="y"] {\n  --p: 2;\n}\n').a, { x: [['--p', '1']], y: [['--p', '2']] }, 'one block after another');
+  assert.equal(b.tone.no, undefined, 'a rule naming more than the attribute is no mode block');
+  assert.deepEqual(MODES.blocksOf(''), {});
+});

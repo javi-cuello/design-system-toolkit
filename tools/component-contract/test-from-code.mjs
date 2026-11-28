@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, shownState, aroundGone, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, lineCap, centreRing, shadowLayers, borderGradient, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance, standIn } from './from-code.mjs';
+import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, shownState, aroundGone, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, lineCap, centreRing, shadowLayers, borderGradient, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance, standIn, pointerModeKeys, stateModes } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -1867,6 +1867,30 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
       && wordsAsDrawn({ childNodes: [span('Search', 'none'), span('Typing', 'inline')] }, { whiteSpaceCollapse: 'collapse' }) === 'Typing'
       && wordsAsDrawn(el('a', {}), { whiteSpaceCollapse: 'collapse' }) === 'a');
   } finally { globalThis.getComputedStyle = had; } }
+// a pointer state that sets a part's modes: the keys it sets them under, or those the part holds where it takes them away
+{ const c = { props: { state: { type: 'enum', values: ['rest', 'press'], role: 'interaction', pointer: ['press'] }, tone: { type: 'enum', values: ['a', 'b'] } },
+    anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', modes: { glyph: 'g' } } },
+    variants: [{ when: { tone: 'b' }, set: { 'root.modes': { ink: 'b' } } }, { when: { state: 'press' }, set: { 'root.modes': { ink: 'p' } } }, { when: { state: 'press', tone: 'b' }, set: { 'icon.modes': null } }] };
+  ok('pointerModeKeys: the keys a pointer state\'s variants set modes under, and the part\'s own where one takes them away; none another state alone sets',
+    JSON.stringify(pointerModeKeys(c)) === '{"ink":["b","p"],"glyph":["g"]}' && JSON.stringify(pointerModeKeys({ ...c, variants: [c.variants[0]] })) === '{}', JSON.stringify(pointerModeKeys(c))); }
+// the mode an element computes at a pointer state, from the page's own rules under each mode's attribute (a probe)
+{ const blocks = { a: { '--ink': 'A' }, p: { '--ink': 'P' } };
+  const el = (attrs = {}, own = {}) => ({ attrs, own, kids: [], parentElement: null, style: {}, getAttribute(k) { return this.attrs[k] ?? null; }, setAttribute(k, v) { this.attrs[k] = v; }, appendChild(x) { x.parentElement = this; this.kids.push(x); }, remove() { const u = this.parentElement; u.kids = u.kids.filter((x) => x !== this); this.parentElement = null; } });
+  const value = (n, nm) => (nm in n.own ? n.own[nm] : n.attrs['data-ink'] ? blocks[n.attrs['data-ink']][nm] : n.parentElement ? value(n.parentElement, nm) : 'root');
+  const style = (n) => ({ getPropertyValue: (nm) => value(n, nm) });
+  const doc = { styleSheets: [{ cssRules: [{ cssRules: [{ selectorText: '[data-ink="a"]', style: ['--ink'] }, { selectorText: '[data-ink="p"]', style: ['--ink'] }, { selectorText: '[data-other="x"]', style: ['--o'] }] }] }], createElement: () => el() };
+  const at = stateModes(['ink'], doc, style), page = el(), n = el({ 'data-ink': 'a' });
+  page.appendChild(n);
+  const was = JSON.stringify(at(n, { ink: 'a' }));
+  n.own['--ink'] = 'P'; const now = JSON.stringify(at(n, { ink: 'a' }));
+  n.own['--ink'] = 'root'; const gone = JSON.stringify(at(n, { ink: 'a' }));
+  ok('stateModes: the attribute\'s mode where the element computes it; the mode whose declarations it computes where a state re-declares them; none where it inherits',
+    was === '{"ink":"a"}' && now === '{"ink":"p"}' && gone === '{}' && page.kids.length === 1, JSON.stringify([was, now, gone]));
+  // (two modes that compute alike: the one the design names first)
+  blocks.q = { '--ink': 'P' }; doc.styleSheets[0].cssRules[0].cssRules.unshift({ selectorText: '[data-ink="q"]', style: ['--ink'] });
+  n.own['--ink'] = 'P';
+  ok('stateModes: of modes that compute alike, the one the design names; else the first the page declares',
+    JSON.stringify(stateModes({ ink: ['p'] }, doc, style)(n, { ink: 'a' })) === '{"ink":"p"}' && JSON.stringify(stateModes(['ink'], doc, style)(n, { ink: 'a' })) === '{"ink":"q"}'); }
 // the self story's words for a string prop: as long as its default and never equal to it, so a literal equal to the
 // default reads back as that literal and a bound text as the prop (boundText)
 ok('standIn: a default\'s letters and digits turned, as long as it, never the same; empty stays empty',

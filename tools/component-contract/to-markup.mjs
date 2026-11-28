@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations, borderBox } from './css.mjs';
-import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, pointerWordsOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
+import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, pointerWordsOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign, foreignOpened } from './layers.mjs';
 // (another library's instance whose insides the contract records is drawn open, its layers this component's own:
@@ -655,8 +655,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     const sets = (c.variants || []).filter((v) => (v.set && `${id}.modes` in v.set) || (apart && own(v)))
       .map((v) => (v.set && `${id}.modes` in v.set ? v : { ...v, set: { [`${id}.modes`]: v.add[id].modes || {} } }))
       .sort((x, y) => !!x.combination - !!y.combination);
-    // (modes a pointer state sets, a card's at focus: the markup's attributes, which no pointer state changes, so a gap)
-    if (sets.some((v) => pointerWords(c, v.when))) gaps.push(`${partName(id)}'s variable modes change at a pointer state: frontend-build's to add, or the design's to drop`);
+    // (modes a pointer state sets, a card's at focus: the markup's attributes, which no pointer state changes; the sheet
+    // sets them there where the token build declares each (to-code's pointerModesOf), else a gap)
+    if (sets.some((v) => pointerWords(c, v.when)) && !pointerModesOf(c, settings).has(id)) gaps.push(`${partName(id)}'s variable modes change at a pointer state: frontend-build's to add, or the design's to drop`);
     // (and a pointer state's variant that adds the part again where no other state draws it, a link's icon at press where
     // its tone takes the icon away: it carries only the modes it says, which the markup holds under the rest of its props,
     // as only that state draws the part there; where the rest draws it at any such combination, it stays the gap)
