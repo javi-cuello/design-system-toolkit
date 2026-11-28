@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.17.3] - 2026-11-28
+### Changed
+- Carries snapshot 0.95.0: a layer's visibility bound to a boolean variable is recorded under `bindings.visible`.
+
 ## [0.17.2] - 2026-11-28
 ### Changed
 - Carries snapshot 0.94.0: a radial, angular or diamond gradient keeps its stops and placement, and a layer's own effects with no style keep their values.

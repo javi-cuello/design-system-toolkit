@@ -578,4 +578,16 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("…and a layer whose effects come from a style records the style's name alone, its values the style's", !("effectLayers" in styled));
 }
 
+// 0.95.0: a boolean variable bound to a layer's visibility (VariableBindableNodeField 'visible') is recorded by name
+// under bindings, as a bound number is: a layer one mode hides drew in every mode
+{
+  const vars = { vb: { id: "vb", name: "Show/Badge", resolvedType: "BOOLEAN" } };
+  const fv = { variables: { getVariableByIdAsync: async (id) => vars[id] || null }, getStyleByIdAsync: async () => null };
+  const w = vm.runInContext(src + "\n;walk", vm.createContext({ figma: fv, console, setTimeout, clearTimeout }));
+  const badge = { ...box("Badge", "FRAME"), boundVariables: { visible: { type: "VARIABLE_ALIAS", id: "vb" } } };
+  const got = await w(box("Row", "FRAME", [badge]), 0);
+  ok("a layer's visibility bound to a boolean variable is recorded as the variable's name under bindings", got.children[0].bindings && got.children[0].bindings.visible === "Show/Badge");
+  ok("…and a layer with none bound records no visibility binding", !(got.bindings && "visible" in got.bindings));
+}
+
 console.log(n + "/" + n + " passed");

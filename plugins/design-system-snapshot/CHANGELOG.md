@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.95.0] - 2026-11-28
+### Added
+- **A layer's visibility bound to a boolean variable is recorded** as the variable's name under `bindings.visible`, as a bound number is (`VariableBindableNodeField` `'visible'` in `@figma/plugin-typings` plugin-api.d.ts). It was never read, so a layer a mode shows or hides reached neither the store nor the contract. Only a layer drawn in the mode walked is recorded: one the variable hides there is skipped with every hidden layer. Takes effect with the next snapshot.
+
 ## [0.94.0] - 2026-11-28
 ### Added
 - **A radial, angular or diamond gradient keeps its stops and placement** (`type`, `transform`, `stops`, as a linear one does without its angle), in a layer's fills and strokes and in a paint style. Each was the bare word `GRADIENT_ANGULAR`, so a stroke painted with one could be neither drawn nor compared. The Plugin API's `GradientPaint` carries `gradientTransform` and `gradientStops` for all four types (`@figma/plugin-typings` plugin-api.d.ts). Takes effect with the next snapshot.

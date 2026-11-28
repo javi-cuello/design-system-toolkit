@@ -1,4 +1,4 @@
-// Design system snapshot — v0.94.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.95.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -225,6 +225,9 @@ async function numberBindings(n) {
   if (stroke || strokeOne) out.strokeWeight = stroke ? stroke.map((w) => w || strokeOne) : [strokeOne, strokeOne, strokeOne, strokeOne];
   const opacity = await name('opacity'); if (opacity) out.opacity = opacity;
   for (const k of ['minWidth', 'minHeight', 'maxWidth', 'maxHeight', 'width', 'height']) { const v = await name(k); if (v) out[k === 'width' ? 'w' : k === 'height' ? 'h' : k] = v; }
+  // a boolean variable that shows or hides the layer, per mode (VariableBindableNodeField 'visible'): never read, so a
+  // layer a mode hides drew in every mode (0.95.0)
+  const visible = await name('visible'); if (visible) out.visible = visible;
   return Object.keys(out).length ? out : null;
 }
 
@@ -900,7 +903,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.94.0';
+const VERSION = '0.95.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
