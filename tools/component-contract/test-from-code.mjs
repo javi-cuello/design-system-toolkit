@@ -340,6 +340,11 @@ ok('a slot\'s stand-in is one word per prop, which no component draws', slotMark
       anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: '{labelText}' }, box: { kind: 'container', parent: 'root' }, 'box/value': { kind: 'text', parent: 'box', content: '{valueText}' } } };
     ok('a text under a layer the instance is read not to draw shows no word: the words left count out one for one', JSON.stringify(wordsOf(cb, ['Group'], {}, { Value: null })) === '{"Heading":"Group"}'
       && JSON.stringify(wordsOf(cb, ['Group'], {}, { Value: false })) === '{"Heading":"Group"}' && JSON.stringify(wordsOf(cb, ['Group'], {}, { Value: true })) === '{}'); }
+  { // (the texts it draws at the props read: a select at hydrate shows its held value, its placeholder's text taken away)
+    const sel = { props: { ph: { type: 'string', default: 'Value', figma: 'Placeholder' }, held: { type: 'string', default: 'Picked', figma: 'Held' }, state: { type: 'enum', values: ['rest', 'hydrate'], figmaValues: ['rest', 'hydrate'], default: 'rest', figma: 'state' } },
+      anatomy: { root: { kind: 'container' }, ph: { kind: 'text', parent: 'root', content: '{ph}' } }, variants: [{ when: { state: 'hydrate' }, remove: ['ph'], add: { held: { kind: 'text', parent: 'root', content: '{held}' } } }] };
+    ok('an instance\'s words are the texts it draws at the props read: at hydrate its held value, never its placeholder',
+      JSON.stringify(wordsOf(sel, ['12/18'], {}, {}, { state: 'hydrate' })) === '{"Held":"12/18"}' && JSON.stringify(wordsOf(sel, ['Pick one'], {}, {}, {})) === '{"Placeholder":"Pick one"}' && JSON.stringify(wordsOf(sel, ['12/18'])) === '{"Placeholder":"12/18"}'); }
   ok('words that do not count out one for one are not guessed', JSON.stringify(wordsOf(badge, ['New', 'Extra'])) === '{}' && JSON.stringify(wordsOf(badge, [])) === '{}');
 }
 

@@ -89,11 +89,16 @@ const sameColour = (a, b) => { const x = parseColour(a), y = parseColour(b); ret
    one for each word it shows (counted alike, else none is guessed); a word this component's own prop put there (its
    stand-in, slotMark) is that prop, as a text's content says it: {prop}. A text under a layer the instance is read not
    to draw (`shown`: a boolean read off, or unseen as a box around it is not drawn, null) shows no word and is no
-   one of them. Tested by test-from-code.mjs. */
-export function wordsOf(fc, texts, own = {}, shown = {}) {
+   one of them. Its texts are the ones it draws at the props read so far (`at`, by Figma's names, derive's atProps: a
+   select at hydrate shows its held value, never its placeholder), each bound as its main binds it; none given, its base
+   anatomy's. Tested by test-from-code.mjs. */
+export function wordsOf(fc, texts, own = {}, shown = {}, at = null) {
   const off = Object.values(fc.props).filter((q) => q.type === 'boolean' && q.figma in (shown || {}) && shown[q.figma] !== true).flatMap((q) => q.shows || []);
   const under = (id) => off.some((l) => id === l || id.startsWith(`${l}/`));
-  const said = Object.entries(fc.anatomy).filter(([id, t]) => t.kind === 'text' && typeof t.content === 'string' && !under(id)).map(([, t]) => /^\{(.+)\}$/.exec(t.content)).filter(Boolean).map((m) => fc.props[m[1]]).filter((q) => q && q.type === 'string');
+  // (a text's binding as its main states it, in its base or the variant that adds it: atProps puts the words in)
+  const bound = (id) => [fc.anatomy[id], ...(fc.variants || []).map((v) => (v.add || {})[id])].map((t) => t && t.content).find((t) => typeof t === 'string' && /^\{.+\}$/.test(t)) ?? (fc.anatomy[id] || {}).content;
+  const A = at ? Object.fromEntries(Object.entries(atProps(fc, at)).map(([id, t]) => [id, t && t.kind === 'text' ? { ...t, content: bound(id) } : t])) : fc.anatomy;
+  const said = Object.entries(A).filter(([id, t]) => t && t.kind === 'text' && typeof t.content === 'string' && !under(id)).map(([, t]) => /^\{(.+)\}$/.exec(t.content)).filter(Boolean).map((m) => fc.props[m[1]]).filter((q) => q && q.type === 'string');
   if (!texts.length || said.length !== texts.length) return {};
   const ownProp = (t) => { const m = /^slot·(.+)·here$/.exec(t); const k = m && Object.keys(own).find((k) => own[k].code === m[1] || k === m[1]); return k ? `{${k}}` : t; };
   return Object.fromEntries(said.map((q, i) => [q.figma, ownProp(texts[i])]));
@@ -3319,7 +3324,7 @@ async function main() {
             const best = fit.sort((a, b) => Object.keys(b[1].args || b[1]).length - Object.keys(a[1].args || a[1]).length)[0];
             if (best) for (const part of best[0].split(', ')) { const [ax, v] = part.split('='); if (ax && v) w[ax] = v; }
           }
-          if (fc && x.texts) Object.assign(w, wordsOf(fc, x.texts, props, x.shown));
+          if (fc && x.texts) Object.assign(w, wordsOf(fc, x.texts, props, x.shown, { ...w }));
           Object.assign(w, shownRead(fc, w, x.shown));
           const glyphOf = [];
           // the glyph goes to the swap that drives a layer drawn at these props: a button's Icon (16) or Icon (20), by its
