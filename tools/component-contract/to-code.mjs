@@ -1753,10 +1753,13 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
   // share; with no library given, none is held, as the markup draws every placed instance then)
   const markOnly = (e) => e.kind === 'instance' && !heldBy(library || {}, e);
   // (a part drawn in a wrapper, turnedParts, is reached through it; `::turn` is the wrapper itself)
-  const turned = turnedParts(c), wrapper = (s) => `[data-turn="${partSeg(c, s)}"]`;
+  const turned = turnedParts(c), wrapper = (s) => `[data-turn="${partSeg(c, s)}"]`, copyMark = pseudo.startsWith('pointer='), tailSel = copyMark ? '' : pseudoSel(pseudo);
   const seg = (s, i) => { const e = c.anatomy[s] || findAdded(c, s) || {};
     if (pseudo === 'turn' && i === segs.length - 1) return wrapper(s);
-    return (turned.has(s) ? `${wrapper(s)} > ` : '') + (s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + (markOnly(e) ? '' : through(n, e.kind === 'instance' && e.component, heldIn(c, s, mains)))); };
+    // (a copy's own `[data-pointer]` on its hook, the host the markup puts it on, before the control inside: a placed
+    // button's native <button>)
+    const mark = copyMark && i === segs.length - 1 ? pseudoSel(pseudo) : '';
+    return (turned.has(s) ? `${wrapper(s)} > ` : '') + (s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + mark + (markOnly(e) ? '' : through(n, e.kind === 'instance' && e.component, heldIn(c, s, mains)))); };
   // a part inside a placed component is that component's own: named as its own sheet names it, under the instance
   const hostAt = segs.findIndex((s) => (c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance');
   const host = hostAt >= 0 && hostAt < segs.length - 1 && segs[hostAt], m = host && (() => { const he = c.anatomy[host] || findAdded(c, host); return mains(he.component, he.key); })();
@@ -1796,7 +1799,7 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
     }
     return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.slice(0, hostAt + 1).map(seg), ...inner].join(' > ') + pseudoSel(pseudo);
   }
-  return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.map(seg)].join(' > ') + pseudoSel(pseudo);
+  return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.map(seg)].join(' > ') + tailSel;
 }
 // the selector the sheet styles a part by, at no condition: what the markup's parity mapping names it by
 /* A part inside a placed component this library holds, by that component's own names under the instance; else null. */

@@ -1491,9 +1491,11 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   for (const [cp, { key, at: states }] of pointerWithOf(c, settings, mains)) {
     const sel = byId[cp];
     if (typeof sel !== 'string' || !sel.startsWith(`${root} > `)) continue;
-    const tail = sel.slice(root.length), all = [...states], at = (v) => condition(c, n, key, v, settings, mains, library);
+    // (`[data-pointer]` on the copy's hook, the host the markup puts it on, before the control inside it: a placed
+    // button's native <button>)
+    const tail = sel.slice(root.length), hookAt = ((h, i) => (i < 0 ? tail.length : i + h.length))(n.part(partSeg(c, cp)), tail.lastIndexOf(n.part(partSeg(c, cp)))), all = [...states], at = (v) => condition(c, n, key, v, settings, mains, library);
     const shown = (x) => (typeof x !== 'string' || (x !== sel && !x.startsWith(`${sel} `)) ? x
-      : ['rest', ...all].map((u) => `${root}${u === 'rest' ? all.map((v) => `:not(${at(v)})`).join('') : at(u)}${tail}[data-pointer="${u}"]${x.slice(sel.length)}`).join(', '));
+      : ['rest', ...all].map((u) => `${root}${u === 'rest' ? all.map((v) => `:not(${at(v)})`).join('') : at(u)}${tail.slice(0, hookAt)}[data-pointer="${u}"]${tail.slice(hookAt)}${x.slice(sel.length)}`).join(', '));
     for (const k of Object.keys(layers)) layers[k] = shown(layers[k]);
     for (const k of Object.keys(byId)) byId[k] = shown(byId[k]);
   }
