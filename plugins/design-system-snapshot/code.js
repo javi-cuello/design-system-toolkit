@@ -1,4 +1,4 @@
-// Design system snapshot — v0.95.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.96.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -148,6 +148,11 @@ const digest = (s) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h
 
 /** @type {Record<string, VariableCollection | null>} */
 const colCache = {};
+/** @param {string} cid */
+async function collectionOf(cid) {
+  if (!(cid in colCache)) { try { colCache[cid] = await figma.variables.getVariableCollectionByIdAsync(cid); } catch { colCache[cid] = null; } }
+  return colCache[cid];
+}
 /** A layer set to another mode of a collection than it inherits (a small variant's Mobile type), by the names a
  *  build and the tokens file know them by; recorded since 0.75.0. One that does not resolve is left out.
  *  @param {SceneNode} n */
@@ -157,8 +162,7 @@ async function modesOf(n) {
   /** @type {Record<string, string>} */
   const out = {};
   for (const [cid, mid] of Object.entries(set)) {
-    if (!(cid in colCache)) { try { colCache[cid] = await figma.variables.getVariableCollectionByIdAsync(cid); } catch { colCache[cid] = null; } }
-    const c = colCache[cid];
+    const c = await collectionOf(cid);
     const m = c && c.modes.find((x) => x.modeId === mid);
     if (c && m) out[c.name] = m.name;
   }
@@ -166,6 +170,28 @@ async function modesOf(n) {
 }
 /** @type {Record<string, Variable | null>} */
 const varCache = {};
+/* The variable names more than one of the file's own collections holds, read once a run (freshLookups, and each
+   components run, which a bridge snapshot makes in parts with no tokens read first): a binding to one records its
+   collection (bindingCollections). @type {Set<string> | null} */
+let sharedNames = null;
+/** The collection of each variable a layer binds (on itself, its fills, strokes and effects) whose name another of the
+ *  file's collections also holds, by the variable's name: `{ "tag-border": "Color palette 1" }`; null where none does.
+ *  A binding is otherwise recorded by name alone, which such a name does not settle (0.96.0). A name bound from two
+ *  collections on one layer keeps both, sorted.
+ *  @param {SceneNode} n */
+async function bindingCollections(n) {
+  if (!sharedNames) {
+    /** @type {Record<string, Set<string>>} */ const at = {};
+    for (const v of await figma.variables.getLocalVariablesAsync()) (at[v.name] ||= new Set()).add(v.variableCollectionId);
+    sharedNames = new Set(Object.keys(at).filter((k) => at[k].size > 1));
+  }
+  /** @type {Record<string, any>} */ const o = {};
+  for (const id of aliasesOn(n, new Set())) {
+    const v = await variable(id), c = v && sharedNames.has(v.name) && await collectionOf(v.variableCollectionId);
+    if (c) o[v.name] = o[v.name] && o[v.name] !== c.name ? [...new Set([].concat(o[v.name], c.name))].sort() : c.name;
+  }
+  return Object.keys(o).length ? o : null;
+}
 /** @param {string} id */
 // A lookup Figma never answers (a library variable it cannot fetch: on one large library the first of 171 hung the
 // run for good, Cancel included, 2026-11-25) is given up after a while; after three, the rest are not asked, and the
@@ -179,7 +205,7 @@ let unanswered = 0, timedOut = 0;
 function freshLookups() {
   unanswered = 0; timedOut = 0;
   for (const id of missed) delete varCache[id];
-  missed.clear(); cols.clear();
+  missed.clear(); cols.clear(); sharedNames = null;
 }
 const MISSED = Symbol('missed');
 /** @template T @param {() => Promise<T>} ask @returns {Promise<T | typeof MISSED>} */
@@ -606,11 +632,15 @@ const autoLineAt = (size, range) => {
 };
 
 /* Every variable the components on `pages` bind, by id: on the component, its layers, and their fills, strokes and effects. */
+/* The variables one layer binds, by id, added to `ids`: on the layer, and its fills, strokes and effects. */
+const aliasesOn = (/** @type {any} */ n, /** @type {Set<string>} */ ids) => {
+  const take = (/** @type {any} */ b) => { if (Array.isArray(b)) b.forEach(take); else if (b && b.type === 'VARIABLE_ALIAS') ids.add(b.id); else if (b && typeof b === 'object') Object.values(b).forEach(take); };
+  for (const x of [n, ...[n.fills, n.strokes, n.effects].flatMap((l) => (Array.isArray(l) ? l : []))]) take(x && x.boundVariables);
+  return ids;
+};
 const boundOn = (/** @type {readonly PageNode[]} */ pages) => {
   const ids = new Set();
-  const take = (/** @type {any} */ b) => { if (Array.isArray(b)) b.forEach(take); else if (b && b.type === 'VARIABLE_ALIAS') ids.add(b.id); else if (b && typeof b === 'object') Object.values(b).forEach(take); };
-  for (const p of pages) for (const c of p.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }))
-    for (const n of [c, ...c.findAll()]) for (const x of [n, ...[/** @type {any} */ (n).fills, /** @type {any} */ (n).strokes, /** @type {any} */ (n).effects].flatMap((l) => (Array.isArray(l) ? l : []))]) take(/** @type {any} */ (x).boundVariables);
+  for (const p of pages) for (const c of p.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] })) for (const n of [c, ...c.findAll()]) aliasesOn(n, ids);
   return ids;
 };
 /* The pages whose components a snapshot stores: never this plugin's scratch page or one a person marks Scratch, which
@@ -903,7 +933,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.95.0';
+const VERSION = '0.96.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1094,6 +1124,9 @@ async function walk(n, depth, at, inInstance = false) {
   // only the binding says whether the design decided it or someone typed it.
   const bound = await numberBindings(n);
   if (bound) o.bindings = bound;
+  // and which collection a bound name came from, where another collection holds the name too (0.96.0)
+  const from = await bindingCollections(n);
+  if (from) o.collections = from;
   // which mode of a collection the layer is set to, where it is set (a component's small variant at Mobile type)
   const modes = await modesOf(n);
   if (modes) o.modes = modes;
@@ -1686,7 +1719,7 @@ async function preferredName(/** @type {any} */ x) {
 
 async function collectComponents({ withIcons, previews, darkModes, scope = null, pages = null, section = null, exclude = null }) {
   // a run names from the file as it is now: a component renamed since the last run is read again
-  localKeys = null; prefNames.clear(); unreadable = [];
+  localKeys = null; prefNames.clear(); unreadable = []; sharedNames = null;
   const components = [];
   // An asset library (illustrations, photos, graphics), as its project lists it: each variant of its sets is an
   // asset of its own, so each gets a preview, not only the default. Guessed from an icon page until 0.92.0, which

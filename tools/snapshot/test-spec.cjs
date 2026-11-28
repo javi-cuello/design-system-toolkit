@@ -133,3 +133,12 @@ test('a visibility bound to a boolean variable (plugin 0.95.0, bindings.visible)
   assert.deepStrictEqual(compact(spec).variants[0].delta, { children: [{ bindings: { visible: 'Show/Compact badge' } }] });
   roundTrip(spec);
 });
+
+test('a bound name\'s collection (plugin 0.96.0, collections) is kept through compaction, a variant binding another its delta', () => {
+  const spec = { name: 'Tag', variants: [
+    node('Color=Blue', 'COMPONENT', { fills: ['tag-background'], collections: { 'tag-background': 'Palette 1' } }, []),
+    node('Color=Red', 'COMPONENT', { fills: ['tag-background'], collections: { 'tag-background': 'Palette 3' } }, []),
+  ] };
+  assert.deepStrictEqual(compact(spec).variants[0].delta, { collections: { 'tag-background': 'Palette 3' } });
+  roundTrip(spec);
+});

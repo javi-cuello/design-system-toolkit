@@ -8,9 +8,9 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const src = readFileSync(fileURLToPath(new URL("../code.js", import.meta.url)), "utf8");
-const figma = { variables: { getVariableByIdAsync: async () => null }, getStyleByIdAsync: async () => null };
+const figma = { variables: { getVariableByIdAsync: async () => null, getLocalVariablesAsync: async () => [], getLocalVariableCollectionsAsync: async () => [], getVariableCollectionByIdAsync: async () => null }, getStyleByIdAsync: async () => null };
 const ctx = vm.createContext({ figma, console, setTimeout, clearTimeout });
-const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION } = vm.runInContext(src + "\n;({ walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION })", ctx);
+const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION, freshLookups } = vm.runInContext(src + "\n;({ freshLookups, walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, familyMetric, autoLineAt, unescaped, VERSION })", ctx);
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log("ok", name); };
@@ -339,7 +339,7 @@ ok("the manifest asks for the file key, and both payloads send it", manifest.ena
 // 0.92.0: every variant was rendered as an asset wherever the file had an icon page; a components library with one
 // rendered 4 778 at 2x and crashed Figma. Now only a file the router says its project lists as an asset library.
 {
-  const asked = (answer) => vm.runInContext(src + "\n;kind().then(() => assetFile)", vm.createContext({ figma: { ...figma, fileKey: "K", root: { ...figma.root, getPluginData: () => "F" }, variables: { getLocalVariableCollectionsAsync: async () => [{}] } }, console, fetch: answer }));
+  const asked = (answer) => vm.runInContext(src + "\n;kind().then(() => assetFile)", vm.createContext({ figma: { ...figma, fileKey: "K", root: { ...figma.root, getPluginData: () => "F" }, variables: { getLocalVariablesAsync: async () => [], getLocalVariableCollectionsAsync: async () => [{}] } }, console, fetch: answer }));
   const reply = (body) => async () => ({ status: 200, json: async () => body });
   ok("a file the router names an asset library renders each variant", (await asked(reply({ ok: true, kind: "library", asset: true }))) === true);
   ok("…one it does not, icon page or not, renders the default alone", (await asked(reply({ ok: true, kind: "library", asset: false }))) === false && (await asked(reply({ ok: true, kind: "library" }))) === false);
@@ -416,7 +416,7 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   for (const c of [iconSet, ...iconSet.children]) c.findAll = c.findAll || (() => c.children || []);
   const wrote = [];
   const ff = { root, fileKey: "K", loadAllPagesAsync: async () => {}, skipInvisibleInstanceChildren: false,
-    variables: { getLocalVariableCollectionsAsync: async () => [], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async () => null },
+    variables: { getLocalVariablesAsync: async () => [], getLocalVariableCollectionsAsync: async () => [], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async () => null },
     // 0.81.1: an Auto line height is measured by drawing a text; the facts mode draws nothing
     getLocalTextStylesAsync: async () => [{ id: "S:1", name: "Body", key: "k", fontName: { family: "Inter", style: "Regular" }, fontSize: 16, lineHeight: { unit: "AUTO" }, letterSpacing: { unit: "PERCENT", value: 0 }, boundVariables: {} }],
     // (a refusal alone would pass: the measure falls back to the metric when drawing fails, so each call is counted)
@@ -487,7 +487,7 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   };
   const page = { type: "PAGE", name: "Page", children: [], findAll: () => [], findAllWithCriteria: () => [] };
   const ff = { root: { name: "Lib", children: [page], getPluginData: () => "", findAllWithCriteria: () => [] }, fileKey: "K",
-    variables: { getLocalVariableCollectionsAsync: async () => [theme, prim], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async (id) => ({ Theme: theme, Primitives: prim })[id] || null },
+    variables: { getLocalVariablesAsync: async () => [], getLocalVariableCollectionsAsync: async () => [theme, prim], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async (id) => ({ Theme: theme, Primitives: prim })[id] || null },
     getLocalTextStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async () => null };
   const c = vm.createContext({ figma: ff, console, setTimeout, clearTimeout });
   const t = await vm.runInContext(src + "\n;collectTokens()", c);
@@ -512,7 +512,7 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   // (a round trip's drawing page, whose layers are never searched: one holds a shadow no component uses)
   const drawing = { type: "PAGE", name: "Round trip · Box", children: [], findAll: () => [], findAllWithCriteria: () => { throw new Error("searched a drawing page"); } };
   const ff = { root: { name: "Lib", children: [page, drawing], getPluginData: () => "", findAllWithCriteria: () => [] }, fileKey: "K",
-    variables: { getLocalVariableCollectionsAsync: async () => [], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async (id) => ({ s1: one, s2: two, s3: three })[id] || null },
+    variables: { getLocalVariablesAsync: async () => [], getLocalVariableCollectionsAsync: async () => [], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async (id) => ({ s1: one, s2: two, s3: three })[id] || null },
     getLocalTextStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async (id) => (id === "S:e1" ? shadow : null) };
   const c = vm.createContext({ figma: ff, console, setTimeout, clearTimeout });
   const t = await vm.runInContext(src + "\n;collectTokens()", c);
@@ -531,7 +531,7 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   dot.parent = comp;
   const page = { type: "PAGE", name: "Page", children: [comp], findAll: () => [comp], findAllWithCriteria: ({ types }) => (types.includes("TEXT") ? [dot] : types.includes("COMPONENT") ? [comp] : []) };
   const ff = { root: { name: "Lib", children: [page], getPluginData: () => "", findAllWithCriteria: () => [] }, fileKey: "K",
-    variables: { getLocalVariableCollectionsAsync: async () => [], getVariableByIdAsync: async () => null, getVariableCollectionByIdAsync: async () => null },
+    variables: { getLocalVariablesAsync: async () => [], getLocalVariableCollectionsAsync: async () => [], getVariableByIdAsync: async () => null, getVariableCollectionByIdAsync: async () => null },
     getLocalTextStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async (id) => (id === "S:p1" ? style : null) };
   const t = await vm.runInContext(src + "\n;collectTokens()", vm.createContext({ figma: ff, console, setTimeout, clearTimeout }));
   const got = t.textStyles.find((x) => x.name === "Paragraph/Default");
@@ -582,12 +582,34 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
 // under bindings, as a bound number is: a layer one mode hides drew in every mode
 {
   const vars = { vb: { id: "vb", name: "Show/Badge", resolvedType: "BOOLEAN" } };
-  const fv = { variables: { getVariableByIdAsync: async (id) => vars[id] || null }, getStyleByIdAsync: async () => null };
+  const fv = { variables: { getVariableByIdAsync: async (id) => vars[id] || null, getLocalVariablesAsync: async () => [] }, getStyleByIdAsync: async () => null };
   const w = vm.runInContext(src + "\n;walk", vm.createContext({ figma: fv, console, setTimeout, clearTimeout }));
   const badge = { ...box("Badge", "FRAME"), boundVariables: { visible: { type: "VARIABLE_ALIAS", id: "vb" } } };
   const got = await w(box("Row", "FRAME", [badge]), 0);
   ok("a layer's visibility bound to a boolean variable is recorded as the variable's name under bindings", got.children[0].bindings && got.children[0].bindings.visible === "Show/Badge");
   ok("…and a layer with none bound records no visibility binding", !(got.bindings && "visible" in got.bindings));
+}
+
+// 0.96.0: a binding is recorded by its variable's name, and a name two collections hold does not say which one the
+// layer binds; the token build names such a variable by its collection where the two disagree. The walk records the
+// collection beside the name, only for a name another of the file's collections holds.
+{
+  const vars = { "v:a": { id: "v:a", name: "tag-border", variableCollectionId: "c:1", valuesByMode: { m: { r: 0, g: 0, b: 0, a: 1 } } },
+    "v:b": { id: "v:b", name: "tag-border", variableCollectionId: "c:2", valuesByMode: { m: { r: 1, g: 1, b: 1, a: 1 } } },
+    "v:c": { id: "v:c", name: "Spacing/8", variableCollectionId: "c:1", valuesByMode: { m: 8 } } };
+  const colls = { "c:1": { id: "c:1", name: "Color palette 1", variableIds: ["v:a", "v:c"], modes: [] }, "c:2": { id: "c:2", name: "Color palette 2", variableIds: ["v:b"], modes: [] } };
+  const was = { ...figma.variables };
+  Object.assign(figma.variables, { getVariableByIdAsync: async (id) => vars[id] || null, getLocalVariablesAsync: async () => Object.values(vars), getVariableCollectionByIdAsync: async (id) => colls[id] || null });
+  freshLookups();
+  const alias = (id) => ({ type: "VARIABLE_ALIAS", id });
+  const layer = { ...box("Tag", "FRAME"), itemSpacing: 8, layoutMode: "HORIZONTAL", paddingTop: 0, paddingRight: 0, paddingBottom: 0, paddingLeft: 0, primaryAxisAlignItems: "MIN", counterAxisAlignItems: "MIN",
+    boundVariables: { itemSpacing: alias("v:c") }, strokes: [{ type: "SOLID", visible: true, opacity: 1, color: { r: 0, g: 0, b: 0 }, boundVariables: { color: alias("v:b") } }], strokeWeight: 1 };
+  const w = await walk(layer, 0);
+  ok("a binding to a name two collections hold records its collection beside the name; one only a single collection holds records none",
+    w.strokes[0] === "tag-border" && JSON.stringify(w.collections) === JSON.stringify({ "tag-border": "Color palette 2" }) && w.bindings.gap === "Spacing/8");
+  ok("…and a layer binding no such name carries no collections", !("collections" in await walk({ ...layer, strokes: [] }, 0)));
+  Object.assign(figma.variables, was);
+  freshLookups();
 }
 
 console.log(n + "/" + n + " passed");

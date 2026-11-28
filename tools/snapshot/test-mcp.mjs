@@ -23,7 +23,7 @@ ok('…and kept where a string or a regex comes first', stripped("x = 'p'; // wh
 ok('an inline /* */ is dropped on the same guard', stripped('} catch (e) { /* why */ }') === '} catch (e) { }' && stripped("s = '/* k */';") === "s = '/* k */';");
 ok('an inline /* */ against a word never joins two words', stripped('let /* c */x = 1;') === 'let x = 1;' && stripped('return/* c */x;') === 'return x;');
 ok('an inline type note before a cast is dropped, the cast kept', stripped('const a = /** @type {X[]} */ (b);') === 'const a = (b);');
-ok('spaces beside an operator go on a line with no literal, never on one with a quote, backtick or slash, nor between two signs', tightened('const a = (b, c) => b === c && d;') === 'const a=(b,c)=>b===c&&d;' && tightened("x = 'a = b';") === "x = 'a = b';" && tightened('y = a / b + c;') === 'y = a / b + c;' && tightened('z = a - -b;') === 'z = a - -b;' && tightened('w = a + +b;') === 'w = a + +b;' && tightened('v = a < !--b;') === 'v = a < !--b;' && tightened('-- > x') === '-- > x');
+ok('spaces beside an operator go, outside a plain quoted string (kept as written, escapes and the other quote inside it too), never on a line with a backtick or slash, one whose quotes no string covers, nor between two signs', tightened('const a = (b, c) => b === c && d;') === 'const a=(b,c)=>b===c&&d;' && tightened("x = 'a = b';") === "x='a = b';" && tightened('s = "it\'s = x" + y;') === 's="it\'s = x"+y;' && tightened("q = 'a\\' b' + c;") === "q='a\\' b'+c;" && tightened("u = 'open + c;") === "u = 'open + c;" && tightened("t = `a = b`;") === "t = `a = b`;" && tightened('y = a / b + c;') === 'y = a / b + c;' && tightened('z = a - -b;') === 'z = a - -b;' && tightened('w = a + +b;') === 'w = a + +b;' && tightened('v = a < !--b;') === 'v = a < !--b;' && tightened('-- > x') === '-- > x');
 ok('a comment is dropped, and a // inside a string kept', stripped("// note\nconst a = 'http://x';\n/* one\n two */\nb();") === "const a = 'http://x';\nb();");
 
 // the payload as the epilogue leaves it, read back as REST gives it
@@ -76,7 +76,7 @@ ok("the stored walk round-trips: new Function('return ' + its text) gives the sa
   const pages = [page('Cover', []), page('Button', [['Button', '1:1'], ['Link', '1:2']]), page('Table', [['Table', '2:1']]), page('Icons', [['Arrow', '3:1']]), page('Chip', [['Chip', '4:1'], ['Tag', '4:2'], ['Badge', '4:3']]), page('Button', [['Card', '5:1']])];
   pages[3].children[0].description = 'arrow, direction';
   Object.assign(pages[4].children[1], { paragraphSpacing: 5, listSpacing: 3 });
-  globalThis.figma = { root: { name: 'Document', children: pages }, fileKey: 'K', skipInvisibleInstanceChildren: false, variables: { getVariableByIdAsync: async () => null, getLocalVariableCollectionsAsync: async () => [] },
+  globalThis.figma = { root: { name: 'Document', children: pages }, fileKey: 'K', skipInvisibleInstanceChildren: false, variables: { getVariableByIdAsync: async () => null, getLocalVariablesAsync: async () => [], getLocalVariableCollectionsAsync: async () => [] },
     getLocalTextStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getStyleByIdAsync: async () => null,
     loadAllPagesAsync: async () => {}, createFrame: () => frame('FRAME', ''), createPage() { const p = frame('PAGE', ''); pages.push(p); return p; } };
   const run = (code) => new (Object.getPrototypeOf(async () => {}).constructor)(code)();

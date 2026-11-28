@@ -93,8 +93,18 @@ const plugin = () => {
    (no quote, backtick or slash), so nothing inside a literal is touched; and never between two signs (`a - -b` would
    read `a--b`), nor on a line an HTML-like comment could start on (`a < !--b`, a `-->`). A space beside a punctuator is never part of the code's meaning: about a twentieth of what is sent
    (2026-11-26: 0.91.0 was 1 786 characters over the cap without it). */
-export const tightened = (code) => code.split('\n').map((l) => (/['"`/]/.test(l) || /[+-]\s+[+-]|<\s*!|^\s*--|--\s*>/.test(l) ? l : l.replace(/ ?(===|!==|=>|&&|\|\||<=|>=|[=+\-*?:<>,{}()]) ?/g, '$1'))).join('\n');
-const headless = (source) => tightened(stripped(source)).replace(/^const HEADLESS = .*$/m, 'const HEADLESS = true;');
+// (a line whose only literals are plain quoted strings, no backtick or slash, is tightened between them: its strings
+// kept as written, each matched whole with its escapes, and the line left alone where they do not cover every quote;
+// 2026-11-28: 0.96.0 was 1 373 characters over the cap without it)
+const OP = / ?(===|!==|=>|&&|\|\||<=|>=|[=+\-*?:<>,{}()]) ?/g;
+const STRINGS = /('(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")/;
+const between = (l) => {
+  const parts = l.split(STRINGS);
+  if (parts.some((x, i) => i % 2 === 0 && /['"]/.test(x))) return l;
+  return parts.map((x, i) => (i % 2 ? x : x.replace(OP, '$1'))).join('');
+};
+export const tightened = (code) => code.split('\n').map((l) => (/[`/]/.test(l) || /[+-]\s+[+-]|<\s*!|^\s*--|--\s*>/.test(l) ? l : /['"]/.test(l) ? between(l) : l.replace(OP, '$1'))).join('\n');
+const headless = (source) => tightened(stripped(source)).replace(/^const HEADLESS ?= ?.*$/m, 'const HEADLESS = true;');
 const capped = (code, what) => {
   if (code.length > CAP) throw new Error(`the ${what} is ${code.length} characters, over use_figma's ${CAP}`);
   return code;
