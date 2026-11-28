@@ -30,7 +30,7 @@
 import { createRequire } from 'node:module';
 import { layerIndex } from './layers.mjs';
 import { parseColour, figmaWeight, radialOf, shadowOrder } from './values.mjs';
-import { cssName } from '../tokens/names.mjs';
+import { cssName, tokenProperty } from '../tokens/names.mjs';
 import { propAttr } from '../shared/prop-attr.mjs';
 import { css, KINDS } from './schema.mjs';
 
@@ -41,8 +41,13 @@ const { slug } = require('../snapshot/spec.cjs');
 
 const SIDES = ['top', 'right', 'bottom', 'left'];
 const kebab = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-// The custom property a token becomes, named by the token build (tools/tokens/names.mjs), for a builder's hint.
-const cssVar = (name) => `var(${cssName('', name)})`;
+// The custom property a token becomes, named by the token build (tools/tokens/names.mjs), for a builder's hint: by the
+// collection the layer records (snapshot 0.96.0) where the build writes the name per collection (`prefixed`,
+// names.mjs prefixedIn); one it records none for is said so, never given the bare name the build does not write.
+const cssVar = (name, node = {}, prefixed = null) => {
+  const r = tokenProperty(name, (node.collections || {})[name], prefixed);
+  return r.missing ? `${name} (written per collection, and the stored spec says ${r.missing}: take the snapshot again)` : `var(${r.css})`;
+};
 
 /** A token name where the design bound one (per side, for a list), else undefined. */
 const bound = (node, key, i) => {
@@ -238,7 +243,7 @@ export function assertionsFor(at, ctx) {
     if (r.unresolved !== undefined) out.push({ kind: 'unresolved', prop, expected: null, from: r.unresolved });
     else add(kind, prop, r.value, from, extra);
   };
-  const hint = (prop, name, literal) => ({ hint: `${prop}: ${name ? cssVar(name) : literal}` });
+  const hint = (prop, name, literal) => ({ hint: `${prop}: ${name ? cssVar(name, node, ctx.prefixed) : literal}` });
   const runtime = (ctx.runtime || []).includes(layer);
 
   // ---- auto layout ----------------------------------------------------------

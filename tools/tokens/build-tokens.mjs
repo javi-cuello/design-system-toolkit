@@ -73,7 +73,10 @@ const ROOT_SD = '@root';
 // of its own, named with its collection's slug as a prefix, code-standard rule 52; set by buildTokens for its build)
 let KEPT = new Set();
 const restOf = (path) => path.slice(1).filter((x) => x !== '$root' && x !== ROOT_SD).join('.');
-export const nameOf = (path) => (KEPT.has(`${path[0]}\0${restOf(path)}`) ? path : path.slice(1)).filter((x) => x !== '$root' && x !== ROOT_SD).map(kebab).join('-');
+/** A token path's house name where `kept` (sharedNames' keys) names the paths written with their collection: one name
+ *  for the build and every reader (names.mjs cssName). */
+export const nameIn = (path, kept) => (kept && kept.has(`${path[0]}\0${restOf(path)}`) ? path : path.slice(1)).filter((x) => x !== '$root' && x !== ROOT_SD).map(kebab).join('-');
+export const nameOf = (path) => nameIn(path, KEPT);
 // the style groups the export writes beside the collections (dtcg.js: text, colour and effect styles' roots): a style
 // meeting a variable's name is no collection's name met twice
 const STYLE_ROOTS = new Set(['text-style', 'color-style', 'effect-style']);
@@ -144,7 +147,7 @@ function defaultsOf(dir) {
 }
 
 /** Folders of DTCG files: collection → { modes: Map(mode → file) }. */
-function discover(dir) {
+export function discover(dir) {
   const out = new Map();
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     if (!e.isDirectory()) continue;

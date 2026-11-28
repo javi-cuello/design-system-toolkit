@@ -38,7 +38,7 @@ import { declarations, holds, rem, borderBox, fractional } from './css.mjs';
 import { negative, heldOpacity, heldGlyph, bareGlyph, siblingOrder, liftsAlone, CLEARED, UNCLIPPED } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
-import { cssName } from '../tokens/names.mjs';
+import { cssName, tokenProperty } from '../tokens/names.mjs';
 import { attrWords, propAttr } from '../shared/prop-attr.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 
@@ -94,12 +94,29 @@ export function namer(folder, naming = { kind: 'class', prefix: '', part: '__' }
   };
 }
 
-/* A token by the custom property the token build writes; a text style by the fields its mixin applies. */
+/* A token by the custom property the token build writes; a text style by the fields its mixin applies. While one
+   component is written (withTokenNames), a name the build writes with its collection takes the collection that
+   component's contract records (`collections`, snapshot 0.96.0), and one it records none for is a finding. */
+let writing = null;
 export const tokenNames = {
   // (a colour the design names currentColor is CSS's own keyword, the colour the box inherits: never a custom property)
-  token: (name) => (/^currentcolor$/i.test(String(name)) ? 'currentColor' : `var(${cssName('', name)})`),
+  token: (name) => (/^currentcolor$/i.test(String(name)) ? 'currentColor' : `var(${writing ? writing(name) : cssName('', name)})`),
   textStyle: (name) => textStyleFields(cssName('', name).slice(2)),
 };
+/* `fn` run with the token names of component `c` under `settings` (its `prefixedTokens`, the token build's names
+   written with their collection: projects.cjs librarySettingsFor), and what it could not name: { out, missing }, each
+   missing token with why. A missing one is written by its bare name, which the build does not write, so the value is
+   invalid and the run says so; never a guessed collection. Synchronous, so one component's names never reach
+   another's. */
+export function withTokenNames(c, settings, fn) {
+  const kept = new Set((settings && settings.prefixedTokens) || []), from = (c && c.collections) || {}, missing = new Map();
+  if (!kept.size) return { out: fn(), missing };
+  const was = writing;
+  writing = (name) => { const r = tokenProperty(name, from[name], kept); if (r.missing) { missing.set(name, r.missing); return cssName('', name); } return r.css; };
+  try { return { out: fn(), missing }; } finally { writing = was; }
+}
+/* What a component's sheet says of the tokens it could not name, and the fix. */
+export const missingSaid = (component, missing) => [...missing].map(([name, why]) => `${component} binds ${name}, which the token build writes per collection, and its stored spec says ${why === 'no collection recorded' ? 'no collection' : why}: take the snapshot again (plugin 0.96.0 on)`);
 
 /*
  * A text entry: Figma draws its placeholder and its value as two texts in one box, a boolean swapping them; code
@@ -1646,7 +1663,16 @@ export function partSeg(c, id) {
 }
 
 /* The stylesheet. */
-export function toCss(c, folder, { naming, layer = 'components', settings = HOUSE, mains: given, library } = {}) {
+export const toCss = (c, folder, opts = {}) => sheetAndGaps(c, folder, opts).css;
+/* The sheet and the tokens it could not name ({ css, missing }): said at the top of the sheet, where its other gaps
+   are, and by the command, which fails on them. */
+export function sheetAndGaps(c, folder, opts = {}) {
+  const { out, missing } = withTokenNames(c, opts.settings, () => sheetOf(c, folder, opts));
+  if (!missing.size) return { css: out, missing };
+  const said = missingSaid(c.component, missing);
+  return { css: out.replace('\n', `\n/* Not named: ${said.join('; ').replace(/\*\//g, '* /')}. */\n`), missing };
+}
+function sheetOf(c, folder, { naming, layer = 'components', settings = HOUSE, mains: given, library } = {}) {
   const n = namer(folder, naming);
   // every question of a placed instance (held or a mark, what it draws inside, its own parts' names) is asked of the one
   // library the markup is given, as the markup asks it (layers.mjs placedOf); `mains` only where no library is given
@@ -1750,7 +1776,9 @@ if (isMain) {
     const { rules } = rulesOf(c, mains, settingsOf(f));
     const off = selfCheck(c, rules, mains, settingsOf(f));
     if (off.length) { broken++; console.error(`to-code: ${f}: ${off.length} declaration(s) the stylesheet does not rebuild, first ${JSON.stringify(off[0])}`); }
-    const css = toCss(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f), library });
+    const { css, missing: unnamed } = sheetAndGaps(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f), library });
+    // a token the build writes per collection that the stored spec gives none for: written invalid, said, and the run fails
+    if (unnamed.size) { broken++; for (const line of missingSaid(f, unnamed)) console.error(`to-code: ${line}`); }
     files.set(`${f}.css`, draft ? css.replace(BANNER, DRAFT) : css);
   }
   // a write replaces only what it wrote (code-standard rule 58): its own files, known by the banner

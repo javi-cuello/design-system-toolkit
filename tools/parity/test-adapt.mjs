@@ -551,4 +551,11 @@ ok('a runtime layer keeps its box and loses its state-dependent paint', (() => {
 // snapshot 0.85.0 and 0.86.0: a vector's outline and paths are declared, so gate 10 holds a new snapshot's vectors
 ok('a vector\'s outline, paths and each path\'s fill rule and data are declared, carried for the component contract', ['outline', 'paths', 'windingRule', 'data'].every((k) => SPEC_KEYS[k] && SPEC_KEYS[k].why && SPEC_KEYS[k].why.because === 'carried'));
 
+{ // a builder's hint names a token the build writes per collection by the collection the layer records (snapshot 0.96.0)
+  const hintOf = (node, ctx) => (doc(node, '$root', {}, ctx).assertions.find((a) => /gap/.test(a.prop)) || {}).hint;
+  const node = (collections) => F({ layout: 'HORIZONTAL', gap: 12, bindings: { gap: 'Spacing/12' }, children: two, ...(collections && { collections }) });
+  const prefixed = new Set(['primitives\0spacing.12', 'brand\0spacing.12']);
+  ok('a gap bound to a name written per collection is hinted with the collection the layer records; none recorded is said, never the bare name',
+    hintOf(node({ 'Spacing/12': 'Brand' }), { prefixed }) === 'gap: var(--brand-spacing-12)' && /Spacing\/12 \(written per collection, and the stored spec says no collection recorded: take the snapshot again\)/.test(hintOf(node(null), { prefixed }))
+    && hintOf(node(null), {}) === 'gap: var(--spacing-12)'); }
 console.log(`\n${n} passed`);

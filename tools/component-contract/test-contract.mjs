@@ -1247,4 +1247,14 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('…and a layer with none bound says no visible', derive({ ...spec, variants: [row('md'), row('sm')] }).anatomy.badge.visible === undefined);
 }
 
+{ // snapshot 0.96.0: a bound name another collection also holds is recorded with its collection on the layer; the contract
+  // carries one map for the component, so code names the binding by it (tools/tokens names.mjs tokenProperty)
+  const v = (size, col) => ({ name: `Size=${size}`, type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', align: 'MIN/MIN', fills: ['tag-background'], collections: { 'tag-background': col },
+    children: [{ name: 'Dot', type: 'ELLIPSE', sizing: 'FIXED/FIXED', w: 8, h: 8, fills: ['tag-border'], collections: { 'tag-border': 'Palette 1' } }] });
+  const one = derive({ name: 'Tag', id: '3:1', props: { Size: ['Large', 'Small'] }, variants: [v('Large', 'Palette 1'), v('Small', 'Palette 1')] });
+  ok('the collections the layers record are the contract\'s, one map', JSON.stringify(one.collections) === JSON.stringify({ 'tag-background': 'Palette 1', 'tag-border': 'Palette 1' }));
+  const two = derive({ name: 'Tag', id: '3:1', props: { Size: ['Large', 'Small'] }, variants: [v('Large', 'Palette 1'), v('Small', 'Palette 2')] });
+  ok('…a name bound from two collections keeps both, sorted', JSON.stringify(two.collections['tag-background']) === JSON.stringify(['Palette 1', 'Palette 2']));
+  ok('…and a spec that records none (before 0.96.0) carries no map', !('collections' in tc2));
+}
 console.log(`${n}/${n} passed`);

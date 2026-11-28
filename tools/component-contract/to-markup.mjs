@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations, borderBox } from './css.mjs';
-import { combinations, condition, tokenNames, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
+import { combinations, condition, tokenNames, withTokenNames, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign, foreignOpened } from './layers.mjs';
 // (another library's instance whose insides the contract records is drawn open, its layers this component's own:
@@ -1098,7 +1098,8 @@ function jsxOf(item, depth) {
    passed through, the root's hooks, the parts, the generated sheet imported. */
 export function toReact(c, folder, { naming, library = {}, stylesheet = null, settings = HOUSE } = {}) {
   const name = pascal(c.component);
-  const t = build(c, folder, { naming, library, jsx: true, settings });
+  // (a token the build writes per collection, by the collection the contract records: to-code withTokenNames)
+  const t = withTokenNames(c, settings, () => build(c, folder, { naming, library, jsx: true, settings })).out;
   const own = t.props.filter((x) => x.type !== 'value');
   // the element the rest of the props reach: the control, the field's input, else the root
   const target = t.entry ? 'input' : t.control || (t.inline ? 'span' : 'div');
@@ -1171,7 +1172,8 @@ function hOf(item, depth) {
    attribute's text or a text node (dom.js `h`), never parsed as HTML. No class is registered: a visual or native
    interactive component is markup and its stylesheet (knowledge/code/web-components.md). */
 export function toElement(c, folder, { naming, library = {}, settings = HOUSE } = {}) {
-  const t = build(c, folder, { naming, library, jsx: false, settings });
+  // (a token the build writes per collection, by the collection the contract records: to-code withTokenNames)
+  const t = withTokenNames(c, settings, () => build(c, folder, { naming, library, jsx: false, settings })).out;
   const tag = t.n.root;
   const own = t.props.filter((x) => x.type !== 'value');
   const placed = t.placed;

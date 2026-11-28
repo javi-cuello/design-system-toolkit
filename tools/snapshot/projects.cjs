@@ -1044,7 +1044,7 @@ function storeLibraries(componentsDir, projectsDir) {
     const ctx = auditContext(w.doc);
     let index = {};
     try { index = JSON.parse(fs.readFileSync(w.paths.index, 'utf8')).components || {}; } catch { /* no index: every folder under the defaults */ }
-    return { ctx, tokens: tokensOf(w.paths), fileOf: (folder) => (index[folder] || {}).file, styles: w.paths.styles };
+    return { ctx, tokens: tokensOf(w.paths), fileOf: (folder) => (index[folder] || {}).file, styles: w.paths.styles, dtcg: w.paths.tokens ? path.join(path.dirname(w.paths.tokens), 'dtcg') : null };
   }
   return null;
 }
@@ -1062,7 +1062,12 @@ function librarySettingsFor(componentsDir, projectsDir) {
   let css = '';
   try { css = of && of.styles ? fs.readFileSync(path.join(of.styles, '_tokens.scss'), 'utf8') : ''; } catch { /* no token build: no modes to re-declare */ }
   const modeTokens = require('../tokens/sheet.cjs').blocksOf(css), memo = new Map();
-  const withModes = (x) => (!Object.keys(modeTokens).length ? x : memo.get(x) || memo.set(x, { ...x, modeTokens }).get(x));
+  // (and the names the token build writes with their collection, `prefixedTokens` (tools/tokens/names.mjs prefixedIn):
+  // a binding to one is named by the collection its contract records; only where there are any, so no other
+  // project's settings move)
+  const prefixedTokens = of && of.dtcg ? [...require('../tokens/names.mjs').prefixedIn(of.dtcg)].sort() : [];
+  const extra = { ...(Object.keys(modeTokens).length && { modeTokens }), ...(prefixedTokens.length && { prefixedTokens }) };
+  const withModes = (x) => (!Object.keys(extra).length ? x : memo.get(x) || memo.set(x, { ...x, ...extra }).get(x));
   return (folder) => withModes((of && (((of.ctx.libraries || {})[of.fileOf(folder)] || {}).tokens || only)) || house);
 }
 

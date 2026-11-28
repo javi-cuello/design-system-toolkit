@@ -1382,4 +1382,15 @@ ok('a placed component stretched by its insets takes no size from its main', dec
 // the layers in the order code-standard rule 4 gives them, declared before any rule, so the tokens lose to a component
 { const { BASE } = await import('./to-code.mjs');
   ok('the base every sheet assumes declares the tokens layer first, then base, then components', /^@layer tokens, base, components;/.test(BASE)); }
+{ // a name the token build writes per collection (prefixedTokens), named by the collection the contract records
+  const { sheetAndGaps } = await import('./to-code.mjs');
+  const settings = { ...HOUSE, prefixedTokens: ['palette-1\0tag-border', 'palette-2\0tag-border'] };
+  const tag = (collections) => ({ component: 'Tag', props: {}, anatomy: { root: { kind: 'container', background: 'tag-border', radius: 'Radius/sm' } }, variants: [], ...(collections && { collections }) });
+  const named = sheetAndGaps(tag({ 'tag-border': 'Palette 2' }), 'tag', { settings });
+  ok('a binding the build writes per collection takes the collection its contract records; a name written once its own',
+    /background(-color)?: var\(--palette-2-tag-border\)/.test(named.css) && /var\(--radius-sm\)/.test(named.css) && !named.missing.size);
+  const old = sheetAndGaps(tag(null), 'tag', { settings });
+  ok('…one whose stored spec records no collection is said, naming the component and the token, with the re-snapshot as the fix, never named by a guess',
+    old.missing.get('tag-border') === 'no collection recorded' && /Not named: Tag binds tag-border, which the token build writes per collection, and its stored spec says no collection: take the snapshot again/.test(old.css) && !/palette-\d-tag-border/.test(old.css));
+  ok('…and without prefixed names a sheet is what it always was', toCss(tag(null), 'tag') === toCss(tag({ 'tag-border': 'Palette 2' }), 'tag')); }
 console.log(`${n} passed`);

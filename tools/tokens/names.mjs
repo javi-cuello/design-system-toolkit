@@ -11,12 +11,29 @@
  * build's `--text-strong`, and `-1` lost its minus).
  */
 import { createRequire } from 'node:module';
-import { nameOf, FIELD } from './build-tokens.mjs';
+import { existsSync } from 'node:fs';
+import { nameOf, nameIn, FIELD, sharedNames, discover } from './build-tokens.mjs';
 
 const DTCG = createRequire(import.meta.url)('./dtcg.js');
 
-/** The custom property a variable becomes: `--colour-background-ghost`. */
-export const cssName = (collection, name) => '--' + nameOf(DTCG.pathFor(collection || '', name));
+/** The custom property a variable becomes: `--colour-background-ghost`; with its collection in front where `kept`
+ *  (prefixedIn) says the build writes it so (`--color-palette-1-tag-border`, code-standard rule 52). */
+export const cssName = (collection, name, kept) => '--' + (kept ? nameIn(DTCG.pathFor(collection || '', name), kept) : nameOf(DTCG.pathFor(collection || '', name)));
+
+/** What the build writes with its collection, read from a project's stored DTCG files (the `dtcg/` beside its
+ *  snapshot) by the build's own sharedNames: a Set of `<collection slug>\0<path>` keys, empty with no files. */
+export const prefixedIn = (dtcgDir) => new Set(dtcgDir && existsSync(dtcgDir) ? sharedNames(discover(dtcgDir)).kept : []);
+
+/** A binding's custom property, from its name and the collection its spec recorded (contract `collections`), under
+ *  what the build prefixed: { css } or { missing }. A name the build writes per collection with no single collection
+ *  recorded is missing, never its bare name, which the build no longer writes, nor a guessed collection. */
+export function tokenProperty(name, collection, kept) {
+  const rest = DTCG.pathFor('', name).slice(1).join('.');
+  const split = kept && [...kept].some((k) => k.slice(k.indexOf('\0') + 1) === rest);
+  if (!split) return { css: cssName('', name) };
+  if (typeof collection !== 'string') return { missing: Array.isArray(collection) ? `bound from ${collection.join(' and ')}` : 'no collection recorded' };
+  return { css: cssName(collection, name, kept) };
+}
 /** The prefix every custom property of a variable's family shares: `Spacing/16` → `--spacing-`. */
 export const cssFamily = (name) => cssName('', String(name).split('/')[0]) + '-';
 
