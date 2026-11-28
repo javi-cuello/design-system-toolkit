@@ -22,7 +22,7 @@
  *  - values arrive resolved, with each alias's first hop by name only; the
  *    collection an alias points into is found by looking the name up, so a
  *    semantic token stays a reference to its primitive;
- *  - colours arrive as CSS strings (`#161616`, `rgb(22 22 22 / 0.116)`) and are
+ *  - colours arrive as CSS strings (`#202020`, `rgb(32 32 32 / 0.116)`) and are
  *    parsed back into channels;
  *  - text styles and shadow layers carry their bindings as `bound` (plugin
  *    0.24.0 and 0.25.0); a snapshot older than that is refused.
@@ -100,18 +100,24 @@ export function toDtcgSnapshot(t) {
   const valuesOf = (c, name) => JSON.stringify(c.modes.filter((m) => ((c.values || {})[m] || {})[name] !== undefined).sort()
     .map((m) => [m, c.values[m][name], aliasOf(c, m, name)]));
   const byCollection = new Map(collections);
+  // Two names of one property in one collection (`🌮 Weight/Bold` and `Weight/Bold`, `a - b/c` and `a/b/c`), at any
+  // values, have no collection to tell them apart: two paths sharing a name, which writeDtcg refuses
+  // (code-standard rule 52), checked before any copy is left out, so neither is dropped for a third collection's
+  const clashes = [];
+  for (const [cname, c] of collections) {
+    const seen = new Map();
+    for (const n of namesOf(c)) { const k = css(n); if (seen.has(k)) clashes.push({ collection: cname, names: [seen.get(k), n], property: `--${k}` }); else seen.set(k, n); }
+  }
   const copyOf = (cname, c, name) => {
     const h = holder.get(css(name));
     if (!c.remote || !h || h === `${cname}\u0000${name}`) return null;
     const [hc, hn] = h.split('\u0000');
-    // (two of one property in one collection, at any values, have no collection to tell them apart: both go on, and
-    // the build refuses them as one name two paths share, code-standard rule 52)
     if (hc === cname) return null;
     return valuesOf(byCollection.get(hc), hn) === valuesOf(c, name) ? hc : null;
   };
   const shadowed = (cname, c, name) => copyOf(cname, c, name) !== null;
   const deduped = [];
-  for (const [cname, c] of collections) for (const n of namesOf(c)) { const hc = copyOf(cname, c, n); if (hc !== null) deduped.push({ name: `${cname}/${n}`, collection: cname, variable: n, holder: hc, reason: `a copy of ${hc}'s, the same in every mode` }); }
+  for (const [cname, c] of collections) for (const n of namesOf(c)) { const hc = copyOf(cname, c, n); if (hc !== null) deduped.push({ name: `${cname}/${n}`, collection: cname, variable: n, holder: hc, holderName: holder.get(css(n)).split('\u0000')[1], reason: `a copy of ${hc}'s, the same in every mode` }); }
   const homes = new Map();
   for (const [cname, c] of collections) {
     for (const mode of c.modes) for (const name of Object.keys((c.values || {})[mode] || {})) {
@@ -176,7 +182,7 @@ export function toDtcgSnapshot(t) {
   // names may be no weight the build can map ("Bold Italic"), and a reference to one it skips would refuse the build
   // (by either name: an alias carries the build's, a text style's binding Figma's)
   const byName = new Map(out.flatMap((c) => { const m = new Map(c.variables.map((v) => [v.name, v])); return [[c.name, m], ...(c.figmaName ? [[c.figmaName, m]] : [])]; }));
-  // a string a text style binds as its font family is one too, whatever its scope (Carbon's Fixed/Body/Font family,
+  // a string a text style binds as its font family is one too, whatever its scope (a `Mono/Body/Font family`
   // scoped to everything): Figma took it as the family there
   for (const st of t.textStyles || []) {
     // (by where the binding lands: one to another library's variable a local one names is the local one)
@@ -292,22 +298,21 @@ export function toDtcgSnapshot(t) {
         : { type: p.type, visible: true })),
   }));
 
-  return { collections: out, textStyles, effectStyles, paintStyles, deduped };
+  return { collections: out, textStyles, effectStyles, paintStyles, deduped, clashes };
 }
 
 /** Write DTCG files for a snapshot tokens file into `dir`, replacing what is there. */
 export function writeDtcg(tokens, dir, opts = {}) {
   const snap = toDtcgSnapshot(tokens);
+  // Two names of one property in one collection (toDtcgSnapshot `clashes`): refused before anything is built, never
+  // the first kept and the other skipped or dropped (code-standard rule 52)
+  if (snap.clashes.length) {
+    const [m] = snap.clashes, more = snap.clashes.length - 1;
+    throw Object.assign(new Error(`tokens: "${m.names[0]}" and "${m.names[1]}" (variables in ${m.collection}) both become ${m.property}: rename one in Figma (code-standard rule 52)${more ? `; ${more} more pair${more > 1 ? 's' : ''} collide` : ''}`), { refused: true });
+  }
   const built = DTCG.buildFiles(snap, { colorFormat: 'object', unit: 'px', rootSize: 16, ...opts });
   // (another library's copies left out, each said: build.mjs lists them whole)
   built.report.deduped = snap.deduped;
-  // Two variables of one collection on one token path (a slug dropped what told them apart) are two paths sharing a
-  // name: refused, never the first kept and the other skipped (code-standard rule 52)
-  const met = built.report.skipped.filter((x) => x.collides);
-  if (met.length) {
-    const [m] = met, more = new Set(met.map((x) => `${x.collection}/${x.name}`)).size - 1;
-    throw Object.assign(new Error(`tokens: "${m.collides}" and "${m.name}" (variables in ${m.collection}) both become ${m.reason.replace(/^.* at /, '')}: rename one in Figma (code-standard rule 52)${more ? `; ${more} more collide` : ''}`), { refused: true });
-  }
   /* Paragraph and list spacing belong to a text style and DTCG's typography
      type has no member for them (Format 2025.10 §9.8 lists exactly five). They
      go in the token's $extensions, merged beside any tracking fraction already

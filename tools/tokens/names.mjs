@@ -28,15 +28,14 @@ export const prefixedIn = (dtcgDir) => new Set(dtcgDir && existsSync(dtcgDir) ? 
 /** Each collection's slug as the build writes it, from the snapshot (tokens.json): another library's collection that
  *  slugs like one already taken is numbered (`🌮 Palette` beside a local `Palette` is `palette-2`, dtcg.js
  *  collectionSlugs). Another library's copy the build left out (from-snapshot `deduped`) is keyed
- *  `<collection>\0<name>` to the slug of the collection that holds it, so a binding recorded to the copy names the
- *  property written. `renamed` keeps only those a reader would not find from the name, for a library's settings. */
+ *  `<collection>\0<name>` to `{ slug, name }`, the collection that holds it and the name it holds it under (`a - b/c`
+ *  copying `a/b/c`), so a binding recorded to the copy names the property written. `renamed` keeps only those a reader would not find from the name, for a library's settings. */
 export const slugsOf = (snapshot, renamed = false) => {
   const t = snapshot || {}, all = DTCG.slugsOf(Object.entries(t.collections || {}));
   const out = { ...all };
-  for (const d of toDtcgSnapshot(t).deduped) out[`${d.collection}\0${d.variable}`] = all[d.holder] || DTCG.slug(d.holder);
-  // (renamed: a collection whose slug differs from its name's, and a copy whose holder differs from what its collection
-  // gives, the lookup tokenProperty makes)
-  return renamed ? Object.fromEntries(Object.entries(out).filter(([n, s]) => s !== (n.includes('\0') ? all[n.split('\0')[0]] : DTCG.slug(n)))) : out;
+  for (const d of toDtcgSnapshot(t).deduped) out[`${d.collection}\0${d.variable}`] = { slug: all[d.holder] || DTCG.slug(d.holder), name: d.holderName };
+  // (renamed: a collection whose slug differs from its name's, and every copy, which no name lookup finds)
+  return renamed ? Object.fromEntries(Object.entries(out).filter(([n, s]) => n.includes('\0') || s !== DTCG.slug(n))) : out;
 };
 
 /** A binding's custom property, from its name and the collection its spec recorded (contract `collections`), under
@@ -44,15 +43,26 @@ export const slugsOf = (snapshot, renamed = false) => {
  *  recorded is missing, never its bare name, which the build no longer writes, nor a guessed collection. The
  *  collection is named by its slug as the build numbered it (`slugs`, slugsOf); one absent there slugs as written. */
 export function tokenProperty(name, collection, kept, slugs = null) {
+  // (a binding to another library's copy the build left out is the variable that holds it, under its own name)
+  const at = slugs && typeof collection === 'string' ? slugs[`${collection}\0${name}`] : null, copy = at && typeof at === 'object' ? at : null;
+  if (copy) name = copy.name;
   const rest = DTCG.pathFor('', name).slice(1).join('.');
   const split = kept && [...kept].some((k) => k.slice(k.indexOf('\0') + 1) === rest);
   if (!split) return { css: cssName('', name) };
   if (typeof collection !== 'string') return { missing: Array.isArray(collection) ? `bound from ${collection.join(' and ')}` : 'no collection recorded' };
   // (only a collection the build writes it from: one it does not is said, never given the bare name)
-  const slug = (slugs && (slugs[`${collection}\0${name}`] || slugs[collection])) || DTCG.slug(collection);
+  const slug = copy ? copy.slug : (slugs && slugs[collection]) || DTCG.slug(collection);
   if (!kept.has(`${slug}\0${rest}`)) return { missing: `${collection}, which the build does not write it from` };
   return { css: cssName(slug, name, kept) };
 }
+/** The names (keyed as the build keys them, `<path less the collection>` dotted) more than one collection of a snapshot
+ *  (tokens.json `collections`, joined by name) holds: what a scoped snapshot walk records a binding's collection for
+ *  (plugin code.js `SHARED`, its own sharedOf, kept equal by tests/test-walk.mjs). Sorted. */
+export const sharedOf = (collections) => {
+  const at = {};
+  for (const c of Object.values(collections || {})) for (const k of new Set(Object.values((c && c.values) || {}).flatMap((m) => Object.keys(m || {})).map((n) => DTCG.pathFor('', n).slice(1).join('.')))) at[k] = (at[k] || 0) + 1;
+  return Object.keys(at).filter((k) => at[k] > 1).sort();
+};
 /** The prefix every custom property of a variable's family shares: `Spacing/16` → `--spacing-`. */
 export const cssFamily = (name) => cssName('', String(name).split('/')[0]) + '-';
 

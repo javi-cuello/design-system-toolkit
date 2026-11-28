@@ -177,7 +177,7 @@ test('a colour style sharing a variable\'s name is refused when bound to another
     ['a literal equal to the variable\'s value', { type: 'SOLID', color: '#202020' }],
   ]) {
     const root = repo();
-    withStyle(root, paint, { 'Colour/Text/weak': '#6f6f6f' });
+    withStyle(root, paint, { 'Colour/Text/weak': '#6a6a6a' });
     const r = buildCli(root);
     assert.equal(r.status, 1, `${what}: ${r.stdout}${r.stderr}`);
     assert.match(r.stderr, /"Colour\/Text\/strong" \(variable in Semantic\) and "Colour\/Text\/\$strong" \(colour style\) both become --colour-text-strong/, what);
@@ -280,7 +280,7 @@ test('two names of one property in one collection at other values are refused, a
     withCollections(root, () => ({ Lib: { remote: true, modes: ['Value'], values: { Value: values }, alias: {} } }));
     const r = buildCli(root);
     assert.equal(r.status, 1, `${Object.keys(values)}: ${r.stdout}${r.stderr}`);
-    assert.match(r.stderr, /tokens: .*(two tokens become|both become) (--logo-text|lib\.weight\.bold).*rename one in Figma \(code-standard rule 52\)/, r.stderr);
+    assert.match(r.stderr, /tokens: .*(two tokens become|both become) --(logo-text|weight-bold).*rename one in Figma \(code-standard rule 52\)/, r.stderr);
     assert.ok(!existsSync(join(root, 'design/dtcg/lib')), 'nothing written');
   }
 });

@@ -8,7 +8,7 @@ import { cssName, cssFamily, prefixedIn, tokenProperty, slugsOf } from './names.
 import { writeDtcg } from './from-snapshot.mjs';
 
 let n = 0;
-const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok  ' + name); };
+const ok = (name, cond, why) => { n++; assert.ok(cond, why ? `${name}\n${why}` : name); console.log('ok  ' + name); };
 ok('a variable becomes its path less the collection, kebab-cased', cssName('Semantic', 'Color/Text/Neutral/primary') === '--color-text-neutral-primary');
 ok('camel case is split as the build splits it, not lowercased first', cssName('Semantic', 'Color/textStrong') === '--color-text-strong');
 ok('a leading minus is kept, as the export keeps it', cssName('Primitives', 'Spacing/-1') === '--spacing-minus-1');
@@ -62,7 +62,21 @@ ok('a family is its first segment as the build writes it', cssFamily('Corner rad
   const slugs = slugsOf(snap), kept = prefixedIn(dir);
   ok('the build leaves the copy out and writes the two local ones with their collection', [...kept].sort().join(',') === 'shades-1\0pill-edge,shades-2\0pill-edge' && !readdirSync(join(dir, 'brand')).some((f) => /pill/.test(f)));
   ok('…and a binding recorded to the copy is named from the one that holds it', tokenProperty('🌮 pill-edge', 'Brand', kept, slugs).css === '--shades-1-pill-edge');
-  ok('…which a library\'s settings keep too', slugsOf(snap, true)['Brand\0🌮 pill-edge'] === 'shades-1');
+  ok('…which a library\'s settings keep too', JSON.stringify(slugsOf(snap, true)['Brand\0🌮 pill-edge']) === JSON.stringify({ slug: 'shades-1', name: 'pill-edge' }));
+  rmSync(dir, { recursive: true, force: true });
+}
+// a copy whose name is the holder's property under another path (`a - b/c` copying `a/b/c`): named from the holder's
+// own name, the property the build writes
+{
+  const dir = mkdtempSync(join(tmpdir(), 'names-'));
+  const snap = { _meta: { file: 'x', fileId: 'x' }, collections: {
+    'Shades 1': { modes: ['Value'], values: { Value: { 'a/b/c': 1 } }, alias: {} },
+    'Shades 2': { modes: ['Value'], values: { Value: { 'a/b/c': 2 } }, alias: {} },
+    Brand: { remote: true, modes: ['Value'], values: { Value: { 'a - b/c': 1 } }, alias: {} },
+  }, textStyles: [], paintStyles: [], effects: [] };
+  writeDtcg(snap, dir);
+  const kept = prefixedIn(dir), got = tokenProperty('a - b/c', 'Brand', kept, slugsOf(snap));
+  ok('a copy under another path is named from the variable that holds it, never a property the build does not write', [...kept].sort().join(',') === 'shades-1\0a.b.c,shades-2\0a.b.c' && got.css === '--shades-1-a-b-c', JSON.stringify(got));
   rmSync(dir, { recursive: true, force: true });
 }
 console.log(`\n${n} passed`);

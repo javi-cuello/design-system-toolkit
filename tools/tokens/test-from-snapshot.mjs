@@ -181,7 +181,7 @@ test('an alias to a same-named variable points at the other collection, never it
   const s = snapshot();
   // Semantic listed first, so a first-definer lookup would have sent the alias home to itself.
   s.collections = {
-    Brand: { modes: ['Light'], values: { Light: { 'Palette/Grey/12': '#161616' } }, alias: { Light: { 'Palette/Grey/12': 'Palette/Grey/12' } } },
+    Brand: { modes: ['Light'], values: { Light: { 'Palette/Grey/12': '#202020' } }, alias: { Light: { 'Palette/Grey/12': 'Palette/Grey/12' } } },
     ...s.collections,
   };
   const v = toDtcgSnapshot(s).collections.find((c) => c.name === 'Brand').variables[0];
@@ -315,7 +315,7 @@ test("another library's variable a local one names at the same values is that on
   const snap = toDtcgSnapshot(t), cols = Object.fromEntries(snap.collections.map((c) => [c.name, c.variables]));
   assert.deepEqual(cols.Colors.map((v) => v.name), ['Gray/100', 'Shade']);
   assert.deepEqual(cols.Colors[1].values.Value, { alias: { collection: 'Theme', name: 'Transparent' } });
-  assert.deepEqual(snap.deduped, [{ name: 'Colors/Transparent', collection: 'Colors', variable: 'Transparent', holder: 'Theme', reason: "a copy of Theme's, the same in every mode" }]);
+  assert.deepEqual(snap.deduped, [{ name: 'Colors/Transparent', collection: 'Colors', variable: 'Transparent', holder: 'Theme', holderName: 'Transparent', reason: "a copy of Theme's, the same in every mode" }]);
   // one at other values, or in other modes, is a token of its own, which the build writes with its collection; an alias
   // in its library lands on it, never on this file's
   for (const theme of [{ modes: ['Value'], values: { Value: { Transparent: '#ffffff00' } } }, { modes: ['Light', 'Dark'], values: { Light: { Transparent: '#00000000' }, Dark: { Transparent: '#00000000' } } }]) {
@@ -334,7 +334,14 @@ test("another library's variable a local one names at the same values is that on
   assert.deepEqual(toDtcgSnapshot(css).collections[0].variables.map((v) => v.name), ['logo/text', 'logo - text', '🌮 Weight/Bold', 'Weight/Bold']);
   assert.deepEqual(toDtcgSnapshot(css).deduped, []);
   const dir = mkdtempSync(join(tmpdir(), 'one-col-'));
-  assert.throws(() => writeDtcg(css, dir), /"🌮 Weight\/Bold" and "Weight\/Bold" \(variables in Lib\) both become lib\.weight\.bold: rename one in Figma \(code-standard rule 52\)/);
+  assert.deepEqual(toDtcgSnapshot(css).clashes.map((x) => x.property), ['--logo-text', '--weight-bold']);
+  assert.throws(() => writeDtcg(css, dir), /"logo\/text" and "logo - text" \(variables in Lib\) both become --logo-text: rename one in Figma \(code-standard rule 52\); 1 more pair collide/);
+  assert.deepEqual(readdirSync(dir), [], 'nothing written');
+  // with a third collection holding the property, a pair in another library's collection at other values is still
+  // refused, never one left out as the third's copy and the other written
+  const third = { collections: { Theme: { modes: ['V'], values: { V: { 'Weight/Bold': 700 } }, alias: {} }, Lib: { modes: ['V'], values: { V: { '🌮 Weight/Bold': 700, 'Weight/Bold': 600 } }, alias: {}, remote: true } } };
+  assert.deepEqual(toDtcgSnapshot(third).clashes, [{ collection: 'Lib', names: ['🌮 Weight/Bold', 'Weight/Bold'], property: '--weight-bold' }]);
+  assert.throws(() => writeDtcg(third, mkdtempSync(join(tmpdir(), 'third-'))), /"🌮 Weight\/Bold" and "Weight\/Bold" \(variables in Lib\) both become --weight-bold/);
   // across collections, an alias is compared as the property it names: one to `🌮 Font Weight/Bold` and one to `Font
   // Weight/Bold` are the same value
   const al = { collections: {
