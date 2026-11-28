@@ -530,15 +530,18 @@ export function staleContracts(dir) {
 
 /* A project's built tokens (its paths.styles, the DTCG files beside the snapshot) against what the token build writes
    from its snapshot today (tools/tokens/build.mjs --check, its own function): null current, or no repo to build in;
-   else { refuse, said }, refuse when they are out of date or the build refuses, not when it cannot run here (no
-   paths.styles, no style-dictionary), which is said. The code is read with yesterday's _tokens.scss otherwise: a
+   else { refuse, said }, refuse when they are out of date (with the rebuild) or the build refuses (a collision, no
+   snapshot: its own line, since a rebuild would refuse again), not when it cannot run here (no paths.styles, no
+   style-dictionary, a build that throws), which is said. The code is read with yesterday's _tokens.scss otherwise: a
    re-snapshot moved a border colour, and four components reported border rows the code did not have (2026-11-28). */
 export async function staleTokens(repo) {
   if (!repo) return null;
   const { tokenBuild, rebuildCommand } = await import('../tokens/build.mjs');
-  const r = await tokenBuild(repo, { check: true, quiet: true });
+  let r;
+  try { r = await tokenBuild(repo, { check: true, quiet: true }); } catch (e) { return { refuse: false, said: `the project's tokens were not checked against its snapshot (the build could not run: ${String(e && e.message || e).split('\n')[0]})` }; }
   if (r.code === 0) return null;
   const why = r.err.filter((l) => !/ out of date — run /.test(l)).map((l) => l.trim());
+  if (r.refused) return { refuse: true, said: `the project's snapshot builds no tokens (${why.join('; ')}): fix it in Figma and take the snapshot again` };
   if (r.code !== 1) return { refuse: false, said: `the project's tokens were not checked against its snapshot (${why.join('; ')})` };
   return { refuse: true, said: `the project's built tokens are not what its snapshot builds now (${why.slice(0, 2).join('; ')}${why.length > 2 ? '; …' : ''}): run ${rebuildCommand(repo)}` };
 }

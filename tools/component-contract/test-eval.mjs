@@ -405,6 +405,16 @@ ok('a component measured since the accept is held until accepted; one that came 
   const was = process.env.TOOLKIT_PROJECTS_ROOT; process.env.TOOLKIT_PROJECTS_ROOT = '/r';
   const moved = await staleTokens(repo);
   if (was === undefined) delete process.env.TOOLKIT_PROJECTS_ROOT; else process.env.TOOLKIT_PROJECTS_ROOT = was;
+  // a snapshot that builds nothing (a collision) is its own line, with no rebuild that would refuse again
+  const good = fs.readFileSync(snap, 'utf8');
+  fs.writeFileSync(snap, JSON.stringify({ ...JSON.parse(good), paintStyles: [{ name: 'Color/Border/$default', paints: [{ type: 'SOLID', color: '#ff0000' }] }] }));
+  const clash = await staleTokens(repo);
+  ok('a snapshot whose build refuses is said as that, the collision named, with no rebuild command', clash && clash.refuse && /^the project's snapshot builds no tokens \(tokens: "Color\/Border\/default" \(variable in Semantic\) and "Color\/Border\/\$default" \(colour style\) both become --color-border-default/.test(clash.said) && !/build\.mjs --repo/.test(clash.said), clash && clash.said);
+  // and a build that throws is said, not refused
+  fs.writeFileSync(snap, '{ not json');
+  const thrown = await staleTokens(repo);
+  ok('a build that cannot run (it throws) is said, never refused', thrown && !thrown.refuse && /could not run/.test(thrown.said), thrown && thrown.said);
+  fs.writeFileSync(snap, good);
   fs.rmSync(path.join(repo, 'node_modules'));
   const unbuildable = await staleTokens(repo);
   ok('tokens the snapshot builds today pass; a re-snapshot that moved one refuses the run, naming the file and the rebuild under the run\'s projects root; one that cannot be built here is said, not refused; no repo, nothing to check',
