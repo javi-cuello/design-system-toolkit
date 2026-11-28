@@ -100,14 +100,6 @@ export function toDtcgSnapshot(t) {
   const valuesOf = (c, name) => JSON.stringify(c.modes.filter((m) => ((c.values || {})[m] || {})[name] !== undefined).sort()
     .map((m) => [m, c.values[m][name], aliasOf(c, m, name)]));
   const byCollection = new Map(collections);
-  // Two names of one property in one collection (`🌮 Weight/Bold` and `Weight/Bold`, `a - b/c` and `a/b/c`), at any
-  // values, have no collection to tell them apart: two paths sharing a name, which writeDtcg refuses
-  // (code-standard rule 52), checked before any copy is left out, so neither is dropped for a third collection's
-  const clashes = [];
-  for (const [cname, c] of collections) {
-    const seen = new Map();
-    for (const n of namesOf(c)) { const k = css(n); if (seen.has(k)) clashes.push({ collection: cname, names: [seen.get(k), n], property: `--${k}` }); else seen.set(k, n); }
-  }
   const copyOf = (cname, c, name) => {
     const h = holder.get(css(name));
     if (!c.remote || !h || h === `${cname}\u0000${name}`) return null;
@@ -118,6 +110,16 @@ export function toDtcgSnapshot(t) {
   const shadowed = (cname, c, name) => copyOf(cname, c, name) !== null;
   const deduped = [];
   for (const [cname, c] of collections) for (const n of namesOf(c)) { const hc = copyOf(cname, c, n); if (hc !== null) deduped.push({ name: `${cname}/${n}`, collection: cname, variable: n, holder: hc, holderName: holder.get(css(n)).split('\u0000')[1], reason: `a copy of ${hc}'s, the same in every mode` }); }
+  // Two names of one property in one collection (`🌮 Weight/Bold` and `Weight/Bold`, `a - b/c` and `a/b/c`), at any
+  // values, have no collection to tell them apart: two paths sharing a name, which writeDtcg refuses
+  // (code-standard rule 52), never one dropped as a third collection's copy and the other written. Only where every
+  // one of them is an exact copy of the collection holding the property is nothing of theirs written, and nothing refused
+  const clashes = [];
+  for (const [cname, c] of collections) {
+    const byKey = new Map();
+    for (const n of namesOf(c)) byKey.set(css(n), [...(byKey.get(css(n)) || []), n]);
+    for (const [k, names] of byKey) if (names.length > 1 && !names.every((n) => shadowed(cname, c, n))) clashes.push({ collection: cname, names, property: `--${k}` });
+  }
   const homes = new Map();
   for (const [cname, c] of collections) {
     for (const mode of c.modes) for (const name of Object.keys((c.values || {})[mode] || {})) {

@@ -206,7 +206,7 @@
    * Two Figma names can slug to one path — a silent overwrite loses a token
    * and the export still looks complete, which is the worst shape a defect
    * can take here. The caller reports the collision instead. */
-  /* A name that is a token and also a group (Atlassian's color.text.warning beside color.text.warning.inverse) is a
+  /* A name that is a token and also a group (one system's color.text.warning beside color.text.warning.inverse) is a
    * group carrying its own token as `$root` (DTCG 2025.10 §6.2, "Root Tokens in Groups"); a reference to it is then
    * `{….$root}` (rootRefs, after every file is built), and the house build names it without the segment (nameOf). */
   var ROOT = '$root';

@@ -342,6 +342,11 @@ test("another library's variable a local one names at the same values is that on
   const third = { collections: { Theme: { modes: ['V'], values: { V: { 'Weight/Bold': 700 } }, alias: {} }, Lib: { modes: ['V'], values: { V: { '🌮 Weight/Bold': 700, 'Weight/Bold': 600 } }, alias: {}, remote: true } } };
   assert.deepEqual(toDtcgSnapshot(third).clashes, [{ collection: 'Lib', names: ['🌮 Weight/Bold', 'Weight/Bold'], property: '--weight-bold' }]);
   assert.throws(() => writeDtcg(third, mkdtempSync(join(tmpdir(), 'third-'))), /"🌮 Weight\/Bold" and "Weight\/Bold" \(variables in Lib\) both become --weight-bold/);
+  // …but a pair both exact copies of the property's holder writes nothing of theirs: nothing refused, both said
+  const copies = { collections: { Theme: { modes: ['V'], values: { V: { 'Weight/Bold': 700 } }, alias: {} }, Lib: { modes: ['V'], values: { V: { '🌮 Weight/Bold': 700, 'Weight/Bold': 700 } }, alias: {}, remote: true } } };
+  assert.deepEqual(toDtcgSnapshot(copies).clashes, []);
+  assert.deepEqual(toDtcgSnapshot(copies).deduped.map((d) => d.name), ['Lib/🌮 Weight/Bold', 'Lib/Weight/Bold']);
+  assert.doesNotThrow(() => writeDtcg(copies, mkdtempSync(join(tmpdir(), 'copies-'))));
   // across collections, an alias is compared as the property it names: one to `🌮 Font Weight/Bold` and one to `Font
   // Weight/Bold` are the same value
   const al = { collections: {
