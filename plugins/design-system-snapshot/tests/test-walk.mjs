@@ -560,4 +560,22 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
   ok("…and a wait past a second says so, a step with no count (a bar that runs)", posted.some((m) => m.type === "progress" && /Figma is slow/.test(m.text) && m.total === undefined));
 }
 
+// 0.94.0: a stroke painted with an angular gradient keeps its stops and placement, and a layer's own effects with no
+// style keep their values: each was a bare word (GRADIENT_ANGULAR, literal) no reader could draw or compare
+{
+  const angular = { type: "GRADIENT_ANGULAR", visible: true, opacity: 1, blendMode: "NORMAL", gradientTransform: [[1, 0, 0], [0, 1, 0]],
+    gradientStops: [{ position: 0, color: { r: 1, g: 0, b: 0, a: 1 } }, { position: 1, color: { r: 0, g: 0, b: 1, a: 1 } }] };
+  const glow = { type: "INNER_SHADOW", visible: true, offset: { x: 0, y: 1 }, radius: 3, spread: 2, color: { r: 0, g: 0, b: 0, a: 0.25 }, blendMode: "NORMAL", boundVariables: {} };
+  const hidden = { ...glow, type: "DROP_SHADOW", visible: false };
+  const blur = { type: "LAYER_BLUR", visible: true, radius: 4, blurType: "NORMAL" };
+  const rect = { name: "Rect", type: "RECTANGLE", width: 20, height: 10, x: 0, y: 0, boundVariables: {}, fills: [], strokes: [angular], strokeWeight: 2, strokeAlign: "OUTSIDE", effects: [glow, hidden, blur] };
+  const w = await walk(rect, 0);
+  const g = w.strokes && w.strokes[0];
+  ok("an angular gradient stroke keeps its type, stops and transform, and no linear angle", g && g.type === "GRADIENT_ANGULAR" && g.stops.length === 2 && g.stops[0].position === 0 && typeof g.stops[1].color === "string" && JSON.stringify(g.transform) === "[[1,0,0],[0,1,0]]" && !("angle" in g));
+  ok("a layer's own effects keep each visible one's values in order, a hidden one left out", w.effect === "literal" && JSON.stringify(w.effectLayers.map((e) => e.type)) === '["INNER_SHADOW","LAYER_BLUR"]'
+    && w.effectLayers[0].x === 0 && w.effectLayers[0].y === 1 && w.effectLayers[0].blur === 3 && w.effectLayers[0].spread === 2 && typeof w.effectLayers[0].color === "string" && w.effectLayers[1].blur === 4);
+  const styled = await walk({ ...rect, effectStyleId: "S:x" }, 0);
+  ok("…and a layer whose effects come from a style records the style's name alone, its values the style's", !("effectLayers" in styled));
+}
+
 console.log(n + "/" + n + " passed");

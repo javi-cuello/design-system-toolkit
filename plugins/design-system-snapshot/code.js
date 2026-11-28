@@ -1,4 +1,4 @@
-// Design system snapshot — v0.93.1 · plugin-standard v1.1.0
+// Design system snapshot — v0.94.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -467,6 +467,10 @@ async function swapName(id) {
  * was that word.
  */
 async function gradient(p) {
+  // (a radial, angular or diamond one too, 2026-11-28: each was the bare word GRADIENT_ANGULAR, its stops and placement
+  // lost, so a stroke painted with one could be neither drawn nor compared. The Plugin API's GradientPaint carries
+  // gradientTransform and gradientStops for all four types, @figma/plugin-typings plugin-api.d.ts. The angle is a linear
+  // one's alone: the others are placed by the transform)
   const [[a, b, c], [d, e, f]] = p.gradientTransform;
   const det = a * e - b * d;
   const inv = (/** @type {number} */ x, /** @type {number} */ y) => [(e * (x - c) - b * (y - f)) / det, (-d * (x - c) + a * (y - f)) / det];
@@ -484,7 +488,31 @@ async function gradient(p) {
   // transform's first row applied to it, so a reader derives the CSS angle
   // and the stop positions from this and the box it fills.
   const transform = p.gradientTransform.map((row) => row.map((v) => +v.toFixed(6)));
-  return { type: 'GRADIENT_LINEAR', angle, transform, stops };
+  return p.type === 'GRADIENT_LINEAR' ? { type: 'GRADIENT_LINEAR', angle, transform, stops } : { type: p.type, transform, stops };
+}
+const GRADIENTS = new Set(['GRADIENT_LINEAR', 'GRADIENT_RADIAL', 'GRADIENT_ANGULAR', 'GRADIENT_DIAMOND']);
+
+/*
+ * One effect's values, as the Plugin API gives them (plugin-api.d.ts DropShadowEffect, InnerShadowEffect, BlurEffect):
+ * a shadow's colour, offset, blur radius and spread, and the variables any of them binds; a blur's radius (and its
+ * kind where progressive); any other kind (noise, texture, glass) its type alone. Shared by an effect style's layers
+ * and a layer's own effects with no style, which recorded only the word `literal` until 2026-11-28, so no reader could
+ * draw or compare them.
+ */
+async function effectLayer(x) {
+  if (x.type === 'LAYER_BLUR' || x.type === 'BACKGROUND_BLUR') return { type: x.type, blur: x.radius, ...(x.blurType === 'PROGRESSIVE' && { blurType: 'PROGRESSIVE' }) };
+  if (x.type !== 'DROP_SHADOW' && x.type !== 'INNER_SHADOW') return { type: x.type };
+  // The variables each field is bound to, as for a text style: the token export kept a shadow's references and the
+  // snapshot sent only its resolved values, so a shadow built from the snapshot lost its tier.
+  /** @type {Record<string, {collection: string | null, name: string}>} */ const bound = {};
+  const bv = /** @type {Record<string, {id: string} | undefined>} */ (x.boundVariables || {});
+  for (const [field, key] of [['color', 'color'], ['x', 'offsetX'], ['y', 'offsetY'], ['blur', 'radius'], ['spread', 'spread']]) {
+    const v = bv[key] ? await variable(/** @type {{id: string}} */ (bv[key]).id) : null;
+    if (!v) continue;
+    const c = await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId);
+    bound[field] = { collection: c ? c.name : null, name: v.name };
+  }
+  return { type: x.type, x: x.offset.x, y: x.offset.y, blur: x.radius, spread: x.spread || 0, color: colour(x.color), ...(Object.keys(bound).length && { bound }) };
 }
 
 // (`all`: a style's own paints, or a stroke's, a clear one included: the style is a token whatever it paints, and a
@@ -503,7 +531,7 @@ async function paintNames(paints, all = false) {
     if (!all && v && Object.values(v.valuesByMode).every((c) => c && typeof c === 'object' && 'a' in c && clear(c.a))) continue;
     if (bound) out.push(v ? v.name : bound.id);
     else if (p.type === 'SOLID') out.push(colour(p.color, p.opacity));
-    else if (p.type === 'GRADIENT_LINEAR') out.push(await gradient(p));
+    else if (GRADIENTS.has(p.type)) out.push(await gradient(p));
     // An image's scale mode is the whole question for a reader: Crop and Tile
     // have no CSS `object-fit` answer, Fill and Fit do. `IMAGE` alone cannot
     // be told apart, so the validator's image rule was silent on every stored
@@ -811,7 +839,7 @@ async function collectTokens() {
     for (const p of ps.paints) {
       if (p.visible === false) continue;
       if (p.type === 'SOLID') { paints.push({ type: 'SOLID', color: (await paintNames([p], true))[0] }); continue; }
-      if (p.type === 'GRADIENT_LINEAR') { paints.push(await gradient(p)); continue; }
+      if (GRADIENTS.has(p.type)) { paints.push(await gradient(p)); continue; }
       paints.push({ type: p.type });
     }
     paintStyles.push({ name: ps.name, paints });
@@ -828,25 +856,9 @@ async function collectTokens() {
   const remoteFx = /** @type {EffectStyle[]} */ ((await Promise.all([...fxIds].map((i) => figma.getStyleByIdAsync(i).catch(() => null)))).filter((e) => e && e.type === 'EFFECT' && e.remote && !fxNames.has(e.name) && fxNames.add(e.name)));
   for (const e of [...localFx, ...remoteFx]) {
     const layers = [];
-    for (const x of e.effects.filter((y) => y.visible !== false)) {
-      // A blur layer has a radius and nothing else; it is sent so the style is
-      // documented whole, and a token build skips it with a warning, as DTCG's
-      // shadow type cannot carry it.
-      if (!/SHADOW/.test(x.type)) { layers.push({ type: x.type, blur: /** @type {BlurEffect} */ (x).radius }); continue; }
-      const sh = /** @type {DropShadowEffect | InnerShadowEffect} */ (x);
-      // The variables each field is bound to, as for a text style: the
-      // token export kept a shadow's references and the snapshot sent only
-      // its resolved values, so a shadow built from the snapshot lost its tier.
-      /** @type {Record<string, {collection: string | null, name: string}>} */ const bound = {};
-      const bv = /** @type {Record<string, {id: string} | undefined>} */ (sh.boundVariables || {});
-      for (const [field, key] of [['color', 'color'], ['x', 'offsetX'], ['y', 'offsetY'], ['blur', 'radius'], ['spread', 'spread']]) {
-        const v = bv[key] ? await variable(/** @type {{id: string}} */ (bv[key]).id) : null;
-        if (!v) continue;
-        const c = await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId);
-        bound[field] = { collection: c ? c.name : null, name: v.name };
-      }
-      layers.push({ type: sh.type, x: sh.offset.x, y: sh.offset.y, blur: sh.radius, spread: sh.spread || 0, color: colour(sh.color), ...(Object.keys(bound).length && { bound }) });
-    }
+    // (a blur layer has a radius and nothing else; it is sent so the style is documented whole, and a token build skips
+    // it with a warning, as DTCG's shadow type cannot carry it)
+    for (const x of e.effects.filter((y) => y.visible !== false)) layers.push(await effectLayer(x));
     effects.push({ name: e.name, key: e.key, ...(e.remote && { remote: true }), layers });
   }
 
@@ -888,7 +900,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.93.1';
+const VERSION = '0.94.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1145,6 +1157,8 @@ async function walk(n, depth, at, inInstance = false) {
       + (e.blurType === 'PROGRESSIVE' ? '_PROGRESSIVE' : '')
       + ((e.type === 'INNER_SHADOW' || e.type === 'DROP_SHADOW') && e.spread ? ':spread' : ''));
     if (kinds.length) o.effects = kinds;
+    // and with no style, each visible effect's values (effectLayer), in the order Figma lists them: a hidden one draws nothing
+    if (o.effect === 'literal' && kinds.length) o.effectLayers = await Promise.all(n.effects.filter((e) => e.visible !== false).map(effectLayer));
   }
   if (n.type === 'TEXT') {
     // whole, so copy the design decides can be compared with what renders (cut

@@ -1,6 +1,11 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.94.0] - 2026-11-28
+### Added
+- **A radial, angular or diamond gradient keeps its stops and placement** (`type`, `transform`, `stops`, as a linear one does without its angle), in a layer's fills and strokes and in a paint style. Each was the bare word `GRADIENT_ANGULAR`, so a stroke painted with one could be neither drawn nor compared. The Plugin API's `GradientPaint` carries `gradientTransform` and `gradientStops` for all four types (`@figma/plugin-typings` plugin-api.d.ts). Takes effect with the next snapshot.
+- **A layer's own effects with no style keep their values** as `effectLayers`, beside `effect: "literal"` and the kinds in `effects`: each visible effect in Figma's order, a shadow's type, colour, offset, blur radius, spread and bound variables, a blur's radius (and kind where progressive), any other kind its type alone (`DropShadowEffect`, `InnerShadowEffect`, `BlurEffect` in the typings). A hidden effect draws nothing and is left out. An effect style's layers are read by the same function. Takes effect with the next snapshot.
+
 ## [0.93.1] - 2026-11-27
 ### Fixed
 - **A remote text style whose family the file lacks is recorded.** Its font reads mixed off the style, and off its text's `getRangeFontName` too while the family is missing, so the style was skipped and the code drew the browser's default face. The text's first segment (`getStyledTextSegments`) still names the family, and is read instead. Takes effect with the next snapshot.

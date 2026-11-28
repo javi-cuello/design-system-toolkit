@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.17.2] - 2026-11-28
+### Changed
+- Carries snapshot 0.94.0: a radial, angular or diamond gradient keeps its stops and placement, and a layer's own effects with no style keep their values.
+
 ## [0.17.1] - 2026-11-27
 ### Changed
 - A document written for one other file is taken on Upload with no button, and the Settings tab says only where its settings came from. The picker stays for a document naming several files, none of them this one.
