@@ -52,6 +52,7 @@ Claude Code then loads each skill when a task matches its `description`. To use 
 | [humanizer](humanizer/SKILL.md) | Removes the signs of AI-generated writing from a text. |
 | [ds-model-routing](ds-model-routing/SKILL.md) | Advises which Claude model and effort suit a design-system task. |
 | **Sessions** | |
+| [checkin](checkin/SKILL.md) | The start of a session, the counterpart of `/checkout`: reads the project's memory whole, checks it against the repo, and reports each thread's state and next step. Read-only. Run by typing `/checkin`; `/checkin <topic>` narrows it to one thread. |
 | [checkout](checkout/SKILL.md) | The housekeeping when a session ends, over that session only: closes its work, folds it into the project's one memory, settles its plan. Run by typing `/checkout`; `--prune` also folds and prunes the project's stale side sessions. |
 
 ## Writing or changing a skill
