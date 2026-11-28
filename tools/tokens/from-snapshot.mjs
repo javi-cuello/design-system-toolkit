@@ -94,21 +94,24 @@ export function toDtcgSnapshot(t) {
   const holder = new Map();
   for (const [cname, c] of [...collections.filter(([, x]) => !x.remote), ...collections.filter(([, x]) => x.remote)])
     for (const n of namesOf(c)) if (!holder.has(css(n))) holder.set(css(n), `${cname}\u0000${n}`);
-  // (a variable's values mode by mode, an alias as written: what two copies must share)
+  // (a variable's values mode by mode, an alias as the property it names: what two copies must share; `🌮 Font
+  // Weight/Bold` and `Font Weight/Bold` are one alias)
+  const aliasOf = (c, m, name) => { const a = ((c.alias || {})[m] || {})[name]; return a == null ? null : css(a); };
   const valuesOf = (c, name) => JSON.stringify(c.modes.filter((m) => ((c.values || {})[m] || {})[name] !== undefined).sort()
-    .map((m) => [m, c.values[m][name], ((c.alias || {})[m] || {})[name] ?? null]));
+    .map((m) => [m, c.values[m][name], aliasOf(c, m, name)]));
   const byCollection = new Map(collections);
   const copyOf = (cname, c, name) => {
     const h = holder.get(css(name));
     if (!c.remote || !h || h === `${cname}\u0000${name}`) return null;
     const [hc, hn] = h.split('\u0000');
-    // (two of one property in one collection at other values have no collection to tell them apart: both go on, and the
-    // build refuses them as one name two paths share, code-standard rule 52)
+    // (two of one property in one collection, at any values, have no collection to tell them apart: both go on, and
+    // the build refuses them as one name two paths share, code-standard rule 52)
+    if (hc === cname) return null;
     return valuesOf(byCollection.get(hc), hn) === valuesOf(c, name) ? hc : null;
   };
   const shadowed = (cname, c, name) => copyOf(cname, c, name) !== null;
   const deduped = [];
-  for (const [cname, c] of collections) for (const n of namesOf(c)) { const hc = copyOf(cname, c, n); if (hc !== null) deduped.push({ name: `${cname}/${n}`, reason: hc === cname ? `the same property as ${holder.get(css(n)).split('\u0000')[1]} in its own collection, at the same values` : `a copy of ${hc}'s, the same in every mode` }); }
+  for (const [cname, c] of collections) for (const n of namesOf(c)) { const hc = copyOf(cname, c, n); if (hc !== null) deduped.push({ name: `${cname}/${n}`, collection: cname, variable: n, holder: hc, reason: `a copy of ${hc}'s, the same in every mode` }); }
   const homes = new Map();
   for (const [cname, c] of collections) {
     for (const mode of c.modes) for (const name of Object.keys((c.values || {})[mode] || {})) {

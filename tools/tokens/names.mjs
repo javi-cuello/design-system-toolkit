@@ -27,10 +27,16 @@ export const prefixedIn = (dtcgDir) => new Set(dtcgDir && existsSync(dtcgDir) ? 
 
 /** Each collection's slug as the build writes it, from the snapshot (tokens.json): another library's collection that
  *  slugs like one already taken is numbered (`🌮 Palette` beside a local `Palette` is `palette-2`, dtcg.js
- *  collectionSlugs). `renamed` keeps only those, for a library's settings. */
+ *  collectionSlugs). Another library's copy the build left out (from-snapshot `deduped`) is keyed
+ *  `<collection>\0<name>` to the slug of the collection that holds it, so a binding recorded to the copy names the
+ *  property written. `renamed` keeps only those a reader would not find from the name, for a library's settings. */
 export const slugsOf = (snapshot, renamed = false) => {
-  const all = DTCG.slugsOf(Object.entries((snapshot && snapshot.collections) || {}));
-  return renamed ? Object.fromEntries(Object.entries(all).filter(([n, s]) => s !== DTCG.slug(n))) : all;
+  const t = snapshot || {}, all = DTCG.slugsOf(Object.entries(t.collections || {}));
+  const out = { ...all };
+  for (const d of toDtcgSnapshot(t).deduped) out[`${d.collection}\0${d.variable}`] = all[d.holder] || DTCG.slug(d.holder);
+  // (renamed: a collection whose slug differs from its name's, and a copy whose holder differs from what its collection
+  // gives, the lookup tokenProperty makes)
+  return renamed ? Object.fromEntries(Object.entries(out).filter(([n, s]) => s !== (n.includes('\0') ? all[n.split('\0')[0]] : DTCG.slug(n)))) : out;
 };
 
 /** A binding's custom property, from its name and the collection its spec recorded (contract `collections`), under
@@ -43,7 +49,7 @@ export function tokenProperty(name, collection, kept, slugs = null) {
   if (!split) return { css: cssName('', name) };
   if (typeof collection !== 'string') return { missing: Array.isArray(collection) ? `bound from ${collection.join(' and ')}` : 'no collection recorded' };
   // (only a collection the build writes it from: one it does not is said, never given the bare name)
-  const slug = (slugs && slugs[collection]) || DTCG.slug(collection);
+  const slug = (slugs && (slugs[`${collection}\0${name}`] || slugs[collection])) || DTCG.slug(collection);
   if (!kept.has(`${slug}\0${rest}`)) return { missing: `${collection}, which the build does not write it from` };
   return { css: cssName(slug, name, kept) };
 }
@@ -52,7 +58,7 @@ export const cssFamily = (name) => cssName('', String(name).split('/')[0]) + '-'
 
 /* The Figma names a custom property is written from, from the snapshot (tokens.json): [{ name, kind }], a variable's
    kind naming its collection, a style's its type, in the snapshot's order. What the build's collision refusal says
-   (build.mjs, code-standard rule 52): a slug drops what told two names apart (`$overlay` and `overlay`), so only
+   (build.mjs, code-standard rule 52): a slug drops what told two names apart (`$veil` and `veil`), so only
    Figma's own names show which two met. A text style meets by its fields (`--body-font-size`). */
 export function collisionNames(snapshot, prop) {
   const t = snapshot || {}, hit = [];

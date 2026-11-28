@@ -49,4 +49,20 @@ ok('a family is its first segment as the build writes it', cssFamily('Corner rad
   ok('…and a binding recorded in it is named by that slug, not the plain one', tokenProperty('pill-edge', '🌮 Shades', kept, slugs).css === '--shades-2-pill-edge' && tokenProperty('pill-edge', 'Shades', kept, slugs).css === '--shades-pill-edge');
   rmSync(dir, { recursive: true, force: true });
 }
+// another library's copy the build left out (the same as a local one, while a second local one differs): a binding
+// recorded to the copy names the property the build writes from the local one that holds it, never missing
+{
+  const dir = mkdtempSync(join(tmpdir(), 'names-'));
+  const snap = { _meta: { file: 'x', fileId: 'x' }, collections: {
+    'Shades 1': { modes: ['Value'], values: { Value: { 'pill-edge': '#000000' } }, alias: {} },
+    'Shades 2': { modes: ['Value'], values: { Value: { 'pill-edge': '#ffffff' } }, alias: {} },
+    Brand: { remote: true, modes: ['Value'], values: { Value: { '🌮 pill-edge': '#000000', Accent: '#ff0000' } }, alias: {} },
+  }, textStyles: [], paintStyles: [], effects: [] };
+  writeDtcg(snap, dir);
+  const slugs = slugsOf(snap), kept = prefixedIn(dir);
+  ok('the build leaves the copy out and writes the two local ones with their collection', [...kept].sort().join(',') === 'shades-1\0pill-edge,shades-2\0pill-edge' && !readdirSync(join(dir, 'brand')).some((f) => /pill/.test(f)));
+  ok('…and a binding recorded to the copy is named from the one that holds it', tokenProperty('🌮 pill-edge', 'Brand', kept, slugs).css === '--shades-1-pill-edge');
+  ok('…which a library\'s settings keep too', slugsOf(snap, true)['Brand\0🌮 pill-edge'] === 'shades-1');
+  rmSync(dir, { recursive: true, force: true });
+}
 console.log(`\n${n} passed`);

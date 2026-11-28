@@ -315,7 +315,7 @@ test("another library's variable a local one names at the same values is that on
   const snap = toDtcgSnapshot(t), cols = Object.fromEntries(snap.collections.map((c) => [c.name, c.variables]));
   assert.deepEqual(cols.Colors.map((v) => v.name), ['Gray/100', 'Shade']);
   assert.deepEqual(cols.Colors[1].values.Value, { alias: { collection: 'Theme', name: 'Transparent' } });
-  assert.deepEqual(snap.deduped, [{ name: 'Colors/Transparent', reason: "a copy of Theme's, the same in every mode" }]);
+  assert.deepEqual(snap.deduped, [{ name: 'Colors/Transparent', collection: 'Colors', variable: 'Transparent', holder: 'Theme', reason: "a copy of Theme's, the same in every mode" }]);
   // one at other values, or in other modes, is a token of its own, which the build writes with its collection; an alias
   // in its library lands on it, never on this file's
   for (const theme of [{ modes: ['Value'], values: { Value: { Transparent: '#ffffff00' } } }, { modes: ['Light', 'Dark'], values: { Light: { Transparent: '#00000000' }, Dark: { Transparent: '#00000000' } } }]) {
@@ -328,11 +328,20 @@ test("another library's variable a local one names at the same values is that on
   // and between two other libraries' collections (an old copy of a foundations library beside its new one), the first holds it
   const two = { collections: { Old: { modes: ['V'], values: { V: { Space0: 0, Space1: 1 } }, alias: {}, remote: true }, New: { modes: ['V'], values: { V: { Space0: 0, Space2: 2 } }, alias: {}, remote: true } } };
   assert.deepEqual(toDtcgSnapshot(two).collections.map((c) => c.variables.map((v) => v.name)), [['Space0', 'Space1'], ['Space2']]);
-  // compared as CSS writes them: an emoji or a separator CSS drops makes no second property, within one collection too
+  // two of one property in one collection, at any values, are never one dropped: both go on, and the build refuses
+  // them (rule 52, test-check)
   const css = { collections: { Lib: { modes: ['V'], values: { V: { 'logo/text': 1, 'logo - text': 2, '🌮 Weight/Bold': 700, 'Weight/Bold': 700 } }, alias: {}, remote: true } } };
-  // (one at the same values only: two of one property at other values both go on, and the build refuses them, rule 52)
-  assert.deepEqual(toDtcgSnapshot(css).collections[0].variables.map((v) => v.name), ['logo/text', 'logo - text', '🌮 Weight/Bold']);
-  assert.deepEqual(toDtcgSnapshot(css).deduped.map((d) => d.name), ['Lib/Weight/Bold'], 'each one left out is said');
+  assert.deepEqual(toDtcgSnapshot(css).collections[0].variables.map((v) => v.name), ['logo/text', 'logo - text', '🌮 Weight/Bold', 'Weight/Bold']);
+  assert.deepEqual(toDtcgSnapshot(css).deduped, []);
+  const dir = mkdtempSync(join(tmpdir(), 'one-col-'));
+  assert.throws(() => writeDtcg(css, dir), /"🌮 Weight\/Bold" and "Weight\/Bold" \(variables in Lib\) both become lib\.weight\.bold: rename one in Figma \(code-standard rule 52\)/);
+  // across collections, an alias is compared as the property it names: one to `🌮 Font Weight/Bold` and one to `Font
+  // Weight/Bold` are the same value
+  const al = { collections: {
+    Type: { modes: ['V'], values: { V: { 'Font Weight/Bold': 700, Strong: 700 } }, alias: { V: { Strong: 'Font Weight/Bold' } } },
+    Lib: { modes: ['V'], values: { V: { '🌮 Font Weight/Bold': 700, Strong: 700 } }, alias: { V: { Strong: '🌮 Font Weight/Bold' } }, remote: true },
+  } };
+  assert.deepEqual(toDtcgSnapshot(al).deduped.map((d) => d.name), ['Lib/🌮 Font Weight/Bold', 'Lib/Strong']);
   // a reference to one left out goes to the one holding its name, an alias and a text style's binding alike
   const ref = { collections: {
     Type: { modes: ['V'], values: { V: { 'Font Weight/Bold': 700, 'Font/Sans': 'Inter' } }, alias: {} },

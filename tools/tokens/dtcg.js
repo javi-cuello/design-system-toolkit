@@ -501,7 +501,7 @@
   }
 
   /* The variable a colour style is no more than, or null: one visible solid paint bound to a variable whose path,
-   * collection aside, is the style's own (`Miscellaneous/$overlay` bound to `Miscellaneous/overlay`, the slug dropping
+   * collection aside, is the style's own (`Surface/$veil` bound to `Surface/veil`, the slug dropping
    * the `$`). That style is the variable again, not a second token sharing its name (code-standard rule 52), so it
    * is written once, as the variable, and reported as its alias. A literal, even one equal to the variable's value,
    * or a binding to another variable, is no alias: it is written, and a name it shares is refused. */

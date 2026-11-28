@@ -50,7 +50,7 @@ function repo() {
   writeFileSync(join(root, 'snapshot.config.json'), JSON.stringify({ toolkit: TOOLKIT, project: 'fixture', paths: { tokens: 'design/figma.json', styles: 'styles/generated' } }));
   writeFileSync(join(root, 'design/figma.json'), JSON.stringify({
     _meta: { file: 'UI library', fileId: 'x' },
-    collections: { Semantic: { modes: ['Light', 'Dark'], values: { Light: { 'Colour/Text/strong': '#161616' }, Dark: { 'Colour/Text/strong': '#f5f5f5' } }, alias: {} } },
+    collections: { Semantic: { modes: ['Light', 'Dark'], values: { Light: { 'Colour/Text/strong': '#202020' }, Dark: { 'Colour/Text/strong': '#ececec' } }, alias: {} } },
     // A text style carries its bindings since plugin 0.24.0; a fixture
     // without them is a snapshot the build refuses, which is what this
     // fixture silently was until bin/check ran every suite.
@@ -174,7 +174,7 @@ test('a colour style bound to the variable it shares a name with is that variabl
 test('a colour style sharing a variable\'s name is refused when bound to another variable, or a literal equal to the variable\'s value', () => {
   for (const [what, paint] of [
     ['bound to another variable', { type: 'SOLID', color: 'Colour/Text/weak' }],
-    ['a literal equal to the variable\'s value', { type: 'SOLID', color: '#161616' }],
+    ['a literal equal to the variable\'s value', { type: 'SOLID', color: '#202020' }],
   ]) {
     const root = repo();
     withStyle(root, paint, { 'Colour/Text/weak': '#6f6f6f' });
@@ -198,7 +198,7 @@ test('one name in two collections at different values is two tokens, each named 
   const r = buildCli(root);
   assert.equal(r.status, 0, r.stderr);
   const css = tokensCss(root);
-  assert.match(css, /--semantic-colour-text-strong: #161616;/);
+  assert.match(css, /--semantic-colour-text-strong: #202020;/);
   assert.match(css, /--brand-colour-text-strong: #ff0000;/);
   assert.match(css, /--colour-text-accent: #00ff00;/, 'a name only one collection holds keeps its name');
   assert.doesNotMatch(css, /--colour-text-strong:/, 'neither copy takes the bare name');
@@ -309,7 +309,7 @@ test('under the project\'s ruling a colour style that disagrees with its variabl
   const r = run();
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /1 colour style\(s\) dropped, the variable of their name kept/);
-  assert.match(r.stdout, /"Colour\/Text\/\$strong" = #000000; the variable Colour\/Text\/strong \(Semantic\) = #161616 \| #f5f5f5/);
-  assert.match(tokensCss(root), /--colour-text-strong: #161616;/);
+  assert.match(r.stdout, /"Colour\/Text\/\$strong" = #000000; the variable Colour\/Text\/strong \(Semantic\) = #202020 \| #ececec/);
+  assert.match(tokensCss(root), /--colour-text-strong: #202020;/);
   assert.equal(run('--check').status, 0, 'the check builds as the write did');
 });
