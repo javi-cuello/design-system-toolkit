@@ -738,6 +738,9 @@ delete globalThis.figma;
     const m = { mains: (n) => (n === 'Button' ? two : null) };
     ok('a swap that drives no layer is unstated where the instance drawn inside is at a layer another swap drives; that other swap stays stated',
       roundTrip(within({ 'Icon 2': 'y' }), within({ 'Icon 2': 'x' }), m).rows.length === 0 && roundTrip(within({ 'Icon 1': 'y' }), within(null), m).rows.length === 1); }
+  { // (a layer a variant adds again under the base's id, without the base's tie: the swap the base ties to it still drives it)
+    const again = { component: 'Button', props: { icon: { type: 'instance', figma: 'Icon' }, big: { type: 'boolean', default: false, figma: 'Big' } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/house', swappedBy: 'icon' } }, variants: [{ when: { big: true }, add: { i: { kind: 'instance', parent: 'root', component: 'Icon/house' } } }] };
+    ok('a swap tied to a base layer a variant adds again stays stated', roundTrip(holder({ Icon: 'x' }), holder(null), { mains: (n) => (n === 'Button' ? again : null) }).rows.length === 1); }
   { // (a text prop whose layer the placed component does not draw at the instance's props, a select's placeholder while it
     // holds a value: unstated; where it draws it, stated)
     const sel = { component: 'Button', props: { ph: { type: 'string', default: 'Value', figma: 'Placeholder', sets: ['ph'] }, state: { type: 'enum', values: ['rest', 'hydrate'], figmaValues: ['rest', 'hydrate'], default: 'rest', figma: 'state' } },
@@ -1279,6 +1282,9 @@ delete globalThis.figma;
   const side = (row) => ({ contract: 1, component: 'Group', props: {}, anatomy: { root: { kind: 'container' }, box: { kind: 'instance', parent: 'root', order: 0, component: 'Box' }, 'box/row': { kind: 'container', parent: 'box', order: 0, width: 'fill', ...row } }, variants: [] });
   ok('a layer inside a placed instance at its component\'s own modes, said on one side and unsaid on the other, raises no row', !rt(side({}), side({ modes: { ai: 'no-ai' } }), { mains }).rows.length, JSON.stringify(rt(side({}), side({ modes: { ai: 'no-ai' } }), { mains }).rows));
   ok('…one in another mode than its component\'s raises the row', rt(side({ modes: { ai: 'layer-only' } }), side({ modes: { ai: 'no-ai' } }), { mains }).rows.some((r) => /box\/row\.modes/.test(r.at)));
+  { // (a layer the instance names otherwise, matched to its component's part as derive matches it)
+    const renamed = (row) => ({ contract: 1, component: 'Group', props: {}, anatomy: { root: { kind: 'container' }, box: { kind: 'instance', parent: 'root', order: 0, component: 'Box' }, 'box/line': { kind: 'container', parent: 'box', order: 0, width: 'fill', ...row } }, variants: [] });
+    ok('…and so does one the instance names otherwise, matched to its component\'s part', !rt(renamed({}), renamed({ modes: { ai: 'no-ai' } }), { mains }).rows.length, JSON.stringify(rt(renamed({}), renamed({ modes: { ai: 'no-ai' } }), { mains }).rows)); }
   ok('…and a placed instance\'s own modes are kept', !!ownModes({ root: { kind: 'container' }, box: { kind: 'instance', parent: 'root', component: 'Box', modes: { ai: 'no-ai' } } }, mains).box.modes); }
 // an effect with no style, its layers compared field by field: a colour in any spelling and a px to its read are the same,
 // another blur a row at that layer's field (2026-11-28)

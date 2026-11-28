@@ -279,8 +279,7 @@ export const wholeHosts = (contract, mains) => req('./derive.cjs').wholeHosts(co
    test-to-figma.mjs. */
 export function ownModes(side, mains) {
   if (!mains || !side) return side;
-  const { placedAs } = req('./derive.cjs');
-  const key = (m) => JSON.stringify(Object.entries(m || {}).sort());
+  const { placedAs, placedMatch } = req('./derive.cjs');
   const out = { ...side }, seen = new Map();
   for (const [id, e] of Object.entries(side)) {
     if (!e || e.kind === 'instance' || !e.modes || !id.includes('/')) continue;
@@ -288,9 +287,11 @@ export function ownModes(side, mains) {
     for (let i = segs.length - 1; i > 0; i--) {
       const h = segs.slice(0, i).join('/'), he = side[h], m = he && he.kind === 'instance' && he.component && mains(he.component, he.key);
       if (!m) continue;
-      if (!seen.has(h)) seen.set(h, placedAs(side, h, m, mains).M);
-      const x = seen.get(h)[id.slice(h.length + 1)];
-      if (x && key(x.modes) === key(e.modes)) { const { modes: _, ...rest } = e; out[id] = rest; }
+      // (its layers matched to its component's parts as derive matches them, placedMatch: a layer the instance names or
+      // places otherwise is still that part)
+      if (!seen.has(h)) { const { M } = placedAs(side, h, m, mains); seen.set(h, { M, match: placedMatch(M, Object.fromEntries(Object.keys(side).filter((k) => k.startsWith(`${h}/`)).map((k) => [k.slice(h.length + 1), side[k]]))) }); }
+      const { M, match } = seen.get(h), x = M[match[id.slice(h.length + 1)]];
+      if (x && req('../tokens/modes.cjs').sameModes(x.modes, e.modes)) { const { modes: _, ...rest } = e; out[id] = rest; }
       break;
     }
   }
@@ -397,9 +398,11 @@ function atDefault(x, mains) {
     // (a swap with no layer it swaps, none swapped by it, at any props; and none drawn inside this instance here, where the
     // design would say what it swapped in, compared as such: one at a layer another of its props swaps is that prop's, a
     // shortcut's first icon its Icon 1's, and says nothing of this swap)
-    const byId = Object.assign({}, ...[main.anatomy || {}, ...(main.variants || []).map((v) => v.add || {})]);
-    const layers = Object.values(byId).filter(Boolean);
-    const another = (rel, key) => Object.entries(main.props || {}).some(([k2, q2]) => k2 !== key && (q2.swaps || []).includes(rel)) || (!!byId[rel] && !!byId[rel].swappedBy && byId[rel].swappedBy !== key);
+    // (every copy of a layer, the base's and each variant's add of it: one id a variant adds again keeps the base's tie)
+    const drawsOf = [main.anatomy || {}, ...(main.variants || []).map((v) => v.add || {})];
+    const layers = drawsOf.flatMap((a) => Object.values(a)).filter(Boolean);
+    const copiesOf = (rel) => drawsOf.map((a) => a[rel]).filter(Boolean);
+    const another = (rel, key) => Object.entries(main.props || {}).some(([k2, q2]) => k2 !== key && (q2.swaps || []).includes(rel)) || copiesOf(rel).some((y) => y.swappedBy && y.swappedBy !== key);
     // (only where the library's snapshot records what its props drive, `mains.linked`: an older one records it for none)
     const swapsNothing = (q, key) => mains.linked !== false && !(q.swaps || []).length && !layers.some((y) => y.swappedBy === key)
       && !(main.variants || []).some((v) => Object.entries(v.set || {}).some(([sk, y]) => sk.endsWith('.swappedBy') && y === key))
@@ -428,8 +431,10 @@ function atDefault(x, mains) {
       }
       // a text prop none of whose layers is drawn at the instance's props (a select's placeholder at hydrate, where it
       // shows the value it holds) shows nothing: an override on nothing, which no code can say. Only where each of its
-      // layers is one its component holds somewhere, so not drawn there is known
-      if (q && q.type === 'string' && mains.linked !== false && (q.sets || []).length && q.sets.every((l) => byId[l])) {
+      // layers is one its component holds somewhere, so not drawn there is known. Not drawn is a variant's `remove` alone,
+      // expand's: the snapshot keeps no hidden layer (the walk records a variant's visible layers, and derive says one
+      // hidden there as removed), so a contract has no other way to say it
+      if (q && q.type === 'string' && mains.linked !== false && (q.sets || []).length && q.sets.every((l) => copiesOf(l).length)) {
         const M = req('./derive.cjs').atProps(main, e.with);
         if (!q.sets.some((l) => M[l])) return false;
       }
