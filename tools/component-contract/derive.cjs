@@ -1011,6 +1011,25 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       const pinned = (y) => { if (!y.absolute) return y; const c = y.constraints || {}, a = { ...y.absolute };
         if (c.vertical === 'max' && a.bottom != null) delete a.y; if (c.horizontal === 'max' && a.end != null) delete a.x; return { ...y, absolute: a }; };
       if (look(arcForm(pinned(y))) === look(arcForm(pinned(x)))) return true;
+      // a part scaled with its parent (Figma's scale constraint) is as big, and as far in, as the instance makes that
+      // parent: its size and point the parent's share of its own, no override (a card's state layer 80 high in an
+      // instance 80 high, of a frame 360 square); its point unstated where it states none, as the walk records none
+      // inside an instance (flatten) and none can override it (figma-fact: no-nested-position-override), and in a
+      // reading its constraints too, as code reads none there
+      const scaledAs = (y) => {
+        const c = x.constraints || {}, pi = anatomy[anatomy[k].parent] || {}, pm = M[x.parent || 'root'] || {}, r = { ...y };
+        let any = false;
+        for (const [axis, size, off] of [['horizontal', 'width', 'x'], ['vertical', 'height', 'y']]) {
+          if (c[axis] !== 'scale' || ![pi[size], pm[size], x[size], y[size]].every((v) => typeof v === 'number') || !pm[size]) continue;
+          const f = pi[size] / pm[size];
+          if (Math.abs(y[size] - x[size] * f) > 0.5) return y;
+          r[size] = x[size]; any = true;
+          if (r.absolute && x.absolute && typeof r.absolute[off] === 'number' && typeof x.absolute[off] === 'number') { if (Math.abs(r.absolute[off] - x.absolute[off] * f) > 0.5) return y; r.absolute = { ...r.absolute, [off]: x.absolute[off] }; }
+        }
+        return any ? r : y;
+      };
+      { const s = scaledAs(y), placeless = (m) => { const o = { ...m }; for (const f of reading ? ['absolute', 'constraints'] : ['absolute']) if (s[f] === undefined) delete o[f]; return o; };
+        if (s !== y && look(arcForm(s)) === look(arcForm(placeless(x)))) return true; }
       // an icon's size said by its width, as code says it (a Size that is its width and height): to-figma's iconSize
       // equivalence, for a reading (from-code)
       const sized = (y) => { const { Size, ...w } = y.with || {}; const same = Size != null && String(Size) === String(y.width) && y.width === y.height; const { with: _, ...r } = y; return same ? (Object.keys(w).length ? { ...r, with: w } : r) : y; };
