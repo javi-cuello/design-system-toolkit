@@ -1086,6 +1086,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
       if (e.layout && isDrawing(mains(e.component, e.key)) && Object.values(c.props || {}).some((q) => q.type === 'instance' && (q.swaps || []).includes(id))) kept.push(...declarations({ layout: e.layout }, { ...ictx, holds: true }, tokenNames).decls);
     }
     if (sample) kept.push(['inline-size', '100%']);
+    // (a button's parts are spans, phrasing inside its <button> (to-markup): a frame of no auto layout, or a mark, in a
+    // box that lays out none either is inline there and keeps no size; a box all the same, as a div would be)
+    if (id !== 'root' && !slotted && (e.kind === 'container' || unheld) && controlOf(c.component, placedIn(c)) && !kept.some(([p]) => p === 'display') && !(parent && parent.layout && parent.layout.direction) && !(e.position === 'absolute' || e.absolute)) kept.push(['display', 'block']);
     // (a mark padded so, the room its frame keeps about the glyph: the glyph code paints on it (a mask, a background) is
     // kept to its content box, inside that room, and a mark that hugs is as big as the design's frame, its content the
     // glyph's own size, its padding round it: markRoom)

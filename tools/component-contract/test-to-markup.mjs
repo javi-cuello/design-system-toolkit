@@ -986,6 +986,21 @@ else {
         ok('a glyph pinned and scaled inside a frame drawn into a placed component\'s part is placed in that frame, its size', JSON.stringify(got) === '[0,0,14,14]', JSON.stringify(got));
       } finally { await s2.close(); }
     }
+    { // a button's parts are spans (phrasing, inside the <button>): a frame of no auto layout in a box that lays out
+      // none either (an icon's mark) is a box all the same, its size kept, and its glyph scaled inside it (a button's icon
+      // glyph read 0 by 0, 2026-11-28)
+      const btn = { component: 'Button', folder: 'button', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } },
+        mark: { kind: 'instance', parent: 'root', component: 'Image', width: 16, height: 16, order: 0 },
+        'mark/icon': { kind: 'container', parent: 'mark', width: 14, height: 14, order: 0 },
+        'mark/icon/glyph': { kind: 'graphic', parent: 'mark/icon', width: 14, height: 14, absolute: { x: 0, y: 0 }, constraints: { horizontal: 'scale', vertical: 'scale' }, background: '#000', order: 0 } }, variants: [] };
+      const s3 = await serveSite(siteFiles({ Button: btn }, { tokensCss: '' }));
+      try {
+        await navigate(tab, `${s3.url}index.html`);
+        for (let i = 0; i < 50 && !(await tab.evaluate('!!window.ready')); i++) await new Promise((r) => setTimeout(r, 100));
+        const got = JSON.parse(await tab.evaluate(`(() => { document.getElementById('stage').replaceChildren(window.R.button({})); const g = document.querySelector('[data-part="glyph"]'), r = g.getBoundingClientRect(), p = g.parentElement.getBoundingClientRect(); return JSON.stringify([g.parentElement.tagName, p.width, p.height, r.width, r.height]); })()`));
+        ok('a button\'s frame of no auto layout, a span in a box that lays out none, keeps its size, and its glyph scales in it', JSON.stringify(got) === '["SPAN",14,14,14,14]', JSON.stringify(got));
+      } finally { await s3.close(); }
+    }
   } finally { await browser.close(); await site.close(); }
 }
 
