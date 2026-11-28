@@ -66,3 +66,10 @@ test('screens: a draft travels as its name, a ready frame needs its tree', () =>
   ok.screens[1].tree = null;
   assert.ok(payload.screens(ok).some((e) => e.startsWith('screens[1].tree')));
 });
+
+test('a layer whose visibility a boolean variable binds (plugin 0.95.0, bindings.visible) passes, sent and stored', () => {
+  const c = component();
+  c.variants[0].children[0].bindings = { visible: 'Show/Label' };
+  assert.deepStrictEqual(payload.component(c), []);
+  assert.deepStrictEqual(payload.component({ ...c, default: c.variants[0], variants: [{ name: 'Size=md', delta: {} }] }), []);
+});

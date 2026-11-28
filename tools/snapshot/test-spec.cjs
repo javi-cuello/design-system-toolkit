@@ -124,3 +124,12 @@ test('a drawing\'s variants pair with the library\'s by their axes, one matcher 
   // a single component, or a set of one, is its one variant whatever each side names it
   assert.deepStrictEqual(pairVariants([v('Tag')], [v('Size=md')]).pairs.map(([a, b]) => [a.name, b.name]), [['Tag', 'Size=md']]);
 });
+
+test('a visibility bound to a boolean variable (plugin 0.95.0, bindings.visible) is kept through compaction, a variant binding another its delta', () => {
+  const spec = { name: 'Row', variants: [
+    node('Size=md', 'COMPONENT', {}, [node('Badge', 'FRAME', { bindings: { visible: 'Show/Badge' } })]),
+    node('Size=sm', 'COMPONENT', {}, [node('Badge', 'FRAME', { bindings: { visible: 'Show/Compact badge' } })]),
+  ] };
+  assert.deepStrictEqual(compact(spec).variants[0].delta, { children: [{ bindings: { visible: 'Show/Compact badge' } }] });
+  roundTrip(spec);
+});
