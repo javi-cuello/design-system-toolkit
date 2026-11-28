@@ -7,6 +7,7 @@
  *   node tools/claude-hooks/hooks.mjs start   SessionStart: what the session inherits
  *   node tools/claude-hooks/hooks.mjs stop    Stop: what it leaves open, kept for the next prompt
  *   node tools/claude-hooks/hooks.mjs prompt  UserPromptSubmit: hands over what stop kept
+ *   (start and prompt also move the session a /clear left to the Trash: clear-prune.mjs)
  *   node tools/claude-hooks/hooks.mjs edit    PreToolUse: an area's rules, once, beside its first change,
  *                                             and the knowledge pages an interface file is built from;
  *                                             the plan gate (gates.mjs) before full-size work
@@ -170,6 +171,12 @@ if (mode === 'edit') {
   const kb = read.length ? `Interface work (toolkit-standard §D 21): read these knowledge pages before the first line, and name the ones you followed in the commit's "Knowledge:" trailer (checked at push):\n${read.map((p) => `  ${SHOWN}/${p}`).join('\n')}` : '';
   const rules = fresh.length ? `First change in this area this session. These are the rules that govern it (${SHOWN}; open a rule's section when it bears on the change, and revisit the change if one does).\n\n${lists}` : '';
   say([rules, kb].filter(Boolean).join('\n\n'));
+}
+
+/* start and prompt: the session a /clear left goes to the Trash, so one session carries the project's name
+   (clear-prune.mjs). At prompt too: the new transcript may not name its parent yet when start runs. */
+if (mode === 'start' || mode === 'prompt') {
+  try { (await import('./clear-prune.mjs')).pruneParent(payload.transcript_path); } catch { /* tried again next prompt */ }
 }
 
 const pendingFile = () => path.join(stateDir(), `toolkit-pending-${payload.session_id || 'none'}`);

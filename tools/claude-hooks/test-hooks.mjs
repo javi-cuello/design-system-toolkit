@@ -202,3 +202,31 @@ test('a stop after writing a memory file that breaks toolkit-standard §D 25 is 
   fs.rmSync(home, { recursive: true, force: true });
   fs.rmSync(path.join(os.tmpdir(), `toolkit-validate-${session_id}`), { force: true });
 });
+
+test('the session a /clear left goes to the Trash with its folder, once, only when it carries the same name; memory stays', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'clear-prune-'));
+  const trash = path.join(dir, 'Trash');
+  const title = (id, t = 'toolkit-kb') => JSON.stringify({ type: 'custom-title', customTitle: t, sessionId: id });
+  const from = (id) => JSON.stringify({ type: 'derived-from', sessions: [{ id, via: 'clear' }] });
+  fs.writeFileSync(path.join(dir, '11111111-1111-1111-1111-111111111111.jsonl'), title('11111111-1111-1111-1111-111111111111') + '\n');
+  fs.mkdirSync(path.join(dir, '11111111-1111-1111-1111-111111111111', 'subagents'), { recursive: true });
+  fs.mkdirSync(path.join(dir, 'memory'));
+  fs.writeFileSync(path.join(dir, 'memory', 'MEMORY.md'), '- [Project state](project-state.md)\n');
+  fs.writeFileSync(path.join(dir, '22222222-2222-2222-2222-222222222222.jsonl'), title('22222222-2222-2222-2222-222222222222', 'round-trip') + '\n');
+  const now = path.join(dir, 'new.jsonl');
+  fs.writeFileSync(now, title('new') + '\n' + from('11111111-1111-1111-1111-111111111111') + '\n');
+  const prompt = (t) => spawnSync('node', [path.join(HERE, 'hooks.mjs'), 'prompt'], { input: JSON.stringify({ session_id: 'new', transcript_path: t }), encoding: 'utf8', env: { ...process.env, TOOLKIT_TRASH: trash } });
+  prompt(now);
+  prompt(now);
+  assert.equal(fs.existsSync(path.join(dir, '11111111-1111-1111-1111-111111111111.jsonl')), false);
+  assert.equal(fs.existsSync(path.join(trash, 'toolkit-kb 11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111.jsonl')), true);
+  assert.equal(fs.existsSync(path.join(trash, 'toolkit-kb 11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'subagents')), true);
+  // the project's memory is the next session's: never moved
+  assert.equal(fs.readFileSync(path.join(dir, 'memory', 'MEMORY.md'), 'utf8'), '- [Project state](project-state.md)\n');
+  // another name is not this session's past: left alone
+  const other = path.join(dir, 'new2.jsonl');
+  fs.writeFileSync(other, title('new2') + '\n' + from('22222222-2222-2222-2222-222222222222') + '\n');
+  prompt(other);
+  assert.equal(fs.existsSync(path.join(dir, '22222222-2222-2222-2222-222222222222.jsonl')), true);
+  fs.rmSync(dir, { recursive: true, force: true });
+});

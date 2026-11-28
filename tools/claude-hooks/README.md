@@ -62,6 +62,7 @@ Second, files the session wrote but did not commit block the turn once. See [The
 | `validate-turn.mjs` | the system's checker at a stop |
 | `state-dir.mjs` | where plans and gate state live |
 | `impact.mjs` | who reads the files a change touches |
+| `clear-prune.mjs` | moves the session a `/clear` left to the Trash |
 
 Each file's full job is under [What each file does](REFERENCE.md#what-each-file-does). A plan's Impact section comes from this command:
 
