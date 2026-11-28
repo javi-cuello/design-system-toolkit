@@ -68,7 +68,13 @@ function keyed(axes, modes) {
 /** The attribute a mode is written under: `data-<key>`. */
 const attribute = (key) => `data-${key}`;
 
+/** A layer's modes ({ key: value }) as the attributes they are written under. */
+const attributesOf = (modes) => Object.fromEntries(Object.entries(modes || {}).map(([k, v]) => [attribute(k), v]));
+
+/** Whether two layers' modes are the same, in any order; none and empty alike. */
+const sameModes = (a, b) => JSON.stringify(Object.entries(a || {}).sort()) === JSON.stringify(Object.entries(b || {}).sort());
+
 /** The axes of a snapshot's tokens file (`collections: { name: { modes } }`). */
 const axesOfTokens = (tokens) => axesOf(Object.entries((tokens && tokens.collections) || {}).map(([name, c]) => ({ name, modes: c.modes || [], ...(c.remote && { remote: true }) })));
 
-module.exports = { slug, THEME, RESPONSIVE, kindOf, axesOf, axesOfTokens, modeOf, keyed, attribute };
+module.exports = { slug, THEME, RESPONSIVE, kindOf, axesOf, axesOfTokens, modeOf, keyed, attribute, attributesOf, sameModes };

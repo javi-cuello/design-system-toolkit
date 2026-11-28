@@ -1026,6 +1026,9 @@ ok('combinations too many to list are said to be unlisted, never left to read as
 { // a layer's variable modes are keyed as the token build writes them: a theme under `theme`, another axis under its
   // first collection's name, one the tokens do not hold under its own; a variant that sets another mode sets it
   const MODES = require('../tokens/modes.cjs');
+  ok('a layer\'s modes are written under their attributes, and two layers\' are the same in any order, none and empty alike',
+    JSON.stringify(MODES.attributesOf({ theme: 'dark', density: 'compact' })) === '{"data-theme":"dark","data-density":"compact"}' && JSON.stringify(MODES.attributesOf(undefined)) === '{}'
+    && MODES.sameModes({ a: '1', b: '2' }, { b: '2', a: '1' }) && MODES.sameModes(undefined, {}) && !MODES.sameModes({ a: '1' }, { a: '2' }));
   const axes = MODES.axesOfTokens({ collections: { '2. Primitives - Colour': { modes: ['Light', 'Dark'] }, '3. Semantic': { modes: ['Light', 'Dark'] }, '5. Responsive type': { modes: ['Desktop', 'Mobile'] } } });
   const v = (bp, mode) => ({ name: `Breakpoint=${bp}`, type: 'COMPONENT', w: 64, h: 64, modes: { '5. Responsive type': mode }, children: [
     { name: 'Card', type: 'FRAME', w: 64, h: 64, modes: { '3. Semantic': 'Dark', 'Density': 'Compact' } }] });

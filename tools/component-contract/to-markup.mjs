@@ -252,7 +252,7 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     if (Lm) {
       const nested = insideOf(a, at, mainOf, { whole, seen, added, redrawn, library, lang, settings, sheet: false, opened });
       // (another of the library's drawn in its place: given its props, and the modes the design sets on it, as placed gives a part's)
-      if (Lm !== Xm) Object.assign(entry, { render: Lm, props: givenOf(Lm, L.with, library, lang, settings), ...(L.modes && Object.keys(L.modes).length && { host: Object.fromEntries(Object.entries(L.modes).map(([k, v]) => [MODES.attribute(k), v])) }) });
+      if (Lm !== Xm) Object.assign(entry, { render: Lm, props: givenOf(Lm, L.with, library, lang, settings), ...(L.modes && Object.keys(L.modes).length && { host: MODES.attributesOf(L.modes) }) });
       else {
         const w = Object.fromEntries(Object.entries(L.with || {}).filter(([k, v]) => !same(v, (X.with || {})[k])));
         const props = givenOf(Lm, w, library, lang, settings);
@@ -300,8 +300,7 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     // its variable modes, where the design sets others than the placed component's part has there (a checkbox's row
     // the group puts in another mode): each as the attribute the token build writes it as, over the part's own; one
     // drawn in its place takes them from `host` or its mark's look, above (derive leaves out modes the part's own)
-    const modesKey = (m) => JSON.stringify(Object.entries(m || {}).sort());
-    if (!entry.render && L.modes && Object.keys(L.modes).length && modesKey(L.modes) !== modesKey(X.modes)) entry.attrs = { ...entry.attrs, ...Object.fromEntries(Object.entries(L.modes).map(([k, v]) => [MODES.attribute(k), v])) };
+    if (!entry.render && L.modes && Object.keys(L.modes).length && !MODES.sameModes(L.modes, X.modes)) entry.attrs = { ...entry.attrs, ...MODES.attributesOf(L.modes) };
     if (Object.keys(entry).length) seen.add(at);
     put(mk, entry);
   }
@@ -337,7 +336,7 @@ function swappedLook(L, inner, rel, host) {
     // (its fill as a mark's: the glyph's colour, which a mark is read by, never a box behind it; and the limits the
     // design gives its size, as the sheet writes them where a variant adds it: an icon tile held to 24 both ways)
     .filter(([k]) => /^(background|border|box-shadow|outline|opacity|min-|max-)/.test(k)).map(([k, v]) => `${/^background(-color)?$/.test(k) ? 'color' : k}: ${v}`).join('; ');
-  return { ...(style && { style }), ...Object.fromEntries(Object.entries(L.modes || {}).map(([k, v]) => [MODES.attribute(k), v])) };
+  return { ...(style && { style }), ...MODES.attributesOf(L.modes) };
 }
 
 /* A layer added inside a placed instance (insideOf), as a tree to draw: its element, its name, its look as an inline
@@ -347,7 +346,7 @@ function addedOf(a, id, mainOf, { library, lang, settings }) {
   const e = a[id], up = a[e.parent] || {};
   const name = camel(id.split('/').pop()).replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`);
   // (and the variable modes the design sets on it, as a part's are said (modeAttrs))
-  const attrs = { 'data-part': name, ...(e.name && { 'data-figma-name': e.name }), ...Object.fromEntries(Object.entries(e.modes || {}).map(([k, v]) => [MODES.attribute(k), v])) };
+  const attrs = { 'data-part': name, ...(e.name && { 'data-figma-name': e.name }), ...MODES.attributesOf(e.modes) };
   const open = e.kind === 'instance' && !mainOf(e.component, e.key) && Object.keys(a).some((k) => a[k].parent === id);
   if (e.kind === 'instance' && !open) {
     const m = mainOf(e.component, e.key);
@@ -613,7 +612,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // the markup can test says one
   const byVariant = (sets, valueOf, base) => {
     let code = base, any = false;
-    for (const v of sets) { const t = testOf(v.when), w = valueOf(v); if (!t) continue; code = t === 'true' ? w : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${w} : ${any ? `(${code})` : code}`; any = true; }
+    // (a variant that says what stands there already adds nothing: `t ? x : x` is x)
+    for (const v of sets) { const t = testOf(v.when), w = valueOf(v); if (!t || w === code) continue; code = t === 'true' ? w : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${w} : ${any ? `(${code})` : code}`; any = true; }
     return any ? code : null;
   };
   // a text's words: its property's, else its own, else, where a variant puts it back with other words (a label's * that
@@ -653,8 +653,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     // (and a part only variants draw, where they draw it with different modes, a flag's close button toned only at one
     // appearance: each variant's own, the modes its add gives, none where it gives none)
     const own = (v) => id !== 'root' && !((parts.get(id) || {}).base) && (v.add || {})[id] && !pointerWords(c, v.when);
-    const key = (m) => JSON.stringify(Object.entries(m || {}).sort());
-    const apart = (c.variants || []).some((v) => own(v) && key(v.add[id].modes) !== key(e.modes));
+    const apart = (c.variants || []).some((v) => own(v) && !MODES.sameModes(v.add[id].modes, e.modes));
     const sets = (c.variants || []).filter((v) => (v.set && `${id}.modes` in v.set) || (apart && own(v)))
       .map((v) => (v.set && `${id}.modes` in v.set ? v : { ...v, set: { [`${id}.modes`]: v.add[id].modes || {} } }))
       .sort((x, y) => !!x.combination - !!y.combination);
@@ -1421,8 +1420,9 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
       : partSelector(c, n, x.id, x, library);
     // (a path another part already holds keeps that one, the first in the tree as the store spells it plainly: parts a
-    // variant adds under the same name, a shortcut's second icon beside its first, never take the first one's path)
-    if (!(pathOf(x.id) in layers)) layers[pathOf(x.id)] = at;
+    // variant adds under the same name, a shortcut's second icon beside its first, never take the first one's path; but
+    // a selector takes the place of a skip, which reads nothing there)
+    if (!(pathOf(x.id) in layers) || (typeof at === 'string' && typeof layers[pathOf(x.id)] !== 'string')) layers[pathOf(x.id)] = at;
     // each part's selector by its id too (not in the mapping written): a stored path may be two parts never drawn
     // together, where the self leg needs each one's own (from-code swapPartsOf)
     if (typeof at === 'string') byId[x.id] = at;
@@ -1438,7 +1438,12 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
     const selOf = (id) => byId[id] || (added.has(id) && (() => { const e = (parts.get(id) || {}).e || {}, up = e.parent && selOf(e.parent); return up ? `${up} > ${n.part(camel(id.split('/').pop()).replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`))}` : null; })());
     // (a layer under a part the holder draws open in another's place is its, never the placed component's part there)
     for (const id of redrawn) delete byId[id];
-    for (const x of parts.values()) if (added.has(x.id) && (typeof layers[pathOf(x.id)] !== 'string' || redrawn.has(x.id))) { const at = selOf(x.id); if (at) { layers[pathOf(x.id)] = at; byId[x.id] = at; } }
+    for (const x of parts.values()) if (added.has(x.id) && (typeof layers[pathOf(x.id)] !== 'string' || redrawn.has(x.id))) {
+      const at = selOf(x.id);
+      if (at) { layers[pathOf(x.id)] = at; byId[x.id] = at; }
+      // (one with no hook to read it by keeps none of the placed component's part's either: said as a skip)
+      else if (redrawn.has(x.id)) layers[pathOf(x.id)] = { skip: 'drawn open by this component in a placed component\'s part, with no hook of its own to read it by' };
+    }
   }
   return Object.defineProperty({ storyId: storyIdOf(titleOf(c, platform), 'Default'), root, state: root, axes, layers, waivers: {} }, 'byId', { value: byId });
 }

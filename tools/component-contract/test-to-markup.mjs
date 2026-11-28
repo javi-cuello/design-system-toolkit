@@ -27,6 +27,12 @@ const folders = fs.readdirSync(DIR).filter((f) => fs.existsSync(path.join(DIR, f
 const library = Object.fromEntries(folders.map((f) => { const c = JSON.parse(fs.readFileSync(path.join(DIR, f, 'contract.json'), 'utf8')); return [c.component, { ...c, folder: f }]; }));
 const CLASS = { kind: 'class', prefix: 'ds-', part: '__' }, ELEMENT = { kind: 'element', prefix: 'ds-' }, KIRBY = ELEMENT;
 
+// a tiny document, enough for dom.js: the generated modules run here as they run in Chrome
+const tinyElement = (tag) => ({ tag, tagName: tag.toUpperCase(), attrs: {}, kids: [], up: null, setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }, get attributes() { return Object.entries(this.attrs).map(([name, value]) => ({ name, value })); }, hasAttribute(k) { return k in this.attrs; }, removeAttribute(k) { delete this.attrs[k]; },
+    addEventListener() {}, append(...xs) { for (const x of xs) { if (typeof x === 'object') x.up = this; this.kids.push(x); } }, get children() { return this.kids.filter((x) => typeof x === 'object'); },
+    insertBefore(x, r) { x.up = this; const i = r ? this.kids.indexOf(r) : -1; if (i < 0) this.kids.push(x); else this.kids.splice(i, 0, x); },
+    remove() { this.up.kids.splice(this.up.kids.indexOf(this), 1); }, replaceWith(x) { x.up = this.up; this.up.kids.splice(this.up.kids.indexOf(this), 1, x); },
+    get textContent() { return this.kids.map((x) => (typeof x === 'string' ? x : x.textContent)).join(''); }, set textContent(s) { this.kids = [String(s)]; } });
 /* ── a part's variable modes ── */
 { // each under the attribute the token build writes it as: a part's own as it stands, one a variant sets chosen by its props
   const card = { contract: 1, component: 'Mode card', props: { breakpoint: { type: 'enum', values: ['md', 'sm'], default: 'md', figma: 'Breakpoint' } },
@@ -55,9 +61,16 @@ const CLASS = { kind: 'class', prefix: 'ds-', part: '__' }, ELEMENT = { kind: 'e
   const flag = { contract: 1, component: 'Mode flag', props: { tone: { type: 'enum', values: ['info', 'warning'], default: 'info', figma: 'Tone' } },
     anatomy: { root: { kind: 'container' } },
     variants: [{ when: { tone: 'info' }, add: { close: { kind: 'container', parent: 'root', order: 0 } } }, { when: { tone: 'warning' }, add: { close: { kind: 'container', parent: 'root', order: 0, modes: { theme: 'inverse' } } } }] };
-  const rf = toReact(flag, 'mode-flag', { naming: CLASS, library: {}, stylesheet: '../styles/mode-flag.css' });
-  ok('React: a part only variants draw carries the modes each one draws it with', /data-theme=\{\(tone === "warning"\) \? "inverse" : \(\(tone === "info"\) \? "" : ""\)\}/.test(rf), rf.split('\n').filter((l) => /data-theme/.test(l)));
-  ok('…and where they all draw it alike, writes it as it stands', /data-theme="inverse"/.test(toReact({ ...flag, variants: flag.variants.map((v) => ({ ...v, add: { close: { ...v.add.close, modes: { theme: 'inverse' } } } })) }, 'mode-flag', { naming: CLASS, library: {}, stylesheet: '../styles/mode-flag.css' })));
+  // (rendered, at each tone: the modes its variant draws it with, and none where it draws none)
+  const fdir = fs.mkdtempSync(path.join(os.tmpdir(), 'mode-flag-'));
+  globalThis.document = { createElement: tinyElement };
+  const drawFlag = async (c, tone) => { const d = fs.mkdtempSync(path.join(fdir, 'v')); fs.writeFileSync(path.join(d, 'dom.js'), DOM); fs.mkdirSync(path.join(d, 'mode-flag')); fs.writeFileSync(path.join(d, 'mode-flag', 'mode-flag.js'), toElement(c, 'mode-flag', { naming: ELEMENT, library: {} })); const root = (await import(path.join(d, 'mode-flag', 'mode-flag.js'))).renderModeFlag({ tone }); const close = (root.kids || []).find((k) => typeof k !== 'string' && k.attrs['data-part'] === 'close'); return close ? close.attrs['data-theme'] ?? null : 'none drawn'; };
+  const toned = [await drawFlag(flag, 'warning'), await drawFlag(flag, 'info')];
+  ok('a part only variants draw carries the modes each one draws it with, rendered at each', toned[0] === 'inverse' && !toned[1], JSON.stringify(toned));
+  const alike = { ...flag, variants: flag.variants.map((v) => ({ ...v, add: { close: { ...v.add.close, modes: { theme: 'inverse' } } } })) };
+  const both = [await drawFlag(alike, 'warning'), await drawFlag(alike, 'info')];
+  ok('…and where they all draw it alike, carries it at each', both.every((t) => t === 'inverse'), JSON.stringify(both));
+  delete globalThis.document; fs.rmSync(fdir, { recursive: true, force: true });
   ok('…and where the rest draws the part there too, the rest\'s modes stay', /data-theme="link"/.test(toReact(kept, 'mode-link', { naming: CLASS, library: {}, stylesheet: '../styles/mode-link.css' })));
 }
 
@@ -236,6 +249,12 @@ const alert = { component: 'Alert', props: { tone: { type: 'enum', values: ['inf
       variants: [{ when: { two: true }, add: { showIcon2Icon: { kind: 'graphic', parent: 'root', name: 'Icon', width: 16, height: 16, background: 'C/a' } } }] };
     const L = toParity(sc, 'shortcut', { naming: ELEMENT, library: { Shortcut: sc }, framework: 'web-components' }).layers;
     ok('a part a variant adds under a base part\'s name leaves that name\'s path to the base part', L.Icon === 'ds-shortcut > [data-part="icon"]', JSON.stringify(L));
+    // (one first held only as a skip, a part a pointer state with no pseudo-class draws: the later part's selector takes the path)
+    const sk = { contract: 1, component: 'Shortcut', props: { state: { type: 'enum', values: ['rest', 'dragged'], default: 'rest', figma: 'State', role: 'interaction', pointer: ['dragged'] }, two: { type: 'boolean', default: false, figma: 'Show Icon 2', shows: ['showIcon2Icon'] } },
+      anatomy: { root: { kind: 'container' } },
+      variants: [{ when: { state: 'dragged' }, add: { icon: { kind: 'graphic', parent: 'root', name: 'Icon', width: 16, height: 16, background: 'C/a' } } }, { when: { two: true }, add: { showIcon2Icon: { kind: 'graphic', parent: 'root', name: 'Icon', width: 16, height: 16, background: 'C/a' } } }] };
+    const L2 = toParity(sk, 'shortcut', { naming: ELEMENT, library: { Shortcut: sk }, framework: 'web-components' }).layers;
+    ok('…and a selector takes a path a skip held first', L2.Icon === 'ds-shortcut > [data-part="show-icon2-icon"]', JSON.stringify(L2));
   }
   ok('…without a library the markup opens nothing, though none would be held (every instance with insides opens)', !toElement(chip, 'chip', { naming: ELEMENT, library: {} }).includes('data-component') && [...foreignOpened(chip, {})].sort().join() === 'icon,icon/inner,plain,tag,tag/mark');
   // (2026-11-27, review: a held one a variant swaps for another library's, its layers recorded there (a status icon of its
@@ -389,13 +408,7 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
     ok('an override a placed component has no prop for is drawn through its parts by a web component, and named as a gap where React cannot pass it, never dropped without a word',
       /Icon: drawn here inside Sw, which has no prop for it/i.test(toReact(org, 'org', { naming: CLASS, library: { Switcher: sw, Org: org } })) && !/drawn here inside/.test(el) && /"": \{ add: \[\{ at: 0, node: h\("span", \{ "data-part": "icon", "data-icon": "Icon\/case"/.test(el), el); } }
 /* ── parts: what a holder sets inside a placed component that no prop of it carries (renderX's third argument) ── */
-{ // a tiny document, enough for dom.js: the generated modules run here as they run in Chrome
-  const el = (tag) => ({ tag, tagName: tag.toUpperCase(), attrs: {}, kids: [], up: null, setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }, get attributes() { return Object.entries(this.attrs).map(([name, value]) => ({ name, value })); }, hasAttribute(k) { return k in this.attrs; }, removeAttribute(k) { delete this.attrs[k]; },
-    addEventListener() {}, append(...xs) { for (const x of xs) { if (typeof x === 'object') x.up = this; this.kids.push(x); } }, get children() { return this.kids.filter((x) => typeof x === 'object'); },
-    insertBefore(x, r) { x.up = this; const i = r ? this.kids.indexOf(r) : -1; if (i < 0) this.kids.push(x); else this.kids.splice(i, 0, x); },
-    remove() { this.up.kids.splice(this.up.kids.indexOf(this), 1); }, replaceWith(x) { x.up = this.up; this.up.kids.splice(this.up.kids.indexOf(this), 1, x); },
-    get textContent() { return this.kids.map((x) => (typeof x === 'string' ? x : x.textContent)).join(''); }, set textContent(s) { this.kids = [String(s)]; } });
-  globalThis.document = { createElement: el };
+{   globalThis.document = { createElement: tinyElement };
   const find = (root, f) => { if (f(root)) return root; for (const k of root.kids || []) if (typeof k !== 'string') { const x = find(k, f); if (x) return x; } return null; };
   const trail = { component: 'Trail', folder: 'trail', props: { tone: { type: 'enum', values: ['plain', 'loud'], figmaValues: ['Plain', 'Loud'], default: 'plain', figma: 'Tone' } }, anatomy: { root: { kind: 'container' }, mark: { kind: 'text', parent: 'root', content: 'T' } }, variants: [] };
   const badge = { component: 'Badge', folder: 'badge', props: { count: { type: 'string', default: '1', figma: 'Count', sets: ['n'] } }, anatomy: { root: { kind: 'container' }, n: { kind: 'text', parent: 'root', content: '{count}' } }, variants: [] };
@@ -484,7 +497,7 @@ ok('a layer whose name its id does not give back carries the design\'s name (dat
 { const sized = { ...renamed, props: { size: { type: 'enum', values: ['s', 'm', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' } },
     variants: [{ when: { size: 'm' }, add: { mark: { kind: 'graphic', parent: 'root' } } }, { when: { size: 'l' }, add: { mark: { kind: 'graphic', parent: 'root', name: 'Rectangle ' } } }] };
   const out = toReact(sized, 'tag', { naming: CLASS, library: {} });
-  ok('a part variants add under names of their own carries each add\'s name there, none where it has none', out.includes('(size === "l") ? "Rectangle " : ') && out.includes('(size === "m") ? ""'), out); }
+  ok('a part variants add under names of their own carries each add\'s name there, none where it has none', out.includes('data-figma-name={(size === "l") ? "Rectangle " : ""}'), out); }
 // an add after a rename, both at one combination: the later one names the part there, as expand applies them
 { const later = { ...renamed, props: { tone: { type: 'enum', values: ['a', 'b'], default: 'a', figma: 'Tone' }, size: { type: 'enum', values: ['s', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', name: 'Mark' } },
     variants: [{ when: { tone: 'b' }, set: { 'mark.name': 'Bar' } }, { when: { size: 'l' }, add: { mark: { kind: 'graphic', parent: 'root', name: 'Rectangle ' } } }] };
@@ -889,7 +902,7 @@ else {
 function phpQuote(s) { return `'${s.replace(/[\\']/g, (m) => `\\${m}`)}'`; }
 
 /* ── the web components in Chrome ── */
-if (!fs.existsSync(findChrome())) ok('Chrome is here to render the web components in (none found: install Chrome, the toolkit\'s one browser)', false);
+if (!fs.existsSync(findChrome())) ok('Chrome is here to render the web components in (none found: install Chrome, the one browser these tests use)', false);
 else {
   // the page: each component's markup, its generated sheet, and the sample's tokens as custom properties
   const tokens = JSON.parse(fs.readFileSync(path.join(SAMPLE, 'tokens.json'), 'utf8'));
@@ -1277,8 +1290,24 @@ else {
   // (the placed component draws it open, its glyph a layer of its own: the holder draws it open in its place, its props
   // and glyph the design's, as the reading reads it by its data-with; 2026-11-28, a picker's chevron read back where the
   // holder had passed only a data-icon the open wrapper never shows)
+  // (rendered, and read back as the reading reads it: the walk's foreign, foreignKey and foreignWith off its attributes,
+  // made the instance by foreignAsInstance)
+  const ddir = fs.mkdtempSync(path.join(os.tmpdir(), 'open-mark-'));
+  fs.writeFileSync(path.join(ddir, 'dom.js'), DOM);
+  for (const c of Object.values(L)) { fs.mkdirSync(path.join(ddir, c.folder)); fs.writeFileSync(path.join(ddir, c.folder, `${c.folder}.js`), toElement(c, c.folder, { naming: ELEMENT, library: L })); }
+  globalThis.document = { createElement: tinyElement };
+  const drawn = (await import(path.join(ddir, 'date', 'date.js'))).renderDate();
+  delete globalThis.document; fs.rmSync(ddir, { recursive: true, force: true });
+  const findIn = (n, f) => { if (typeof n === 'string') return null; if (f(n)) return n; for (const k of n.kids || []) { const x = findIn(k, f); if (x) return x; } return null; };
+  const chev = findIn(drawn, (n) => n.attrs['data-part'] === 'chev'), g = chev && findIn(chev, (n) => n.attrs['data-part'] === 'g');
+  const { foreignAsInstance } = await import('./from-code.mjs');
+  const read = { anatomy: { chev: chev ? { foreign: chev.attrs['data-component'], ...(chev.attrs['data-key'] && { foreignKey: chev.attrs['data-key'] }), foreignWith: JSON.parse(chev.attrs['data-with'] || 'null') } : {} }, variants: [] };
+  foreignAsInstance(read);
   ok('a wrapper the placed component draws open that the holder draws with another glyph is drawn open in its place, its props and glyph the holder\'s',
-    /"chev": \{ render: \(_, host\) => h\("div", \{ \.\.\.host, "data-component": "Mark", "data-with": "\{\\"<icon>\\":\\"Cross\\"\}" \}, h\("span", \{ "data-part": "g", "data-icon": "Cross"/.test(out) && !/attrs: \{ "data-icon"/.test(out), out);
+    JSON.stringify(read.anatomy.chev) === '{"kind":"instance","component":"Mark","with":{"<icon>":"Cross"}}' && !!g && g.attrs['data-icon'] === 'Cross' && !('data-icon' in chev.attrs), JSON.stringify([read.anatomy.chev, chev && chev.attrs, g && g.attrs]));
+  // (and read by the hooks it is drawn with, never the placed component's part there: its glyph under its own name)
+  const pm = toParity(date, 'date', { naming: ELEMENT, library: L, framework: 'web-components' });
+  ok('…its layers read by the hooks it is drawn with', pm.layers['Pick > Field > Clear > G'] === 'ds-date > [data-part="pick"] > [data-part="field"] > [data-part="chev"] > [data-part="g"]', JSON.stringify(pm.layers));
 }
 
 { // two layers of the holder in one part of the placed component, each at its own combination (a picker's chevron by
