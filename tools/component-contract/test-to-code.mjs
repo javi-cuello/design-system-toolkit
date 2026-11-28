@@ -1300,4 +1300,17 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a centred stroke of a width not whole is an inset and an outer ring of half its width; a whole one an outline',
     f['box-shadow'] === 'inset 0 0 0 calc(1.4933px / 2) var(--c-arc), 0 0 0 calc(1.4933px / 2) var(--c-arc)' && !('outline' in f)
     && whole.outline === '2px solid var(--c-arc)' && !('box-shadow' in whole), JSON.stringify(f)); }
+// an override inside a placed component one layer sets and a later one drops, where the component draws none there:
+// the later combination says it back (unset), or the earlier rule's override stands (a dropdown's list item kept its
+// focus ring where the design drops it, 2026-11-28)
+{ const { byComponentName } = require('./derive.cjs');
+  const ring = { color: 'L/sel', sides: { top: 0, end: 0, bottom: 1, start: 0 }, align: 'outside' };
+  const item = { contract: 1, component: 'Item', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const list = { contract: 1, component: 'List', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, item: { kind: 'instance', parent: 'root', component: 'Item' } }, variants: [] };
+  const m = { contract: 1, component: 'M', props: { open: { type: 'boolean', default: false }, size: { type: 'enum', values: ['md', 'xs'], default: 'md' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, list: { kind: 'instance', parent: 'root', component: 'List' }, 'list/item': { kind: 'instance', parent: 'list', component: 'Item' } },
+    variants: [{ when: { open: true }, set: { 'list/item.border': ring } }, { when: { open: true, size: 'xs' }, set: { 'list/item.border': null } }] };
+  const mains = byComponentName([item, list, m]);
+  const css = toCss(m, 'm', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an override inside a placed component a later combination drops is said back there', /\[data-size="xs"\]\) > \.ds-m__list > \.ds-list__item \{\s*box-shadow: unset;/.test(css) && selfCheck(m, rulesOf(m, mains).rules, mains).length === 0, css); }
 console.log(`${n} passed`);

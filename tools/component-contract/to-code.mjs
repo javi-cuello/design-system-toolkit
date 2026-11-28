@@ -970,7 +970,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
         return loneSomewhere(c, x.parent) ? String(rankIn(A, id) + 1) : null;
       };
       const ord = heldOrder(a), ordAt = B[id] ? heldOrder(B) : null, order = ord ? [['order', ord]] : ordAt ? [['order', 'unset']] : [];
-      const decls = [...order, ...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p) || ever.has(p)).map(([p, v, note]) => [p, v, note, over.theirs.get(p) === v]), ...over.removed.map((p) => [p, 'unset']), ...[...base].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset', undefined, true])];
+      const decls = [...order, ...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p) || ever.has(p)).map(([p, v, note]) => [p, v, note, over.theirs.get(p) === v]), ...over.removed.map((p) => [p, 'unset']), ...[...new Set([...base, ...ever])].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset', undefined, true])];
       if (decls.length) out[id] = { decls: new Map(decls.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: [] };
       continue;
     }
