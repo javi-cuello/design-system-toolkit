@@ -1274,7 +1274,12 @@ else {
     'pick/field/clear': { kind: 'instance', parent: 'pick/field', component: 'Mark', with: { '<icon>': 'Cross' } }, 'pick/field/clear/g': { kind: 'instance', parent: 'pick/field/clear', component: 'Cross' } }, variants: [] };
   const L = { Pick: { ...pick, folder: 'pick' }, Date: { ...date, folder: 'date' } };
   const out = toElement(date, 'date', { naming: ELEMENT, library: L });
-  ok('a mark of the placed component the holder draws with another glyph is passed that glyph', /"chev": \{ attrs: \{ "data-icon": "Cross" \} \}/.test(out), out); }
+  // (the placed component draws it open, its glyph a layer of its own: the holder draws it open in its place, its props
+  // and glyph the design's, as the reading reads it by its data-with; 2026-11-28, a picker's chevron read back where the
+  // holder had passed only a data-icon the open wrapper never shows)
+  ok('a wrapper the placed component draws open that the holder draws with another glyph is drawn open in its place, its props and glyph the holder\'s',
+    /"chev": \{ render: \(_, host\) => h\("div", \{ \.\.\.host, "data-component": "Mark", "data-with": "\{\\"<icon>\\":\\"Cross\\"\}" \}, h\("span", \{ "data-part": "g", "data-icon": "Cross"/.test(out) && !/attrs: \{ "data-icon"/.test(out), out);
+}
 
 { // two layers of the holder in one part of the placed component, each at its own combination (a picker's chevron by
   // default, its clear icon where a value is held): each read where the placed component draws that part

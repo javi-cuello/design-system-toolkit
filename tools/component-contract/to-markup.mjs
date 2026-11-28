@@ -232,7 +232,7 @@ export function givenOf(placed, w, library = {}, lang = JS, settings = HOUSE) {
    only where the design keeps the instance whole, so a part it does not list is not drawn). `a` is one combination's
    anatomy (expand), `hid` the instance there, `whole` the instances it keeps whole (derive's wholeIn); `seen` collects
    each layer so carried. Tested by test-to-markup.mjs. */
-export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), added = null, library = {}, lang = JS, settings = HOUSE, sheet = true, opened = new Set() } = {}) {
+export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), added = null, redrawn = null, library = {}, lang = JS, settings = HOUSE, sheet = true, opened = new Set() } = {}) {
   const e = a[hid], m = e && e.kind === 'instance' && mainOf(e.component, e.key);
   if (!m) return {};
   const { M, back } = placedAs(a, hid, m, mainOf);
@@ -250,7 +250,7 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
     const L = inner[rel], X = M[mk], at = `${hid}/${rel}`, entry = {};
     const Lm = L.kind === 'instance' && mainOf(L.component, L.key), Xm = X.kind === 'instance' && mainOf(X.component, X.key);
     if (Lm) {
-      const nested = insideOf(a, at, mainOf, { whole, seen, added, library, lang, settings, sheet: false, opened });
+      const nested = insideOf(a, at, mainOf, { whole, seen, added, redrawn, library, lang, settings, sheet: false, opened });
       // (another of the library's drawn in its place: given its props, and the modes the design sets on it, as placed gives a part's)
       if (Lm !== Xm) Object.assign(entry, { render: Lm, props: givenOf(Lm, L.with, library, lang, settings), ...(L.modes && Object.keys(L.modes).length && { host: Object.fromEntries(Object.entries(L.modes).map(([k, v]) => [MODES.attribute(k), v])) }) });
       else {
@@ -266,6 +266,15 @@ export function insideOf(a, hid, mainOf, { whole = new Set(), seen = new Set(), 
       entry.render = { node: addedOf(a, at, mainOf, { library, lang, settings }) };
       // (its layers read by their own hooks under the part's, as a layer added inside the instance is: toParity's `added`)
       for (const k of Object.keys(a)) if (k.startsWith(`${at}/`)) { seen.add(k); if (added) added.add(k); }
+    }
+    // (another library's one the placed component draws open, given other props here and its layers recorded: drawn open
+    // in that part's place as the design draws it, its props said for the reading, as one it swaps in is; a glyph alone,
+    // its data-icon, is no override of a part drawn open, which is read by its data-with: a split button's chevron in
+    // an icon button's own icon)
+    else if (L.kind === 'instance' && X.kind === 'instance' && !Lm && !Xm && L.component && L.component === X.component && !same(L.with, X.with) && foreignOpened(m, library).has(back[mk] || mk) && Object.keys(a).some((k) => k.startsWith(`${at}/`))) {
+      entry.render = { node: addedOf(a, at, mainOf, { library, lang, settings }) };
+      // (its layers read under it by the hooks it is drawn with, over the placed component's own parts there: `redrawn`)
+      for (const k of Object.keys(a)) if (k.startsWith(`${at}/`)) { seen.add(k); if (added) added.add(k); if (redrawn) redrawn.add(k); }
     } else if (L.kind === 'instance' && X.kind === 'instance' && !Xm && L.component && L.component !== X.component) entry.attrs = { 'data-icon': L.component, ...swappedLook(L, inner, rel, e) };
     // (one the library does not hold, in place of one it does: marked where it goes, as this component marks its own)
     else if (L.kind === 'instance' && Xm && L.component) entry.render = { icon: L.component, attrs: swappedLook(L, inner, rel, e) };
@@ -1421,13 +1430,15 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   // a layer the markup adds inside a placed instance, where that component has no part for it (insideOf's `add`): read
   // under the part it is added to, by the name it is drawn with (a web component's alone: React and a snippet keep the gap)
   if (framework === 'web-components') {
-    const added = new Set(), mainOf = (name, key) => placedOf(library, { component: name, key }), D = variantDefaults(c);
+    const added = new Set(), redrawn = new Set(), mainOf = (name, key) => placedOf(library, { component: name, key }), D = variantDefaults(c);
     for (const when of [D, ...(c.variants || []).filter((v) => !pointerWords(c, v.when)).map((v) => ({ ...D, ...(v.when || {}) }))]) {
       const a = expand(c, when);
-      for (const id of Object.keys(a)) { if (a[id].kind !== 'instance') continue; let up = a[id].parent; while (up && a[up] && a[up].kind !== 'instance') up = a[up].parent; if (!up || !a[up]) insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), added, library, settings, opened: foreignOpened(c, library) }); }
+      for (const id of Object.keys(a)) { if (a[id].kind !== 'instance') continue; let up = a[id].parent; while (up && a[up] && a[up].kind !== 'instance') up = a[up].parent; if (!up || !a[up]) insideOf(a, id, mainOf, { whole: wholeIn(a, mainOf), added, redrawn, library, settings, opened: foreignOpened(c, library) }); }
     }
     const selOf = (id) => byId[id] || (added.has(id) && (() => { const e = (parts.get(id) || {}).e || {}, up = e.parent && selOf(e.parent); return up ? `${up} > ${n.part(camel(id.split('/').pop()).replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`))}` : null; })());
-    for (const x of parts.values()) if (added.has(x.id) && typeof layers[pathOf(x.id)] !== 'string') { const at = selOf(x.id); if (at) { layers[pathOf(x.id)] = at; byId[x.id] = at; } }
+    // (a layer under a part the holder draws open in another's place is its, never the placed component's part there)
+    for (const id of redrawn) delete byId[id];
+    for (const x of parts.values()) if (added.has(x.id) && (typeof layers[pathOf(x.id)] !== 'string' || redrawn.has(x.id))) { const at = selOf(x.id); if (at) { layers[pathOf(x.id)] = at; byId[x.id] = at; } }
   }
   return Object.defineProperty({ storyId: storyIdOf(titleOf(c, platform), 'Default'), root, state: root, axes, layers, waivers: {} }, 'byId', { value: byId });
 }
