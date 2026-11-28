@@ -134,7 +134,13 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
   const knob = { component: 'Knob', props: { on: { type: 'boolean', default: false } }, variants: [{ when: { on: true }, add: { glow: { kind: 'graphic', parent: 'root' } } }], anatomy: { root: { kind: 'container' }, grip: { kind: 'graphic', parent: 'root' } } };
   const held = [{ id: 'root', kind: 'container' }, { id: 'knob', kind: 'instance', parent: 'root', component: 'Knob' }, { id: 'knob/grip', kind: 'graphic', parent: 'knob', order: 0 }, { id: 'knob/layer', kind: 'graphic', parent: 'knob', order: 1, name: 'Layer' }];
   const mainOf = (n) => (n === 'Knob' ? knob : null);
-  const { autoSized, outOfFlowIn, statedIn, asFigma: shapedOf } = await import('./from-code.mjs');
+  const { autoSized, outOfFlowIn, statedIn, movedOn, asFigma: shapedOf } = await import('./from-code.mjs');
+  // (2026-11-28: a box centred across and pinned along, translate -50% 0, that sits at the middle along by its offset is
+  // pinned there, never read centred: a vertical slider's value indicator at the top)
+  ok('a translate moves a box only along the axis it names a length on; a transform other than a translate moves both',
+    movedOn({ translate: '-50% 0' }, 'horizontal') && !movedOn({ translate: '-50% 0' }, 'vertical') && !movedOn({ translate: '-50%' }, 'vertical')
+    && movedOn({ translate: '0 -50%' }, 'vertical') && !movedOn({ translate: 'none', transform: 'none' }, 'horizontal')
+    && !movedOn({ transform: 'translateX(-50%)' }, 'vertical') && movedOn({ transform: 'translateY(-50%)' }, 'vertical') && movedOn({ transform: 'rotate(45deg)' }, 'vertical'));
   { const a = Object.fromEntries(held.map((r) => [r.id, r]));
     const layer = { kind: 'graphic', parent: 'knob', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' } };
     const c = { component: 'Holder', props: {}, variants: [], anatomy: { root: { kind: 'container' }, knob: { kind: 'instance', parent: 'root', component: 'Knob' }, 'knob/layer': layer } };

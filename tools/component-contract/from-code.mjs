@@ -2350,6 +2350,21 @@ export const autoSized = (v) => !String(v ?? '').trim() || /^(auto|fit-content|m
    its children (an auto layout), the part taken out of it; in a frame of no auto layout every part is at its point and
    the design writes no position. A placed component's parent is laid out as its main's root says (`layoutOf`); one the
    library does not hold (`mainOf` none) is taken to lay out, as before. Tested by test-from-code.mjs. */
+/* Whether the declarations (`pos`: translate, transform as declared) move a box along `axis` (horizontal or vertical):
+   a translate's part on that axis (its second, 0 where unsaid) other than 0, or a transform other than a translate
+   that leaves that axis alone. Tested by test-from-code.mjs. */
+export function movedOn(pos, axis) {
+  const zero = (v) => v == null || /^\s*-?0(\.0+)?([a-z%]+)?\s*$/i.test(String(v));
+  const tr = String(pos.translate || '').trim();
+  if (tr && !/^none$/.test(tr)) { const [x, y] = tr.split(/\s+(?![^(]*\))/); if (!zero(axis === 'horizontal' ? x : y)) return true; }
+  const tf = String(pos.transform || '').trim();
+  if (!tf || /^none$/.test(tf)) return false;
+  const one = /^translate(X|Y)?\(([^)]*)\)$/i.exec(tf);
+  if (!one) return true;
+  const [x, y] = one[1] ? (one[1].toUpperCase() === 'X' ? [one[2], null] : [null, one[2]]) : one[2].split(/\s*,\s*/);
+  return !zero(axis === 'horizontal' ? x : y);
+}
+
 export function outOfFlowIn(up, layoutOf = (u) => u.layout, mainOf = () => null) {
   if (!up) return true;
   if (up.kind === 'instance' && !mainOf(up)) return true;
@@ -3121,14 +3136,14 @@ async function main() {
             const measured = (e.constraints || {});
             // (only where the declarations leave room for it: both edges set, or a transform; a box held by its near edge
             // alone that happens to sit centred, a graphic larger than its frame, stays pinned there)
-            const moved = ['translate', 'transform'].some((p) => pos[p] && !/^\s*none\s*$/.test(String(pos[p])));
+            // (along that axis only: a box centred across and pinned along, translate -50% 0, is moved across alone)
             // (the far edge as declared: placeFromCss leaves it out where a size of its own over-constrains the box)
             // (a value, not auto or a CSS-wide keyword; the inset shorthand's own right and bottom, as placeFromCss reads it)
             const set = (v) => v != null && !/^\s*(auto|unset|initial|inherit|revert|revert-layer)\s*$/.test(String(v));
             const iv = String(pos.inset || '').trim() ? String(pos.inset).trim().split(/\s+(?![^(]*\))/) : [];
             const shR = iv.length ? iv[iv.length === 1 ? 0 : 1] : null, shB = iv.length ? iv[iv.length < 3 ? 0 : 2] : null;
             const far = { horizontal: set(pos['inset-inline-end']) || set(pos.right) || set(shR), vertical: set(pos['inset-block-end']) || set(pos.bottom) || set(shB) };
-            for (const k of ['horizontal', 'vertical']) if (measured[k] === 'center' && place.constraints[k] === 'min' && (moved || far[k] || place.offsets[k === 'horizontal' ? 'x' : 'y'] == null)) place.constraints[k] = 'center';
+            for (const k of ['horizontal', 'vertical']) if (measured[k] === 'center' && place.constraints[k] === 'min' && (movedOn(pos, k) || far[k] || place.offsets[k === 'horizontal' ? 'x' : 'y'] == null)) place.constraints[k] = 'center';
             // said as the snapshot says it: pinned top left is Figma's default, left out
             if (place.constraints.horizontal === 'min' && place.constraints.vertical === 'min') delete e.constraints; else e.constraints = place.constraints;
             const o = place.offsets, at = { x: insets[e.id].x, y: insets[e.id].y, ...(e.absolute || {}) };
