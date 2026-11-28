@@ -397,3 +397,21 @@ test("the default mode the snapshot records is the resolver's default, whatever 
   writeDtcg(t, d);
   assert.equal(JSON.parse(readFileSync(join(d, RESOLVER), 'utf8')).modifiers.brand.default, 'light');
 });
+
+test("another library's variable joined into a collection of the same name resolves in its own default mode where a mode is the other library's", () => {
+  // two libraries' collections of one name, joined by the snapshot (a mode only one side has holds only that side's
+  // variables): Figma resolves a variable in its own collection, whose mode a layer set for the other library's does not
+  // select, so in that mode it takes its own collection's default (2026-11-28: a type collection's font families,
+  // bound by text styles, missing in the other library's modes refused the whole export)
+  const t = { collections: {
+    Type: { remote: true, modes: ['Sans', 'System', 'Other'], defaultMode: 'Sans',
+      values: { Sans: { 'Family/Body': 'Inter' }, System: { 'Family/Body': 'SF Pro' }, Other: { 'Size/Body': 14 } }, alias: {} },
+    Brand: { modes: ['Value'], values: { Value: { 'Body font': 'Inter' } }, alias: { Value: { 'Body font': 'Family/Body' } } },
+  } };
+  const v = toDtcgSnapshot(t).collections.find((c) => c.name === 'Type').variables;
+  const fam = v.find((x) => x.name === 'Family/Body'), size = v.find((x) => x.name === 'Size/Body');
+  assert.deepEqual(fam.values, { Sans: 'Inter', System: 'SF Pro', Other: 'Inter' }, 'the default mode\'s value in the other library\'s mode');
+  assert.deepEqual(size.values, { Other: 14 }, 'a variable its own default mode does not hold is never given one');
+  // (a local collection's gap is no join: still refused, the test above)
+  writeDtcg(t, mkdtempSync(join(tmpdir(), 'dtcg-joined-')));
+});

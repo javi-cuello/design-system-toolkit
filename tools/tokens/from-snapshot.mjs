@@ -113,10 +113,15 @@ export function toDtcgSnapshot(t) {
         const values = {};
         let type = null;
         for (const mode of c.modes) {
-          const raw = ((c.values || {})[mode] || {})[name];
+          // (another library's collection the snapshot joined under one name, remote: a mode only one side has holds only
+          // that side's variables, and Figma resolves a variable in its own collection, whose mode a layer set for the other
+          // side's does not select: its own default's value there, where it holds one; never one it does not hold. A local
+          // collection has every variable in every mode, so its gap stays a gap, refused below)
+          const own = ((c.values || {})[mode] || {})[name] !== undefined ? mode : c.remote && c.defaultMode && ((c.values || {})[c.defaultMode] || {})[name] !== undefined ? c.defaultMode : mode;
+          const raw = ((c.values || {})[own] || {})[name];
           if (raw === undefined) continue;
           type = type || typeOf(raw);
-          const alias = held(((c.alias || {})[mode] || {})[name]);
+          const alias = held(((c.alias || {})[own] || {})[name]);
           const at = alias && homeOf(alias, cname, name);
           if (at) values[mode] = { alias: { collection: built(at), name: alias } };
           else values[mode] = isColour(raw) ? figmaRgba(raw) : raw;
