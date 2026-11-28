@@ -1546,6 +1546,33 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); await site.close(); }
   }
 }
+// (and the sheet names it by the placed component's own settings, the reader's pseudoFor, never the holder's: two
+// components of one library with pointer states of their own, the placed one's Lit at :hover, which the holder's lack)
+{ const fs = await import('node:fs');
+  const { findChrome, launch, newPage, attach, navigate, waitFor, call } = await import('../shared/cdp.mjs');
+  const { selfSiteFiles, serveSite, selfMapping } = await import('./site.mjs');
+  const { HOUSE } = await import('./to-code.mjs');
+  const LIT = { ...HOUSE, pseudoClasses: { ...(HOUSE.pseudoClasses || {}), lit: ':hover' } };
+  const link = { contract: 1, component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'lit'], default: 'rest', figmaValues: ['Rest', 'Lit'], role: 'interaction', pointer: ['lit'], figma: 'State' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 10, height: 10, background: '#000000' } }, variants: [{ when: { state: 'lit' }, set: { 'root.background': '#ff0000' } }] };
+  const card = { contract: 1, component: 'Card', folder: 'card', props: { shown: { type: 'boolean', default: false, axis: true, figma: 'Shown' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, link: { kind: 'instance', parent: 'root', component: 'Link', with: { State: 'Rest' } } },
+    variants: [{ when: { shown: true }, set: { 'link.with': { State: 'Lit' } } }] };
+  const library = { Link: link, Card: card }, settingsOf = (f) => (f === 'link' ? LIT : HOUSE), files = selfSiteFiles(library, 'card', { settingsOf });
+  const sel = selfMapping(card, { library, settings: HOUSE }).byId.link;
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to draw a placed component under its own settings in (none found: install Chrome, the toolkit\'s one browser)', false);
+  else {
+    const browser = await launch({}), site = await serveSite(files);
+    try {
+      const tab = await attach(await newPage(browser.endpoint));
+      await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
+      const at = (shown) => call(tab, ([q, v]) => { const s = document.createElement('section'); s.append(window.R.card({ shown: v })); document.getElementById('stage').replaceChildren(s); return getComputedStyle(document.querySelector(q)).backgroundColor; }, [sel, shown]);
+      const [off, on] = [await at(false), await at(true)];
+      ok('a placed component\'s own pointer value is drawn by the holder\'s sheet as the placed component\'s own settings name it, the holder\'s lacking it',
+        off === 'rgb(0, 0, 0)' && on === 'rgb(255, 0, 0)' && /\[data-part="link"\]:where\(:not\(:hover\)\)/.test(files['all.css']), JSON.stringify([off, on]));
+    } finally { await browser.close(); await site.close(); }
+  }
+}
 // (second review of 2026-11-28: the reader names a placed component's pointer value by one pseudo-class whether forced
 // beside the holder's (forwardedAt) or drawn by the holder's sheet (drawnAsOf): the one its own settings give)
 { const { drawnAsOf, heldOf } = await import('./to-code.mjs');

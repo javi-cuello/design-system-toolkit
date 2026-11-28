@@ -364,6 +364,9 @@ export function pointerWordsOf(c, t = HOUSE) {
 /* The display a component's own sheet gives its root at its defaults (`inline-flex` for one that hugs, drawn): what a
    holder shows a copy of it at (pointerWithOf), `revert-layer` where it draws none. */
 // (once per component, library and settings, as drawnAt keeps its looks)
+/* The settings a placed component `m` is drawn under: its own, where the library's lookup carries them (heldOf's
+   `settingsOf`), so its pointer states are named by its own pseudo-classes as its own sheet names them; else `t`. */
+const placedSettings = (m, mains, t) => (m && mains && mains.settingsOf ? mains.settingsOf(m.folder || folderOf(m.component)) ?? HOUSE : t);
 const ROOT_DISPLAY = new WeakMap();
 function rootDisplay(m, mains, t) {
   if (!m) return 'revert-layer';
@@ -388,7 +391,7 @@ export function ownPointerOf(m, w) {
    it back as that value. Each with its part id, the placed contract, its props at that value and at rest, and the
    value's pseudo-class without its colon; one inside another placed component is that one's to draw. Tested by
    test-to-code.mjs. */
-export function drawnAsOf(c, when, mains = NO_MAINS, t = HOUSE, a = expand(c, when), pseudoFor = (m, v) => pseudoClasses(t)[v]) {
+export function drawnAsOf(c, when, mains = NO_MAINS, t = HOUSE, a = expand(c, when), pseudoFor = (m, v) => pseudoClasses(placedSettings(m, mains, t))[v]) {
   const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
   if (pk && (c.props[pk].pointer || []).includes(when[pk]) && pseudoClasses(t)[when[pk]]) return [];
   const out = [];
@@ -1447,7 +1450,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
     const shown = !a[id] ? null : at.has(when[key]) ? when[key] : 'rest';
     // (one drawn open, the frame's own display here, `revert` to the element's where this sheet writes it none)
     // (one turned a quarter, its wrapper's display here: turnedParts)
-    const display = !a[id] ? null : turned.has(id) ? ((out[`${id}::turn`] || { decls: new Map() }).decls.get('display') || {}).v || 'revert' : a[id].foreign ? ((out[id] && out[id].decls.get('display')) || {}).v || 'revert' : rootDisplay(mains(a[id].component, a[id].key ?? null), mains, t);
+    const display = !a[id] ? null : turned.has(id) ? ((out[`${id}::turn`] || { decls: new Map() }).decls.get('display') || {}).v || 'revert' : a[id].foreign ? ((out[id] && out[id].decls.get('display')) || {}).v || 'revert' : ((pm) => rootDisplay(pm, mains, placedSettings(pm, mains, t)))(mains(a[id].component, a[id].key ?? null));
     for (const u of ['rest', ...at]) out[`${id}::pointer=${u}`] = { decls: new Map([['display', { v: u === shown ? display : 'none' }]]), unread: [] };
   }
   // a placed component the design gives a pointer value of its own where nothing forwards one: what its own sheet draws
@@ -1459,16 +1462,16 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   // which a rule of this combination's would otherwise outrank, a link drawn hovered over its own :active)
   // (and the placed one at none of its own, `|<its pseudo-classes>`: there too its own state stands, whatever order the two
   // sheets come in)
-  const statesOf = (x) => ((pk) => (!pk ? [] : (x.props[pk].pointer || []).map((v) => pseudoClasses(t)[v]).filter(Boolean).map((y) => y.replace(/^:/, ''))))(Object.keys(x.props || {}).find((k) => x.props[k].role === 'interaction'));
+  const statesOf = (x, xt = t) => ((pk) => (!pk ? [] : (x.props[pk].pointer || []).map((v) => pseudoClasses(xt)[v]).filter(Boolean).map((y) => y.replace(/^:/, ''))))(Object.keys(x.props || {}).find((k) => x.props[k].role === 'interaction'));
   const restOf = statesOf(c);
   for (const { id, m, w, rest } of drawnAsOf(c, when, mains, t, a)) {
-    const P = drawnAt(m, w, mains, t), R = drawnAt(m, rest, mains, t);
+    const own = placedSettings(m, mains, t), P = drawnAt(m, w, mains, own), R = drawnAt(m, rest, mains, own);
     const match = placedOf(a, id, placedAs(a, id, m, mains).M), mine = (k) => new Set(Object.keys(out).filter((x) => !x.includes('::') && (k === 'root' ? x === id : x.startsWith(`${id}/`) && match[x.slice(id.length + 1)] === k)).flatMap((x) => [...out[x].decls.keys()]));
     for (const k of new Set([...Object.keys(P), ...Object.keys(R)])) {
       if (k.includes('::')) continue;
       const p = (P[k] || {}).decls || new Map(), r = (R[k] || {}).decls || new Map(), taken = mine(k);
       const decls = new Map([...[...p].filter(([q, x]) => !r.has(q) || r.get(q).v !== x.v), ...[...r.keys()].filter((q) => !p.has(q)).map((q) => [q, { v: 'unset' }])].filter(([q]) => !taken.has(q)));
-      if (decls.size) out[`${id}::as=${restOf.join(',')}|${statesOf(m).join(',')}>${k}`] = { decls, unread: [] };
+      if (decls.size) out[`${id}::as=${restOf.join(',')}|${statesOf(m, own).join(',')}>${k}`] = { decls, unread: [] };
     }
   }
   // a part whose variable modes a pointer state sets: at that state, the mode's declarations the attribute would give
@@ -1855,7 +1858,9 @@ export const copySelector = (c, n, id, mains, library = {}) => {
 };
 export const selectorOf = (c, n, id, mains = null, library = {}) => (id === 'root' ? n.root + through(n, c.component, placedIn(c)) : chain(c, n, id, '', mains, library));
 // (the library kept on it, `library`, for what a placed component draws open: layers.mjs foreignOpened)
-export const heldOf = (library) => Object.assign((name, key = null) => heldBy(library, { component: name, key }), { library });
+// (`settingsOf`, by folder: each placed component's own settings, its pointer states' pseudo-classes among them, where the
+// caller has them; the holder's otherwise, placedSettings)
+export const heldOf = (library, settingsOf = null) => Object.assign((name, key = null) => heldBy(library, { component: name, key }), { library, ...(settingsOf && { settingsOf }) });
 const findAdded = (c, id) => (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
 // a part's name in a selector: its id's last part, the whole id where two parts would share it
 export function partSeg(c, id) {
@@ -1874,11 +1879,11 @@ export function sheetAndGaps(c, folder, opts = {}) {
   const said = missingSaid(c.component, missing);
   return { css: out.replace('\n', `\n/* Not named: ${said.join('; ').replace(/\*\//g, '* /')}. */\n`), missing };
 }
-function sheetOf(c, folder, { naming, layer = 'components', settings = HOUSE, mains: given, library } = {}) {
+function sheetOf(c, folder, { naming, layer = 'components', settings = HOUSE, mains: given, library, settingsOf = null } = {}) {
   const n = namer(folder, naming);
   // every question of a placed instance (held or a mark, what it draws inside, its own parts' names) is asked of the one
   // library the markup is given, as the markup asks it (layers.mjs placedOf); `mains` only where no library is given
-  const mains = library ? heldOf(library) : given;
+  const mains = library ? heldOf(library, settingsOf) : given;
   library ||= {};
   // (another library's instance whose insides the contract records is drawn open, as the markup draws it: openForeign)
   if (Object.keys(library).length) c = openForeign(c, library);
@@ -1972,13 +1977,13 @@ if (isMain) {
   for (const d of fs.existsSync(dir) ? fs.readdirSync(dir).sort() : []) {
     try { const x = of(JSON.parse(fs.readFileSync(path.join(dir, d, 'contract.json'), 'utf8'))); x.folder ||= d; library[x.component] = x; } catch { /* not a component */ }
   }
-  const mains = heldOf(library);
+  const mains = heldOf(library, settingsOf);
   for (const f of folders) {
     const c = draft || of(JSON.parse(fs.readFileSync(path.join(dir, f, 'contract.json'), 'utf8')));
     const { rules } = rulesOf(c, mains, settingsOf(f));
     const off = selfCheck(c, rules, mains, settingsOf(f));
     if (off.length) { broken++; console.error(`to-code: ${f}: ${off.length} declaration(s) the stylesheet does not rebuild, first ${JSON.stringify(off[0])}`); }
-    const { css, missing: unnamed } = sheetAndGaps(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f), library });
+    const { css, missing: unnamed } = sheetAndGaps(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f), library, settingsOf });
     // a token the build writes per collection that the stored spec gives none for: written invalid, said, and the run fails
     if (unnamed.size) { broken++; for (const line of missingSaid(f, unnamed)) console.error(`to-code: ${line}`); }
     files.set(`${f}.css`, draft ? css.replace(BANNER, DRAFT) : css);
