@@ -155,7 +155,21 @@ export const GAPS = {
   'foreign-own': 'the props, layout and clipping of a component the library does not hold, where the markup leaves it closed',
   'swapped-own': 'the key, modes and look of a swapped-in component no prop passes',
   'carries-override': 'a placed component\'s part kept only as the way down to an override',
+  'unbound-prop': 'a prop the placed component declares that drives no layer of it (no layer references it, the snapshot\'s links): the library\'s defect, a prop bound to nothing, so the design draws the same whatever it is given and no markup has a layer to pass it to',
 };
+/* The props a component declares that drive no layer, by the stored spec (snapshot `figma.json`): a text, boolean or
+   swap property no layer's componentPropertyReferences names, hidden layers included (the plugin's propLinks, 0.50.0
+   on). A defect of the library, which declares a prop bound to nothing. Only where the spec shows its plugin read links:
+   it records some (`links`), or a walked layer says its place among its siblings (`index`, 0.83.0 on, after links).
+   A spec from before either says nothing of its links, so no prop is taken for unbound there. Figma's names. */
+export function unboundProps(spec) {
+  if (!spec || typeof spec !== 'object') return new Set();
+  const links = spec.links || {};
+  const indexed = (n) => !!n && typeof n === 'object' && (n.children || []).some((c) => (c && typeof c.index === 'number') || indexed(c));
+  const read = Object.keys(links).length > 0 || [spec.default, ...(spec.variants || [])].some(indexed);
+  if (!read) return new Set();
+  return new Set(Object.entries(spec.props || {}).filter(([p, t]) => ['TEXT', 'BOOLEAN', 'INSTANCE_SWAP'].includes(t) && !Object.hasOwn(links, p)).map(([p]) => p));
+}
 /* Which gap of GAPS excuses a row (at, row), or null where it is a difference: leftToCode, by name. */
 /* The instances a reading from code draws open: another library's (the library holds none of it), with a layer listed
    inside, in the base or a variant's adds. A project's code may draw an icon so; what it draws closed lists nothing. */
@@ -165,7 +179,7 @@ export function openedIn(reading, library = {}) {
   for (const A of parts) for (const [id, e] of Object.entries(A)) if (e && e.kind === 'instance' && !placedOf(library, e) && Object.values(all).some((x) => x && x.parent === id)) out.add(id);
   return out;
 }
-export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true, read = null, library = null } = {}) {
+export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet = true, read = null, library = null, specOf = null } = {}) {
   // (`library`: the one the markup was drawn with, { component: contract }; another library's instance it draws open,
   // its insides, props and layout this component's own, is held to the design as any part: layers.mjs openForeign)
   const opened = library && Object.keys(library).length ? foreignOpened(contract, library) : new Set();
@@ -460,8 +474,22 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     const keys = field === 'modes' ? (row.library && typeof row.library === 'object' ? Object.keys(row.library) : []) : [field.slice('modes.'.length)];
     return keys.length > 0 && keys.every((k) => !Object.hasOwn(built, k));
   };
+  // a placed instance's prop its component declares and drives no layer with (unboundProps, by that component's stored
+  // spec, `specOf(main)`): what the design gives it changes nothing the design draws, so code has nothing to draw it
+  // with. Only a prop given otherwise than the reading has it, each one unbound; the instance's other props stay measured
+  const unboundOf = (() => { const seen = new Map(); return (m) => { if (!seen.has(m)) seen.set(m, specOf ? unboundProps(specOf(m)) : new Set()); return seen.get(m); }; })();
+  const unbound = (el, field, row) => {
+    const e = all[el] || {}, m = !!row && specOf && mainOf && e.kind === 'instance' && mainOf(e.component, e.key);
+    if (!m || !/^with(\.|$)/.test(field)) return false;
+    const off = unboundOf(m), named = (k) => [...off].some((p) => low(p) === low(k));
+    if (field !== 'with') return named(field.slice(5));
+    const lib = row.library && typeof row.library === 'object' ? row.library : {}, drawn = row.drawn && typeof row.drawn === 'object' ? row.drawn : {};
+    const moved = [...new Set([...Object.keys(lib), ...Object.keys(drawn)])].filter((k) => restKey(lib[k] ?? null) !== restKey(drawn[k] ?? null));
+    return moved.length > 0 && moved.every(named);
+  };
   return (at, row) => {
     const el = at.split('.')[0], field = at.slice(el.length + 1);
+    if (unbound(el, field, row)) return 'unbound-prop';
     const id = ids.find((x) => (el === x || el.startsWith(`${x}/`)) && !(over.has(x) && !((el !== x && /^(exposed-)?part$/.test(String(over.get(x)))) || passed.has(field) || (field.startsWith('with.') && el === x) || (el === x && over.get(x) === 'exposed-part' && SWAPPED.test(field)))));
     // (modes, the markup's attributes, that only pointer states' variants set at every combination the row was found in:
     // roundTrip's `pointer`)
@@ -547,6 +575,9 @@ export function measure(where, only = [], now = {}) {
   const selfDir = path.join(drawn, 'self', 'from-code');
   // (what the markup leaves to the code, under the library's settings, the ones the self leg writes under)
   const settingsOf = req('../snapshot/projects.cjs').librarySettingsFor(where.paths.components);
+  // (and a placed component's stored spec, for the props it declares that drive no layer, the library's own defect:
+  // unboundProps; by the folder the library holds it under)
+  const specs = new Map(), specOfMain = (m) => { const f = m && (library[m.component] || {}).folder; if (!f) return null; if (!specs.has(f)) specs.set(f, read(path.join(where.paths.components, f, 'figma.json'))); return specs.get(f); };
   for (const { folder, contract } of contracts(where)) {
     if (only.length && !only.includes(folder)) continue;
     const code = read(path.join(readings, `${folder}.json`));
@@ -557,7 +588,7 @@ export function measure(where, only = [], now = {}) {
     else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true, opened: openedIn(code.asFigma, library) }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, ...tagsOf(code), combinations: r.combinations, ...predicted(code), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true, opened: foreignOpened(contract, library) }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma, library })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true, whens: true, opened: foreignOpened(contract, library) }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { read: own.asFigma, library, specOf: specOfMain })), ...tagsOf(own), combinations: r.combinations, ...predicted(own), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
@@ -567,7 +598,7 @@ export function measure(where, only = [], now = {}) {
       const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true, pointerFrom: contract, whens: true, opened: foreignOpened(contract, library) }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
-      legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false, read: again.asFigma, library })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
+      legs.second[folder] = { ...splitLeft(r.rows, gapOf(contract, mains, settingsOf(folder), { ownSheet: false, read: again.asFigma, library, specOf: specOfMain })), ...tagsOf(again), combinations: r.combinations, ...predicted(again), ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     // a reading whose geometry was not compared (taken before it was kept, or with no stored figma.json) is stale, as one
@@ -592,9 +623,10 @@ const FOREIGN = new Set(['inside-foreign', 'foreign-own']);
 export const isSameApartFromForeign = (x) => !!x.rows && !x.rows.length && !x.lacks && !x.predicted && !x.cut && (x.left || []).every((r) => FOREIGN.has(r.gap));
 /* A third tier, beside the other two: held back only by what the library itself holds back, another library's insides
    and an override no prop of the placed component carries (one on an instance it exposes is ours, exposed-unforwarded,
-   and holds a component out of this tier). The user's ruling, 2026-11-26: what Figma allows and no code can express is
-   counted apart, never among the toolkit's differences. */
-const LIBRARY = new Set([...FOREIGN, 'unexposed-override']);
+   and holds a component out of this tier), and a prop a placed component declares and binds to nothing (unbound-prop).
+   The user's ruling, 2026-11-26: what Figma allows and no code can express is counted apart, never among the toolkit's
+   differences. */
+const LIBRARY = new Set([...FOREIGN, 'unexposed-override', 'unbound-prop']);
 export const isSameApartFromLibrary = (x) => !!x.rows && !x.rows.length && !x.lacks && !x.predicted && !x.cut && (x.left || []).every((r) => LIBRARY.has(r.gap));
 /* A component's strict count: its rows, its rows left to code and its fields taken from the design. */
 const assistedFields = (x) => Object.values(x.assisted || {}).reduce((a, l) => a + l.length, 0);

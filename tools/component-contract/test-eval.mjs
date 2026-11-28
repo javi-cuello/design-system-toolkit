@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, rewriteHint, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, isSameApartFromForeign, isSameApartFromLibrary, gapOf, GAPS, leftToCode as leftToCode0, unaccepted, identifiedNote } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, rewriteHint, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, isSameApartFromForeign, isSameApartFromLibrary, gapOf, GAPS, unboundProps, leftToCode as leftToCode0, unaccepted, identifiedNote } from './eval.mjs';
 import { drawSettings } from './to-figma.mjs';
 import { partsOf } from './to-code.mjs';
 import { spawnSync } from 'node:child_process';
@@ -730,7 +730,7 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
       && gd('root.modes', { library: { theme: 'a', density: 'b' }, drawn: null, pointer: true, rest: null }) === 'pointer-modes'
       && gm('root.modes', { library: { theme: 'a' }, drawn: null, pointer: true, rest: null }) === 'pointer-modes'
       && gb('root.modes', { library: { theme: 'a' }, drawn: { theme: 'z' }, pointer: true, rest: null }) === null); }
-  ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'exposed-unforwarded', 'pointer-words', 'pointer-with', 'pointer-modes', 'pointer-modes-no-css', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override'].every((id) => typeof GAPS[id] === 'string'));
+  ok('every gap id is described', ['pointer-only-part', 'path-radius', 'unrecorded-effect', 'one-css-name', 'unexposed-override', 'exposed-unforwarded', 'pointer-words', 'pointer-with', 'pointer-modes', 'pointer-modes-no-css', 'unwritten-scale', 'icon-own-colour', 'placed-own-look', 'inside-foreign', 'foreign-own', 'swapped-own', 'carries-override', 'unbound-prop'].every((id) => typeof GAPS[id] === 'string'));
   ok('leftToCode is gapOf said as yes or no', leftToCode(c)('picker/hint') === true && leftToCode(c)('root.width') === false); }
 
 // a count derived from an accepted leg (`self strict`) that accepted.json does not hold yet is said, never failed on: it
@@ -766,6 +766,35 @@ ok('a reading with rows left to code, combinations predicted or combinations cut
   ok('measure: what the code declares (its module\'s label) is carried as declared, kept out of assisted; the verdict counts it as identified',
     JSON.stringify(m.legs.self.tag.declared) === JSON.stringify(['component-name']) && isStrict(m.legs.self.tag)
     && identifiedNote(Object.entries(m.legs.self)) === '; 1 identified by the code\'s own label' && identifiedNote([['x', { rows: [] }]]) === '');
+  fs.rmSync(home, { recursive: true, force: true }); }
+// a prop a placed component declares and drives no layer with (no layer references it, the spec's links) is the library's
+// defect, unbound-prop: counted apart with what the library holds back, never among the differences. Only where the spec
+// shows its plugin read links (some recorded, or a walked layer's `index`): an older spec says nothing of them
+{ const tree = (index) => ({ name: 'Indicator', type: 'COMPONENT', children: [{ name: 'Label', type: 'TEXT', text: '50', ...(index ? { index: 0 } : {}) }] });
+  ok('unboundProps: a text, boolean or swap prop no link names, only where the spec shows links were read',
+    [...unboundProps({ props: { Label: 'TEXT', Size: ['S', 'L'] }, default: tree(true) })].join() === 'Label'
+    && [...unboundProps({ props: { Label: 'TEXT', Show: 'BOOLEAN' }, links: { Show: { kind: 'visible', layers: [['Label']] } }, variants: [tree(false)] })].join() === 'Label'
+    && !unboundProps({ props: { Label: 'TEXT' }, links: { Label: { kind: 'characters', layers: [['Label']] } }, default: tree(true) }).size
+    && !unboundProps({ props: { Label: 'TEXT' }, default: tree(false) }).size && !unboundProps(null).size);
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'eval-unbound-'));
+  const ind = { contract: 1, component: 'Indicator', props: { label: { type: 'string', figma: 'Label' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: '50' } }, variants: [] };
+  const bar = { contract: 1, component: 'Bar', props: {}, anatomy: { root: { kind: 'container' }, ind: { kind: 'instance', parent: 'root', component: 'Indicator', with: { Label: '0' } } }, variants: [] };
+  const write = (f, x) => { fs.mkdirSync(path.dirname(path.join(home, f)), { recursive: true }); fs.writeFileSync(path.join(home, f), JSON.stringify(x)); };
+  write('components/indicator/contract.json', ind); write('components/bar/contract.json', bar);
+  write('round-trip/self/from-code/bar.json', { unread: 0, assisted: {}, asFigma: { ...bar, anatomy: { ...bar.anatomy, ind: { kind: 'instance', parent: 'root', component: 'Indicator' } } } });
+  const where = { projectDir: home, paths: { components: path.join(home, 'components') } };
+  write('components/indicator/figma.json', { name: 'Indicator', props: { Label: 'TEXT' }, default: tree(true), variants: [] });
+  const m = measure(where, ['bar']).legs.self.bar;
+  write('components/indicator/figma.json', { name: 'Indicator', props: { Label: 'TEXT' }, default: tree(false), variants: [] });
+  const old = measure(where, ['bar']).legs.self.bar;
+  ok('measure: a placed instance given a prop its component binds to nothing is unbound-prop, the library\'s; with an older spec it stays a difference',
+    !m.rows.length && m.left.length === 1 && m.left[0].gap === 'unbound-prop' && m.left[0].at === 'ind.with' && isSameApartFromLibrary(m) && !isSame(m)
+    && old.rows.length === 1 && old.rows[0].at === 'ind.with' && !old.left.length);
+  const g = gapOf(bar, (n) => (n === 'Indicator' ? ind : null), undefined, { specOf: () => ({ props: { Label: 'TEXT', Icon: 'INSTANCE_SWAP' }, links: { Icon: { kind: 'mainComponent', layers: [['Icon']] } } }) });
+  ok('gapOf: only props each unbound, given otherwise than the reading has them; a bound one beside them stays a difference',
+    g('ind.with', { library: { Label: '0' }, drawn: null }) === 'unbound-prop' && leftToCode(bar, (n) => (n === 'Indicator' ? ind : null), undefined, { specOf: () => ({ props: { Label: 'TEXT' }, default: tree(true) }) })('ind.with.Label', { library: '0', drawn: null })
+    && g('ind.with', { library: { Label: '0', Icon: 'Star' }, drawn: null }) === null && g('ind.with', { library: { Label: '0', Icon: 'Star' }, drawn: { Icon: 'Star' } }) === 'unbound-prop'
+    && g('ind.with.Icon', { library: 'Star', drawn: null }) === null && gapOf(bar, (n) => (n === 'Indicator' ? ind : null))('ind.with', { library: { Label: '0' }, drawn: null }) === null);
   fs.rmSync(home, { recursive: true, force: true }); }
 // 2026-11-26: an override of a nested instance the placed component exposes is the toolkit's (exposed-unforwarded); the
 // same on one it does not expose is the library's (unexposed-override)
