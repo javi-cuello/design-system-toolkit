@@ -1433,6 +1433,9 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   // unset
   // (never a property this one writes on that part itself, an override the design sets on the instance there, which
   // stands over the state's look as it does in Figma: a selected split button's menu button filled its own way)
+  // (scoped to this one at none of its pointer states, `as=<their pseudo-classes>`: there the browser's own state stands,
+  // which a rule of this combination's would otherwise outrank, a link drawn hovered over its own :active)
+  const restOf = ((pk) => (!pk ? [] : (c.props[pk].pointer || []).map((v) => pseudoClasses(t)[v]).filter(Boolean).map((x) => x.replace(/^:/, ''))))(Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction'));
   for (const { id, m, w, rest } of drawnAsOf(c, when, mains, t, a)) {
     const P = drawnAt(m, w, mains, t), R = drawnAt(m, rest, mains, t);
     const match = placedOf(a, id, placedAs(a, id, m, mains).M), mine = (k) => new Set(Object.keys(out).filter((x) => !x.includes('::') && (k === 'root' ? x === id : x.startsWith(`${id}/`) && match[x.slice(id.length + 1)] === k)).flatMap((x) => [...out[x].decls.keys()]));
@@ -1440,7 +1443,7 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
       if (k.includes('::')) continue;
       const p = (P[k] || {}).decls || new Map(), r = (R[k] || {}).decls || new Map(), taken = mine(k);
       const decls = new Map([...[...p].filter(([q, x]) => !r.has(q) || r.get(q).v !== x.v), ...[...r.keys()].filter((q) => !p.has(q)).map((q) => [q, { v: 'unset' }])].filter(([q]) => !taken.has(q)));
-      if (decls.size) out[`${id}::as>${k}`] = { decls, unread: [] };
+      if (decls.size) out[`${id}::as=${restOf.join(',')}>${k}`] = { decls, unread: [] };
     }
   }
   // a part whose variable modes a pointer state sets: at that state, the mode's declarations the attribute would give
@@ -1735,8 +1738,11 @@ function chain(c, n, id, rootCond, given = null, library = {}) {
   const [own, pseudo = ''] = id.split('::');
   // (a part of a placed component's own, drawnAsOf's look on it: the instance's selector, then the part's own names
   // under that component's root)
-  if (pseudo.startsWith('as>')) {
-    const e = allOf(c)[own], m = e && e.component && mains(e.component, e.key ?? null), k = pseudo.slice(3), base = chain(c, n, own, rootCond, given, library);
+  if (pseudo.startsWith('as=')) {
+    // (this one at none of its pointer states: each pseudo-class not on it, focus not within it either)
+    const [states, k] = [pseudo.slice(3, pseudo.indexOf('>')), pseudo.slice(pseudo.indexOf('>') + 1)];
+    const rest = states.split(',').filter(Boolean).map((x) => `:not(:${x})${/^focus/.test(x) ? `:not(:has(:${x}))` : ''}`).join('');
+    const e = allOf(c)[own], m = e && e.component && mains(e.component, e.key ?? null), base = chain(c, n, own, rootCond + (rest ? `:where(${rest})` : ''), given, library);
     if (!m || k === 'root') return base;
     const n2 = namer(m.folder || folderOf(m.component), n.naming), pre = n2.root + through(n2, m.component, placedIn(m));
     return base + chain(m, n2, k, '', given, library).slice(pre.length);
