@@ -28,7 +28,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { declarations, borderBox } from './css.mjs';
-import { combinations, condition, tokenNames, withTokenNames, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
+import { combinations, condition, tokenNames, withTokenNames, missingSaid, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign, foreignOpened } from './layers.mjs';
 // (another library's instance whose insides the contract records is drawn open, its layers this component's own:
@@ -1099,7 +1099,9 @@ function jsxOf(item, depth) {
 export function toReact(c, folder, { naming, library = {}, stylesheet = null, settings = HOUSE } = {}) {
   const name = pascal(c.component);
   // (a token the build writes per collection, by the collection the contract records: to-code withTokenNames)
-  const t = withTokenNames(c, settings, () => build(c, folder, { naming, library, jsx: true, settings })).out;
+  const { out: t, missing } = withTokenNames(c, settings, () => build(c, folder, { naming, library, jsx: true, settings }));
+  // (and a token it could not name, a gap the markup's header says, as the sheet's does)
+  t.gaps.push(...missingSaid(c.component, missing));
   const own = t.props.filter((x) => x.type !== 'value');
   // the element the rest of the props reach: the control, the field's input, else the root
   const target = t.entry ? 'input' : t.control || (t.inline ? 'span' : 'div');
@@ -1173,7 +1175,9 @@ function hOf(item, depth) {
    interactive component is markup and its stylesheet (knowledge/code/web-components.md). */
 export function toElement(c, folder, { naming, library = {}, settings = HOUSE } = {}) {
   // (a token the build writes per collection, by the collection the contract records: to-code withTokenNames)
-  const t = withTokenNames(c, settings, () => build(c, folder, { naming, library, jsx: false, settings })).out;
+  const { out: t, missing } = withTokenNames(c, settings, () => build(c, folder, { naming, library, jsx: false, settings }));
+  // (and a token it could not name, a gap the markup's header says, as the sheet's does)
+  t.gaps.push(...missingSaid(c.component, missing));
   const tag = t.n.root;
   const own = t.props.filter((x) => x.type !== 'value');
   const placed = t.placed;

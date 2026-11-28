@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { toCss, rulesOf, rulesAt, combinations, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn, paintsAny, partsOf, childrenOf, markupOrder, pointerModesOf } from './to-code.mjs';
+import { toCss, tokenNames, rulesOf, rulesAt, combinations, selfCheck, namer, condition, controlOf, HOUSE, nestedSelector, drawn, paintsAny, partsOf, childrenOf, markupOrder, pointerModesOf } from './to-code.mjs';
 import { declarations } from './css.mjs';
 import { toElement } from './to-markup.mjs';
 import { ELEMENT } from './site.mjs';
@@ -1382,20 +1382,45 @@ ok('a placed component stretched by its insets takes no size from its main', dec
 // the layers in the order code-standard rule 4 gives them, declared before any rule, so the tokens lose to a component
 { const { BASE } = await import('./to-code.mjs');
   ok('the base every sheet assumes declares the tokens layer first, then base, then components', /^@layer tokens, base, components;/.test(BASE)); }
-{ // a name the token build writes per collection (prefixedTokens), named by the collection the contract records
-  const { sheetAndGaps } = await import('./to-code.mjs');
-  const settings = { ...HOUSE, prefixedTokens: ['palette-1\0tag-border', 'palette-2\0tag-border'] };
-  const tag = (collections) => ({ component: 'Tag', props: {}, anatomy: { root: { kind: 'container', background: 'tag-border', radius: 'Radius/sm' } }, variants: [], ...(collections && { collections }) });
-  const named = sheetAndGaps(tag({ 'tag-border': 'Palette 2' }), 'tag', { settings });
-  ok('a binding the build writes per collection takes the collection its contract records; a name written once its own',
-    /background(-color)?: var\(--palette-2-tag-border\)/.test(named.css) && /var\(--radius-sm\)/.test(named.css) && !named.missing.size);
-  const old = sheetAndGaps(tag(null), 'tag', { settings });
+{ // a name the token build writes per collection, named layer by layer by the collection the contract records; the
+  // build's own names, from a real build of a snapshot (tools/tokens names.mjs prefixedIn)
+  const { sheetAndGaps, withTokenNames } = await import('./to-code.mjs');
+  const { writeDtcg } = await import('../tokens/from-snapshot.mjs');
+  const { prefixedIn } = await import('../tokens/names.mjs');
+  const { derive } = createRequire(import.meta.url)('./derive.cjs');
+  const os = await import('node:os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dtcg-'));
+  writeDtcg({ _meta: { file: 'x', fileId: 'x' }, collections: {
+    'Shades 1': { modes: ['Value'], values: { Value: { 'pill-fill': '#000000', 'pill-edge': '#111111' } }, alias: {} },
+    'Shades 2': { modes: ['Value'], values: { Value: { 'pill-fill': '#ffffff', 'pill-edge': '#eeeeee' } }, alias: {} },
+    Base: { modes: ['Value'], values: { Value: { 'Radius/sm': 4 } }, alias: {} },
+  }, textStyles: [], paintStyles: [], effects: [] }, dir);
+  const settings = { ...HOUSE, prefixedTokens: [...prefixedIn(dir)].sort() };
+  fs.rmSync(dir, { recursive: true, force: true });
+  // a pill whose fill comes from one collection when warm and the other when cool, and whose dot's edge from one only
+  const v = (tone, col, rec = true) => ({ name: `Tone=${tone}`, type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', align: 'MIN/MIN', fills: ['pill-fill'], ...(rec && { collections: { 'pill-fill': col } }),
+    children: [{ name: 'Dot', type: 'ELLIPSE', sizing: 'FIXED/FIXED', w: 8, h: 8, fills: ['pill-edge'], ...(rec && { collections: { 'pill-edge': 'Shades 2' } }) }] });
+  const pill = (rec) => ({ ...derive({ name: 'Pill', id: '3:1', props: { Tone: ['Warm', 'Cool'] }, variants: [v('Warm', 'Shades 1', rec), v('Cool', 'Shades 2', rec)] }), folder: 'pill' });
+  const named = sheetAndGaps(pill(true), 'pill', { settings });
+  ok('variants binding one name from two collections are each named by their own layer\'s, and none is missing',
+    /var\(--shades-1-pill-fill\)/.test(named.css) && /var\(--shades-2-pill-fill\)/.test(named.css) && /var\(--shades-2-pill-edge\)/.test(named.css) && !/var\(--pill-(fill|edge)\)/.test(named.css) && !named.missing.size, named.css);
+  const old = sheetAndGaps(pill(false), 'pill', { settings });
   ok('…one whose stored spec records no collection is said, naming the component and the token, with the re-snapshot as the fix, never named by a guess',
-    old.missing.get('tag-border') === 'no collection recorded' && /Not named: Tag binds tag-border, which the token build writes per collection, and its stored spec says no collection: take the snapshot again/.test(old.css) && !/palette-\d-tag-border/.test(old.css));
-  ok('…a collection the build numbered is named by its number (settings collectionSlugs)', /var\(--palette-2-tag-border\)/.test(sheetAndGaps(tag({ 'tag-border': 'Remote Palette' }), 'tag', { settings: { ...settings, collectionSlugs: { 'Remote Palette': 'palette-2' } } }).css));
+    old.missing.get('pill-fill') === 'no collection recorded' && /Not named: Pill binds pill-fill, which the token build writes per collection, and its stored spec says no collection: take the snapshot again/.test(old.css) && !/shades-\d-pill/.test(old.css));
+  ok('…a value written with no layer to hand takes the one collection the component binds the name from, and says two as two',
+    withTokenNames(pill(true), settings, () => [tokenNames.token('pill-edge'), tokenNames.token('pill-fill')]).out.join() === 'var(--shades-2-pill-edge),var(--pill-fill)'
+    && /Shades 1 and Shades 2/.test(withTokenNames(pill(true), settings, () => tokenNames.token('pill-fill')).missing.get('pill-fill')));
+  ok('…a collection the build numbered is named by its number (settings collectionSlugs)', /var\(--shades-2-pill-edge\)/.test(sheetAndGaps({ ...pill(true), anatomy: { ...pill(true).anatomy, dot: { ...pill(true).anatomy.dot, collections: { 'pill-edge': 'Remote shades' } } } }, 'pill', { settings: { ...settings, collectionSlugs: { 'Remote shades': 'shades-2' } } }).css));
+  { // the markup writes a token inline for a layer added inside a placed instance: by its layer's collection, and one it
+    // could not name is a gap
+    const badge = { component: 'Badge', folder: 'badge', props: {}, variants: [], anatomy: { root: { kind: 'container' } } };
+    const added = (cols) => ({ component: 'Pill', folder: 'pill', props: {}, variants: [], anatomy: { root: { kind: 'container' }, badge: { kind: 'instance', parent: 'root', component: 'Badge' }, 'badge/extra': { kind: 'container', parent: 'badge', background: 'pill-fill', width: 4, height: 4, ...(cols && { collections: cols }) } } });
+    const bad = toElement(added(null), 'pill', { settings, library: { Badge: badge } }), good = toElement(added({ 'pill-fill': 'Shades 1' }), 'pill', { settings, library: { Badge: badge } });
+    ok('…the markup names an inline token by its layer\'s collection, and carries one it could not name into its gaps',
+      /background: var\(--shades-1-pill-fill\)/.test(good) && !/Pill binds/.test(good) && /frontend-build: Pill binds pill-fill, which the token build writes per collection/.test(bad), bad); }
   { const { selfDrawn } = await import('./site.mjs');
     const said = [], was = console.error; console.error = (x) => said.push(String(x));
-    try { const c = { ...tag(null), folder: 'tag' }; selfDrawn(c, { library: { Tag: c }, settings }); selfDrawn(c, { library: { Tag: c }, settings }); } finally { console.error = was; }
-    ok('…the self leg says it on stderr too, as to-code does, once however often it draws the component', said.length === 1 && /^site: Tag binds tag-border, which the token build writes per collection/.test(said[0])); }
-  ok('…and without prefixed names a sheet is what it always was', toCss(tag(null), 'tag') === toCss(tag({ 'tag-border': 'Palette 2' }), 'tag')); }
+    try { const c = pill(false); selfDrawn(c, { library: { Pill: c }, settings }); selfDrawn(c, { library: { Pill: c }, settings }); } finally { console.error = was; }
+    ok('…the self leg says it on stderr too, as to-code does, once however often it draws the component', said.length >= 1 && said.every((l) => /^site: Pill binds pill-(fill|edge), which the token build writes per collection/.test(l)) && new Set(said).size === said.length, said.join('\n')); }
+  ok('…and without prefixed names a sheet is what it always was', toCss(pill(false), 'pill') === toCss(pill(true), 'pill')); }
 console.log(`${n} passed`);

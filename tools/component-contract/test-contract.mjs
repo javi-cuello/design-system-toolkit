@@ -1248,13 +1248,15 @@ ok('combinations too many to list are said to be unlisted, never left to read as
 }
 
 { // snapshot 0.96.0: a bound name another collection also holds is recorded with its collection on the layer; the contract
-  // carries one map for the component, so code names the binding by it (tools/tokens names.mjs tokenProperty)
-  const v = (size, col) => ({ name: `Size=${size}`, type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', align: 'MIN/MIN', fills: ['tag-background'], collections: { 'tag-background': col },
-    children: [{ name: 'Dot', type: 'ELLIPSE', sizing: 'FIXED/FIXED', w: 8, h: 8, fills: ['tag-border'], collections: { 'tag-border': 'Palette 1' } }] });
-  const one = derive({ name: 'Tag', id: '3:1', props: { Size: ['Large', 'Small'] }, variants: [v('Large', 'Palette 1'), v('Small', 'Palette 1')] });
-  ok('the collections the layers record are the contract\'s, one map', JSON.stringify(one.collections) === JSON.stringify({ 'tag-background': 'Palette 1', 'tag-border': 'Palette 1' }));
-  const two = derive({ name: 'Tag', id: '3:1', props: { Size: ['Large', 'Small'] }, variants: [v('Large', 'Palette 1'), v('Small', 'Palette 2')] });
-  ok('…a name bound from two collections keeps both, sorted', JSON.stringify(two.collections['tag-background']) === JSON.stringify(['Palette 1', 'Palette 2']));
-  ok('…and a spec that records none (before 0.96.0) carries no map', !('collections' in tc2));
+  // keeps it on that layer, and a variant binding it from another collection says it as a change (code names each
+  // layer's binding by its own, tools/tokens names.mjs tokenProperty)
+  const v = (tone, col) => ({ name: `Tone=${tone}`, type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', align: 'MIN/MIN', fills: ['pill-fill'], collections: { 'pill-fill': col },
+    children: [{ name: 'Dot', type: 'ELLIPSE', sizing: 'FIXED/FIXED', w: 8, h: 8, fills: ['pill-edge'], collections: { 'pill-edge': 'Shades 1' } }] });
+  const spec = { name: 'Pill', id: '3:1', props: { Tone: ['Warm', 'Cool'] }, variants: [v('Warm', 'Shades 1'), v('Cool', 'Shades 2')] };
+  const c = derive(spec);
+  ok('each layer keeps the collections it records', JSON.stringify(c.anatomy.root.collections) === JSON.stringify({ 'pill-fill': 'Shades 1' }) && JSON.stringify(c.anatomy.dot.collections) === JSON.stringify({ 'pill-edge': 'Shades 1' }), JSON.stringify(c.anatomy));
+  ok('…a variant binding one from another collection says it as a change', c.variants.some((x) => x.when.tone === 'cool' && x.set && JSON.stringify(x.set['root.collections']) === JSON.stringify({ 'pill-fill': 'Shades 2' })), JSON.stringify(c.variants));
+  ok('…every variant rebuilds from the contract', selfCheck(spec).length === 0);
+  ok('…and a spec that records none (before 0.96.0) says none', !Object.values(tc2.anatomy).some((e) => 'collections' in e));
 }
 console.log(`${n}/${n} passed`);

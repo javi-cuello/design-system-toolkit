@@ -1179,6 +1179,7 @@ delete globalThis.figma;
   ok('…a styled glyph folds onto its instance as an unstyled one does; a drawing that lost the style is a row at the instance',
     !roundTrip(icon({ fillStyle: 'Sys/on' }), code, { layoutUnit: true }).rows.length
     && JSON.stringify(roundTrip(icon({ fillStyle: 'Sys/on' }), icon({})).rows.map((r) => [r.at, r.library, r.drawn])) === '[["icon.fillStyle","Sys/on",null]]');
+  ok('which collection a bound name came from is never a row: a drawing or a reading from code holds none', !roundTrip({ ...lib, anatomy: { root: { ...lib.anatomy.root, collections: { 'C/error': 'Shades 1' } } } }, lib).rows.length);
   ok('…the styles a plan paints with are among what it needs keys for', JSON.stringify(needs({ variants: [{ anatomy: lib.anatomy }] }).fillStyles) === '["Sys/error"]');
   const src = fs.readFileSync(new URL('./to-figma.mjs', import.meta.url), 'utf8');
   ok('…applied by its key once the layer is painted, taken in the library\'s own file from its styles and the copies its own component uses, looked up where the library uses it',

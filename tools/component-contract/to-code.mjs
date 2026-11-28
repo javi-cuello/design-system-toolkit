@@ -95,25 +95,49 @@ export function namer(folder, naming = { kind: 'class', prefix: '', part: '__' }
 }
 
 /* A token by the custom property the token build writes; a text style by the fields its mixin applies. While one
-   component is written (withTokenNames), a name the build writes with its collection takes the collection that
-   component's contract records (`collections`, snapshot 0.96.0), and one it records none for is a finding. */
+   component is written (withTokenNames), a name the build writes with its collection takes the collection the layer
+   records (an anatomy entry's `collections`, snapshot 0.96.0: `at`, which css.mjs declarations asks for each entry),
+   and one it records none for is a finding. */
 let writing = null;
+// (a colour the design names currentColor is CSS's own keyword, the colour the box inherits: never a custom property)
+const tokenAt = (name, cols) => (/^currentcolor$/i.test(String(name)) ? 'currentColor' : `var(${writing ? writing(name, cols) : cssName('', name)})`);
 export const tokenNames = {
-  // (a colour the design names currentColor is CSS's own keyword, the colour the box inherits: never a custom property)
-  token: (name) => (/^currentcolor$/i.test(String(name)) ? 'currentColor' : `var(${writing ? writing(name) : cssName('', name)})`),
+  token: (name) => tokenAt(name, null),
   textStyle: (name) => textStyleFields(cssName('', name).slice(2)),
+  // the names for one layer, by the collections it records
+  at: (cols) => (cols && writing ? { ...tokenNames, token: (name) => tokenAt(name, cols) } : tokenNames),
 };
+/* Every collection a component's layers record each bound name from: its anatomy's, and its variants' (a change, or a
+   layer one adds), name → Set. */
+export function collectionsIn(c) {
+  const all = new Map(), take = (cols) => { for (const [k, v] of Object.entries(cols || {})) for (const x of [].concat(v)) all.set(k, (all.get(k) || new Set()).add(x)); };
+  for (const e of Object.values((c && c.anatomy) || {})) take(e && e.collections);
+  for (const v of (c && c.variants) || []) {
+    for (const [k, x] of Object.entries(v.set || {})) if (/\.collections$/.test(k)) take(x);
+    for (const e of Object.values(v.add || {})) take(e && e.collections);
+  }
+  return all;
+}
 /* `fn` run with the token names of component `c` under `settings` (its `prefixedTokens`, the token build's names
-   written with their collection, and `collectionSlugs`, the collections it numbered: projects.cjs librarySettingsFor), and what it could not name: { out, missing }, each
+   written with their collection, and `collectionSlugs`, the collections it numbered: projects.cjs librarySettingsFor),
+   and what it could not name: { out, missing }, each
    missing token with why. A missing one is written by its bare name, which the build does not write, so the value is
    invalid and the run says so; never a guessed collection. Synchronous, so one component's names never reach
    another's. */
 export function withTokenNames(c, settings, fn) {
-  const kept = new Set((settings && settings.prefixedTokens) || []), from = (c && c.collections) || {}, missing = new Map();
+  const kept = new Set((settings && settings.prefixedTokens) || []), missing = new Map();
   if (!kept.size) return { out: fn(), missing };
   const was = writing;
   const slugs = (settings && settings.collectionSlugs) || null;
-  writing = (name) => { const r = tokenProperty(name, from[name], kept, slugs); if (r.missing) { missing.set(name, r.missing); return cssName('', name); } return r.css; };
+  // (a layer's own record first; where a value is written with no layer to hand, the one collection the component binds
+  // the name from anywhere, and two are said as two, never one picked)
+  const all = collectionsIn(c);
+  const anywhere = (name) => { const s = all.get(name); return !s ? undefined : s.size === 1 ? [...s][0] : [...s].sort(); };
+  writing = (name, cols) => {
+    const r = tokenProperty(name, cols && cols[name] !== undefined ? cols[name] : anywhere(name), kept, slugs);
+    if (r.missing) { missing.set(name, r.missing); return cssName('', name); }
+    return r.css;
+  };
   try { return { out: fn(), missing }; } finally { writing = was; }
 }
 /* What a component's sheet says of the tokens it could not name, and the fix. */

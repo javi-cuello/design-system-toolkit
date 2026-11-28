@@ -150,6 +150,10 @@ function element(n, parent, known, up = null, axes = [], turned = false) {
   if (n.opacity != null && n.opacity !== 1) e.opacity = b.opacity ?? n.opacity;
   // shown or hidden by a boolean variable, per mode (snapshot 0.95.0 on): the variable's name, as a bound number is said
   if (b.visible) e.visible = b.visible;
+  // the collection each bound name came from, where another collection holds the name too (snapshot 0.96.0): the token
+  // build names such a variable by its collection where the collections disagree, so code names it by this, layer by
+  // layer, and a variant binding it from another says it as a change
+  if (n.collections) e.collections = { ...n.collections };
   if (n.blendMode) e.blend = n.blendMode.toLowerCase();
   if (n.mask) e.mask = true;
   if (n.smoothing) e.smoothing = n.smoothing;
@@ -1324,25 +1328,9 @@ function deriveWith(stored, known, { stateAxis = HOUSE.stateAxis || null, pointe
     for (const f of flat) for (const [id, e] of Object.entries(f.anatomy)) if (e && e.kind === 'instance' && e.component && (e.fillStyle === undefined || e.border === undefined)) { const m = mains(e.component, e.key); if (!m || !atProps(m, e.with).root) walked[id] = [...new Set([...(walked[id] || []), walkedAs(e)])].sort(); }
     if (Object.keys(walked).length) contract.asWalked = Object.fromEntries(Object.entries(walked).sort(([a], [b]) => (a < b ? -1 : 1)));
   }
-  // the collection each bound name came from, where another collection holds the name too (snapshot 0.96.0): the token
-  // build names such a variable by its collection where the collections disagree, so code names it by this
-  const from = bindingCollections(spec);
-  if (from) contract.collections = from;
   return contract;
 }
 
-/* Every layer's `collections` over the spec's variants, one map: { name: collection }, a name the component binds from
-   two collections both, sorted. Null where the walk recorded none (no shared name bound, or a snapshot before 0.96.0). */
-function bindingCollections(spec) {
-  const out = {};
-  const walk = (n) => {
-    for (const [k, v] of Object.entries((n && n.collections) || {})) out[k] = [...new Set([...[].concat(out[k] || []), ...[].concat(v)])].sort();
-    for (const c of (n && n.children) || []) walk(c);
-  };
-  for (const v of spec.variants || []) walk(v);
-  const keys = Object.keys(out).sort();
-  return keys.length ? Object.fromEntries(keys.map((k) => [k, out[k].length === 1 ? out[k][0] : out[k]])) : null;
-}
 
 
 /* Every stored variant, rebuilt from the contract and compared with the

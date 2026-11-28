@@ -24,7 +24,9 @@ const SIDES = ['top', 'end', 'bottom', 'start'];
 import { shadowOrder } from '../parity/values.mjs';
 import { alignToCss, centreOffset, share, negative, pullProp, fillCss, gradientCss, rawColour as raw, smoothingToCss, pathsToCss, pathsToMask, blendToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
-const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma', 'foreign']);
+const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma', 'foreign',
+  // (which collection each bound name came from: how a token is named, read by names.at above, nothing CSS draws)
+  'collections']);
 const NOTE = 'no token in the design';
 // a text's own values say why they are values and no more: a variable may be bound to one, which the snapshot does not record
 const TEXT_NOTE = 'no text style in the design';
@@ -51,6 +53,8 @@ export function borderBox(P) {
 export const shareable = (whole, offset, own) => typeof whole === 'number' && whole > 0 && typeof offset === 'number' && typeof own === 'number';
 
 export function declarations(e, { root = false, holds = false, row = true, wrap = false, anchors = false, box = null, pull = null, words = null } = {}, names) {
+  // (a token named by the collection this layer records, where the names know layers: to-code tokenNames.at)
+  if (names && names.at && e && e.collections) names = names.at(e.collections);
   // (unshared: the axes a scale constraint could not be written on, as a share of the parent: shareable)
   const decls = [], unread = [], unshared = [];
   const put = (prop, value, note) => { if (value !== undefined && value !== null && !/\bundefined\b/.test(String(value))) decls.push(note ? [prop, value, note] : [prop, value]); };
