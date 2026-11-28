@@ -134,7 +134,13 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
   const knob = { component: 'Knob', props: {}, variants: [{ when: { on: true }, add: { glow: { kind: 'graphic', parent: 'root' } } }], anatomy: { root: { kind: 'container' }, grip: { kind: 'graphic', parent: 'root' } } };
   const held = [{ id: 'root', kind: 'container' }, { id: 'knob', kind: 'instance', parent: 'root', component: 'Knob' }, { id: 'knob/grip', kind: 'graphic', parent: 'knob', order: 0 }, { id: 'knob/layer', kind: 'graphic', parent: 'knob', order: 1, name: 'Layer' }];
   const mainOf = (n) => (n === 'Knob' ? knob : null);
-  const { autoSized, outOfFlowIn } = await import('./from-code.mjs');
+  const { autoSized, outOfFlowIn, statedIn, asFigma: shapedOf } = await import('./from-code.mjs');
+  { const a = Object.fromEntries(held.map((r) => [r.id, r]));
+    const layer = { kind: 'graphic', parent: 'knob', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' } };
+    const c = { component: 'Holder', props: {}, variants: [], anatomy: { root: { kind: 'container' }, knob: { kind: 'instance', parent: 'root', component: 'Knob' }, 'knob/layer': layer } };
+    const kept = shapedOf(c, { added: new Set(['knob/layer']) }).contract.anatomy['knob/layer'], dropped = shapedOf(c).contract.anatomy['knob/layer'];
+    ok('a layer a placed component does not have keeps its place in the reading\'s shape, as derive keeps it; one it has keeps none',
+      !statedIn(a, 'knob', 'knob/layer', knob, mainOf) && statedIn(a, 'knob', 'knob/grip', knob, mainOf) && !!kept.absolute && !!kept.constraints && !dropped.absolute && !dropped.constraints, JSON.stringify([kept, dropped])); }
   const layoutOfMain = (u) => (u.kind === 'instance' ? (mainOf(u.component) || {}).anatomy.root.layout : u.layout);
   ok('a part out of the flow says position only where its parent lays out: a placed component whose main has no auto layout is a frame, one the library does not hold is taken to lay out',
     !outOfFlowIn(held[1], layoutOfMain, (u) => mainOf(u.component)) && outOfFlowIn({ kind: 'instance', component: 'Other' }, layoutOfMain, () => null)

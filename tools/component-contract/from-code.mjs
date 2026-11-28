@@ -1599,7 +1599,7 @@ export function delta(base, other, def = base) {
    - props first, then the axes in the order the house settings give (axisOrder, figma-standard rule 1).
    `renamed` lists every change, so a reader can see what the code said. `foreign`: the instances foreignAsInstance gave
    back (another library's, drawn open), whose glyph scaling both ways keeps its point, as derive keeps it there. */
-export function asFigma(contract, { axisOrder = [], foreign = new Set() } = {}) {
+export function asFigma(contract, { axisOrder = [], foreign = new Set(), added = new Set() } = {}) {
   const renamed = [];
   const props = {}, valueMap = {}, joined = [];
   const tokensOf = (anatomy) => Object.values(anatomy).flatMap((e) => [e.background, e.color].filter((t) => typeof t === 'string' && t.includes('/')));
@@ -1681,7 +1681,9 @@ export function asFigma(contract, { axisOrder = [], foreign = new Set() } = {}) 
   // (figma-fact: no-nested-position-override); one placed absolutely, or a glyph's scale both ways, keeps them
   const all = { ...contract.anatomy, ...Object.assign({}, ...variants.map((v) => v.add || {})) };
   const nearest = (id) => { for (let up = (all[id] || {}).parent; up; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') return up; return null; };
-  const inside = (id) => !!nearest(id);
+  // (a layer the placed component does not have, the design's own added in the instance, `added`, keeps its place, as
+  // derive keeps it: statedIn)
+  const inside = (id) => !!nearest(id) && !added.has(id);
   // (nor a place in its frame: the component's too; one placed absolutely in an auto layout, position absolute, keeps it)
   const framed = (e) => e.position !== 'absolute';
   const loose = (e) => (framed(e) || !e.absolute) && !(e.constraints && e.constraints.horizontal === 'scale' && e.constraints.vertical === 'scale');
@@ -2286,6 +2288,19 @@ async function selfSource(project, name, { second = false } = {}) {
   return src;
 }
 
+/* Whether the placed component `m` (the instance `hid`'s, in `anatomy`) has the layer `id` inside it: matched to one of
+   its parts at the instance's props (derive's placedMatch), or one it has at other props, a variant's, by its name, so a
+   status icon another status shows stays its component's. One it has not is the design's own, added in the instance,
+   whose place derive keeps. Tested by test-from-code.mjs. */
+export function statedIn(anatomy, hid, id, m, mainOf) {
+  const { placedAs, placedMatch } = req('./derive.cjs');
+  const inner = Object.fromEntries(Object.entries(anatomy).filter(([k]) => k.startsWith(`${hid}/`)).map(([k, r]) => [k.slice(hid.length + 1), r]));
+  const rel = id.slice(hid.length + 1);
+  if (placedMatch(placedAs(anatomy, hid, m, mainOf).M, inner)[rel]) return true;
+  const last = rel.slice(rel.lastIndexOf('/') + 1).replace(/_\d+$/, '');
+  return [m.anatomy || {}, ...(m.variants || []).map((v) => v.add || {})].some((a) => Object.entries(a).some(([mk, x]) => mk !== 'root' && (mk.slice(mk.lastIndexOf('/') + 1).replace(/_\d+$/, '') === last || (x && x.name && camel(x.name) === last))));
+}
+
 /* A part inside a placed component, in a box with no auto layout, sits where its component puts it: the design writes
    no place for it (derive.cjs, inInstance) and an instance cannot move it (Figma's help, "Apply changes to
    instances"), so none is read. A box with auto layout places its children by flow, as the design says it, and one
@@ -2303,15 +2318,7 @@ export function unplacedIn(raw, e, layoutOf = (u) => u.layout, mainOf = null) {
     if (typeof q.foreign === 'string') return false;
     if (q.kind !== 'instance') continue;
     const m = mainOf && e.id.startsWith(`${q.id}/`) && mainOf(q.component, q.key);
-    if (!m) return true;
-    const { placedAs, placedMatch } = req('./derive.cjs'), anatomy = Object.fromEntries(raw.map((r) => [r.id, r]));
-    const inner = Object.fromEntries(raw.filter((r) => r.id.startsWith(`${q.id}/`)).map((r) => [r.id.slice(q.id.length + 1), r]));
-    const rel = e.id.slice(q.id.length + 1);
-    if (placedMatch(placedAs(anatomy, q.id, m, mainOf).M, inner)[rel]) return true;
-    // (or one it has at other props than these, a variant's: by its name, so a status icon another status shows stays
-    // its component's)
-    const last = rel.slice(rel.lastIndexOf('/') + 1).replace(/_\d+$/, '');
-    return [m.anatomy || {}, ...(m.variants || []).map((v) => v.add || {})].some((a) => Object.entries(a).some(([mk, x]) => mk !== 'root' && (mk.slice(mk.lastIndexOf('/') + 1).replace(/_\d+$/, '') === last || (x && x.name && camel(x.name) === last))));
+    return !m || statedIn(Object.fromEntries(raw.map((r) => [r.id, r])), q.id, e.id, m, mainOf);
   }
   return false;
 }
@@ -4096,7 +4103,11 @@ async function main() {
     for (const e of [...Object.values(fromCode.anatomy), ...fromCode.variants.flatMap((v) => Object.values(v.add || {}))]) if (e) delete e.overlap;
     for (const v of fromCode.variants) for (const k of Object.keys(v.set || {})) if (k.endsWith('.overlap')) delete v.set[k];
     // in the house's Figma conventions; its props against Figma's as the code audit judges them (one comparison, compareProps)
-    const shaped = asFigma(fromCode, { axisOrder: (L.lib.tokens && L.lib.tokens.axisOrder) || [], foreign: foreignIds });
+    // (the layers a placed component does not have, the design's own: their place kept, statedIn)
+    const addedIds = (() => { const all = { ...fromCode.anatomy, ...Object.assign({}, ...fromCode.variants.map((v) => v.add || {})) }, out = new Set();
+      for (const id of Object.keys(all)) { let q = null; for (let up = (all[id] || {}).parent; up && !q; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') q = up; const m = q && mainOf(all[q].component, all[q].key); if (m && !statedIn(all, q, id, m, mainOf)) out.add(id); }
+      return out; })();
+    const shaped = asFigma(fromCode, { axisOrder: (L.lib.tokens && L.lib.tokens.axisOrder) || [], foreign: foreignIds, added: addedIds });
     // a prop the design has under no key or name is the code's alone (the contract editor's "Exists in: Code only"):
     // the drawing leaves it out, as Figma has no such property
     // only where the code follows the design (governed): a compared library's props are joined by rule, under the
