@@ -131,7 +131,7 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
     !unplacedIn(raw, raw[2], (u) => (u.kind === 'instance' ? { direction: 'row' } : u.layout)));
   // (2026-11-28: a layer the placed component does not have, the design's own added inside its instance, is placed by
   // the design, as derive gives it its place: a state layer stretched over a slider's handle)
-  const knob = { component: 'Knob', props: {}, variants: [{ when: { on: true }, add: { glow: { kind: 'graphic', parent: 'root' } } }], anatomy: { root: { kind: 'container' }, grip: { kind: 'graphic', parent: 'root' } } };
+  const knob = { component: 'Knob', props: { on: { type: 'boolean', default: false } }, variants: [{ when: { on: true }, add: { glow: { kind: 'graphic', parent: 'root' } } }], anatomy: { root: { kind: 'container' }, grip: { kind: 'graphic', parent: 'root' } } };
   const held = [{ id: 'root', kind: 'container' }, { id: 'knob', kind: 'instance', parent: 'root', component: 'Knob' }, { id: 'knob/grip', kind: 'graphic', parent: 'knob', order: 0 }, { id: 'knob/layer', kind: 'graphic', parent: 'knob', order: 1, name: 'Layer' }];
   const mainOf = (n) => (n === 'Knob' ? knob : null);
   const { autoSized, outOfFlowIn, statedIn, asFigma: shapedOf } = await import('./from-code.mjs');
@@ -151,7 +151,10 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
     ['', 'auto', 'fit-content', 'unset', 'initial', 'revert', 'revert-layer', ' unset '].every(autoSized) && !['2.5rem', '40px', '100%'].some(autoSized));
   ok('a layer a placed component does not have is placed by the design; one it has, at these props or a variant\'s, stays its component\'s',
     !unplacedIn(held, held[3], undefined, mainOf) && unplacedIn(held, held[2], undefined, mainOf) && unplacedIn(held, held[3])
-    && unplacedIn([...held, { id: 'knob/glow', kind: 'graphic', parent: 'knob', order: 2 }], { id: 'knob/glow', kind: 'graphic', parent: 'knob', order: 2 }, undefined, mainOf));
+    && unplacedIn([...held, { id: 'knob/glow', kind: 'graphic', parent: 'knob', order: 2 }], { id: 'knob/glow', kind: 'graphic', parent: 'knob', order: 2 }, undefined, mainOf)
+    // (one that only shares a part's name, under another parent, is the design's own: an added icon; matched as derive
+    // matches the design's, placedMatch)
+    && !unplacedIn([...held, { id: 'knob/grip/glow', kind: 'graphic', parent: 'knob/grip', order: 0 }], { id: 'knob/grip/glow', kind: 'graphic', parent: 'knob/grip', order: 0 }, undefined, mainOf));
   // (2026-11-27: one in another library's icon drawn open inside a placed component is placed by the design: a field's
   // open chevron's glyph at its point)
   const open = [...raw, { id: 'chev', kind: 'container', foreign: 'Chevron--up', parent: 'pin' }, { id: 'glyph', kind: 'graphic', parent: 'chev' }];

@@ -2288,17 +2288,20 @@ async function selfSource(project, name, { second = false } = {}) {
   return src;
 }
 
-/* Whether the placed component `m` (the instance `hid`'s, in `anatomy`) has the layer `id` inside it: matched to one of
-   its parts at the instance's props (derive's placedMatch), or one it has at other props, a variant's, by its name, so a
-   status icon another status shows stays its component's. One it has not is the design's own, added in the instance,
-   whose place derive keeps. Tested by test-from-code.mjs. */
+/* Whether the placed component `m` (the instance `hid`'s, in `anatomy`) has the layer `id` inside it, matched as derive
+   matches an instance's layers to its component's parts (placedMatch: by its address, else by parent, kind and order):
+   at the instance's props, or at a variant's of the component, so a status icon another status shows stays its
+   component's. One it has at none is the design's own, added in the instance, whose place derive keeps. Tested by
+   test-from-code.mjs. */
 export function statedIn(anatomy, hid, id, m, mainOf) {
   const { placedAs, placedMatch } = req('./derive.cjs');
   const inner = Object.fromEntries(Object.entries(anatomy).filter(([k]) => k.startsWith(`${hid}/`)).map(([k, r]) => [k.slice(hid.length + 1), r]));
   const rel = id.slice(hid.length + 1);
-  if (placedMatch(placedAs(anatomy, hid, m, mainOf).M, inner)[rel]) return true;
-  const last = rel.slice(rel.lastIndexOf('/') + 1).replace(/_\d+$/, '');
-  return [m.anatomy || {}, ...(m.variants || []).map((v) => v.add || {})].some((a) => Object.entries(a).some(([mk, x]) => mk !== 'root' && (mk.slice(mk.lastIndexOf('/') + 1).replace(/_\d+$/, '') === last || (x && x.name && camel(x.name) === last))));
+  // (a variant's props under Figma's names and values, as an instance states them)
+  const figmaOf = (when) => Object.fromEntries(Object.entries(when || {}).map(([k, v]) => { const q = (m.props || {})[k] || {}, i = (q.values || []).indexOf(v);
+    return [q.figma || k, q.type === 'enum' && q.figmaValues && i >= 0 ? q.figmaValues[i] : v]; }));
+  const at = [anatomy[hid].with, ...(m.variants || []).map((v) => ({ ...(anatomy[hid].with || {}), ...figmaOf(v.when) }))];
+  return at.some((w) => !!placedMatch(placedAs({ ...anatomy, [hid]: { ...anatomy[hid], with: w } }, hid, m, mainOf).M, inner)[rel]);
 }
 
 /* A part inside a placed component, in a box with no auto layout, sits where its component puts it: the design writes
