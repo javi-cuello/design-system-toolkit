@@ -22,10 +22,18 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
 { const { cssShadows } = await import('../parity/external.mjs');
   const s = await shadowLayers(cssShadows('rgba(0, 0, 0, 0.25) 0px 1px 3px 2px inset, rgb(1, 2, 3) 0px 2.5px 6px 0px'), async (c) => (c.startsWith('rgba') ? 'Shadow/inner' : c));
   ok('a box-shadow no style draws is its layers, each its type, offset, blur, spread and named colour',
-    JSON.stringify(s) === JSON.stringify({ layers: [{ type: 'INNER_SHADOW', x: 0, y: 1, blur: 3, spread: 2, color: 'Shadow/inner' }, { type: 'DROP_SHADOW', x: 0, y: 2.5, blur: 6, spread: 0, color: 'rgb(1, 2, 3)' }] }), JSON.stringify(s)); }
+    JSON.stringify(s) === JSON.stringify({ layers: [{ type: 'DROP_SHADOW', x: 0, y: 2.5, blur: 6, spread: 0, color: 'rgb(1, 2, 3)' }, { type: 'INNER_SHADOW', x: 0, y: 1, blur: 3, spread: 2, color: 'Shadow/inner' }] }), JSON.stringify(s)); }
 // a border-image as css.mjs paints a gradient stroke, read back as that gradient paint (2026-11-28)
 { const g = await borderGradient({ image: 'linear-gradient(90deg, rgb(255, 0, 0) 0%, rgb(0, 0, 255) 100%)', w: 40, h: 20 }, async (c) => (c === 'rgb(255, 0, 0)' ? 'Brand/start' : c));
   ok('a border-image gradient is the stroke\'s gradient paint, each stop named', g && g.type === 'GRADIENT_LINEAR' && g.stops[0].color === 'Brand/start' && g.stops[1].color === 'rgb(0, 0, 255)' && (await borderGradient({ image: 'url(x.png)', w: 1, h: 1 }, async (c) => c)) === null, JSON.stringify(g)); }
+// box-shadow's top-first list read back in Figma's order, bottom first; a style matched the same way round (2026-11-28)
+{ const { cssShadows, shadowKey } = await import('../parity/external.mjs');
+  const css = 'rgb(0, 0, 255) 0px 2px 0px 2px, rgb(255, 0, 0) 0px 2px 0px 2px';
+  const s = await shadowLayers(cssShadows(css), async (c) => c);
+  const style = { name: 'Stack', layers: [{ type: 'DROP_SHADOW', x: 0, y: 2, blur: 0, spread: 2, color: 'rgb(255 0 0)' }, { type: 'DROP_SHADOW', x: 0, y: 2, blur: 0, spread: 2, color: 'rgb(0 0 255)' }] };
+  ok('overlapping box-shadows read back bottom first, as Figma lists them, and match the style that stacks them so',
+    s.layers[0].color === 'rgb(255, 0, 0)' && s.layers[1].color === 'rgb(0, 0, 255)' && wholeShadowStyle(cssShadows(css), style, [style], shadowKey) === style
+    && wholeShadowStyle(cssShadows('rgb(255, 0, 0) 0px 2px 0px 2px, rgb(0, 0, 255) 0px 2px 0px 2px'), style, [style], shadowKey) !== style, JSON.stringify(s)); }
 // a line's square cap read back as css.mjs draws it: its edge's box shadowed half the edge's width along the line each
 // way in the edge's colour (a caret 16 tall inked 17, 2026-11-28); a lone shadow, one across the line, another colour's
 // or an inset one is no cap

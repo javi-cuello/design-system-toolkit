@@ -29,7 +29,7 @@
  */
 import { createRequire } from 'node:module';
 import { layerIndex } from './layers.mjs';
-import { parseColour, figmaWeight, radialOf } from './values.mjs';
+import { parseColour, figmaWeight, radialOf, shadowOrder } from './values.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { propAttr } from '../shared/prop-attr.mjs';
 import { css, KINDS } from './schema.mjs';
@@ -414,16 +414,16 @@ export function assertionsFor(at, ctx) {
    * gradients in one Figma file render at CSS 135° and 110.9° on their boxes.
    * A diagonal recorded without its transform is said, not guessed.
    */
-  const gradient = (g, from) => {
+  const gradient = (g, from, kind = 'gradient', prop = 'background-image') => {
     const stops = g.stops.map((st) => ({ r: V.colour(st.color), position: +(st.position * 100).toFixed(2) }));
     const missing = stops.find((s) => s.r.unresolved !== undefined);
-    if (missing) return put('gradient', 'background-image', missing.r, from);
+    if (missing) return put(kind, prop, missing.r, from);
     const resolved = stops.map((s) => ({ colour: s.r.value, position: s.position }));
     // a radial one, its ellipse in percentages of the box (values.mjs radialOf); turned off the axes, no CSS radial draws it
-    if (g.type === 'GRADIENT_RADIAL') { const r = radialOf(g.transform); return r ? add('gradient', 'background-image', { radial: r, stops: resolved }, from) : out.push({ kind: 'unresolved', prop: 'background-image', expected: null, from: 'a radial gradient turned off the box\'s axes, or recorded without its transform: no CSS radial draws a turned ellipse' }); }
-    if (Array.isArray(g.transform)) return add('gradient', 'background-image', { transform: g.transform, stops: resolved }, from);
-    if (g.angle % 90 !== 0) return out.push({ kind: 'unresolved', prop: 'background-image', expected: null, from: `a ${g.angle}° gradient recorded without its transform, which alone fixes a diagonal's direction on this box: snapshot again with design-system-snapshot 0.48.0` });
-    add('gradient', 'background-image', { angle: g.angle, stops: resolved }, from);
+    if (g.type === 'GRADIENT_RADIAL') { const r = radialOf(g.transform); return r ? add(kind, prop, { radial: r, stops: resolved }, from) : out.push({ kind: 'unresolved', prop, expected: null, from: 'a radial gradient turned off the box\'s axes, or recorded without its transform: no CSS radial draws a turned ellipse' }); }
+    if (Array.isArray(g.transform)) return add(kind, prop, { transform: g.transform, stops: resolved }, from);
+    if (g.angle % 90 !== 0) return out.push({ kind: 'unresolved', prop, expected: null, from: `a ${g.angle}° gradient recorded without its transform, which alone fixes a diagonal's direction on this box: snapshot again with design-system-snapshot 0.48.0` });
+    add(kind, prop, { angle: g.angle, stops: resolved }, from);
   };
   if (!runtime) {
     const style = node.fillStyle && (ctx.snapshot.paintStyles || []).find((p) => p.name === node.fillStyle);
@@ -464,7 +464,19 @@ export function assertionsFor(at, ctx) {
   const shadowLayers = [];
   let shadowUnresolved = null;
   const strokes = !runtime && Array.isArray(node.strokes) && node.strokes.length ? node.strokes : null;
-  if (strokes) {
+  // a gradient stroke, as the contract's css.mjs paints one: a border painted by border-image where the stroke takes room
+  // (INSIDE, in the layout), all round at one width with square corners; any other no CSS channel paints, said
+  const gradedStroke = strokes && strokes[0] && typeof strokes[0] === 'object' && /^GRADIENT_/.test(strokes[0].type || '');
+  if (gradedStroke) {
+    const weights = Array.isArray(node.strokeSides) ? node.strokeSides : [1, 1, 1, 1];
+    const square = !node.radius || (Array.isArray(node.radius) ? node.radius.every((r) => !r) : false);
+    if (node.strokeAlign === 'INSIDE' && node.strokesInLayout !== false && weights.every((x) => x > 0 && x === weights[0]) && square && !(node.dash && node.dash.length)) {
+      SIDES.forEach((side, i) => put('strokeWidth', `border-${side}-width`, bound(node, 'strokeWeight', i) ? V.length(bound(node, 'strokeWeight', i)) : { value: `${weights[i]}px` }, bound(node, 'strokeWeight', i) || weights[i]));
+      if (/^GRADIENT_(LINEAR|RADIAL)$/.test(strokes[0].type)) gradient(strokes[0], 'gradient stroke', 'borderGradient', 'border-image-source');
+      else out.push({ kind: 'unresolved', prop: 'border-image-source', expected: null, from: `a ${strokes[0].type.toLowerCase().replace(/_/g, ' ')} stroke, which no CSS gradient draws as Figma does` });
+    } else out.push({ kind: 'unresolved', prop: 'border-image-source', expected: null, from: 'a gradient stroke off the layout, on some sides or round corners: border-image is the one CSS channel that paints a gradient edge, and it takes room and draws no rounded corner' });
+  }
+  else if (strokes) {
     const colour = V.colour(strokes[0]);
     const weights = Array.isArray(node.strokeSides) ? node.strokeSides : [1, 1, 1, 1];
     const width = (i) => {
@@ -546,17 +558,19 @@ export function assertionsFor(at, ctx) {
    * paints its first shadow on top, Figma lists the bottom layer first. A
    * bound colour resolves in the tier being measured; the snapshot keeps an
    * effect style's colours in the default mode only. Blur layers are not
-   * box-shadow. An unbound effect ('literal') has kinds recorded and no
-   * values, so it cannot be stated.
+   * box-shadow. An effect with no style ('literal') is stated from the
+   * layers the snapshot records beside it (0.94.0's effectLayers, one
+   * shape with a style's); an older snapshot recorded only its kinds, so
+   * it cannot be stated. The order is turned by values.mjs shadowOrder.
    */
   const effect = node.effect && !runtime ? node.effect : null;
   if (effect) {
-    const style = (ctx.snapshot.effects || []).find((e) => e.name === effect);
-    if (!style) shadowUnresolved = shadowUnresolved || { unresolved: effect === 'literal' ? 'an unbound effect, whose values the snapshot does not record' : `effect style ${effect}` };
+    const style = effect === 'literal' ? (Array.isArray(node.effectLayers) && node.effectLayers.length ? { layers: node.effectLayers } : null) : (ctx.snapshot.effects || []).find((e) => e.name === effect);
+    if (!style) shadowUnresolved = shadowUnresolved || { unresolved: effect === 'literal' ? 'an unbound effect, whose values this older snapshot does not record' : `effect style ${effect}` };
     else {
       // a blur is a filter, not a shadow: said, not dropped
       for (const l of style.layers.filter((x) => !/SHADOW/.test(x.type))) out.push({ kind: 'unresolved', prop: l.type === 'BACKGROUND_BLUR' ? 'backdrop-filter' : 'filter', expected: null, from: `a ${l.type} in effect style ${effect}, which no rule translates` });
-      for (const l of style.layers.filter((x) => /SHADOW/.test(x.type)).reverse()) {
+      for (const l of shadowOrder(style.layers.filter((x) => /SHADOW/.test(x.type)))) {
         const c = l.bound && l.bound.color ? V.colour(l.bound.color.name) : V.colour(l.color);
         if (c.unresolved !== undefined) { shadowUnresolved = shadowUnresolved || c; continue; }
         shadowLayers.push(`${l.type === 'INNER_SHADOW' ? 'inset ' : ''}${l.x}px ${l.y}px ${l.blur}px ${l.spread}px ${c.value}`);

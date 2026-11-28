@@ -40,7 +40,7 @@ import { fileURLToPath } from 'node:url';
 import { collect, pairElements, selectorFor, rootPattern } from './pair.mjs';
 import { displayName } from '../shared/names.js';
 import { writeReport } from '../shared/output.mjs';
-import { parseColour, figmaWeight, insetStroke, splitTop, sideWinner } from './values.mjs';
+import { shadowOrder, parseColour, figmaWeight, insetStroke, splitTop, sideWinner } from './values.mjs';
 import { probeSource } from './probe.mjs';
 import { pseudoClasses } from '../component-contract/to-code.mjs';
 
@@ -104,7 +104,7 @@ export function expected(element, fields, value, textStyle, effectOf = () => nul
       if (s) for (const [k, v] of Object.entries({ 'font-size': s.size, 'font-weight': figmaWeight(String(s.weight)) ?? s.weight, 'line-height': s.lineHeight == null ? null : +(s.lineHeight * s.size).toFixed(2), 'letter-spacing': +((s.letterSpacing || 0) * s.size).toFixed(2) })) if (v != null) out[k] = { want: v, token: element.typography };
     }
     // a shadow: the effect style's layers, as the key both sides are compared by (what they draw)
-    if (f === 'shadow' && element.shadow) { const fx = effectOf(element.shadow); if (fx) out.shadow = { want: shadowKey((fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color }))), token: element.shadow }; }
+    if (f === 'shadow' && element.shadow) { const fx = effectOf(element.shadow); if (fx) out.shadow = { want: shadowKey(shadowOrder((fx.layers || []).filter((l) => /SHADOW/.test(l.type))).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color }))), token: element.shadow }; }
     if (f === 'size') { if (element.minWidth != null) out['min-width'] = { want: value(element.minWidth), token: null }; if (element.minHeight != null) out['min-height'] = { want: value(element.minHeight), token: null }; }
   }
   return out;
@@ -715,7 +715,7 @@ export async function tokenSides(snapshot, repo, spec, valueOf) {
   }
   // effects: matched by what they draw, since the two sides name them differently
   if (spec.effects) {
-    for (const e of snapshot.effects || []) { const k = shadowKey(e.layers.filter((l) => /SHADOW/.test(l.type)).map((l) => ({ ...l, inset: l.type === 'INNER_SHADOW' }))); ours.push({ group: 'effect', name: e.name, words: [k], value: k }); }
+    for (const e of snapshot.effects || []) { const k = shadowKey(shadowOrder(e.layers.filter((l) => /SHADOW/.test(l.type))).map((l) => ({ ...l, inset: l.type === 'INNER_SHADOW' }))); ours.push({ group: 'effect', name: e.name, words: [k], value: k }); }
     for (const [p, v] of leaves((await mod(spec.effects.file))[spec.effects.export])) if (typeof v === 'string' && /px/.test(v) && /rgba?\(|#[0-9a-f]{3}/i.test(v)) { const k = shadowKey(cssShadows(v)); theirs.push({ group: 'effect', name: p.join('.'), words: [k], value: k, show: v }); }
   }
   return { ours, theirs };

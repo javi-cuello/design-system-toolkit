@@ -1,4 +1,6 @@
-# Eval cases — component-validator (v2.33.0)
+# Eval cases — component-validator (v2.33.2)
+
+**Walked: 2026-11-28 for 2.33.2** — W11's diamond check reads a gradient fill stored as an object (snapshot 0.94.0) as well as the bare word; the new assertion in `tools/component-validator/test-validate.mjs` fails on 2.33.1 and passes now. The E, MU, ST, CV, CLI and WF cases stand: `node tools/component-validator/test-validate.mjs` 158/158, `node skills/component-validator/tests/test-walk-figma.mjs` 3/3.
 
 **Walked: 2026-11-21 for 2.33.0** — SKILL.md and references rewritten to skill-standard §A clause I; detail moved to the new references/engine.md and references/record.md. T1–T3 re-traced to their new homes; rule ids, Detect lines and sources unchanged, so the E, MU, ST, CV, CLI and WF cases stand. `node tools/component-validator/test-validate.mjs` and `node skills/component-validator/tests/test-walk-figma.mjs` pass.
 

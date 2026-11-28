@@ -42,7 +42,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
-import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop, shorthandOf, sidePiece } from '../parity/values.mjs';
+import { shadowOrder, parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop, shorthandOf, sidePiece } from '../parity/values.mjs';
 export { shorthandOf, sidePiece } from '../parity/values.mjs';
 import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses, isDrawing } from './to-code.mjs';
@@ -705,7 +705,8 @@ export async function borderGradient(im, colourOf) {
   return g && { ...g, stops: await Promise.all(g.stops.map(async (st) => ({ ...st, color: await colourOf(st.color) }))) };
 }
 export async function shadowLayers(parsed, colourOf) {
-  return { layers: await Promise.all(parsed.map(async (l) => ({ type: l.inset ? 'INNER_SHADOW' : 'DROP_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: await colourOf(l.color) }))) };
+  // (box-shadow lists its top layer first, Figma its bottom one: values.mjs shadowOrder)
+  return { layers: await Promise.all(shadowOrder(parsed).map(async (l) => ({ type: l.inset ? 'INNER_SHADOW' : 'DROP_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: await colourOf(l.color) }))) };
 }
 export function lineEdge(x, width, raw0) {
   if (!x || !x.border) return x;
@@ -1393,7 +1394,8 @@ export const paddingCss = (rtl) => ({ top: 'padding-top', end: rtl ? 'padding-le
    code's own over it) is matched by value, so the difference shows. `layers`: the shadow read, as cssShadows gives it;
    `key`: shadowKey. Tested by test-from-code.mjs. */
 export function wholeShadowStyle(layers, named, effects, key, coloursOf = (l) => [l.color]) {
-  const of = (fx) => (fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color, ...(l.bound && { bound: l.bound }) }));
+  // (a style's layers in box-shadow's order, top first, as `layers` are read: values.mjs shadowOrder)
+  const of = (fx) => shadowOrder((fx.layers || []).filter((l) => /SHADOW/.test(l.type))).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color, ...(l.bound && { bound: l.bound }) }));
   if (named) {
     const own = of(named);
     const fits = own.length && own.length === layers.length && own.every((l, i) => coloursOf(l).some((c) => key([{ ...l, color: c }]) === key([layers[i]])));
@@ -3353,7 +3355,7 @@ async function main() {
           const named = said.length && effects.find((fx) => said.some((v) => writtenAs(v, fx.name)));
           // a style layer's colour in every mode its bound variable takes (the token table's), its own where it binds none
           const shadeOf = (l) => { const b = l.bound && l.bound.color, t = b && table.find((r) => r[0] === b.name && (!b.collection || r[3] == null || r[3] === b.collection)); return t ? [l.color, ...(t[4] || [t[1]])].filter((c) => typeof c === 'string') : [l.color]; };
-          const keyOf = (fx) => shadowKey((fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color })));
+          const keyOf = (fx) => shadowKey(shadowOrder((fx.layers || []).filter((l) => /SHADOW/.test(l.type))).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color })));
           // a sharp offset layer read as a side's stroke may be the style's own (an inset highlight, a 1px drop): where the
           // whole shadow is a style, or every ring taken is a layer the style the code names draws itself, it is the
           // style's, not a border; a ring the style does not draw (a divider beside an elevation) stays the border

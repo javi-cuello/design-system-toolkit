@@ -146,6 +146,23 @@ ok('a radial gradient is judged by its ellipse and stops; a turned one is said',
     && /^unresolved: a radial gradient turned/.test(rad([[0.7071, 0.7071, 0], [-0.7071, 0.7071, 0.5]]));
 })());
 
+// an effect with no style is judged from the layers the snapshot records, top first as box-shadow lists them; an older
+// snapshot's word alone is said (2026-11-28)
+ok('an effect with no style is its recorded layers, Figma\'s last on top; without them it is said', (() => {
+  const lit = of(F({ effect: 'literal', effects: ['DROP_SHADOW', 'DROP_SHADOW'], effectLayers: [{ type: 'DROP_SHADOW', x: 0, y: 2, blur: 0, spread: 2, color: 'rgb(255 0 0)' }, { type: 'DROP_SHADOW', x: 0, y: 2, blur: 0, spread: 2, color: 'rgb(0 0 255)' }] }))['box-shadow'];
+  return lit === '0px 2px 0px 2px rgba(0, 0, 255, 1), 0px 2px 0px 2px rgba(255, 0, 0, 1)' && /^unresolved: an unbound effect, whose values this older snapshot/.test(of(F({ effect: 'literal', effects: ['DROP_SHADOW'] }))['box-shadow']);
+})());
+// a gradient stroke, as the contract paints it: in the layout, all round and square, a border whose border-image is the
+// gradient; off the layout it is said, never "[object Object]" (2026-11-28)
+ok('a gradient stroke is judged as border-image where it takes room; off the layout it is said', (() => {
+  const g = { type: 'GRADIENT_LINEAR', angle: 90, transform: [[1, 0, 0], [0, 1, 0]], stops: [{ position: 0, color: '#ff0000' }, { position: 1, color: '#0000ff' }] };
+  const a = doc(F({ w: 40, h: 20, strokes: [g], strokeAlign: 'INSIDE', strokeSides: [2, 2, 2, 2] })).assertions;
+  const img = a.find((x) => x.prop === 'border-image-source'), off = of(F({ w: 40, h: 20, strokes: [g], strokeAlign: 'OUTSIDE', strokeSides: [2, 2, 2, 2] }));
+  return img && img.kind === 'borderGradient' && KINDS.borderGradient.compare(img.expected, { image: 'linear-gradient(90deg, rgb(255, 0, 0) 0%, rgb(0, 0, 255) 100%)', w: 40, h: 20 }, {}, {})
+    && a.find((x) => x.prop === 'border-top-width').expected === '2px' && !JSON.stringify(a).includes('[object Object]')
+    && /^unresolved: a gradient stroke off the layout/.test(off['border-image-source']) && !JSON.stringify(off).includes('[object Object]');
+})());
+
 // ---- layout ---------------------------------------------------------------------------------
 ok('padding is four properties, each preferring its bound token',
   of(F({ pad: [12, 4, 12, 4], bindings: { pad: ['Spacing/12', null, 'Spacing/12', null] } }))['padding-top'] === '12px'

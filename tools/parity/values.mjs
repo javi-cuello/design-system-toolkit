@@ -165,7 +165,7 @@ export function parseShadow(value) {
  */
 /* A radial gradient's ellipse in the layer, as percentages of its box: Figma's gradient space puts the centre at (0.5, 0.5)
    and the ends of the two radii at (1, 0.5) and (0.5, 1), each taken back into the layer's unit square through the
-   transform's inverse (figma-plugin-helpers extractRadialOrDiamondGradientParams, which reads it so). → { x, y, rx, ry }
+   transform's inverse. → { x, y, rx, ry }
    (two decimals), or null where the radii are not along the box's axes (a turned ellipse, which no CSS radial draws) or
    the transform has no inverse. */
 export function radialOf(t) {
@@ -196,6 +196,12 @@ export function parseRadial(value) {
   const [rx, ry, x, y] = m.slice(1).map((v, i) => (v === undefined && i > 1 ? 50 : Number(v)));
   return { rx, ry, x, y, stops };
 }
+/* Shadow layers from one paint order to the other. Figma's effects array paints its last entry on top (its Effects
+   panel, whose order is the render order, lists the top first, the reverse of the array the API gives; tokens/dtcg.js
+   shadowToken writes effect styles so); CSS box-shadow paints its first on top (CSS Backgrounds 3 §6.1.3: "the first shadow is on
+   top and the others are layered behind"). Either way round it is the list reversed, as a copy. The one owner of that
+   order: the contract keeps Figma's, and every reader or writer of box-shadow turns it here. */
+export const shadowOrder = (layers) => [...(layers || [])].reverse();
 export function parseGradient(value) {
   const s = String(value == null ? '' : value);
   const inner = s.match(/linear-gradient\(([\s\S]*)\)\s*$/);

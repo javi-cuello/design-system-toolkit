@@ -958,7 +958,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // shared variant-name reader is)
   const colourOf = (c) => { const x = parseColour(c); return x ? { rgb: x.slice(0, 3).map((v) => v / 255), a: x[3] } : null; };
   // an effect with no style as Figma's effects: each shadow at its offset, blur, spread and colour (a raw colour, or the
-  // token's own value from the snapshot, K.values, as an unbound fill is drawn); null where a layer cannot be painted
+  // token's own value from the snapshot, K.values, as an unbound fill is drawn); null where a layer cannot be painted.
+  // The contract keeps Figma's order, bottom first, so the layers go in as they are (values.mjs shadowOrder)
   const effectsOf = (layers) => {
     const out = [];
     for (const l of layers || []) {

@@ -21,6 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
+import { shadowOrder } from '../parity/values.mjs';
 import { alignToCss, centreOffset, share, negative, pullProp, fillCss, gradientCss, rawColour as raw, smoothingToCss, pathsToCss, pathsToMask, blendToCss, typeOfValue, familyToCss, looksLikeValue, spacingToCss, CASE_ROWS, DECORATION_ROWS, textToCss, CLEARED, UNCLIPPED } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma', 'foreign']);
@@ -167,10 +168,11 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
   const graded = b && b.color !== undefined && ((b.color && typeof b.color === 'object' && !Array.isArray(b.color)) || (typeof b.color === 'string' && b.color.startsWith('GRADIENT_')));
   if (graded) {
     const W = Array.isArray(b.width) ? b.width : [b.width ?? 1];
-    const g = typeof b.color === 'object' ? gradientCss(b.color, { w: e.width, h: e.height }, (f) => (raw(f) ? f : names.token(f))) : { unread: [`border (a ${b.color.toLowerCase().replace(/_/g, ' ')} stroke recorded without its stops)`] };
+    const g = typeof b.color === 'object' ? gradientCss(b.color, { w: e.width, h: e.height }, (f) => (f == null ? undefined : raw(f) ? f : names.token(f))) : { unread: [`border (a ${b.color.toLowerCase().replace(/_/g, ' ')} stroke recorded without its stops)`] };
     const square = !e.radius || (Array.isArray(e.radius) ? e.radius.every((r) => !r) : false);
     const allRound = !b.sides || SIDES.every((k) => b.sides[k]);
-    if (!g.value) unread.push(...g.unread.map((u) => u.replace(/^background/, 'border')));
+    // (a stop whose colour names no token leaves gradientCss saying nothing: said here, the border never dropped silently)
+    if (!g.value) unread.push(...(g.unread.length ? g.unread.map((u) => u.replace(/^background/, 'border')) : ['border (a gradient stroke a stop of which names no colour)']));
     else if ((b.align || 'inside') === 'inside' && b.inLayout && allRound && W.every((x) => x === W[0]) && square && !b.dash) { put('border', `${len(W[0], true)} solid transparent`); put('border-image', `${g.value} 1`); }
     else unread.push('border (a gradient stroke off the layout, on some sides or round corners: border-image is the one CSS channel that paints a gradient edge, and it takes room and draws no rounded corner)');
   }
@@ -233,7 +235,8 @@ export function declarations(e, { root = false, holds = false, row = true, wrap 
   // colour a token where a variable binds it; a blur or any other layer no box-shadow draws, said
   else if (shadow && typeof shadow === 'object' && Array.isArray(shadow.layers)) {
     const n = (v) => (v ? `${+(+v).toFixed(2)}px` : '0');
-    for (const l of shadow.layers) {
+    // (top first, as box-shadow paints: the contract keeps Figma's order, bottom first; values.mjs shadowOrder)
+    for (const l of shadowOrder(shadow.layers)) {
       if (l.type !== 'DROP_SHADOW' && l.type !== 'INNER_SHADOW') { unread.push(`shadow (a ${String(l.type).toLowerCase().replace(/_/g, ' ')} layer, which no box-shadow draws)`); continue; }
       const c = raw(l.color) ? l.color : names.token(l.color);
       if (c === undefined) { unread.push(`shadow (its colour ${l.color}, no token named)`); continue; }

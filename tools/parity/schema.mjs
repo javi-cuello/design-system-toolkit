@@ -479,7 +479,7 @@ export const PROPS = new Set([
   ...SIDES.flatMap((s) => [`padding-${s}`, `border-${s}-width`, `border-${s}-color`]),
   'row-gap', 'column-gap', 'justify-content', 'align-items', 'flex-wrap', 'overflow',
   'width', 'height', 'min-width', 'min-height', 'max-width', 'max-height', 'border-radius',
-  'background-color', 'background-image', 'color', 'fill', 'stroke', 'stroke-width', 'opacity', 'box-shadow',
+  'background-color', 'background-image', 'border-image-source', 'color', 'fill', 'stroke', 'stroke-width', 'opacity', 'box-shadow',
   'font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing', 'text-align',
   'text-transform', 'font-variant-caps', 'text-decoration-line', 'mix-blend-mode', ...SIDES.map((x) => `border-${x}-style`), 'rotate', 'filter', 'backdrop-filter',
   '-stacking', '-clipped', '-present', '-ring-width', '-ring-offset', '-ring-color', '-ring-radius', '-ring-drawn', '-inner-ring-width', '-inner-ring-color', '-inner-ring-drawn', '-rings', '-stroke',
@@ -504,3 +504,7 @@ export const NUMERIC = new Set([
 ]);
 
 export const isProp = (p) => PROPS.has(p) || /^-attr:[a-z0-9-]+$|^-swap:[a-z0-9-]+$/.test(p);
+
+/* A gradient stroke's paint, judged as a fill's gradient is (above), read off border-image-source: the one CSS channel
+   that paints a gradient edge (the contract's css.mjs draws a gradient stroke so). */
+KINDS.borderGradient = { ...KINDS.gradient, reads: ['border-image-source', 'width', 'height'], read: ({ record }) => ({ image: record['border-image-source'], w: parseFloat(record.width), h: parseFloat(record.height) }) };

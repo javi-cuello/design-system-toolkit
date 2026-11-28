@@ -1318,7 +1318,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
 { const d = declarations({ kind: 'container', shadow: { layers: [{ type: 'INNER_SHADOW', x: 0, y: 1, blur: 3, spread: 2, color: 'Shadow/inner' }, { type: 'DROP_SHADOW', x: 0, y: 2.5, blur: 6, spread: 0, color: 'rgb(0 0 0 / 0.25)' }, { type: 'LAYER_BLUR', blur: 4 }] } }, {}, names);
   const v = Object.fromEntries(d.decls.map(([p, x]) => [p, x]));
   ok('an effect with no style is drawn layer by layer as box-shadow, a blur said unread',
-    v['box-shadow'] === 'inset 0 1px 3px 2px var(--shadow-inner), 0 2.5px 6px 0 rgb(0 0 0 / 0.25)' && d.unread.some((u) => /layer blur/.test(u)) && !d.unread.some((u) => /no style/.test(u)), JSON.stringify(d)); }
+    v['box-shadow'] === '0 2.5px 6px 0 rgb(0 0 0 / 0.25), inset 0 1px 3px 2px var(--shadow-inner)' && d.unread.some((u) => /layer blur/.test(u)) && !d.unread.some((u) => /no style/.test(u)), JSON.stringify(d)); }
 // a gradient stroke: a border painted by border-image where it takes room, all round, square; any other said, never one
 // colour or a var(--object-object) (2026-11-28)
 { const g = { type: 'GRADIENT_LINEAR', angle: 90, transform: [[1, 0, 0], [0, 1, 0]], stops: [{ position: 0, color: 'rgb(255 0 0)' }, { position: 1, color: 'rgb(0 0 255)' }] };
@@ -1330,4 +1330,11 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     v(inLayout).border === '2px solid transparent' && v(inLayout)['border-image'] === 'linear-gradient(90deg, rgb(255 0 0) 0%, rgb(0 0 255) 100%) 1'
     && !('box-shadow' in v(ring)) && !('outline' in v(ring)) && ring.unread.some((u) => /gradient stroke/.test(u))
     && word.unread.some((u) => /angular stroke recorded without its stops/.test(u)) && !JSON.stringify(word.decls).includes('object'), JSON.stringify([inLayout, ring, word])); }
+// two overlapping shadows, red under blue in Figma (its array bottom first): box-shadow lists blue first, on top (2026-11-28)
+{ const d = declarations({ kind: 'container', shadow: { layers: [{ type: 'DROP_SHADOW', x: 0, y: 2, blur: 0, spread: 2, color: 'rgb(255 0 0)' }, { type: 'DROP_SHADOW', x: 0, y: 2, blur: 0, spread: 2, color: 'rgb(0 0 255)' }] } }, {}, names);
+  const v = Object.fromEntries(d.decls.map(([p, x]) => [p, x]));
+  ok('overlapping shadows keep Figma\'s stacking: its last layer is box-shadow\'s first', v['box-shadow'] === '0 2px 0 2px rgb(0 0 255), 0 2px 0 2px rgb(255 0 0)', v['box-shadow']); }
+// a gradient stroke a stop of which names no colour is said, never dropped silently (2026-11-28)
+{ const d = declarations({ kind: 'container', width: 4, height: 4, border: { color: { type: 'GRADIENT_LINEAR', angle: 90, transform: [[1, 0, 0], [0, 1, 0]], stops: [{ position: 0, color: 'rgb(255 0 0)' }, { position: 1, color: undefined }] }, width: 1, inLayout: true } }, {}, names);
+  ok('a gradient stroke whose stop names no colour is said unread', !d.decls.some(([p]) => /^border/.test(p)) && d.unread.some((u) => /names no colour/.test(u)), JSON.stringify(d)); }
 console.log(`${n} passed`);

@@ -56,4 +56,8 @@ ok('the table cannot be changed by a caller', Object.isFrozen(WEIGHTS));
   ok('a shadow that is no inset stroke names none', insetStrokeVars('0 1px 2px var(--shadow)') === null && insetStrokeVars('inset 0 1px 0 var(--stroke-1) red') === null && insetStrokeVars(null) === null);
 }
 
+// shadow layers between paint orders: Figma lists the bottom first, box-shadow the top first (2026-11-28)
+{ const { shadowOrder } = await import('./values.mjs');
+  const fig = [{ c: 'bottom' }, { c: 'top' }];
+  ok('Figma\'s bottom-first effects are box-shadow\'s top-first list reversed, as a copy', JSON.stringify(shadowOrder(fig)) === JSON.stringify([{ c: 'top' }, { c: 'bottom' }]) && fig[0].c === 'bottom' && JSON.stringify(shadowOrder([])) === '[]'); }
 console.log(`\n${n} passed`);
