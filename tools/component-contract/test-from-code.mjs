@@ -1404,6 +1404,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const { findChrome, launch, newPage, attach, navigate, waitFor, call } = await import('../shared/cdp.mjs');
   const { selfSiteFiles, serveSite, selfMapping } = await import('./site.mjs');
   const { HOUSE, drawnAsOf, heldOf } = await import('./to-code.mjs');
+  const { drawnAsSeen } = await import('./from-code.mjs');
   const link = { contract: 1, component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figmaValues: ['Rest', 'Hover'], role: 'interaction', pointer: ['hover'], figma: 'State' } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 10, height: 10, background: '#000000' } }, variants: [{ when: { state: 'hover' }, set: { 'root.background': '#ff0000' } }] };
   const card = { contract: 1, component: 'Card', folder: 'card', props: { shown: { type: 'boolean', default: false, axis: true, figma: 'Shown' } },
@@ -1418,10 +1419,15 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       const tab = await attach(await newPage(browser.endpoint));
       await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
       const at = (shown) => call(tab, ([q, v]) => { const s = document.createElement('section'); s.append(window.R.card({ shown: v })); document.getElementById('stage').replaceChildren(s); return getComputedStyle(document.querySelector(q)).backgroundColor; }, [sel, shown]);
-      const [off, on] = [await at(false), await at(true)];
-      const hint = drawnAsOf(card, { shown: true }, heldOf(library)).find((x) => x.id === 'link');
-      ok('a placed component\'s own pointer value nothing forwards: its look drawn by the holder\'s sheet under the holder\'s attribute, nothing forced, its rest\'s elsewhere; read as that value',
-        off === 'rgb(0, 0, 0)' && on === 'rgb(255, 0, 0)' && hint && axisValueOf({ Rest: {}, Hover: { pseudo: 'hover' } }, {}, false, hint.pseudo) === 'Hover', JSON.stringify([off, on, hint && hint.pseudo]));
+      const hint = drawnAsOf(card, { shown: true }, heldOf(library)).find((x) => x.id === 'link'), asked = [{ id: 'link', selector: sel, pseudo: hint && hint.pseudo }];
+      const off = await at(false), offSeen = await drawnAsSeen(tab, asked), on = await at(true), onSeen = await drawnAsSeen(tab, asked);
+      ok('a placed component\'s own pointer value nothing forwards: its look drawn by the holder\'s sheet under the holder\'s attribute, nothing forced, its rest\'s elsewhere',
+        off === 'rgb(0, 0, 0)' && on === 'rgb(255, 0, 0)', JSON.stringify([off, on]));
+      // (review of 2026-11-28: read at that value only where the page shows it so, the same unforced as forced, never
+      // from the sheet's own word for it)
+      ok('…and read at that value only where the page draws it as that pseudo-class draws it, never where it does not',
+        onSeen.length === 1 && axisValueOf({ Rest: {}, Hover: { pseudo: 'hover' } }, {}, false, onSeen[0].pseudo) === 'Hover' && offSeen.length === 0
+        && await call(tab, (q) => !document.querySelector(`${q}:hover`), sel), JSON.stringify([onSeen, offSeen]));
     } finally { await browser.close(); await site.close(); }
   }
 }

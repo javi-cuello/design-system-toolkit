@@ -1859,6 +1859,26 @@ async function forceAt(tab, at, also = []) {
   return got || { missed: [] };
 }
 
+/* The placed components the holder's sheet draws at a pointer value of their own with nothing forced (to-code's
+   drawnAsOf), each `{ selector, pseudo }`, that the page shows so: each one's look, it and every element in it, the same
+   unforced as forced to that pseudo-class. Only those are read at that value; one the page draws otherwise stays a
+   difference. Lets go of what it forced. Tested by test-from-code.mjs. */
+export async function drawnAsSeen(tab, targets) {
+  const { forceState, waitFor, call } = await import('../shared/cdp.mjs');
+  const look = (q) => call(tab, (sel) => [...document.querySelectorAll(sel)].flatMap((n) => [n, ...n.querySelectorAll('*')]).map((n) => { const s = getComputedStyle(n); return [...s].map((p) => `${p}:${s.getPropertyValue(p)}`).join(';'); }).join('|'), q);
+  const out = [];
+  for (const x of targets) {
+    const before = await look(x.selector);
+    if (!before) continue;
+    await forceState(tab, [{ selector: x.selector, pseudo: x.pseudo }]);
+    await waitFor(tab, 'document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)', { timeout: 3000 }).catch(() => {});
+    const after = await look(x.selector);
+    await tab.send('DOM.getDocument', { depth: 0 });
+    if (after === before) out.push(x);
+  }
+  return out;
+}
+
 /* The placed components the design passes a pointer state of their own at this combination `combo` of this one's
    props, itself at a pointer state (a radio's icon given State Focus at focus, a picker's select at hover): each part id
    with the pseudo-class, without its colon, that draws that state in its own sheet. Read from the anatomy the variants
@@ -2301,6 +2321,18 @@ async function selfSource(project, name, { second = false } = {}) {
     : x.type === 'number' ? { control: 'number', type: 'number', default: x.default }
     : x.type === 'node' ? selfSlotControl(x)
     : { control: 'text', type: 'string', default: x.default ?? '' }])) } };
+  // the design's combination a render at these args draws, and the args with every text the reading leaves unsaid at its
+  // stand-in (the markup's own default is the design's): each of the markup's props by its contract key, the has-value
+  // flag by its own, the state by the design's value; what forwardedAt and drawnAsOf read
+  const comboOf = (all) => {
+    const { __state, ...args } = all;
+    for (const x of own) if (x.type === 'string' && args[x.name] === undefined) args[x.name] = standIn(x.default);
+    const combo = Object.fromEntries(own.filter((x) => x.key && args[x.name] !== undefined).map((x) => [x.key, args[x.name]]));
+    if (flag && flag.name in args && entry) combo[entry.flag] = args[flag.name];
+    const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
+    if (pk && __state !== undefined && __state !== restOf(c)) combo[pk] = __state;
+    return { __state, args, combo };
+  };
   const tokens = project.snapshot;
   const src = {
     governed: true, label: project.config.project, tab, lib, repo: project.repo, out: path.join(where.projectDir, 'round-trip', second ? 'self2' : 'self'), mode: tier, tokens,
@@ -2324,33 +2356,16 @@ async function selfSource(project, name, { second = false } = {}) {
     // each read on a clean page (render, below): a forced pointer state never outlives the args it was forced for
     statesAsArg: true,
     // the placed components a render at these args forces a pointer state of their own on (forwardedAt), each part id
-    // with its pseudo-class: what render forces (its own copy of these lines, as its source keys the read cache), and
-    // what the reading takes as that component's state (axisValueOf)
+    // with its pseudo-class: what render forced, and what the reading takes as that component's state (axisValueOf)
     // (and, where this one is at no pointer state, those the design gives one of their own that this one's sheet draws,
-    // to-code's drawnAsOf: nothing forced, the reading takes them at that state)
+    // to-code's drawnAsOf, which the page showed so at the last render, drawnAsSeen: asked after it)
     forwardedOf(all) {
-      const { __state, ...args } = all;
-      // (a string the reading leaves unsaid, at its story's words, its stand-in: the markup's own default is the design's)
-      for (const x of own) if (x.type === 'string' && args[x.name] === undefined) args[x.name] = standIn(x.default);
-      // (the design's combination this render draws: each of the markup's props by its contract key, the has-value flag
-      // by its own, the state by the design's value; what forwardedAt reads)
-      const combo = Object.fromEntries(own.filter((x) => x.key && args[x.name] !== undefined).map((x) => [x.key, args[x.name]]));
-      if (flag && flag.name in args && entry) combo[entry.flag] = args[flag.name];
-      const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
-      if (pk && __state !== undefined && __state !== restOf(c)) combo[pk] = __state;
-      if (!src.pseudoOf[__state]) return drawnAsOf(c, { ...variantDefaults(c), ...combo }, forwardMain, settingsOf(c.folder)).filter((x) => forwardSel[x.id]).map(({ id, pseudo }) => ({ id, pseudo }));
+      const { combo, __state } = comboOf(all);
+      if (!src.pseudoOf[__state]) return src.seenAs || [];
       return forwardedAt(c, combo, forwardMain, forwardPseudo).filter((x) => forwardSel[x.id]);
     },
     async render(all) {
-      const { __state, ...args } = all;
-      // (a string the reading leaves unsaid, at its story's words, its stand-in: the markup's own default is the design's)
-      for (const x of own) if (x.type === 'string' && args[x.name] === undefined) args[x.name] = standIn(x.default);
-      // (the design's combination this render draws: each of the markup's props by its contract key, the has-value flag
-      // by its own, the state by the design's value; what forwardedAt reads)
-      const combo = Object.fromEntries(own.filter((x) => x.key && args[x.name] !== undefined).map((x) => [x.key, args[x.name]]));
-      if (flag && flag.name in args && entry) combo[entry.flag] = args[flag.name];
-      const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
-      if (pk && __state !== undefined && __state !== restOf(c)) combo[pk] = __state;
+      const { __state, args, combo } = comboOf(all);
       const also = src.pseudoOf[__state] ? forwardedAt(c, combo, forwardMain, forwardPseudo).filter((x) => forwardSel[x.id]).map((x) => ({ selector: forwardSel[x.id], pseudo: x.pseudo })) : [];
       // a state no pointer reaches is the markup's own prop (state="loading")
       if (__state !== undefined && __state !== restOf(c) && !src.pseudoOf[__state] && src.stateArg) args[src.stateArg] = __state;
@@ -2380,6 +2395,7 @@ async function selfSource(project, name, { second = false } = {}) {
         return document.fonts.ready.then(() => true);
       }, [name, args, String(tier).toLowerCase()]);
       const { missed } = await forceAt(tab, src.pseudoOf[__state], also);
+      src.seenAs = src.pseudoOf[__state] ? [] : (await drawnAsSeen(tab, drawnAsOf(c, { ...variantDefaults(c), ...combo }, forwardMain, settingsOf(c.folder)).filter((x) => forwardSel[x.id]).map(({ id, pseudo }) => ({ id, pseudo, selector: forwardSel[id] })))).map(({ id, pseudo }) => ({ id, pseudo }));
       for (const { selector } of also) { const t = forwardTried.get(selector) || { tried: 0, hit: 0 }; t.tried++; if (!missed.includes(selector)) t.hit++; forwardTried.set(selector, t); }
     },
     api: async () => api,
@@ -2397,7 +2413,7 @@ async function selfSource(project, name, { second = false } = {}) {
   // page through a tab that answers from it
   const { chromeVersion } = await import('../shared/cdp.mjs');
   const key = pageKey({ files, chrome: chromeVersion(), fonts: fontsInstalled({ stat: true }), env: localeHere(), system: `${process.platform} ${(await import('node:os')).release()}`,
-    code: [pageCode(), serveSite.toString(), forceAt.toString(), pageReusable.toString(), src.render.toString(), live.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
+    code: [pageCode(), serveSite.toString(), forceAt.toString(), pageReusable.toString(), src.render.toString(), comboOf.toString(), drawnAsSeen.toString(), live.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
   // (an element's matched styles kept once by their content: every element inherits the tokens' :root rule)
   const rec = recorder({ key, live, pool: (o) => Array.isArray(o.cssProperties) });
   const render = src.render, close = src.close;
@@ -2693,9 +2709,10 @@ async function main() {
       const fill = Object.fromEntries(Object.entries(all).filter(([k]) => k in slotArgs));
       const viaChannel = Object.keys(fill).length && await call(L.tab, () => !!window.__STORYBOOK_PREVIEW__);
       const given = Object.fromEntries(Object.entries(all).filter(([k]) => !(viaChannel && k in fill)).map(([k, v]) => [k, v === 'null' && nullable.has(k) ? null : v]));
-      // (the placed components this render forces a pointer state of their own on, by part id: their state, read below)
-      forwarded = new Map((L.forwardedOf ? L.forwardedOf(given) : []).map((x) => [x.id, x.pseudo]));
       await L.render(given, { reload: !!viaChannel });
+      // (the placed components this render forced a pointer state of their own on, or found drawn at one, by part id: their
+      // state, read below)
+      forwarded = new Map((L.forwardedOf ? L.forwardedOf(given) : []).map((x) => [x.id, x.pseudo]));
       if (!viaChannel) return;
       const missing = await call(L.tab, async ([args, wait]) => {
         const p = window.__STORYBOOK_PREVIEW__;

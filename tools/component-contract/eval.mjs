@@ -433,7 +433,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     if (!q) return false;
     const i = (q.figmaValues || []).map(low).indexOf(low(v));
     // (one with a pseudo-class is drawn by this component's sheet where nothing forwards it, to-code's drawnAsOf, and read
-    // back so: no gap)
+    // back so where the page shows it so, from-code's drawnAsSeen: no gap; one it does not stays a difference)
     const at = i >= 0 ? q.values[i] : v;
     return (q.pointer || []).includes(at) && !pseudoClasses(settings)[at];
   };
