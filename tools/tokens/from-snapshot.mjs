@@ -107,18 +107,29 @@ export function toDtcgSnapshot(t) {
     if (hc === cname) return null;
     return valuesOf(byCollection.get(hc), hn) === valuesOf(c, name) ? hc : null;
   };
-  const shadowed = (cname, c, name) => copyOf(cname, c, name) !== null;
-  const deduped = [];
-  for (const [cname, c] of collections) for (const n of namesOf(c)) { const hc = copyOf(cname, c, n); if (hc !== null) deduped.push({ name: `${cname}/${n}`, collection: cname, variable: n, holder: hc, holderName: holder.get(css(n)).split('\u0000')[1], reason: `a copy of ${hc}'s, the same in every mode` }); }
-  // Two names of one property in one collection (`🌮 Weight/Bold` and `Weight/Bold`, `a - b/c` and `a/b/c`), at any
-  // values, have no collection to tell them apart: two paths sharing a name, which writeDtcg refuses
-  // (code-standard rule 52), never one dropped as a third collection's copy and the other written. Only where every
-  // one of them is an exact copy of the collection holding the property is nothing of theirs written, and nothing refused
-  const clashes = [];
+  // Two names of one property in one collection (`🌮 Weight/Bold` and `Weight/Bold`, `a - b/c` and `a/b/c`) are one
+  // token where they hold the same values in the same modes, as two collections' are (code-standard rule 52): the
+  // first written, the other left out and said with it. At other values they have no collection to tell them apart,
+  // two paths sharing a name, which writeDtcg refuses, never one dropped as a third collection's copy and the other
+  // written. Where every one is an exact copy of the collection holding the property, nothing of theirs is written.
+  const isCopy = (cname, c, name) => copyOf(cname, c, name) !== null;
+  const sibling = new Map(), clashes = [];
   for (const [cname, c] of collections) {
     const byKey = new Map();
     for (const n of namesOf(c)) byKey.set(css(n), [...(byKey.get(css(n)) || []), n]);
-    for (const [k, names] of byKey) if (names.length > 1 && !names.every((n) => shadowed(cname, c, n))) clashes.push({ collection: cname, names, property: `--${k}` });
+    for (const [k, names] of byKey) {
+      if (names.length < 2 || names.every((n) => isCopy(cname, c, n))) continue;
+      if (names.every((n) => valuesOf(c, n) === valuesOf(c, names[0]))) for (const n of names.slice(1)) sibling.set(`${cname}\u0000${n}`, names[0]);
+      else clashes.push({ collection: cname, names, property: `--${k}` });
+    }
+  }
+  const shadowed = (cname, c, name) => isCopy(cname, c, name) || sibling.has(`${cname}\u0000${name}`);
+  const deduped = [];
+  for (const [cname, c] of collections) for (const n of namesOf(c)) {
+    const hc = copyOf(cname, c, n);
+    if (hc !== null) deduped.push({ name: `${cname}/${n}`, collection: cname, variable: n, holder: hc, holderName: holder.get(css(n)).split('\u0000')[1], reason: `a copy of ${hc}'s, the same in every mode` });
+    const kept = sibling.get(`${cname}\u0000${n}`);
+    if (kept !== undefined) deduped.push({ name: `${cname}/${n}`, collection: cname, variable: n, holder: cname, holderName: kept, reason: `one token with ${kept} in ${cname}, the same in every mode` });
   }
   const homes = new Map();
   for (const [cname, c] of collections) {

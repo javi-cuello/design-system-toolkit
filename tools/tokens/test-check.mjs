@@ -285,6 +285,20 @@ test('two names of one property in one collection at other values are refused, a
   }
 });
 
+test('two names of one property in one collection at the same values in every mode are one token, both said, local or another library\'s', () => {
+  for (const remote of [false, true]) {
+    const root = repo();
+    withCollections(root, () => ({ Lib: { ...(remote && { remote: true }), modes: ['Light', 'Dark'], values: { Light: { 'Logo/text': '#101010', 'Ω Logo - text': '#101010' }, Dark: { 'Logo/text': '#efefef', 'Ω Logo - text': '#efefef' } }, alias: {} } }));
+    const r = buildCli(root);
+    assert.equal(r.status, 0, `${remote}: ${r.stdout}${r.stderr}`);
+    assert.match(r.stdout, /1 deduped:\n\s+Lib\/Ω Logo - text \(one token with Logo\/text in Lib, the same in every mode\)/, r.stdout);
+    const css = tokensCss(root);
+    assert.ok(!/omega|--lib-logo-text/.test(css), css);
+    assert.match(css, /--logo-text: #101010;/);
+    assert.match(css, /--logo-text: #efefef;/);
+  }
+});
+
 test('a name its collection prefixes that still meets another is refused as before', () => {
   const root = repo();
   withCollections(root, () => ({

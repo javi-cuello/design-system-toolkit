@@ -328,15 +328,20 @@ test("another library's variable a local one names at the same values is that on
   // and between two other libraries' collections (an old copy of a foundations library beside its new one), the first holds it
   const two = { collections: { Old: { modes: ['V'], values: { V: { Space0: 0, Space1: 1 } }, alias: {}, remote: true }, New: { modes: ['V'], values: { V: { Space0: 0, Space2: 2 } }, alias: {}, remote: true } } };
   assert.deepEqual(toDtcgSnapshot(two).collections.map((c) => c.variables.map((v) => v.name)), [['Space0', 'Space1'], ['Space2']]);
-  // two of one property in one collection, at any values, are never one dropped: both go on, and the build refuses
-  // them (rule 52, test-check)
-  const css = { collections: { Lib: { modes: ['V'], values: { V: { 'logo/text': 1, 'logo - text': 2, '🌮 Weight/Bold': 700, 'Weight/Bold': 700 } }, alias: {}, remote: true } } };
-  assert.deepEqual(toDtcgSnapshot(css).collections[0].variables.map((v) => v.name), ['logo/text', 'logo - text', '🌮 Weight/Bold', 'Weight/Bold']);
-  assert.deepEqual(toDtcgSnapshot(css).deduped, []);
+  // two of one property in one collection at other values are never one dropped: both go on, and the build refuses
+  // them (rule 52, test-check); at the same values in the same modes they are one token, as two collections' are: the
+  // first written, the other left out and said with it
+  const css = { collections: { Lib: { modes: ['V', 'W'], values: { V: { 'logo/text': 1, 'logo - text': 2, '🌮 Weight/Bold': 700, 'Weight/Bold': 700 }, W: { 'logo/text': 1, 'logo - text': 2, '🌮 Weight/Bold': 600, 'Weight/Bold': 600 } }, alias: {}, remote: true } } };
+  assert.deepEqual(toDtcgSnapshot(css).collections[0].variables.map((v) => v.name), ['logo/text', 'logo - text', '🌮 Weight/Bold']);
+  assert.deepEqual(toDtcgSnapshot(css).deduped.map((d) => [d.name, d.reason]), [['Lib/Weight/Bold', 'one token with 🌮 Weight/Bold in Lib, the same in every mode']]);
   const dir = mkdtempSync(join(tmpdir(), 'one-col-'));
-  assert.deepEqual(toDtcgSnapshot(css).clashes.map((x) => x.property), ['--logo-text', '--weight-bold']);
-  assert.throws(() => writeDtcg(css, dir), /"logo\/text" and "logo - text" \(variables in Lib\) both become --logo-text: rename one in Figma \(code-standard rule 52\); 1 more pair collide/);
+  assert.deepEqual(toDtcgSnapshot(css).clashes.map((x) => x.property), ['--logo-text']);
+  assert.throws(() => writeDtcg(css, dir), /"logo\/text" and "logo - text" \(variables in Lib\) both become --logo-text: rename one in Figma \(code-standard rule 52\)$/);
   assert.deepEqual(readdirSync(dir), [], 'nothing written');
+  // (equal in one mode, other in another: not one token; aliases compared by the property they name)
+  const pair = (w, alias = {}) => ({ collections: { Base: { modes: ['V'], values: { V: { 'Font Weight/Bold': 700, '🌮 Font Weight/Bold': 700 } }, alias: {} }, Lib: { modes: ['V', 'W'], values: { V: { 'Weight/Bold': 700, '🌮 Weight/Bold': 700 }, W: { 'Weight/Bold': 600, '🌮 Weight/Bold': w } }, alias, remote: true } } });
+  assert.ok(toDtcgSnapshot(pair(500)).clashes.some((x) => x.property === '--weight-bold'));
+  assert.ok(!toDtcgSnapshot(pair(600, { V: { 'Weight/Bold': 'Font Weight/Bold', '🌮 Weight/Bold': '🌮 Font Weight/Bold' } })).clashes.some((x) => x.property === '--weight-bold'));
   // with a third collection holding the property, a pair in another library's collection at other values is still
   // refused, never one left out as the third's copy and the other written
   const third = { collections: { Theme: { modes: ['V'], values: { V: { 'Weight/Bold': 700 } }, alias: {} }, Lib: { modes: ['V'], values: { V: { '🌮 Weight/Bold': 700, 'Weight/Bold': 600 } }, alias: {}, remote: true } } };
