@@ -457,7 +457,7 @@ export function gapOf(contract, mainOf = null, settings = undefined, { ownSheet 
     // forwardedAt, and reads it back; left to code only where another of this one's props gives it)
     return byMine || (ownAtRest && Object.entries(lib).every(([k, v]) => ownPointer(el, k, v)) && rowWhens(row).some((w) => !pointerWords(contract, w)));
   };
-  const copied = pointerWithOf(contract, settings, mainOf || (() => null));
+  const copied = pointerWithOf(contract, settings, mainOf || undefined);
   const rowWhens = (row) => (Array.isArray(row.whens) && row.whens.length ? row.whens : [{}]);
   // modes a pointer state's variant sets on that layer at the design's value, or drops by adding the layer again, at every
   // combination the row was found in (roundTrip's `pointer`, read per combination from the variants that apply there): one

@@ -1467,5 +1467,6 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('its own pointer state alone is no copy\'s (the browser\'s); a state with no pseudo-class leaves it uncopied', of(card([{ when: { state: 'hover' }, set: { 'link.with': { On: 'False', State: 'Hover' } } }])) === '[]'
     && of(card([{ when: { state: 'held' }, set: { 'link.with': { On: 'True' } } }])) === '[]');
   ok('an override a pointer state gives inside a placed component is the copy of the outermost one', of(card([{ when: { state: 'focus' }, set: { 'menu/item.with': { On: 'True' } } }])) === '[["menu","state",["focus"]]]');
-  ok('one a variant swaps for another component is not copied', of(card([{ when: { state: 'hover' }, set: { 'link.with': { On: 'True' } } }, { when: { state: 'focus' }, set: { 'link.component': 'List' } }])) === '[]'); }
+  ok('one a variant swaps for another component is not copied', of(card([{ when: { state: 'hover' }, set: { 'link.with': { On: 'True' } } }, { when: { state: 'focus' }, set: { 'link.component': 'List' } }])) === '[]');
+  ok('asked again of the same contract, with or without the library, it answers from its memo', pointerWithOf(a) === pointerWithOf(a) && pointerWithOf(a, HOUSE, lib(a)) !== pointerWithOf(a) && ((m) => pointerWithOf(a, HOUSE, m) === pointerWithOf(a, HOUSE, m))(lib(a))); }
 console.log(`${n} passed`);

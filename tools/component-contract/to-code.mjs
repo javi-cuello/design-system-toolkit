@@ -370,7 +370,7 @@ function rootDisplay(m, mains, t) {
   return ROOT_DISPLAY.get(m);
 }
 const POINTER_WITH = new WeakMap();
-export function pointerWithOf(c, t = HOUSE, mains = () => null) {
+export function pointerWithOf(c, t = HOUSE, mains = NO_MAINS) {
   const memo = POINTER_WITH.get(c) || new Map(); POINTER_WITH.set(c, memo);
   const by = mains.library || mains;
   if (memo.has(t) && memo.get(t).has(by)) return memo.get(t).get(by);
