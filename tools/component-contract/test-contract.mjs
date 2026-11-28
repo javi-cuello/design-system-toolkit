@@ -1212,5 +1212,17 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const v = Object.keys(out).find((k) => k.endsWith('/v')), back = Object.keys(out).find((k) => k.endsWith('/back'));
   ok('a scaled layer inside an instance the library does not hold keeps its point beside its scale', !!out[back].absolute && out[back].absolute.x === 0 && out[back].constraints.horizontal === 'scale');
   ok('…and a group\'s child its point in the group, which the opened instance draws as a frame of its own (Figma states it in the frame holding the group)', !!out[v].absolute && out[v].absolute.x === 0 && out[v].absolute.y === 0);
+  // mirrored (a group and its glyph flipped across): the glyph's visible box is said in the group's already (the
+  // snapshot's `visual`), and the group's own point is its visible left, never its transform's origin at its right edge
+  // (a tile's glyph read -13.13 in a group 12.25 wide, 2026-11-28)
+  const flipped = derive({ name: 'Tile', props: {}, variants: [{ name: 'Tile', type: 'COMPONENT', layout: 'HORIZONTAL', children: [
+    { name: 'Mark', type: 'INSTANCE', instanceOf: 'Mark', w: 14, h: 14, sizing: 'FIXED/FIXED', children: [
+      { name: 'G', type: 'GROUP', x: 13.13, y: 0.85, w: 12.25, h: 12.3, flip: 'x', visual: { x: 0.88, y: 0.85, w: 12.25, h: 12.3 }, children: [
+        { name: 'V', type: 'VECTOR', x: 13.13, y: 0.85, w: 12.25, h: 12.3, flip: 'x', visual: { x: 0, y: 0, w: 12.25, h: 12.3 }, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/v'] }] },
+      { name: 'H', type: 'GROUP', x: 13.13, y: 0.85, w: 12.25, h: 12.3, flip: 'x', visual: { x: 0.88, y: 0.85, w: 12.25, h: 12.3 }, children: [
+        { name: 'D', type: 'VECTOR', x: 2, y: 1.85, w: 4, h: 4, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/v'] }] }] }] }] }, [], { mains: () => null }).anatomy;
+  const fv = Object.keys(flipped).find((k) => k.endsWith('/v')), fd = Object.keys(flipped).find((k) => k.endsWith('/d'));
+  ok('…mirrored, a group\'s glyph its visible point in the group, never less the group\'s origin', !!flipped[fv].absolute && flipped[fv].absolute.x === 0 && flipped[fv].absolute.y === 0, JSON.stringify(flipped[fv]));
+  ok('…and an unmirrored layer in a mirrored group its point less the group\'s visible left', !!flipped[fd].absolute && flipped[fd].absolute.x === 1.12 && flipped[fd].absolute.y === 1, JSON.stringify(flipped[fd]));
 }
 console.log(`${n}/${n} passed`);

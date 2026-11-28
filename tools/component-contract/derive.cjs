@@ -428,7 +428,12 @@ function flatten(list, characters = new Map(), known = [], axes = [], turned = n
     place(e, inInstance);
     // (a group's child: Figma states its point in the frame that holds the group, its box the group's; the group's own
     // point kept beside it, for an instance drawn open, where the group is a frame of its own: ownInsides)
-    if (outside && outside.absolute && up && up.type === 'GROUP' && up.x != null) outside.group = { x: up.x, y: up.y };
+    // (mirrored: an axis whose point boxAt took from the snapshot's `visual` is in the group's box already, and the
+    // group's own point is its visible edge, boxAt's, never its transform's origin)
+    if (outside && outside.absolute && up && up.type === 'GROUP' && up.x != null) {
+      const g = boxAt(up), seen = (axis) => node.flip === axis && !!node.visual && node.visual[axis] != null;
+      outside.group = { x: seen('x') ? 0 : g.x, y: seen('y') ? 0 : g.y };
+    }
     if (outside && (outside.absolute || outside.constraints)) aside.set(idOf(segs), outside);
     // a line along its box (a divider, spec.cjs boxOnly) carries no paths where to-figma draws it as its line (a graphic
     // of no height, or no width, along that axis, that no icon names): the box and its stroke say it, as before 0.86.0,
