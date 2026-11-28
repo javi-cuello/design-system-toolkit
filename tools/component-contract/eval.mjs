@@ -528,6 +528,21 @@ export function staleContracts(dir) {
   return (checkSpecs(dir).bad || []).filter((b) => /contract\.json is not what the spec derives|no contract\.json beside the spec|no contract can be derived/.test(b)).map((b) => b.split(':')[0].trim());
 }
 
+/* A project's built tokens (its paths.styles, the DTCG files beside the snapshot) against what the token build writes
+   from its snapshot today (tools/tokens/build.mjs --check, its own function): null current, or no repo to build in;
+   else { refuse, said }, refuse when they are out of date or the build refuses, not when it cannot run here (no
+   paths.styles, no style-dictionary), which is said. The code is read with yesterday's _tokens.scss otherwise: a
+   re-snapshot moved a border colour, and four components reported border rows the code did not have (2026-11-28). */
+export async function staleTokens(repo) {
+  if (!repo) return null;
+  const { tokenBuild, rebuildCommand } = await import('../tokens/build.mjs');
+  const r = await tokenBuild(repo, { check: true, quiet: true });
+  if (r.code === 0) return null;
+  const why = r.err.filter((l) => !/ out of date — run /.test(l)).map((l) => l.trim());
+  if (r.code !== 1) return { refuse: false, said: `the project's tokens were not checked against its snapshot (${why.join('; ')})` };
+  return { refuse: true, said: `the project's built tokens are not what its snapshot builds now (${why.slice(0, 2).join('; ')}${why.length > 2 ? '; …' : ''}): run ${rebuildCommand(repo)}` };
+}
+
 /* Every leg for one project: { home, legs: { browser, self, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }.
    `now` is what a self reading is read from today ({ inputs: selfInputs, reader: readerCode, chrome: chromeMajor }); a
    field left out is not checked. */
@@ -1178,6 +1193,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   { const old = staleContracts(where.paths.components).filter((f) => !argv.length || argv.includes(f));
     if (old.length) { const say = `${old.length} official contract(s) are not what their specs derive now (${old.slice(0, 3).join(', ')}${old.length > 3 ? ', …' : ''}): derive.cjs changed since the store was written; run ${rewriteHint(where.paths.components)}`;
       if (into || self || second) { console.error(say); process.exit(2); } console.log(`warning: ${say}`); } }
+  // the tokens the code is read with, as the snapshot builds them today: refused as a stale store is, for the same reason
+  { const t = await staleTokens(where.repo);
+    if (t) { if (t.refuse && (into || self || second)) { console.error(t.said); process.exit(2); } console.log(`warning: ${t.said}`); } }
   // the long legs hold the one measuring lock, niced (tools/shared/lock.mjs); from-code, run under it, does not wait
   if (into || self || second) await (await import('../shared/lock.mjs')).hold(`eval.mjs ${process.argv.slice(2).join(' ')}`);
   if (into) {

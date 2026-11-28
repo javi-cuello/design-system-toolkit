@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, rewriteHint, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, isSameApartFromForeign, isSameApartFromLibrary, gapOf, GAPS, unboundProps, leftToCode as leftToCode0, unaccepted, identifiedNote } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, staleContracts, staleTokens, rewriteHint, runAll, projectsOptions, stepRunner, openLog, closureOf, drawingInputs, todayOf, mechanisms, isSame, draw, figmaInputs, isStrict, isSameApartFromForeign, isSameApartFromLibrary, gapOf, GAPS, unboundProps, leftToCode as leftToCode0, unaccepted, identifiedNote } from './eval.mjs';
 import { drawSettings } from './to-figma.mjs';
 import { partsOf } from './to-code.mjs';
 import { spawnSync } from 'node:child_process';
@@ -391,6 +391,28 @@ ok('a component measured since the accept is held until accepted; one that came 
   }
   ok('an official contract an older derive.cjs wrote is named, so a measure is never taken against yesterday\'s rules', JSON.stringify(staleContracts(d)) === '["gone","old"]' && staleContracts(path.join(d, 'none')).length === 0);
   fs.rmSync(d, { recursive: true, force: true }); }
+{ // the project's built tokens against what its snapshot builds today, by the token build itself (Style Dictionary from tools/tokens)
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'tokens-')), snap = path.join(repo, 'design', 'figma.json');
+  fs.mkdirSync(path.dirname(snap)); fs.symlinkSync(path.join(HERE_W, '..', 'tokens', 'node_modules'), path.join(repo, 'node_modules'));
+  fs.writeFileSync(path.join(repo, 'package.json'), '{"name":"fixture","private":true}');
+  fs.writeFileSync(path.join(repo, 'snapshot.config.json'), JSON.stringify({ project: 'fixture', paths: { tokens: 'design/figma.json', styles: 'styles' } }));
+  const tokens = (border) => fs.writeFileSync(snap, JSON.stringify({ _meta: { file: 'UI library', fileId: 'x' }, collections: { Semantic: { modes: ['Light'], values: { Light: { 'Color/Border/default': border } }, alias: {} } }, textStyles: [], paintStyles: [], effects: [] }));
+  tokens('rgb(11 18 14 / 0.14)');
+  const { tokenBuild } = await import('../tokens/build.mjs');
+  const built = await tokenBuild(repo, { quiet: true });
+  const fresh = await staleTokens(repo);
+  tokens('rgb(11 18 40 / 0.14)');
+  const was = process.env.TOOLKIT_PROJECTS_ROOT; process.env.TOOLKIT_PROJECTS_ROOT = '/r';
+  const moved = await staleTokens(repo);
+  if (was === undefined) delete process.env.TOOLKIT_PROJECTS_ROOT; else process.env.TOOLKIT_PROJECTS_ROOT = was;
+  fs.rmSync(path.join(repo, 'node_modules'));
+  const unbuildable = await staleTokens(repo);
+  ok('tokens the snapshot builds today pass; a re-snapshot that moved one refuses the run, naming the file and the rebuild under the run\'s projects root; one that cannot be built here is said, not refused; no repo, nothing to check',
+    built.code === 0 && fresh === null
+    && moved && moved.refuse && moved.said.includes('styles/_tokens.scss differs') && moved.said.endsWith(`run TOOLKIT_PROJECTS_ROOT=/r node ${path.resolve(HERE_W, '..', 'tokens', 'build.mjs')} --repo ${repo}`)
+    && unbuildable && !unbuildable.refuse && /style-dictionary is not installed/.test(unbuildable.said)
+    && (await staleTokens(null)) === null);
+  fs.rmSync(repo, { recursive: true, force: true }); }
 {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'closure-')), w = (f, s) => { fs.mkdirSync(path.dirname(path.join(d, f)), { recursive: true }); fs.writeFileSync(path.join(d, f), s); };
   w('a.mjs', "const s = createRequire(import.meta.url)('./h.cjs');\nrequire(`./i`);\nimport { x } from './b.mjs';\nconst c = await import('./sub/c.mjs');\nconst req = createRequire(import.meta.url); req('./d.cjs');\nimport(path.join(HERE, 'e.mjs'));\nimport './skip.mjs';");
