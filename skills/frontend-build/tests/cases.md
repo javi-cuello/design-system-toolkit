@@ -140,9 +140,9 @@ Runs: node --test tools/tokens/test-build-tokens.mjs — "Mobile is the base and
 Assert: `--body-font-family` with the fallback stack, `--body-font-size: var(--body-size)`, letter-spacing present at zero, no `font` shorthand, and `text-style($name)` in `_text-styles.scss`. Regression: Style Dictionary's own `expand` resolved the reference first, so responsive type stopped following its breakpoint.
 Runs: node --test tools/tokens/test-build-tokens.mjs — "a text style is its fields, a bound field stays a reference, and the mixin applies it"
 
-## B6 · Two paths that become one property fail the build *(negative)* — *executed*
-Assert: rejects, naming the property. With the collection dropped from names, `Primitive/Space/2` and `Spacing/Space/2` collide, and without the check one silently wins.
-Runs: node --test tools/tokens/test-build-tokens.mjs — "two paths that become one property fail the build"
+## B6 · One path in two collections is two properties; a name that still meets another fails the build *(negative)* — *executed*
+Assert: at different values, `Primitive/Space/2` and `Spacing/Space/2` become `--primitive-space-2` and `--spacing-space-2`, and a path one collection holds keeps its bare name; at the same values they are one `--space-2`; a prefixed name that still meets another rejects, naming the property. Without the check one silently wins (code-standard rule 52).
+Runs: node --test tools/tokens/test-build-tokens.mjs — "one path two collections hold at different values is two properties, each with its collection; one that still meets another fails the build"
 
 ## B7 · An alias to nothing fails the build *(negative)* — *executed*
 Assert: rejects. It must never emit `var(--missing)`, which renders as an unset property with no error anywhere.
