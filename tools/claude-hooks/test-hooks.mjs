@@ -206,27 +206,40 @@ test('a stop after writing a memory file that breaks toolkit-standard §D 25 is 
 test('the session a /clear left goes to the Trash with its folder, once, only when it carries the same name; memory stays', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'clear-prune-'));
   const trash = path.join(dir, 'Trash');
-  const title = (id, t = 'toolkit-kb') => JSON.stringify({ type: 'custom-title', customTitle: t, sessionId: id });
-  const from = (id) => JSON.stringify({ type: 'derived-from', sessions: [{ id, via: 'clear' }] });
-  fs.writeFileSync(path.join(dir, '11111111-1111-1111-1111-111111111111.jsonl'), title('11111111-1111-1111-1111-111111111111') + '\n');
-  fs.mkdirSync(path.join(dir, '11111111-1111-1111-1111-111111111111', 'subagents'), { recursive: true });
+  const id = (n) => `${String(n).repeat(8)}-${String(n).repeat(4)}-${String(n).repeat(4)}-${String(n).repeat(4)}-${String(n).repeat(12)}`;
+  const title = (sid, t = 'toolkit-kb') => JSON.stringify({ type: 'custom-title', customTitle: t, sessionId: sid });
+  const from = (sid, via = 'clear') => JSON.stringify({ type: 'derived-from', sessions: [{ id: sid, via }] });
+  const hook = (mode, t) => spawnSync('node', [path.join(HERE, 'hooks.mjs'), mode], { input: JSON.stringify({ session_id: path.basename(t, '.jsonl'), transcript_path: t, cwd: dir }), encoding: 'utf8', env: { ...process.env, TOOLKIT_TRASH: trash } });
+  const session = (n, lines) => { const f = path.join(dir, `${id(n)}.jsonl`); fs.writeFileSync(f, lines.join('\n') + '\n'); return f; };
   fs.mkdirSync(path.join(dir, 'memory'));
   fs.writeFileSync(path.join(dir, 'memory', 'MEMORY.md'), '- [Project state](project-state.md)\n');
-  fs.writeFileSync(path.join(dir, '22222222-2222-2222-2222-222222222222.jsonl'), title('22222222-2222-2222-2222-222222222222', 'round-trip') + '\n');
-  const now = path.join(dir, 'new.jsonl');
-  fs.writeFileSync(now, title('new') + '\n' + from('11111111-1111-1111-1111-111111111111') + '\n');
-  const prompt = (t) => spawnSync('node', [path.join(HERE, 'hooks.mjs'), 'prompt'], { input: JSON.stringify({ session_id: 'new', transcript_path: t }), encoding: 'utf8', env: { ...process.env, TOOLKIT_TRASH: trash } });
-  prompt(now);
-  prompt(now);
-  assert.equal(fs.existsSync(path.join(dir, '11111111-1111-1111-1111-111111111111.jsonl')), false);
-  assert.equal(fs.existsSync(path.join(trash, 'toolkit-kb 11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111.jsonl')), true);
-  assert.equal(fs.existsSync(path.join(trash, 'toolkit-kb 11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'subagents')), true);
+  // a /clear: the old session and its folder go, once, at start; an earlier copy in the Trash is kept
+  session(1, [title(id(1))]);
+  fs.mkdirSync(path.join(dir, id(1), 'subagents'), { recursive: true });
+  fs.mkdirSync(path.join(trash, `toolkit-kb ${id(1)}`), { recursive: true });
+  const now = session(2, [title(id(2)), from(id(1))]);
+  hook('start', now);
+  assert.equal(fs.existsSync(path.join(dir, `${id(1)}.jsonl`)), false);
+  assert.equal(fs.existsSync(path.join(dir, id(1))), false);
+  const moved = fs.readdirSync(trash).filter((d) => fs.existsSync(path.join(trash, d, `${id(1)}.jsonl`)));
+  assert.equal(moved.length, 1);
+  assert.equal(fs.existsSync(path.join(trash, moved[0], id(1), 'subagents')), true);
+  // restored by hand, it stays restored: once a session
+  fs.renameSync(path.join(trash, moved[0], `${id(1)}.jsonl`), path.join(dir, `${id(1)}.jsonl`));
+  hook('prompt', now);
+  assert.equal(fs.existsSync(path.join(dir, `${id(1)}.jsonl`)), true);
   // the project's memory is the next session's: never moved
   assert.equal(fs.readFileSync(path.join(dir, 'memory', 'MEMORY.md'), 'utf8'), '- [Project state](project-state.md)\n');
-  // another name is not this session's past: left alone
-  const other = path.join(dir, 'new2.jsonl');
-  fs.writeFileSync(other, title('new2') + '\n' + from('22222222-2222-2222-2222-222222222222') + '\n');
-  prompt(other);
-  assert.equal(fs.existsSync(path.join(dir, '22222222-2222-2222-2222-222222222222.jsonl')), true);
+  // another name, or a /compact, is not this session's past: left alone
+  session(3, [title(id(3), 'round-trip')]);
+  hook('prompt', session(4, [title(id(4)), from(id(3))]));
+  assert.equal(fs.existsSync(path.join(dir, `${id(3)}.jsonl`)), true);
+  hook('prompt', session(5, [title(id(5)), from(id(1), 'compact')]));
+  assert.equal(fs.existsSync(path.join(dir, `${id(1)}.jsonl`)), true);
+  // a title with a path in it stays inside the Trash
+  session(6, [title(id(6), '../../x/y')]);
+  hook('prompt', session(7, [title(id(7), '../../x/y'), from(id(6))]));
+  assert.equal(fs.existsSync(path.join(dir, `${id(6)}.jsonl`)), false);
+  assert.ok(fs.readdirSync(trash).some((d) => d === `xy ${id(6)}`));
   fs.rmSync(dir, { recursive: true, force: true });
 });
