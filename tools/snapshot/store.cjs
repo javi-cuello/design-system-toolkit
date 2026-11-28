@@ -1157,9 +1157,14 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, atOrAf
   const others = Object.entries(index.components).filter(([s, e]) => !thisFile.has(e.file) && !mine.has(s) && !orphan(e.file)).map(([s]) => s);
   // A set Figma could not read this time (payload.unreadable) is still the library's: its stored spec, contract and
   // index entry are kept as the last snapshot left them, never pruned and never graded component-removed. Matched by
-  // the index entry's name, and its page where both record one, whatever folder the store files it under.
+  // the index entry's name, and its page where both record one, whatever folder the store files it under; a stored
+  // spec the index does not list, by the Figma name and page its figma.json records.
   const unread = p.unreadable || [];
-  const held = Object.entries(index.components).filter(([s, e]) => !mine.has(s) && unread.some((x) => x.name === e.name && (!x.page || !e.page || x.page === e.page))).map(([s]) => s);
+  // A stored spec with no index entry is matched by its own Figma name (figmaName, or its name's last segment).
+  const unreadAt = (name, page) => unread.some((x) => x.name === name && (!x.page || !page || x.page === page));
+  const specNamed = (s) => { const f = readJson(path.join(P.components, s, 'figma.json'), null); return f && unreadAt(f.figmaName || String(f.name || '').split('/').pop(), f.page); };
+  const stored = fs.existsSync(P.components) ? fs.readdirSync(P.components).filter((s) => !mine.has(s) && !index.components[s] && unread.length && specNamed(s)) : [];
+  const held = [...Object.entries(index.components).filter(([s, e]) => !mine.has(s) && unreadAt(e.name, e.page)).map(([s]) => s), ...stored];
   const pruned = pruneSpecs(P.components, new Set([...mine, ...others, ...held]));
   // a drawing an older store took in (its stored page or index entry the round trip's) goes as no library change
   const wasDrawn = (s) => payload.drawnPage((pruned.before[s] || {}).page) || payload.drawnPage((index.components[s] || {}).page);

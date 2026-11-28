@@ -2039,6 +2039,27 @@ test('a stored component Figma could not read this time is kept as the last snap
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('a stored spec the index does not list is kept when Figma could not read it, matched by the Figma name its spec records', async () => {
+  const { createRequire } = await import('node:module');
+  const store = createRequire(import.meta.url)('./store.cjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'unreadable-spec-'));
+  try {
+    const P = store.paths(dir);
+    const v = { name: 'Size=sm', type: 'COMPONENT', w: 10, h: 10 };
+    const comp = (name, id, page) => ({ name, id, page, props: { Size: ['sm'] }, variants: [v] });
+    store.writeLibrary(lib('L', { components: [comp('Checkbox', '1:1', 'Checkbox'), comp('Utilities/_Gesture', '2:2', 'Utilities')] }), P);
+    const index = JSON.parse(fs.readFileSync(P.index, 'utf8'));
+    const folder = Object.entries(index.components).find(([, e]) => /_Gesture/.test(e.name))[0];
+    delete index.components[folder];
+    fs.writeFileSync(P.index, JSON.stringify(index, null, 2));
+    const spec = fs.readFileSync(path.join(P.components, folder, 'figma.json'), 'utf8');
+    const r = store.writeLibrary({ ...lib('L', { components: [comp('Checkbox', '1:1', 'Checkbox')] }), unreadable: [{ name: '_Gesture', page: 'Utilities', reason: 'in get_componentPropertyDefinitions: Component set has existing errors' }] }, P);
+    assert.equal(fs.readFileSync(path.join(P.components, folder, 'figma.json'), 'utf8'), spec, 'its spec stays as it was');
+    const grade = r.lines.find((l) => l.label === 'grade');
+    assert.ok(!grade.detail.some((d) => /removed from the library/.test(d)), `no removal graded: ${grade.detail.join(' | ')}`);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('a drawing a store already holds is pruned as no library change, and a drawing\'s preview and unreadable set are passed over too', async () => {
   const { createRequire } = await import('node:module');
   const store = createRequire(import.meta.url)('./store.cjs');

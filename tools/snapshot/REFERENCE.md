@@ -144,7 +144,7 @@ place every unrecognised snapshot lands.
 
 ## What a payload contains, and where it lands
 
-A library payload may carry `unreadable`: the component sets the plugin could not read because Figma holds them in error (conflicting variant names), each with Figma's reason. The store prints them as a warning, so a missing component never reads as the library's choice.
+A library payload may carry `unreadable`: the component sets the plugin could not read because Figma holds them in error (conflicting variant names), each with Figma's reason. The store prints them as a warning, so a missing component never reads as the library's choice. A stored set it lists is kept as the last snapshot left it, matched by its index entry or, where the index lists none, by the Figma name and page its stored spec records.
 
 `payload.cjs` is the schema for both payloads; a payload that does not match
 is refused with a 400 naming the field, before anything is routed.
