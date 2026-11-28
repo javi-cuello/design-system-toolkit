@@ -426,6 +426,13 @@ function atDefault(x, mains) {
           : [first, ...(q.swaps || []).slice(1).filter((sp) => !(M[sp] && M[sp].swappedBy && M[sp].swappedBy !== key)).map((sp) => (M[sp] || {}).component)];
         return !drawn.filter(Boolean).length || !drawn.filter(Boolean).some((d) => low(d) === low(v) || low(d).endsWith(`/${low(v)}`));
       }
+      // a text prop none of whose layers is drawn at the instance's props (a select's placeholder at hydrate, where it
+      // shows the value it holds) shows nothing: an override on nothing, which no code can say. Only where each of its
+      // layers is one its component holds somewhere, so not drawn there is known
+      if (q && q.type === 'string' && mains.linked !== false && (q.sets || []).length && q.sets.every((l) => byId[l])) {
+        const M = req('./derive.cjs').atProps(main, e.with);
+        if (!q.sets.some((l) => M[l])) return false;
+      }
       if (!q || q.default === undefined) return true;
       const words = [q.default, (q.figmaValues || [])[(q.values || []).indexOf(q.default)]].filter((w) => w !== undefined).map(low);
       // a word of an option is one in any case; a text's words are its own

@@ -738,6 +738,13 @@ delete globalThis.figma;
     const m = { mains: (n) => (n === 'Button' ? two : null) };
     ok('a swap that drives no layer is unstated where the instance drawn inside is at a layer another swap drives; that other swap stays stated',
       roundTrip(within({ 'Icon 2': 'y' }), within({ 'Icon 2': 'x' }), m).rows.length === 0 && roundTrip(within({ 'Icon 1': 'y' }), within(null), m).rows.length === 1); }
+  { // (a text prop whose layer the placed component does not draw at the instance's props, a select's placeholder while it
+    // holds a value: unstated; where it draws it, stated)
+    const sel = { component: 'Button', props: { ph: { type: 'string', default: 'Value', figma: 'Placeholder', sets: ['ph'] }, state: { type: 'enum', values: ['rest', 'hydrate'], figmaValues: ['rest', 'hydrate'], default: 'rest', figma: 'state' } },
+      anatomy: { root: { kind: 'container' }, ph: { kind: 'text', parent: 'root', content: '{ph}' } }, variants: [{ when: { state: 'hydrate' }, remove: ['ph'] }] };
+    const m = { mains: (n) => (n === 'Button' ? sel : null) };
+    ok('a text prop whose layer the placed component does not draw at the instance\'s props is unstated; one it draws is stated',
+      roundTrip(holder({ state: 'hydrate', Placeholder: '12/25' }), holder({ state: 'hydrate' }), m).rows.length === 0 && roundTrip(holder({ state: 'rest', Placeholder: '12/25' }), holder({ state: 'rest' }), m).rows.length === 1); }
   { const pair = { component: 'Button', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' }, icon: { type: 'instance', figma: 'Icon', swaps: ['a', 'b'] }, iconOn: { type: 'instance', figma: 'Icon (on)', swaps: ['a', 'b'] } },
       anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Icon/full' }, b: { kind: 'instance', parent: 'root', component: 'Icon/line' } }, variants: [] };
     const m = { mains: (n) => (n === 'Button' ? pair : null) };
