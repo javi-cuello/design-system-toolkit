@@ -61,7 +61,7 @@ import { compareNames, writeReport } from '../shared/output.mjs';
 import { realpathSync } from 'node:fs';
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const req = createRequire(import.meta.url);
-const { expand, variantDefaults, atProps } = req('./derive.cjs');
+const { expand, variantDefaults, atProps, propsAt } = req('./derive.cjs');
 import { recorder, pageKey, pageCode, fontsInstalled, localeHere, cacheOff } from './read-cache.mjs';
 
 /* ---- pure parts ---- */
@@ -95,9 +95,9 @@ const sameColour = (a, b) => { const x = parseColour(a), y = parseColour(b); ret
 export function wordsOf(fc, texts, own = {}, shown = {}, at = null) {
   const off = Object.values(fc.props).filter((q) => q.type === 'boolean' && q.figma in (shown || {}) && shown[q.figma] !== true).flatMap((q) => q.shows || []);
   const under = (id) => off.some((l) => id === l || id.startsWith(`${l}/`));
-  // (a text's binding as its main states it, in its base or the variant that adds it: atProps puts the words in)
-  const bound = (id) => [fc.anatomy[id], ...(fc.variants || []).map((v) => (v.add || {})[id])].map((t) => t && t.content).find((t) => typeof t === 'string' && /^\{.+\}$/.test(t)) ?? (fc.anatomy[id] || {}).content;
-  const A = at ? Object.fromEntries(Object.entries(atProps(fc, at)).map(([id, t]) => [id, t && t.kind === 'text' ? { ...t, content: bound(id) } : t])) : fc.anatomy;
+  // (each text's binding as its main draws it at those props, a variant's add or set of its content included: expand,
+  // before atProps puts the words in)
+  const A = at ? expand(fc, propsAt(fc, at)) : fc.anatomy;
   const said = Object.entries(A).filter(([id, t]) => t && t.kind === 'text' && typeof t.content === 'string' && !under(id)).map(([, t]) => /^\{(.+)\}$/.exec(t.content)).filter(Boolean).map((m) => fc.props[m[1]]).filter((q) => q && q.type === 'string');
   if (!texts.length || said.length !== texts.length) return {};
   const ownProp = (t) => { const m = /^slot·(.+)·here$/.exec(t); const k = m && Object.keys(own).find((k) => own[k].code === m[1] || k === m[1]); return k ? `{${k}}` : t; };
@@ -188,17 +188,9 @@ export function wordsAsDrawn(n, s) {
   return (kept ? x : collapse === 'preserve-breaks' ? x.replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n') : x.replace(/[ \n\t]+/g, ' ')).replace(/^[ \n\t]+|[ \n\t]+$/g, '');
 }
 
-/* Whether `m`, found in the placed instance `n` by its layer's selector `q`, is that instance's own layer, not one of
-   another instance nested in it (`isRoot`). A layer that is itself a placed component is reached through its host
-   (`[data-part=button] > button`): that host is the layer's own, so a selector that ends in a bare tag under the
-   component's root also takes a nested copy's. Runs in the page (passed as source). */
-/* Whether a layer a boolean shows is drawn: laid out, not hidden and painted, or at opacity 0 where the design draws
-   that layer at 0 too (`atZero`: a tooltip until hovered, as Figma's boolean shows a layer by its visibility alone);
-   one code draws at 0 for good, where the design paints it, is not drawn. `rects` its client rects' count, `cs` its
-   computed style. Tested by test-from-code.mjs. */
 /* What a placed instance's boolean is read as from the layer it shows: on where a copy of the layer found in it is drawn
    (`found`, per copy [drawn, unseen only as a box around it is not drawn]); unknown (null) where every copy is unseen
-   only so, or where none is found and a layer around it in its main is missing too (`aroundGone`: this component took
+   only so, or where none is found and a layer around it in its main is gone too (`aroundGone`, as its own reading finds it: this component took
    that layer away whole, as a design hides a checkbox's box and value, and the markup leaves it out, dom.js dressed), so
    it says nothing of the boolean; else off. Runs in the page (passed as source); tested by test-from-code.mjs. */
 export function shownState(found, aroundGone) {
@@ -206,6 +198,18 @@ export function shownState(found, aroundGone) {
   return (found.length ? found.every(([, boxed]) => boxed) : aroundGone) ? null : false;
 }
 
+/* Whether a layer around a placed instance's boolean's layer is gone (shownState's `aroundGone`): only where this
+   component's own reading says so, its mapping (`mapped`, id → selector) naming that layer inside the instance (`id`) and
+   finding nothing there (`has`, whether a selector finds an element); one it does not name says nothing. `around`: the
+   layers around it in its main, by their ids there. Runs in the page (passed as source); tested by test-from-code.mjs. */
+export function aroundGone(around, id, mapped, has) {
+  return around.some((rel) => { const q = mapped[`${id}/${rel}`]; return !!q && !has(q); });
+}
+
+/* Whether a layer a boolean shows is drawn: laid out, not hidden and painted, or at opacity 0 where the design draws
+   that layer at 0 too (`atZero`: a tooltip until hovered, as Figma's boolean shows a layer by its visibility alone);
+   one code draws at 0 for good, where the design paints it, is not drawn. `rects` its client rects' count, `cs` its
+   computed style. Tested by test-from-code.mjs. */
 export function layerShown(rects, cs, atZero = false) { return rects > 0 && cs.visibility !== 'hidden' && (atZero || +cs.opacity > 0); }
 
 /* Whether a contract draws its layer `id` at opacity 0 at some combination: in its anatomy, as a variant sets it or as a
@@ -255,15 +259,19 @@ export function alignedOf(n, s) {
   if (below <= 1 && above > below) return 'end';
   return undefined;
 }
-/* Whether a mark draws no glyph of its own: no child element, no text of its own (an icon font's ligature, home), and no
-   pseudo-element with content (`pseudo` each one's computed content), so the colour it is read at is no glyph's. `text`
-   its own text content. Tested by test-from-code.mjs. */
 /* What a mark (to-markup's data-icon, a component the library does not hold) keeps of its own box's styling as read: its
    corners, stroke, ring, clipping, shadow and layout (the room about its glyph its frame keeps, which to-code writes on
    the mark). Read in the page, so passed in by name; tested by test-from-code.mjs. */
 export const MARK_FIELDS = ['radius', 'full', 'cornerShape', 'outline', 'ownOutline', 'border', 'overflow', 'shadow', 'shadowAll', 'ringsUsed', 'layout', 'rtl'];
+/* Whether a mark draws no glyph of its own: no child element, no text of its own (an icon font's ligature, home), and no
+   pseudo-element with content (`pseudo` each one's computed content), so the colour it is read at is no glyph's. `text`
+   its own text content. Tested by test-from-code.mjs. */
 export function glyphless(children, text, pseudo) { return !children && !String(text || '').trim() && pseudo.every((c) => !c || c === 'none' || c === 'normal'); }
 
+/* Whether `m`, found in the placed instance `n` by its layer's selector `q`, is that instance's own layer, not one of
+   another instance nested in it (`isRoot`). A layer that is itself a placed component is reached through its host
+   (`[data-part=button] > button`): that host is the layer's own, so a selector that ends in a bare tag under the
+   component's root also takes a nested copy's. Runs in the page (passed as source). */
 export function ownLayer(m, n, q, isRoot) {
   const host = q.replace(/\s*>\s*[a-z][a-z0-9-]*\s*$/i, '');
   for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (isRoot(up) && !(up === m.parentElement && host !== q && up.matches(host))) return false;
@@ -1603,6 +1611,21 @@ export function delta(base, other, def = base) {
   return { ...(Object.keys(set).length && { set }), ...(Object.keys(add).length && { add }), ...(remove.length && { remove }) };
 }
 
+/* Every layer of a reading, its base's and each variant's add, by id (a later add over an earlier, the base's last
+   over all). Shared by asFigma and addedIn. */
+const everyLayer = (c) => ({ ...(c.anatomy || {}), ...Object.assign({}, ...(c.variants || []).map((v) => v.add || {})) });
+
+/* The nearest placed instance a layer (`id`) is inside, among `all` (id → layer), or null. */
+const nearestInstance = (all, id) => { for (let up = (all[id] || {}).parent; up; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') return up; return null; };
+
+/* The layers of a reading inside a placed instance that its component does not have (statedIn): the design's own,
+   added there, whose place asFigma keeps (`added`). Tested by test-from-code.mjs. */
+export function addedIn(c, mainOf) {
+  const all = everyLayer(c), out = new Set();
+  for (const id of Object.keys(all)) { const q = nearestInstance(all, id), m = q && mainOf(all[q].component, all[q].key); if (m && !statedIn(all, q, id, m, mainOf)) out.add(id); }
+  return out;
+}
+
 /* The code's contract in the house's Figma conventions (figma-standard), so
    that it reads as the one derive.cjs would read from a Figma component:
    - an enum's values and name take the token vocabulary (figma-standard rule 22): where each
@@ -1697,8 +1720,8 @@ export function asFigma(contract, { axisOrder = [], foreign = new Set(), added =
   });
   // a layer inside a placed component keeps no constraints, as derive keeps none in the design's
   // (figma-fact: no-nested-position-override); one placed absolutely, or a glyph's scale both ways, keeps them
-  const all = { ...contract.anatomy, ...Object.assign({}, ...variants.map((v) => v.add || {})) };
-  const nearest = (id) => { for (let up = (all[id] || {}).parent; up; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') return up; return null; };
+  const all = everyLayer({ ...contract, variants });
+  const nearest = (id) => nearestInstance(all, id);
   // (a layer the placed component does not have, the design's own added in the instance, `added`, keeps its place, as
   // derive keeps it: statedIn)
   const inside = (id) => !!nearest(id) && !added.has(id);
@@ -2364,10 +2387,6 @@ export function insetsIn(doc, unturnSrc, turnSrc) {
    a label that hugs once it floats). Tested by test-from-code.mjs. */
 export const autoSized = (v) => !String(v ?? '').trim() || /^(auto|fit-content|max-content|min-content|unset|initial|revert|revert-layer)$/.test(String(v).trim());
 
-/* Whether a part placed out of the flow says so (`position: absolute`), as derive says it: only where its parent lays out
-   its children (an auto layout), the part taken out of it; in a frame of no auto layout every part is at its point and
-   the design writes no position. A placed component's parent is laid out as its main's root says (`layoutOf`); one the
-   library does not hold (`mainOf` none) is taken to lay out, as before. Tested by test-from-code.mjs. */
 /* Whether the declarations (`pos`: translate, transform as declared) move a box along `axis` (horizontal or vertical):
    a translate's part on that axis (its second, 0 where unsaid) other than 0, or a transform other than a translate
    that leaves that axis alone. Tested by test-from-code.mjs. */
@@ -2383,6 +2402,10 @@ export function movedOn(pos, axis) {
   return !zero(axis === 'horizontal' ? x : y);
 }
 
+/* Whether a part placed out of the flow says so (`position: absolute`), as derive says it: only where its parent lays out
+   its children (an auto layout), the part taken out of it; in a frame of no auto layout every part is at its point and
+   the design writes no position. A placed component's parent is laid out as its main's root says (`layoutOf`); one the
+   library does not hold (`mainOf` none) is taken to lay out, as before. Tested by test-from-code.mjs. */
 export function outOfFlowIn(up, layoutOf = (u) => u.layout, mainOf = () => null) {
   if (!up) return true;
   if (up.kind === 'instance' && !mainOf(up)) return true;
@@ -2428,8 +2451,12 @@ export function unturn(root) {
       if (flat && (ma < 0 || md < 0)) n.style.setProperty('transform', `translate(${tx}px, ${ty}px) scale(${Math.abs(a)}, ${Math.abs(d)})`, 'important');
       if (was) {
         const now = n.getBoundingClientRect(), dx = was.left - now.left, dy = was.top - now.top;
-        const t = String(s.translate || 'none') === 'none' ? [0, 0] : String(s.translate).split(/\s+/).map(parseFloat);
-        if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) n.style.setProperty('translate', `${(t[0] || 0) + dx}px ${(t[1] || 0) + dy}px`, 'important');
+        // (on top of its own move as computed, a share of its box or a calc() kept whole, and its z: each part split at
+        // the top level, never inside a calc's parentheses)
+        const parts = [], tr = String(s.translate || 'none');
+        if (tr !== 'none') { let depth = 0, cur = ''; for (const ch of tr) { if (ch === '(') depth++; if (ch === ')') depth--; if (/\s/.test(ch) && !depth) { if (cur) parts.push(cur); cur = ''; } else cur += ch; } if (cur) parts.push(cur); }
+        const [x0 = '0px', y0 = '0px', z0] = parts;
+        if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) n.style.setProperty('translate', `calc(${x0} + ${dx}px) calc(${y0} + ${dy}px)${z0 ? ` ${z0}` : ''}`, 'important');
       }
       if (fx !== fy) mirrors.set(n, fx ? 'x' : 'y');
     }
@@ -2647,9 +2674,9 @@ async function main() {
     const shownSel = Object.fromEntries(Object.keys(others).map((slug) => {
       const fc = official.get(slug), parts = L.partsOf ? L.partsOf(slug) : null;
       if (!fc || !parts) return [slug, {}];
-      // (with the selectors of the layers around it in its main, each its own part: one this component takes away whole
-      // takes the layer with it, which then says nothing of the boolean, shownState)
-      const around = (id) => { const out = []; for (let up = (fc.anatomy[id] || {}).parent; up && up !== 'root' && fc.anatomy[up]; up = fc.anatomy[up].parent) if (parts[up]) out.push(parts[up]); return out; };
+      // (with the layers around it in its main, by their ids there: one this component takes away whole takes the layer
+      // with it, which then says nothing of the boolean, shownState)
+      const around = (id) => { const out = []; for (let up = (fc.anatomy[id] || {}).parent; up && up !== 'root' && fc.anatomy[up]; up = fc.anatomy[up].parent) out.push(up); return out; };
       return [slug, Object.fromEntries(Object.values(fc.props).filter((q) => q.type === 'boolean' && q.shows && parts[q.shows[0]]).map((q) => [q.figma, [parts[q.shows[0]], around(q.shows[0])]]))];
     }));
     // (and those its own design draws at opacity 0, a tooltip until hovered: shown there at 0, layerShown)
@@ -2744,7 +2771,7 @@ async function main() {
       // each element two layers of the design share, by what it draws (namedAt): its icon's name, else the first inside it
       const twice = [...new Set(named.map((x) => x[0]).filter((sl, i, a) => a.indexOf(sl) !== i))];
       const glyphs = twice.length ? await call(L.tab, (sels) => Object.fromEntries(sels.map((sl) => { const n = document.querySelector(sl), g = n && (n.getAttribute('data-icon') || (n.querySelector('[data-icon]') || { getAttribute: () => null }).getAttribute('data-icon')); return [sl, g || null]; })), twice) : {};
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS, paintedClearSrc, childrenMeetSrc, strokeShapesSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, swapSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames, cssOrderSrc, cornersSrc, glyphsDrawnSrc, ownLayerSrc, textTypeSrc, wordsSrc, paddingSrc, stackSrc, siblingOrderSrc, liftsSrc, turnSrc, ringsSrc, ownBoxSrc, flowSrc, layerShownSrc, markFillSrc, zeroShown, seeThroughSrc, glyphlessSrc, alignedSrc, wordsRectSrc, MARK_FIELDS, paintedClearSrc, childrenMeetSrc, strokeShapesSrc, mapped]) => {
         const corner = new Function(`return ${cornerSrc}`)(), corners = new Function(`return ${cornersSrc}`)();
         const shadowOnlyRings = new Function(`return ${ringsSrc}`)(), ownBox = new Function(`return ${ownBoxSrc}`)(), childrenMeet = new Function(`return ${childrenMeetSrc}`)(), [lineCap, centreRing] = new Function(`return ${strokeShapesSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
@@ -2758,7 +2785,7 @@ async function main() {
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
         const elementOfLayer = new Function(`return ${elementOfLayerSrc}`)();
         const opensPlaced = new Function(`return ${opensPlacedSrc}`)();
-        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), [layerShown, shownState] = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)(), paintedClear = new Function(`return ${paintedClearSrc}`)(); const seeThrough = new Function(`return ${seeThroughSrc}`)(), glyphless = new Function(`return ${glyphlessSrc}`)(), alignedOf = new Function(`return ${alignedSrc}`)();
+        const nameInside = new Function(`return ${nameInsideSrc}`)(), glyphsDrawn = new Function(`return ${glyphsDrawnSrc}`)(), ownLayer = new Function(`return ${ownLayerSrc}`)(), [layerShown, shownState, aroundGone] = new Function(`return ${layerShownSrc}`)(), markFill = new Function(`return ${markFillSrc}`)(), paintedClear = new Function(`return ${paintedClearSrc}`)(); const seeThrough = new Function(`return ${seeThroughSrc}`)(), glyphless = new Function(`return ${glyphlessSrc}`)(), alignedOf = new Function(`return ${alignedSrc}`)();
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -2877,7 +2904,7 @@ async function main() {
                 // (a box not drawn: computed display none, the hidden attribute's too unless CSS draws it again; a display: contents
                 // wrapper has no box of its own and hides nothing)
                 const boxedOut = (m) => { for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (getComputedStyle(up).display === 'none') return true; return false; };
-                return [p, shownState(ms.map((m) => [seen(m), boxedOut(m)]), around.some((u) => !mine(u).length))];
+                return [p, shownState(ms.map((m) => [seen(m), boxedOut(m)]), aroundGone(around, id, mapped, (q2) => !!document.querySelector(q2)))];
               })),
               // (its own root's included; none hidden, read to screen readers only, or of another instance nested in it)
               texts: [n, ...n.querySelectorAll('*')].filter((t) => {
@@ -3047,7 +3074,7 @@ async function main() {
           ranked.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; delete e.stack; delete e.rect; delete e.rects; });
         }
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), `[${layerShown.toString()}, ${shownState.toString()}]`, markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString(), `[${lineCap.toString()}, ${centreRing.toString()}]`]);
+      }, [rootSel, others, L.instancePattern, L.container, namedAt(named, drawnHere(), glyphs, (id) => (figmaContract ? layerNamesOf(figmaContract, id) : [])), partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, swapSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames, cssOrderOf.toString(), cornersOf.toString(), glyphsDrawn.toString(), ownLayer.toString(), textTypeOf.toString(), wordsAsDrawn.toString(), paddingOf.toString(), stackOf.toString(), `[${siblingOrder.toString()}, ${stackedFirst.toString()}, ${childOrder.toString()}]`, liftsAlone.toString(), turnOf.toString(), shadowOnlyRings.toString(), ownBoxOf.toString(), flowOf.toString(), `[${layerShown.toString()}, ${shownState.toString()}, ${aroundGone.toString()}]`, markFill.toString(), zeroShown, seeThrough.toString(), glyphless.toString(), alignedOf.toString(), wordsRect.toString(), MARK_FIELDS, paintedClear.toString(), childrenMeet.toString(), `[${lineCap.toString()}, ${centreRing.toString()}]`, Object.fromEntries(named.map(([q, id]) => [id, q]))]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a box whose children say by z-index how they stack but not the design's order of them (one in the flow, no CSS
       // order: rules.mjs stackedFirst): its children read as painted, and said so; the box keeps the mark (stackUnknown),
@@ -4157,10 +4184,7 @@ async function main() {
     for (const v of fromCode.variants) for (const k of Object.keys(v.set || {})) if (k.endsWith('.overlap')) delete v.set[k];
     // in the house's Figma conventions; its props against Figma's as the code audit judges them (one comparison, compareProps)
     // (the layers a placed component does not have, the design's own: their place kept, statedIn)
-    const addedIds = (() => { const all = { ...fromCode.anatomy, ...Object.assign({}, ...fromCode.variants.map((v) => v.add || {})) }, out = new Set();
-      for (const id of Object.keys(all)) { let q = null; for (let up = (all[id] || {}).parent; up && !q; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') q = up; const m = q && mainOf(all[q].component, all[q].key); if (m && !statedIn(all, q, id, m, mainOf)) out.add(id); }
-      return out; })();
-    const shaped = asFigma(fromCode, { axisOrder: (L.lib.tokens && L.lib.tokens.axisOrder) || [], foreign: foreignIds, added: addedIds });
+    const shaped = asFigma(fromCode, { axisOrder: (L.lib.tokens && L.lib.tokens.axisOrder) || [], foreign: foreignIds, added: addedIn(fromCode, mainOf) });
     // a prop the design has under no key or name is the code's alone (the contract editor's "Exists in: Code only"):
     // the drawing leaves it out, as Figma has no such property
     // only where the code follows the design (governed): a compared library's props are joined by rule, under the

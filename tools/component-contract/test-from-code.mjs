@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, shownState, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, lineCap, centreRing, shadowLayers, borderGradient, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
+import { MARK_FIELDS, flowOf, paddingOf, lengthAt, snappedOffset, wordsAsDrawn, designSetsColour, unplacedIn, designTokenFor, boxSelector, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, cornersOf, fullestOf, fullCorner, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, attrsByArg, asDesignSwaps, selfSlotControl, slotProp, dropPlaced, glyphSwaps, asShape, placedHere, layerShown, shownState, aroundGone, drawnAtZero, markFill, glyphless, seeThrough, withsOf, wrapGlyph, wholeShadowStyle, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign, textTypeOf, typedText, changedPaths, assistsOf, nameInside, roomTaken, nameBorrowed, colourKept, codeFigma, axisNames, paddingSaid, paddingWritten, paddingRead, childrenMeet, codeKeys, codeName, keyInstances, readCleared, lineEdge, lineCap, centreRing, shadowLayers, borderGradient, stateProp, stateHidden, passedSwaps, namedAt, layerNamesOf, alignedOf, swappedMark, renamedJoins, foreignAsInstance } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -134,7 +134,7 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
   const knob = { component: 'Knob', props: { on: { type: 'boolean', default: false } }, variants: [{ when: { on: true }, add: { glow: { kind: 'graphic', parent: 'root' } } }], anatomy: { root: { kind: 'container' }, grip: { kind: 'graphic', parent: 'root' } } };
   const held = [{ id: 'root', kind: 'container' }, { id: 'knob', kind: 'instance', parent: 'root', component: 'Knob' }, { id: 'knob/grip', kind: 'graphic', parent: 'knob', order: 0 }, { id: 'knob/layer', kind: 'graphic', parent: 'knob', order: 1, name: 'Layer' }];
   const mainOf = (n) => (n === 'Knob' ? knob : null);
-  const { autoSized, outOfFlowIn, statedIn, movedOn, asFigma: shapedOf } = await import('./from-code.mjs');
+  const { autoSized, outOfFlowIn, statedIn, movedOn, asFigma: shapedOf, addedIn } = await import('./from-code.mjs');
   // (2026-11-28: a box centred across and pinned along, translate -50% 0, that sits at the middle along by its offset is
   // pinned there, never read centred: a vertical slider's value indicator at the top)
   ok('a translate moves a box only along the axis it names a length on; a transform other than a translate moves both',
@@ -147,6 +147,7 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
     c.props = { size: { type: 'enum', values: ['lg', 'sm'], default: 'lg' } }; c.variants = [{ when: { size: 'sm' }, set: { 'knob/layer.absolute': { x: 0, y: -4, end: 0, bottom: 0 } } }];
     const keptSet = (shapedOf(c, { added: new Set(['knob/layer']) }).contract.variants[0] || {}).set || {};
     const kept = shapedOf(c, { added: new Set(['knob/layer']) }).contract.anatomy['knob/layer'], dropped = shapedOf(c).contract.anatomy['knob/layer'];
+    ok('the layers a placed component does not have are found as such, the base\'s and a variant\'s add, one it has not', (() => { const at = addedIn({ ...c, variants: [{ when: { size: 'sm' }, add: { 'knob/extra': { kind: 'container', parent: 'knob', name: 'Extra' } } }], anatomy: Object.fromEntries(held.map(({ id, ...r }) => [id, r])) }, mainOf); return at.has('knob/layer') && at.has('knob/extra') && !at.has('knob/grip') && !at.has('knob'); })());
     ok('a layer a placed component does not have keeps its place, and a variant\'s of it, in the reading\'s shape, as derive keeps them; one it has keeps none',
       !statedIn(a, 'knob', 'knob/layer', knob, mainOf) && statedIn(a, 'knob', 'knob/grip', knob, mainOf) && !!kept.absolute && !!kept.constraints && !dropped.absolute && !dropped.constraints && !!keptSet['knob/layer.absolute'], JSON.stringify([kept, dropped, keptSet])); }
   const layoutOfMain = (u) => (u.kind === 'instance' ? (mainOf(u.component) || {}).anatomy.root.layout : u.layout);
@@ -344,7 +345,10 @@ ok('a slot\'s stand-in is one word per prop, which no component draws', slotMark
     const sel = { props: { ph: { type: 'string', default: 'Value', figma: 'Placeholder' }, held: { type: 'string', default: 'Picked', figma: 'Held' }, state: { type: 'enum', values: ['rest', 'hydrate'], figmaValues: ['rest', 'hydrate'], default: 'rest', figma: 'state' } },
       anatomy: { root: { kind: 'container' }, ph: { kind: 'text', parent: 'root', content: '{ph}' } }, variants: [{ when: { state: 'hydrate' }, remove: ['ph'], add: { held: { kind: 'text', parent: 'root', content: '{held}' } } }] };
     ok('an instance\'s words are the texts it draws at the props read: at hydrate its held value, never its placeholder',
-      JSON.stringify(wordsOf(sel, ['12/18'], {}, {}, { state: 'hydrate' })) === '{"Held":"12/18"}' && JSON.stringify(wordsOf(sel, ['Pick one'], {}, {}, {})) === '{"Placeholder":"Pick one"}' && JSON.stringify(wordsOf(sel, ['12/18'])) === '{"Placeholder":"12/18"}'); }
+      JSON.stringify(wordsOf(sel, ['12/18'], {}, {}, { state: 'hydrate' })) === '{"Held":"12/18"}' && JSON.stringify(wordsOf(sel, ['Pick one'], {}, {}, {})) === '{"Placeholder":"Pick one"}' && JSON.stringify(wordsOf(sel, ['12/18'])) === '{"Placeholder":"12/18"}');
+    // (a variant that sets the text's content to another prop's binding, a field filled: that binding there, the base's elsewhere)
+    const filled = { ...sel, variants: [{ when: { state: 'hydrate' }, set: { 'ph.content': '{held}' } }] };
+    ok('…and a variant that binds the text to another prop at those props binds it to that one', JSON.stringify(wordsOf(filled, ['12/18'], {}, {}, { state: 'hydrate' })) === '{"Held":"12/18"}' && JSON.stringify(wordsOf(filled, ['Pick'], {}, {}, { state: 'rest' })) === '{"Placeholder":"Pick"}'); }
   ok('words that do not count out one for one are not guessed', JSON.stringify(wordsOf(badge, ['New', 'Extra'])) === '{}' && JSON.stringify(wordsOf(badge, [])) === '{}');
 }
 
@@ -828,6 +832,8 @@ ok('an arg renamed off an HTML attribute\'s name (typeOption) is read from that 
   ok('a layer a boolean shows is shown at opacity 0 where its design draws it at 0 (a tooltip drawn until hovered), not where hidden or not laid out',
     layerShown(1, { visibility: 'visible', opacity: '0' }, true) && layerShown(1, { visibility: 'visible', opacity: '1' }) && !layerShown(1, { visibility: 'hidden', opacity: '1' }, true) && !layerShown(0, { visibility: 'visible', opacity: '1' }));
   ok('…and one code draws at 0 for good, where the design paints it, is not shown', !layerShown(1, { visibility: 'visible', opacity: '0' }));
+  ok('a layer around a boolean\'s layer is gone only where this component\'s mapping names it inside the instance and finds nothing; one it does not name says nothing',
+    aroundGone(['box'], 'cb', { 'cb/box': 'q1' }, () => false) === true && aroundGone(['box'], 'cb', { 'cb/box': 'q1' }, () => true) === false && aroundGone(['box'], 'cb', {}, () => false) === false);
   ok('a placed instance\'s boolean is unknown where its layer is missing with a layer around it (a checkbox\'s box and value taken away whole), off where only the layer is missing, on where a copy is drawn',
     shownState([], true) === null && shownState([], false) === false && shownState([[false, true]], false) === null && shownState([[false, false]], true) === false && shownState([[false, true], [true, false]], true) === true);
   { const tip = { anatomy: { root: { kind: 'container' }, tip: { kind: 'instance', parent: 'root', opacity: 0 }, dot: { kind: 'graphic', parent: 'root' } }, variants: [{ when: { state: 'hover' }, set: { 'tip.opacity': null } }, { when: { size: 'l' }, add: { badge: { kind: 'graphic', parent: 'root', opacity: 0 } } }] };
@@ -1204,7 +1210,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   // (and a rule on an ancestor's pointer state, so a forced state that outlived its render would show in the next)
   const tokensCss = `:root {\n${lines.join('\n')}\n}\n#stage:hover section * { color: rgb(1, 2, 3) }`;
   const { findChrome, launch, newPage, attach, navigate, waitFor, call, forceState } = await import('../shared/cdp.mjs');
-  if (!fs.existsSync(findChrome())) ok('Chrome is here to read the self page in (none found: install Chrome, the toolkit\'s one browser)', false);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read the self page in (none found: install Chrome, the one browser these tests use)', false);
   else {
     const { authoredVars, authoredValue, authoredSelector, layerVars } = await import('../parity/external.mjs');
     const { propsOf } = await import('./to-markup.mjs');
@@ -1296,7 +1302,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
 { const fs = await import('node:fs');
   const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
   ok('an outline offset snaps as a border width: under 1px up to 1px, larger down to whole px, the sign kept', snappedOffset(-0.5) === -1 && snappedOffset(-1.5) === -1 && snappedOffset(-2) === -2 && snappedOffset(0) === 0 && snappedOffset(0.4) === 1);
-  if (!fs.existsSync(findChrome())) ok('Chrome is here to resolve a written length in (none found: install Chrome, the toolkit\'s one browser)', false);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to resolve a written length in (none found: install Chrome, the one browser these tests use)', false);
   else {
     const browser = await launch({});
     try {
@@ -1315,7 +1321,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
 { const fs = await import('node:fs');
   const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
   const { unturn } = await import('./from-code.mjs');
-  if (!fs.existsSync(findChrome())) ok('Chrome is here to measure a mirrored frame in (none found: install Chrome, the toolkit\'s one browser)', false);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to measure a mirrored frame in (none found: install Chrome, the one browser these tests use)', false);
   else {
     const browser = await launch({});
     try {
@@ -1330,6 +1336,10 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
       await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html>${frame('scale: -1 1; transform: scaleX(-1)')}${frame('scale: -1 -1')}${frame('scale: -1 1; transform-origin: 0 0')}${frame('scale: -1 1; width: 20.3px')}` });
       const composed = await call(tab, (src) => { const { mirrors, turned, restore } = new Function(`return ${src}`)()(document.documentElement); try { return [...document.querySelectorAll('.f')].map((f) => [mirrors.get(f) || null, turned.get(f) || 0, +f.getBoundingClientRect().left.toFixed(2)]); } finally { restore(); } }, unturn.toString());
       ok('mirrors compose per axis (two on one axis none, one on each a half turn), and one about an off-middle origin is set aside where it drew the box', JSON.stringify(composed) === '[[null,0,40],[null,180,40],["x",0,20],["x",0,40]]', JSON.stringify(composed));
+      // (one moved by a share of its box and in z too: the shift goes on top of that move, its share and its z kept)
+      await navigate(tab, 'http://round-trip.test/', { html: `<!doctype html>${frame('scale: -1 1; transform-origin: 0 0; translate: -50% 0 3px')}` });
+      const moved = await call(tab, (src) => { const f = document.querySelector('.f'), was = f.getBoundingClientRect().left; const { restore } = new Function(`return ${src}`)()(document.documentElement); try { return [+was.toFixed(2), +f.getBoundingClientRect().left.toFixed(2), /3px/.test(getComputedStyle(f).translate)]; } finally { restore(); } }, unturn.toString());
+      ok('…a mirror set aside on a box moved by a share of it keeps the box where it drew it, its z move kept', moved[0] === moved[1] && moved[2], JSON.stringify(moved));
       // a placed button whose host draws no box (display: contents) sits where its <button> does, pinned to its parent's
       // end: measured by that box, never the host's, which has none (a notification's close button read unplaced)
       const { insetsIn, turnOf } = await import('./from-code.mjs');
@@ -1345,7 +1355,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
   const { declarations } = await import('./css.mjs');
   const { weightName } = await import('../parity/values.mjs');
-  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a literal text in (none found: install Chrome, the toolkit\'s one browser)', false);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a literal text in (none found: install Chrome, the one browser these tests use)', false);
   else {
     const browser = await launch({});
     try {
@@ -1384,7 +1394,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('a text in a taller box: its vertical alignment written, never said unread; one cut to lines said unread',
     /align-content: center/.test(cssOf({ verticalAlign: 'center' })) && /align-content: end/.test(cssOf({ verticalAlign: 'end' })) && !/align-content/.test(cssOf({ verticalAlign: 'start' }))
     && !dec({ verticalAlign: 'center' }).unread.length && dec({ verticalAlign: 'center', maxLines: 2 }).unread.some((u) => /verticalAlign/.test(u)));
-  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a text\'s vertical alignment in (none found: install Chrome, the toolkit\'s one browser)', false);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a text\'s vertical alignment in (none found: install Chrome, the one browser these tests use)', false);
   else {
     const browser = await launch({});
     try {
@@ -1423,7 +1433,7 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
 // UNBLENDED); the same instance with nothing said computes its component's darken and reads nothing
 { const fs = await import('node:fs');
   const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
-  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a blend in (none found: install Chrome, the toolkit\'s one browser)', false);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a blend in (none found: install Chrome, the one browser these tests use)', false);
   else {
     const browser = await launch({});
     try {
@@ -1564,7 +1574,7 @@ ok('codeFigma: the design component a generated module names, read from its text
 // flow side by side cannot; one placed out of the flow, or one a margin pulls over the other, can; one alone cannot
 { const fs = await import('node:fs');
   const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
-  if (!fs.existsSync(findChrome())) ok('Chrome is here to measure children in (none found: install Chrome, the toolkit\'s one browser)', false);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to measure children in (none found: install Chrome, the one browser these tests use)', false);
   else {
     const browser = await launch({});
     try {
@@ -1582,7 +1592,7 @@ ok('codeFigma: the design component a generated module names, read from its text
 { const fs = await import('node:fs');
   const { findChrome, launch, newPage, attach, navigate } = await import('../shared/cdp.mjs');
   const { authoredSide } = await import('../parity/external.mjs');
-  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a written padding in (none found: install Chrome, the toolkit\'s one browser)', false);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a written padding in (none found: install Chrome, the one browser these tests use)', false);
   else {
     const browser = await launch({});
     try {
@@ -1800,7 +1810,7 @@ ok('a mark keeps its layout and its corners, stroke and clipping as read', ['lay
 { const fs = await import('node:fs');
   const { findChrome, launch, newPage, attach, navigate, call } = await import('../shared/cdp.mjs');
   const { toCss } = await import('./to-code.mjs');
-  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a mark in (none found: install Chrome, the toolkit\'s one browser)', false);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to read a mark in (none found: install Chrome, the one browser these tests use)', false);
   else {
     const c = { contract: 1, component: 'Bar', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Glyph', key: 'dd44', layout: { direction: 'row', gap: 0, align: 'center', crossAlign: 'center', padding: { top: 4, end: 4, bottom: 4, start: 4 } } }, 'icon/glyph': { kind: 'instance', parent: 'icon', component: 'Warn', width: 16, height: 16 } }, variants: [] };
     const sheet = toCss(c, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: () => null });

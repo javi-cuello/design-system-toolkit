@@ -1113,10 +1113,9 @@ function ownGlyph(anatomy, id) {
   if (anatomy[id].overflow === 'hidden') delete anatomy[id].overflow;
 }
 
-/* A component as one of its instances draws it: its contract expanded at the instance's props (`with`, by Figma's
-   names; an enum by Figma's own spelling of its value), each text prop's placeholder its words there, else the
-   prop's default. One reading for derive (an instance's insides held to it) and to-code (what a placed icon draws in). */
-function atProps(m, withProps = {}) {
+/* An instance's props (`with`, by Figma's names; an enum by Figma's own spelling of its value) as its component's own
+   values, every other prop at its variant default: what expand() takes. atProps's, shared with from-code's wordsOf. */
+function propsAt(m, withProps = {}) {
   const low = (x) => String(x).toLowerCase();
   const by = Object.fromEntries(Object.entries(m.props || {}).map(([k, q]) => [low(q.figma || k), k]));
   const vals = { ...variantDefaults(m) };
@@ -1127,7 +1126,15 @@ function atProps(m, withProps = {}) {
     const at = q.type === 'enum' && (q.figmaValues || []).findIndex((x) => low(x) === low(v));
     vals[mk] = q.type === 'boolean' ? v === true || low(v) === 'true' : q.type === 'enum' ? (at >= 0 ? q.values[at] : q.values.find((x) => low(x) === low(v)) ?? kebab(String(v))) : v;
   }
-  const M = expand(m, vals);
+  return vals;
+}
+
+/* A component as one of its instances draws it: its contract expanded at the instance's props (`with`, by Figma's
+   names; an enum by Figma's own spelling of its value), each text prop's placeholder its words there, else the
+   prop's default. One reading for derive (an instance's insides held to it) and to-code (what a placed icon draws in). */
+function atProps(m, withProps = {}) {
+  const low = (x) => String(x).toLowerCase();
+  const M = expand(m, propsAt(m, withProps));
   const words = (t) => {
     const r = /^\{(.+)\}$/.exec(t || ''), q = r && m.props[r[1]];
     if (!q) return t;
@@ -1404,4 +1411,4 @@ function wholeIn(all, mains, { reading = false } = {}) {
   return out;
 }
 
-module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, glyphColour, ownStyling, OWN, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs, wholeHosts, wholeIn, textGrows };
+module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, propsAt, glyphColour, ownStyling, OWN, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs, wholeHosts, wholeIn, textGrows };
