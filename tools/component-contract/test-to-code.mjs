@@ -1485,5 +1485,9 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     /ds-card:where\(\[shown\]:not\(\[shown="false"\]\)\) > \[data-part="link"\] \{\s*background: var\(--c-hi\);/.test(css) && /> \[data-part="link"\] > \[data-part="label"\] \{\s*color: var\(--c-ink-hi\);/.test(css), css);
   ok('…named with its pseudo-class there, and none at rest or where this one is at a pointer state (forwarded)',
     JSON.stringify(drawnAsOf(card, { shown: true, state: 'rest' }, heldOf(lib)).map((x) => [x.id, x.pseudo])) === '[["link","hover"]]'
-    && !drawnAsOf(card, { shown: false, state: 'rest' }, heldOf(lib)).length && !drawnAsOf(card, { shown: true, state: 'hover' }, heldOf(lib)).length); }
+    && !drawnAsOf(card, { shown: false, state: 'rest' }, heldOf(lib)).length && !drawnAsOf(card, { shown: true, state: 'hover' }, heldOf(lib)).length);
+  // (an override the design sets on the instance there stands over that look, as in Figma: a selected split button's
+  // menu button filled its own way)
+  const own = { ...card, variants: [{ when: { shown: true }, set: { 'link.with': { State: 'Hover' }, 'link.background': 'C/mine' } }] }, ownCss = toCss(own, 'card', { naming: { kind: 'element', prefix: 'ds-' }, library: { Card: own, Link: link } });
+  ok('…an override the design sets on the instance there stands over that look', /--c-mine/.test(ownCss) && !/--c-hi/.test(ownCss) && /--c-ink-hi/.test(ownCss), ownCss); }
 console.log(`${n} passed`);

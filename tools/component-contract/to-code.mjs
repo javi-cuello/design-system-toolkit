@@ -1431,12 +1431,15 @@ export function drawn(c, when, mains = NO_MAINS, t = HOUSE, known = {}) {
   // a placed component the design gives a pointer value of its own where nothing forwards one: what its own sheet draws
   // at that value and not at its rest, over its own (drawnAsOf), each property its rest writes and that value does not
   // unset
+  // (never a property this one writes on that part itself, an override the design sets on the instance there, which
+  // stands over the state's look as it does in Figma: a selected split button's menu button filled its own way)
   for (const { id, m, w, rest } of drawnAsOf(c, when, mains, t, a)) {
     const P = drawnAt(m, w, mains, t), R = drawnAt(m, rest, mains, t);
+    const match = placedOf(a, id, placedAs(a, id, m, mains).M), mine = (k) => new Set(Object.keys(out).filter((x) => !x.includes('::') && (k === 'root' ? x === id : x.startsWith(`${id}/`) && match[x.slice(id.length + 1)] === k)).flatMap((x) => [...out[x].decls.keys()]));
     for (const k of new Set([...Object.keys(P), ...Object.keys(R)])) {
       if (k.includes('::')) continue;
-      const p = (P[k] || {}).decls || new Map(), r = (R[k] || {}).decls || new Map();
-      const decls = new Map([...[...p].filter(([q, x]) => !r.has(q) || r.get(q).v !== x.v), ...[...r.keys()].filter((q) => !p.has(q)).map((q) => [q, { v: 'unset' }])]);
+      const p = (P[k] || {}).decls || new Map(), r = (R[k] || {}).decls || new Map(), taken = mine(k);
+      const decls = new Map([...[...p].filter(([q, x]) => !r.has(q) || r.get(q).v !== x.v), ...[...r.keys()].filter((q) => !p.has(q)).map((q) => [q, { v: 'unset' }])].filter(([q]) => !taken.has(q)));
       if (decls.size) out[`${id}::as>${k}`] = { decls, unread: [] };
     }
   }
