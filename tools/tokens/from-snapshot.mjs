@@ -102,13 +102,13 @@ export function toDtcgSnapshot(t) {
     const h = holder.get(css(name));
     if (!c.remote || !h || h === `${cname}\u0000${name}`) return null;
     const [hc, hn] = h.split('\u0000');
-    // (two of one property in one collection have no collection to tell them apart: the first holds it, whatever the
-    // other's values, and the other is said)
-    return hc === cname || valuesOf(byCollection.get(hc), hn) === valuesOf(c, name) ? hc : null;
+    // (two of one property in one collection at other values have no collection to tell them apart: both go on, and the
+    // build refuses them as one name two paths share, code-standard rule 52)
+    return valuesOf(byCollection.get(hc), hn) === valuesOf(c, name) ? hc : null;
   };
   const shadowed = (cname, c, name) => copyOf(cname, c, name) !== null;
   const deduped = [];
-  for (const [cname, c] of collections) for (const n of namesOf(c)) { const hc = copyOf(cname, c, n); if (hc !== null) deduped.push({ name: `${cname}/${n}`, reason: hc === cname ? `the same property as ${holder.get(css(n)).split('\u0000')[1]} in its own collection, which holds it` : `a copy of ${hc}'s, the same in every mode` }); }
+  for (const [cname, c] of collections) for (const n of namesOf(c)) { const hc = copyOf(cname, c, n); if (hc !== null) deduped.push({ name: `${cname}/${n}`, reason: hc === cname ? `the same property as ${holder.get(css(n)).split('\u0000')[1]} in its own collection, at the same values` : `a copy of ${hc}'s, the same in every mode` }); }
   const homes = new Map();
   for (const [cname, c] of collections) {
     for (const mode of c.modes) for (const name of Object.keys((c.values || {})[mode] || {})) {
@@ -298,6 +298,13 @@ export function writeDtcg(tokens, dir, opts = {}) {
   const built = DTCG.buildFiles(snap, { colorFormat: 'object', unit: 'px', rootSize: 16, ...opts });
   // (another library's copies left out, each said: build.mjs lists them whole)
   built.report.deduped = snap.deduped;
+  // Two variables of one collection on one token path (a slug dropped what told them apart) are two paths sharing a
+  // name: refused, never the first kept and the other skipped (code-standard rule 52)
+  const met = built.report.skipped.filter((x) => x.collides);
+  if (met.length) {
+    const [m] = met, more = new Set(met.map((x) => `${x.collection}/${x.name}`)).size - 1;
+    throw Object.assign(new Error(`tokens: "${m.collides}" and "${m.name}" (variables in ${m.collection}) both become ${m.reason.replace(/^.* at /, '')}: rename one in Figma (code-standard rule 52)${more ? `; ${more} more collide` : ''}`), { refused: true });
+  }
   /* Paragraph and list spacing belong to a text style and DTCG's typography
      type has no member for them (Format 2025.10 §9.8 lists exactly five). They
      go in the token's $extensions, merged beside any tracking fraction already

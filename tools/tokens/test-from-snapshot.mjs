@@ -330,8 +330,9 @@ test("another library's variable a local one names at the same values is that on
   assert.deepEqual(toDtcgSnapshot(two).collections.map((c) => c.variables.map((v) => v.name)), [['Space0', 'Space1'], ['Space2']]);
   // compared as CSS writes them: an emoji or a separator CSS drops makes no second property, within one collection too
   const css = { collections: { Lib: { modes: ['V'], values: { V: { 'logo/text': 1, 'logo - text': 2, '🌮 Weight/Bold': 700, 'Weight/Bold': 700 } }, alias: {}, remote: true } } };
-  assert.deepEqual(toDtcgSnapshot(css).collections[0].variables.map((v) => v.name), ['logo/text', '🌮 Weight/Bold']);
-  assert.deepEqual(toDtcgSnapshot(css).deduped.map((d) => d.name), ['Lib/logo - text', 'Lib/Weight/Bold'], 'each one left out is said');
+  // (one at the same values only: two of one property at other values both go on, and the build refuses them, rule 52)
+  assert.deepEqual(toDtcgSnapshot(css).collections[0].variables.map((v) => v.name), ['logo/text', 'logo - text', '🌮 Weight/Bold']);
+  assert.deepEqual(toDtcgSnapshot(css).deduped.map((d) => d.name), ['Lib/Weight/Bold'], 'each one left out is said');
   // a reference to one left out goes to the one holding its name, an alias and a text style's binding alike
   const ref = { collections: {
     Type: { modes: ['V'], values: { V: { 'Font Weight/Bold': 700, 'Font/Sans': 'Inter' } }, alias: {} },

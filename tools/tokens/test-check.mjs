@@ -274,6 +274,17 @@ test('under the ruling (read for a tokens-only library too), a colour style is m
   assert.match(tokensCss(root), /--shades-1-pill-edge: #000000;/);
 });
 
+test('two names of one property in one collection at other values are refused, another library\'s too, never one kept and the other dropped', () => {
+  for (const values of [{ 'Logo/text': 1, 'Logo - text': 2 }, { 'Weight/Bold': 700, '🌮 Weight/Bold': 600 }]) {
+    const root = repo();
+    withCollections(root, () => ({ Lib: { remote: true, modes: ['Value'], values: { Value: values }, alias: {} } }));
+    const r = buildCli(root);
+    assert.equal(r.status, 1, `${Object.keys(values)}: ${r.stdout}${r.stderr}`);
+    assert.match(r.stderr, /tokens: .*(two tokens become|both become) (--logo-text|lib\.weight\.bold).*rename one in Figma \(code-standard rule 52\)/, r.stderr);
+    assert.ok(!existsSync(join(root, 'design/dtcg/lib')), 'nothing written');
+  }
+});
+
 test('a name its collection prefixes that still meets another is refused as before', () => {
   const root = repo();
   withCollections(root, () => ({

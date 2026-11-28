@@ -273,6 +273,7 @@
     var rootSize = o.rootSize || 16;
     var tokens = {};
     var skipped = [];
+    var heldBy = {};
     var renamed = [];
 
     var opacityValues = [];
@@ -320,8 +321,9 @@
       if (!o.noExtensions) token.$extensions = extensions(v, collection.figmaName || collection.name, mode, vendor);
       var at = pathFor(collection.name, v.name);
       if (!setDeep(tokens, at, token))
-        skipped.push({ name: v.name, reason: 'name collides with another token at ' + at.join('.') });
+        skipped.push({ name: v.name, reason: 'name collides with another token at ' + at.join('.'), collides: heldBy[at.join('.')] || null });
       else {
+        heldBy[at.join('.')] = v.name;
         var lossy = renamedSegments(v.name);
         if (lossy.length) renamed.push({ name: v.name, path: at.join('.'), segments: lossy });
       }
