@@ -200,23 +200,30 @@ export function sized(plan, limit = LIMIT) {
 }
 
 /* What one call leaves the next on the temporary page, and the next takes up: the names more than one collection holds,
-   the count of lookups given up on, how many timed out, and which variables missed, so a miss is counted once a run
-   and never asked again, as one whole run counts it (each call starts with an empty variable cache). */
-const LEAVE = `scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered)); scratch().setSharedPluginData('${NS}', 'timedOut', String(timedOut)); scratch().setSharedPluginData('${NS}', 'missed', JSON.stringify([...missed]));`;
+   the count of lookups given up on, how many timed out, which variables missed (so a miss is counted once a run and
+   never asked again, as one whole run counts it: each call starts with empty caches; a collection lookup that can be
+   given up on is made only by collectTokens, which no later call runs), and which variables the tokens call read (so the components call's dark previews find every collection a whole run finds).
+   A list goes on a frame of its own in entries under Figma's 100 kB, as the payload does (`written`). */
+const HANDOVER = `
+const __put = (k, v) => { const s = scratch(); for (const f of s.children.filter((x) => x.name === 'handover ' + k)) f.remove(); const t = JSON.stringify(v), f = figma.createFrame(); f.name = 'handover ' + k; s.appendChild(f); let i = 0; do { f.setSharedPluginData('${NS}', 'c' + i, t.slice(i * ${CHUNK}, (i + 1) * ${CHUNK})); i++; } while (i * ${CHUNK} < t.length); f.setSharedPluginData('${NS}', 'n', String(i)); };
+const __get = (k, d) => { const f = scratch().children.find((x) => x.name === 'handover ' + k), n = f ? Number(f.getSharedPluginData('${NS}', 'n')) || 0 : 0; if (!n) return d; let t = ''; for (let i = 0; i < n; i++) t += f.getSharedPluginData('${NS}', 'c' + i); return JSON.parse(t); };`;
+const LEAVE = `scratch().setSharedPluginData('${NS}', 'unanswered', String(unanswered)); scratch().setSharedPluginData('${NS}', 'timedOut', String(timedOut)); __put('missed', [...missed]);`;
 const TAKE = `const __from = unanswered = Number(scratch().getSharedPluginData('${NS}', 'unanswered')) || 0; timedOut = Number(scratch().getSharedPluginData('${NS}', 'timedOut')) || 0;
-for (const id of JSON.parse(scratch().getSharedPluginData('${NS}', 'missed') || '[]')) { missed.add(id); varCache[id] = null; }
-const __shared = scratch().getSharedPluginData('${NS}', 'shared'); if (__shared) sharedNames = new Set(JSON.parse(__shared));`;
+for (const id of __get('missed', [])) { missed.add(id); varCache[id] = null; }
+const __shared = __get('shared', null); if (__shared) sharedNames = new Set(__shared);`;
 const TOKENS = `
 {
+${HANDOVER}
 figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
 const tokens = await collectTokens();
-scratch().setSharedPluginData('${NS}', 'shared', JSON.stringify([...sharedNames]));
+__put('shared', [...sharedNames]); __put('read', Object.keys(varCache).filter((id) => varCache[id]));
 ${LEAVE}
 %ICONS%
 ${written(`{ tokens, unanswered, sets: ${PLANNED}.flatMap((pg) => pg.sets.map((s) => s.id)), iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, ...(Object.keys(iconGroups).length && { iconGroups }), ...(Object.keys(iconDescriptions).length && { iconDescriptions }) }`, ', sets: __payload.sets.length')}}`;
 const PART = `
+${HANDOVER}
 figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 await loadPages(true);
@@ -247,9 +254,12 @@ export function tokensCode() {
    first call read (its shared names and the lookups it gave up on taken up from the temporary page, as a part takes
    them), leaving the components, the sets it walked and what it left unrecorded, as one part's holder does. */
 const COMPONENTS = `
+${HANDOVER}
 figma.skipInvisibleInstanceChildren = true;
 const __t0 = Date.now();
 ${TAKE}
+for (const v of await figma.variables.getLocalVariablesAsync()) varCache[v.id] = v;
+for (const id of __get('read', [])) await variable(id);
 const __groups = [];
 unrecordedSeen.push = function (...xs) { if (xs.length) __groups.push(xs); return Array.prototype.push.apply(this, xs); };
 const __r = await collectLibrary(true, { _meta: {} });

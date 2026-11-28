@@ -628,7 +628,7 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
     "Lib/v:r": { id: "Lib/v:r", key: "kr", name: "Pill Edge", variableCollectionId: "c:r", remote: true, scopes: [], valuesByMode: { mr: { r: 1, g: 0, b: 0, a: 1 } } } };
   const colls = { "c:l": { id: "c:l", name: "Shades", modes: [{ modeId: "m", name: "Value" }], defaultModeId: "m", variableIds: ["v:l"] },
     "c:r": { id: "c:r", name: "Lib", remote: true, modes: [{ modeId: "mr", name: "Value" }], defaultModeId: "mr", variableIds: ["Lib/v:r"] } };
-  const run = async (head) => {
+  const run = async (head, strict = false) => {
     const button = { ...box("Button", "COMPONENT"), id: "1:1", parent: null, fills: [], effects: [], strokeWeight: 1,
       strokes: [{ type: "SOLID", visible: true, opacity: 1, color: { r: 1, g: 0, b: 0 }, boundVariables: { color: alias("Lib/v:r") } }],
       componentPropertyDefinitions: {}, findAll: () => [], findAllWithCriteria: () => [] };
@@ -638,13 +638,32 @@ ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation =
     const ff = { root, fileKey: "K", currentPage: page, loadAllPagesAsync: async () => {}, skipInvisibleInstanceChildren: false,
       variables: { getLocalVariablesAsync: async () => [vars["v:l"]], getLocalVariableCollectionsAsync: async () => [colls["c:l"]], getVariableByIdAsync: async (id) => vars[id] || null, getVariableCollectionByIdAsync: async (id) => colls[id] || null },
       getLocalTextStylesAsync: async () => [], getLocalPaintStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [], getStyleByIdAsync: async () => null };
+    // (strict: a scoped run reads no style, so none is served)
+    if (strict) for (const k of ['getLocalTextStylesAsync', 'getLocalPaintStylesAsync', 'getLocalEffectStylesAsync']) ff[k] = async () => { throw new Error(`a scoped run read styles (${k})`); };
     return vm.runInContext("(async () => { const __html__ = undefined; " + head + "\n" + src + "\nreturn __headless(); })()", vm.createContext({ figma: ff, __html__: "<ui/>", console, setTimeout, clearTimeout }));
   };
   const recorded = (r) => JSON.stringify(r.components).match(/"collections":\{[^}]*\}/g);
-  const scoped = await run('const SCOPE = ["1:1"];');
-  ok("a scoped headless run records the collection of a name another library's collection shares with the file's", JSON.stringify(recorded(scoped)) === JSON.stringify(['"collections":{"Pill Edge":"Lib"}']), JSON.stringify(scoped.components));
+  const scoped = await run('const SCOPE = ["1:1"];', true);
+  ok("a scoped headless run records the collection of a name another library's collection shares with the file's, reading names alone (no style)", JSON.stringify(recorded(scoped)) === JSON.stringify(['"collections":{"Pill Edge":"Lib"}']), JSON.stringify(scoped.components));
   const whole = await run('const FULL = true;');
   ok("…the same as a whole run records", JSON.stringify(recorded(whole)) === JSON.stringify(recorded(scoped)), JSON.stringify(whole.components));
+  // handed the names the stored tokens share (names.mjs sharedOf, the plugin's own sharedOf in the build's keys)
+  const { sharedOf: storedShared } = await import("../../../tools/tokens/names.mjs");
+  const shared = storedShared(whole.tokens.collections);
+  const handed = await run(`const SCOPE = ["1:1"]; const SHARED = ${JSON.stringify(shared)};`, true);
+  ok("…and the same handed SHARED from the stored snapshot's collections, which the plugin's sharedOf agrees with", JSON.stringify(shared) === '["pill-edge"]' && JSON.stringify([...sharedOf(whole.tokens.collections)]) === JSON.stringify(shared) && JSON.stringify(recorded(handed)) === JSON.stringify(recorded(scoped)), JSON.stringify(handed.components));
+}
+{ // the walk's own fallback (no tokens read, no SHARED) counts collections by name, as sharedOf joins them
+  const vars = { "v:fa": { id: "v:fa", name: "pill-edge", variableCollectionId: "c:f1" }, "v:fb": { id: "v:fb", name: "pill-edge", variableCollectionId: "c:f2" } };
+  const colls = { "c:f1": { id: "c:f1", name: "Shades", modes: [] }, "c:f2": { id: "c:f2", name: "Shades", modes: [] } };
+  const was = { ...figma.variables };
+  Object.assign(figma.variables, { getVariableByIdAsync: async (id) => vars[id] || null, getLocalVariablesAsync: async () => Object.values(vars), getVariableCollectionByIdAsync: async (id) => colls[id] || null });
+  freshLookups();
+  const layer = { ...box("Pill", "FRAME"), strokes: [{ type: "SOLID", visible: true, opacity: 1, color: { r: 0, g: 0, b: 0 }, boundVariables: { color: { type: "VARIABLE_ALIAS", id: "v:fb" } } }], strokeWeight: 1 };
+  const w = await walk(layer, 0);
+  ok("the walk's fallback counts two collections of one name as one, as sharedOf does: no collection recorded", !("collections" in w), JSON.stringify(w));
+  Object.assign(figma.variables, was);
+  freshLookups();
 }
 
 console.log(n + "/" + n + " passed");

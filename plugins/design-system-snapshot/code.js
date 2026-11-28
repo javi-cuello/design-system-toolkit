@@ -198,8 +198,9 @@ const sharedOf = (cols) => {
  *  @param {SceneNode} n */
 async function bindingCollections(n) {
   if (!sharedNames) {
+    // (counted by collection name, as sharedOf counts the collections the tokens join by name)
     /** @type {Record<string, Set<string>>} */ const at = {};
-    for (const v of await figma.variables.getLocalVariablesAsync()) (at[nameKey(v.name)] ||= new Set()).add(v.variableCollectionId);
+    for (const v of await figma.variables.getLocalVariablesAsync()) { const c = await collectionOf(v.variableCollectionId); (at[nameKey(v.name)] ||= new Set()).add(c ? c.name : v.variableCollectionId); }
     sharedNames = new Set(Object.keys(at).filter((k) => at[k].size > 1));
   }
   /** @type {Record<string, any>} */ const o = {};
@@ -2161,6 +2162,24 @@ async function collectFacts() {
 // return statement". The bridge evaluates it as a function BODY and needs the
 // value, so the service appends `return __headless();` when it serves this
 // file for headless use (figma-audit/server.mjs).
+/* The names more than one collection holds (sharedOf), from the collections collectTokens reads, by names alone: the
+   file's own, and another library's a stored component binds (joined by name, one a local collection's name shadows
+   left out), with no value, style or font read. A scoped headless run's, when no SHARED is handed in. */
+async function namesShared() {
+  /** @type {Record<string, { values: Record<string, Record<string, number>> }>} */ const byName = {};
+  const take = async (c) => { const into = ((byName[c.name] ||= { values: { names: {} } }).values.names); for (const id of c.variableIds) { const v = await variable(id); if (v) into[v.name] = 1; } };
+  const local = await figma.variables.getLocalVariableCollectionsAsync(), here = new Set(local.map((c) => c.name)), seen = new Set();
+  for (const c of local) await take(c);
+  for (const i of boundVariableIds()) {
+    const v = await variable(i).catch(() => null);
+    const cid = v && v.remote ? v.variableCollectionId : null;
+    if (!cid || seen.has(cid)) continue;
+    seen.add(cid);
+    const got = await answered(() => figma.variables.getVariableCollectionByIdAsync(cid)).then((x) => (x === MISSED ? (unanswered++, null) : x), () => null);
+    if (got && !here.has(got.name)) await take(got);
+  }
+  return sharedOf(byName);
+}
 async function __headless() {
   // put back on the way out: the caller's next read (Audit lite's components scan, the bridge's next script) sees what it saw before
   const skip = figma.skipInvisibleInstanceChildren;
@@ -2174,11 +2193,11 @@ async function __headless() {
   try {
     if (typeof FULL !== 'undefined' && FULL) return Object.assign(await collectLibrary(true), { fileKey: figma.fileKey || null, fileName: figma.root.name });
     if (typeof FACTS !== 'undefined' && FACTS) return Object.assign(await collectFacts(), { fileKey: figma.fileKey || null, fileName: figma.root.name, at: new Date().toISOString() });
-    // (the tokens read first, as a whole run reads them: the names a binding records its collection for are those every
-    // collection the tokens hold shares, another library's too, never the file's own alone, so a scoped run records
-    // what a whole one does)
-    await collectTokens();
+    // (the names a binding records its collection for, as a whole run has them: those every collection the tokens hold
+    // shares, another library's too. Handed in as SHARED (names.mjs sharedOf over the stored snapshot's collections), or
+    // read by names alone, never the whole tokens)
+    sharedNames = typeof SHARED !== 'undefined' && Array.isArray(SHARED) ? new Set(SHARED) : await namesShared();
     const components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], scope, pages, section, exclude });
-    return { components, ...(unreadable.length && { unreadable }), fileKey: figma.fileKey || null, fileName: figma.root.name, at: new Date().toISOString() };
+    return { components, ...(unanswered && { unanswered }), ...(unreadable.length && { unreadable }), fileKey: figma.fileKey || null, fileName: figma.root.name, at: new Date().toISOString() };
   } finally { figma.skipInvisibleInstanceChildren = skip; if (scratchPage) { scratchPage.remove(); scratchPage = null; } }
 }
