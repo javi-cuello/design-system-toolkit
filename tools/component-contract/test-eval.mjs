@@ -16,6 +16,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 let n = 0;
 // every excuse the fixtures below meet, by its gap id: each must be met once (checked at the end)
+const HERE_W = path.dirname(new URL(import.meta.url).pathname);
 const seenGaps = new Set();
 const leftToCode = (...a) => { const g = gapOf(...a), yes = leftToCode0(...a); return (at, row) => { const r = g(at, row); if (r) seenGaps.add(r); if (!!r !== yes(at, row)) throw new Error(`gapOf and leftToCode disagree at ${at}`); return !!r; }; };
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -375,6 +376,14 @@ ok('a component measured since the accept is held until accepted; one that came 
   for (const [f, c] of [['fresh', derive(spec, ['T'], {})], ['old', { ...derive(spec, ['T'], {}), anatomy: { root: { kind: 'container' } } }], ['gone', null]]) {
     fs.mkdirSync(path.join(d, f)); fs.writeFileSync(path.join(d, f, 'figma.json'), JSON.stringify(spec)); if (c) fs.writeFileSync(path.join(d, f, 'contract.json'), JSON.stringify(c)); }
   ok('the rewrite a stale store asks for carries the projects root the run read, so the store it writes is the one the run reads', rewriteHint('/x/components', '/r') === 'TOOLKIT_PROJECTS_ROOT=/r node tools/component-contract/write.cjs /x/components' && rewriteHint('/x/components', '') === 'node tools/component-contract/write.cjs /x/components');
+  { // a store under another projects root than the run's: write.cjs refuses, naming the root, and writes nothing
+    const other = fs.mkdtempSync(path.join(os.tmpdir(), 'root-')), comps = path.join(other, 'lib', 'figma-design-system', 'snapshot', 'components');
+    fs.mkdirSync(path.join(comps, 'chip'), { recursive: true });
+    fs.writeFileSync(path.join(comps, 'chip', 'figma.json'), JSON.stringify({ name: 'Chip', type: 'COMPONENT' }));
+    const r = spawnSync(process.execPath, [path.join(HERE_W, 'write.cjs'), comps], { encoding: 'utf8', env: { ...process.env, TOOLKIT_PROJECTS_ROOT: fs.mkdtempSync(path.join(os.tmpdir(), 'run-')) } });
+    ok('write.cjs: a store no project under the run\'s root registers is refused with the root to run under, nothing written', r.status === 2 && r.stderr.includes(`TOOLKIT_PROJECTS_ROOT=${other} `) && !fs.existsSync(path.join(comps, 'chip', 'contract.json')));
+    fs.rmSync(other, { recursive: true, force: true });
+  }
   ok('an official contract an older derive.cjs wrote is named, so a measure is never taken against yesterday\'s rules', JSON.stringify(staleContracts(d)) === '["gone","old"]' && staleContracts(path.join(d, 'none')).length === 0);
   fs.rmSync(d, { recursive: true, force: true }); }
 {

@@ -12,10 +12,18 @@
 const fs = require('fs');
 const path = require('path');
 const { derive } = require('./derive.cjs');
-const { deriveOptionsFor } = require('../snapshot/projects.cjs');
+const { deriveOptionsFor, storeLibraries, HOME } = require('../snapshot/projects.cjs');
 
 const dir = process.argv[2];
 if (!dir || !fs.existsSync(dir)) { console.error('usage: write.cjs <components dir>'); process.exit(2); }
+// a project's store that no project under this projects root registers: derived here, it would take the house's state
+// axis and pointer states, not its project's, and every state prop would lose its role. Said, with the root to run under.
+const segs = path.resolve(dir).split(path.sep), at = segs.lastIndexOf(HOME);
+if (at > 1 && !storeLibraries(dir)) {
+  const other = segs.slice(0, at - 1).join(path.sep);
+  console.error(`no project under this projects root registers ${dir}: run TOOLKIT_PROJECTS_ROOT=${other} node tools/component-contract/write.cjs ${dir}`);
+  process.exit(2);
+}
 let written = 0, same = 0;
 const bad = [];
 // the project's state axis and pointer states, as the snapshot router derives under them
