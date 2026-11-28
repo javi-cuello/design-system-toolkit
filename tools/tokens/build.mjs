@@ -21,7 +21,7 @@
  * Style Dictionary is the repo's own dependency, loaded from the repo, so the
  * toolkit stays dependency-free and every repo pins its own version.
  */
-import { readFileSync, readdirSync, existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, mkdtempSync, rmSync, statSync, realpathSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve, relative, dirname } from 'node:path';
@@ -29,79 +29,125 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 const TOOLKIT = resolve(HERE, '..', '..');
-const argv = process.argv.slice(2);
-// Without --repo, indexOf is -1 and argv[0] (say --check) became the repo.
-const at = argv.indexOf('--repo');
-const repo = resolve(at >= 0 && argv[at + 1] ? argv[at + 1] : '.');
-const check = argv.includes('--check');
+const require_ = createRequire(import.meta.url);
 
-const config = createRequire(import.meta.url)('../shared/repo-config.cjs').repoConfig(repo, 'tokens build');
-const { paths } = await import(pathToFileURL(join(TOOLKIT, 'tools/snapshot/store.cjs')).href).then((m) => m.default || m);
-const P = paths(repo, config.paths);
-if (!P.styles) { console.error(`  ${repo}/snapshot.config.json names no paths.styles — where the token stylesheets go`); process.exit(2); }
-if (!existsSync(P.tokens)) { console.error(`  no snapshot at ${relative(repo, P.tokens)} — take one in Figma first`); process.exit(1); }
+/* The command that rebuilds a repo's tokens: its `bin/tokens` where it has one (project-check init writes it), else
+   this build by its full path, so the line is one that runs (a scratch library has no bin/). Under the projects root
+   the run read (TOOLKIT_PROJECTS_ROOT), as eval's rewriteHint carries it. */
+export const rebuildCommand = (repo, root = process.env.TOOLKIT_PROJECTS_ROOT) =>
+  `${root ? `TOOLKIT_PROJECTS_ROOT=${root} ` : ''}${existsSync(join(repo, 'bin/tokens')) ? join(repo, 'bin/tokens') : `node ${join(TOOLKIT, 'tools/tokens/build.mjs')} --repo ${repo}`}`;
 
-let SD;
-try {
-  const req = createRequire(join(repo, 'package.json'));
-  SD = (await import(pathToFileURL(req.resolve('style-dictionary')).href)).default;
-} catch {
-  console.error(`  style-dictionary is not installed in ${repo} — add it as a dev dependency`);
-  process.exit(2);
-}
+/* The build, written or (check) regenerated beside and compared: { code, out: [lines], err: [lines] }, nothing printed
+   but what Style Dictionary and buildTokens warn of (`quiet` drops those: eval asks only whether the files are current).
+   code 0 written or current, 1 out of date or refused, 2 the repo cannot be built (no paths.styles, no
+   style-dictionary). A repo with no snapshot is code 1, as the command always said it. */
+export async function tokenBuild(repo, { check = false, quiet = false } = {}) {
+  const out = [], err = [];
+  const done = (code) => ({ code, out, err });
+  const { readRepoConfig } = require_('../shared/repo-config.cjs');
+  const cfg = readRepoConfig(repo);
+  if (cfg.error) { err.push(`tokens build: ${cfg.error}`); return done(2); }
+  const { paths } = await import(pathToFileURL(join(TOOLKIT, 'tools/snapshot/store.cjs')).href).then((m) => m.default || m);
+  const P = paths(repo, cfg.config.paths);
+  if (!P.styles) { err.push(`  ${repo}/snapshot.config.json names no paths.styles — where the token stylesheets go`); return done(2); }
+  if (!existsSync(P.tokens)) { err.push(`  no snapshot at ${relative(repo, P.tokens)} — take one in Figma first`); return done(1); }
 
-const { writeDtcg } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/from-snapshot.mjs')).href);
-const { buildTokens } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/build-tokens.mjs')).href);
+  let SD;
+  try {
+    const req = createRequire(join(repo, 'package.json'));
+    SD = (await import(pathToFileURL(req.resolve('style-dictionary')).href)).default;
+  } catch {
+    err.push(`  style-dictionary is not installed in ${repo} — add it as a dev dependency`);
+    return done(2);
+  }
 
-// written in place, or, for --check, beside it and compared
-const STORED = join(dirname(P.tokens), 'dtcg');
-const dtcg = check ? mkdtempSync(join(tmpdir(), 'dtcg-')) : STORED;
-const tree = (root) => {
-  const out = new Map();
-  // dist/ beside them is a consumer's build, which writeDtcg leaves alone too
-  const walk = (d) => { for (const n of readdirSync(d)) { const f = join(d, n); if (statSync(f).isDirectory()) { if (!(d === root && n === 'dist')) walk(f); } else if (n.endsWith('.json')) out.set(relative(root, f), readFileSync(f, 'utf8')); } };
-  if (existsSync(root)) walk(root);
-  return out;
-};
-let built, files, dtcgBad = [], refused = false;
-try {
-  built = writeDtcg(JSON.parse(readFileSync(P.tokens, 'utf8')), dtcg);
-  files = await buildTokens(SD, { tokens: dtcg, out: P.styles, write: !check });
+  const { writeDtcg } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/from-snapshot.mjs')).href);
+  const { buildTokens } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/build-tokens.mjs')).href);
+  const { collisionNames } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/names.mjs')).href);
+
+  // built beside first, then compared (--check) or written in place: a refused build writes nothing, where it once
+  // left new DTCG files over the stylesheets they no longer built
+  const STORED = join(dirname(P.tokens), 'dtcg');
+  const dtcg = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  const tree = (root) => {
+    const found = new Map();
+    // dist/ beside them is a consumer's build, which writeDtcg leaves alone too
+    const walk = (d) => { for (const n of readdirSync(d)) { const f = join(d, n); if (statSync(f).isDirectory()) { if (!(d === root && n === 'dist')) walk(f); } else if (n.endsWith('.json')) found.set(relative(root, f), readFileSync(f, 'utf8')); } };
+    if (existsSync(root)) walk(root);
+    return found;
+  };
+  const snapshot = JSON.parse(readFileSync(P.tokens, 'utf8'));
+  let built, files, dtcgBad = [], refused = false;
+  const warn = console.warn;
+  if (quiet) console.warn = () => {};
+  try {
+    built = writeDtcg(snapshot, dtcg);
+    files = await buildTokens(SD, { tokens: dtcg, out: P.styles, write: false });
+    if (!check) {
+      built = writeDtcg(snapshot, STORED);
+      mkdirSync(P.styles, { recursive: true });
+      for (const [f, body] of files) writeFileSync(join(P.styles, f), body);
+    } else {
+      const want = tree(dtcg), have = tree(STORED), at = relative(repo, STORED);
+      for (const [f, body] of want) if (have.get(f) !== body) dtcgBad.push(`${at}/${f} differs from what the token build writes`);
+      for (const f of have.keys()) if (!want.has(f)) dtcgBad.push(`${at}/${f} is generated and nothing generates it any more`);
+    }
+  } catch (e) {
+    // writeDtcg's refusal (a reference no build resolves, a folder that is not an export) is one line, as
+    // from-snapshot.mjs prints it; buildTokens' collision names the Figma names that meet, read from the snapshot
+    if (!e?.refused) throw e;
+    err.push(e.collisions ? collisionLine(e.collisions, snapshot, collisionNames) : e.message); refused = true;
+  } finally {
+    console.warn = warn;
+    rmSync(dtcg, { recursive: true, force: true });
+  }
+  if (refused) return done(1);
+
+  // A generated stylesheet the build no longer writes is stale; one it never
+  // wrote (another generator's, a hand-written partial) is left alone.
+  const ours = (f) => { try { return /Generated from the Figma snapshot by the toolkit token build|GENERATED by bin\/tokens|Generated by bin\/tokens/.test(readFileSync(join(P.styles, f), 'utf8').slice(0, 300)); } catch { return false; } };
+  const stale = existsSync(P.styles) ? readdirSync(P.styles).filter((f) => /\.s[ac]ss$/.test(f) && !files.has(f) && ours(f)) : [];
+
+  const rel = relative(repo, P.styles);
   if (check) {
-    const want = tree(dtcg), have = tree(STORED), at = relative(repo, STORED);
-    for (const [f, body] of want) if (have.get(f) !== body) dtcgBad.push(`${at}/${f} differs from what the token build writes`);
-    for (const f of have.keys()) if (!want.has(f)) dtcgBad.push(`${at}/${f} is generated and nothing generates it any more`);
+    for (const line of dtcgBad) err.push(`  ${line}`);
+    for (const [f, body] of files) {
+      const file = join(P.styles, f);
+      if (!existsSync(file) || readFileSync(file, 'utf8') !== body) err.push(`  ${rel}/${f} differs from what the token build writes`);
+    }
+    for (const f of stale) err.push(`  ${rel}/${f} is generated and nothing generates it any more`);
+    if (err.length) { err.push(`  tokens: ${err.length} file(s) out of date — run ${rebuildCommand(repo)}`); return done(1); }
+    out.push('  tokens: generated files match');
+    return done(0);
   }
-} catch (e) {
-  // writeDtcg's refusal (a reference no build resolves, a folder that is not an export) is one line, as from-snapshot.mjs prints it
-  if (!e?.refused) throw e;
-  console.error(e.message); refused = true;
-} finally {
-  if (check) rmSync(dtcg, { recursive: true, force: true });
-}
-if (refused) process.exit(1);
-
-// A generated stylesheet the build no longer writes is stale; one it never
-// wrote (another generator's, a hand-written partial) is left alone.
-const ours = (f) => { try { return /Generated from the Figma snapshot by the toolkit token build|GENERATED by bin\/tokens|Generated by bin\/tokens/.test(readFileSync(join(P.styles, f), 'utf8').slice(0, 300)); } catch { return false; } };
-const stale = existsSync(P.styles) ? readdirSync(P.styles).filter((f) => /\.s[ac]ss$/.test(f) && !files.has(f) && ours(f)) : [];
-
-const rel = relative(repo, P.styles);
-if (check) {
-  let bad = 0;
-  for (const line of dtcgBad) { console.error(`  ${line}`); bad++; }
-  for (const [f, body] of files) {
-    const file = join(P.styles, f);
-    if (!existsSync(file) || readFileSync(file, 'utf8') !== body) { console.error(`  ${rel}/${f} differs from what the token build writes`); bad++; }
-  }
-  for (const f of stale) { console.error(`  ${rel}/${f} is generated and nothing generates it any more`); bad++; }
-  if (bad) { console.error(`  tokens: ${bad} file(s) out of date — run bin/tokens`); process.exit(1); }
-  console.log('  tokens: generated files match');
-} else {
   for (const f of stale) rmSync(join(P.styles, f));
-  console.log(`  tokens: DTCG → ${relative(repo, STORED)}, ${files.size} file(s) → ${rel}${stale.length ? `, ${stale.length} stale removed` : ''}`);
+  out.push(`  tokens: DTCG → ${relative(repo, STORED)}, ${files.size} file(s) → ${rel}${stale.length ? `, ${stale.length} stale removed` : ''}`);
   for (const k of ['skipped', 'warnings']) {
     const list = built.report[k] || [];
-    if (list.length) console.log(`  tokens: ${list.length} ${k}: ${list.slice(0, 4).map((x) => `${x.name} (${x.reason})`).join('; ')}${list.length > 4 ? ' …' : ''}`);
+    if (list.length) out.push(`  tokens: ${list.length} ${k}: ${list.slice(0, 4).map((x) => `${x.name} (${x.reason})`).join('; ')}${list.length > 4 ? ' …' : ''}`);
   }
+  return done(0);
+}
+
+/* buildTokens' collision as one line: the first property's Figma names, then how many more meet. Two paths that
+   would share a name fail the build rather than letting one win (code-standard rule 52), so one is renamed in Figma.
+   No escape keeps them apart: a slug drops punctuation (kebab-case, the same rule), and a `$` cannot reach the DTCG files,
+   whose token and group names must not begin with one (Design Tokens Format Module §5.1.1, Character restrictions). */
+function collisionLine(props, snapshot, collisionNames) {
+  const [first, ...rest] = props;
+  const who = collisionNames(snapshot, first);
+  const named = who.length > 1 ? `${who.map((w) => `"${w.name}" (${w.kind})`).join(' and ')} both become ${first}` : `two tokens become ${first} in one block`;
+  const more = rest.length ? `; ${rest.length} more collide (${rest.slice(0, 3).join(', ')}${rest.length > 3 ? ', …' : ''})` : '';
+  return `tokens: ${named}: rename one in Figma (code-standard rule 52)${more}`;
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
+  const argv = process.argv.slice(2);
+  // Without --repo, indexOf is -1 and argv[0] (say --check) became the repo.
+  const at = argv.indexOf('--repo');
+  const repo = resolve(at >= 0 && argv[at + 1] ? argv[at + 1] : '.');
+  const r = await tokenBuild(repo, { check: argv.includes('--check') });
+  for (const l of r.out) console.log(l);
+  for (const l of r.err) console.error(l);
+  process.exit(r.code);
 }

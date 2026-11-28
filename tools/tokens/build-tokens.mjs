@@ -155,7 +155,7 @@ const px = (v) => (typeof v === 'object' && v !== null ? (v.unit === 'rem' ? v.v
 const rem = (n) => `${+(n / ROOT_PX).toFixed(4)}rem`;
 
 // a typography token's DTCG fields, by the name each is written under and its type
-const FIELD = { fontFamily: ['font-family', 'fontFamily'], fontWeight: ['font-weight', 'fontWeight'], fontSize: ['font-size', 'dimension'], lineHeight: ['line-height', 'number'], letterSpacing: ['letter-spacing', 'dimension'], paragraphSpacing: ['paragraph-spacing', 'dimension'], listSpacing: ['list-spacing', 'dimension'] };
+export const FIELD = { fontFamily: ['font-family', 'fontFamily'], fontWeight: ['font-weight', 'fontWeight'], fontSize: ['font-size', 'dimension'], lineHeight: ['line-height', 'number'], letterSpacing: ['letter-spacing', 'dimension'], paragraphSpacing: ['paragraph-spacing', 'dimension'], listSpacing: ['list-spacing', 'dimension'] };
 
 function register(SD) {
   SD.registerTransform({
@@ -432,12 +432,14 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
   rmSync(tmp, { recursive: true, force: true });
   const css = parts.join('\n') + '\n';
 
-  // Two paths that land on one property would let one silently win.
+  // Two paths that land on one property would let one silently win (code-standard rule 52): refused, every such
+  // property listed (`collisions`, in the order written), so the caller names the Figma names that meet in one line
+  const collisions = [];
   for (const b of css.split(/\n(?=[^\s])/)) {
     const names = [...b.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((x) => x[1]);
-    const dup = names.find((n, i) => names.indexOf(n) !== i);
-    if (dup) throw new Error(`two tokens become ${dup} in one block: rename one in Figma`);
+    for (const dup of names.filter((n, i) => names.indexOf(n) !== i)) if (!collisions.includes(dup)) collisions.push(dup);
   }
+  if (collisions.length) throw Object.assign(new Error(`two tokens become ${collisions[0]} in one block: rename one in Figma${collisions.length > 1 ? ` (${collisions.length - 1} more)` : ''}`), { refused: true, collisions });
 
   const bpNames = Object.keys(breakpoints);
   const bpScss = [

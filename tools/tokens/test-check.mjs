@@ -5,7 +5,7 @@
 // repo installed. Run: node --test test-check.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, existsSync, readFileSync, appendFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, existsSync, readFileSync, appendFileSync, rmSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -121,4 +121,32 @@ test('each way of breaking the standard is named', () => {
     assert.notEqual(r.status, 0, `${what}: the check passed`);
     assert.match(r.stderr, expect, `${what}: ${r.stderr}`);
   }
+});
+
+const buildCli = (root, ...args) => spawnSync(process.execPath, [join(TOOLKIT, 'tools/tokens/build.mjs'), '--repo', root, ...args], { encoding: 'utf8', env: { ...process.env, TOOLKIT_PROJECTS_ROOT: '' } });
+
+test('a colour style and a variable that slug to one property are refused in one line naming both Figma names, no stack, nothing written', () => {
+  const root = repo();
+  const f = join(root, 'design/figma.json'), t = JSON.parse(readFileSync(f, 'utf8'));
+  // a `$` marks the style apart in Figma, and the slug drops it (code-standard rule 52; DTCG reserves a leading `$`)
+  t.paintStyles = [{ name: 'Colour/Text/$strong', paints: [{ type: 'SOLID', color: '#000000' }] }];
+  writeFileSync(f, JSON.stringify(t));
+  const r = buildCli(root);
+  assert.equal(r.status, 1, r.stderr);
+  assert.doesNotMatch(r.stderr, /\n\s+at /, 'no stack trace');
+  assert.match(r.stderr, /^tokens: "Colour\/Text\/strong" \(variable in Semantic\) and "Colour\/Text\/\$strong" \(colour style\) both become --colour-text-strong: rename one in Figma \(code-standard rule 52\)$/m);
+  assert.ok(!existsSync(join(root, 'design/dtcg/color-style')), 'a refused build writes no DTCG file over the stylesheets it did not build');
+});
+
+test('an out-of-date build names the command that rebuilds it: bin/tokens where the repo has one, else the build itself', () => {
+  const root = repo();
+  const f = join(root, 'design/figma.json'), t = JSON.parse(readFileSync(f, 'utf8'));
+  t.collections.Semantic.values.Light['Colour/Text/strong'] = '#222222';
+  writeFileSync(f, JSON.stringify(t));
+  let r = buildCli(root, '--check');
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, new RegExp(`out of date — run ${join(root, 'bin/tokens').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'm'), r.stderr);
+  rmSync(join(root, 'bin/tokens'));
+  r = buildCli(root, '--check');
+  assert.ok(r.stderr.includes(`out of date — run node ${join(TOOLKIT, 'tools/tokens/build.mjs')} --repo ${root}\n`), r.stderr);
 });

@@ -27,7 +27,7 @@ It reads the snapshot's `tokens.json`, wherever `snapshot.config.json` puts it. 
 
 | File | Job |
 |---|---|
-| `build.mjs` | the command a project runs |
+| `build.mjs` | the command a project runs. Its `tokenBuild` is the same build for a caller: eval.mjs uses it to refuse a measure on stale tokens. |
 | `check.mjs` | the token gates |
 | `from-snapshot.mjs` | snapshot to DTCG files |
 | `dtcg.js` | the converter `from-snapshot.mjs` runs |
