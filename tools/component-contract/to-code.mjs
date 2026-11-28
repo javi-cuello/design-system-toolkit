@@ -417,7 +417,14 @@ function drawnAt(m, w, mains, t) {
 // layer names), or a placed component that is a control or holds one, a field or a button in it)
 const holdsTarget = (c, id, mains) => {
   const entry = entryOf(c), e = c.anatomy[id] || findAdded(c, id) || {}, m = e.kind === 'instance' && mains(e.component, e.key ?? null);
-  const isControl = (x) => !!x && (!!entryOf(x) || !!controlOf(x.component, placedIn(x)) || placedIn(x).some((k) => controlOf(k)));
+  // (at any depth: each instance it places, a variant's added ones too, by its own contract where the library holds one)
+  const isControl = (x, seen = new Set()) => {
+    if (!x || seen.has(x)) return false;
+    seen.add(x);
+    if (entryOf(x) || controlOf(x.component, placedIn(x))) return true;
+    const placed = [x.anatomy || {}, ...(x.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a)).filter((y) => y && y.kind === 'instance');
+    return placed.some((y) => { const ym = mains(y.component, y.key ?? null); return ym ? isControl(ym, seen) : !!controlOf(y.component); });
+  };
   return (entry && (id === entry.input || id === entry.box)) || controlsOf(c).includes(id) || isControl(m) || (!m && e.kind === 'instance' && !!controlOf(e.component));
 };
 const POINTER_WITH = new WeakMap();
