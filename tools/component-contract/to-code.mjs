@@ -33,7 +33,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
-import { expand, drawLayers, variantDefaults, kebab, camel, placedOf as heldBy, openForeign, foreignOpened } from './layers.mjs';
+import { expand, drawLayers, variantDefaults, kebab, camel, placedOf as heldBy, openForeign, foreignOpened, swapsOf } from './layers.mjs';
 import { declarations, holds, rem, borderBox, fractional } from './css.mjs';
 import { negative, heldOpacity, heldGlyph, bareGlyph, siblingOrder, liftsAlone, CLEARED, UNCLIPPED } from './rules.mjs';
 const { atProps, propsAt, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
@@ -429,7 +429,7 @@ const holdsTarget = (c, id, mains) => {
     seen.add(x);
     if (entryOf(x) || controlOf(x.component, placedIn(x))) return true;
     // (and each component a variant swaps in for a part, with its key: `<part>.component`)
-    const swapped = (x.variants || []).flatMap((v) => Object.entries(v.set || {}).filter(([k, y]) => k.endsWith('.component') && typeof y === 'string').map(([k, y]) => ({ kind: 'instance', component: y, key: (v.set || {})[`${k.slice(0, -'.component'.length)}.key`] ?? null })));
+    const swapped = swapsOf(x).map(({ component, key }) => ({ kind: 'instance', component, key }));
     const placed = [...[x.anatomy || {}, ...(x.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a)).filter((y) => y && y.kind === 'instance'), ...swapped];
     return placed.some((y) => { const ym = mains(y.component, y.key ?? null); return ym ? isControl(ym, seen) : !!controlOf(y.component); });
   };
@@ -467,7 +467,7 @@ export function pointerWithOf(c, t = HOUSE, mains = NO_MAINS) {
     const part = parts.get(id), e = part && part.e;
     // (placed whole, or another library's drawn open, layers.mjs openForeign: its props on its frame, to-markup's data-with)
     if (bad.has(id) || !e || !(e.foreign === true || (e.kind === 'instance' && mains(e.component, e.key ?? null))) || part.inside || part.slotted || part.ring) continue;
-    if ((c.variants || []).some((v) => typeof (v.set || {})[`${id}.component`] === 'string')) continue;
+    if (swapsOf(c).some((x) => x.id === id)) continue;
     // (never one that is or holds what takes focus or a press, this one's control or a native one inside it: a copy
     // focused would be hidden by the focus it takes, and flipped back, and copies of a field would each submit)
     if (holdsTarget(c, id, mains)) continue;

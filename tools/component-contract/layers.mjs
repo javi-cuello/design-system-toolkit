@@ -107,6 +107,13 @@ export function propKey(drafts, d) {
 export const keyMatches = (own, key) => !own || !key || own === key;
 /* The component a placed instance `e` is, in a library keyed by name: by its key where the library holds it, else by
    its name where the key does not say otherwise. (Looked up each time: a reader replaces a library's entries as it goes.) */
+/* The components a variant swaps in for a part: `<part>.component` set to a name, its `<part>.key` beside it, each
+   `{ v, id, component, key }`: one variant's (swapsIn), a part's in one variant (swapIn), or every variant's, in order
+   (swapsOf). The one reading of a swap. Tested by test-to-code.mjs. */
+export const swapsIn = (v) => Object.entries((v && v.set) || {}).filter(([k, x]) => k.endsWith('.component') && typeof x === 'string')
+  .map(([k, x]) => { const id = k.slice(0, -'.component'.length); return { v, id, component: x, key: v.set[`${id}.key`] ?? null }; });
+export const swapIn = (v, id) => { const x = ((v && v.set) || {})[`${id}.component`]; return typeof x === 'string' ? { v, id, component: x, key: v.set[`${id}.key`] ?? null } : null; };
+export const swapsOf = (c) => ((c && c.variants) || []).flatMap(swapsIn);
 export function placedOf(library, e) {
   if (!library || !e || !e.component) return null;
   const keyed = e.key && Object.values(library).find((c) => c && c.figma && c.figma.key === e.key);
@@ -157,7 +164,7 @@ function opening(c, library) {
     const es = [anatomy[id], ...vs.map((v) => (v.add || {})[id])].filter(Boolean);
     if (!es.length || es.some((e) => e.kind !== 'instance' || held(e)) || driven.has(id)) continue;
     if (!Object.values(all).some((e) => e && e.parent === id)) continue;
-    if (vs.some((v) => { const s = v.set || {}; return `${id}.kind` in s || (typeof s[`${id}.component`] === 'string' && held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null })); })) continue;
+    if (vs.some((v) => { const sw = swapIn(v, id); return `${id}.kind` in (v.set || {}) || (!!sw && held(sw)); })) continue;
     const near = nearOf(id);
     if (!near || opened.has(near)) { opened.add(id); if (near && inHeld.has(near)) inHeld.add(id); continue; }
     // (inside a held instance with no instance above it, one that is not what that component draws there (a cell's icon
@@ -188,7 +195,7 @@ function opening(c, library) {
     let closed = false;
     for (let up = e.parent; up && up !== 'root' && !closed; up = (all[up] || {}).parent) closed = (all[up] || {}).kind === 'instance' && !opened.has(up);
     if (closed) continue;
-    const at = vs.filter((v) => { const s = v.set || {}; return typeof s[`${id}.component`] === 'string' && !(`${id}.kind` in s) && !held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null }) && Object.values(v.add || {}).some((x) => x && x.parent === id); });
+    const at = vs.filter((v) => { const s = v.set || {}, sw = swapIn(v, id); return !!sw && !(`${id}.kind` in s) && !held(sw) && Object.values(v.add || {}).some((x) => x && x.parent === id); });
     if (at.length) { swappedIn.set(id, new Set(at)); opened.add(id); }
   }
   // (one in the base listed inside a held instance, where a variant detaches that instance: opened in that variant, as
@@ -206,7 +213,7 @@ function opening(c, library) {
   // field no later variant sets; one beside it is left as the design says it)
   // (laid over: it holds wherever it does with an opener's props, as a combination narrower than that opener)
   const over = (v, o) => v !== o && Object.entries(o.when || {}).every(([k, x]) => (v.when || {})[k] === x);
-  const backTo = (v, id) => { const s = v.set || {}; return typeof s[`${id}.component`] === 'string' && held({ component: s[`${id}.component`], key: s[`${id}.key`] ?? null }) && [...swappedIn.get(id)].some((o) => over(v, o)); };
+  const backTo = (v, id) => { const sw = swapIn(v, id); return !!sw && held(sw) && [...swappedIn.get(id)].some((o) => over(v, o)); };
   const setOpen = (v, w) => {
     const ids = [...swappedIn].filter(([, at]) => at.has(v)).map(([id]) => id), back = [...swappedIn.keys()].filter((id) => backTo(v, id) && !(`${id}.kind` in (v.set || {})));
     if (!ids.length && !back.length) return w;

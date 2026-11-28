@@ -44,7 +44,7 @@ import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { shadowOrder, parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop, shorthandOf, sidePiece } from '../parity/values.mjs';
 export { shorthandOf, sidePiece } from '../parity/values.mjs';
-import { camel, sentence, partName, kebab } from './layers.mjs';
+import { camel, sentence, partName, kebab, swapsOf, swapIn } from './layers.mjs';
 import { ringOf, pseudoClasses, isDrawing, drawnAsOf, ownPointerOf, placedPseudo } from './to-code.mjs';
 import { swapKeysOf } from './to-markup.mjs';
 import { inWordsOf } from './to-figma.mjs';
@@ -1346,7 +1346,7 @@ export function designKeyOf(design, fe, name) {
   if (fe && fe.component === name) return fe.key || null;
   const all = [design.anatomy || {}, ...(design.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a));
   // (a variant's swap, `<id>.component` with its `<id>.key` beside it, places one too)
-  const swaps = (design.variants || []).flatMap((v) => Object.entries(v.set || {}).filter(([k, x]) => k.endsWith('.component') && x === name).map(([k]) => (v.set || {})[`${k.slice(0, -'.component'.length)}.key`]));
+  const swaps = swapsOf(design).filter((x) => x.component === name).map((x) => x.key);
   const keys = [...new Set([...all.filter((x) => x.kind === 'instance' && x.component === name && x.key).map((x) => x.key), ...swaps.filter(Boolean)])];
   return keys.length === 1 ? keys[0] : null;
 }
@@ -1377,7 +1377,7 @@ export function swappedMark(fromCode, design) {
         for (const f of ['component', 'key', 'with']) if (s[`${id}.${f}`] === null) delete s[`${id}.${f}`];
         continue;
       }
-      const dv = (design.variants || []).find((w) => { const n = (w.set || {})[`${id}.component`]; return typeof n === 'string' && (n === s[k] || n.split('/').pop() === s[k]); });
+      const dv = (design.variants || []).find((w) => { const n = (swapIn(w, id) || {}).component; return typeof n === 'string' && (n === s[k] || n.split('/').pop() === s[k]); });
       if (!dv) continue;
       delete s[k]; delete s[`${id}.kind`];
       s[`${id}.component`] = dv.set[`${id}.component`];
@@ -4094,7 +4094,7 @@ async function main() {
         const set = fe.component.split('/').slice(0, -1).join('/'), whole = (g) => (!set || g.startsWith(`${set}/`) ? g : `${set}/${g}`), named = whole(e.asset);
         // (with no folder to scope it, only a component the design places, never any word of it: a layer named Close)
         const placed = () => [figmaContract.anatomy, ...(figmaContract.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a).map((x) => x.component))
-          .concat((figmaContract.variants || []).flatMap((v) => Object.entries(v.set || {}).filter(([k]) => k.endsWith('.component')).map(([, x]) => x)));
+          .concat(swapsOf(figmaContract).map((x) => x.component));
         const held = (n) => fe.component === n || (set ? JSON.stringify(figmaContract).includes(JSON.stringify(n)) : placed().includes(n));
         // and every glyph a variant changes it to, held the same way, or the whole layer stays the code's graphic
         const glyphs = fromCode.variants.map((v) => (v.set || {})[`${id}.asset`]).filter((g) => typeof g === 'string');

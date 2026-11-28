@@ -30,7 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { declarations, borderBox } from './css.mjs';
 import { combinations, condition, tokenNames, withTokenNames, missingSaid, namer, partSeg, copyOf, markupOrder, partsOf, pointerAt, pointerWordsOf, pointerWithOf, ownPointerOf, placedPseudo, heldOf, pointerModesOf, childrenOf, entryOf, controlOf, selectorOf, nestedSelector, sampleSelector, copySelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey, turnedParts, isDrawing } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
-import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign, foreignOpened } from './layers.mjs';
+import { partName, figmaWord, camel, placedOf, expand, variantDefaults, bareProp, openForeign, foreignOpened, swapsOf, swapIn } from './layers.mjs';
 // (another library's instance whose insides the contract records is drawn open, its layers this component's own:
 // layers.mjs openForeign, asked only of a library the markup is given, as no library holds nothing)
 const opened = (c, library) => (library && Object.keys(library).length ? openForeign(c, library) : c);
@@ -141,7 +141,7 @@ export function swapKeysOf(c, el) {
   const vs = c.variants || [], low = (v) => String(v).toLowerCase();
   const all = { ...(c.anatomy || {}), ...Object.assign({}, ...vs.map((v) => v.add || {})) };
   const inside = new Set([...Object.values(all).filter((e) => e && e.parent === el && e.kind === 'instance' && e.component).map((e) => low(e.component)),
-    ...vs.flatMap((v) => Object.entries(v.set || {}).filter(([k, x]) => typeof x === 'string' && k.endsWith('.component') && (all[k.slice(0, -'.component'.length)] || {}).parent === el).map(([, x]) => low(x)))]);
+    ...swapsOf(c).filter((x) => (all[x.id] || {}).parent === el).map((x) => low(x.component))]);
   const out = new Set();
   for (const w of [(all[el] || {}).with, ...vs.map((v) => (v.set || {})[`${el}.with`]), ...vs.map((v) => ((v.add || {})[el] || {}).with)]) for (const [k, x] of Object.entries(w && typeof w === 'object' ? w : {})) if (typeof x === 'string' && inside.has(low(x))) out.add(k);
   for (const v of vs) for (const [k, x] of Object.entries(v.set || {})) if (k.startsWith(`${el}.with.`) && typeof x === 'string' && inside.has(low(x))) out.add(k.slice(el.length + 6));
@@ -798,7 +798,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     let out;
     // (a component the library does not hold that a variant swaps for one it holds: drawn as each alternative, the mark
     // where none swaps it, the held one where its variant holds: instanceOut)
-    const toHeld = !icon && e.kind === 'instance' && !placedOf(library, e) && (c.variants || []).some((v) => { const g = (v.set || {})[`${id}.component`]; return typeof g === 'string' && placedOf(library, { ...e, component: g, key: v.set[`${id}.key`] ?? null }); });
+    const toHeld = !icon && e.kind === 'instance' && !placedOf(library, e) && (c.variants || []).some((v) => { const sw = swapIn(v, id); return !!sw && placedOf(library, { ...e, component: sw.component, key: sw.key }); });
     if (!toHeld && (icon || (e.kind === 'instance' && !placedOf(library, e)))) {
       gaps.push(`${partName(id)}: draw the icon ${icon ? `its ${icon.name} names` : e.component}, as the project draws icons`);
       // the glyph a variant changes (an alert's error icon): the one its condition draws, else the part's own
@@ -819,7 +819,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
         }
       }
       if (!icon && !wrapped) for (const v of c.variants || []) {
-        const g = (v.set || {})[`${id}.component`], t = typeof g === 'string' && !library[g] && testOf(v.when);
+        const g = (swapIn(v, id) || {}).component, t = typeof g === 'string' && !library[g] && testOf(v.when);
         if (!t) continue;
         // (a nested choice bracketed: PHP 8 refuses an unbracketed one)
         const prev = glyph.code ? `(${glyph.code})` : lang.str(glyph.lit);
@@ -903,9 +903,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // (the combinations last and reversed: of those, the first that holds is drawn, as expand and layers.mjs take it)
       // (not one that detaches it there too, an instance opened in that variant, layers.mjs openForeign: the frame
       // stands there, so its swap is never drawn, and the instance is asked for only where that variant does not hold)
-      const swaps = (c.variants || []).filter((v) => typeof (v.set || {})[`${id}.component`] === 'string' && !(typeof v.set[`${id}.kind`] === 'string' && v.set[`${id}.kind`] !== 'instance'));
+      const swaps = (c.variants || []).filter((v) => swapIn(v, id) && !(typeof v.set[`${id}.kind`] === 'string' && v.set[`${id}.kind`] !== 'instance'));
       const layers = [...swaps.filter((v) => !v.combination), ...swaps.filter((v) => v.combination).reverse()]
-        .map((v) => ({ t: testOf(v.when || {}), e: { ...e, component: v.set[`${id}.component`], key: (v.set || {})[`${id}.key`] ?? null } }))
+        .map((v) => ({ t: testOf(v.when || {}), e: { ...e, component: swapIn(v, id).component, key: swapIn(v, id).key } }))
         .filter((x) => x.t && x.t !== 'false');
       if (layers.some((x) => placedOf(library, x.e) !== placedOf(library, e))) {
         const wrap = (x) => (/^!?[\w$]+$/.test(x) || /^!\([^()]*\)$/.test(x) ? x : `(${x})`), not = (x) => (x === 'true' ? 'false' : /^[\w$]+$/.test(x) ? `!${x}` : `!(${x})`);

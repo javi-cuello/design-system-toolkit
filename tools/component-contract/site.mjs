@@ -18,6 +18,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { toElement, toParity, DOM } from './to-markup.mjs';
 import { sheetAndGaps, missingSaid, BASE } from './to-code.mjs';
+import { swapsOf } from './layers.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { createRequire } from 'node:module';
 const { byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -60,9 +61,9 @@ export function closureOf(library, folders) {
     const out = new Set(), take = (name, key) => { for (const m of [main(name, key ?? null), library[name]]) if (m && m.folder) out.add(m.folder); };
     JSON.stringify(c, function (k, v) {
       if (typeof v === 'string' && k === 'component') take(v, this.key);
-      else if (typeof v === 'string' && k.endsWith('.component')) take(v, this[`${k.slice(0, -'.component'.length)}.key`]);
       return v;
     });
+    for (const x of swapsOf(c)) take(x.component, x.key);
     return out;
   };
   const seen = new Set();

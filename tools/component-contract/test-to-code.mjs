@@ -1458,6 +1458,12 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     ok('…a drawing taken from the cache says it as a fresh one does', cached.files === 1 && cached.lines.length >= 1 && cached.lines.every((l) => /^site: Pill binds/.test(l)) && /Not named/.test(cached.sheet), JSON.stringify(cached));
     ok('…the self leg says it on stderr too, as to-code does, once a build however often it draws the component, and again in the next build', said.length >= 2 && said.every((l) => /^site: Pill binds pill-(fill|edge), which the token build writes per collection/.test(l)) && second.length >= 1 && new Set(second).size === second.length, said.join('\n')); }
   ok('…and without prefixed names a sheet is what it always was', toCss(pill(false), 'pill') === toCss(pill(true), 'pill')); }
+// (last review of 2026-11-28: one reading of a variant's swap, its part, component and key, every variant's in order)
+{ const { swapsOf, swapIn } = await import('./layers.mjs');
+  const v1 = { when: { a: true }, set: { 'x.component': 'Button', 'x.key': 'k1', 'y.with': {} } }, v2 = { when: { b: true }, set: { 'y.component': 'Dot', 'z.component': null } };
+  const got = swapsOf({ variants: [v1, v2] }).map(({ id, component, key }) => [id, component, key]);
+  ok('a variant\'s swap is read once: its part, component and key, every variant\'s in order, a null set no swap',
+    JSON.stringify(got) === '[["x","Button","k1"],["y","Dot",null]]' && swapIn(v1, 'x').key === 'k1' && swapIn(v2, 'z') === null && swapIn(v1, 'y') === null, JSON.stringify(got)); }
 // (last review of 2026-11-28: a placed component the settings lookup gives nothing for is named by the holder's settings)
 { const { drawnAsOf, heldOf, HOUSE } = await import('./to-code.mjs');
   const GLOW = { ...HOUSE, pseudoClasses: { ...(HOUSE.pseudoClasses || {}), glow: ':hover' } };
