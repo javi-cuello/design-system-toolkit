@@ -1458,6 +1458,23 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     ok('…a drawing taken from the cache says it as a fresh one does', cached.files === 1 && cached.lines.length >= 1 && cached.lines.every((l) => /^site: Pill binds/.test(l)) && /Not named/.test(cached.sheet), JSON.stringify(cached));
     ok('…the self leg says it on stderr too, as to-code does, once a build however often it draws the component, and again in the next build', said.length >= 2 && said.every((l) => /^site: Pill binds pill-(fill|edge), which the token build writes per collection/.test(l)) && second.length >= 1 && new Set(second).size === second.length, said.join('\n')); }
   ok('…and without prefixed names a sheet is what it always was', toCss(pill(false), 'pill') === toCss(pill(true), 'pill')); }
+// (last review of 2026-11-28: a placed component the settings lookup gives nothing for is named by the holder's settings)
+{ const { drawnAsOf, heldOf, HOUSE } = await import('./to-code.mjs');
+  const GLOW = { ...HOUSE, pseudoClasses: { ...(HOUSE.pseudoClasses || {}), glow: ':hover' } };
+  const link = { component: 'Link', folder: 'link', props: { state: { type: 'enum', values: ['rest', 'glow'], default: 'rest', figmaValues: ['Rest', 'Glow'], role: 'interaction', pointer: ['glow'], figma: 'State' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const card = { component: 'Card', folder: 'card', props: { shown: { type: 'boolean', default: false, axis: true, figma: 'Shown' } }, anatomy: { root: { kind: 'container' }, link: { kind: 'instance', parent: 'root', component: 'Link', with: { State: 'Rest' } } }, variants: [{ when: { shown: true }, set: { 'link.with': { State: 'Glow' } } }] };
+  ok('a placed component the settings lookup says nothing for is named by the holder\'s settings',
+    JSON.stringify(drawnAsOf(card, { shown: true }, heldOf({ Card: card, Link: link }, () => undefined), GLOW).map((x) => x.pseudo)) === '["hover"]'); }
+// (last review of 2026-11-28: a variant's swap is followed by its key: two contracts share a name, the key picking the
+// one that holds a button; that row is never copied, the one the other key picks is)
+{ const { pointerWithOf, heldOf } = await import('./to-code.mjs');
+  const actionA = { component: 'Action', folder: 'action-a', figma: { key: 'kA' }, props: {}, anatomy: { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Button' } }, variants: [] };
+  const actionB = { component: 'Action', folder: 'action-b', figma: { key: 'kB' }, props: {}, anatomy: { root: { kind: 'container' }, d: { kind: 'instance', parent: 'root', component: 'Dot' } }, variants: [] };
+  const dot = { component: 'Dot', folder: 'dot', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const row = (key) => ({ component: 'Row', folder: 'row', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' } }, anatomy: { root: { kind: 'container' }, s: { kind: 'instance', parent: 'root', component: 'Dot' } }, variants: [{ when: { on: true }, set: { 's.component': 'Action', 's.key': key } }] });
+  const card = { component: 'Card', folder: 'card', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } }, anatomy: { root: { kind: 'container' }, row: { kind: 'instance', parent: 'root', component: 'Row', with: { On: 'False' } } }, variants: [{ when: { state: 'focus' }, set: { 'row.with': { On: 'True' } } }] };
+  const copied = (key) => { const c = { ...card }; return pointerWithOf(c, undefined, heldOf({ Card: c, Row: row(key), Action: actionA, 'Action#b': actionB, Dot: dot })).has('row'); };
+  ok('a variant\'s swap is followed by its key: the contract that key picks holding a button is never copied, the other is', !copied('kA') && copied('kB'), JSON.stringify([copied('kA'), copied('kB')])); }
 // 2026-11-28: a placed component whose props a pointer state changes (pointerWithOf): copied per such state, its own
 // pointer state aside (the browser's), an override inside it its copy's, never one swapped for another component
 { const { pointerWithOf, heldOf } = await import('./to-code.mjs');

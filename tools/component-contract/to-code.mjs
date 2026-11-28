@@ -366,7 +366,7 @@ export function pointerWordsOf(c, t = HOUSE) {
 // (once per component, library and settings, as drawnAt keeps its looks)
 /* The settings a placed component `m` is drawn under: its own, where the library's lookup carries them (heldOf's
    `settingsOf`), so its pointer states are named by its own pseudo-classes as its own sheet names them; else `t`. */
-const placedSettings = (m, mains, t) => (m && mains && mains.settingsOf ? mains.settingsOf(m.folder || folderOf(m.component)) ?? HOUSE : t);
+const placedSettings = (m, mains, t) => (m && mains && mains.settingsOf ? mains.settingsOf(m.folder || folderOf(m.component)) ?? t : t);
 /* The pseudo-class a placed component `m` draws its pointer value `v` by: its own settings', by folder (`settingsOf`),
    the holder's `t` where none is given. One answer for the sheet, the markup, the reader and the gaps. */
 export const placedPseudo = (m, v, settingsOf, t = HOUSE) => pseudoClasses(placedSettings(m, { settingsOf }, t))[v];
