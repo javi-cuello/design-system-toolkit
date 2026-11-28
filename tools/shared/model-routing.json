@@ -326,6 +326,22 @@
   },
   {
     "keys": [
+      "checkin"
+    ],
+    "task": "Start-of-session read: the project's memory checked against the repo, each thread's next step",
+    "skills": [
+      "checkin"
+    ],
+    "model": "Sonnet",
+    "effort": "Medium",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Read-only: reading memory and git and naming next steps; the judgement is which step comes first; not yet measured"
+  },
+  {
+    "keys": [
       "checkout"
     ],
     "task": "End-of-session housekeeping over the session it runs in: its work, its project's memory, its plan",
