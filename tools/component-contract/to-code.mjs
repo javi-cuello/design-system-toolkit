@@ -403,6 +403,13 @@ function drawnAt(m, w, mains, t) {
   if (!memo.has(k)) memo.set(k, drawn(m, propsAt(m, w), mains, t));
   return memo.get(k);
 }
+// (what takes focus or a press: this one's own control (a field's input and its box, a placed control its Selected
+// layer names), or a placed component that is a control or holds one, a field or a button in it)
+const holdsTarget = (c, id, mains) => {
+  const entry = entryOf(c), e = c.anatomy[id] || findAdded(c, id) || {}, m = e.kind === 'instance' && mains(e.component, e.key ?? null);
+  const isControl = (x) => !!x && (!!entryOf(x) || !!controlOf(x.component, placedIn(x)) || placedIn(x).some((k) => controlOf(k)));
+  return (entry && (id === entry.input || id === entry.box)) || controlsOf(c).includes(id) || isControl(m) || (!m && e.kind === 'instance' && !!controlOf(e.component));
+};
 const POINTER_WITH = new WeakMap();
 export function pointerWithOf(c, t = HOUSE, mains = NO_MAINS) {
   const memo = POINTER_WITH.get(c) || new Map(); POINTER_WITH.set(c, memo);
@@ -442,6 +449,9 @@ export function pointerWithOf(c, t = HOUSE, mains = NO_MAINS) {
     // (placed whole, or another library's drawn open, layers.mjs openForeign: its props on its frame, to-markup's data-with)
     if (bad.has(id) || !e || !(e.foreign === true || (e.kind === 'instance' && mains(e.component, e.key ?? null))) || part.inside || part.slotted || part.ring) continue;
     if ((c.variants || []).some((v) => typeof (v.set || {})[`${id}.component`] === 'string')) continue;
+    // (never one that is or holds what takes focus or a press, this one's control or a native one inside it: a copy
+    // focused would be hidden by the focus it takes, and flipped back, and copies of a field would each submit)
+    if (holdsTarget(c, id, mains)) continue;
     // (held for one state alone: that state's props are its own already, to-markup's heldAt)
     const heldAt = new Set((part.pointerHeld && part.pointerAdds || []).flatMap((w) => Object.entries(w).filter(([k, v]) => pointer(k, v)).map(([k, v]) => `${k}=${v}`)));
     if (part.pointerHeld && heldAt.size === 1) continue;

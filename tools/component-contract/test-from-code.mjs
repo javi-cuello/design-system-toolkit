@@ -1371,32 +1371,29 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     } finally { await browser.close(); await site.close(); }
   }
 }
-// (review of 2026-11-28: a copied placed component with a native control, a button's <button>: the copy's mark on its
-// host, where the markup puts it, before the control; each copy hidden or shown there, and the mapping finding the one shown)
+// (review of 2026-11-28: a placed component that takes focus itself, a button, is never copied per pointer state: one
+// element, which stays drawn while it holds focus; the props its state gives stay the markup's gap)
 { const fs = await import('node:fs');
-  const { findChrome, launch, newPage, attach, navigate, waitFor, call, forceState } = await import('../shared/cdp.mjs');
-  const { selfSiteFiles, serveSite, selfMapping } = await import('./site.mjs');
+  const { findChrome, launch, newPage, attach, navigate, waitFor, call } = await import('../shared/cdp.mjs');
+  const { selfSiteFiles, serveSite } = await import('./site.mjs');
   const { HOUSE } = await import('./to-code.mjs');
+  const { toElement } = await import('./to-markup.mjs');
   const btn = { contract: 1, component: 'Button', folder: 'button', props: { on: { type: 'boolean', default: false, axis: true, figma: 'On' } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row' }, width: 10, height: 10 } }, variants: [] };
-  const card = { contract: 1, component: 'Card', folder: 'card', props: { state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', role: 'interaction', pointer: ['hover'], figma: 'State' } },
+  const card = { contract: 1, component: 'Card', folder: 'card', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } },
     anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, btn: { kind: 'instance', parent: 'root', component: 'Button', with: { On: 'False' } } },
-    variants: [{ when: { state: 'hover' }, set: { 'btn.with': { On: 'True' } } }] };
+    variants: [{ when: { state: 'focus' }, set: { 'btn.with': { On: 'True' } } }] };
   const library = { Card: card, Button: btn }, files = selfSiteFiles(library, 'card', { settingsOf: () => HOUSE });
-  const sel = selfMapping(card, { library, settings: HOUSE }).byId.btn;
-  if (!fs.existsSync(findChrome())) ok('Chrome is here to show a copied button in (none found: install Chrome, the toolkit\'s one browser)', false);
+  if (!fs.existsSync(findChrome())) ok('Chrome is here to focus a placed button in (none found: install Chrome, the toolkit\'s one browser)', false);
   else {
     const browser = await launch({}), site = await serveSite(files);
     try {
       const tab = await attach(await newPage(browser.endpoint));
       await navigate(tab, `${site.url}index.html`); await waitFor(tab, '!!window.ready', { timeout: 10000 });
-      await call(tab, () => { const s = document.createElement('section'); s.append(window.R.card({})); document.getElementById('stage').replaceChildren(s); });
-      const read = () => call(tab, (q) => { const n = document.querySelector(q); return { found: n && (n.closest('[data-pointer]') || n).getAttribute('data-pointer'), shown: [...document.querySelectorAll('[data-part="btn"]')].filter((x) => getComputedStyle(x.querySelector(':scope > button') || x).display !== 'none').map((x) => x.getAttribute('data-pointer')) }; }, sel);
-      const rest = await read();
-      await forceState(tab, [{ selector: '#stage section > *', pseudo: 'hover' }]);
-      const hovered = await read();
-      ok('a copied placed component with a native control: one copy shown at a time, the state\'s, and the mapping finds that one',
-        rest.shown.join() === 'rest' && rest.found === 'rest' && hovered.shown.join() === 'hover' && hovered.found === 'hover', JSON.stringify([sel, rest, hovered]));
+      const got = await call(tab, () => { const s = document.createElement('section'); s.append(window.R.card({})); document.getElementById('stage').replaceChildren(s);
+        const b = s.querySelectorAll('button'); b[0].focus(); return { buttons: b.length, kept: document.activeElement === b[0] && getComputedStyle(b[0]).display !== 'none' }; });
+      ok('a placed button a pointer state gives props is one element, never a copy per state: focused, it stays drawn; its props the markup\'s gap',
+        got.buttons === 1 && got.kept && /Btn is given props only a pointer state draws/.test(toElement(card, 'card', { naming: { kind: 'element', prefix: 'ds-' }, library })), JSON.stringify(got));
     } finally { await browser.close(); await site.close(); }
   }
 }
